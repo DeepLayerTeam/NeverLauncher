@@ -1,29 +1,32 @@
 # Changelog
 
-## 0.10.2 — Managed Java + Vanilla
+## 0.10.3 — Fabric + Quilt
 
-0.10.2 переводит Vanilla client provisioning и Java runtime из ручной подготовки в исполняемый production-контур NeverLauncher.
+0.10.3 добавляет рабочую materialization цепочку Fabric и Quilt поверх `0.10.2` Managed Java + Vanilla без fallback metadata и без объявления Forge/NeoForge готовыми.
 
-### Managed Java
+### Fabric
 
-- NeverRuntime автоматически выбирает JVM требуемой major-версии и при необходимости устанавливает Temurin JRE 8/17/21/25 через Adoptium API.
-- Архив JRE проверяется по platform metadata, size и SHA-256, загружается атомарно, безопасно распаковывается в staging и повторно проверяется через `java -version`; повреждённый cache помещается в quarantine.
-- Custom Java path применяется только при `allowCustomPath=true` и точном совпадении major-версии; `distribution=system` запрещает автоматическую подмену системной JVM.
-- Desktop получил тот же Managed Java flow через Tauri/NeverRuntime, а `build_launch_plan`/`launch` сами обеспечивают JVM независимо от UI.
-- Восстановлен отсутствовавший в переданном 0.10.1 исполняемый `neverruntime` CLI (`verify`, `sync`, `launch`, `plan`, `compatibility`, `java ensure`).
+- Добавлены `nl runtime fabric-install` и `nl runtime fabric-package`.
+- Loader version разрешается через официальный Fabric Meta v2; `latest-stable` материализуется в конкретную версию до создания release.
+- Официальный `profile/json` проверяется по `inheritsFrom`, `mainClass` и выбранному loader Maven artifact.
+- Fabric Maven libraries реально загружаются, проверяются по repository `.sha1` и получают pinned `path/url/sha1/size` в локальном version profile.
+- Полученный дочерний profile сохраняется в `versions/<profile>/<profile>.json` и запускается через существующий Compatibility Engine с `inheritsFrom` Vanilla metadata.
 
-### Vanilla materializer
+### Quilt
 
-- Добавлены `nl runtime vanilla-install` и `nl runtime vanilla-package`: официальный Mojang manifest/version metadata превращается в реальное client tree и стандартный SHA-256 Never client package.
-- Реализована проверенная загрузка client JAR, libraries, asset index/objects, logging config и native classifiers; поддерживаются OS/arch rules, legacy virtual/resources assets и повторное использование проверенного cache.
-- Native archives распаковываются fail-closed с защитой от traversal/symlink и сохраняются по target OS; NeverRuntime автоматически выбирает platform-specific natives directory.
-- Compatibility Engine теперь применяет Mojang `logging.client.argument/file` и требует logging config внутри подписанного release manifest.
-- Runtime API объявляет Managed Java и Vanilla materializer фактическими возможностями; Fabric/Quilt/Forge/NeoForge installer adapters и настоящий client E2E остаются следующими этапами.
+- Добавлены симметричные `nl runtime quilt-install` и `nl runtime quilt-package` через Quilt Meta v3.
+- Quilt имеет отдельный adapter/Meta endpoint и отдельный profile, но использует общий безопасный Maven materializer.
+- Выбранная loader version и все runtime dependencies фиксируются до публикации immutable Never release.
 
-### Проверки
+### Безопасность и проверки
 
-- Vanilla materializer покрыт локальным HTTP fixture-тестом полного потока metadata -> client/library/native/assets/logging -> verified cache без зависимости от внешней сети.
-- Добавлены regression tests для небезопасных native paths и запрета внешнего HTTP.
+- Внешние Meta/Maven источники требуют HTTPS; HTTP разрешён только для loopback тестов.
+- Strict mode fail-closed отклоняет loader dependency без корректного SHA-1 sidecar, небезопасный Maven coordinate, несовместимую loader version и неожиданный `inheritsFrom`.
+- Loader profile после нормализации получает SHA-256 и вместе с Maven JAR входит в стандартный подписанный Never manifest.
+- Добавлен локальный HTTP fixture E2E для Fabric и Quilt: Vanilla base -> Meta loader selection -> profile -> Maven SHA-1/JAR -> materialized tree -> consumable client package.
+- Восстановлен отсутствовавший в переданном `0.10.2` binary source `runtime/neverruntime/src/bin/neverruntime.rs`, обязательный для заявленного `[[bin]]` Cargo target.
+- Forge/NeoForge остаются `not-certified-yet`; `runtime matrix` больше не создаёт видимость их production-готовности.
+
 
 ## 0.10.1 — Compatibility Engine
 

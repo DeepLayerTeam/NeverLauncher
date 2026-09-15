@@ -1,17 +1,19 @@
-# NeverLauncher 0.10.2
+# NeverLauncher 0.10.3
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.2` переводит **Vanilla + Java runtime** в рабочий production-контур: CLI материализует официальный Vanilla-клиент из Mojang metadata с проверкой upstream-хешей, а NeverRuntime автоматически выбирает либо устанавливает проверенный Temurin JRE нужной major-версии перед запуском.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.3` добавляет рабочую production-материализацию **Fabric + Quilt** поверх проверенного Vanilla-клиента: CLI выбирает совместимую версию загрузчика через официальный Meta API, получает client profile, проверенно скачивает Maven-зависимости и превращает результат в обычный подписываемый immutable Never release.
 
 ## Рабочий контур
 
 ```text
-Mojang metadata -> Vanilla materializer -> проверенное client tree -> SHA-256 package/release
-                -> подписанный immutable manifest -> NeverRuntime -> Managed Java -> JVM
+Mojang metadata -> Vanilla materializer -> проверенное Vanilla tree
+Fabric/Quilt Meta API -> pinned loader profile -> проверенные Maven libraries
+                    -> SHA-256 package/release -> подписанный immutable manifest
+                    -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-Сохраняется весь контур `0.10.1`: Compatibility Engine, signed metadata trust boundary, immutable published releases, verify/repair/rollback, Ed25519 key lifecycle, SBOM/provenance, Backend API, Desktop и ServerBridge.
+Сохраняется весь контур `0.10.2`: Compatibility Engine, Managed Java, Vanilla materializer, signed metadata trust boundary, immutable published releases, verify/repair/rollback, Ed25519 key lifecycle, SBOM/provenance, Backend API, Desktop и ServerBridge.
 
-## Managed Java 0.10.2
+## Managed Java 0.10.3
 
 NeverRuntime больше не требует заранее установленную подходящую Java. Перед построением/выполнением launch plan он:
 
@@ -24,7 +26,7 @@ NeverRuntime больше не требует заранее установле�
 7. после установки повторно выполняет `java -version` и принимает только требуемую major-версию;
 8. повторные запуски используют проверенный локальный runtime cache.
 
-Поддерживаемые managed major-версии в `0.10.2`: Java 8, 17, 21 и 25.
+Поддерживаемые managed major-версии в `0.10.3`: Java 8, 17, 21 и 25.
 
 Ручная установка/проверка Managed Java:
 
@@ -34,7 +36,7 @@ neverruntime java ensure --major 21 --distribution temurin
 
 Desktop использует тот же NeverRuntime installer; установка Java не дублируется в JavaScript/Tauri UI.
 
-## Vanilla materializer 0.10.2
+## Vanilla materializer 0.10.3
 
 `nl runtime vanilla-install` выполняет реальную материализацию Vanilla client tree из `version_manifest_v2.json`:
 
@@ -70,11 +72,52 @@ nl runtime vanilla-package \
 
 После загрузки файлов в обычный Never release опубликованный manifest остаётся immutable и запускается через `classpathStrategy=compatibility`. Upstream SHA-1 используется только для проверки официальных Mojang artifacts при материализации; внутри Never release файлы фиксируются существующим SHA-256 lifecycle.
 
+## Fabric + Quilt 0.10.3
+
+`nl runtime fabric-install` и `nl runtime quilt-install` работают поверх того же проверенного Vanilla tree. Materializer:
+
+1. разрешает фактическую Minecraft-версию через Mojang manifest;
+2. запрашивает список совместимых loader versions из официального Fabric Meta v2 или Quilt Meta v3;
+3. фиксирует конкретную stable loader version вместо mutable `latest`;
+4. получает официальный `profile/json` для выбранной пары Minecraft/loader;
+5. проверяет `inheritsFrom`, `mainClass` и наличие выбранного loader artifact;
+6. для каждой Maven-библиотеки получает `.sha1`, проверяет JAR и записывает точные `url/path/sha1/size` в локальный version profile;
+7. сохраняет дочерний profile в `versions/<profile>/<profile>.json` и включает его вместе со всеми loader libraries в обычный SHA-256 Never package;
+8. NeverRuntime затем разрешает этот profile через реальный `inheritsFrom` Compatibility Engine и допускает только paths из подписанного release manifest.
+
+Пример Fabric:
+
+```bash
+nl runtime fabric-package \
+  --minecraft 1.21.1 \
+  --loader-version latest-stable \
+  --client-dir .neverlauncher/fabric/1.21.1 \
+  --project my-project \
+  --profile fabric \
+  --channel stable \
+  --output client-package.json
+```
+
+Пример Quilt:
+
+```bash
+nl runtime quilt-package \
+  --minecraft 1.21.1 \
+  --loader-version latest-stable \
+  --client-dir .neverlauncher/quilt/1.21.1 \
+  --project my-project \
+  --profile quilt \
+  --channel stable \
+  --output client-package.json
+```
+
+Для production внешние Meta/Maven URL обязаны использовать HTTPS. HTTP допускается только для loopback fixture-тестов. Если Maven repository не предоставляет корректный SHA-1 sidecar, strict materialization завершается ошибкой вместо публикации непроверенной зависимости.
+
 ## Compatibility Engine
 
 При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime читает подписанный `version.json`, разрешает `inheritsFrom`, Mojang rules, ordered classpath, native classifiers, JVM/game arguments и logging config. Для materialized Vanilla natives автоматически выбирается текущий каталог `natives/windows`, `natives/linux` или `natives/osx`.
 
-Каждый metadata/classpath/native/logging path, использованный engine, обязан входить в подписанный manifest. Локальная подмена `version.json`, JAR или logging config fail-closed блокирует запуск. Fabric/Quilt/Forge/NeoForge installer adapters и настоящий графический Minecraft E2E не объявляются готовыми в `0.10.2`.
+Каждый metadata/classpath/native/logging path, использованный engine, обязан входить в подписанный manifest. Локальная подмена `version.json`, Fabric/Quilt profile, JAR или logging config fail-closed блокирует запуск. В `0.10.3` production-материализаторы готовы для Vanilla, Fabric и Quilt; Forge/NeoForge installer adapters и настоящий графический Minecraft E2E пока не объявляются готовыми.
 
 Прямое разрешение установленного client tree:
 

@@ -795,7 +795,7 @@ mod tests {
             project_id: "demo".to_string(),
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
-            version: "0.10.2-test".to_string(),
+            version: "0.10.3-test".to_string(),
             created_at: "2026-09-13T00:00:00Z".to_string(),
             minecraft: MinecraftInfo {
                 version: "1.21.1".to_string(),

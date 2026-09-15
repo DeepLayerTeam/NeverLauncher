@@ -154,10 +154,10 @@ func handleLoader(args []string) error {
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
 		{"id": "vanilla", "title": "Vanilla", "status": "stable", "installer": "mojang-version-manifest", "runtime": "builtin", "metadata": "version.json"},
-		{"id": "fabric", "title": "Fabric", "status": "real-installer", "installer": "fabric-meta", "runtime": "loader-metadata", "metadata": "loader profile JSON или Fabric Meta profile"},
-		{"id": "forge", "title": "Forge", "status": "real-installer", "installer": "forge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
-		{"id": "neoforge", "title": "NeoForge", "status": "real-installer", "installer": "neoforge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
-		{"id": "quilt", "title": "Quilt", "status": "real-installer", "installer": "quilt-meta", "runtime": "loader-metadata", "metadata": "loader profile JSON или Quilt Meta profile"},
+		{"id": "fabric", "title": "Fabric", "status": "production-materializer", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "официальный Fabric Meta profile"},
+		{"id": "forge", "title": "Forge", "status": "not-certified-yet", "installer": "forge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
+		{"id": "neoforge", "title": "NeoForge", "status": "not-certified-yet", "installer": "neoforge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
+		{"id": "quilt", "title": "Quilt", "status": "production-materializer", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "официальный Quilt Meta profile"},
 	}
 }
 
@@ -270,7 +270,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует --metadata или --installer-profile; builtin fallback metadata в 0.10.2 запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в 0.10.3 запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {

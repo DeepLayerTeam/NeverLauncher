@@ -1,4 +1,4 @@
-# Production-развёртывание NeverLauncher 0.10.2
+# Production-развёртывание NeverLauncher 0.10.3
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 

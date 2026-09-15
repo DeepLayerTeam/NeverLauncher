@@ -15,7 +15,7 @@ PINNED_PUBLIC_KEY="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc866412553
 ADMIN_EMAIL="admin@neverlauncher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 PLAYER_USERNAME="E2EPlayer"
-VERSION="0.10.2"
+VERSION="0.10.3"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
 for cmd in docker curl jq go javac jar cargo python3 gradle; do need "$cmd"; done
@@ -167,7 +167,7 @@ javac --release 17 -d "$RUNTIME_DIR/fixture/classes" "$RUNTIME_DIR/fixture/src/r
 jar --create --file "$RUNTIME_DIR/fixture/neverlauncher-e2e-fixture.jar" -C "$RUNTIME_DIR/fixture/classes" .
 
 printf '[e2e] publish package through canonical API\n'
-RELEASE="$(json_post "$API/api/v1/admin/projects/e2e-project/versions" "$ACCESS_TOKEN" '{"profileId":"vanilla","channel":"stable","version":"0.10.2-e2e"}')"
+RELEASE="$(json_post "$API/api/v1/admin/projects/e2e-project/versions" "$ACCESS_TOKEN" '{"profileId":"vanilla","channel":"stable","version":"0.10.3-e2e"}')"
 VERSION_ID="$(jq -er '.id' <<<"$RELEASE")"
 json_post "$API/api/v1/admin/projects/e2e-project/versions/$VERSION_ID/manifest" "$ACCESS_TOKEN" '{"minecraft":{"version":"1.21.1","loader":"fixture","mainClass":"ru.neverlauncher.e2e.LaunchFixture","gameArgs":[]},"runtime":{"java":{"majorVersion":17,"distribution":"temurin","allowCustomPath":true},"jvmArgs":[],"memory":{"minimumMb":64,"recommendedMb":128,"maximumMb":256},"launch":{"mainClass":"ru.neverlauncher.e2e.LaunchFixture","classpathStrategy":"manifest","nativesDirectory":"natives","offlineMode":true}},"directories":{"game":".","assets":"assets","libraries":"libraries","natives":"natives"}}' > "$RUNTIME_DIR/manifest-draft.json"
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \

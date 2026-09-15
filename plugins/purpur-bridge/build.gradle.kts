@@ -6,7 +6,7 @@ dependencies {
 }
 tasks.jar {
     archiveBaseName.set("neverlauncher-purpur-bridge")
-    archiveVersion.set("0.10.2")
+    archiveVersion.set("0.10.3")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }

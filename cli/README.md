@@ -1,4 +1,4 @@
-# NeverLauncher CLI 0.10.2
+# NeverLauncher CLI 0.10.3
 
 `nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
 
@@ -15,6 +15,18 @@ nl loader ...
 nl project ...
 nl diagnostics ...
 ```
+
+## Minecraft runtime materialization
+
+Рабочие materializer-команды `0.10.3`:
+
+```bash
+nl runtime vanilla-package --minecraft 1.21.1 --client-dir .neverlauncher/vanilla/1.21.1 --output client-package.json
+nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/fabric/1.21.1 --output client-package.json
+nl runtime quilt-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/quilt/1.21.1 --output client-package.json
+```
+
+Fabric использует официальный Meta API v2, Quilt — Meta API v3. До упаковки mutable alias `latest-stable` разрешается в конкретную loader version, Maven dependencies скачиваются и проверяются по repository SHA-1, а итоговый profile/JAR фиксируются обычным SHA-256 + signed manifest lifecycle NeverLauncher.
 
 ## Операции Backend
 
@@ -41,9 +53,9 @@ nl install bootstrap-admin \
 
 ```bash
 nl release doctor
-nl release build --out dist/release-0.10.2
-nl release sign dist/release-0.10.2 --private-key /secure/release-private.pem
-nl release verify dist/release-0.10.2 --public-key /etc/neverlauncher/release-public.pem
+nl release build --out dist/release-0.10.3
+nl release sign dist/release-0.10.3 --private-key /secure/release-private.pem
+nl release verify dist/release-0.10.3 --public-key /etc/neverlauncher/release-public.pem
 nl packaging prepare
 nl packaging verify
 ```
@@ -91,7 +103,7 @@ nl install first-run --output-dir ./neverlauncher-production \
 Desktop package/verify работает только с реально собранными artifacts:
 
 ```bash
-nl desktop package --artifact-dir dist/release-0.10.2 --out dist/desktop-package --platform linux
+nl desktop package --artifact-dir dist/release-0.10.3 --out dist/desktop-package --platform linux
 nl desktop verify dist/desktop-package
 ```
 
@@ -103,5 +115,5 @@ nl security keys --registry-dir /secure/neverlauncher-keys
 nl security revocation-list --registry-dir /secure/neverlauncher-keys --revoke <keyId>
 nl security attest --path PROVENANCE.json --private-key /secure/.../private.pem
 nl security sbom --source-root . --output SBOM.spdx.json
-nl security provenance --source-root . --artifact-dir dist/release-0.10.2 --output PROVENANCE.json
+nl security provenance --source-root . --artifact-dir dist/release-0.10.3 --output PROVENANCE.json
 ```

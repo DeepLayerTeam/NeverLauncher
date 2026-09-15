@@ -15,13 +15,21 @@ import (
 
 func handleRuntime(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
+		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, fabric-install, fabric-package, quilt-install, quilt-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
 	}
 	switch args[0] {
 	case "vanilla-install":
 		return handleRuntimeVanillaInstall(args[1:])
 	case "vanilla-package":
 		return handleRuntimeVanillaPackage(args[1:])
+	case "fabric-install":
+		return handleRuntimeFabricInstall(args[1:])
+	case "fabric-package":
+		return handleRuntimeFabricPackage(args[1:])
+	case "quilt-install":
+		return handleRuntimeQuiltInstall(args[1:])
+	case "quilt-package":
+		return handleRuntimeQuiltPackage(args[1:])
 	case "resolve":
 		minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
 		loader := flagValue(args, "--loader", "vanilla")
@@ -29,7 +37,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.2 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.3 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -292,6 +300,8 @@ func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 	status := "ready"
 	if !isSupportedLoader(loader) {
 		status = "unsupported-loader"
+	} else if loader == "forge" || loader == "neoforge" {
+		status = "not-certified-yet"
 	}
 	return map[string]any{
 		"schemaVersion":    "0.8.8",
@@ -304,15 +314,16 @@ func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 		"metadataSources": []map[string]any{
 			{"id": "mojang-version-manifest", "requiredFor": []string{"vanilla", "fabric", "quilt", "forge", "neoforge"}, "input": "--version-json", "resolves": []string{"client.jar", "mainClass", "libraries", "natives", "arguments", "javaVersion"}},
 			{"id": "mojang-asset-index", "requiredFor": []string{"all"}, "input": "--asset-index", "resolves": []string{"assets/objects", "asset total size", "asset object paths"}},
-			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "--metadata", "resolves": []string{"KnotClient", "fabric-loader", "intermediary", "loader arguments"}},
-			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "--metadata", "resolves": []string{"Quilt KnotClient", "quilt-loader", "quilt mappings", "loader arguments"}},
+			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "Fabric Meta v2", "resolves": []string{"pinned loader version", "KnotClient", "fabric-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
+			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "Quilt Meta v3", "resolves": []string{"pinned loader version", "Quilt KnotClient", "quilt-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
 			{"id": "forge-install-profile", "requiredFor": []string{"forge"}, "input": "--installer-profile", "resolves": []string{"BootstrapLauncher", "forge libraries", "launchTarget", "processors metadata"}},
 			{"id": "neoforge-install-profile", "requiredFor": []string{"neoforge"}, "input": "--installer-profile", "resolves": []string{"BootstrapLauncher", "neoforge libraries", "launchTarget", "processors metadata"}},
 		},
 		"pipeline": []string{"load-version-json", "resolve-java-constraints", "filter-libraries-by-rules", "resolve-natives-for-current-os", "resolve-assets", "merge-loader-metadata", "build-classpath", "build-jvm-args", "build-game-args", "validate-launch-plan"},
 		"commands": []string{
 			"nl runtime launch-plan --version-json <version.json> --asset-index <asset-index.json>",
-			"nl runtime launch-plan --loader fabric --metadata <fabric-profile.json> --version-json <version.json>",
+			"nl runtime fabric-package --minecraft <version> --loader-version latest-stable --output client-package.json",
+			"nl runtime quilt-package --minecraft <version> --loader-version latest-stable --output client-package.json",
 			"nl runtime launch-plan --loader forge --installer-profile <install_profile.json> --version-json <version.json>",
 			"nl loader install-plan --loader neoforge --installer-profile <install_profile.json> --version-json <version.json>",
 		},
@@ -324,8 +335,8 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "vanilla-managed-java",
-		"title":         "NeverRuntime Managed Java + Vanilla 0.10.2",
+		"status":        "fabric-quilt-production",
+		"title":         "NeverRuntime Fabric + Quilt 0.10.3",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
@@ -334,9 +345,9 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "JVM/game argument resolution", "status": "implemented"},
 			{"feature": "signed metadata trust boundary", "status": "implemented"},
 		},
-		"certifiedLoaders": []string{"vanilla-materializer", "vanilla-version-metadata", "managed-java-temurin"},
-		"notCertifiedYet":  []string{"fabric-installer", "quilt-installer", "forge-installer", "neoforge-installer", "real-client-e2e"},
-		"note":             "0.10.2 материализует и проверяет Vanilla client tree и управляет Java runtime; реальный графический Minecraft E2E входит в последующий релиз.",
+		"materializersReady": []string{"vanilla", "fabric", "quilt", "managed-java-temurin"},
+		"pending":            []string{"forge-installer", "neoforge-installer", "real-client-e2e"},
+		"note":               "0.10.3 материализует Fabric и Quilt поверх проверенного Vanilla client tree, фиксирует loader version и Maven dependencies в immutable Never release.",
 	}
 }
 
@@ -348,7 +359,7 @@ func runtimeMetadataPolicy740() map[string]any {
 		"policy": []map[string]any{
 			{"source": "version.json", "trust": "required", "validation": []string{"id", "mainClass", "downloads.client", "libraries", "arguments or minecraftArguments"}},
 			{"source": "asset index", "trust": "required-for-full-assets", "validation": []string{"objects hash", "objects size", "object path prefix"}},
-			{"source": "Fabric/Quilt metadata", "trust": "pinned-by-admin", "validation": []string{"mainClass", "libraries", "loaderVersion", "sha1 if present"}},
+			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-never-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
 			{"source": "Forge/NeoForge install_profile.json", "trust": "pinned-by-admin", "validation": []string{"spec", "minecraft", "path", "libraries", "processors recorded"}},
 		},
 		"security": []string{"path traversal denied", "remote metadata source recorded", "hash fields preserved", "signed manifest layer remains outside resolver"},
