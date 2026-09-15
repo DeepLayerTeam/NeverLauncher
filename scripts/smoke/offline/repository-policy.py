@@ -371,7 +371,7 @@ if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
     fail("standalone first-run regression-test отсутствует")
 
-# 9. 0.10.6 real Minecraft client E2E: the release gate must materialize and
+# 9. 0.10.7 real Minecraft client E2E: the release gate must materialize and
 #    launch an actual Mojang client, not regress to a synthetic Java fixture.
 e2e_script = read("e2e/scripts/run-minecraft-e2e.sh")
 e2e_publish = read("e2e/scripts/publish-client-package.py")
@@ -386,7 +386,7 @@ for required in [
     "--max-runtime-seconds",
 ]:
     if required not in e2e_script:
-        fail(f"0.10.6 actual Minecraft E2E отсутствует обязательный primitive: {required}")
+        fail(f"0.10.7 actual Minecraft E2E отсутствует обязательный primitive: {required}")
 for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(f"production Minecraft E2E снова использует synthetic fixture: {forbidden}")
@@ -412,7 +412,7 @@ for forbidden in ['"status": "passed"', '"status":"passed"', '"pass": true', '"p
         fail("compatibility/targets.json must never contain manually editable PASS state")
 for required in [
     "verify_result", "missing required result", "loader result did not resolve to a concrete immutable version",
-    "actualClient", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "evidenceSha256",
+    "actualClient", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "evidenceSha256",
 ]:
     if required not in compat_tool:
         fail(f"compatibility matrix aggregator missing hardening primitive: {required}")
@@ -428,7 +428,7 @@ for required in [
         fail(f"public compatibility workflow incomplete: {required}")
 for required in [
     "NEVERLAUNCHER_E2E_MODE=compatibility", "GITHUB_SHA", "GITHUB_RUN_ID",
-    "actualClient", "paperJoin", "signedManifest", "cleanSync", "sessionRevokeDeny",
+    "actualClient", "paperJoin", "signedManifest", "cleanSync", "sessionRevokeDeny", "paperHealthy",
 ]:
     if required not in compat_case:
         fail(f"compatibility case does not bind result to real CI evidence: {required}")
@@ -442,6 +442,44 @@ if 'NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}' not in e
     fail("E2E server profile must be bound to compatibility target instead of hard-coded Vanilla")
 if "symlink package path is forbidden" not in e2e_publish or "resolve(strict=True)" not in e2e_publish:
     fail("E2E publisher must reject symlink/path ambiguity before upload")
+
+
+# 11. 0.10.7 compatibility stabilization: concurrent materializers are locked,
+#     transient upstream failures are retried, client-tree symlink escapes are
+#     rejected, portable atomic replacement is used, and the NeverRuntime bin
+#     source must exist whenever Cargo declares it.
+stability_go = read("cli/cmd/neverlauncher/compatibility_stability.go")
+stability_tests = read("cli/cmd/neverlauncher/compatibility_stability_test.go")
+vanilla_runtime = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+managed_java = read("runtime/neverruntime/src/managed_java.rs")
+runtime_compat = read("runtime/neverruntime/src/compatibility.rs")
+if not (ROOT / "runtime/neverruntime/src/bin/neverruntime.rs").is_file():
+    fail("Cargo declares neverruntime binary but src/bin/neverruntime.rs is missing")
+for required in [
+    "acquireCompatibilityMaterializationLock", "compatibilityGET", "secureClientDestination",
+    "validateAssetLogicalPath", "replaceFileAtomicPortable", "retryableCompatibilityStatus",
+]:
+    if required not in stability_go:
+        fail(f"0.10.7 compatibility stabilization missing primitive: {required}")
+for required in [
+    "TestCompatibilityGETRetriesTransientStatus", "TestMaterializationLockIsExclusive",
+    "TestSecureClientDestinationRejectsSymlinkComponent", "TestValidateAssetLogicalPath",
+    "TestReplaceFileAtomicPortableReplacesExisting",
+]:
+    if required not in stability_tests:
+        fail(f"0.10.7 compatibility stabilization missing regression test: {required}")
+for required in ["maxCompatibilityArtifact+1", "secureClientDestination", "validateAssetLogicalPath"]:
+    if required not in vanilla_runtime:
+        fail(f"Vanilla stabilization missing: {required}")
+if managed_java.count("check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?") != 1:
+    fail("Managed Java cached runtime validation must invoke java -version exactly once")
+if "compatibility path содержит symlink" not in runtime_compat:
+    fail("NeverRuntime Compatibility Engine must reject symlink path components")
+if "runtime record java path вышел за Managed Java root через symlink" not in managed_java:
+    fail("Managed Java cache validation must reject symlink escape")
+for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "evidence manifestLoader mismatch"]:
+    if required not in compat_tool:
+        fail(f"compatibility evidence stabilization missing: {required}")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

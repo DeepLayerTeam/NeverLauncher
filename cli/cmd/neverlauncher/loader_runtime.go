@@ -103,6 +103,11 @@ func handleRuntimeLoaderInstall(loader string, args []string) error {
 	if err != nil {
 		return err
 	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	result, err := installMetaLoader(context.Background(), opts)
 	if err != nil {
 		return err
@@ -115,6 +120,11 @@ func handleRuntimeLoaderPackage(loader string, args []string) error {
 	if err != nil {
 		return err
 	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	result, err := installMetaLoader(context.Background(), opts)
 	if err != nil {
 		return err
@@ -281,7 +291,11 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	}
 	profileBytes = append(profileBytes, '\n')
 	profilePath := filepath.ToSlash(filepath.Join("versions", profile.ID, profile.ID+".json"))
-	if err := writeAtomicBytes(filepath.Join(opts.ClientDir, filepath.FromSlash(profilePath)), profileBytes, 0o644); err != nil {
+	profileDest, err := secureClientDestination(opts.ClientDir, profilePath)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	if err := writeAtomicBytes(profileDest, profileBytes, 0o644); err != nil {
 		return loaderMaterializeResult{}, err
 	}
 	profileSHA := sha256.Sum256(profileBytes)
@@ -315,7 +329,10 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		"status":           "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
-	statePath := filepath.Join(opts.ClientDir, ".neverlauncher", loader+"-install.json")
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", loader+"-install.json")))
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
 	if err := writeAtomicBytes(statePath, append(stateBytes, '\n'), 0o600); err != nil {
 		return loaderMaterializeResult{}, err
 	}
@@ -512,12 +529,7 @@ func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, 
 	if err := validateRemoteURL(rawURL); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "NeverLauncher/"+version+" LoaderMaterializer")
-	resp, err := client.Do(req)
+	resp, err := compatibilityGET(ctx, client, rawURL, "NeverLauncher/"+version+" LoaderMaterializer")
 	if err != nil {
 		return nil, err
 	}

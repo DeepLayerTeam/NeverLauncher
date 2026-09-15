@@ -240,7 +240,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-0.10.6-minecraft-client-e2e-evidence
+          name: neverlauncher-0.10.7-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
             e2e/runtime/client-package.json

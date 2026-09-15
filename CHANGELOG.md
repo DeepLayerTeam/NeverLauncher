@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.10.7 — Compatibility stabilization
+
+`0.10.7` стабилизирует весь Minecraft compatibility-контур `0.10.1`–`0.10.6` без добавления нового loader API: исправлены реальные гонки materialization, transient upstream failures, symlink/path escape, stale generated natives, portable atomic replacement и более строгая проверка CI evidence.
+
+### Materialization lifecycle
+
+- Vanilla/Fabric/Quilt/Forge/NeoForge CLI materializers теперь берут exclusive lock на конкретный `clientDir`; параллельная сборка одного дерева не может одновременно перезаписывать metadata/libraries/assets/processors.
+- Stale lock старше двух часов безопасно вытесняется; обычное ожидание ограничено и завершается явной ошибкой вместо повреждения client tree.
+- `clientDir` и существующие компоненты destination path проверяются через `Lstat`; symlink-компоненты отклоняются до записи.
+- Asset logical paths валидируются до materialization virtual/resources tree.
+- `buildClientPackage` теперь fail-closed отклоняет symlink artifacts, а не следует за ними при hashing.
+
+### Download / filesystem hardening
+
+- Все Minecraft/loader HTTP GET получили bounded retry для transient `408/425/429/500/502/503/504` и сетевых ошибок; `Retry-After` учитывается с верхним пределом.
+- Client artifact ограничен 2 GiB и читается через `limit+1`, поэтому oversized response обнаруживается, а не молча обрезается.
+- Повреждённый существующий artifact заменяется portable atomic sequence, работающей и там, где `rename` не заменяет destination напрямую.
+- `natives/<os>` полностью пересобирается перед extraction, поэтому stale native libraries предыдущей materialization не попадают в новый signed package.
+- Forge/NeoForge installer `data/` очищается и пересоздаётся перед processor execution.
+
+### Runtime / CI evidence
+
+- Compatibility Engine в NeverRuntime отклоняет symlink-компоненты при чтении metadata/classpath paths.
+- Убран двойной `java -version` при проверке cached Managed Java.
+- Восстановлен обязательный `runtime/neverruntime/src/bin/neverruntime.rs`; repository policy теперь блокирует Cargo `[[bin]]` без source-файла.
+- Compatibility matrix aggregator теперь дополнительно требует `exitCode == 0`, healthy Paper evidence, совпадающий `manifestLoader` и полный набор обязательных evidence files.
+- Добавлены regression tests для retry, materialization lock, symlink escape, unsafe asset paths, portable replace и symlink package artifacts.
+
 ## 0.10.6 — Public CI Compatibility Matrix + hardening
 
 `0.10.6` расширяет actual Minecraft Client E2E до публичной CI-матрицы Vanilla/Fabric/Quilt/Forge/NeoForge и делает результаты machine-verifiable вместо ручной таблицы.

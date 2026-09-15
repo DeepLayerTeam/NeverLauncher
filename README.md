@@ -1,9 +1,11 @@
-# NeverLauncher 0.10.6
+# NeverLauncher 0.10.7
 
 [![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.6` превращает реальный Minecraft Client E2E из одной Vanilla-проверки в **публичную CI Compatibility Matrix** для Vanilla, Fabric, Quilt, Forge и NeoForge. Каждый PASS строится из фактического materialize → signed immutable release → clean NeverRuntime sync → actual Minecraft client → Paper world join → revoke/deny и привязан к точному Git commit/GitHub Actions run.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.7` — стабилизационный релиз compatibility-контура: он не добавляет декларативные loader-заготовки, а делает уже реализованные Vanilla/Fabric/Quilt/Forge/NeoForge materializers и actual-client CI устойчивее к параллельному запуску, transient upstream errors, symlink/path attacks, stale generated files и неполному CI evidence.
+
+Главная цель `0.10.7` — чтобы один и тот же compatibility pipeline воспроизводимо работал повторно и fail-closed завершался при неоднозначном filesystem/network state. Публичная CI Compatibility Matrix, появившаяся в `0.10.6`, сохранена и усилена дополнительной проверкой health/exit/evidence.
 
 ## Рабочий контур
 
@@ -18,7 +20,20 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
                      -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-В `0.10.6` Forge/NeoForge больше не являются только `install-plan`: CLI выполняет реальный processor-based installer pipeline и материализует итоговые runtime artifacts до формирования Never package.
+Сохраняется processor-based Forge/NeoForge pipeline, введённый ранее; в `0.10.7` его execution state дополнительно сериализован materialization lock'ом, а installer scratch data полностью пересобирается перед запуском processors.
+
+## Стабилизация compatibility-контура в 0.10.7
+
+- exclusive materialization lock на каждый `clientDir` для Vanilla/Fabric/Quilt/Forge/NeoForge;
+- retry transient HTTP `408/425/429/5xx` и bounded `Retry-After`;
+- запрет symlink-компонентов внутри materialized client tree и symlink artifacts при package build;
+- portable atomic replacement повреждённых файлов;
+- очистка и полная пересборка generated natives перед упаковкой;
+- очистка Forge/NeoForge installer scratch data перед processors;
+- Compatibility Engine повторно проверяет отсутствие symlink path components непосредственно перед runtime resolution;
+- CI aggregator требует `exitCode=0`, healthy Paper, полный evidence set и loader identity, а не только поле `status=passed`.
+
+Эти проверки находятся в исполняемом коде и regression tests; repository policy дополнительно запрещает выпуск при удалении обязательных stabilization primitives.
 
 ## Managed Java
 
@@ -38,7 +53,7 @@ nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --cl
 nl runtime quilt-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/quilt/1.21.1 --output client-package.json
 ```
 
-## Forge + NeoForge 0.10.6
+## Forge + NeoForge
 
 Новые materializer-команды:
 
@@ -83,7 +98,7 @@ Production pipeline выполняет:
 
 Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В strict mode отсутствие корректного checksum завершает materialization ошибкой.
 
-`0.10.6` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
+`0.10.7` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
 
 ## Compatibility Engine
 
@@ -143,9 +158,9 @@ NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 ./scripts/release/preflight.sh
 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 ```
 
-## Публичная CI Compatibility Matrix — 0.10.6
+## Публичная CI Compatibility Matrix — 0.10.7
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. `0.10.6` проверяет Linux x86_64 для Vanilla/Fabric/Quilt/Forge/NeoForge на Minecraft 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. `0.10.7` проверяет Linux x86_64 для Vanilla/Fabric/Quilt/Forge/NeoForge на Minecraft 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
 
 Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
 
@@ -158,7 +173,7 @@ python3 scripts/compatibility/test_matrix.py
 
 Подробности: `compatibility/README.md`.
 
-## Настоящий Minecraft Client E2E — 0.10.6
+## Настоящий Minecraft Client E2E — 0.10.7
 
 Блокирующий production release gate по умолчанию проверяет Vanilla, а compatibility workflow использует тот же production-путь для всех пяти loader families. Java fixture не используется как доказательство совместимости клиента:
 

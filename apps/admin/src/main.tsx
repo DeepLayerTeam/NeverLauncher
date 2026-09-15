@@ -14,7 +14,7 @@ type ChannelForm = { projectId: string; id: string; name: string; description: s
 type UserForm = { id: string; email: string; displayName: string; roleId: string; password: string };
 type PackageForm = { projectId: string; profileId: string; channel: string; version: string; packageId: string; path: string; sha256: string };
 
-const TOOL_VERSION = '0.10.6';
+const TOOL_VERSION = '0.10.7';
 
 const fallbackSections: Section[] = [
   { id: 'dashboard', title: 'Обзор' },
@@ -97,7 +97,7 @@ function App() {
   const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: 'neverlauncher-project', id: 'vanilla-java21', name: 'Vanilla Java 21', description: 'Production-профиль клиента', loader: 'vanilla', preset: 'recommended', isDefault: true });
   const [channelForm, setChannelForm] = useState<ChannelForm>({ projectId: 'neverlauncher-project', id: 'stable', name: 'stable', description: 'Стабильный production-канал', protected: true });
   const [userForm, setUserForm] = useState<UserForm>({ id: '', email: 'operator@neverlauncher.local', displayName: 'Оператор', roleId: 'viewer', password: 'Смените-этот-пароль' });
-  const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: 'neverlauncher-project', profileId: 'vanilla-java21', channel: 'stable', version: '0.10.6-client', packageId: '', path: 'mods/example.jar', sha256: '' });
+  const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: 'neverlauncher-project', profileId: 'vanilla-java21', channel: 'stable', version: '0.10.7-client', packageId: '', path: 'mods/example.jar', sha256: '' });
   const [packageFile, setPackageFile] = useState<File | null>(null);
 
   const sections = productionUI.sections?.length ? productionUI.sections : fallbackSections;
@@ -277,7 +277,7 @@ function App() {
     </aside>
     <section className="main">
       <header className="header">
-        <div><h1>NeverLauncher Admin · API v1</h1><p>Рабочая панель NeverLauncher 0.10.6: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.</p></div>
+        <div><h1>NeverLauncher Admin · API v1</h1><p>Рабочая панель NeverLauncher 0.10.7: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.</p></div>
         <span className={`badge ${status === 'online' ? 'ok' : 'warn'}`}>Backend: {status === 'online' ? 'доступен' : 'недоступен'}</span>
       </header>
       <section className="card wide">

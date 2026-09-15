@@ -164,10 +164,25 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
-        mandatory = ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny"]
+        mandatory = ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy"]
         for key in mandatory:
             if checks.get(key) is not True:
                 errors.append(f"check {key} is not true")
+    if result.get("exitCode") != 0:
+        errors.append(f"exitCode is {result.get('exitCode')!r}")
+    evidence = result.get("evidence")
+    if not isinstance(evidence, dict):
+        errors.append("evidence is missing")
+    else:
+        if str(evidence.get("manifestLoader", "")) != target["loader"]:
+            errors.append("evidence manifestLoader mismatch")
+        files = evidence.get("files")
+        mandatory_files = {
+            "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
+            "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
+        }
+        if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
+            errors.append("evidence files are incomplete")
     if result.get("status") != "passed":
         errors.append(f"status is {result.get('status')!r}")
     return errors
@@ -179,8 +194,8 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         "",
         "> Матрица сгенерирована автоматически из фактических E2E-результатов. Статусы PASS не хранятся и не редактируются вручную.",
         "",
-        "| Target | Minecraft | Loader | Resolved loader | OS / arch | Actual client | Paper join | Result |",
-        "|---|---|---|---|---|---:|---:|---:|",
+        "| Target | Minecraft | Loader | Resolved loader | OS / arch | Actual client | Paper join | Paper health | Result |",
+        "|---|---|---|---|---|---:|---:|---:|---:|",
     ]
     for target in targets:
         record = records.get(target["id"], {})
@@ -190,7 +205,8 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         lines.append(
             f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{resolved}` | "
             f"`{target['os']}/{target['arch']}` | {'✅' if checks.get('actualClient') is True else '❌'} | "
-            f"{'✅' if checks.get('paperJoin') is True else '❌'} | {status} |"
+            f"{'✅' if checks.get('paperJoin') is True else '❌'} | "
+            f"{'✅' if checks.get('paperHealthy') is True else '❌'} | {status} |"
         )
     lines += [
         "",

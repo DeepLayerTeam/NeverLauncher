@@ -114,6 +114,11 @@ type vanillaTaskResult struct {
 func handleRuntimeVanillaInstall(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
 	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", "vanilla", minecraftVersion))
+	lock, err := acquireCompatibilityMaterializationLock(clientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
 		return errors.New("--workers должен быть числом от 1 до 64")
@@ -143,6 +148,11 @@ func handleRuntimeVanillaInstall(args []string) error {
 func handleRuntimeVanillaPackage(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
 	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", "vanilla", minecraftVersion))
+	lock, err := acquireCompatibilityMaterializationLock(clientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	targets, err := parseVanillaTargets(flagValue(args, "--target", currentVanillaTarget().OS+"/"+currentVanillaTarget().Arch))
 	if err != nil {
 		return err
@@ -248,7 +258,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый downloads.client")
 	}
 
-	versionPath := filepath.Join(opts.ClientDir, "versions", selectedID, selectedID+".json")
+	versionRel := filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json"))
+	versionPath, err := secureClientDestination(opts.ClientDir, versionRel)
+	if err != nil {
+		return vanillaInstallResult{}, err
+	}
 	if err := writeAtomicBytes(versionPath, versionBytes, 0o644); err != nil {
 		return vanillaInstallResult{}, err
 	}
@@ -369,7 +383,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	if err != nil {
 		return vanillaInstallResult{}, fmt.Errorf("asset index: %w", err)
 	}
-	if err := writeAtomicBytes(filepath.Join(opts.ClientDir, filepath.FromSlash(assetIndexPath)), assetBytes, 0o644); err != nil {
+	assetIndexDest, err := secureClientDestination(opts.ClientDir, assetIndexPath)
+	if err != nil {
+		return vanillaInstallResult{}, err
+	}
+	if err := writeAtomicBytes(assetIndexDest, assetBytes, 0o644); err != nil {
 		return vanillaInstallResult{}, err
 	}
 	var assets vanillaAssetIndex
@@ -377,6 +395,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, fmt.Errorf("asset index повреждён: %w", err)
 	}
 	for name, object := range assets.Objects {
+		if err := validateAssetLogicalPath(name); err != nil {
+			return vanillaInstallResult{}, err
+		}
 		if len(object.Hash) != 40 || object.Size < 0 {
 			return vanillaInstallResult{}, fmt.Errorf("asset %q содержит некорректный hash/size", name)
 		}
@@ -414,6 +435,22 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: assetIndexPath, Kind: "asset-index", Size: int64(len(assetBytes)), SHA1: metadata.AssetIndex.SHA1, SHA256: hex.EncodeToString(assetHash[:]), Cached: false})
 
 	nativeTasks := make([]vanillaDownloadTask, 0)
+	// Natives are generated output, not a cache. Rebuild every target directory so an
+	// older Minecraft/loader materialization cannot leak stale native libraries into
+	// the next signed package.
+	for _, target := range opts.Targets {
+		nativeRel := filepath.ToSlash(filepath.Join("natives", target.OS))
+		nativeDir, err := secureClientDestination(opts.ClientDir, nativeRel)
+		if err != nil {
+			return vanillaInstallResult{}, err
+		}
+		if err := os.RemoveAll(nativeDir); err != nil {
+			return vanillaInstallResult{}, fmt.Errorf("native cleanup %s: %w", target.OS, err)
+		}
+		if err := os.MkdirAll(nativeDir, 0o755); err != nil {
+			return vanillaInstallResult{}, fmt.Errorf("native directory %s: %w", target.OS, err)
+		}
+	}
 	for _, task := range taskList {
 		if task.Kind == "native-archive" && task.NativeTarget != nil {
 			nativeTasks = append(nativeTasks, task)
@@ -421,7 +458,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	for _, task := range nativeTasks {
 		archivePath := filepath.Join(opts.ClientDir, filepath.FromSlash(task.Path))
-		targetDir := filepath.Join(opts.ClientDir, "natives", task.NativeTarget.OS)
+		targetRel := filepath.ToSlash(filepath.Join("natives", task.NativeTarget.OS))
+		targetDir, err := secureClientDestination(opts.ClientDir, targetRel)
+		if err != nil {
+			return vanillaInstallResult{}, err
+		}
 		extracted, err := extractNativeJar(archivePath, targetDir, task.NativeExclude)
 		if err != nil {
 			return vanillaInstallResult{}, fmt.Errorf("native extraction %s: %w", task.Path, err)
@@ -446,19 +487,33 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			object := assets.Objects[name]
 			source := filepath.Join(opts.ClientDir, "assets", "objects", object.Hash[:2], object.Hash)
 			if assets.Virtual {
-				dest := filepath.Join(opts.ClientDir, "assets", "virtual", "legacy", filepath.FromSlash(name))
+				destRel := filepath.ToSlash(filepath.Join("assets", "virtual", "legacy", filepath.FromSlash(name)))
+				dest, err := secureClientDestination(opts.ClientDir, destRel)
+				if err != nil {
+					return vanillaInstallResult{}, err
+				}
 				if err := copyFileVerified(source, dest, object.Size, object.Hash); err != nil {
 					return vanillaInstallResult{}, fmt.Errorf("virtual asset %s: %w", name, err)
 				}
-				sum, size, _ := hashFile(dest)
+				sum, size, err := hashFile(dest)
+				if err != nil {
+					return vanillaInstallResult{}, fmt.Errorf("virtual asset %s hash: %w", name, err)
+				}
 				downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("assets", "virtual", "legacy", name)), Kind: "virtual-asset", Size: size, SHA1: object.Hash, SHA256: sum})
 			}
 			if assets.MapToResources {
-				dest := filepath.Join(opts.ClientDir, "resources", filepath.FromSlash(name))
+				destRel := filepath.ToSlash(filepath.Join("resources", filepath.FromSlash(name)))
+				dest, err := secureClientDestination(opts.ClientDir, destRel)
+				if err != nil {
+					return vanillaInstallResult{}, err
+				}
 				if err := copyFileVerified(source, dest, object.Size, object.Hash); err != nil {
 					return vanillaInstallResult{}, fmt.Errorf("resource asset %s: %w", name, err)
 				}
-				sum, size, _ := hashFile(dest)
+				sum, size, err := hashFile(dest)
+				if err != nil {
+					return vanillaInstallResult{}, fmt.Errorf("resource asset %s hash: %w", name, err)
+				}
 				downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("resources", name)), Kind: "resource-asset", Size: size, SHA1: object.Hash, SHA256: sum})
 			}
 		}
@@ -487,7 +542,10 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			result.Downloaded++
 		}
 	}
-	statePath := filepath.Join(opts.ClientDir, ".neverlauncher", "vanilla-install.json")
+	statePath, err := secureClientDestination(opts.ClientDir, ".neverlauncher/vanilla-install.json")
+	if err != nil {
+		return vanillaInstallResult{}, err
+	}
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
 		return vanillaInstallResult{}, err
 	}
@@ -514,8 +572,7 @@ func runVanillaDownloads(ctx context.Context, client *http.Client, root string, 
 		go func() {
 			defer wg.Done()
 			for task := range jobs {
-				dest := filepath.Join(root, filepath.FromSlash(task.Path))
-				file, err := downloadVanillaArtifact(ctx, client, task, dest)
+				file, err := downloadVanillaArtifact(ctx, client, task, root)
 				results <- vanillaTaskResult{File: file, Err: err}
 				if err != nil {
 					cancel()
@@ -554,7 +611,14 @@ func runVanillaDownloads(ctx context.Context, client *http.Client, root string, 
 	return out, nil
 }
 
-func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vanillaDownloadTask, dest string) (vanillaDownloadedFile, error) {
+func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vanillaDownloadTask, root string) (vanillaDownloadedFile, error) {
+	dest, err := secureClientDestination(root, task.Path)
+	if err != nil {
+		return vanillaDownloadedFile{}, err
+	}
+	if task.Size > maxCompatibilityArtifact {
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact size %d превышает лимит %d", task.Path, task.Size, maxCompatibilityArtifact)
+	}
 	if task.SHA1 != "" {
 		if ok, sha256sum, size := existingFileMatchesSHA1(dest, task.SHA1, task.Size); ok {
 			return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: size, SHA1: task.SHA1, SHA256: sha256sum, TargetOS: uniqueStrings(task.TargetOS), Cached: true}, nil
@@ -566,12 +630,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	if err := validateRemoteURL(task.URL); err != nil {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: %w", task.Path, err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, task.URL, nil)
-	if err != nil {
-		return vanillaDownloadedFile{}, err
-	}
-	req.Header.Set("User-Agent", "NeverLauncher/"+version+" VanillaMaterializer")
-	resp, err := client.Do(req)
+	resp, err := compatibilityGET(ctx, client, task.URL, "NeverLauncher/"+version+" VanillaMaterializer")
 	if err != nil {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: download: %w", task.Path, err)
 	}
@@ -589,7 +648,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	h1 := sha1.New()
 	h256 := sha256.New()
-	written, copyErr := io.Copy(io.MultiWriter(out, h1, h256), io.LimitReader(resp.Body, 2<<30))
+	written, copyErr := io.Copy(io.MultiWriter(out, h1, h256), io.LimitReader(resp.Body, maxCompatibilityArtifact+1))
 	syncErr := out.Sync()
 	closeErr := out.Close()
 	if copyErr != nil || syncErr != nil || closeErr != nil {
@@ -598,6 +657,10 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	gotSHA1 := hex.EncodeToString(h1.Sum(nil))
 	gotSHA256 := hex.EncodeToString(h256.Sum(nil))
+	if written > maxCompatibilityArtifact {
+		_ = os.Remove(tmp)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact превышает лимит %d", task.Path, maxCompatibilityArtifact)
+	}
 	if task.Size > 0 && written != task.Size {
 		_ = os.Remove(tmp)
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: размер %d, ожидался %d", task.Path, written, task.Size)
@@ -606,7 +669,11 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		_ = os.Remove(tmp)
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: SHA-1 mismatch", task.Path)
 	}
-	if err := os.Rename(tmp, dest); err != nil {
+	if _, err := secureClientDestination(root, task.Path); err != nil {
+		_ = os.Remove(tmp)
+		return vanillaDownloadedFile{}, err
+	}
+	if err := replaceFileAtomicPortable(tmp, dest); err != nil {
 		_ = os.Remove(tmp)
 		return vanillaDownloadedFile{}, err
 	}
@@ -659,7 +726,10 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		if entry.Mode()&os.ModeSymlink != 0 {
 			return nil, fmt.Errorf("native archive содержит symlink: %s", entry.Name)
 		}
-		dst := filepath.Join(targetDir, filepath.FromSlash(clean))
+		dst, err := secureClientDestination(targetDir, clean)
+		if err != nil {
+			return nil, err
+		}
 		rel, err := filepath.Rel(targetDir, dst)
 		if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
 			return nil, fmt.Errorf("native archive path escape: %s", entry.Name)
@@ -685,7 +755,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 			_ = os.Remove(tmp)
 			return nil, fmt.Errorf("native %s extraction failed", entry.Name)
 		}
-		if err := os.Rename(tmp, dst); err != nil {
+		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
 			return nil, err
 		}
@@ -727,7 +797,7 @@ func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) 
 		_ = os.Remove(tmp)
 		return err
 	}
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 		_ = os.Remove(tmp)
 		return err
 	}
@@ -745,12 +815,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 	if err := validateRemoteURL(source); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "NeverLauncher/"+version+" VanillaMaterializer")
-	resp, err := client.Do(req)
+	resp, err := compatibilityGET(ctx, client, source, "NeverLauncher/"+version+" VanillaMaterializer")
 	if err != nil {
 		return nil, err
 	}
@@ -1035,7 +1100,7 @@ func writeAtomicBytes(dst string, data []byte, mode os.FileMode) error {
 		_ = os.Remove(tmp)
 		return err
 	}
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 		_ = os.Remove(tmp)
 		return err
 	}

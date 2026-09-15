@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var version = "0.10.6"
+var version = "0.10.7"
 
 const cliSchemaVersion = "1.0"
 

@@ -45,7 +45,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.6 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.7 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -342,9 +342,13 @@ func runtimeMatrix740() map[string]any {
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
 		"status":        "actual-client-public-ci-matrix",
-		"title":         "NeverLauncher 0.10.6 Compatibility Matrix",
+		"title":         "NeverLauncher 0.10.7 Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
+			{"feature": "exclusive materialization lock", "status": "implemented"},
+			{"feature": "transient upstream retry", "status": "implemented"},
+			{"feature": "symlink-safe client tree", "status": "implemented"},
+			{"feature": "portable atomic artifact replacement", "status": "implemented"},
 			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
 			{"feature": "ordered classpath", "status": "implemented"},
 			{"feature": "native classifier resolution", "status": "implemented"},
@@ -355,7 +359,7 @@ func runtimeMatrix740() map[string]any {
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
 		"ciTargets":          []string{"vanilla-1.21.1-linux-x64", "fabric-1.21.1-linux-x64", "quilt-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64"},
-		"evidence":           []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "actual-client-launch", "paper-world-join", "session-revoke-deny"},
+		"evidence":           []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":            []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
 		"note":               "PASS формируется только GitHub Actions actual-client E2E; compatibility/targets.json не содержит ручных статусов.",
 	}
@@ -372,7 +376,7 @@ func runtimeMetadataPolicy740() map[string]any {
 			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-never-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
 			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "processor-based install_profile (spec 0+)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
 		},
-		"security": []string{"path traversal denied", "remote metadata source recorded", "hash fields preserved", "signed manifest layer remains outside resolver"},
+		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "stale generated natives rebuilt", "remote metadata source recorded", "hash fields preserved", "signed manifest layer remains outside resolver"},
 	}
 }
 

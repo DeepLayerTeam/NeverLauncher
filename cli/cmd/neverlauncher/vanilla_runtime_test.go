@@ -140,6 +140,11 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		}
 	}
 
+	staleNative := filepath.Join(dir, "natives", target.OS, "stale-from-previous-run.bin")
+	if err := os.WriteFile(staleNative, []byte("stale"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	second, err := installVanilla(context.Background(), vanillaInstallOptions{
 		MinecraftVersion: "test-vanilla", ClientDir: dir, VersionManifest: base + "/manifest.json",
 		AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries", Targets: []vanillaTarget{target}, Workers: 2,
@@ -150,6 +155,9 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	}
 	if second.Cached == 0 {
 		t.Fatalf("expected cache hits on second install: %+v", second)
+	}
+	if _, err := os.Stat(staleNative); !os.IsNotExist(err) {
+		t.Fatalf("stale native survived rematerialization: %v", err)
 	}
 
 	packagePath := filepath.Join(t.TempDir(), "client-package.json")

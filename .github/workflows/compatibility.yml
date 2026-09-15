@@ -86,7 +86,7 @@ jobs:
             e2e/runtime/runtime-launch-minecraft.json
             e2e/runtime/health-paper.json
             e2e/runtime/bridge-diagnostics.json
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 14
 
   publish-matrix:

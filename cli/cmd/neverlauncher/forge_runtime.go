@@ -143,6 +143,11 @@ func handleRuntimeForgeLikeInstall(loader string, args []string) error {
 	if err != nil {
 		return err
 	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	result, err := installForgeLike(context.Background(), opts)
 	if err != nil {
 		return err
@@ -155,6 +160,11 @@ func handleRuntimeForgeLikePackage(loader string, args []string) error {
 	if err != nil {
 		return err
 	}
+	lock, err := acquireCompatibilityMaterializationLock(opts.ClientDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	result, err := installForgeLike(context.Background(), opts)
 	if err != nil {
 		return err
@@ -289,7 +299,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	}
 
 	installerRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "installer.jar"))
-	installerFile, err := downloadVanillaArtifact(ctx, opts.HTTPClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, filepath.Join(opts.ClientDir, filepath.FromSlash(installerRel)))
+	installerFile, err := downloadVanillaArtifact(ctx, opts.HTTPClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
 	if err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
 	}
@@ -303,7 +313,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// production boundary is presence of version.json + processor metadata, not
 	// an arbitrary minimum spec number.
 	if bundle.Profile.JSON == "" && bundle.Profile.Version == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в 0.10.6 не поддерживается", loader)
+		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в 0.10.7 не поддерживается", loader)
 	}
 	if bundle.Profile.Minecraft == "" {
 		bundle.Profile.Minecraft = vanilla.MinecraftVersion
@@ -328,7 +338,19 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
-	installerDataDir := filepath.Join(opts.ClientDir, ".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "data")
+	installerDataRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "data"))
+	installerDataDir, err := secureClientDestination(opts.ClientDir, installerDataRel)
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	// Installer data is reproducible scratch state. Clear it on every run so stale
+	// processor inputs or symlink leftovers cannot survive between materializations.
+	if err := os.RemoveAll(installerDataDir); err != nil {
+		return forgeMaterializeResult{}, fmt.Errorf("installer data cleanup: %w", err)
+	}
+	if err := os.MkdirAll(installerDataDir, 0o755); err != nil {
+		return forgeMaterializeResult{}, fmt.Errorf("installer data create: %w", err)
+	}
 	if err := extractInstallerData(installerPath, installerDataDir); err != nil {
 		return forgeMaterializeResult{}, err
 	}
@@ -372,7 +394,11 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	}
 	profileBytes = append(profileBytes, '\n')
 	profilePath := filepath.ToSlash(filepath.Join("versions", bundle.Version.ID, bundle.Version.ID+".json"))
-	if err := writeAtomicBytes(filepath.Join(opts.ClientDir, filepath.FromSlash(profilePath)), profileBytes, 0o644); err != nil {
+	profileDest, err := secureClientDestination(opts.ClientDir, profilePath)
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	if err := writeAtomicBytes(profileDest, profileBytes, 0o644); err != nil {
 		return forgeMaterializeResult{}, err
 	}
 	profileSHA := sha256.Sum256(profileBytes)
@@ -400,7 +426,10 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
-	statePath := filepath.Join(opts.ClientDir, ".neverlauncher", loader+"-install.json")
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", loader+"-install.json")))
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
 	if err := writeAtomicBytes(statePath, append(stateBytes, '\n'), 0o600); err != nil {
 		return forgeMaterializeResult{}, err
 	}
@@ -601,7 +630,10 @@ func extractEmbeddedMaven(installerPath, clientDir string) ([]vanillaDownloadedF
 			return nil, fmt.Errorf("embedded Maven artifact %s превышает 1 GiB", rel)
 		}
 		dstRel := filepath.ToSlash(filepath.Join("libraries", rel))
-		dst := filepath.Join(clientDir, filepath.FromSlash(dstRel))
+		dst, err := secureClientDestination(clientDir, dstRel)
+		if err != nil {
+			return nil, err
+		}
 		if err := copyZipEntryAtomic(entry, dst); err != nil {
 			return nil, err
 		}
@@ -647,7 +679,7 @@ func copyZipEntryAtomic(entry *zip.File, dst string) error {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("extract %s failed: %v %v %v", entry.Name, copyErr, syncErr, closeErr)
 	}
-	if err := os.Rename(tmp, dst); err != nil {
+	if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 		_ = os.Remove(tmp)
 		return err
 	}
@@ -679,7 +711,10 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
 		}
 		dstRel := "libraries/" + rel
-		dst := filepath.Join(clientDir, filepath.FromSlash(dstRel))
+		dst, err := secureClientDestination(clientDir, dstRel)
+		if err != nil {
+			return nil, fmt.Errorf("library %s destination: %w", lib.Name, err)
+		}
 		artifact := lib.Downloads.Artifact
 		if info, err := os.Stat(dst); err == nil && !info.IsDir() {
 			sha1sum, sha256sum, size, err := hashFileSHA1SHA256(dst)

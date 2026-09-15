@@ -335,6 +335,9 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		if err != nil {
 			return err
 		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("client package запрещает symlink: %s", path)
+		}
 		if d.IsDir() {
 			name := d.Name()
 			if strings.HasPrefix(name, ".git") || name == "node_modules" || name == ".neverlauncher-cache" || name == ".neverlauncher" {

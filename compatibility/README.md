@@ -1,8 +1,8 @@
-# Публичная CI Compatibility Matrix NeverLauncher 0.10.6
+# Публичная CI Compatibility Matrix NeverLauncher 0.10.7
 
 Матрица совместимости NeverLauncher формируется только из фактических запусков настоящего Minecraft Java Client. Файл `targets.json` содержит цели проверки, но **не содержит статусов PASS/FAIL**.
 
-Канонические цели `0.10.6`:
+Канонические цели `0.10.7`:
 
 - Vanilla 1.21.1 — Linux x86_64;
 - Fabric 1.21.1 — Linux x86_64, concrete loader разрешается из `latest-stable` до публикации release;
@@ -36,3 +36,16 @@ Workflow `.github/workflows/compatibility.yml` запускается после
 python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
 python3 scripts/compatibility/test_matrix.py
 ```
+
+## Стабилизация 0.10.7
+
+`0.10.7` не меняет состав обязательных target'ов, а усиливает воспроизводимость каждого прогона:
+
+- materializer одного `clientDir` сериализован exclusive lock-файлом;
+- transient upstream `408/425/429/5xx` повторяются ограниченное число раз;
+- symlink-компоненты client tree и symlink package artifacts запрещены;
+- generated `natives/<os>` пересобираются с нуля;
+- Forge/NeoForge processor scratch data очищается перед каждым install;
+- агрегатор требует `exitCode == 0`, `paperHealthy == true`, совпадение `manifestLoader` и полный набор обязательных evidence files.
+
+Таким образом `status: passed` в одном JSON недостаточен для зелёной публичной матрицы: результат должен пройти независимую агрегационную проверку.

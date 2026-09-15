@@ -743,6 +743,26 @@ pub fn normalize_relative_path(path: &str) -> Result<String, String> {
 
 fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let normalized = normalize_relative_path(relative)?;
+    let root_meta = std::fs::symlink_metadata(root)
+        .map_err(|err| format!("compatibility root {} недоступен: {err}", root.display()))?;
+    if root_meta.file_type().is_symlink() || !root_meta.is_dir() {
+        return Err(format!("compatibility root не должен быть symlink/файлом: {}", root.display()));
+    }
+    let mut current = root.to_path_buf();
+    for component in Path::new(&normalized).components() {
+        let Component::Normal(value) = component else {
+            return Err(format!("небезопасный compatibility path: {relative}"));
+        };
+        current.push(value);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!("compatibility path содержит symlink: {}", current.display()));
+            }
+            Ok(_) => {}
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => break,
+            Err(err) => return Err(format!("compatibility path metadata {}: {err}", current.display())),
+        }
+    }
     Ok(root.join(normalized))
 }
 
@@ -867,7 +887,7 @@ mod tests {
 
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.6".into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.7".into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");

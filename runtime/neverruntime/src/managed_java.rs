@@ -86,7 +86,7 @@ pub async fn ensure_managed_java(
     }
     if !matches!(required_major, 8 | 17 | 21 | 25) {
         return Err(format!(
-            "Managed Java 0.10.6 поддерживает Java 8/17/21/25; запрошена Java {required_major}"
+            "Managed Java 0.10.7 поддерживает Java 8/17/21/25; запрошена Java {required_major}"
         ));
     }
     let distribution = normalize_distribution(distribution)?;
@@ -504,6 +504,13 @@ async fn find_cached_runtime(root: &Path, major: u32, distribution: &str) -> Res
 }
 
 async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, cached: bool) -> Result<Option<ManagedJavaResult>, String> {
+    let dir_meta = match std::fs::symlink_metadata(dir) {
+        Ok(value) => value,
+        Err(_) => return Ok(None),
+    };
+    if dir_meta.file_type().is_symlink() || !dir_meta.is_dir() {
+        return Ok(None);
+    }
     let record_path = dir.join(".neverruntime.json");
     let bytes = match fs::read(&record_path).await {
         Ok(bytes) => bytes,
@@ -545,7 +552,17 @@ fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
             return Err("runtime record содержит traversal java path".to_string());
         }
     }
-    Ok(root.join(rel))
+    let candidate = root.join(rel);
+    if candidate.exists() {
+        let canonical_root = std::fs::canonicalize(root)
+            .map_err(|err| format!("runtime root canonicalize: {err}"))?;
+        let canonical_candidate = std::fs::canonicalize(&candidate)
+            .map_err(|err| format!("runtime java canonicalize: {err}"))?;
+        if !canonical_candidate.starts_with(&canonical_root) {
+            return Err("runtime record java path вышел за Managed Java root через symlink".to_string());
+        }
+    }
+    Ok(candidate)
 }
 
 fn find_java_executable(root: &Path) -> Option<PathBuf> {
@@ -634,7 +651,7 @@ fn normalize_distribution(value: &str) -> Result<String, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "" | "any" | "managed" | "adoptium" | "temurin" => Ok("temurin".to_string()),
         "system" => Err("distribution=system не является Managed Java runtime".to_string()),
-        other => Err(format!("Managed Java distribution {other} не поддерживается в 0.10.6")),
+        other => Err(format!("Managed Java distribution {other} не поддерживается в 0.10.7")),
     }
 }
 

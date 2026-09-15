@@ -19,7 +19,7 @@ class MatrixToolTests(unittest.TestCase):
     def target_doc(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.10.6",
+            "productVersion": "0.10.7",
             "targets": [{
                 "id": "fabric-1.21.1-linux-x64",
                 "minecraft": "1.21.1",
@@ -34,7 +34,7 @@ class MatrixToolTests(unittest.TestCase):
     def passing_result(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.10.6",
+            "productVersion": "0.10.7",
             "targetId": "fabric-1.21.1-linux-x64",
             "status": "passed",
             "minecraftVersion": "1.21.1",
@@ -45,6 +45,7 @@ class MatrixToolTests(unittest.TestCase):
             "arch": "x86_64",
             "commit": "abc123",
             "runId": "77",
+            "exitCode": 0,
             "checks": {
                 "actualClient": True,
                 "packageVerified": True,
@@ -52,6 +53,14 @@ class MatrixToolTests(unittest.TestCase):
                 "cleanSync": True,
                 "paperJoin": True,
                 "sessionRevokeDeny": True,
+                "paperHealthy": True,
+            },
+            "evidence": {
+                "manifestLoader": "fabric",
+                "files": [
+                    "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
+                    "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json"
+                ],
             },
         }
 
@@ -111,6 +120,20 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("commit", proc.stderr)
+
+    def test_aggregate_rejects_failed_health_even_with_pass_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            targets = tmp / "targets.json"
+            targets.write_text(json.dumps(self.target_doc()))
+            results = tmp / "results" / "case"
+            results.mkdir(parents=True)
+            bad = self.passing_result()
+            bad["checks"]["paperHealthy"] = False
+            (results / "compatibility-result.json").write_text(json.dumps(bad))
+            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("paperHealthy", proc.stderr)
 
 
 if __name__ == "__main__":
