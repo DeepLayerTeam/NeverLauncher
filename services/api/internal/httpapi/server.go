@@ -120,9 +120,11 @@ func (s Server) runtimeRequirements(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version": s.Version,
 		"java": map[string]any{
-			"supportedMajorVersions":  []int{8, 17, 21},
+			"supportedMajorVersions":  []int{8, 17, 21, 25},
 			"recommendedMajorVersion": 21,
 			"allowCustomPath":         true,
+			"managedDistribution":     "temurin",
+			"managedInstall":          true,
 		},
 		"memory": map[string]any{
 			"minimumMb":     1024,
@@ -147,7 +149,7 @@ func (s Server) launchTemplate(w http.ResponseWriter, r *http.Request) {
 			"loader":  "vanilla",
 		},
 		"runtime": map[string]any{
-			"java":    map[string]any{"majorVersion": 21, "distribution": "any", "allowCustomPath": true},
+			"java":    map[string]any{"majorVersion": 21, "distribution": "temurin", "allowCustomPath": true},
 			"jvmArgs": []string{"-Xms2G", "-Xmx4G"},
 			"memory":  map[string]any{"minimumMb": 1024, "recommendedMb": 4096, "maximumMb": 8192},
 			"launch":  map[string]any{"classpathStrategy": "compatibility", "nativesDirectory": "natives", "offlineMode": true},
@@ -187,7 +189,7 @@ func (s Server) loaderCompatibility(w http.ResponseWriter, r *http.Request) {
 
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
-		{"id": "vanilla", "name": "Vanilla", "resolution": "version-json", "adapter": "compatibility-engine", "installer": "external/package-stage"},
+		{"id": "vanilla", "name": "Vanilla", "resolution": "mojang-version-manifest-v2", "adapter": "compatibility-engine", "installer": "neverlauncher-vanilla-materializer", "managedJava": true},
 		{"id": "fabric", "name": "Fabric", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
 		{"id": "quilt", "name": "Quilt", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
 		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var version = "0.10.1"
+var version = "0.10.2"
 
 const cliSchemaVersion = "1.0"
 
@@ -26,7 +26,7 @@ const helpText = `NeverLauncher CLI
   update plan                     построить план обновления
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
-  runtime ...                     resolver/launch tooling
+  runtime vanilla-install|vanilla-package|...  Managed Vanilla/resolver/launch tooling
   loader ...                      loader tooling
   project validate|publish        операции проекта
   api compatibility-check         проверить canonical OpenAPI

@@ -337,7 +337,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if strings.HasPrefix(name, ".git") || name == "node_modules" || name == ".neverlauncher-cache" {
+			if strings.HasPrefix(name, ".git") || name == "node_modules" || name == ".neverlauncher-cache" || name == ".neverlauncher" {
 				return filepath.SkipDir
 			}
 			return nil
@@ -379,7 +379,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		FileGroups: []map[string]any{
 			{"id": "runtime", "required": true, "paths": []string{"versions/**", "natives/**"}},
 			{"id": "libraries", "required": true, "paths": []string{"libraries/**"}},
-			{"id": "assets", "required": true, "paths": []string{"assets/**"}},
+			{"id": "assets", "required": true, "paths": []string{"assets/**", "resources/**"}},
 			{"id": "mods", "required": true, "paths": []string{"mods/*.jar"}},
 			{"id": "optional-mods", "required": false, "paths": []string{"mods/optional/**", "optional/**"}},
 			{"id": "config", "required": true, "paths": []string{"config/**"}},
@@ -826,7 +826,7 @@ func classifyClientFile(path string) (string, bool) {
 	switch {
 	case strings.HasPrefix(path, "libraries/"):
 		return "libraries", true
-	case strings.HasPrefix(path, "assets/"):
+	case strings.HasPrefix(path, "assets/") || strings.HasPrefix(path, "resources/"):
 		return "assets", true
 	case strings.HasPrefix(path, "versions/") || strings.HasPrefix(path, "natives/"):
 		return "runtime", true

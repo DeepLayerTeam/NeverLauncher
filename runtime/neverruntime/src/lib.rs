@@ -1,6 +1,8 @@
 pub mod compatibility;
+pub mod managed_java;
 pub mod supervisor;
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
+pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
@@ -528,7 +530,6 @@ pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>,
 }
 
 async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>) -> Result<LaunchPlan, String> {
-    let java_executable = java_path.filter(|value| !value.trim().is_empty()).unwrap_or_else(|| "java".to_string());
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
     let mut required_java = manifest.runtime.java.major_version;
     let mut plan = if strategy == "compatibility" || strategy == "mojang" {
@@ -541,7 +542,8 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
         } else {
             "natives"
         };
-        let natives_dir = manifest_directory(root, natives_name, "natives")?;
+        let natives_base = manifest_directory(root, natives_name, "natives")?;
+        let natives_dir = platform_natives_directory(&natives_base).await;
         let player_name = username.unwrap_or_else(|| "Player".to_string());
         let metadata_path = if manifest.runtime.launch.version_metadata_path.trim().is_empty() {
             None
@@ -562,7 +564,12 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
         };
         let resolution = resolve_compatibility(root, &manifest.minecraft.version, metadata_path, &context).await?;
         if let Some(major) = resolution.java_major_version {
-            required_java = required_java.max(major);
+            if required_java > 0 && required_java != major {
+                return Err(format!(
+                    "manifest требует Java {required_java}, а Mojang metadata требует Java {major}; release должен быть пересобран"
+                ));
+            }
+            required_java = major;
         }
         validate_compatibility_resolution_trust(manifest, &resolution)?;
         if !manifest.runtime.launch.main_class.trim().is_empty() && manifest.runtime.launch.main_class != resolution.main_class {
@@ -577,7 +584,7 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
         let mut game_args = resolution.game_args;
         game_args.extend(manifest.minecraft.game_args.clone());
         LaunchPlan {
-            java_executable: java_executable.clone(),
+            java_executable: String::new(),
             working_directory: game_dir.to_string_lossy().to_string(),
             main_class: resolution.main_class,
             classpath_entries,
@@ -586,18 +593,39 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
             command_preview: String::new(),
         }
     } else {
-        create_manifest_launch_plan(manifest, root, &java_executable, username).await?
+        create_manifest_launch_plan(manifest, root, "", username).await?
     };
 
-    if required_java > 0 {
-        let java = check_java(Some(java_executable.clone()), Some(required_java)).await?;
-        if !java.found || !java.compatible {
-            return Err(format!("launch заблокирован: {}", java.message));
-        }
+    if required_java == 0 {
+        return Err("launch заблокирован: manifest/runtime metadata не задают требуемую major-версию Java".to_string());
     }
+    let (java_executable, _managed) = select_java_executable(
+        java_path,
+        required_java,
+        &manifest.runtime.java.distribution,
+        manifest.runtime.java.allow_custom_path,
+    )
+    .await?;
+    plan.java_executable = java_executable;
+
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
     plan.command_preview = format!("{} {} -cp {} {} {}", plan.java_executable, plan.jvm_args.join(" "), join_classpath(&plan.classpath_entries), plan.main_class, plan.game_args.join(" "));
     Ok(plan)
+}
+
+async fn platform_natives_directory(base: &Path) -> PathBuf {
+    let platform = match std::env::consts::OS {
+        "macos" => "osx",
+        "windows" => "windows",
+        "linux" => "linux",
+        _ => return base.to_path_buf(),
+    };
+    let candidate = base.join(platform);
+    if fs::metadata(&candidate).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
+        candidate
+    } else {
+        base.to_path_buf()
+    }
 }
 
 async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_executable: &str, username: Option<String>) -> Result<LaunchPlan, String> {
@@ -644,6 +672,11 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
     for path in resolution.metadata_paths.iter().chain(resolution.classpath.iter()).chain(resolution.natives.iter().map(|native| &native.path)) {
         if !trusted.contains(path) {
             return Err(format!("Compatibility Engine отклонил неподписанный release path: {path}"));
+        }
+    }
+    if let Some(path) = resolution.logging_file.as_ref() {
+        if !trusted.contains(path) {
+            return Err(format!("Compatibility Engine отклонил неподписанный logging config: {path}"));
         }
     }
     Ok(())
@@ -762,7 +795,7 @@ mod tests {
             project_id: "demo".to_string(),
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
-            version: "0.10.1-test".to_string(),
+            version: "0.10.2-test".to_string(),
             created_at: "2026-09-13T00:00:00Z".to_string(),
             minecraft: MinecraftInfo {
                 version: "1.21.1".to_string(),

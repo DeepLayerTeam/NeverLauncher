@@ -1,6 +1,6 @@
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
-    LaunchPlan, Manifest, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
+    LaunchPlan, ManagedJavaResult, Manifest, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -163,6 +163,8 @@ async fn prepare_profile_directory(base_dir: String, project_id: String, profile
 #[tauri::command]
 async fn check_java(java_path: Option<String>, required_major_version: Option<u32>) -> Result<JavaInfoResult, String> { neverruntime::check_java(java_path, required_major_version).await }
 #[tauri::command]
+async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> { neverruntime::ensure_managed_java(required_major_version, &distribution, None).await }
+#[tauri::command]
 async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String) -> Result<LaunchPlan, String> { neverruntime::build_launch_plan(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await }
 #[tauri::command]
 async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> {
@@ -210,6 +212,6 @@ fn main() {
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

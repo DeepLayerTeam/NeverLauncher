@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.10.2 — Managed Java + Vanilla
+
+0.10.2 переводит Vanilla client provisioning и Java runtime из ручной подготовки в исполняемый production-контур NeverLauncher.
+
+### Managed Java
+
+- NeverRuntime автоматически выбирает JVM требуемой major-версии и при необходимости устанавливает Temurin JRE 8/17/21/25 через Adoptium API.
+- Архив JRE проверяется по platform metadata, size и SHA-256, загружается атомарно, безопасно распаковывается в staging и повторно проверяется через `java -version`; повреждённый cache помещается в quarantine.
+- Custom Java path применяется только при `allowCustomPath=true` и точном совпадении major-версии; `distribution=system` запрещает автоматическую подмену системной JVM.
+- Desktop получил тот же Managed Java flow через Tauri/NeverRuntime, а `build_launch_plan`/`launch` сами обеспечивают JVM независимо от UI.
+- Восстановлен отсутствовавший в переданном 0.10.1 исполняемый `neverruntime` CLI (`verify`, `sync`, `launch`, `plan`, `compatibility`, `java ensure`).
+
+### Vanilla materializer
+
+- Добавлены `nl runtime vanilla-install` и `nl runtime vanilla-package`: официальный Mojang manifest/version metadata превращается в реальное client tree и стандартный SHA-256 Never client package.
+- Реализована проверенная загрузка client JAR, libraries, asset index/objects, logging config и native classifiers; поддерживаются OS/arch rules, legacy virtual/resources assets и повторное использование проверенного cache.
+- Native archives распаковываются fail-closed с защитой от traversal/symlink и сохраняются по target OS; NeverRuntime автоматически выбирает platform-specific natives directory.
+- Compatibility Engine теперь применяет Mojang `logging.client.argument/file` и требует logging config внутри подписанного release manifest.
+- Runtime API объявляет Managed Java и Vanilla materializer фактическими возможностями; Fabric/Quilt/Forge/NeoForge installer adapters и настоящий client E2E остаются следующими этапами.
+
+### Проверки
+
+- Vanilla materializer покрыт локальным HTTP fixture-тестом полного потока metadata -> client/library/native/assets/logging -> verified cache без зависимости от внешней сети.
+- Добавлены regression tests для небезопасных native paths и запрета внешнего HTTP.
+
 ## 0.10.1 — Compatibility Engine
 
 0.10.1 переносит разрешение Minecraft launch metadata в исполняемый NeverRuntime и убирает fallback-планы из production runtime path. Compatibility Engine работает по подписанному содержимому immutable release и строит детерминированный план запуска из реального Mojang-compatible `version.json`.

@@ -39,6 +39,11 @@ type Manifest = {
   files: ManifestFile[];
 };
 
+type ManagedJavaResult = {
+  status: string; distribution: string; majorVersion: number; releaseName: string; javaExecutable: string;
+  installDirectory: string; archiveSha256: string; archiveSize: number; cached: boolean; message: string;
+};
+
 type JavaInfoResult = {
   found: boolean;
   compatible: boolean;
@@ -69,7 +74,7 @@ type AuthSession = { accessToken: string; refreshToken: string; sessionId: strin
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
 
-const DESKTOP_VERSION = '0.10.1';
+const DESKTOP_VERSION = '0.10.2';
 const RELEASE_DOCTOR_MARKER = 'Desktop First-Run Binding';
 
 const stageLabels: Record<Stage, string> = {
@@ -455,11 +460,24 @@ function App() {
   async function checkJavaRuntime() {
     setStage('java');
     try {
-      const required = manifest?.runtime.java.majorVersion ?? 17;
-      const result = await callTauri<JavaInfoResult>('check_java', {
+      const activeManifest = manifest;
+      const required = activeManifest?.runtime.java.majorVersion ?? 17;
+      const distribution = activeManifest?.runtime.java.distribution || 'temurin';
+      let result = await callTauri<JavaInfoResult>('check_java', {
         javaPath: settings.javaPath || null,
         requiredMajorVersion: required,
       });
+      if (!result.compatible && !settings.javaPath && distribution.toLowerCase() !== 'system') {
+        const managed = await callTauri<ManagedJavaResult>('ensure_managed_java', {
+          requiredMajorVersion: required,
+          distribution,
+        });
+        log(managed.message);
+        result = await callTauri<JavaInfoResult>('check_java', {
+          javaPath: managed.javaExecutable,
+          requiredMajorVersion: required,
+        });
+      }
       setJavaInfo(result);
       log(result.message);
       await refreshLaunchHistory();

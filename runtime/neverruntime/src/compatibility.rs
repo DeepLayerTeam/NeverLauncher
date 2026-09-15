@@ -62,6 +62,8 @@ pub struct CompatibilityResolution {
     pub jvm_args: Vec<String>,
     pub game_args: Vec<String>,
     pub assets_index: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logging_file: Option<String>,
     pub metadata_paths: Vec<String>,
     pub inheritance_chain: Vec<String>,
     pub environment: CompatibilityEnvironment,
@@ -114,6 +116,8 @@ struct VersionMetadata {
     minecraft_arguments: String,
     #[serde(default)]
     java_version: Option<JavaVersion>,
+    #[serde(default)]
+    logging: LoggingConfig,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -121,6 +125,20 @@ struct VersionMetadata {
 struct JavaVersion {
     #[serde(default)]
     major_version: u32,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct LoggingConfig {
+    #[serde(default)]
+    client: Option<LoggingClient>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct LoggingClient {
+    #[serde(default)]
+    argument: String,
+    #[serde(default)]
+    file: Download,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -234,6 +252,7 @@ struct MergedVersion {
     arguments: Arguments,
     minecraft_arguments: String,
     java_version: Option<JavaVersion>,
+    logging_client: Option<LoggingClient>,
 }
 
 pub async fn resolve_compatibility(
@@ -349,6 +368,22 @@ pub async fn resolve_compatibility(
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
 
+    let logging_file = if let Some(logging) = merged.logging_client.as_ref() {
+        if logging.file.id.trim().is_empty() || logging.argument.trim().is_empty() {
+            return Err("logging.client должен содержать file.id и argument".to_string());
+        }
+        let relative = normalize_relative_path(&format!("assets/log_configs/{}", logging.file.id))?;
+        let absolute = safe_join(root, &relative)?.to_string_lossy().to_string();
+        let argument = logging.argument.replace("${path}", &absolute);
+        if argument.contains("${path}") {
+            return Err("logging.client.argument содержит неразрешённый ${path}".to_string());
+        }
+        jvm_args.push(argument);
+        Some(relative)
+    } else {
+        None
+    };
+
     let metadata_paths = layers.iter().map(|(_, path, _)| path.clone()).collect::<Vec<_>>();
     let inheritance_chain = layers.iter().map(|(id, _, _)| id.clone()).collect::<Vec<_>>();
 
@@ -365,6 +400,7 @@ pub async fn resolve_compatibility(
         jvm_args,
         game_args,
         assets_index,
+        logging_file,
         metadata_paths,
         inheritance_chain,
         environment,
@@ -411,6 +447,9 @@ fn merge_layers(layers: &[(String, String, VersionMetadata)]) -> Result<MergedVe
         }
         if layer.java_version.is_some() {
             merged.java_version = layer.java_version.clone();
+        }
+        if layer.logging.client.is_some() {
+            merged.logging_client = layer.logging.client.clone();
         }
     }
     if merged.id.trim().is_empty() {
@@ -828,7 +867,7 @@ mod tests {
 
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.1".into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.2".into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");

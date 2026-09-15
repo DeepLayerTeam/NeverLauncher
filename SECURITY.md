@@ -1,6 +1,6 @@
-# Политика безопасности NeverLauncher 0.10.1
+# Политика безопасности NeverLauncher 0.10.2
 
-NeverLauncher 0.10.1 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
+NeverLauncher 0.10.2 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
 ## Обязательные production-настройки
 
@@ -40,6 +40,13 @@ Source archive формируется из git-tracked файлов либо с�
 `nl security rotate-key` создаёт новую Ed25519 пару через CSPRNG и сохраняет metadata в persistent `trusted-keys.json`; private key записывается с правами `0600`. Предыдущий активный ключ переводится в verify-only либо сразу отзывается по явному флагу. `nl security revocation-list --revoke <keyId>` фиксирует отзыв в registry, а verify-flow с `--registry-dir` отклоняет подпись от отозванного public key. `nl security attest` создаёт detached Ed25519 signature для указанного artifact.
 
 Published package после перехода в `published` считается неизменяемым: загрузка файлов, изменение manifest/status и повторная публикация запрещены на HTTP и repository уровнях. Любое изменение содержимого выпускается новой версией.
+
+
+## Managed Java и Vanilla supply chain
+
+NeverRuntime `0.10.2` устанавливает Managed Java только из HTTPS metadata Adoptium/Temurin. Перед публикацией runtime в локальный cache проверяются ожидаемый размер и SHA-256 архива, platform metadata и фактическая major-версия через `java -version`. Загрузка выполняется во временный файл, распаковка — в staging; path traversal и внешние symlink после извлечения отклоняются, а рабочий каталог появляется только после атомарного rename. Повреждённый ранее установленный runtime помещается в quarantine и не используется для запуска.
+
+Vanilla materializer получает Mojang `version_manifest_v2.json`, затем проверяет опубликованный Mojang SHA-1 для `version.json`, client/libraries/assets/native/logging artifacts и ожидаемый размер. SHA-1 здесь является upstream-идентификатором Mojang, а не внутренним trust primitive NeverLauncher: после материализации каждый файл получает SHA-256 и далее проходит стандартный signed immutable release lifecycle NeverLauncher. HTTP разрешён только для loopback fixture-тестов; внешние источники должны использовать HTTPS. Native ZIP распаковываются с проверкой traversal, symlink и escape за пределы целевого каталога.
 
 ## CORS
 
@@ -100,7 +107,7 @@ Mojang rules обрабатываются до выбора library/native artif
 
 ## Псевдонимы совместимости
 
-Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.1 используют канонические переменные:
+Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.2 используют канонические переменные:
 
 - `NEVERLAUNCHER_DATABASE_DSN` вместо `NEVERLAUNCHER_DATABASE_URL`;
 - `NEVERLAUNCHER_AUTH_TOKEN_SECRET` вместо `NEVERLAUNCHER_TOKEN_SECRET` или `NEVERLAUNCHER_JWT_SECRET`;

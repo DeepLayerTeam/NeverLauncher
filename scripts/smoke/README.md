@@ -1,4 +1,4 @@
-# Smoke-gates NeverLauncher 0.10.1
+# Smoke-gates NeverLauncher 0.10.2
 
 Актуальный P3.2v3 smoke-контур проверяет только рабочие production-пути. Исторические RC/Stable metadata-gates и fake Minecraft demo-kit удалены из preflight.
 

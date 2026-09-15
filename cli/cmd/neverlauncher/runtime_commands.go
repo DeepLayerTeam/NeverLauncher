@@ -15,9 +15,13 @@ import (
 
 func handleRuntime(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные runtime-подкоманды: resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
+		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
 	}
 	switch args[0] {
+	case "vanilla-install":
+		return handleRuntimeVanillaInstall(args[1:])
+	case "vanilla-package":
+		return handleRuntimeVanillaPackage(args[1:])
 	case "resolve":
 		minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
 		loader := flagValue(args, "--loader", "vanilla")
@@ -25,7 +29,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.1 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.2 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -198,6 +202,7 @@ type MojangDownload struct {
 
 type MojangLibrary struct {
 	Name      string                 `json:"name"`
+	URL       string                 `json:"url,omitempty"`
 	Downloads MojangLibraryDownloads `json:"downloads"`
 	Natives   map[string]string      `json:"natives"`
 	Rules     []map[string]any       `json:"rules"`
@@ -319,8 +324,8 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "engine-only",
-		"title":         "NeverRuntime Compatibility Engine 0.10.1",
+		"status":        "vanilla-managed-java",
+		"title":         "NeverRuntime Managed Java + Vanilla 0.10.2",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
@@ -329,9 +334,9 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "JVM/game argument resolution", "status": "implemented"},
 			{"feature": "signed metadata trust boundary", "status": "implemented"},
 		},
-		"certifiedLoaders": []string{"vanilla-version-metadata"},
-		"notCertifiedYet":  []string{"fabric-installer", "quilt-installer", "forge-installer", "neoforge-installer", "managed-java", "real-client-e2e"},
-		"note":             "0.10.1 не публикует фиктивную compatibility matrix: loader installers и реальный Minecraft E2E входят в последующие релизы.",
+		"certifiedLoaders": []string{"vanilla-materializer", "vanilla-version-metadata", "managed-java-temurin"},
+		"notCertifiedYet":  []string{"fabric-installer", "quilt-installer", "forge-installer", "neoforge-installer", "real-client-e2e"},
+		"note":             "0.10.2 материализует и проверяет Vanilla client tree и управляет Java runtime; реальный графический Minecraft E2E входит в последующий релиз.",
 	}
 }
 

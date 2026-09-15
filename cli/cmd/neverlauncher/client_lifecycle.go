@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var managedClientRoots = []string{"libraries", "assets", "versions", "natives", "mods"}
+var managedClientRoots = []string{"libraries", "assets", "versions", "natives", "resources", "mods"}
 
 type clientLifecycleSnapshot struct {
 	SchemaVersion string   `json:"schemaVersion"`

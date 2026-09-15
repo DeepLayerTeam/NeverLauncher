@@ -270,7 +270,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует --metadata или --installer-profile; builtin fallback metadata в 0.10.1 запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует --metadata или --installer-profile; builtin fallback metadata в 0.10.2 запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {

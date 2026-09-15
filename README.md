@@ -1,37 +1,80 @@
-# NeverLauncher 0.10.1
+# NeverLauncher 0.10.2
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.1` добавляет рабочий **Compatibility Engine** в исполняемый NeverRuntime: Minecraft launch plan теперь может строиться из подписанного Mojang-compatible `version.json` с наследованием, rules, ordered classpath, natives и JVM/game arguments вместо перебора всех JAR-файлов.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.2` переводит **Vanilla + Java runtime** в рабочий production-контур: CLI материализует официальный Vanilla-клиент из Mojang metadata с проверкой upstream-хешей, а NeverRuntime автоматически выбирает либо устанавливает проверенный Temurin JRE нужной major-версии перед запуском.
 
 ## Рабочий контур
 
 ```text
-Администратор -> пакет/релиз -> подписанный манифест -> NeverRuntime: загрузка/проверка/восстановление
-              -> контролируемый запуск JVM -> ServerBridge: проверка входа -> отзыв -> запрет
+Mojang metadata -> Vanilla materializer -> проверенное client tree -> SHA-256 package/release
+                -> подписанный immutable manifest -> NeverRuntime -> Managed Java -> JVM
 ```
 
+Сохраняется весь контур `0.10.1`: Compatibility Engine, signed metadata trust boundary, immutable published releases, verify/repair/rollback, Ed25519 key lifecycle, SBOM/provenance, Backend API, Desktop и ServerBridge.
 
-## Сохранённый production-контур 0.10.0-P3.2v4
+## Managed Java 0.10.2
 
-- опубликованный release нельзя изменить: upload/manifest/status mutation после `published` блокируются и на HTTP, и на repository слое;
-- client lifecycle реально устанавливает, проверяет, ремонтирует, помещает orphan-файлы в quarantine и откатывает snapshot;
-- `install first-run` создаёт автономный Compose из canonical embedded templates и принимает только pinned API/Admin image refs;
-- Desktop package содержит фактические native artifacts и SHA-256, а verify перечитывает каждый файл;
-- Ed25519 ключи ротируются через persistent registry, могут быть отозваны, attestation подписывается detached signature;
-- SPDX SBOM строится из dependency manifests/lock-файлов, provenance — in-toto/SLSA v1 и входит в release bundle с отдельной Ed25519-подписью.
+NeverRuntime больше не требует заранее установленную подходящую Java. Перед построением/выполнением launch plan он:
 
-## Compatibility Engine 0.10.1
+1. получает требуемую major-версию из signed manifest и Mojang `javaVersion.majorVersion`;
+2. отклоняет конфликт между manifest и Mojang metadata;
+3. принимает custom Java только если профиль разрешает `allowCustomPath` и версия совпадает;
+4. для `distribution=system` требует подходящую системную Java;
+5. для `temurin`/`any` использует подходящую системную JVM либо устанавливает Temurin JRE через Adoptium API;
+6. проверяет platform, размер и SHA-256 архива, скачивает через HTTPS во временный файл, безопасно распаковывает в staging и атомарно публикует runtime;
+7. после установки повторно выполняет `java -version` и принимает только требуемую major-версию;
+8. повторные запуски используют проверенный локальный runtime cache.
 
-При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime:
+Поддерживаемые managed major-версии в `0.10.2`: Java 8, 17, 21 и 25.
 
-1. читает `versionMetadataPath` или `versions/<minecraftVersion>/<minecraftVersion>.json` из уже проверенного release;
-2. разрешает цепочку `inheritsFrom` с защитой от циклов и traversal;
-3. применяет Mojang OS/architecture/feature rules;
-4. строит детерминированный ordered classpath и native classifier plan;
-5. разрешает `arguments.jvm`, `arguments.game` и legacy `minecraftArguments` с Mojang placeholders;
-6. учитывает `javaVersion.majorVersion` перед запуском;
-7. проверяет, что каждый использованный metadata/classpath path входит в подписанный manifest, иначе launch fail-closed блокируется.
+Ручная установка/проверка Managed Java:
 
-`targetOs` и `executable` сохраняются в Backend repository и signed manifest; verify/sync не требуют артефакты другой ОС. В `0.10.1` это именно production compatibility core. Автоматические installer/resolver adapters Fabric/Quilt/Forge/NeoForge и managed Java относятся к следующим compatibility-релизам и здесь не объявляются готовыми.
+```bash
+neverruntime java ensure --major 21 --distribution temurin
+```
+
+Desktop использует тот же NeverRuntime installer; установка Java не дублируется в JavaScript/Tauri UI.
+
+## Vanilla materializer 0.10.2
+
+`nl runtime vanilla-install` выполняет реальную материализацию Vanilla client tree из `version_manifest_v2.json`:
+
+- проверяет SHA-1 Mojang version metadata;
+- загружает и проверяет client JAR;
+- разрешает libraries и OS/architecture rules;
+- загружает native classifiers для выбранных target-платформ и безопасно извлекает native-файлы;
+- загружает asset index и все asset objects с проверкой SHA-1/size;
+- поддерживает legacy `virtual`/`map_to_resources` assets;
+- загружает `logging.client.file`;
+- сохраняет детерминированное локальное состояние и повторно использует только файлы, прошедшие проверку.
+
+Пример:
+
+```bash
+nl runtime vanilla-install \
+  --minecraft latest-release \
+  --client-dir .neverlauncher/vanilla/latest \
+  --target windows/x86_64
+```
+
+Команда `vanilla-package` сразу превращает материализованное дерево в стандартный Never client package с SHA-256 каждого файла и готовыми `manifestSettings` для Compatibility Engine:
+
+```bash
+nl runtime vanilla-package \
+  --minecraft 1.21.1 \
+  --client-dir .neverlauncher/vanilla/1.21.1 \
+  --project my-project \
+  --profile vanilla \
+  --channel stable \
+  --output client-package.json
+```
+
+После загрузки файлов в обычный Never release опубликованный manifest остаётся immutable и запускается через `classpathStrategy=compatibility`. Upstream SHA-1 используется только для проверки официальных Mojang artifacts при материализации; внутри Never release файлы фиксируются существующим SHA-256 lifecycle.
+
+## Compatibility Engine
+
+При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime читает подписанный `version.json`, разрешает `inheritsFrom`, Mojang rules, ordered classpath, native classifiers, JVM/game arguments и logging config. Для materialized Vanilla natives автоматически выбирается текущий каталог `natives/windows`, `natives/linux` или `natives/osx`.
+
+Каждый metadata/classpath/native/logging path, использованный engine, обязан входить в подписанный manifest. Локальная подмена `version.json`, JAR или logging config fail-closed блокирует запуск. Fabric/Quilt/Forge/NeoForge installer adapters и настоящий графический Minecraft E2E не объявляются готовыми в `0.10.2`.
 
 Прямое разрешение установленного client tree:
 
