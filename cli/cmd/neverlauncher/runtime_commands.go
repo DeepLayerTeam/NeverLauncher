@@ -45,7 +45,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.5 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.6 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -341,8 +341,8 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "forge-neoforge-production",
-		"title":         "NeverRuntime Forge + NeoForge 0.10.5",
+		"status":        "actual-client-public-ci-matrix",
+		"title":         "NeverLauncher 0.10.6 Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
@@ -350,10 +350,14 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "native classifier resolution", "status": "implemented"},
 			{"feature": "JVM/game argument resolution", "status": "implemented"},
 			{"feature": "signed metadata trust boundary", "status": "implemented"},
+			{"feature": "actual Minecraft client E2E", "status": "implemented"},
+			{"feature": "public CI evidence aggregation", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"pending":            []string{"forge-legacy-pre-1.13", "real-client-e2e"},
-		"note":               "0.10.5 выполняет processor-based Forge/NeoForge installer pipeline, проверяет upstream installer SHA-1 и processor outputs и материализует результат в immutable Never release.",
+		"ciTargets":          []string{"vanilla-1.21.1-linux-x64", "fabric-1.21.1-linux-x64", "quilt-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64"},
+		"evidence":           []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "actual-client-launch", "paper-world-join", "session-revoke-deny"},
+		"pending":            []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
+		"note":               "PASS формируется только GitHub Actions actual-client E2E; compatibility/targets.json не содержит ручных статусов.",
 	}
 }
 

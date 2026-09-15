@@ -1,0 +1,136 @@
+name: NeverLauncher Compatibility Matrix
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neverlauncher-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  matrix-plan:
+    name: Validate compatibility targets
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        name: Validate and generate immutable CI plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
+          matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+
+  compatibility-e2e:
+    name: ${{ matrix.loader }} ${{ matrix.minecraft }} · ${{ matrix.os }}/${{ matrix.arch }}
+    needs: matrix-plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.7.1'
+      - name: Install actual Minecraft E2E dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
+            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Run actual-client compatibility target
+        env:
+          NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
+          NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
+          NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
+          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
+          NEVERLAUNCHER_E2E_LOADER: ${{ matrix.loader }}
+          NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
+          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '90'
+        run: bash e2e/scripts/run-compatibility-case.sh
+      - name: Upload machine-verifiable compatibility result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-${{ matrix.id }}
+          path: |
+            e2e/compatibility-result/compatibility-result.json
+            e2e/runtime/result.json
+            e2e/runtime/materialized-client-verify.json
+            e2e/runtime/manifest.json
+            e2e/runtime/runtime-verify.json
+            e2e/runtime/runtime-sync.json
+            e2e/runtime/runtime-launch-minecraft.json
+            e2e/runtime/health-paper.json
+            e2e/runtime/bridge-diagnostics.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish-matrix:
+    name: Publish public compatibility matrix
+    if: always() && needs.matrix-plan.result == 'success'
+    needs: [matrix-plan, compatibility-e2e]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download compatibility evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: compatibility-*
+          path: compatibility-results
+      - name: Aggregate and validate matrix
+        shell: bash
+        run: |
+          set +e
+          mkdir -p compatibility-public
+          python3 scripts/compatibility/matrix.py aggregate \
+            --targets compatibility/targets.json \
+            --results-root compatibility-results \
+            --output-dir compatibility-public \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            > compatibility-public/aggregate.log 2>&1
+          rc=$?
+          if [[ -s compatibility-public/matrix.md ]]; then
+            cat compatibility-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            cat compatibility-public/aggregate.log >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cat compatibility-public/aggregate.log
+          exit "$rc"
+      - name: Upload public matrix JSON and Markdown
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-compatibility-matrix-${{ github.run_id }}
+          path: |
+            compatibility-public/matrix.json
+            compatibility-public/matrix.md
+            compatibility-public/aggregate.log
+          if-no-files-found: error
+          retention-days: 30

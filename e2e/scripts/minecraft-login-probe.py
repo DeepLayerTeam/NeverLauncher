@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Minimal Minecraft Java login probe used for bridge revoke/deny coverage.
 
-The primary 0.10.5 release gate launches the actual Mojang client. This probe is
+The primary 0.10.6 release gate launches the actual Mojang client. This probe is
 kept only for fast protocol-level Velocity/Paper/Purpur checks after session
 revocation; it is not accepted as evidence of Minecraft client compatibility.
 """

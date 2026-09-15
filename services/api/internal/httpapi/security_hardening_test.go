@@ -103,7 +103,7 @@ func TestAdminLoginDoesNotFallbackToConfigPassword(t *testing.T) {
 	if _, err := repo.SetUserPassword("admin", hashPassword("Strong-New-Password-902")); err != nil {
 		t.Fatal(err)
 	}
-	api := Server{Version: "0.10.5", Config: config.Config{PublicURL: "http://127.0.0.1:18092", AuthTokenSecret: "test-secret"}, Repo: repo, State: NewRuntimeState()}
+	api := Server{Version: "0.10.6", Config: config.Config{PublicURL: "http://127.0.0.1:18092", AuthTokenSecret: "test-secret"}, Repo: repo, State: NewRuntimeState()}
 	h := api.Handler()
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))

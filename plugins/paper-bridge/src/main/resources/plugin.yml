@@ -1,6 +1,6 @@
 name: NeverLauncherPaperBridge
 main: ru.neverlauncher.bridge.paper.NeverLauncherPaperBridge
-version: 0.10.5
+version: 0.10.6
 api-version: '1.21'
 author: SkiF4er
 description: NeverLauncher ServerBridge/AuthBridge integration for Paper servers.

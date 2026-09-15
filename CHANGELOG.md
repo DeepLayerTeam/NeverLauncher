@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.10.6 — Public CI Compatibility Matrix + hardening
+
+`0.10.6` расширяет actual Minecraft Client E2E до публичной CI-матрицы Vanilla/Fabric/Quilt/Forge/NeoForge и делает результаты machine-verifiable вместо ручной таблицы.
+
+### Public compatibility matrix
+
+- Добавлен canonical `compatibility/targets.json` без PASS/FAIL state; цели валидируются до построения dynamic GitHub Actions matrix.
+- Новый `.github/workflows/compatibility.yml` запускает actual-client E2E на `main`, nightly и вручную, публикует per-target evidence и агрегированный `matrix.json`/`matrix.md` в Actions Summary/artifact.
+- `scripts/compatibility/matrix.py` fail-closed проверяет completeness, duplicate/missing targets, exact commit/run ID, Minecraft/loader/OS/arch и concrete loader version; mutable `latest-stable` не принимается как resolved result.
+- Добавлены regression tests агрегатора для валидного evidence, mutable resolved loader и commit mismatch.
+
+### Generic actual-client E2E
+
+- `run-minecraft-e2e.sh` теперь выполняет тот же production path для Vanilla, Fabric, Quilt, Forge и NeoForge; loader/profile больше не hard-coded как Vanilla.
+- Compatibility mode поднимает обязательный Paper node и выполняет materialize → package verify → canonical API upload → signed immutable publish → clean sync → actual Minecraft → world join → revoke/deny.
+- Concrete loader version извлекается из materialized package и повторно сверяется с опубликованным signed manifest.
+- Исправлена 0.10.5 проверка manifest, где `jq` использовал не переданный `$mc`; в 0.10.6 Minecraft/loader/version передаются явно и проверяются fail-closed.
+
+### Hardening
+
+- `publish-client-package.py` запрещает symlink-компоненты package path и использует strict root containment перед чтением artifact.
+- Compatibility result формируется wrapper-ом даже для failed E2E и содержит обязательные evidence checks; агрегатор не доверяет job name или ручному status.
+- Repository policy запрещает manual PASS в target definition, требует public workflow/aggregator и generic actual-client primitives.
+- Восстановлен `runtime/neverruntime/src/bin/neverruntime.rs`, отсутствовавший во входном архиве 0.10.5 при объявленном Cargo binary target.
+
 ## 0.10.5 — настоящий Minecraft Client E2E
 
 `0.10.5` заменяет Java fixture в главном production E2E на реальный Minecraft Java Client и делает фактический вход клиента на сервер блокирующим release gate.

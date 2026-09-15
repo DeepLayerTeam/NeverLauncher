@@ -33,6 +33,9 @@ src-tauri/target/
 /e2e/runtime/
 /e2e/runtime-ci/
 /e2e/reports/
+/e2e/compatibility-result/
+/compatibility-results/
+/compatibility-public/
 /.neverlauncher/
 
 # Built application binaries

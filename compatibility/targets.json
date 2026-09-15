@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "productVersion": "0.10.6",
+  "targets": [
+    {
+      "id": "vanilla-1.21.1-linux-x64",
+      "minecraft": "1.21.1",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true
+    },
+    {
+      "id": "fabric-1.21.1-linux-x64",
+      "minecraft": "1.21.1",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true
+    },
+    {
+      "id": "quilt-1.21.1-linux-x64",
+      "minecraft": "1.21.1",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true
+    },
+    {
+      "id": "forge-1.21.1-linux-x64",
+      "minecraft": "1.21.1",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.1-linux-x64",
+      "minecraft": "1.21.1",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true
+    }
+  ]
+}

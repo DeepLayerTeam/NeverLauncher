@@ -39,6 +39,7 @@ run_step cli-build bash "${ROOT_DIR}/scripts/smoke/offline/cli-build.sh"
 run_step backend-build bash "${ROOT_DIR}/scripts/smoke/offline/backend-build.sh"
 run_step version-alignment bash "${ROOT_DIR}/scripts/smoke/offline/version-alignment.sh"
 run_step contract-validation python3 "${ROOT_DIR}/scripts/contracts/validate-openapi.py"
+run_step compatibility-matrix bash "${ROOT_DIR}/scripts/smoke/offline/compatibility-matrix.sh"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

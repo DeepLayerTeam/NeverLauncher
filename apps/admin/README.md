@@ -1,4 +1,4 @@
-# NeverLauncher Admin UI 0.10.5
+# NeverLauncher Admin UI 0.10.6
 
 Admin UI — рабочая операторская панель NeverLauncher для канонического Backend API `/api/v1`.
 

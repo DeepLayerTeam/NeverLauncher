@@ -1,6 +1,9 @@
-# NeverLauncher 0.10.5
+# NeverLauncher 0.10.6
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.5` переводит главный production E2E с Java fixture на **настоящий Minecraft Java Client**: реальный Vanilla 1.21.1 материализуется из Mojang metadata, публикуется как подписанный immutable release, заново скачивается NeverRuntime и фактически входит на настоящий Paper-сервер.
+[![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
+[![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
+
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.6` превращает реальный Minecraft Client E2E из одной Vanilla-проверки в **публичную CI Compatibility Matrix** для Vanilla, Fabric, Quilt, Forge и NeoForge. Каждый PASS строится из фактического materialize → signed immutable release → clean NeverRuntime sync → actual Minecraft client → Paper world join → revoke/deny и привязан к точному Git commit/GitHub Actions run.
 
 ## Рабочий контур
 
@@ -15,7 +18,7 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
                      -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-В `0.10.5` Forge/NeoForge больше не являются только `install-plan`: CLI выполняет реальный processor-based installer pipeline и материализует итоговые runtime artifacts до формирования Never package.
+В `0.10.6` Forge/NeoForge больше не являются только `install-plan`: CLI выполняет реальный processor-based installer pipeline и материализует итоговые runtime artifacts до формирования Never package.
 
 ## Managed Java
 
@@ -35,7 +38,7 @@ nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --cl
 nl runtime quilt-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/quilt/1.21.1 --output client-package.json
 ```
 
-## Forge + NeoForge 0.10.5
+## Forge + NeoForge 0.10.6
 
 Новые materializer-команды:
 
@@ -80,7 +83,7 @@ Production pipeline выполняет:
 
 Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В strict mode отсутствие корректного checksum завершает materialization ошибкой.
 
-`0.10.5` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
+`0.10.6` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
 
 ## Compatibility Engine
 
@@ -140,9 +143,24 @@ NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 ./scripts/release/preflight.sh
 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 ```
 
-## Настоящий Minecraft Client E2E — 0.10.5
+## Публичная CI Compatibility Matrix — 0.10.6
 
-Блокирующий release gate больше не использует Java fixture как доказательство совместимости клиента:
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. `0.10.6` проверяет Linux x86_64 для Vanilla/Fabric/Quilt/Forge/NeoForge на Minecraft 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+
+Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
+
+Локальная проверка definition/aggregator:
+
+```bash
+python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
+python3 scripts/compatibility/test_matrix.py
+```
+
+Подробности: `compatibility/README.md`.
+
+## Настоящий Minecraft Client E2E — 0.10.6
+
+Блокирующий production release gate по умолчанию проверяет Vanilla, а compatibility workflow использует тот же production-путь для всех пяти loader families. Java fixture не используется как доказательство совместимости клиента:
 
 ```text
 официальный Mojang version manifest
@@ -184,4 +202,4 @@ deploy/production/README.md
 
 ## CI
 
-`.github/workflows/ci.yml` — обязательный production CI. Он блокирует релиз при ошибках policy/preflight, Go/contracts, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеров или полного PostgreSQL + Redis + Minecraft E2E.
+`.github/workflows/ci.yml` — обязательный production CI. Он блокирует релиз при ошибках policy/preflight, Go/contracts, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеров или полного PostgreSQL + Redis + Minecraft E2E. `.github/workflows/compatibility.yml` независимо публикует public actual-client matrix для `main` и nightly run; обычные PR не тратят пять тяжёлых Minecraft jobs, но всегда валидируют target definition и matrix regression tests.

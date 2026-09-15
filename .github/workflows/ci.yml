@@ -33,6 +33,11 @@ jobs:
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
+      - name: Validate public compatibility target definition
+        run: |
+          python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
+          python3 scripts/compatibility/test_matrix.py
+          python3 e2e/scripts/test_publish_client_package.py
       - name: CLI test, race, vet and build
         working-directory: cli
         run: |
@@ -235,7 +240,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-0.10.5-minecraft-client-e2e-evidence
+          name: neverlauncher-0.10.6-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
             e2e/runtime/client-package.json

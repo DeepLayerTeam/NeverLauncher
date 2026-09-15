@@ -39,7 +39,7 @@ class APIClient:
         return self.conn
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
-        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": "NeverLauncher-E2E/0.10.5", **headers}
+        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": "NeverLauncher-E2E/0.10.6", **headers}
         request_path = self.base_path + path
         for attempt in range(2):
             conn = self._connect()
@@ -113,10 +113,17 @@ def safe_local(root: Path, relative: str) -> Path:
     rel = Path(relative)
     if rel.is_absolute() or ".." in rel.parts or not relative or "\\" in relative:
         raise RuntimeError(f"unsafe package path: {relative!r}")
-    candidate = (root / rel).resolve()
-    resolved_root = root.resolve()
-    if candidate != resolved_root and resolved_root not in candidate.parents:
-        raise RuntimeError(f"package path escapes client root: {relative!r}")
+    resolved_root = root.resolve(strict=True)
+    lexical = root
+    for part in rel.parts:
+        lexical = lexical / part
+        if lexical.is_symlink():
+            raise RuntimeError(f"symlink package path is forbidden: {relative!r}")
+    candidate = (root / rel).resolve(strict=True)
+    if candidate == resolved_root or resolved_root not in candidate.parents:
+        raise RuntimeError(f"package path escapes client root or resolves to root: {relative!r}")
+    if not candidate.is_file():
+        raise RuntimeError(f"package path is not a regular file: {relative!r}")
     return candidate
 
 
