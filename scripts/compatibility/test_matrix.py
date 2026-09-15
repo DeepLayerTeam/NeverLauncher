@@ -19,7 +19,7 @@ class MatrixToolTests(unittest.TestCase):
     def target_doc(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.10.7",
+            "productVersion": "0.11.0",
             "targets": [{
                 "id": "fabric-1.21.1-linux-x64",
                 "minecraft": "1.21.1",
@@ -34,7 +34,7 @@ class MatrixToolTests(unittest.TestCase):
     def passing_result(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.10.7",
+            "productVersion": "0.11.0",
             "targetId": "fabric-1.21.1-linux-x64",
             "status": "passed",
             "minecraftVersion": "1.21.1",

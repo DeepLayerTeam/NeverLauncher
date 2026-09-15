@@ -240,7 +240,13 @@ func securityManifestPolicyModel() map[string]any {
 }
 
 func securityReleasePolicyModel() map[string]any {
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}, "checks": []string{"checksums", "signature", "sbom", "provenance", "release-notes", "desktop-package-signature", "api-binary-version", "cli-binary-version"}, "failureMode": "fail-closed"}
+	required := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
+	checks := []string{"checksums", "signature", "sbom", "provenance", "release-notes", "desktop-package-signature", "api-binary-version", "cli-binary-version"}
+	if compatibilityCertificationRequired(version) {
+		required = append(required, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		checks = append(checks, "minecraft-compatibility-certification")
+	}
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": required, "checks": checks, "failureMode": "fail-closed"}
 }
 
 func securityDesktopPolicyModel() map[string]any {

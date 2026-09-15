@@ -7,6 +7,9 @@ OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
 PRIVATE_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
 PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}"
+COMPATIBILITY_MATRIX="${NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE:-}"
+COMPATIBILITY_TARGETS="${NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE:-${ROOT_DIR}/compatibility/targets.json}"
+SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
@@ -32,6 +35,17 @@ if [[ -z "${PRIVATE_KEY}" || -z "${PUBLIC_KEY}" ]]; then
 fi
 require_file "${PRIVATE_KEY}"
 require_file "${PUBLIC_KEY}"
+if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
+  require_file "${COMPATIBILITY_MATRIX}"
+  require_file "${COMPATIBILITY_TARGETS}"
+  if [[ -z "${SOURCE_COMMIT}" ]] && command -v git >/dev/null 2>&1; then
+    SOURCE_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
+  fi
+  if [[ -z "${SOURCE_COMMIT}" ]]; then
+    echo "Ошибка: certified compatibility release требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
+    exit 1
+  fi
+fi
 
 log "Сборка CLI linux/amd64"
 (
@@ -101,12 +115,23 @@ python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-d
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-package-${VERSION}.zip"
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}"
+release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}")
+if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
+  log "Встраивание machine-verifiable Minecraft Compatibility certification для commit ${SOURCE_COMMIT}"
+  release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}" --source-commit "${SOURCE_COMMIT}")
+fi
+"${OUT_DIR}/neverlauncher-cli-linux-amd64" "${release_build_args[@]}"
 
 log "Ed25519 release signing"
 "${OUT_DIR}/neverlauncher-cli-linux-amd64" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
 "${OUT_DIR}/neverlauncher-cli-linux-amd64" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
+  log "Publish-check Minecraft Compatibility Release"
+  "${OUT_DIR}/neverlauncher-cli-linux-amd64" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+else
+  log "Compatibility evidence не передан: bundle является CI release candidate и не проходит 0.11+ publish-check"
+fi
 
 log "Каталог production-релиза готов: ${OUT_DIR}"

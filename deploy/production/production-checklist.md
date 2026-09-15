@@ -1,4 +1,4 @@
-# Production-чеклист NeverLauncher 0.10.7
+# Production-чеклист NeverLauncher 0.11.0
 
 ## Перед запуском
 
@@ -20,7 +20,7 @@
 
 ## После запуска
 
-- [ ] `GET /health` возвращает версию `0.10.7`.
+- [ ] `GET /health` возвращает версию `0.11.0`.
 - [ ] `GET /ready` возвращает готовность и не скрывает ошибки миграций/Redis.
 - [ ] `GET /api/v1/status` отвечает через канонический API v1.
 - [ ] Исторические `/api/v2`–`/api/v5` не доступны.
@@ -32,10 +32,12 @@
 
 - [ ] `NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh` завершается успешно без пропущенных production-проверок.
 - [ ] `nl release doctor` возвращает `repository-policy-ready` без failed checks; этот статус не заменяет строгий preflight.
-- [ ] `VERSION`, CLI, API, Admin, Desktop, Tauri и ServerBridge согласованы с `0.10.7`.
+- [ ] `VERSION`, CLI, API, Admin, Desktop, Tauri и ServerBridge согласованы с `0.11.0`.
 - [ ] CLI не содержит исторических `schemaVersion` 4.x–8.x.
 - [ ] `CHANGELOG.md` обновлён.
 - [ ] Private Ed25519 release key хранится вне репозитория; trusted public key распространяется отдельным доверенным каналом.
 - [ ] `scripts/release/build-release.sh` собрал реальные CLI/API/Admin/Desktop/NeverRuntime/Velocity/Paper/Purpur artifacts и source archive прошёл secret scan.
 - [ ] Подготовлены `RELEASE_MANIFEST.json`, `SHA256SUMS`, `SHA256SUMS.sig`, `SBOM.spdx.json` и `PROVENANCE.json`.
+- [ ] Для `0.11.0+` в bundle присутствуют `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json`, `COMPATIBILITY_CERTIFICATION.json`, привязанные к exact source commit.
 - [ ] `nl release verify <release-dir> --public-key <trusted-public-key>` проходит успешно и все `required=true` artifacts имеют `status=present`.
+- [ ] `nl release publish-check <release-dir> --public-key <trusted-public-key>` проходит compatibility certification gate.

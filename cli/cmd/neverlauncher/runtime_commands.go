@@ -45,7 +45,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.7 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.11.0 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -341,8 +341,8 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "actual-client-public-ci-matrix",
-		"title":         "NeverLauncher 0.10.7 Compatibility Matrix",
+		"status":        "minecraft-compatibility-release",
+		"title":         "NeverLauncher 0.11.0 Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "exclusive materialization lock", "status": "implemented"},
@@ -356,12 +356,13 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "signed metadata trust boundary", "status": "implemented"},
 			{"feature": "actual Minecraft client E2E", "status": "implemented"},
 			{"feature": "public CI evidence aggregation", "status": "implemented"},
+			{"feature": "release-bound compatibility certification", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
 		"ciTargets":          []string{"vanilla-1.21.1-linux-x64", "fabric-1.21.1-linux-x64", "quilt-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64"},
 		"evidence":           []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":            []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":               "PASS формируется только GitHub Actions actual-client E2E; compatibility/targets.json не содержит ручных статусов.",
+		"note":               "PASS формируется только GitHub Actions actual-client E2E; официальный 0.11+ publish-check требует встроенную certification для того же product version/commit.",
 	}
 }
 

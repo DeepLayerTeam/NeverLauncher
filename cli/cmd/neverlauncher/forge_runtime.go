@@ -313,7 +313,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	// production boundary is presence of version.json + processor metadata, not
 	// an arbitrary minimum spec number.
 	if bundle.Profile.JSON == "" && bundle.Profile.Version == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в 0.10.7 не поддерживается", loader)
+		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в 0.11.0 не поддерживается", loader)
 	}
 	if bundle.Profile.Minecraft == "" {
 		bundle.Profile.Minecraft = vanilla.MinecraftVersion

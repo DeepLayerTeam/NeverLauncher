@@ -39,7 +39,7 @@ class APIClient:
         return self.conn
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
-        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": "NeverLauncher-E2E/0.10.7", **headers}
+        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": "NeverLauncher-E2E/0.11.0", **headers}
         request_path = self.base_path + path
         for attempt in range(2):
             conn = self._connect()

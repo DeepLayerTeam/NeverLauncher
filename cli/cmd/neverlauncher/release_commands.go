@@ -34,7 +34,12 @@ func handleRelease(args []string) error {
 	case "build", "package":
 		ver := flagValue(args, "--version", version)
 		out := flagValue(args, "--out", filepath.Join("dist", "release-"+ver))
-		if err := buildReleaseBundle(ver, out, flagValue(args, "--source-root", ".")); err != nil {
+		if err := buildReleaseBundle(
+			ver, out, flagValue(args, "--source-root", "."),
+			flagValue(args, "--compatibility-matrix", ""),
+			flagValue(args, "--compatibility-targets", "compatibility/targets.json"),
+			flagValue(args, "--source-commit", ""),
+		); err != nil {
 			return err
 		}
 		fmt.Printf("Каталог release bundle подготовлен: %s\n", out)
@@ -50,6 +55,19 @@ func handleRelease(args []string) error {
 		if err := ensurePublicKeyNotRevoked(flagValue(args, "--registry-dir", ""), publicKey); err != nil {
 			return err
 		}
+		if args[0] == "publish-check" {
+			manifestVersion, err := releaseBundleVersion(args[1])
+			if err != nil {
+				return err
+			}
+			if compatibilityCertificationRequired(manifestVersion) {
+				if err := verifyCompatibilityCertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Minecraft compatibility certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility certification")
+			return nil
+		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
 		return nil
 	case "sign":
@@ -64,6 +82,10 @@ func handleRelease(args []string) error {
 	case "publish-plan":
 		ver := flagValue(args, "--version", version)
 		out := flagValue(args, "--output", "")
+		artifacts := append([]string{}, releaseArtifacts(ver)...)
+		if compatibilityCertificationRequired(ver) {
+			artifacts = append(artifacts, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		}
 		plan := map[string]any{
 			"schemaVersion": "1.0",
 			"version":       ver,
@@ -76,7 +98,7 @@ func handleRelease(args []string) error {
 				"создать SHA256SUMS.sig",
 				"загрузить артефакты в release bundle",
 			},
-			"artifacts": releaseArtifacts(ver),
+			"artifacts": artifacts,
 		}
 		if out != "" {
 			return writeJSONFile(out, plan)
@@ -106,6 +128,9 @@ func releaseDoctor() error {
 		"apps/admin/Dockerfile",
 		"runtime/neverruntime/Cargo.toml",
 		"e2e/scripts/run-minecraft-e2e.sh",
+		"compatibility/targets.json",
+		"scripts/compatibility/matrix.py",
+		".github/workflows/compatibility.yml",
 	}
 	failed := false
 	for _, path := range required {
@@ -134,9 +159,10 @@ func releaseDoctor() error {
 		failed = true
 	}
 	for id, command := range map[string][]string{
-		"repository-policy": {"python3", "scripts/smoke/offline/repository-policy.py"},
-		"version-alignment": {"bash", "scripts/smoke/offline/version-alignment.sh"},
-		"openapi-validator": {"python3", "scripts/contracts/validate-openapi.py"},
+		"repository-policy":     {"python3", "scripts/smoke/offline/repository-policy.py"},
+		"version-alignment":     {"bash", "scripts/smoke/offline/version-alignment.sh"},
+		"openapi-validator":     {"python3", "scripts/contracts/validate-openapi.py"},
+		"compatibility-targets": {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -268,9 +294,17 @@ func productionTables() []string {
 	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "registry_entries", "desktop_packages"}
 }
 
-func buildReleaseBundle(ver, out, sourceRoot string) error {
+func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, expectedCommit string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
+	}
+	if strings.TrimSpace(compatibilityMatrixPath) != "" {
+		if !filepath.IsAbs(compatibilityTargetsPath) {
+			compatibilityTargetsPath = filepath.Join(sourceRoot, compatibilityTargetsPath)
+		}
+		if err := embedCompatibilityCertification(out, compatibilityMatrixPath, compatibilityTargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("compatibility certification: %w", err)
+		}
 	}
 	sbom, err := dependencySBOM(sourceRoot, ver)
 	if err != nil {
@@ -291,15 +325,24 @@ func buildReleaseBundle(ver, out, sourceRoot string) error {
 	}
 
 	entries := releaseBundleEntries(ver, out)
+	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
+	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	compatibilityCertified := false
+	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		checks = append(checks, "minecraft-compatibility-certification")
+		compatibilityCertified = true
+	}
 	manifest := map[string]any{
-		"schemaVersion": cliSchemaVersion,
-		"name":          "NeverLauncher",
-		"version":       ver,
-		"createdAt":     time.Now().UTC().Format(time.RFC3339),
-		"mode":          "release-pipeline",
-		"artifacts":     entries,
-		"checks":        []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"},
-		"requiredFiles": []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"},
+		"schemaVersion":          cliSchemaVersion,
+		"name":                   "NeverLauncher",
+		"version":                ver,
+		"createdAt":              time.Now().UTC().Format(time.RFC3339),
+		"mode":                   "release-pipeline",
+		"artifacts":              entries,
+		"checks":                 checks,
+		"requiredFiles":          requiredFiles,
+		"compatibilityCertified": compatibilityCertified,
 	}
 	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
@@ -318,7 +361,11 @@ func buildReleaseBundle(ver, out, sourceRoot string) error {
 func releaseBundleEntries(ver, out string) []map[string]any {
 	known := map[string]bool{}
 	var entries []map[string]any
-	for _, name := range releaseArtifacts(ver) {
+	requiredNames := append([]string{}, releaseArtifacts(ver)...)
+	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+	}
+	for _, name := range requiredNames {
 		known[name] = true
 		entry := map[string]any{"name": name, "required": true, "status": "missing"}
 		path := filepath.Join(out, name)
@@ -453,7 +500,7 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 }
 
 func releaseArtifacts(ver string) []string {
-	return []string{
+	artifacts := []string{
 		"neverlauncher-source-" + ver + ".zip",
 		"neverlauncher-cli-linux-amd64",
 		"neverlauncher-cli-windows-amd64.exe",
@@ -470,9 +517,31 @@ func releaseArtifacts(ver string) []string {
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
 	}
+	return artifacts
+}
+
+func releaseBundleVersion(dir string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
+	if err != nil {
+		return "", err
+	}
+	var payload struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(payload.Version) == "" {
+		return "", errors.New("RELEASE_MANIFEST.json не содержит version")
+	}
+	return strings.TrimSpace(payload.Version), nil
 }
 
 func releaseDescription(ver string) string {
+	extra := ""
+	if compatibilityCertificationRequired(ver) {
+		extra = "\n- официальный publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, привязанные к той же версии и source commit;"
+	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
 		"Основное:\n"+
@@ -481,7 +550,7 @@ func releaseDescription(ver string) string {
 		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом release bundle;\n"+
 		"- проверка release bundle через nl release verify;\n"+
 		"- Ed25519-подпись SHA256SUMS и отдельная signed SLSA provenance attestation с внешним trust anchor;\n"+
-		"- source package формируется только из git-tracked/allowlisted файлов и проходит secret scan.", ver, ver)
+		"- source package формируется только из git-tracked/allowlisted файлов и проходит secret scan.%s", ver, ver, extra)
 }
 
 func buildManifest(root, project, profile, ver string) (Manifest, error) {

@@ -147,7 +147,7 @@ jobs:
           docker build -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
 
   release-bundle:
-    name: Production release bundle
+    name: Release candidate bundle
     needs: [go-contracts, web, rust-desktop, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -240,7 +240,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-0.10.7-minecraft-client-e2e-evidence
+          name: neverlauncher-0.11.0-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
             e2e/runtime/client-package.json

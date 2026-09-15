@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.11.0 — Minecraft Compatibility Release
+
+`0.11.0` завершает compatibility-линию `0.10.1`–`0.10.7` и переводит её в release-grade состояние: Compatibility Engine, Managed Java, Vanilla/Fabric/Quilt/Forge/NeoForge materializers, actual Minecraft Client E2E и публичная CI-матрица теперь связаны с production release bundle machine-verifiable certification.
+
+### Release-bound compatibility certification
+
+- `nl release build` принимает `--compatibility-matrix`, `--compatibility-targets` и `--source-commit`; matrix повторно валидируется до формирования release checksums.
+- В certified bundle добавляются `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json` и `COMPATIBILITY_CERTIFICATION.json`.
+- Certification требует совпадение product version/commit/run ID, exact target set, PASS всех required targets, `exitCode=0`, mandatory actual-client checks, immutable resolved loader versions и валидный `evidenceSha256`.
+- Target definition и matrix хешируются SHA-256; certification фиксирует их digests, required/passed target sets и loader families.
+- Все compatibility artifacts входят в `RELEASE_MANIFEST.json` как required, попадают в `SHA256SUMS` и защищаются общей Ed25519 release signature.
+- `release verify` продолжает проверять cryptographic integrity candidate bundle; `release publish-check` для `0.11.0+` дополнительно fail-closed требует валидную compatibility certification.
+- `scripts/release/build-release.sh` умеет собирать certified bundle через `NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE` + exact `NEVERLAUNCHER_SOURCE_COMMIT`; без matrix он явно создаёт только CI release candidate.
+
+### Compatibility release hardening
+
+- `release doctor` проверяет compatibility target definition и наличие public compatibility workflow/tooling.
+- Runtime matrix сообщает release-bound certification как реализованную capability.
+- Repository policy закрепляет обязательность certification primitives и предотвращает возврат к publish без фактического matrix evidence.
+- Восстановлен отсутствовавший во входном `0.10.7` `runtime/neverruntime/src/bin/neverruntime.rs`; clean Cargo binary target снова имеет source file.
+- Исторический hardening `0.10.7` сохранён: exclusive materialization lock, bounded retry, symlink-safe tree, deterministic generated state и строгий CI evidence.
+
 ## 0.10.7 — Compatibility stabilization
 
 `0.10.7` стабилизирует весь Minecraft compatibility-контур `0.10.1`–`0.10.6` без добавления нового loader API: исправлены реальные гонки materialization, transient upstream failures, symlink/path escape, stale generated natives, portable atomic replacement и более строгая проверка CI evidence.

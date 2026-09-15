@@ -1,11 +1,11 @@
-# NeverLauncher 0.10.7
+# NeverLauncher
 
 [![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.7` — стабилизационный релиз compatibility-контура: он не добавляет декларативные loader-заготовки, а делает уже реализованные Vanilla/Fabric/Quilt/Forge/NeoForge materializers и actual-client CI устойчивее к параллельному запуску, transient upstream errors, symlink/path attacks, stale generated files и неполному CI evidence.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. `0.11.0` — **Minecraft Compatibility Release**: Compatibility Engine, Managed Java, Vanilla/Fabric/Quilt/Forge/NeoForge materialization, настоящий Minecraft Client E2E и публичная CI Compatibility Matrix сведены в один release-grade контур.
 
-Главная цель `0.10.7` — чтобы один и тот же compatibility pipeline воспроизводимо работал повторно и fail-closed завершался при неоднозначном filesystem/network state. Публичная CI Compatibility Matrix, появившаяся в `0.10.6`, сохранена и усилена дополнительной проверкой health/exit/evidence.
+Главное изменение финального `0.11.0` относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 
 ## Рабочий контур
 
@@ -20,9 +20,9 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
                      -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-Сохраняется processor-based Forge/NeoForge pipeline, введённый ранее; в `0.10.7` его execution state дополнительно сериализован materialization lock'ом, а installer scratch data полностью пересобирается перед запуском processors.
+Сохраняется processor-based Forge/NeoForge pipeline, введённый в `0.10.4`, и стабилизационный hardening `0.10.7`: exclusive materialization lock, bounded upstream retry, symlink-safe client tree, deterministic natives/processors state и строгий CI evidence.
 
-## Стабилизация compatibility-контура в 0.10.7
+## Minecraft Compatibility Release — 0.11.0
 
 - exclusive materialization lock на каждый `clientDir` для Vanilla/Fabric/Quilt/Forge/NeoForge;
 - retry transient HTTP `408/425/429/5xx` и bounded `Retry-After`;
@@ -33,7 +33,33 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
 - Compatibility Engine повторно проверяет отсутствие symlink path components непосредственно перед runtime resolution;
 - CI aggregator требует `exitCode=0`, healthy Paper, полный evidence set и loader identity, а не только поле `status=passed`.
 
-Эти проверки находятся в исполняемом коде и regression tests; repository policy дополнительно запрещает выпуск при удалении обязательных stabilization primitives.
+Эти проверки находятся в исполняемом коде и regression tests; repository policy дополнительно запрещает выпуск при удалении обязательных compatibility primitives.
+
+### Release-bound compatibility certification
+
+Официальный publish flow `0.11.0` использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml` и создаёт в release bundle три обязательных файла:
+
+```text
+COMPATIBILITY_TARGETS.json
+COMPATIBILITY_MATRIX.json
+COMPATIBILITY_CERTIFICATION.json
+```
+
+Certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Все три файла входят в `SHA256SUMS` и поэтому защищены общей Ed25519 release signature.
+
+Сборка сертифицированного bundle:
+
+```bash
+export NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE=/path/to/matrix.json
+export NEVERLAUNCHER_SOURCE_COMMIT=$(git rev-parse HEAD)
+bash scripts/release/build-release.sh
+```
+
+Финальная проверка перед публикацией:
+
+```bash
+nl release publish-check dist/release-0.11.0 --public-key /secure/release-public.pem
+```
 
 ## Managed Java
 
@@ -98,7 +124,7 @@ Production pipeline выполняет:
 
 Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В strict mode отсутствие корректного checksum завершает materialization ошибкой.
 
-`0.10.7` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
+`0.11.0` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
 
 ## Compatibility Engine
 
@@ -158,9 +184,9 @@ NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 ./scripts/release/preflight.sh
 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 ```
 
-## Публичная CI Compatibility Matrix — 0.10.7
+## Публичная CI Compatibility Matrix — 0.11.0
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. `0.10.7` проверяет Linux x86_64 для Vanilla/Fabric/Quilt/Forge/NeoForge на Minecraft 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. `0.11.0` проверяет Linux x86_64 для Vanilla/Fabric/Quilt/Forge/NeoForge на Minecraft 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
 
 Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
 
@@ -173,7 +199,7 @@ python3 scripts/compatibility/test_matrix.py
 
 Подробности: `compatibility/README.md`.
 
-## Настоящий Minecraft Client E2E — 0.10.7
+## Настоящий Minecraft Client E2E — 0.11.0
 
 Блокирующий production release gate по умолчанию проверяет Vanilla, а compatibility workflow использует тот же production-путь для всех пяти loader families. Java fixture не используется как доказательство совместимости клиента:
 
@@ -217,4 +243,4 @@ deploy/production/README.md
 
 ## CI
 
-`.github/workflows/ci.yml` — обязательный production CI. Он блокирует релиз при ошибках policy/preflight, Go/contracts, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеров или полного PostgreSQL + Redis + Minecraft E2E. `.github/workflows/compatibility.yml` независимо публикует public actual-client matrix для `main` и nightly run; обычные PR не тратят пять тяжёлых Minecraft jobs, но всегда валидируют target definition и matrix regression tests.
+`.github/workflows/ci.yml` — обязательный CI candidate-контур: policy/contracts, Go, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеры, release candidate bundle и PostgreSQL + Redis + actual Minecraft E2E. `.github/workflows/compatibility.yml` отдельно запускает все пять loader targets и публикует machine-verifiable matrix. Официальная публикация `0.11.0+` выполняется только после передачи этой matrix в release build и успешного `release publish-check`; обычный candidate bundle сам по себе не считается Minecraft Compatibility Release.

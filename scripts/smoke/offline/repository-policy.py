@@ -371,7 +371,7 @@ if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
     fail("standalone first-run regression-test отсутствует")
 
-# 9. 0.10.7 real Minecraft client E2E: the release gate must materialize and
+# 9. 0.11.0 real Minecraft client E2E: the release gate must materialize and
 #    launch an actual Mojang client, not regress to a synthetic Java fixture.
 e2e_script = read("e2e/scripts/run-minecraft-e2e.sh")
 e2e_publish = read("e2e/scripts/publish-client-package.py")
@@ -386,7 +386,7 @@ for required in [
     "--max-runtime-seconds",
 ]:
     if required not in e2e_script:
-        fail(f"0.10.7 actual Minecraft E2E отсутствует обязательный primitive: {required}")
+        fail(f"0.11.0 actual Minecraft E2E отсутствует обязательный primitive: {required}")
 for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(f"production Minecraft E2E снова использует synthetic fixture: {forbidden}")
@@ -480,6 +480,36 @@ if "runtime record java path вышел за Managed Java root через symlin
 for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "evidence manifestLoader mismatch"]:
     if required not in compat_tool:
         fail(f"compatibility evidence stabilization missing: {required}")
+
+
+
+# 12. 0.11.0 Minecraft Compatibility Release: production publication must be
+#     bound to machine-verifiable compatibility evidence for the same version
+#     and source commit, and the evidence must live inside signed SHA256SUMS.
+compat_release = read("cli/cmd/neverlauncher/compatibility_release.go")
+release_commands = read("cli/cmd/neverlauncher/release_commands.go")
+build_release = read("scripts/release/build-release.sh")
+for required in [
+    "COMPATIBILITY_TARGETS.json", "COMPATIBILITY_MATRIX.json", "COMPATIBILITY_CERTIFICATION.json",
+    "validateCompatibilityEvidence", "verifyCompatibilityCertificationInBundle",
+    "all-required-targets-must-pass-actual-client-e2e", "evidenceSha256",
+]:
+    if required not in compat_release:
+        fail(f"0.11.0 compatibility release certification missing: {required}")
+for required in [
+    "--compatibility-matrix", "--compatibility-targets", "--source-commit",
+    "Minecraft compatibility certification", "compatibilityCertificationRequired",
+]:
+    if required not in release_commands:
+        fail(f"release CLI is not compatibility-certified: {required}")
+for required in [
+    "NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE", "NEVERLAUNCHER_SOURCE_COMMIT",
+    "release publish-check", "CI release candidate",
+]:
+    if required not in build_release:
+        fail(f"build-release compatibility certification incomplete: {required}")
+if not (ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go").is_file():
+    fail("compatibility release certification regression tests are missing")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

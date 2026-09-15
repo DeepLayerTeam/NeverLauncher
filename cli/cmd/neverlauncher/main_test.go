@@ -88,7 +88,7 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range releaseArtifacts("2.7.0") {
+	for _, name := range releaseArtifacts("0.10.6") {
 		if name == "SBOM.spdx.json" || name == "PROVENANCE.json" || name == "RELEASE_NOTES.txt" {
 			continue
 		}
@@ -96,7 +96,7 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := run([]string{"release", "package", "--version", "2.7.0", "--out", out}); err != nil {
+	if err := run([]string{"release", "package", "--version", "0.10.6", "--out", out}); err != nil {
 		t.Fatalf("release package: %v", err)
 	}
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)

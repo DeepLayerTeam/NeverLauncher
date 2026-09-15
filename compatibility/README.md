@@ -1,8 +1,8 @@
-# Публичная CI Compatibility Matrix NeverLauncher 0.10.7
+# Публичная CI Compatibility Matrix NeverLauncher
 
 Матрица совместимости NeverLauncher формируется только из фактических запусков настоящего Minecraft Java Client. Файл `targets.json` содержит цели проверки, но **не содержит статусов PASS/FAIL**.
 
-Канонические цели `0.10.7`:
+Канонические цели `0.11.0`:
 
 - Vanilla 1.21.1 — Linux x86_64;
 - Fabric 1.21.1 — Linux x86_64, concrete loader разрешается из `latest-stable` до публикации release;
@@ -37,9 +37,9 @@ python3 scripts/compatibility/matrix.py validate --targets compatibility/targets
 python3 scripts/compatibility/test_matrix.py
 ```
 
-## Стабилизация 0.10.7
+## Release certification 0.11.0
 
-`0.10.7` не меняет состав обязательных target'ов, а усиливает воспроизводимость каждого прогона:
+`0.11.0` сохраняет состав обязательных target'ов и добавляет связь между CI evidence и production release bundle. Стабилизация materialization из `0.10.7` остаётся обязательной частью контура:
 
 - materializer одного `clientDir` сериализован exclusive lock-файлом;
 - transient upstream `408/425/429/5xx` повторяются ограниченное число раз;
@@ -49,3 +49,11 @@ python3 scripts/compatibility/test_matrix.py
 - агрегатор требует `exitCode == 0`, `paperHealthy == true`, совпадение `manifestLoader` и полный набор обязательных evidence files.
 
 Таким образом `status: passed` в одном JSON недостаточен для зелёной публичной матрицы: результат должен пройти независимую агрегационную проверку.
+
+## Как матрица становится частью release
+
+Агрегированный `matrix.json` сам по себе не является release trust anchor. При сборке официального `0.11.0` CLI повторно валидирует его вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Проверяются exact `productVersion`, source commit, Actions run ID, отсутствие matrix errors, все required targets, concrete loader versions, `exitCode=0` и полный набор mandatory checks.
+
+В release bundle сохраняются точные копии target definition и matrix. Certification содержит их SHA-256, commit/run ID и списки required/passed targets. `nl release publish-check` для `0.11.0+` fail-closed требует эти три файла и повторно вычисляет certification перед разрешением публикации. Они включаются в `SHA256SUMS` и покрываются Ed25519-подписью release bundle.
+
+CI bundle без переданного `NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE` допустим только как build candidate; он проходит cryptographic `release verify`, но не проходит `release publish-check`.

@@ -43,7 +43,7 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 		t.Fatalf("server token missing: %v %s", err, res.Body.String())
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.10.7"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.11.0"}`))
 	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 	req.Header.Set("Content-Type", "application/json")
 	res = httptest.NewRecorder()

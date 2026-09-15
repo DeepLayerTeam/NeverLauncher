@@ -1,4 +1,4 @@
-# NeverLauncher CLI 0.10.7
+# NeverLauncher CLI
 
 `nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
 
@@ -18,7 +18,7 @@ nl diagnostics ...
 
 ## Minecraft runtime materialization
 
-Рабочие materializer-команды `0.10.7`:
+Рабочие materializer-команды:
 
 ```bash
 nl runtime vanilla-package --minecraft 1.21.1 --client-dir .neverlauncher/vanilla/1.21.1 --output client-package.json
@@ -28,7 +28,7 @@ nl runtime forge-package --minecraft 1.20.1 --loader-version latest-stable --cli
 nl runtime neoforge-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/neoforge/1.21.1 --output client-package.json
 ```
 
-Fabric использует официальный Meta API v2, Quilt — Meta API v3. Forge и NeoForge загружают проверенный official Maven installer JAR, выполняют client processors из `install_profile.json`, проверяют outputs и нормализуют дочерний `version.json`. До упаковки mutable alias `latest-stable` разрешается в конкретную loader version, а все runtime artifacts фиксируются обычным SHA-256 + signed manifest lifecycle NeverLauncher. Legacy Forge pre-1.13 в 0.10.7 не объявляется поддерживаемым.
+Fabric использует официальный Meta API v2, Quilt — Meta API v3. Forge и NeoForge загружают проверенный official Maven installer JAR, выполняют client processors из `install_profile.json`, проверяют outputs и нормализуют дочерний `version.json`. До упаковки mutable alias `latest-stable` разрешается в конкретную loader version, а все runtime artifacts фиксируются обычным SHA-256 + signed manifest lifecycle NeverLauncher.
 
 ## Операции Backend
 
@@ -55,9 +55,13 @@ nl install bootstrap-admin \
 
 ```bash
 nl release doctor
-nl release build --out dist/release-0.10.7
-nl release sign dist/release-0.10.7 --private-key /secure/release-private.pem
-nl release verify dist/release-0.10.7 --public-key /etc/neverlauncher/release-public.pem
+nl release build --out dist/release-0.11.0 \
+  --compatibility-matrix /path/to/matrix.json \
+  --compatibility-targets compatibility/targets.json \
+  --source-commit "$(git rev-parse HEAD)"
+nl release sign dist/release-0.11.0 --private-key /secure/release-private.pem
+nl release verify dist/release-0.11.0 --public-key /etc/neverlauncher/release-public.pem
+nl release publish-check dist/release-0.11.0 --public-key /etc/neverlauncher/release-public.pem
 nl packaging prepare
 nl packaging verify
 ```
@@ -105,7 +109,7 @@ nl install first-run --output-dir ./neverlauncher-production \
 Desktop package/verify работает только с реально собранными artifacts:
 
 ```bash
-nl desktop package --artifact-dir dist/release-0.10.7 --out dist/desktop-package --platform linux
+nl desktop package --artifact-dir dist/release-0.11.0 --out dist/desktop-package --platform linux
 nl desktop verify dist/desktop-package
 ```
 
@@ -117,5 +121,5 @@ nl security keys --registry-dir /secure/neverlauncher-keys
 nl security revocation-list --registry-dir /secure/neverlauncher-keys --revoke <keyId>
 nl security attest --path PROVENANCE.json --private-key /secure/.../private.pem
 nl security sbom --source-root . --output SBOM.spdx.json
-nl security provenance --source-root . --artifact-dir dist/release-0.10.7 --output PROVENANCE.json
+nl security provenance --source-root . --artifact-dir dist/release-0.11.0 --output PROVENANCE.json
 ```
