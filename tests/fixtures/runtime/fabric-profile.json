@@ -1,0 +1,11 @@
+{
+  "loader": "fabric",
+  "minecraftVersion": "1.21.1",
+  "loaderVersion": "0.16.10",
+  "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
+  "libraries": [
+    {"name": "net.fabricmc:fabric-loader:0.16.10", "downloads": {"artifact": {"path": "net/fabricmc/fabric-loader/0.16.10/fabric-loader-0.16.10.jar", "sha1": "fabric-loader", "size": 55, "url": "https://example.invalid/fabric-loader.jar"}}},
+    {"name": "net.fabricmc:intermediary:1.21.1", "downloads": {"artifact": {"path": "net/fabricmc/intermediary/1.21.1/intermediary-1.21.1.jar", "sha1": "intermediary", "size": 55, "url": "https://example.invalid/intermediary.jar"}}}
+  ],
+  "gameArgs": ["--fabric.gameJar", "${game_directory}/versions/1.21.1/1.21.1.jar"]
+}

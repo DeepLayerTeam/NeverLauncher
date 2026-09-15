@@ -1,0 +1,107 @@
+# NeverLauncher CLI 0.10.0-P3.2v4
+
+`nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
+
+Все общие отчёты CLI, ранее помеченные историческими `schemaVersion` 4.x–8.x, используют единую версию схемы `1.0`. Специализированные форматы, например manifest/runtime schema, сохраняют собственные версии формата.
+
+## Основные команды
+
+```bash
+nl version
+nl manifest ...
+nl update ...
+nl runtime ...
+nl loader ...
+nl project ...
+nl diagnostics ...
+```
+
+## Операции Backend
+
+```bash
+nl auth login --backend https://launcher.example
+nl auth sessions --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl admin overview --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl install readiness --backend https://launcher.example
+nl operations diagnostics --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl backup status --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+```
+
+Первичная инициализация администратора использует одноразовый bootstrap-заголовок:
+
+```bash
+nl install bootstrap-admin \
+  --backend https://launcher.example \
+  --bootstrap-token "$NEVERLAUNCHER_BOOTSTRAP_TOKEN" \
+  --email admin@example.test \
+  --password '...'
+```
+
+## Релизы и пакеты
+
+```bash
+nl release doctor
+nl release build --out dist/release-0.10.0-P3.2v4
+nl release sign dist/release-0.10.0-P3.2v4 --private-key /secure/release-private.pem
+nl release verify dist/release-0.10.0-P3.2v4 --public-key /etc/neverlauncher/release-public.pem
+nl packaging prepare
+nl packaging verify
+```
+
+Для обращений к Backend используйте `--backend`, а для защищённых маршрутов `/api/v1` — `--token` или `NEVERLAUNCHER_TOKEN`.
+
+## Production-операции без status-only заглушек
+
+```bash
+nl pipeline stage --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN" --package-id <id>
+nl pipeline smoke-test --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN" --package-id <id>
+nl pipeline publish --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN" --package-id <id>
+nl storage consistency --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl storage audit --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl migrate apply --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl migrate rollback --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN" --backup-id <id> --confirm <id>
+nl install storage-check --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+nl install verify --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
+```
+
+`release verify` и `security verify-signature` требуют внешний доверенный Ed25519 public key. Ключ, лежащий внутри проверяемого bundle, никогда не используется как trust anchor.
+
+## P3.2v4: реальный client/desktop/key lifecycle
+
+Client lifecycle использует уже собранный `client-package.json` и storage с тем же layout:
+
+```bash
+nl client install --package dist/client-package.json --storage-dir ./storage --client-dir ./minecraft
+nl client verify --package dist/client-package.json --client-dir ./minecraft
+nl client repair --package dist/client-package.json --storage-dir ./storage --client-dir ./minecraft
+nl client cleanup --package dist/client-package.json --client-dir ./minecraft
+nl client rollback --client-dir ./minecraft --target previous
+```
+
+`cleanup` не удаляет неизвестные файлы безвозвратно: управляемые orphan-файлы перемещаются в `.neverlauncher/quarantine`. Перед install/update/repair создаётся rollback snapshot.
+
+Standalone first-run не зависит от исходного checkout и требует immutable image references:
+
+```bash
+nl install first-run --output-dir ./neverlauncher-production \
+  --api-image registry.example/neverlauncher-api@sha256:<digest> \
+  --admin-image registry.example/neverlauncher-admin@sha256:<digest>
+```
+
+Desktop package/verify работает только с реально собранными artifacts:
+
+```bash
+nl desktop package --artifact-dir dist/release-0.10.0-P3.2v4 --out dist/desktop-package --platform linux
+nl desktop verify dist/desktop-package
+```
+
+Key lifecycle и supply-chain:
+
+```bash
+nl security rotate-key --registry-dir /secure/neverlauncher-keys --key release-signing
+nl security keys --registry-dir /secure/neverlauncher-keys
+nl security revocation-list --registry-dir /secure/neverlauncher-keys --revoke <keyId>
+nl security attest --path PROVENANCE.json --private-key /secure/.../private.pem
+nl security sbom --source-root . --output SBOM.spdx.json
+nl security provenance --source-root . --artifact-dir dist/release-0.10.0-P3.2v4 --output PROVENANCE.json
+```

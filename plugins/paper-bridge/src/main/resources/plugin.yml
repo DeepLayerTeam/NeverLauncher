@@ -1,0 +1,24 @@
+name: NeverLauncherPaperBridge
+main: ru.neverlauncher.bridge.paper.NeverLauncherPaperBridge
+version: 0.10.0-P3.2v4
+api-version: '1.21'
+author: SkiF4er
+description: NeverLauncher ServerBridge/AuthBridge integration for Paper servers.
+commands:
+  nlbridge:
+    description: NeverLauncher bridge diagnostics and control command
+    usage: /nlbridge <status|test|diagnostics>
+    permission: neverlauncher.bridge.status
+permissions:
+  neverlauncher.bridge.admin:
+    description: Full NeverLauncher bridge administration
+    default: op
+  neverlauncher.bridge.status:
+    description: Read NeverLauncher bridge status
+    default: op
+  neverlauncher.bridge.reload:
+    description: Reload NeverLauncher bridge configuration
+    default: op
+  neverlauncher.bridge.diagnostics:
+    description: Export NeverLauncher bridge diagnostics
+    default: op

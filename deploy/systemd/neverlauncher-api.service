@@ -1,0 +1,26 @@
+[Unit]
+Description=NeverLauncher API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=neverlauncher
+Group=neverlauncher
+WorkingDirectory=/opt/neverlauncher
+EnvironmentFile=/opt/neverlauncher/.env
+ExecStart=/opt/neverlauncher/bin/neverlauncher-api
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/neverlauncher /var/log/neverlauncher /opt/neverlauncher/data
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

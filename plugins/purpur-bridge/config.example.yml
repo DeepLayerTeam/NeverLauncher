@@ -1,0 +1,14 @@
+backend:
+  url: "https://launcher.example.com"
+  timeoutMs: 5000
+  retries: 2
+server:
+  id: "purpur-main"
+  token: "paste-one-time-server-token-here"
+security:
+  failMode: "closed"
+  requireLauncherSession: true
+profile:
+  projectId: "default"
+  profileId: "vanilla"
+  channel: "stable"

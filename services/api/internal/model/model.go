@@ -1,0 +1,204 @@
+package model
+
+import "time"
+
+// Project описывает Minecraft-проект, который использует NeverLauncher.
+type Project struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	Homepage       string    `json:"homepage"`
+	Repository     string    `json:"repository"`
+	DefaultChannel string    `json:"defaultChannel"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+}
+
+// Profile описывает клиентский профиль проекта.
+type Profile struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"projectId"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Loader      string    `json:"loader"`
+	Preset      string    `json:"preset"`
+	IsDefault   bool      `json:"isDefault"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+// ReleaseChannel описывает канал релиза: dev, beta или stable.
+type ReleaseChannel struct {
+	ID          string `json:"id"`
+	ProjectID   string `json:"projectId"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Protected   bool   `json:"protected"`
+}
+
+// ReleaseVersion описывает опубликованную версию клиентского профиля.
+type ReleaseVersion struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"projectId"`
+	ProfileID   string    `json:"profileId"`
+	Channel     string    `json:"channel"`
+	Version     string    `json:"version"`
+	Status      string    `json:"status"`
+	Manifest    Manifest  `json:"manifest"`
+	PublishedAt time.Time `json:"publishedAt"`
+}
+
+// FileObject описывает файл клиентской сборки.
+type FileObject struct {
+	ID        string `json:"id"`
+	ProjectID string `json:"projectId"`
+	VersionID string `json:"versionId"`
+	Path      string `json:"path"`
+	Size      int64  `json:"size"`
+	SHA256    string `json:"sha256"`
+	URL       string `json:"url"`
+	Required  bool   `json:"required"`
+}
+
+// User описывает пользователя backend/admin panel.
+type User struct {
+	ID                string            `json:"id"`
+	Email             string            `json:"email"`
+	DisplayName       string            `json:"displayName"`
+	RoleID            string            `json:"roleId"`
+	Status            string            `json:"status"`
+	ProjectRoles      map[string]string `json:"projectRoles,omitempty"`
+	PasswordHash      string            `json:"-"`
+	PasswordUpdatedAt time.Time         `json:"passwordUpdatedAt,omitempty"`
+	LastLoginAt       time.Time         `json:"lastLoginAt,omitempty"`
+	DisabledAt        time.Time         `json:"disabledAt,omitempty"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	UpdatedAt         time.Time         `json:"updatedAt"`
+}
+
+// Role описывает роль пользователя в проекте.
+type Role struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Permissions []string `json:"permissions"`
+}
+
+// AdminSession описывает сессию панели управления с Bearer-токеном доступа.
+type AdminSession struct {
+	Token            string    `json:"token"`
+	RefreshToken     string    `json:"refreshToken,omitempty"`
+	SessionID        string    `json:"sessionId,omitempty"`
+	User             User      `json:"user"`
+	ExpiresAt        time.Time `json:"expiresAt"`
+	RefreshExpiresAt time.Time `json:"refreshExpiresAt,omitempty"`
+}
+
+// Manifest — минимальная структура манифеста, которую backend отдаёт desktop client.
+type Manifest struct {
+	SchemaVersion string         `json:"schemaVersion"`
+	ProjectID     string         `json:"projectId"`
+	ProfileID     string         `json:"profileId"`
+	Channel       string         `json:"channel"`
+	Version       string         `json:"version"`
+	CreatedAt     string         `json:"createdAt"`
+	Minecraft     MinecraftInfo  `json:"minecraft"`
+	Runtime       RuntimeInfo    `json:"runtime"`
+	Directories   Directories    `json:"directories,omitempty"`
+	Files         []ManifestFile `json:"files"`
+	Signature     *SignatureInfo `json:"signature,omitempty"`
+}
+
+// SignatureInfo описывает подпись манифеста Ed25519.
+type SignatureInfo struct {
+	Algorithm string `json:"algorithm"`
+	PublicKey string `json:"publicKey"`
+	Signature string `json:"signature"`
+	SignedAt  string `json:"signedAt"`
+}
+
+// AuditEvent описывает запись журнала безопасности и административных действий.
+type AuditEvent struct {
+	ID        string    `json:"id"`
+	Actor     string    `json:"actor"`
+	Action    string    `json:"action"`
+	Target    string    `json:"target"`
+	IP        string    `json:"ip"`
+	UserAgent string    `json:"userAgent"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type MinecraftInfo struct {
+	Version       string   `json:"version"`
+	Loader        string   `json:"loader"`
+	LoaderVersion string   `json:"loaderVersion,omitempty"`
+	MainClass     string   `json:"mainClass,omitempty"`
+	GameArgs      []string `json:"gameArgs,omitempty"`
+}
+
+type RuntimeInfo struct {
+	Java    JavaInfo      `json:"java"`
+	JVMArgs []string      `json:"jvmArgs,omitempty"`
+	Memory  MemoryInfo    `json:"memory,omitempty"`
+	Launch  RuntimeLaunch `json:"launch,omitempty"`
+}
+
+type JavaInfo struct {
+	MajorVersion    int    `json:"majorVersion"`
+	Distribution    string `json:"distribution"`
+	AllowCustomPath bool   `json:"allowCustomPath,omitempty"`
+}
+
+type RuntimeLaunch struct {
+	MainClass         string `json:"mainClass,omitempty"`
+	ClasspathStrategy string `json:"classpathStrategy,omitempty"`
+	NativesDirectory  string `json:"nativesDirectory,omitempty"`
+	OfflineMode       bool   `json:"offlineMode,omitempty"`
+}
+
+type MemoryInfo struct {
+	MinimumMb     int `json:"minimumMb,omitempty"`
+	RecommendedMb int `json:"recommendedMb,omitempty"`
+	MaximumMb     int `json:"maximumMb,omitempty"`
+}
+
+type Directories struct {
+	Game      string `json:"game,omitempty"`
+	Assets    string `json:"assets,omitempty"`
+	Libraries string `json:"libraries,omitempty"`
+	Natives   string `json:"natives,omitempty"`
+}
+
+type ManifestFile struct {
+	Path       string   `json:"path"`
+	Size       int64    `json:"size"`
+	SHA256     string   `json:"sha256"`
+	URL        string   `json:"url"`
+	Required   bool     `json:"required"`
+	Executable bool     `json:"executable"`
+	TargetOS   []string `json:"targetOs,omitempty"`
+}
+
+// TelemetryEvent описывает минимальное событие телеметрии без персональных данных.
+type TelemetryEvent struct {
+	ID              string    `json:"id"`
+	ProjectID       string    `json:"projectId"`
+	ProfileID       string    `json:"profileId"`
+	LauncherVersion string    `json:"launcherVersion"`
+	ProfileVersion  string    `json:"profileVersion"`
+	Event           string    `json:"event"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"createdAt"`
+}
+
+// CrashReport описывает локальный отчёт об ошибке запуска, отправленный пользователем добровольно.
+type CrashReport struct {
+	ID              string    `json:"id"`
+	ProjectID       string    `json:"projectId"`
+	ProfileID       string    `json:"profileId"`
+	LauncherVersion string    `json:"launcherVersion"`
+	ProfileVersion  string    `json:"profileVersion"`
+	Message         string    `json:"message"`
+	Log             string    `json:"log,omitempty"`
+	CreatedAt       time.Time `json:"createdAt"`
+}

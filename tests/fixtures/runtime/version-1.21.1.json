@@ -1,0 +1,17 @@
+{
+  "id": "1.21.1",
+  "type": "release",
+  "mainClass": "net.minecraft.client.main.Main",
+  "assets": "17",
+  "javaVersion": {"component": "java-runtime-delta", "majorVersion": 21},
+  "assetIndex": {"id": "17", "sha1": "asset-index-demo", "size": 123, "url": "https://example.invalid/indexes/17.json"},
+  "downloads": {"client": {"sha1": "client-demo-sha1", "size": 123456, "url": "https://example.invalid/client.jar"}},
+  "libraries": [
+    {"name": "org.lwjgl:lwjgl:3.3.3", "downloads": {"artifact": {"path": "org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3.jar", "sha1": "lwjgl", "size": 100, "url": "https://example.invalid/lwjgl.jar"}}},
+    {"name": "org.lwjgl:lwjgl-glfw:3.3.3", "downloads": {"artifact": {"path": "org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3.jar", "sha1": "glfw", "size": 100, "url": "https://example.invalid/glfw.jar"}, "classifiers": {"natives-linux": {"path": "org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3-natives-linux.jar", "sha1": "glfw-native", "size": 42, "url": "https://example.invalid/glfw-native.jar"}}}}
+  ],
+  "arguments": {
+    "game": ["--username", "${auth_player_name}", "--version", "${version_name}", "--gameDir", "${game_directory}", "--assetsDir", "${assets_root}", "--assetIndex", "${assets_index_name}", "--uuid", "${auth_uuid}", "--accessToken", "${auth_access_token}"],
+    "jvm": ["-Djava.library.path=${natives_directory}", "-cp", "${classpath}"]
+  }
+}

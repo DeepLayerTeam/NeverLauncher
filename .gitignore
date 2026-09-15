@@ -1,0 +1,87 @@
+# Общие временные файлы
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Переменные окружения
+.env
+!.env.example
+
+# Go
+bin/
+coverage.out
+
+# Node/TypeScript
+node_modules/
+dist/
+build/
+!scripts/build/
+!scripts/build/*.sh
+.vite/
+
+# Rust/Tauri
+target/
+src-tauri/target/
+
+# Локальные данные NeverLauncher
+/data/
+/storage/
+
+# NeverLauncher generated artifacts
+/artifacts/
+/e2e/runtime/
+/e2e/runtime-ci/
+/e2e/reports/
+/.neverlauncher/
+
+# Built application binaries
+/cli/nl
+/cli/nl.exe
+/services/api/neverlauncher-api
+/services/api/neverlauncher-api.exe
+
+# Local environment files
+.env.*
+!.env.example
+deploy/production/.env
+
+# Local secrets / TLS
+/deploy/production/certs/
+/deploy/production/acme/
+/secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Go generated/test output
+*.test
+*.prof
+*.coverprofile
+coverage/
+coverage*.out
+
+# Node tooling
+.npm/
+.eslintcache
+*.tsbuildinfo
+
+# Gradle / Java build cache
+.gradle/
+**/out/
+
+# Runtime/process state
+*.pid
+*.pid.lock
+*.sock
+
+# IDE
+.idea/
+.vscode/
+
+# Editor/backup files
+*.swp
+*.swo
+*~
+*.bak
