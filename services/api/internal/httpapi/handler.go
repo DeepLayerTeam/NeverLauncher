@@ -8,6 +8,13 @@ func (s Server) Handler() http.Handler {
 		// Test/development servers created directly in unit tests use the safe
 		// in-memory limiter and do not trust forwarded headers by default.
 	}
+	if s.Federation == nil {
+		core, err := NewFederationCore112(s.Repo)
+		if err != nil {
+			panic("federation core 0.11.2 initialization failed: " + err.Error())
+		}
+		s.Federation = core
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.health)
 	mux.HandleFunc("GET /ready", s.ready)

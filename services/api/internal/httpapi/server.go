@@ -7,16 +7,18 @@ import (
 	"strings"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
 type Server struct {
-	Version string
-	Config  config.Config
-	Repo    repository.Repository
-	Storage storage.Storage
-	State   *RuntimeState
+	Version    string
+	Config     config.Config
+	Repo       repository.Repository
+	Storage    storage.Storage
+	State      *RuntimeState
+	Federation *federation.Core
 }
 
 type statusResponse struct {
@@ -40,10 +42,12 @@ type contractsResponse struct {
 
 type loginRequest struct {
 	Email        string `json:"email"`
+	Identifier   string `json:"identifier,omitempty"`
 	Password     string `json:"password"`
 	TOTP         string `json:"totp,omitempty"`
 	RecoveryCode string `json:"recoveryCode,omitempty"`
 	DeviceID     string `json:"deviceId,omitempty"`
+	ProviderID   string `json:"providerId,omitempty"`
 }
 
 type userWriteRequest struct {

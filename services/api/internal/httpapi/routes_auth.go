@@ -4,6 +4,8 @@ import "net/http"
 
 func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/login", s.authLogin)
+	mux.HandleFunc("GET /api/v1/auth/providers", s.authProviders112)
+	mux.HandleFunc("GET /api/v1/auth/identities", s.authIdentities112)
 	mux.HandleFunc("POST /api/v1/auth/refresh", s.authRefresh)
 	mux.HandleFunc("POST /api/v1/auth/logout", s.authLogout)
 	mux.Handle("GET /api/v1/auth/accounts", s.requirePermission("project:read", s.authAccounts))

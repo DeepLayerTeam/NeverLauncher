@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.2 — Connector SDK + Federation Core
+
+`0.11.2` переводит рабочий local password login на общий Federation Core. Встроенный `local` provider использует тот же публичный Connector SDK, который предназначен для SQL/HTTP/OIDC/Microsoft connectors следующих релизов; прямой password-check в `/auth/login` и `/admin/login` больше не является отдельным auth engine.
+
+### Connector SDK
+
+- Добавлен импортируемый Go SDK `services/api/pkg/authconnector` с typed metadata, capabilities, canonical provider identity, password/browser auth, refresh, profile resolution, identity linking и revoke interfaces.
+- Capabilities являются исполняемым контрактом: registry и conformance suite отклоняют connector, который заявляет capability без соответствующего интерфейса.
+- Добавлен reusable `authconnector/conformance` testkit; встроенный `local` connector проходит его в backend test suite.
+- Connector errors имеют стабильные typed codes (`invalid_credentials`, `identity_disabled`, `unavailable`, `conflict`, `identity_not_found`) вместо сравнения строк ошибок.
+
+### Federation Core
+
+- Добавлен concurrent-safe provider registry и единый password-auth dispatch. `providerId` поддерживается в canonical `/api/v1/auth/login` и `/api/v1/admin/login`; отсутствие значения означает `local`.
+- После успешной проверки credentials provider возвращает только authentication proof/identity. Federation Core обязательно разрешает `(provider, subject)` через `auth_identities` в canonical Never `User`; provider token не становится Never access token.
+- Реализовано explicit-only identity linking с защитой от silent reassignment одного subject другому Never user.
+- Локальный provider теперь реально зарегистрирован через SDK и обслуживает production login. MFA, RBAC, access/refresh sessions и audit выполняются после canonical identity resolution.
+- Новые users при создании получают persistent `local` identity; successful federation login обновляет snapshot claims и `last_authenticated_at`.
+
+### Persistence / API
+
+- Migration `0005_federation_core_0112.sql` расширяет `auth_identities` provider metadata (`email`, `username`, `display_name`, `claims`, `last_authenticated_at`) и backfill-ит локальные identity.
+- Repository получил рабочие get/list/save/touch операции для canonical identities в memory и PostgreSQL implementations.
+- `GET /api/v1/auth/providers` показывает реально зарегистрированные providers/capabilities/health до login; `GET /api/v1/auth/identities` возвращает identity links текущего Never user без provider secrets/claims.
+- OpenAPI login schema получил `providerId`; canonical auth capabilities теперь объявляют активный Federation Core и registry providers.
+
+### Verification
+
+- Backend integration test проверяет provider discovery, local login через Federation Core, canonical identity endpoint и дальнейший session refresh/revoke flow.
+- Federation unit tests проверяют canonical resolution и fail-closed отказ для authenticated, но не связанной external identity.
+- SDK conformance tests проверяют соответствие capability interfaces и health contract.
+
 ## 0.11.1 — Auth Core hardening + persistent sessions
 
 `0.11.1` переводит authentication state с process-local registry/snapshot semantics на нормализованный PostgreSQL auth core и закрывает replay refresh token на уровне token family.

@@ -217,19 +217,29 @@ func TestAdminUsersSessionsAndRBAC(t *testing.T) {
 func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 	handler := testServer(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/accounts", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/providers", nil)
 	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"id":"local"`) || !strings.Contains(res.Body.String(), `"healthy":true`) {
+		t.Fatalf("federation providers вернули неожиданный ответ %d: %s", res.Code, res.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/accounts", nil)
+	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("/api/v1/auth/accounts без токена должен вернуть 401, получено %d: %s", res.Code, res.Body.String())
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin","deviceId":"integration-test"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"identifier":"admin@neverlauncher.local","password":"admin","providerId":"local","deviceId":"integration-test"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
 		t.Fatalf("v1 login вернул статус %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), `"provider":"local"`) {
+		t.Fatalf("v1 login не прошёл через local federation provider: %s", res.Body.String())
 	}
 	var loginPayload struct {
 		Data struct {
@@ -244,6 +254,14 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &loginPayload); err != nil || loginPayload.Data.Tokens.AccessToken == "" || loginPayload.Data.Tokens.RefreshToken == "" || loginPayload.Data.Session.ID == "" {
 		t.Fatalf("v1 login не вернул session/access/refresh: err=%v body=%s", err, res.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/identities", nil)
+	req.Header.Set("Authorization", "Bearer "+loginPayload.Data.Tokens.AccessToken)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"provider":"local"`) || !strings.Contains(res.Body.String(), `"subject":"admin"`) {
+		t.Fatalf("canonical identities вернули неожиданный ответ %d: %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/accounts", nil)

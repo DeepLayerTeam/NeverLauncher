@@ -30,6 +30,10 @@ type Repository interface {
 	SetUserDisabled(id string, disabled bool) (model.User, error)
 	SetUserPassword(id, passwordHash string) (model.User, error)
 	TouchUserLogin(id string) (model.User, error)
+	GetAuthIdentity(provider, subject string) (model.AuthIdentity, error)
+	ListAuthIdentities(userID string) []model.AuthIdentity
+	SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error)
+	TouchAuthIdentity(id string) (model.AuthIdentity, error)
 	ListRoles() []model.Role
 	ListAuditEvents() []model.AuditEvent
 	AddAuditEvent(event model.AuditEvent)
@@ -49,16 +53,17 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
-	projects  []model.Project
-	profiles  []model.Profile
-	channels  []model.ReleaseChannel
-	releases  []model.ReleaseVersion
-	files     []model.FileObject
-	users     []model.User
-	roles     []model.Role
-	audit     []model.AuditEvent
-	telemetry []model.TelemetryEvent
-	crashes   []model.CrashReport
+	projects   []model.Project
+	profiles   []model.Profile
+	channels   []model.ReleaseChannel
+	releases   []model.ReleaseVersion
+	files      []model.FileObject
+	users      []model.User
+	identities []model.AuthIdentity
+	roles      []model.Role
+	audit      []model.AuditEvent
+	telemetry  []model.TelemetryEvent
+	crashes    []model.CrashReport
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
@@ -132,6 +137,9 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		},
 		users: []model.User{
 			{ID: "admin", Email: "admin@neverlauncher.local", DisplayName: "Администратор", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"demo-project": "owner"}, PasswordHash: "sha256:8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now},
+		},
+		identities: []model.AuthIdentity{
+			{ID: "identity-local-admin", UserID: "admin", Provider: "local", Subject: "admin", Email: "admin@neverlauncher.local", Username: "admin@neverlauncher.local", DisplayName: "Администратор", CreatedAt: now, UpdatedAt: now},
 		},
 		audit: []model.AuditEvent{
 			{ID: "audit-start", Actor: "system", Action: "backend:start", Target: "neverlauncher-api", CreatedAt: now},
@@ -344,6 +352,7 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 			return model.User{}, fmt.Errorf("пользователь с таким email уже существует")
 		}
 	}
+	updatedExisting := false
 	for i := range r.users {
 		if r.users[i].ID == user.ID {
 			if user.CreatedAt.IsZero() {
@@ -351,16 +360,25 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 			}
 			user.UpdatedAt = now
 			r.users[i] = user
-			return user, nil
+			updatedExisting = true
+			break
 		}
 	}
-	if user.CreatedAt.IsZero() {
-		user.CreatedAt = now
+	if !updatedExisting {
+		if user.CreatedAt.IsZero() {
+			user.CreatedAt = now
+		}
+		if user.UpdatedAt.IsZero() {
+			user.UpdatedAt = now
+		}
+		r.users = append(r.users, user)
 	}
-	if user.UpdatedAt.IsZero() {
-		user.UpdatedAt = now
+	if _, err := r.SaveAuthIdentity(model.AuthIdentity{
+		UserID: user.ID, Provider: "local", Subject: user.ID,
+		Email: user.Email, Username: user.Email, DisplayName: user.DisplayName,
+	}); err != nil {
+		return model.User{}, err
 	}
-	r.users = append(r.users, user)
 	return user, nil
 }
 
@@ -396,6 +414,91 @@ func (r *MemoryRepository) TouchUserLogin(id string) (model.User, error) {
 	}
 	user.LastLoginAt = time.Now().UTC()
 	return r.SaveUser(user)
+}
+
+func (r *MemoryRepository) GetAuthIdentity(provider, subject string) (model.AuthIdentity, error) {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	subject = strings.TrimSpace(subject)
+	for _, item := range r.identities {
+		if item.Provider == provider && item.Subject == subject {
+			return item, nil
+		}
+	}
+	return model.AuthIdentity{}, ErrNotFound
+}
+
+func (r *MemoryRepository) ListAuthIdentities(userID string) []model.AuthIdentity {
+	items := make([]model.AuthIdentity, 0)
+	for _, item := range r.identities {
+		if userID == "" || item.UserID == userID {
+			copy := item
+			if item.Claims != nil {
+				copy.Claims = make(map[string]any, len(item.Claims))
+				for k, v := range item.Claims {
+					copy.Claims[k] = v
+				}
+			}
+			items = append(items, copy)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Provider == items[j].Provider {
+			return items[i].Subject < items[j].Subject
+		}
+		return items[i].Provider < items[j].Provider
+	})
+	return items
+}
+
+func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error) {
+	now := time.Now().UTC()
+	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.UserID = strings.TrimSpace(identity.UserID)
+	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
+		return model.AuthIdentity{}, fmt.Errorf("userId, provider и subject identity обязательны")
+	}
+	if _, err := r.GetUser(identity.UserID); err != nil {
+		return model.AuthIdentity{}, err
+	}
+	for i := range r.identities {
+		item := r.identities[i]
+		if item.Provider == identity.Provider && item.Subject == identity.Subject && item.UserID != identity.UserID {
+			return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
+		}
+		if item.UserID == identity.UserID && item.Provider == identity.Provider {
+			if item.Subject != identity.Subject {
+				return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
+			}
+			if identity.ID == "" {
+				identity.ID = item.ID
+			}
+			if identity.CreatedAt.IsZero() {
+				identity.CreatedAt = item.CreatedAt
+			}
+			identity.UpdatedAt = now
+			r.identities[i] = identity
+			return identity, nil
+		}
+	}
+	if identity.ID == "" {
+		identity.ID = "identity-" + identity.Provider + "-" + identity.UserID
+	}
+	identity.CreatedAt = now
+	identity.UpdatedAt = now
+	r.identities = append(r.identities, identity)
+	return identity, nil
+}
+
+func (r *MemoryRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error) {
+	for i := range r.identities {
+		if r.identities[i].ID == id {
+			r.identities[i].LastAuthenticatedAt = time.Now().UTC()
+			r.identities[i].UpdatedAt = r.identities[i].LastAuthenticatedAt
+			return r.identities[i], nil
+		}
+	}
+	return model.AuthIdentity{}, ErrNotFound
 }
 
 func (r *MemoryRepository) ListRoles() []model.Role {

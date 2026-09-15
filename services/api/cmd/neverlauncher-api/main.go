@@ -64,6 +64,10 @@ func main() {
 	if err := state.ConfigureProductRuntime(cfg); err != nil {
 		log.Fatal(err)
 	}
+	federationCore, err := httpapi.NewFederationCore112(repo)
+	if err != nil {
+		log.Fatalf("federation core 0.11.2 initialization failed: %v", err)
+	}
 	if err := httpapi.ConfigureAuthCore111(cfg, state); err != nil {
 		log.Fatal(err)
 	}
@@ -80,11 +84,12 @@ func main() {
 	}
 
 	server := httpapi.Server{
-		Version: version,
-		Config:  cfg,
-		Repo:    repo,
-		Storage: store,
-		State:   state,
+		Version:    version,
+		Config:     cfg,
+		Repo:       repo,
+		Storage:    store,
+		State:      state,
+		Federation: federationCore,
 	}
 
 	log.Printf(

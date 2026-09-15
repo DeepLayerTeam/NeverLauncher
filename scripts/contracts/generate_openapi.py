@@ -21,7 +21,7 @@ public_prefixes = (
     "/health", "/ready", "/metrics", "/api/v1/status", "/api/v1/diagnostics/", "/api/v1/runtime/", "/api/v1/loaders",
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
-public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
+public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
 server_token_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/audit-event"}
 
 def is_public(method, path):
@@ -154,7 +154,7 @@ schemas={
 "Error":{"type":"object","required":["error"],"properties":{"error":{"type":"string"}}},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
-"LoginRequest":{"type":"object","required":["email","password"],"properties":{"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
+"LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
 "RefreshRequest":{"type":"object","required":["refreshToken"],"properties":{"refreshToken":{"type":"string","minLength":1}}},
 "BootstrapAdminRequest":{"type":"object","required":["email","password"],"properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"password":{"type":"string","minLength":12},"actor":{"type":"string"}}},
 "FirstProjectRequest":{"type":"object","properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"},"actor":{"type":"string"}}},

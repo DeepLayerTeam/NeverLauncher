@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.11.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.11.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -1389,6 +1389,36 @@
         }
       }
     },
+    "/api/v1/auth/identities": {
+      "get": {
+        "operationId": "get_auth_identities",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/identities",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "post_auth_login",
@@ -1572,6 +1602,29 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/auth/providers": {
+      "get": {
+        "operationId": "get_auth_providers",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/providers",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": []
       }
     },
     "/api/v1/auth/recovery-code/consume": {
@@ -4490,10 +4543,25 @@
       "LoginRequest": {
         "type": "object",
         "required": [
-          "email",
           "password"
         ],
+        "anyOf": [
+          {
+            "required": [
+              "identifier"
+            ]
+          },
+          {
+            "required": [
+              "email"
+            ]
+          }
+        ],
         "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1
+          },
           "email": {
             "type": "string",
             "format": "email"
@@ -4501,6 +4569,10 @@
           "password": {
             "type": "string",
             "minLength": 1
+          },
+          "providerId": {
+            "type": "string",
+            "default": "local"
           },
           "totp": {
             "type": "string"

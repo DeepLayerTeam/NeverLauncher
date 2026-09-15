@@ -78,6 +78,23 @@ type User struct {
 	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
+// AuthIdentity связывает канонического Never user с subject конкретного auth provider.
+// Внешний provider никогда не заменяет User: federation core всегда разрешает identity
+// в локальный User до выпуска Never session/token.
+type AuthIdentity struct {
+	ID                  string         `json:"id"`
+	UserID              string         `json:"userId"`
+	Provider            string         `json:"provider"`
+	Subject             string         `json:"subject"`
+	Email               string         `json:"email,omitempty"`
+	Username            string         `json:"username,omitempty"`
+	DisplayName         string         `json:"displayName,omitempty"`
+	Claims              map[string]any `json:"claims,omitempty"`
+	CreatedAt           time.Time      `json:"createdAt"`
+	UpdatedAt           time.Time      `json:"updatedAt"`
+	LastAuthenticatedAt time.Time      `json:"lastAuthenticatedAt,omitempty"`
+}
+
 // Role описывает роль пользователя в проекте.
 type Role struct {
 	ID          string   `json:"id"`

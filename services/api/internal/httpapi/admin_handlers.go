@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
 
 func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
@@ -20,45 +21,47 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	req.Email = strings.TrimSpace(req.Email)
-	if req.Email == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "email и пароль обязательны")
+	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
+	rateKey := strings.ToLower(identifier)
+	if identifier == "" || req.Password == "" {
+		writeError(w, http.StatusBadRequest, "identifier/email и пароль обязательны")
 		return
 	}
-	if allowed, retry := s.State.Security.allowLogin(req.Email, clientIP(r)); !allowed {
-		s.audit(r, req.Email, "admin:login:rate-limited", "admin-panel")
+	if allowed, retry := s.State.Security.allowLogin(rateKey, clientIP(r)); !allowed {
+		s.audit(r, identifier, "admin:login:rate-limited", "admin-panel")
 		writeError(w, http.StatusTooManyRequests, fmt.Sprintf("слишком много неудачных входов; повторите после %s", retry.Format(time.RFC3339)))
 		return
 	}
-	user, ok := s.findUserByEmail(req.Email)
-	if !ok {
-		s.State.Security.recordLoginFailure(req.Email, clientIP(r))
+	result, authErr := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
+	if authErr != nil {
+		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("admin-login-failed")
-		s.audit(r, req.Email, "admin:login:failed", "admin-panel")
+		s.audit(r, identifier, "admin:login:failed", "admin-panel")
+		status := federationHTTPStatus112(authErr)
+		if status >= 500 {
+			writeError(w, status, "auth provider временно недоступен")
+			return
+		}
+		if status == http.StatusForbidden {
+			writeError(w, status, "пользователь отключён или identity не связана")
+			return
+		}
+		if status == http.StatusBadRequest {
+			writeError(w, status, "auth provider не поддерживает password login")
+			return
+		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
 		return
 	}
-	if user.Status == "disabled" {
-		s.audit(r, user.Email, "admin:login:blocked", user.ID)
-		writeError(w, http.StatusForbidden, "пользователь отключён")
-		return
-	}
-	passwordOK := verifyPassword(req.Password, user.PasswordHash)
-	if !passwordOK {
-		s.State.Security.recordLoginFailure(user.Email, clientIP(r))
-		_ = s.flushPersistenceState950("admin-login-failed")
-		s.audit(r, user.Email, "admin:login:failed", "admin-panel")
-		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
-		return
-	}
+	user := result.User
 	if ok, reason := s.State.Security.verifySecondFactor(user.ID, req.TOTP, req.RecoveryCode); !ok {
-		s.State.Security.recordLoginFailure(user.Email, clientIP(r))
+		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("admin-login-failed")
 		s.audit(r, user.Email, "admin:login:mfa-failed", reason)
 		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
 		return
 	}
-	s.State.Security.recordLoginSuccess(user.Email, clientIP(r))
+	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))
 	_ = s.flushPersistenceState950("admin-login-success")
 	if updated, err := s.Repo.TouchUserLogin(user.ID); err == nil {
 		user = updated
@@ -69,6 +72,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, user.Email, "admin:login", session.ID)
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "admin-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, model.AdminSession{Token: token, RefreshToken: refreshToken, SessionID: session.ID, User: user, ExpiresAt: time.Now().UTC().Add(accessTokenTTL), RefreshExpiresAt: session.ExpiresAt})
 }
 

@@ -8,14 +8,17 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
 
 type authLoginRequest struct {
 	Email        string `json:"email"`
+	Identifier   string `json:"identifier,omitempty"`
 	Password     string `json:"password"`
 	TOTP         string `json:"totp,omitempty"`
 	RecoveryCode string `json:"recoveryCode,omitempty"`
 	DeviceID     string `json:"deviceId,omitempty"`
+	ProviderID   string `json:"providerId,omitempty"`
 }
 
 type authRefreshRequest struct {
@@ -70,30 +73,45 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	if email == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "email и password обязательны")
+	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
+	rateKey := strings.ToLower(identifier)
+	if identifier == "" || req.Password == "" {
+		writeError(w, http.StatusBadRequest, "identifier/email и password обязательны")
 		return
 	}
-	if allowed, retry := s.State.Security.allowLogin(email, clientIP(r)); !allowed {
+	if allowed, retry := s.State.Security.allowLogin(rateKey, clientIP(r)); !allowed {
 		writeError(w, http.StatusTooManyRequests, "слишком много неудачных входов; повторите после "+retry.Format(time.RFC3339))
 		return
 	}
-	user, ok := s.findUserByEmail(email)
-	if !ok || user.Status == "disabled" || !verifyPassword(req.Password, user.PasswordHash) {
-		s.State.Security.recordLoginFailure(email, clientIP(r))
+	result, authErr := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
+	if authErr != nil {
+		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("auth-login-failed")
+		status := federationHTTPStatus112(authErr)
+		if status >= 500 {
+			writeError(w, status, "auth provider временно недоступен")
+			return
+		}
+		if status == http.StatusForbidden {
+			writeError(w, status, "учётная запись недоступна или identity не связана")
+			return
+		}
+		if status == http.StatusBadRequest {
+			writeError(w, status, "auth provider не поддерживает password login")
+			return
+		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
 		return
 	}
+	user := result.User
 	if ok, reason := s.State.Security.verifySecondFactor(user.ID, req.TOTP, req.RecoveryCode); !ok {
-		s.State.Security.recordLoginFailure(email, clientIP(r))
+		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("auth-mfa-failed")
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
 		return
 	}
-	s.State.Security.recordLoginSuccess(email, clientIP(r))
+	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))
 	_ = s.flushPersistenceState950("auth-login-success")
 	accessToken, refreshToken, session, err := s.issueLoginSession(user, r, firstNonEmpty(req.DeviceID, "desktop-client"))
 	if err != nil {
@@ -104,10 +122,14 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		user = updated
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   s.Version,
 		"status":        "authenticated",
+		"provider":      result.Provider.ID,
+		"identity":      map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "subject": result.Identity.Subject},
+		"authMethods":   result.AuthMethods,
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),
 		"tokens":        map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true},
@@ -196,8 +218,9 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
-		"status":        "auth-session-enforcement-ready",
-		"capabilities":  []string{"email-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"status":        "federation-core-active",
+		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "email-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),
 	}

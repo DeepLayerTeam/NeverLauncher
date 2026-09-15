@@ -43,7 +43,7 @@ NeverLauncher — русскоязычный open-source проект. Все п
 Обновление версии выполняется одной командой:
 
 ```bash
-python3 scripts/version/manage.py set 0.11.1
+python3 scripts/version/manage.py set <version>
 ```
 
 Если `VERSION` уже изменён вручную, синхронизируйте обязательные metadata:
