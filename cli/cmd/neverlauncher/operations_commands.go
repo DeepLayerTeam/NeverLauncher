@@ -155,8 +155,8 @@ func loaderCatalog() []map[string]any {
 	return []map[string]any{
 		{"id": "vanilla", "title": "Vanilla", "status": "stable", "installer": "mojang-version-manifest", "runtime": "builtin", "metadata": "version.json"},
 		{"id": "fabric", "title": "Fabric", "status": "production-materializer", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "официальный Fabric Meta profile"},
-		{"id": "forge", "title": "Forge", "status": "not-certified-yet", "installer": "forge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
-		{"id": "neoforge", "title": "NeoForge", "status": "not-certified-yet", "installer": "neoforge-installer", "runtime": "installer-profile", "metadata": "install_profile.json"},
+		{"id": "forge", "title": "Forge", "status": "production-materializer", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
+		{"id": "neoforge", "title": "NeoForge", "status": "production-materializer", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
 		{"id": "quilt", "title": "Quilt", "status": "production-materializer", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "официальный Quilt Meta profile"},
 	}
 }
@@ -270,7 +270,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в 0.10.3 запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в 0.10.4 запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {
@@ -376,9 +376,7 @@ func validateLoaderProfile(loader, minecraftVersion, loaderVersion, metadataPath
 		warnings = append(warnings, "version.json не указан; будет использован fallback runtime plan")
 	}
 	if loader == "forge" || loader == "neoforge" {
-		if installerProfile == "" {
-			warnings = append(warnings, "для Forge/NeoForge желательно указать --installer-profile install_profile.json")
-		}
+		warnings = append(warnings, "loader validate проверяет только legacy inspection input; production materialization выполняется через nl runtime "+loader+"-install/-package")
 	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "valid": len(errs) == 0, "loader": loader, "minecraftVersion": minecraftVersion, "loaderVersion": loaderVersion, "metadata": metadataPath, "installerProfile": installerProfile, "errors": errs, "warnings": warnings, "checks": loaderChecks(loader)}
 }
@@ -442,11 +440,11 @@ func loaderChecks(loader string) []string {
 func loaderCompatibility(loader string) map[string]any {
 	return map[string]any{
 		"java":                   []int{17, 21},
-		"minecraftRange":         "1.13+ для Fabric/Quilt; 1.16.8+ для Forge/NeoForge при наличии installer profile",
+		"minecraftRange":         "Fabric/Quilt по официальному Meta API; Forge processor-based installers 1.13+; NeoForge processor-based installers; legacy Forge pre-1.13 пока вне 0.10.4",
 		"requiresInstallerMerge": loader == "forge" || loader == "neoforge",
 		"supportsOptionalMods":   loader != "vanilla",
 		"profileFields":          []string{"loader", "loaderVersion", "minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
-		"metadataInputs":         []string{"--version-json", "--metadata", "--installer-profile", "--asset-index"},
+		"metadataInputs":         []string{"--version-json", "--metadata", "--installer-profile", "--asset-index", "runtime forge/neoforge: official installer.jar + Maven metadata"},
 	}
 }
 

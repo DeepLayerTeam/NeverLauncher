@@ -1,32 +1,42 @@
 # Changelog
 
-## 0.10.3 — Fabric + Quilt
+## 0.10.4 — Forge + NeoForge
 
-0.10.3 добавляет рабочую materialization цепочку Fabric и Quilt поверх `0.10.2` Managed Java + Vanilla без fallback metadata и без объявления Forge/NeoForge готовыми.
+`0.10.4` добавляет рабочую materialization-цепочку Forge и NeoForge поверх `0.10.3` Fabric + Quilt. Реализация использует настоящий processor-based installer format, а не декларативный install-plan.
 
-### Fabric
+### Forge / NeoForge installer pipeline
 
-- Добавлены `nl runtime fabric-install` и `nl runtime fabric-package`.
-- Loader version разрешается через официальный Fabric Meta v2; `latest-stable` материализуется в конкретную версию до создания release.
-- Официальный `profile/json` проверяется по `inheritsFrom`, `mainClass` и выбранному loader Maven artifact.
-- Fabric Maven libraries реально загружаются, проверяются по repository `.sha1` и получают pinned `path/url/sha1/size` в локальном version profile.
-- Полученный дочерний profile сохраняется в `versions/<profile>/<profile>.json` и запускается через существующий Compatibility Engine с `inheritsFrom` Vanilla metadata.
+- Добавлены `nl runtime forge-install`, `forge-package`, `neoforge-install`, `neoforge-package`.
+- Версия Forge выбирается по official Maven metadata для конкретной Minecraft-версии; NeoForge фильтруется по соответствующей ветке `major.patch`.
+- `latest-stable` разрешается в concrete loader version до формирования release.
+- Official `installer.jar` скачивается по HTTPS и проверяется по Maven `.sha1`; custom mirror требует явный URL/checksum.
+- Installer JAR реально разбирается: читаются `install_profile.json` и встроенный `version.json`.
+- Встроенный `maven/` извлекается безопасно в `libraries/`; traversal и symlink отклоняются.
+- Installer `data/` извлекается во внутреннее `.neverlauncher` состояние и не попадает в итоговый client package.
+- Installer/runtime libraries материализуются с SHA-1/size verification; локально созданные processor outputs нормализуются фактическими digest/size.
 
-### Quilt
+### Processor Engine
 
-- Добавлены симметричные `nl runtime quilt-install` и `nl runtime quilt-package` через Quilt Meta v3.
-- Quilt имеет отдельный adapter/Meta endpoint и отдельный profile, но использует общий безопасный Maven materializer.
-- Выбранная loader version и все runtime dependencies фиксируются до публикации immutable Never release.
+- Выполняются client processors из `install_profile.json` через реальную Java JVM.
+- Processor `Main-Class` читается из `META-INF/MANIFEST.MF`; classpath строится из pinned Maven coordinates.
+- Реализованы installer variables `{ROOT}`, `{MINECRAFT_JAR}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}` и `data` variables.
+- Maven references `[group:artifact:version[:classifier][@ext]]` разрешаются в локальный `libraries/` path.
+- `outputs` проверяются по SHA-1/SHA-256; tokenized hash values вида `{PATCHED_SHA}` и quoted digests поддерживаются.
+- Уже корректный output позволяет безопасно пропустить processor при повторной материализации.
+- Каждый processor имеет timeout; запуск идёт без shell interpolation.
 
-### Безопасность и проверки
+### Runtime integration
 
-- Внешние Meta/Maven источники требуют HTTPS; HTTP разрешён только для loopback тестов.
-- Strict mode fail-closed отклоняет loader dependency без корректного SHA-1 sidecar, небезопасный Maven coordinate, несовместимую loader version и неожиданный `inheritsFrom`.
-- Loader profile после нормализации получает SHA-256 и вместе с Maven JAR входит в стандартный подписанный Never manifest.
-- Добавлен локальный HTTP fixture E2E для Fabric и Quilt: Vanilla base -> Meta loader selection -> profile -> Maven SHA-1/JAR -> materialized tree -> consumable client package.
-- Восстановлен отсутствовавший в переданном `0.10.2` binary source `runtime/neverruntime/src/bin/neverruntime.rs`, обязательный для заявленного `[[bin]]` Cargo target.
-- Forge/NeoForge остаются `not-certified-yet`; `runtime matrix` больше не создаёт видимость их production-готовности.
+- Child Forge/NeoForge `version.json` нормализуется и сохраняется в `versions/<id>/<id>.json`.
+- Итоговый profile использует существующий `inheritsFrom` Compatibility Engine без отдельного launch fallback.
+- `runtime matrix` теперь объявляет processor-based Forge и NeoForge materializers готовыми.
+- Legacy Forge pre-1.13 остаётся явно вне scope `0.10.4`, вместо ложного статуса поддержки.
 
+### Проверки
+
+- Добавлен полный локальный fixture: Vanilla base -> verified installer -> embedded Maven -> processor execution -> output digest -> child profile -> Never client package.
+- Отдельно проверяются Forge/NeoForge Maven version selection, несовместимая Minecraft/NeoForge ветка, Maven classifier/extension paths и archive traversal.
+- Восстановлен отсутствовавший в входном `0.10.3` binary source `runtime/neverruntime/src/bin/neverruntime.rs`, на который уже ссылался `Cargo.toml`.
 
 ## 0.10.1 — Compatibility Engine
 

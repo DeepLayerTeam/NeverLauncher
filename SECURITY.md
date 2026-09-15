@@ -1,6 +1,6 @@
-# Политика безопасности NeverLauncher 0.10.3
+# Политика безопасности NeverLauncher 0.10.4
 
-NeverLauncher 0.10.3 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
+NeverLauncher 0.10.4 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
 ## Обязательные production-настройки
 
@@ -44,11 +44,13 @@ Published package после перехода в `published` считается 
 
 ## Managed Java и Vanilla supply chain
 
-NeverRuntime `0.10.3` устанавливает Managed Java только из HTTPS metadata Adoptium/Temurin. Перед публикацией runtime в локальный cache проверяются ожидаемый размер и SHA-256 архива, platform metadata и фактическая major-версия через `java -version`. Загрузка выполняется во временный файл, распаковка — в staging; path traversal и внешние symlink после извлечения отклоняются, а рабочий каталог появляется только после атомарного rename. Повреждённый ранее установленный runtime помещается в quarantine и не используется для запуска.
+NeverRuntime `0.10.4` устанавливает Managed Java только из HTTPS metadata Adoptium/Temurin. Перед публикацией runtime в локальный cache проверяются ожидаемый размер и SHA-256 архива, platform metadata и фактическая major-версия через `java -version`. Загрузка выполняется во временный файл, распаковка — в staging; path traversal и внешние symlink после извлечения отклоняются, а рабочий каталог появляется только после атомарного rename. Повреждённый ранее установленный runtime помещается в quarantine и не используется для запуска.
 
 Vanilla materializer получает Mojang `version_manifest_v2.json`, затем проверяет опубликованный Mojang SHA-1 для `version.json`, client/libraries/assets/native/logging artifacts и ожидаемый размер. SHA-1 здесь является upstream-идентификатором Mojang, а не внутренним trust primitive NeverLauncher: после материализации каждый файл получает SHA-256 и далее проходит стандартный signed immutable release lifecycle NeverLauncher. HTTP разрешён только для loopback fixture-тестов; внешние источники должны использовать HTTPS. Native ZIP распаковываются с проверкой traversal, symlink и escape за пределы целевого каталога.
 
 Fabric/Quilt materializer использует официальный Meta API только как online source до публикации release. Mutable `latest` никогда не сохраняется в published release: сначала выбирается конкретная loader version. Полученный loader profile проверяется относительно выбранной Minecraft-версии и выбранного loader artifact, затем нормализуется; Maven JAR скачиваются только по HTTPS и в strict mode обязаны иметь корректный repository `.sha1`. В profile записываются точные URL, SHA-1 и фактический размер; сам profile и JAR затем фиксируются SHA-256 и защищаются обычной Ed25519-подписью immutable Never manifest. Компрометация локального profile после публикации обнаруживается Compatibility Engine trust boundary.
+
+Forge/NeoForge materializer `0.10.4` принимает только processor-based installer format, загружает `installer.jar` по HTTPS и в strict mode требует корректный Maven SHA-1. `install_profile.json` и `version.json` читаются непосредственно из уже проверенного installer JAR. Встроенные `maven/` и `data/` entries извлекаются с защитой от path traversal и symlink. Processor запускается как прямой Java process без shell interpolation; `Main-Class` берётся из manifest processor JAR, classpath строится только из materialized Maven artifacts, а timeout ограничивает зависший процесс. Installer variables и Maven references нормализуются в локальные пути. Заявленные processor outputs проверяются по SHA-1/SHA-256 после выполнения и перед повторным использованием. Installer JAR, временные data и служебное состояние остаются под `.neverlauncher/` и исключаются из опубликованного client package; в immutable release попадают только нормализованные runtime artifacts и child version profile. Legacy Forge pre-1.13 не считается поддерживаемым security boundary этой версии.
 
 ## CORS
 
@@ -109,7 +111,7 @@ Mojang rules обрабатываются до выбора library/native artif
 
 ## Псевдонимы совместимости
 
-Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.3 используют канонические переменные:
+Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.4 используют канонические переменные:
 
 - `NEVERLAUNCHER_DATABASE_DSN` вместо `NEVERLAUNCHER_DATABASE_URL`;
 - `NEVERLAUNCHER_AUTH_TOKEN_SECRET` вместо `NEVERLAUNCHER_TOKEN_SECRET` или `NEVERLAUNCHER_JWT_SECRET`;

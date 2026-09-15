@@ -867,7 +867,7 @@ mod tests {
 
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.3".into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "NeverLauncher".into(), launcher_version: "0.10.4".into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");

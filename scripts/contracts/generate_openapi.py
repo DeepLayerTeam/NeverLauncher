@@ -189,7 +189,7 @@ schemas={
 
 spec={
  "openapi":"3.1.1",
- "info":{"title":"NeverLauncher API","version":"1.0.0","description":"Канонический production API NeverLauncher 0.10.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
+ "info":{"title":"NeverLauncher API","version":"1.0.0","description":"Канонический production API NeverLauncher 0.10.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
  "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
  "tags":[{"name":x} for x in ["auth","install","projects","packages","admin","runtime","bridge","operations"]],
  "paths":paths,

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var version = "0.10.3"
+var version = "0.10.4"
 
 const cliSchemaVersion = "1.0"
 
@@ -26,7 +26,7 @@ const helpText = `NeverLauncher CLI
   update plan                     построить план обновления
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
-  runtime vanilla-install|fabric-install|quilt-install|...  Managed Vanilla/Fabric/Quilt tooling
+  runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
   loader ...                      loader tooling
   project validate|publish        операции проекта
   api compatibility-check         проверить canonical OpenAPI

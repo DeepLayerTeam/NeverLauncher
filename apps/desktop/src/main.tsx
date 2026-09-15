@@ -74,7 +74,7 @@ type AuthSession = { accessToken: string; refreshToken: string; sessionId: strin
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
 
-const DESKTOP_VERSION = '0.10.3';
+const DESKTOP_VERSION = '0.10.4';
 const RELEASE_DOCTOR_MARKER = 'Desktop First-Run Binding';
 
 const stageLabels: Record<Stage, string> = {

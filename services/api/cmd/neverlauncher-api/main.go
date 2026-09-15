@@ -15,7 +15,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
-var version = "0.10.3"
+var version = "0.10.4"
 
 func main() {
 	cfg := config.Load()

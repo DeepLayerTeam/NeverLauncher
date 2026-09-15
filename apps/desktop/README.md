@@ -1,4 +1,4 @@
-# NeverLauncher Desktop 0.10.3
+# NeverLauncher Desktop 0.10.4
 
 Desktop Launcher — рабочий Tauri/React-клиент NeverLauncher поверх NeverRuntime.
 
