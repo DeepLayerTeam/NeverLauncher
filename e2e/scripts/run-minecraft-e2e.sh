@@ -15,14 +15,14 @@ PINNED_PUBLIC_KEY="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc866412553
 ADMIN_EMAIL="admin@neverlauncher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 PLAYER_USERNAME="E2EPlayer"
-VERSION="0.10.4"
+VERSION="0.10.5"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go javac jar cargo python3 gradle; do need "$cmd"; done
+for cmd in docker curl jq go java cargo python3 gradle xvfb-run; do need "$cmd"; done
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
-mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/client" "$RUNTIME_DIR/fixture/src/ru/neverlauncher/e2e"
+mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
 cat > "$ENV_FILE" <<ENV
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
 NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
@@ -153,48 +153,53 @@ for service in velocity paper purpur; do
   fi
 done
 
-printf '[e2e] build a real Java launch fixture JAR\n'
-cat > "$RUNTIME_DIR/fixture/src/ru/neverlauncher/e2e/LaunchFixture.java" <<'JAVA'
-package ru.neverlauncher.e2e;
-public final class LaunchFixture {
-    public static void main(String[] args) {
-        System.out.println("NEVERLAUNCHER_E2E_FIXTURE_OK");
-    }
-}
-JAVA
-mkdir -p "$RUNTIME_DIR/fixture/classes"
-javac --release 17 -d "$RUNTIME_DIR/fixture/classes" "$RUNTIME_DIR/fixture/src/ru/neverlauncher/e2e/LaunchFixture.java"
-jar --create --file "$RUNTIME_DIR/fixture/neverlauncher-e2e-fixture.jar" -C "$RUNTIME_DIR/fixture/classes" .
+printf '[e2e] materialize a real Minecraft 1.21.1 client from Mojang metadata\n'
+MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-1.21.1}"
+CLIENT_PACKAGE="$RUNTIME_DIR/client-package.json"
+"$RUNTIME_DIR/nl" runtime vanilla-package \
+  --minecraft "$MINECRAFT_VERSION" \
+  --client-dir "$RUNTIME_DIR/materialized-client" \
+  --project e2e-project \
+  --profile vanilla \
+  --channel stable \
+  --version "${VERSION}-minecraft-e2e" \
+  --output "$CLIENT_PACKAGE"
+"$RUNTIME_DIR/nl" client verify \
+  --package "$CLIENT_PACKAGE" \
+  --client-dir "$RUNTIME_DIR/materialized-client" \
+  --output "$RUNTIME_DIR/materialized-client-verify.json"
+jq -e '.status == "valid" and .verify.valid == true and .verify.missing == [] and .verify.corrupted == []' "$RUNTIME_DIR/materialized-client-verify.json" >/dev/null
+jq -e --arg mc "$MINECRAFT_VERSION" '.vanilla.minecraftVersion == $mc and .manifestSettings.runtime.launch.classpathStrategy == "compatibility" and (.manifest.files | length) > 10' "$CLIENT_PACKAGE" >/dev/null
 
-printf '[e2e] publish package through canonical API\n'
-RELEASE="$(json_post "$API/api/v1/admin/projects/e2e-project/versions" "$ACCESS_TOKEN" '{"profileId":"vanilla","channel":"stable","version":"0.10.4-e2e"}')"
-VERSION_ID="$(jq -er '.id' <<<"$RELEASE")"
-json_post "$API/api/v1/admin/projects/e2e-project/versions/$VERSION_ID/manifest" "$ACCESS_TOKEN" '{"minecraft":{"version":"1.21.1","loader":"fixture","mainClass":"ru.neverlauncher.e2e.LaunchFixture","gameArgs":[]},"runtime":{"java":{"majorVersion":17,"distribution":"temurin","allowCustomPath":true},"jvmArgs":[],"memory":{"minimumMb":64,"recommendedMb":128,"maximumMb":256},"launch":{"mainClass":"ru.neverlauncher.e2e.LaunchFixture","classpathStrategy":"manifest","nativesDirectory":"natives","offlineMode":true}},"directories":{"game":".","assets":"assets","libraries":"libraries","natives":"natives"}}' > "$RUNTIME_DIR/manifest-draft.json"
-curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -F 'path=libraries/neverlauncher-e2e-fixture.jar' \
-  -F "file=@$RUNTIME_DIR/fixture/neverlauncher-e2e-fixture.jar;type=application/java-archive" \
-  "$API/api/v1/admin/projects/e2e-project/versions/$VERSION_ID/files" > "$RUNTIME_DIR/upload.json"
-curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" -X POST \
-  "$API/api/v1/admin/projects/e2e-project/versions/$VERSION_ID/publish" > "$RUNTIME_DIR/published.json"
-MANIFEST_URL="$API/api/v1/projects/e2e-project/profiles/vanilla/manifest?channel=stable"
+printf '[e2e] upload the full real Minecraft package through canonical /api/v1 and publish signed immutable release\n'
+python3 "$ROOT/e2e/scripts/publish-client-package.py" \
+  --api "$API" \
+  --token "$ACCESS_TOKEN" \
+  --package "$CLIENT_PACKAGE" \
+  --client-dir "$RUNTIME_DIR/materialized-client" \
+  --quick-play "127.0.0.1:25571" \
+  --output "$RUNTIME_DIR/published-client-package.json" \
+  > "$RUNTIME_DIR/published-client-package.stdout.json"
+MANIFEST_URL="$(jq -er '.manifestUrl' "$RUNTIME_DIR/published-client-package.json")"
 curl -fsS "$MANIFEST_URL" > "$RUNTIME_DIR/manifest.json"
-jq -e --arg key "$PINNED_PUBLIC_KEY" '.signature.algorithm == "Ed25519" and .signature.publicKey == $key and (.signature.signature|length == 128)' "$RUNTIME_DIR/manifest.json" >/dev/null
+jq -e --arg key "$PINNED_PUBLIC_KEY" --arg version "${VERSION}-minecraft-e2e" \
+  '.version == $version and .minecraft.version == $mc and .minecraft.loader == "vanilla" and .runtime.launch.classpathStrategy == "compatibility" and .signature.algorithm == "Ed25519" and .signature.publicKey == $key and (.signature.signature|length == 128)' \
+  "$RUNTIME_DIR/manifest.json" >/dev/null
 
-printf '[e2e] NeverRuntime pinned Ed25519 verify -> download/SHA-256 -> launch fixture\n'
+printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> actual Minecraft client launch\n'
 (
   cd "$ROOT"
   cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- verify \
     --manifest "$RUNTIME_DIR/manifest.json" --pinned-public-key "$PINNED_PUBLIC_KEY" > "$RUNTIME_DIR/runtime-verify.json"
+  rm -rf "$RUNTIME_DIR/client"
+  mkdir -p "$RUNTIME_DIR/client"
   cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- sync \
     --manifest-url "$MANIFEST_URL" --pinned-public-key "$PINNED_PUBLIC_KEY" --root "$RUNTIME_DIR/client" > "$RUNTIME_DIR/runtime-sync.json"
-  cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
-    --manifest "$RUNTIME_DIR/manifest.json" --pinned-public-key "$PINNED_PUBLIC_KEY" --root "$RUNTIME_DIR/client" \
-    --java "$(command -v java)" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/runtime-launch.json"
 )
-jq -e '.status == "ready" and .download.failed == 0' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
-jq -e '.success == true and (.stdout | contains("NEVERLAUNCHER_E2E_FIXTURE_OK"))' "$RUNTIME_DIR/runtime-launch.json" >/dev/null
+jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
 
-printf '[e2e] join -> allow -> revoke -> deny on all real bridge registrations\n'
+printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
+json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"vanilla\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client.json"
 validate_join() {
   local id="$1" token="$2" expect="$3" out="$RUNTIME_DIR/validate-$id-$expect.json" code
   code="$(curl -sS -o "$out" -w '%{http_code}' -H 'Content-Type: application/json' -H "X-NeverLauncher-Server-Token: $token" \
@@ -206,6 +211,34 @@ validate_join() {
     [[ "$code" == 403 ]] && jq -e '.data.allowed == false and .data.reason == "launcher_session_missing_or_expired"' "$out" >/dev/null
   fi
 }
+validate_join paper-e2e-p3 "$PAPER_TOKEN" allow
+
+(
+  cd "$ROOT"
+  export LIBGL_ALWAYS_SOFTWARE=1
+  export NEVERLAUNCHER_RESOLUTION_WIDTH=854
+  export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+  xvfb-run -a -s '-screen 0 1280x720x24' \
+    cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
+      --manifest "$RUNTIME_DIR/manifest.json" \
+      --pinned-public-key "$PINNED_PUBLIC_KEY" \
+      --root "$RUNTIME_DIR/client" \
+      --java "$(command -v java)" \
+      --username "$PLAYER_USERNAME" \
+      --max-runtime-seconds "${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-75}" \
+      > "$RUNTIME_DIR/runtime-launch-minecraft.json"
+)
+jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minecraft.json" >/dev/null
+wait_log paper "neverlauncher.join.allowed username=$PLAYER_USERNAME"
+wait_log paper "$PLAYER_USERNAME joined the game"
+
+printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
+json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
+validate_join paper-e2e-p3 "$PAPER_TOKEN" deny
+python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
+wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
+
+printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and Purpur bridges\n'
 flow_for_server() {
   local id="$1" token="$2" service="$3" port="$4"
   json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"$id\",\"projectId\":\"e2e-project\",\"profileId\":\"vanilla\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-$id.json"
@@ -217,13 +250,11 @@ flow_for_server() {
   python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-deny.txt"
   wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
 }
-
 flow_for_server velocity-e2e-p3 "$VELOCITY_TOKEN" velocity 25570
-flow_for_server paper-e2e-p3 "$PAPER_TOKEN" paper 25571
 flow_for_server purpur-e2e-p3 "$PURPUR_TOKEN" purpur 25572
 
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
 cat > "$RUNTIME_DIR/result.json" <<JSON
-{"version":"$VERSION","status":"passed","health":{"velocity":"healthy","paper":"healthy","purpur":"healthy"},"evidence":["health-velocity.json","health-paper.json","health-purpur.json","bridge-diagnostics.json"],"flow":["postgres-migrate","api-bootstrap","real-velocity","real-paper","real-purpur","container-healthchecks","bridge-heartbeat","publish","ed25519-verify","download-sha256","launch-fixture","minecraft-protocol-join","plugin-allow","revoke","minecraft-protocol-rejoin","plugin-deny"]}
+{"version":"$VERSION","status":"passed","minecraft":{"version":"$MINECRAFT_VERSION","client":"actual-mojang-client","paperJoin":"passed"},"health":{"velocity":"healthy","paper":"healthy","purpur":"healthy"},"evidence":["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-sync.json","runtime-launch-minecraft.json","health-velocity.json","health-paper.json","health-purpur.json","bridge-diagnostics.json"],"flow":["postgres-migrate","api-bootstrap","real-velocity","real-paper","real-purpur","mojang-materialize","local-package-verify","canonical-api-upload","immutable-publish","ed25519-verify","clean-download-sha256","xvfb-actual-minecraft-launch","quick-play-paper","actual-player-world-join","revoke","plugin-deny","velocity-protocol-bridge-check","purpur-protocol-bridge-check"]}
 JSON
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

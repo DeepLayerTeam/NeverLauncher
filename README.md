@@ -1,6 +1,6 @@
-# NeverLauncher 0.10.4
+# NeverLauncher 0.10.5
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.4` добавляет рабочую production-материализацию **Forge + NeoForge** поверх уже реализованных Compatibility Engine, Managed Java, Vanilla, Fabric и Quilt.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.5` переводит главный production E2E с Java fixture на **настоящий Minecraft Java Client**: реальный Vanilla 1.21.1 материализуется из Mojang metadata, публикуется как подписанный immutable release, заново скачивается NeverRuntime и фактически входит на настоящий Paper-сервер.
 
 ## Рабочий контур
 
@@ -15,7 +15,7 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
                      -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-В `0.10.4` Forge/NeoForge больше не являются только `install-plan`: CLI выполняет реальный processor-based installer pipeline и материализует итоговые runtime artifacts до формирования Never package.
+В `0.10.5` Forge/NeoForge больше не являются только `install-plan`: CLI выполняет реальный processor-based installer pipeline и материализует итоговые runtime artifacts до формирования Never package.
 
 ## Managed Java
 
@@ -35,7 +35,7 @@ nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --cl
 nl runtime quilt-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/quilt/1.21.1 --output client-package.json
 ```
 
-## Forge + NeoForge 0.10.4
+## Forge + NeoForge 0.10.5
 
 Новые materializer-команды:
 
@@ -80,7 +80,7 @@ Production pipeline выполняет:
 
 Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В strict mode отсутствие корректного checksum завершает materialization ошибкой.
 
-`0.10.4` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
+`0.10.5` поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
 
 ## Compatibility Engine
 
@@ -140,18 +140,32 @@ NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 ./scripts/release/preflight.sh
 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 ```
 
-## Production E2E
+## Настоящий Minecraft Client E2E — 0.10.5
 
-Блокирующий релизный сценарий:
+Блокирующий release gate больше не использует Java fixture как доказательство совместимости клиента:
 
 ```text
-миграции PostgreSQL -> bootstrap -> Velocity/Paper/Purpur
--> публикация подписанного Java fixture -> NeverRuntime: pinned Ed25519-проверка
--> потоковая загрузка/SHA-256 -> запуск JVM
--> вход -> разрешение -> отзыв -> запрет
+официальный Mojang version manifest
+ -> Minecraft 1.21.1 client/libraries/assets/natives/logging
+ -> полный локальный SHA-256 verify
+ -> upload через canonical /api/v1
+ -> Ed25519 signed immutable release
+ -> чистый NeverRuntime sync из Backend
+ -> pinned signature + SHA-256 verify
+ -> Xvfb + software OpenGL
+ -> настоящий Minecraft Java Client
+ -> --quickPlayMultiplayer 127.0.0.1:25571
+ -> настоящий Paper 1.21.1
+ -> NeverLauncher ServerBridge allow
+ -> E2EPlayer joined the game
+ -> revoke session -> subsequent join denied
 ```
 
-Запуск в окружении с Docker, Gradle, JDK 21, Rust/Cargo, Go, PostgreSQL client, `curl` и `jq`:
+Для CI добавлен безопасный `--max-runtime-seconds`: NeverRuntime сам завершает долговременно работающий game process после сбора E2E evidence и отражает это как `timedOut`, не оставляя Java-процесс после job.
+
+Velocity/Purpur продолжают проходить быстрый protocol-level allow/revoke/deny тест, но такой probe больше не считается доказательством Minecraft Client compatibility.
+
+Запуск в окружении с Docker, Gradle, JDK 21, Rust/Cargo, Go, PostgreSQL client, `curl`, `jq`, Python 3, Xvfb и OpenGL/X11 runtime:
 
 ```bash
 bash e2e/scripts/run-minecraft-e2e.sh

@@ -19,6 +19,7 @@ use tokio::{
     fs,
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
     process::Command,
+    time::{timeout, Duration},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -229,6 +230,8 @@ pub struct LaunchPlan {
 pub struct LaunchResult {
     pub exit_code: Option<i32>,
     pub success: bool,
+    #[serde(default)]
+    pub timed_out: bool,
     pub log_path: String,
     pub stdout: String,
     pub stderr: String,
@@ -479,6 +482,17 @@ pub async fn build_launch_plan(manifest: &Manifest, root: &Path, java_path: Opti
 }
 
 pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, pinned_public_key: &str) -> Result<LaunchResult, String> {
+    launch_with_timeout(manifest, root, java_path, username, pinned_public_key, None).await
+}
+
+pub async fn launch_with_timeout(
+    manifest: &Manifest,
+    root: &Path,
+    java_path: Option<String>,
+    username: Option<String>,
+    pinned_public_key: &str,
+    max_runtime_seconds: Option<u64>,
+) -> Result<LaunchResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
     let checks = check_files(manifest, root).await?;
@@ -498,7 +512,7 @@ pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>,
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
-    let status = Command::new(&plan.java_executable)
+    let mut child = Command::new(&plan.java_executable)
         .args(&plan.jvm_args)
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
@@ -509,17 +523,51 @@ pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>,
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file))
         .spawn()
-        .map_err(|err| format!("не удалось запустить runtime: {err}"))?
-        .wait()
-        .await
-        .map_err(|err| format!("не удалось дождаться runtime: {err}"))?;
-    let success = status.success();
-    let exit_code = status.code();
-    let stdout = read_log_tail(&log_path, 256 * 1024).await.unwrap_or_default();
+        .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
+
+    let (status, timed_out) = if let Some(seconds) = max_runtime_seconds.filter(|seconds| *seconds > 0) {
+        match timeout(Duration::from_secs(seconds), child.wait()).await {
+            Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false),
+            Err(_) => {
+                child.kill().await.map_err(|err| format!("runtime превысил лимит {seconds}s и не был остановлен: {err}"))?;
+                let _ = child.wait().await;
+                (None, true)
+            }
+        }
+    } else {
+        (Some(child.wait().await.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false)
+    };
+    let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
+    let exit_code = status.and_then(|value| value.code());
+    let stdout = read_log_tail(&log_path, 512 * 1024).await.unwrap_or_default();
     let stderr = String::new();
-    let history = LaunchHistoryEntry { started_at: started_at.to_string(), project_id: manifest.project_id.clone(), profile_id: manifest.profile_id.clone(), version: manifest.version.clone(), success, exit_code, log_path: log_path.to_string_lossy().to_string(), message: if success { "Runtime завершился успешно" } else { "Runtime завершился с ошибкой" }.to_string() };
+    let message = if timed_out {
+        format!("Runtime остановлен после заданного лимита {}s", max_runtime_seconds.unwrap_or_default())
+    } else if success {
+        "Runtime завершился успешно".to_string()
+    } else {
+        "Runtime завершился с ошибкой".to_string()
+    };
+    let history = LaunchHistoryEntry {
+        started_at: started_at.to_string(),
+        project_id: manifest.project_id.clone(),
+        profile_id: manifest.profile_id.clone(),
+        version: manifest.version.clone(),
+        success,
+        exit_code,
+        log_path: log_path.to_string_lossy().to_string(),
+        message: message.clone(),
+    };
     append_launch_history(root, &history).await?;
-    Ok(LaunchResult { exit_code, success, log_path: log_path.to_string_lossy().to_string(), stdout, stderr, message: history.message })
+    Ok(LaunchResult {
+        exit_code,
+        success,
+        timed_out,
+        log_path: log_path.to_string_lossy().to_string(),
+        stdout,
+        stderr,
+        message,
+    })
 }
 
 pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>, String> {
@@ -795,7 +843,7 @@ mod tests {
             project_id: "demo".to_string(),
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
-            version: "0.10.4-test".to_string(),
+            version: "0.10.5-test".to_string(),
             created_at: "2026-09-13T00:00:00Z".to_string(),
             minecraft: MinecraftInfo {
                 version: "1.21.1".to_string(),

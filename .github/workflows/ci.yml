@@ -197,10 +197,10 @@ jobs:
           test -s "${DIR}/neverlauncher-purpur-bridge-${VERSION}.jar"
 
   production-e2e:
-    name: PostgreSQL + Redis + Minecraft E2E
+    name: PostgreSQL + Redis + actual Minecraft Client E2E
     needs: [go-contracts, web, rust-desktop, bridge, containers, release-bundle]
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -220,12 +220,14 @@ jobs:
       - name: Install E2E dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends jq postgresql-client
-      - name: Real publish -> verify -> launch -> join -> revoke -> deny
+          sudo apt-get install -y --no-install-recommends \
+            jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
+            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence
         run: |
-          jq -e '.status == "passed" and .health.velocity == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy"' e2e/runtime/result.json >/dev/null
+          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .health.velocity == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy"' e2e/runtime/result.json >/dev/null
           for service in velocity paper purpur; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
@@ -233,7 +235,21 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-p3.2-e2e-evidence
-          path: e2e/runtime/**
+          name: neverlauncher-0.10.5-minecraft-client-e2e-evidence
+          path: |
+            e2e/runtime/result.json
+            e2e/runtime/client-package.json
+            e2e/runtime/materialized-client-verify.json
+            e2e/runtime/published-client-package.json
+            e2e/runtime/manifest.json
+            e2e/runtime/runtime-verify.json
+            e2e/runtime/runtime-sync.json
+            e2e/runtime/runtime-launch-minecraft.json
+            e2e/runtime/health-*.json
+            e2e/runtime/bridge-diagnostics.json
+            e2e/runtime/validate-*.json
+            e2e/runtime/join-*.json
+            e2e/runtime/revoke-*.json
+            e2e/runtime/probe-*.txt
           if-no-files-found: ignore
           retention-days: 7

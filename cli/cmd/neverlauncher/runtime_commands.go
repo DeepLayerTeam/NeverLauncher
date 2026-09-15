@@ -45,7 +45,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.4 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.5 запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -342,7 +342,7 @@ func runtimeMatrix740() map[string]any {
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
 		"status":        "forge-neoforge-production",
-		"title":         "NeverRuntime Forge + NeoForge 0.10.4",
+		"title":         "NeverRuntime Forge + NeoForge 0.10.5",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
@@ -353,7 +353,7 @@ func runtimeMatrix740() map[string]any {
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
 		"pending":            []string{"forge-legacy-pre-1.13", "real-client-e2e"},
-		"note":               "0.10.4 выполняет processor-based Forge/NeoForge installer pipeline, проверяет upstream installer SHA-1 и processor outputs и материализует результат в immutable Never release.",
+		"note":               "0.10.5 выполняет processor-based Forge/NeoForge installer pipeline, проверяет upstream installer SHA-1 и processor outputs и материализует результат в immutable Never release.",
 	}
 }
 

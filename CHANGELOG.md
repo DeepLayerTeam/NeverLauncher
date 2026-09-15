@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.10.5 — настоящий Minecraft Client E2E
+
+`0.10.5` заменяет Java fixture в главном production E2E на реальный Minecraft Java Client и делает фактический вход клиента на сервер блокирующим release gate.
+
+### Real client pipeline
+
+- E2E материализует Minecraft 1.21.1 из официального Mojang `version_manifest_v2`, включая client JAR, libraries, assets, natives и logging config.
+- Полученное дерево проходит полный локальный `nl client verify` до публикации.
+- Новый `e2e/scripts/publish-client-package.py` повторно SHA-256-хеширует каждый artifact, загружает полный package через канонический `/api/v1`, сверяет backend checksum/size и публикует Ed25519-signed immutable release.
+- NeverRuntime скачивает опубликованный release в чистый client root и повторно проверяет pinned Ed25519 signature и SHA-256 всех файлов.
+- Настоящий Mojang client запускается под Xvfb/software OpenGL с `--quickPlayMultiplayer` и подключается к настоящему Paper 1.21.1.
+- Release gate требует одновременно `neverlauncher.join.allowed username=E2EPlayer` и серверную строку `E2EPlayer joined the game`; простого protocol handshake недостаточно.
+- После отзыва launcher session повторная попытка входа проверяет fail-closed deny; Velocity/Purpur сохраняют дополнительное protocol-level bridge покрытие.
+
+### NeverRuntime
+
+- Восстановлен фактический binary source `runtime/neverruntime/src/bin/neverruntime.rs`, который отсутствовал в переданном `0.10.4`, несмотря на объявленный Cargo `[[bin]]`.
+- Добавлен `launch_with_timeout` и CLI-флаг `--max-runtime-seconds`: runtime корректно завершает дочерний game process после ограниченного CI-интервала и возвращает `timedOut` в JSON result. Обычный production `launch()` сохраняет прежнее поведение без timeout.
+- Размер tail runtime log для launch evidence увеличен до 512 KiB.
+
+### CI
+
+- Production E2E job переведён на 90 минут и устанавливает Xvfb/OpenGL/X11/audio runtime, необходимый настоящему клиенту Minecraft на Ubuntu runner.
+- CI artifact теперь содержит materialization verify, опубликованный package, signed manifest, clean sync result, actual Minecraft launch result и health/bridge diagnostics.
+
 ## 0.10.4 — Forge + NeoForge
 
 `0.10.4` добавляет рабочую materialization-цепочку Forge и NeoForge поверх `0.10.3` Fabric + Quilt. Реализация использует настоящий processor-based installer format, а не декларативный install-plan.

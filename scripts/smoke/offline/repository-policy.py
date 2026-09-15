@@ -368,6 +368,31 @@ if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
     fail("standalone first-run regression-test отсутствует")
 
+# 9. 0.10.5 real Minecraft client E2E: the release gate must materialize and
+#    launch an actual Mojang client, not regress to a synthetic Java fixture.
+e2e_script = read("e2e/scripts/run-minecraft-e2e.sh")
+e2e_publish = read("e2e/scripts/publish-client-package.py")
+for required in [
+    "runtime vanilla-package",
+    "materialized-client-verify.json",
+    "publish-client-package.py",
+    "xvfb-run",
+    "--quick-play",
+    "runtime-launch-minecraft.json",
+    "joined the game",
+    "--max-runtime-seconds",
+]:
+    if required not in e2e_script:
+        fail(f"0.10.5 actual Minecraft E2E отсутствует обязательный primitive: {required}")
+for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
+    if forbidden in e2e_script:
+        fail(f"production Minecraft E2E снова использует synthetic fixture: {forbidden}")
+for required in ["hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings"]:
+    if required not in e2e_publish:
+        fail(f"E2E package publisher не проверяет реальный artifact lifecycle: {required}")
+if "actual-mojang-client" not in ci or "xvfb" not in ci or "Minecraft Client E2E" not in ci:
+    fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

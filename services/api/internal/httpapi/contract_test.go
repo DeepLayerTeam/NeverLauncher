@@ -25,7 +25,7 @@ func p1CanonicalServer(t *testing.T) http.Handler {
 		ManifestSigningPrivateKey: p1TestSigningSeed,
 	}
 	return Server{
-		Version: "0.10.4",
+		Version: "0.10.5",
 		Config:  cfg,
 		Repo:    repository.NewMemoryRepository(cfg.PublicURL),
 		Storage: storage.NewLocalStorage(cfg.StorageLocalPath),

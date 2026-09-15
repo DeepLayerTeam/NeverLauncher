@@ -270,7 +270,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в 0.10.4 запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в 0.10.5 запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {
@@ -440,7 +440,7 @@ func loaderChecks(loader string) []string {
 func loaderCompatibility(loader string) map[string]any {
 	return map[string]any{
 		"java":                   []int{17, 21},
-		"minecraftRange":         "Fabric/Quilt по официальному Meta API; Forge processor-based installers 1.13+; NeoForge processor-based installers; legacy Forge pre-1.13 пока вне 0.10.4",
+		"minecraftRange":         "Fabric/Quilt по официальному Meta API; Forge processor-based installers 1.13+; NeoForge processor-based installers; legacy Forge pre-1.13 пока вне 0.10.5",
 		"requiresInstallerMerge": loader == "forge" || loader == "neoforge",
 		"supportsOptionalMods":   loader != "vanilla",
 		"profileFields":          []string{"loader", "loaderVersion", "minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
