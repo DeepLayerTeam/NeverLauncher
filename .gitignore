@@ -9,7 +9,6 @@ Thumbs.db
 !.env.example
 
 # Go
-bin/
 coverage.out
 
 # Node/TypeScript
