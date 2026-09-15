@@ -23,7 +23,7 @@ type RuntimeState struct {
 
 func NewRuntimeState() *RuntimeState {
 	return &RuntimeState{
-		AuthSessions:             &authSessionStore{sessions: map[string]authSessionRecord{}},
+		AuthSessions:             newAuthSessionStore111(),
 		Security:                 &securityHardeningStore{mfa: map[string]mfaRecord{}, failedLogins: map[string]loginFailureRecord{}, passwordResets: map[string]oneTimeSecurityToken{}, emailTokens: map[string]oneTimeSecurityToken{}, emailVerified: map[string]bool{}},
 		ServerBridge:             &serverBridgeStore{servers: map[string]bridgeServerRecord{}, joins: map[string]bridgeJoinRecord{}, textures: map[string]bridgeTextureRecord{}},
 		Maintenance:              &maintenanceGate{},

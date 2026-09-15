@@ -41,16 +41,56 @@ type authSessionRecord struct {
 	UserAgent     string    `json:"userAgent"`
 }
 
-type authSessionStore struct {
-	mu       sync.Mutex
-	sessions map[string]authSessionRecord
+type refreshTokenRecord111 struct {
+	Hash       string
+	FamilyID   string
+	SessionID  string
+	Status     string
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	ConsumedAt time.Time
 }
 
-var errRefreshTokenInvalid = errors.New("refresh token недействителен")
+type refreshFamilyRecord111 struct {
+	ID            string
+	SessionID     string
+	UserID        string
+	Status        string
+	CreatedAt     time.Time
+	CompromisedAt time.Time
+	RevokedAt     time.Time
+	RevokedReason string
+}
+
+type authSessionStore struct {
+	mu         sync.Mutex
+	sessions   map[string]authSessionRecord
+	tokens     map[string]refreshTokenRecord111 // key: SHA-256(refresh token)
+	families   map[string]refreshFamilyRecord111
+	persistent *authSessionPostgres111
+}
+
+var (
+	errRefreshTokenInvalid       = errors.New("refresh token недействителен")
+	errRefreshTokenReuseDetected = errors.New("обнаружено повторное использование refresh token")
+)
+
+func newAuthSessionStore111() *authSessionStore {
+	return &authSessionStore{
+		sessions: map[string]authSessionRecord{},
+		tokens:   map[string]refreshTokenRecord111{},
+		families: map[string]refreshFamilyRecord111{},
+	}
+}
 
 func (s *authSessionStore) create(user model.User, r *http.Request, deviceID string) (authSessionRecord, string, error) {
+	if s.persistent != nil {
+		return s.persistent.create(user, r, deviceID)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.ensureMemoryMapsLocked111()
 
 	now := time.Now().UTC()
 	deviceID = strings.TrimSpace(deviceID)
@@ -61,6 +101,7 @@ func (s *authSessionStore) create(user model.User, r *http.Request, deviceID str
 	if err != nil {
 		return authSessionRecord{}, "", err
 	}
+	familyID := fmt.Sprintf("rtf-%d", now.UnixNano())
 	record := authSessionRecord{
 		ID:            fmt.Sprintf("sess-%d", now.UnixNano()),
 		UserID:        user.ID,
@@ -70,7 +111,7 @@ func (s *authSessionStore) create(user model.User, r *http.Request, deviceID str
 		Device:        deviceID,
 		Status:        "active",
 		RefreshHash:   hashRefreshToken(refreshToken),
-		RefreshFamily: fmt.Sprintf("rtf-%d", now.UnixNano()),
+		RefreshFamily: familyID,
 		CreatedAt:     now,
 		LastSeenAt:    now,
 		ExpiresAt:     now.Add(refreshTokenTTL),
@@ -78,41 +119,78 @@ func (s *authSessionStore) create(user model.User, r *http.Request, deviceID str
 		UserAgent:     r.UserAgent(),
 	}
 	s.sessions[record.ID] = record
+	s.families[familyID] = refreshFamilyRecord111{ID: familyID, SessionID: record.ID, UserID: user.ID, Status: "active", CreatedAt: now}
+	s.tokens[record.RefreshHash] = refreshTokenRecord111{Hash: record.RefreshHash, FamilyID: familyID, SessionID: record.ID, Status: "current", CreatedAt: now, ExpiresAt: record.ExpiresAt}
 	s.enforceSessionLimitLocked(user.ID)
 	return record, refreshToken, nil
 }
 
 func (s *authSessionStore) rotate(refreshToken string) (authSessionRecord, string, error) {
+	if s.persistent != nil {
+		return s.persistent.rotate(refreshToken)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.ensureMemoryMapsLocked111()
 
 	now := time.Now().UTC()
 	hash := hashRefreshToken(refreshToken)
-	for id, record := range s.sessions {
-		if record.RefreshHash != hash {
-			continue
+	token, ok := s.tokens[hash]
+	if !ok {
+		// Upgrade compatibility for an in-memory/snapshot session created before 0.11.1.
+		for _, record := range s.sessions {
+			if record.RefreshHash == hash {
+				token = refreshTokenRecord111{Hash: hash, FamilyID: record.RefreshFamily, SessionID: record.ID, Status: "current", CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt}
+				s.tokens[hash] = token
+				if _, exists := s.families[record.RefreshFamily]; !exists {
+					s.families[record.RefreshFamily] = refreshFamilyRecord111{ID: record.RefreshFamily, SessionID: record.ID, UserID: record.UserID, Status: "active", CreatedAt: record.CreatedAt}
+				}
+				ok = true
+				break
+			}
 		}
-		if record.Status != "active" || record.ExpiresAt.Before(now) {
+	}
+	if !ok {
+		return authSessionRecord{}, "", errRefreshTokenInvalid
+	}
+	if token.Status == "consumed" {
+		s.compromiseFamilyLocked111(token.FamilyID, "refresh-token-reuse")
+		return authSessionRecord{}, "", errRefreshTokenReuseDetected
+	}
+	if token.Status != "current" {
+		return authSessionRecord{}, "", errRefreshTokenInvalid
+	}
+	record, ok := s.sessions[token.SessionID]
+	if !ok || record.Status != "active" || record.ExpiresAt.Before(now) || token.ExpiresAt.Before(now) {
+		if ok {
 			record.Status = "revoked"
 			record.RevokedAt = now
 			record.RevokedReason = "expired-or-inactive-refresh-token"
-			s.sessions[id] = record
-			return authSessionRecord{}, "", errRefreshTokenInvalid
+			s.sessions[record.ID] = record
 		}
-		newRefresh, err := randomToken("nlr")
-		if err != nil {
-			return authSessionRecord{}, "", err
-		}
-		record.RefreshHash = hashRefreshToken(newRefresh)
-		record.LastSeenAt = now
-		record.ExpiresAt = now.Add(refreshTokenTTL)
-		s.sessions[id] = record
-		return record, newRefresh, nil
+		return authSessionRecord{}, "", errRefreshTokenInvalid
 	}
-	return authSessionRecord{}, "", errRefreshTokenInvalid
+	newRefresh, err := randomToken("nlr")
+	if err != nil {
+		return authSessionRecord{}, "", err
+	}
+	newHash := hashRefreshToken(newRefresh)
+	token.Status = "consumed"
+	token.ConsumedAt = now
+	s.tokens[hash] = token
+	s.tokens[newHash] = refreshTokenRecord111{Hash: newHash, FamilyID: token.FamilyID, SessionID: token.SessionID, Status: "current", CreatedAt: now, ExpiresAt: now.Add(refreshTokenTTL)}
+	record.RefreshHash = newHash
+	record.LastSeenAt = now
+	record.ExpiresAt = now.Add(refreshTokenTTL)
+	s.sessions[record.ID] = record
+	return record, newRefresh, nil
 }
 
 func (s *authSessionStore) active(sessionID, userID string) bool {
+	if s.persistent != nil {
+		return s.persistent.active(sessionID, userID)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	record, ok := s.sessions[sessionID]
@@ -125,20 +203,28 @@ func (s *authSessionStore) active(sessionID, userID string) bool {
 }
 
 func (s *authSessionStore) revoke(sessionID, reason string) bool {
+	if s.persistent != nil {
+		return s.persistent.revoke(sessionID, reason)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	record, ok := s.sessions[sessionID]
 	if !ok {
 		return false
 	}
+	now := time.Now().UTC()
 	record.Status = "revoked"
-	record.RevokedAt = time.Now().UTC()
+	record.RevokedAt = now
 	record.RevokedReason = firstNonEmpty(reason, "manual-revoke")
 	s.sessions[sessionID] = record
+	s.revokeFamilyLocked111(record.RefreshFamily, record.RevokedReason, now)
 	return true
 }
 
 func (s *authSessionStore) revokeUser(userID, reason string) int {
+	if s.persistent != nil {
+		return s.persistent.revokeUser(userID, reason)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	count := 0
@@ -151,12 +237,16 @@ func (s *authSessionStore) revokeUser(userID, reason string) int {
 		record.RevokedAt = now
 		record.RevokedReason = firstNonEmpty(reason, "user-session-revoke")
 		s.sessions[id] = record
+		s.revokeFamilyLocked111(record.RefreshFamily, record.RevokedReason, now)
 		count++
 	}
 	return count
 }
 
 func (s *authSessionStore) listByUser(userID string) []authSessionRecord {
+	if s.persistent != nil {
+		return s.persistent.listByUser(userID)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	items := make([]authSessionRecord, 0)
@@ -170,6 +260,9 @@ func (s *authSessionStore) listByUser(userID string) []authSessionRecord {
 }
 
 func (s *authSessionStore) summary() map[string]any {
+	if s.persistent != nil {
+		return s.persistent.summary()
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	active := 0
@@ -181,7 +274,7 @@ func (s *authSessionStore) summary() map[string]any {
 			revoked++
 		}
 	}
-	return map[string]any{"active": active, "revokedOrExpired": revoked, "total": len(s.sessions), "backend": "in-process-session-registry"}
+	return map[string]any{"active": active, "revokedOrExpired": revoked, "total": len(s.sessions), "backend": "in-process-dev-session-registry", "reuseDetection": "token-family"}
 }
 
 func (s *authSessionStore) enforceSessionLimitLocked(userID string) {
@@ -200,6 +293,57 @@ func (s *authSessionStore) enforceSessionLimitLocked(userID string) {
 		record.RevokedAt = time.Now().UTC()
 		record.RevokedReason = "max-sessions-per-user"
 		s.sessions[record.ID] = record
+		s.revokeFamilyLocked111(record.RefreshFamily, record.RevokedReason, record.RevokedAt)
+	}
+}
+
+func (s *authSessionStore) ensureMemoryMapsLocked111() {
+	if s.sessions == nil {
+		s.sessions = map[string]authSessionRecord{}
+	}
+	if s.tokens == nil {
+		s.tokens = map[string]refreshTokenRecord111{}
+	}
+	if s.families == nil {
+		s.families = map[string]refreshFamilyRecord111{}
+	}
+}
+
+func (s *authSessionStore) compromiseFamilyLocked111(familyID, reason string) {
+	now := time.Now().UTC()
+	family := s.families[familyID]
+	family.Status = "compromised"
+	family.CompromisedAt = now
+	family.RevokedReason = reason
+	s.families[familyID] = family
+	if record, ok := s.sessions[family.SessionID]; ok {
+		record.Status = "revoked"
+		record.RevokedAt = now
+		record.RevokedReason = reason
+		s.sessions[record.ID] = record
+	}
+	for hash, token := range s.tokens {
+		if token.FamilyID == familyID {
+			token.Status = "revoked"
+			s.tokens[hash] = token
+		}
+	}
+}
+
+func (s *authSessionStore) revokeFamilyLocked111(familyID, reason string, now time.Time) {
+	if familyID == "" {
+		return
+	}
+	family := s.families[familyID]
+	family.Status = "revoked"
+	family.RevokedAt = now
+	family.RevokedReason = reason
+	s.families[familyID] = family
+	for hash, token := range s.tokens {
+		if token.FamilyID == familyID && token.Status != "revoked" {
+			token.Status = "revoked"
+			s.tokens[hash] = token
+		}
 	}
 }
 

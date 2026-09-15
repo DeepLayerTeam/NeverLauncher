@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -127,6 +128,9 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	session, newRefreshToken, err := s.State.AuthSessions.rotate(req.RefreshToken)
 	_ = s.flushPersistenceState950("auth-refresh-rotate")
 	if err != nil {
+		if errors.Is(err, errRefreshTokenReuseDetected) {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		}
 		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
 		return
 	}

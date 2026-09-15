@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.11.1 — Auth Core hardening + persistent sessions
+
+`0.11.1` переводит authentication state с process-local registry/snapshot semantics на нормализованный PostgreSQL auth core и закрывает replay refresh token на уровне token family.
+
+### Persistent session core
+
+- Добавлена migration `0004_auth_core_0111.sql` с `auth_sessions`, `refresh_token_families`, `refresh_tokens`, `auth_identities`, `mfa_methods`, `recovery_codes` и `auth_events`.
+- В PostgreSQL-режиме login/refresh/active/revoke/list используют общую БД как source of truth; memory backend остаётся только для dev/test.
+- Refresh-token rotation сохраняет consumed-token history. Повторное использование старого token помечает family как compromised, отзывает текущий token и всю session.
+- Ограничение числа сессий применяется транзакционно и отзывает соответствующие token families.
+- Старые 0.10.x persistence snapshots мигрируются в нормализованные auth tables при первом запуске после обновления.
+
+### MFA persistence
+
+- TOTP state вынесен из общего runtime snapshot в `mfa_methods`; TOTP secrets хранятся encrypted at rest.
+- Recovery codes хранятся отдельно в `recovery_codes` как hashes и потребляются атомарным `UPDATE ... WHERE status='active'`.
+- Несколько Backend instances читают единое MFA/session state непосредственно из PostgreSQL.
+- `currentCodeForSmoke` удалён из production enrollment response; тест получает enrollment secret и сам вычисляет код.
+
+### Verification
+
+- Добавлен regression test на refresh-token replay: replay старого token обязан отозвать session и отклонить ранее выданный current token.
+- Offline backend test suite проходит с `neverlauncher_nopgx`; production pgx test в изолированном окружении требует заранее доступный module cache/registry.
+
 ## 0.11.0 — Minecraft Compatibility Release
 
 `0.11.0` завершает compatibility-линию `0.10.1`–`0.10.7` и переводит её в release-grade состояние: Compatibility Engine, Managed Java, Vanilla/Fabric/Quilt/Forge/NeoForge materializers, actual Minecraft Client E2E и публичная CI-матрица теперь связаны с production release bundle machine-verifiable certification.

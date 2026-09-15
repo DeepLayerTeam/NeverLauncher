@@ -24,10 +24,11 @@ func TestSecurityHardening902TOTPAndPasswordReset(t *testing.T) {
 	}
 
 	enroll := postJSON902(t, h, "/api/v1/auth/totp/enroll", `{}`, token)
-	code := nestedStringField902(t, enroll, "data", "currentCodeForSmoke")
-	if code == "" {
-		t.Fatalf("enroll did not return currentCodeForSmoke: %#v", enroll)
+	secret := nestedStringField902(t, enroll, "data", "secret")
+	if secret == "" {
+		t.Fatalf("enroll did not return enrollment secret: %#v", enroll)
 	}
+	code := currentTOTPCode902(secret, nowUTC902())
 	verify := postJSON902(t, h, "/api/v1/auth/totp/verify", `{"code":"`+code+`"}`, token)
 	if nestedStringField902(t, verify, "data", "status") != "totp-enabled" {
 		t.Fatalf("totp was not enabled: %#v", verify)
@@ -41,7 +42,7 @@ func TestSecurityHardening902TOTPAndPasswordReset(t *testing.T) {
 		t.Fatalf("login without TOTP should fail after MFA enablement, got %d: %s", res.Code, res.Body.String())
 	}
 
-	withMFA := postJSON902(t, h, "/api/v1/auth/login", `{"email":"admin@neverlauncher.local","password":"admin","totp":"`+currentTOTPCode902(api.State.Security.mfa["admin"].ActiveSecret, nowUTC902())+`"}`, "")
+	withMFA := postJSON902(t, h, "/api/v1/auth/login", `{"email":"admin@neverlauncher.local","password":"admin","totp":"`+currentTOTPCode902(secret, nowUTC902())+`"}`, "")
 	if nestedStringField902(t, withMFA, "data", "status") != "authenticated" {
 		t.Fatalf("login with TOTP failed: %#v", withMFA)
 	}

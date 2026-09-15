@@ -78,7 +78,9 @@ func BootstrapPersistence950(cfg config.Config, state *RuntimeState) error {
 	if snapshot, ok, err := store.loadLatest(ctx, "all"); err != nil {
 		return err
 	} else if ok {
-		importPersistenceSnapshot950(state, snapshot, cfg.AuthTokenSecret)
+		if err := importPersistenceSnapshot950(state, snapshot, cfg.AuthTokenSecret); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -169,9 +171,10 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			"productionGate": s.Config.RequirePersistentStoreInProduction,
 		},
 		"implemented": []string{
-			"PostgreSQL DDL for security users, sessions, recovery codes, bridge servers, join sessions, textures and audit",
-			"write-through JSON persistence snapshots for auth sessions, security hardening and ServerBridge state",
-			"startup bootstrap from latest PostgreSQL persistence snapshot",
+			"PostgreSQL DDL for security users, normalized auth sessions/token families/MFA, bridge servers, join sessions, textures and audit",
+			"normalized PostgreSQL auth core is source of truth for sessions and MFA in 0.11.1",
+			"JSON persistence snapshots remain for non-auth legacy state and 0.10.x migration bootstrap",
+			"startup migration from latest PostgreSQL persistence snapshot into normalized auth tables",
 			"production guard: memory repository is rejected when NEVERLAUNCHER_ENV=production",
 			"persistence status/readiness/security/server-bridge/smoke endpoints",
 			"backup/restore manifests include 0.10.0 persistent state tables",
@@ -286,10 +289,15 @@ func exportPersistenceSnapshot950(state *RuntimeState, secret string) persistenc
 	return persistenceSnapshot950{AuthSessions: state.AuthSessions.export950(), Security: state.Security.export950(secret), ServerBridge: state.ServerBridge.export950(), ExportedAt: time.Now().UTC()}
 }
 
-func importPersistenceSnapshot950(state *RuntimeState, snapshot persistenceSnapshot950, secret string) {
-	state.AuthSessions.import950(snapshot.AuthSessions)
-	state.Security.import950(snapshot.Security, secret)
+func importPersistenceSnapshot950(state *RuntimeState, snapshot persistenceSnapshot950, secret string) error {
+	if err := state.AuthSessions.import950(snapshot.AuthSessions); err != nil {
+		return err
+	}
+	if err := state.Security.import950(snapshot.Security, secret); err != nil {
+		return err
+	}
 	state.ServerBridge.import950(snapshot.ServerBridge)
+	return nil
 }
 
 func exportPersistenceSummary950(state *RuntimeState) map[string]any {
@@ -301,6 +309,9 @@ func exportPersistenceSummary950(state *RuntimeState) map[string]any {
 }
 
 func (s *authSessionStore) export950() []authSessionRecord {
+	if s.persistent != nil {
+		return nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	items := make([]authSessionRecord, 0, len(s.sessions))
@@ -310,7 +321,10 @@ func (s *authSessionStore) export950() []authSessionRecord {
 	return items
 }
 
-func (s *authSessionStore) import950(items []authSessionRecord) {
+func (s *authSessionStore) import950(items []authSessionRecord) error {
+	if s.persistent != nil {
+		return s.persistent.importLegacySessions(items)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.sessions == nil {
@@ -321,22 +335,31 @@ func (s *authSessionStore) import950(items []authSessionRecord) {
 			s.sessions[item.ID] = item
 		}
 	}
+	return nil
 }
 
 func (s *securityHardeningStore) export950(secret string) securityState950 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	mfa := make(map[string]mfaPersistRecord950, len(s.mfa))
-	for userID, rec := range s.mfa {
-		mfa[userID] = mfaPersistRecord950{PendingSecretEncrypted: encryptString950(secret, rec.PendingSecret), ActiveSecretEncrypted: encryptString950(secret, rec.ActiveSecret), Enabled: rec.Enabled, Recovery: copyMap950(rec.Recovery), UpdatedAt: rec.UpdatedAt}
+	mfa := map[string]mfaPersistRecord950{}
+	if s.persistent == nil {
+		mfa = make(map[string]mfaPersistRecord950, len(s.mfa))
+		for userID, rec := range s.mfa {
+			mfa[userID] = mfaPersistRecord950{PendingSecretEncrypted: encryptString950(secret, rec.PendingSecret), ActiveSecretEncrypted: encryptString950(secret, rec.ActiveSecret), Enabled: rec.Enabled, Recovery: copyMap950(rec.Recovery), UpdatedAt: rec.UpdatedAt}
+		}
 	}
 	return securityState950{MFA: mfa, FailedLogins: copyMap950(s.failedLogins), PasswordResets: copyMap950(s.passwordResets), EmailTokens: copyMap950(s.emailTokens), EmailVerified: copyMap950(s.emailVerified), RecoveryUseLog: append([]map[string]any(nil), s.recoveryUseLog...)}
 }
 
-func (s *securityHardeningStore) import950(state securityState950, secret string) {
+func (s *securityHardeningStore) import950(state securityState950, secret string) error {
+	if s.persistent != nil && len(state.MFA) > 0 {
+		if err := s.persistent.importLegacyMFA(state); err != nil {
+			return err
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(state.MFA) > 0 {
+	if s.persistent == nil && len(state.MFA) > 0 {
 		converted := make(map[string]mfaRecord, len(state.MFA))
 		for userID, rec := range state.MFA {
 			converted[userID] = mfaRecord{PendingSecret: decryptString950(secret, rec.PendingSecretEncrypted), ActiveSecret: decryptString950(secret, rec.ActiveSecretEncrypted), Enabled: rec.Enabled, Recovery: copyMap950(rec.Recovery), UpdatedAt: rec.UpdatedAt}
@@ -358,6 +381,7 @@ func (s *securityHardeningStore) import950(state securityState950, secret string
 	if len(state.RecoveryUseLog) > 0 {
 		s.recoveryUseLog = state.RecoveryUseLog
 	}
+	return nil
 }
 
 func (b *serverBridgeStore) export950() serverBridgeState950 {

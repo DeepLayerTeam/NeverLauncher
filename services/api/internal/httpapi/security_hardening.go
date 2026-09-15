@@ -38,6 +38,7 @@ type securityHardeningStore struct {
 	emailTokens    map[string]oneTimeSecurityToken
 	emailVerified  map[string]bool
 	recoveryUseLog []map[string]any
+	persistent     *securityPostgres111
 }
 
 type mfaRecord struct {
@@ -152,22 +153,23 @@ func (s Server) authTOTPEnroll(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "не удалось создать TOTP secret")
 		return
 	}
-	s.State.Security.startTOTPEnrollment(claims.Sub, secret)
+	if err := s.State.Security.startTOTPEnrollment(claims.Sub, secret); err != nil {
+		writeError(w, http.StatusInternalServerError, "не удалось сохранить TOTP enrollment")
+		return
+	}
 	_ = s.flushPersistenceState950("totp-enroll")
 	issuer := "NeverLauncher"
 	account := claims.Email
 	provisioning := "otpauth://totp/" + url.PathEscape(issuer+":"+account) + "?secret=" + url.QueryEscape(secret) + "&issuer=" + url.QueryEscape(issuer) + "&algorithm=SHA1&digits=6&period=30"
-	nowCode := currentTOTPCode902(secret, time.Now().UTC())
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: securityAuditID902("totp-enroll"), Actor: claims.Email, Action: "auth:totp:enroll", Target: claims.Sub, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": securityHardeningSchema902, "data": map[string]any{
-		"schemaVersion":       securityHardeningSchema902,
-		"toolVersion":         s.Version,
-		"status":              "pending-verification",
-		"secret":              secret,
-		"provisioningUri":     provisioning,
-		"algorithm":           "TOTP/HMAC-SHA1/30s/6digits",
-		"currentCodeForSmoke": nowCode,
-		"next":                []string{"add secret to authenticator", "POST /api/v1/auth/totp/verify with current code", "regenerate recovery codes"},
+		"schemaVersion":   securityHardeningSchema902,
+		"toolVersion":     s.Version,
+		"status":          "pending-verification",
+		"secret":          secret,
+		"provisioningUri": provisioning,
+		"algorithm":       "TOTP/HMAC-SHA1/30s/6digits",
+		"next":            []string{"add secret to authenticator", "POST /api/v1/auth/totp/verify with current code", "regenerate recovery codes"},
 	}})
 }
 
@@ -334,7 +336,10 @@ func (s Server) authEmailVerificationConfirm(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": securityHardeningSchema902, "data": map[string]any{"schemaVersion": securityHardeningSchema902, "toolVersion": s.Version, "status": "email-verified", "userId": rec.UserID}})
 }
 
-func (s *securityHardeningStore) startTOTPEnrollment(userID, secret string) {
+func (s *securityHardeningStore) startTOTPEnrollment(userID, secret string) error {
+	if s.persistent != nil {
+		return s.persistent.startTOTPEnrollment(userID, secret)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec := s.mfa[userID]
@@ -344,9 +349,13 @@ func (s *securityHardeningStore) startTOTPEnrollment(userID, secret string) {
 		rec.Recovery = map[string]string{}
 	}
 	s.mfa[userID] = rec
+	return nil
 }
 
 func (s *securityHardeningStore) finishTOTPEnrollment(userID, code string) bool {
+	if s.persistent != nil {
+		return s.persistent.finishTOTPEnrollment(userID, code)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec := s.mfa[userID]
@@ -365,6 +374,9 @@ func (s *securityHardeningStore) finishTOTPEnrollment(userID, code string) bool 
 }
 
 func (s *securityHardeningStore) disableTOTP(userID, code string) bool {
+	if s.persistent != nil {
+		return s.persistent.disableTOTP(userID, code)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec := s.mfa[userID]
@@ -380,6 +392,9 @@ func (s *securityHardeningStore) disableTOTP(userID, code string) bool {
 }
 
 func (s *securityHardeningStore) verifySecondFactor(userID, totp, recovery string) (bool, string) {
+	if s.persistent != nil {
+		return s.persistent.verifySecondFactor(userID, totp, recovery)
+	}
 	s.mu.Lock()
 	rec := s.mfa[userID]
 	s.mu.Unlock()
@@ -396,6 +411,9 @@ func (s *securityHardeningStore) verifySecondFactor(userID, totp, recovery strin
 }
 
 func (s *securityHardeningStore) generateRecoveryCodes(userID string, count int) ([]string, error) {
+	if s.persistent != nil {
+		return s.persistent.generateRecoveryCodes(userID, count)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec := s.mfa[userID]
@@ -420,6 +438,9 @@ func (s *securityHardeningStore) generateRecoveryCodes(userID string, count int)
 }
 
 func (s *securityHardeningStore) consumeRecoveryCode(userID, code string) bool {
+	if s.persistent != nil {
+		return s.persistent.consumeRecoveryCode(userID, code)
+	}
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return false
@@ -538,21 +559,30 @@ func (s *securityHardeningStore) clearExpiredLocked() {
 }
 
 func (s *securityHardeningStore) summary() map[string]any {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	enabled := 0
 	pending := 0
 	activeRecovery := 0
-	for _, rec := range s.mfa {
-		if rec.Enabled {
-			enabled++
+	if s.persistent != nil {
+		var err error
+		enabled, pending, activeRecovery, err = s.persistent.summary()
+		if err != nil {
+			return map[string]any{"backend": "postgres-auth-core-0.11.1", "status": "unavailable", "error": err.Error()}
 		}
-		if rec.PendingSecret != "" {
-			pending++
-		}
-		for _, state := range rec.Recovery {
-			if state == "active" {
-				activeRecovery++
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.persistent == nil {
+		for _, rec := range s.mfa {
+			if rec.Enabled {
+				enabled++
+			}
+			if rec.PendingSecret != "" {
+				pending++
+			}
+			for _, state := range rec.Recovery {
+				if state == "active" {
+					activeRecovery++
+				}
 			}
 		}
 	}
@@ -562,7 +592,11 @@ func (s *securityHardeningStore) summary() map[string]any {
 			locked++
 		}
 	}
-	return map[string]any{"totpEnabledUsers": enabled, "totpPendingUsers": pending, "activeRecoveryCodes": activeRecovery, "activePasswordResetTokens": len(s.passwordResets), "activeEmailVerificationTokens": len(s.emailTokens), "verifiedEmails": len(s.emailVerified), "lockedLoginKeys": locked}
+	backend := "in-process-dev-security-store"
+	if s.persistent != nil {
+		backend = "postgres-auth-core-0.11.1"
+	}
+	return map[string]any{"totpEnabledUsers": enabled, "totpPendingUsers": pending, "activeRecoveryCodes": activeRecovery, "activePasswordResetTokens": len(s.passwordResets), "activeEmailVerificationTokens": len(s.emailTokens), "verifiedEmails": len(s.emailVerified), "lockedLoginKeys": locked, "mfaBackend": backend}
 }
 
 func generateTOTPSecret902() (string, error) {

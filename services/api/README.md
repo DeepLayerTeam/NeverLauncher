@@ -22,6 +22,8 @@ POST /api/v1/install/first-project
 
 Канонический API реализует login/refresh/logout, отзыв сессий, роли, password/TOTP/recovery-сценарии, CRUD проектов/профилей/каналов, пользователей, аудит, проверку хранилища, публикацию версий и операции с пакетами в `/api/v1/auth/*` и `/api/v1/admin/*`.
 
+Начиная с `0.11.1`, при PostgreSQL repository auth state больше не хранится в process-local registry: `auth_sessions`, refresh-token families/tokens, TOTP methods и recovery codes используют PostgreSQL как source of truth. Rotation сохраняет consumed refresh tokens; replay уже использованного token компрометирует всю family и отзывает session. TOTP secrets хранятся зашифрованными в `mfa_methods`, recovery codes — отдельно как hashes. Memory auth backend оставлен только для dev/test режима.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

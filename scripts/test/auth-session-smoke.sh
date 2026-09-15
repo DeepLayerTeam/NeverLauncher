@@ -60,4 +60,28 @@ if [[ "${status}" != "401" ]]; then
   exit 1
 fi
 
+# 0.11.1 regression: replay consumed refresh token must compromise the whole family.
+replay_login=$(curl -fsS -X POST "${API_URL}/api/v1/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@neverlauncher.local","password":"admin","deviceId":"auth-smoke-replay"}')
+replay_old=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["refreshToken"])' <<<"${replay_login}")
+replay_rotated=$(curl -fsS -X POST "${API_URL}/api/v1/auth/refresh" \
+  -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"${replay_old}\"}")
+replay_access=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["accessToken"])' <<<"${replay_rotated}")
+status=$(curl -sS -o /tmp/nl-auth-smoke-replay.json -w '%{http_code}' -X POST "${API_URL}/api/v1/auth/refresh" \
+  -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"${replay_old}\"}")
+if [[ "${status}" != "401" ]]; then
+  echo "Ожидался 401 при replay consumed refresh token, получено ${status}" >&2
+  cat /tmp/nl-auth-smoke-replay.json >&2 || true
+  exit 1
+fi
+status=$(curl -sS -o /tmp/nl-auth-smoke-family-revoked.json -w '%{http_code}' "${API_URL}/api/v1/auth/accounts" -H "Authorization: Bearer ${replay_access}")
+if [[ "${status}" != "401" ]]; then
+  echo "Ожидался 401 для access token из compromised refresh family, получено ${status}" >&2
+  cat /tmp/nl-auth-smoke-family-revoked.json >&2 || true
+  exit 1
+fi
+
 echo "[NeverLauncher] Auth session smoke OK for ${VERSION}"
