@@ -45,7 +45,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.11.0 запрещён")
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в текущей версии запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -342,7 +342,7 @@ func runtimeMatrix740() map[string]any {
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
 		"status":        "minecraft-compatibility-release",
-		"title":         "NeverLauncher 0.11.0 Compatibility Matrix",
+		"title":         "NeverLauncher " + version + " Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "exclusive materialization lock", "status": "implemented"},
@@ -362,7 +362,7 @@ func runtimeMatrix740() map[string]any {
 		"ciTargets":          []string{"vanilla-1.21.1-linux-x64", "fabric-1.21.1-linux-x64", "quilt-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64"},
 		"evidence":           []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":            []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":               "PASS формируется только GitHub Actions actual-client E2E; официальный 0.11+ publish-check требует встроенную certification для того же product version/commit.",
+		"note":               "PASS формируется только GitHub Actions actual-client E2E; официальный publish-check требует встроенную certification для того же product version/commit.",
 	}
 }
 

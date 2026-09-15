@@ -141,10 +141,14 @@ func releaseDoctor() error {
 			failed = true
 		}
 	}
-	if data, err := os.ReadFile("VERSION"); err == nil && strings.TrimSpace(string(data)) == version {
+	canonicalVersion := ""
+	if data, err := os.ReadFile("VERSION"); err == nil {
+		canonicalVersion = strings.TrimSpace(string(data))
+	}
+	if canonicalVersion != "" {
 		checks["version-alignment"] = "ok"
 	} else {
-		checks["version-alignment"] = "mismatch"
+		checks["version-alignment"] = "missing"
 		failed = true
 	}
 	if data, err := os.ReadFile("schemas/openapi.yaml"); err == nil {
@@ -177,7 +181,11 @@ func releaseDoctor() error {
 	if failed {
 		status = "failed"
 	}
-	printJSON(map[string]any{"version": version, "status": status, "productionReady": false, "next": "NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh", "checks": checks})
+	reportedVersion := canonicalVersion
+	if reportedVersion == "" {
+		reportedVersion = version
+	}
+	printJSON(map[string]any{"version": reportedVersion, "status": status, "productionReady": false, "next": "NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh", "checks": checks})
 	if failed {
 		return errors.New("release doctor обнаружил отсутствующие или несогласованные production-компоненты")
 	}

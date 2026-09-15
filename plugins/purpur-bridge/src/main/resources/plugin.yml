@@ -1,6 +1,6 @@
 name: NeverLauncherPurpurBridge
 main: ru.neverlauncher.bridge.purpur.NeverLauncherPurpurBridge
-version: 0.11.0
+version: ${version}
 api-version: '1.21'
 author: SkiF4er
 description: NeverLauncher ServerBridge/AuthBridge integration for Purpur servers.

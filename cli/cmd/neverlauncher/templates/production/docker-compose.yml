@@ -51,7 +51,9 @@ services:
     build:
       context: ../..
       dockerfile: services/api/Dockerfile
-    image: neverlauncher-api:${NEVERLAUNCHER_IMAGE_TAG:-0.11.0}
+      args:
+        NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_IMAGE_TAG}
+    image: neverlauncher-api:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
     restart: unless-stopped
     depends_on:
       api-volume-init:
@@ -96,7 +98,9 @@ services:
     build:
       context: ../..
       dockerfile: apps/admin/Dockerfile
-    image: neverlauncher-admin:${NEVERLAUNCHER_IMAGE_TAG:-0.11.0}
+      args:
+        NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_IMAGE_TAG}
+    image: neverlauncher-admin:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
     restart: unless-stopped
     read_only: true
     tmpfs:

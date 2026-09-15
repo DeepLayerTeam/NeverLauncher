@@ -1,4 +1,4 @@
-# TLS-развёртывание NeverLauncher 0.11.0
+# TLS-развёртывание NeverLauncher
 
 Публичный NeverLauncher ОБЯЗАН завершать TLS до попадания трафика во внутренний HTTP-only Compose ingress. Стандартный Compose намеренно публикует только HTTP и рассчитан на размещение за TLS-capable load balancer, ingress controller, Caddy, Traefik, облачным HTTPS load balancer или host Nginx.
 

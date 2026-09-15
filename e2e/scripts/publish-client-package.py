@@ -19,6 +19,9 @@ import secrets
 import sys
 from urllib.parse import quote, urlsplit
 
+ROOT = Path(__file__).resolve().parents[2]
+PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+
 
 class APIClient:
     def __init__(self, base_url: str, token: str) -> None:
@@ -39,7 +42,7 @@ class APIClient:
         return self.conn
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
-        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": "NeverLauncher-E2E/0.11.0", **headers}
+        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": f"NeverLauncher-E2E/{PRODUCT_VERSION}", **headers}
         request_path = self.base_path + path
         for attempt in range(2):
             conn = self._connect()

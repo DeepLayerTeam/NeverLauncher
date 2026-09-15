@@ -1,7 +1,7 @@
 {
   "id": "neverlauncher-velocity-bridge",
   "name": "NeverLauncher Velocity Bridge",
-  "version": "0.11.0",
+  "version": "${version}",
   "description": "NeverLauncher ServerBridge/AuthBridge integration for Velocity proxy-layer.",
   "authors": ["SkiF4er"],
   "main": "ru.neverlauncher.bridge.velocity.NeverLauncherVelocityBridge"

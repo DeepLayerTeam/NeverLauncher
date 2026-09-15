@@ -34,3 +34,28 @@ NeverLauncher — русскоязычный open-source проект. Все п
 - `schemas` — машинно-читаемые спецификации.
 - `deploy` — инфраструктурные примеры.
 - `examples` — примеры конфигурации.
+
+## Версия проекта
+
+`VERSION` в корне репозитория — единственный редактируемый источник версии NeverLauncher.
+Не меняйте вручную версии в `package.json`, `Cargo.toml`, Tauri metadata или production env-шаблонах.
+
+Обновление версии выполняется одной командой:
+
+```bash
+python3 scripts/version/manage.py set 0.11.1
+```
+
+Если `VERSION` уже изменён вручную, синхронизируйте обязательные metadata:
+
+```bash
+python3 scripts/version/manage.py sync
+```
+
+Проверка без изменения файлов:
+
+```bash
+python3 scripts/version/manage.py check
+```
+
+Go binaries получают версию через `-ldflags`, Admin/Desktop — из `VERSION` во время Vite build, ServerBridge — через Gradle-generated `BridgeVersion`, а compatibility/E2E tooling читает `VERSION` напрямую.

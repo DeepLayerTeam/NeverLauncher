@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "scripts" / "compatibility" / "matrix.py"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -19,7 +20,7 @@ class MatrixToolTests(unittest.TestCase):
     def target_doc(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.11.0",
+            "productVersion": VERSION,
             "targets": [{
                 "id": "fabric-1.21.1-linux-x64",
                 "minecraft": "1.21.1",
@@ -34,7 +35,7 @@ class MatrixToolTests(unittest.TestCase):
     def passing_result(self) -> dict:
         return {
             "schemaVersion": "1.0",
-            "productVersion": "0.11.0",
+            "productVersion": VERSION,
             "targetId": "fabric-1.21.1-linux-x64",
             "status": "passed",
             "minecraftVersion": "1.21.1",

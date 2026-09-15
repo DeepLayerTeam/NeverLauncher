@@ -1,4 +1,4 @@
-# NeverLauncher Backend API 0.11.0
+# NeverLauncher Backend API
 
 Backend предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
 

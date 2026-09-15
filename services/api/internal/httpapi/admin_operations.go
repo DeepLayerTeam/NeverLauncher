@@ -51,7 +51,7 @@ func (s Server) adminOps9100Payload(kind string) map[string]any {
 	return map[string]any{
 		"schemaVersion": adminOpsSchema9100,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.11.0 Production Hardening",
+		"release":       "NeverLauncher " + s.Version + " Production Hardening",
 		"kind":          kind,
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"sections": []map[string]string{

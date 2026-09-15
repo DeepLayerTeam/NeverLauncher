@@ -86,7 +86,7 @@ pub async fn ensure_managed_java(
     }
     if !matches!(required_major, 8 | 17 | 21 | 25) {
         return Err(format!(
-            "Managed Java 0.11.0 поддерживает Java 8/17/21/25; запрошена Java {required_major}"
+            "Managed Java {} поддерживает Java 8/17/21/25; запрошена Java {required_major}", env!("CARGO_PKG_VERSION")
         ));
     }
     let distribution = normalize_distribution(distribution)?;
@@ -651,7 +651,7 @@ fn normalize_distribution(value: &str) -> Result<String, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "" | "any" | "managed" | "adoptium" | "temurin" => Ok("temurin".to_string()),
         "system" => Err("distribution=system не является Managed Java runtime".to_string()),
-        other => Err(format!("Managed Java distribution {other} не поддерживается в 0.11.0")),
+        other => Err(format!("Managed Java distribution {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
     }
 }
 

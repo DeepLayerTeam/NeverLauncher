@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
+PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/(?:health|ready|metrics))')
 files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
 routes = []
@@ -189,7 +190,7 @@ schemas={
 
 spec={
  "openapi":"3.1.1",
- "info":{"title":"NeverLauncher API","version":"1.0.0","description":"Канонический production API NeverLauncher 0.11.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
+ "info":{"title":"NeverLauncher API","version":"1.0.0","description":f"Канонический production API NeverLauncher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
  "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
  "tags":[{"name":x} for x in ["auth","install","projects","packages","admin","runtime","bridge","operations"]],
  "paths":paths,

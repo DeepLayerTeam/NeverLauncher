@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,38 +19,52 @@ def read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
-# 1. Все фактические носители версии должны совпадать с VERSION.
-version_expectations = {
-    ".env.example": VERSION,
-    "cli/cmd/neverlauncher/main.go": f'var version = "{VERSION}"',
-    "services/api/cmd/neverlauncher-api/main.go": f'var version = "{VERSION}"',
-    "apps/admin/package.json": f'"version": "{VERSION}"',
-    "apps/admin/package-lock.json": f'"version": "{VERSION}"',
-    "apps/desktop/package.json": f'"version": "{VERSION}"',
-    "apps/desktop/package-lock.json": f'"version": "{VERSION}"',
-    "apps/desktop/src-tauri/Cargo.toml": f'version = "{VERSION}"',
-    "apps/desktop/src-tauri/tauri.conf.json": f'"version": "{VERSION}"',
-    "runtime/neverruntime/Cargo.toml": f'version = "{VERSION}"',
-    "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java": f'VERSION = "{VERSION}"',
-    "plugins/velocity-bridge/src/main/resources/velocity-plugin.json": f'"version": "{VERSION}"',
-    "plugins/paper-bridge/src/main/resources/plugin.yml": f'version: {VERSION}',
-    "plugins/purpur-bridge/src/main/resources/plugin.yml": f'version: {VERSION}',
-    "plugins/velocity-bridge/build.gradle.kts": f'archiveVersion.set("{VERSION}")',
-    "plugins/paper-bridge/build.gradle.kts": f'archiveVersion.set("{VERSION}")',
-    "plugins/purpur-bridge/build.gradle.kts": f'archiveVersion.set("{VERSION}")',
-    "deploy/production/env.production.example": f'NEVERLAUNCHER_IMAGE_TAG={VERSION}',
-    "deploy/production/docker-compose.yml": f'NEVERLAUNCHER_IMAGE_TAG:-{VERSION}',
-    "e2e/scripts/run-minecraft-e2e.sh": f'VERSION="{VERSION}"',
-    "schemas/openapi.yaml": VERSION,
-    "scripts/contracts/generate_openapi.py": VERSION,
+# 1. VERSION — единственный редактируемый источник версии. Обязательные
+# package/Cargo/Tauri/env metadata синхронизируются scripts/version/manage.py,
+# а исполняемый код получает version через build/runtime integration.
+version_check = subprocess.run(
+    [sys.executable, str(ROOT / "scripts/version/manage.py"), "check"],
+    cwd=ROOT,
+    text=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+)
+if version_check.returncode != 0:
+    fail("version metadata drift: " + version_check.stdout.strip())
+
+dynamic_version_expectations = {
+    "cli/cmd/neverlauncher/main.go": 'var version = "dev"',
+    "services/api/cmd/neverlauncher-api/main.go": 'var version = "dev"',
+    "apps/admin/src/main.tsx": "const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;",
+    "apps/desktop/src/main.tsx": "const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;",
+    "apps/admin/vite.config.ts": "../../VERSION",
+    "apps/desktop/vite.config.ts": "../../VERSION",
+    "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
+    "plugins/bridge-common/build.gradle.kts": "generated/sources/version/java",
+    "plugins/velocity-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/paper-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/purpur-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "e2e/scripts/run-minecraft-e2e.sh": '< "$ROOT/VERSION"',
+    "scripts/compatibility/matrix.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
+    "scripts/contracts/generate_openapi.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
 }
-for rel, expected in version_expectations.items():
+for rel, expected in dynamic_version_expectations.items():
     path = ROOT / rel
     if not path.is_file():
-        fail(f"отсутствует обязательный носитель версии: {rel}")
-        continue
-    if expected not in read(rel):
-        fail(f"{rel}: версия не согласована с VERSION={VERSION}")
+        fail(f"отсутствует version integration: {rel}")
+    elif expected not in read(rel):
+        fail(f"{rel}: отсутствует canonical VERSION integration")
+
+for rel in (
+    "plugins/velocity-bridge/src/main/resources/velocity-plugin.json",
+    "plugins/paper-bridge/src/main/resources/plugin.yml",
+    "plugins/purpur-bridge/src/main/resources/plugin.yml",
+):
+    if "${version}" not in read(rel):
+        fail(f"{rel}: plugin descriptor должен получать version из Gradle")
+
+if '"productVersion"' in read("compatibility/targets.json"):
+    fail("compatibility/targets.json: productVersion не должен дублировать VERSION")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [
@@ -85,8 +100,6 @@ current_docs = [
 ]
 for rel in current_docs:
     text = read(rel)
-    if VERSION not in text:
-        fail(f"{rel}: текущая версия {VERSION} не указана")
     for match in re.finditer(r"0\.10\.0-P3\.2(?:v\d+)?", text):
         if match.group(0) != VERSION:
             fail(f"{rel}: найдено устаревшее упоминание {match.group(0)} вместо {VERSION}")
@@ -94,13 +107,11 @@ for rel in current_docs:
 ui_files = ["apps/admin/src/main.tsx", "apps/desktop/src/main.tsx"]
 for rel in ui_files:
     text = read(rel)
-    if VERSION not in text:
-        fail(f"{rel}: UI не содержит текущую версию {VERSION}")
-    for match in re.finditer(r"0\.10\.0(?:-[A-Za-z0-9.]+)?", text):
-        candidate = match.group(0)
-        if candidate not in {VERSION, VERSION + "-client"}:
-            line = text.count("\n", 0, match.start()) + 1
-            fail(f"{rel}:{line}: UI содержит устаревшую продуктовую версию {candidate}")
+    if "__NEVERLAUNCHER_VERSION__" not in text:
+        fail(f"{rel}: UI должен получать версию из Vite define, связанного с VERSION")
+    for match in re.finditer(r"(?<![0-9])\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", text):
+        line = text.count("\n", 0, match.start()) + 1
+        fail(f"{rel}:{line}: UI содержит ручной product version literal {match.group(0)}")
 
 # 4. Минимальная защита русскоязычной документации: вне code fences не допускаются
 #    длинные полностью англоязычные фразы. Технические идентификаторы/названия разрешены.
@@ -371,7 +382,7 @@ if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
     fail("standalone first-run regression-test отсутствует")
 
-# 9. 0.11.0 real Minecraft client E2E: the release gate must materialize and
+# 9. Real Minecraft client E2E: the release gate must materialize and
 #    launch an actual Mojang client, not regress to a synthetic Java fixture.
 e2e_script = read("e2e/scripts/run-minecraft-e2e.sh")
 e2e_publish = read("e2e/scripts/publish-client-package.py")
@@ -386,7 +397,7 @@ for required in [
     "--max-runtime-seconds",
 ]:
     if required not in e2e_script:
-        fail(f"0.11.0 actual Minecraft E2E отсутствует обязательный primitive: {required}")
+        fail(f"actual Minecraft E2E отсутствует обязательный primitive: {required}")
 for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(f"production Minecraft E2E снова использует synthetic fixture: {forbidden}")
@@ -483,7 +494,7 @@ for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "e
 
 
 
-# 12. 0.11.0 Minecraft Compatibility Release: production publication must be
+# 12. Minecraft Compatibility Release: production publication must be
 #     bound to machine-verifiable compatibility evidence for the same version
 #     and source commit, and the evidence must live inside signed SHA256SUMS.
 compat_release = read("cli/cmd/neverlauncher/compatibility_release.go")
@@ -495,7 +506,7 @@ for required in [
     "all-required-targets-must-pass-actual-client-e2e", "evidenceSha256",
 ]:
     if required not in compat_release:
-        fail(f"0.11.0 compatibility release certification missing: {required}")
+        fail(f"compatibility release certification missing: {required}")
 for required in [
     "--compatibility-matrix", "--compatibility-targets", "--source-commit",
     "Minecraft compatibility certification", "compatibilityCertificationRequired",

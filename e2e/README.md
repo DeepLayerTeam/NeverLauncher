@@ -1,4 +1,4 @@
-# Production E2E NeverLauncher 0.11.0
+# Production E2E NeverLauncher
 
 Основной production E2E запускается командой:
 
@@ -6,7 +6,7 @@
 e2e/scripts/run-minecraft-e2e.sh
 ```
 
-`0.11.0` использует настоящий Minecraft Java Client, а не Java fixture. Один и тот же script поддерживает два режима.
+Production E2E использует настоящий Minecraft Java Client, а не Java fixture. Один и тот же script поддерживает два режима.
 
 ### Полный production mode
 

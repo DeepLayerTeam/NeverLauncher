@@ -1,4 +1,4 @@
-# Smoke-gates NeverLauncher 0.11.0
+# Smoke-gates NeverLauncher
 
 Текущий smoke-контур проверяет только рабочие production-пути; исторические RC/Stable metadata-gates и fake Minecraft demo-kit не используются.
 

@@ -2,7 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VERSION="${1:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}" 
+CANONICAL_VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
+if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
+  echo "Ошибка: версия release задаётся только через VERSION=${CANONICAL_VERSION}; передано: $1" >&2
+  exit 2
+fi
+VERSION="${CANONICAL_VERSION}"
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
 PRIVATE_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
@@ -35,6 +40,7 @@ if [[ -z "${PRIVATE_KEY}" || -z "${PUBLIC_KEY}" ]]; then
 fi
 require_file "${PRIVATE_KEY}"
 require_file "${PUBLIC_KEY}"
+python3 "${ROOT_DIR}/scripts/version/manage.py" check
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
   require_file "${COMPATIBILITY_MATRIX}"
   require_file "${COMPATIBILITY_TARGETS}"

@@ -17,6 +17,8 @@ ALLOWED_ARCH = {"x86_64"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,95}$")
 VERSION_RE = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$")
 MUTABLE_SELECTORS = {"latest", "latest-stable", "stable", "recommended"}
+ROOT = Path(__file__).resolve().parents[2]
+PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def die(message: str) -> None:
@@ -36,9 +38,10 @@ def load_targets(path: Path) -> dict[str, Any]:
         die("targets document must be an object")
     if payload.get("schemaVersion") != "1.0":
         die("targets schemaVersion must be 1.0")
-    product_version = str(payload.get("productVersion", "")).strip()
-    if not VERSION_RE.fullmatch(product_version):
-        die("targets productVersion is invalid")
+    declared_version = str(payload.get("productVersion", "")).strip()
+    if declared_version and declared_version != PRODUCT_VERSION:
+        die(f"targets productVersion {declared_version!r} does not match VERSION={PRODUCT_VERSION}")
+    product_version = PRODUCT_VERSION
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
         die("targets must contain a non-empty array")

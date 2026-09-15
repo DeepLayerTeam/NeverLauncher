@@ -1,5 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /src
+ARG NEVERLAUNCHER_VERSION=dev
+ENV NEVERLAUNCHER_VERSION=${NEVERLAUNCHER_VERSION}
 COPY apps/admin/package.json apps/admin/package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY apps/admin/ ./
