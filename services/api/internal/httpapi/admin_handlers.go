@@ -317,6 +317,11 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "path обязателен")
 		return
 	}
+	executable, targetOS, metadataErr := releaseFileMetadata(r)
+	if metadataErr != nil {
+		writeError(w, http.StatusBadRequest, metadataErr.Error())
+		return
+	}
 
 	hasher := sha256.New()
 	reader := io.TeeReader(file, hasher)
@@ -327,14 +332,16 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	object := model.FileObject{
-		ID:        fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()),
-		ProjectID: projectID,
-		VersionID: versionID,
-		Path:      relativePath,
-		Size:      size,
-		SHA256:    hex.EncodeToString(hasher.Sum(nil)),
-		URL:       fmt.Sprintf("%s/api/v1/files/%s/%s/%s", strings.TrimRight(s.Config.PublicURL, "/"), projectID, versionID, relativePath),
-		Required:  true,
+		ID:         fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()),
+		ProjectID:  projectID,
+		VersionID:  versionID,
+		Path:       relativePath,
+		Size:       size,
+		SHA256:     hex.EncodeToString(hasher.Sum(nil)),
+		URL:        fmt.Sprintf("%s/api/v1/files/%s/%s/%s", strings.TrimRight(s.Config.PublicURL, "/"), projectID, versionID, relativePath),
+		Required:   true,
+		Executable: executable,
+		TargetOS:   targetOS,
 	}
 	saved, err := s.Repo.AddFile(object)
 	if err != nil {

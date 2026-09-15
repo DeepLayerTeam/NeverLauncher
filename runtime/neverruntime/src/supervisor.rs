@@ -76,7 +76,7 @@ impl ProcessSupervisor {
             .arg(join_classpath(&plan.classpath_entries))
             .arg(&plan.main_class)
             .args(&plan.game_args)
-            .current_dir(root)
+            .current_dir(Path::new(&plan.working_directory))
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(log_file))

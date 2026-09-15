@@ -3,7 +3,10 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"path"
+	"strings"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -42,6 +45,13 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 	var req versionManifestRequest
 	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
+		return
+	}
+	if _, enabled, validationErr := compatibilityMetadataPath(req.Minecraft, req.Runtime); validationErr != nil {
+		writeError(w, http.StatusBadRequest, validationErr.Error())
+		return
+	} else if enabled && strings.TrimSpace(req.Minecraft.Version) == "" {
+		writeError(w, http.StatusBadRequest, "Compatibility Engine требует minecraft.version")
 		return
 	}
 	manifest := release.Manifest
@@ -108,11 +118,51 @@ func (s Server) publishSigned(projectID, profileID, channel, version string) (mo
 	}
 	manifest.Files = make([]model.ManifestFile, 0, len(files))
 	for _, file := range files {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
+	}
+	if err = validateCompatibilityManifest(manifest); err != nil {
+		return model.ReleaseVersion{}, err
 	}
 	signed, err := s.signManifest(manifest)
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
 	return s.Repo.PublishVersionWithManifest(projectID, profileID, channel, version, signed)
+}
+
+func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.RuntimeInfo) (string, bool, error) {
+	strategy := strings.ToLower(strings.TrimSpace(runtime.Launch.ClasspathStrategy))
+	if strategy != "compatibility" && strategy != "mojang" {
+		return "", false, nil
+	}
+	version := strings.TrimSpace(minecraft.Version)
+	if version == "" || version == "." || version == ".." || strings.ContainsAny(version, `/\`) {
+		return "", true, errors.New("Compatibility Engine: minecraft.version должен быть безопасным version id")
+	}
+	metadataPath := strings.TrimSpace(runtime.Launch.VersionMetadataPath)
+	if metadataPath == "" {
+		metadataPath = fmt.Sprintf("versions/%s/%s.json", version, version)
+	}
+	normalized := strings.ReplaceAll(metadataPath, `\`, "/")
+	clean := path.Clean(normalized)
+	if strings.HasPrefix(normalized, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || clean != normalized {
+		return "", true, fmt.Errorf("Compatibility Engine: небезопасный versionMetadataPath %q", metadataPath)
+	}
+	if !strings.HasSuffix(strings.ToLower(clean), ".json") {
+		return "", true, errors.New("Compatibility Engine: versionMetadataPath должен указывать на JSON")
+	}
+	return clean, true, nil
+}
+
+func validateCompatibilityManifest(manifest model.Manifest) error {
+	metadataPath, enabled, err := compatibilityMetadataPath(manifest.Minecraft, manifest.Runtime)
+	if err != nil || !enabled {
+		return err
+	}
+	for _, file := range manifest.Files {
+		if strings.ReplaceAll(file.Path, `\`, "/") == metadataPath && file.Required {
+			return nil
+		}
+	}
+	return fmt.Errorf("Compatibility Engine: signed release не содержит обязательный metadata файл %s", metadataPath)
 }

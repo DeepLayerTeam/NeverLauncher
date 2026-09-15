@@ -1,6 +1,6 @@
-# NeverLauncher 0.10.0-P3.2v4
+# NeverLauncher 0.10.1
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.0-P3.2v4` — production-completion релиз: сохраняет fail-closed hardening P3.2v3 и добавляет immutable published releases, реальный client/desktop lifecycle, автономный first-run, persistent Ed25519 key lifecycle, dependency SBOM и подписанный SLSA provenance без status-only/foundation-заглушек.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Версия `0.10.1` добавляет рабочий **Compatibility Engine** в исполняемый NeverRuntime: Minecraft launch plan теперь может строиться из подписанного Mojang-compatible `version.json` с наследованием, rules, ordered classpath, natives и JVM/game arguments вместо перебора всех JAR-файлов.
 
 ## Рабочий контур
 
@@ -10,7 +10,7 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 ```
 
 
-## P3.2v4 production completion
+## Сохранённый production-контур 0.10.0-P3.2v4
 
 - опубликованный release нельзя изменить: upload/manifest/status mutation после `published` блокируются и на HTTP, и на repository слое;
 - client lifecycle реально устанавливает, проверяет, ремонтирует, помещает orphan-файлы в quarantine и откатывает snapshot;
@@ -18,6 +18,28 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 - Desktop package содержит фактические native artifacts и SHA-256, а verify перечитывает каждый файл;
 - Ed25519 ключи ротируются через persistent registry, могут быть отозваны, attestation подписывается detached signature;
 - SPDX SBOM строится из dependency manifests/lock-файлов, provenance — in-toto/SLSA v1 и входит в release bundle с отдельной Ed25519-подписью.
+
+## Compatibility Engine 0.10.1
+
+При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime:
+
+1. читает `versionMetadataPath` или `versions/<minecraftVersion>/<minecraftVersion>.json` из уже проверенного release;
+2. разрешает цепочку `inheritsFrom` с защитой от циклов и traversal;
+3. применяет Mojang OS/architecture/feature rules;
+4. строит детерминированный ordered classpath и native classifier plan;
+5. разрешает `arguments.jvm`, `arguments.game` и legacy `minecraftArguments` с Mojang placeholders;
+6. учитывает `javaVersion.majorVersion` перед запуском;
+7. проверяет, что каждый использованный metadata/classpath path входит в подписанный manifest, иначе launch fail-closed блокируется.
+
+`targetOs` и `executable` сохраняются в Backend repository и signed manifest; verify/sync не требуют артефакты другой ОС. В `0.10.1` это именно production compatibility core. Автоматические installer/resolver adapters Fabric/Quilt/Forge/NeoForge и managed Java относятся к следующим compatibility-релизам и здесь не объявляются готовыми.
+
+Прямое разрешение установленного client tree:
+
+```bash
+neverruntime compatibility \
+  --root .neverlauncher/client \
+  --version 1.21.1
+```
 
 ## Компоненты
 

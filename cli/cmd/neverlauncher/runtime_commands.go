@@ -24,15 +24,12 @@ func handleRuntime(args []string) error {
 		versionJSON := flagValue(args, "--version-json", "")
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
-		var plan map[string]any
-		var err error
-		if versionJSON != "" {
-			plan, err = realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			plan = minecraftRuntimePlan(minecraftVersion, loader)
+		if versionJSON == "" {
+			return errors.New("runtime resolve требует --version-json; fallback runtime plan в 0.10.1 запрещён")
+		}
+		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
+		if err != nil {
+			return err
 		}
 		if out == "-" {
 			printJSON(plan)
@@ -279,20 +276,6 @@ type ForgeInstallProfile struct {
 	Libraries  []MojangLibrary  `json:"libraries"`
 }
 
-func minecraftRuntimePlan(minecraftVersion string, loader string) map[string]any {
-	return map[string]any{
-		"schemaVersion":    "0.8.8",
-		"toolVersion":      version,
-		"minecraftVersion": minecraftVersion,
-		"loader":           loader,
-		"strategy":         "real-runtime-resolver",
-		"resolvers":        []string{"mojang-version-json", "asset-index", "libraries", "natives", "launch-arguments", "classpath"},
-		"directories":      map[string]string{"versions": "versions/" + minecraftVersion, "assets": "assets", "libraries": "libraries", "natives": "natives/" + minecraftVersion, "logs": "logs"},
-		"java":             map[string]any{"recommendedMajorVersion": 21, "supportedMajorVersions": []int{17, 21}},
-		"status":           "resolver-ready",
-	}
-}
-
 func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 	if minecraftVersion == "" {
 		minecraftVersion = "1.21.1"
@@ -336,19 +319,19 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "ready",
-		"title":         "Minecraft Runtime Resolver 0.10.0 support matrix",
-		"targets": []map[string]any{
-			{"minecraft": "1.12.2", "loader": "forge", "java": []int{8, 17}, "status": "legacy-supported", "metadata": []string{"version.json", "install_profile.json"}},
-			{"minecraft": "1.16.5", "loader": "forge", "java": []int{8, 11, 17}, "status": "legacy-supported", "metadata": []string{"version.json", "install_profile.json"}},
-			{"minecraft": "1.20.1", "loader": "fabric", "java": []int{17}, "status": "supported", "metadata": []string{"version.json", "asset index", "fabric meta profile"}},
-			{"minecraft": "1.21.x", "loader": "vanilla", "java": []int{21}, "status": "supported", "metadata": []string{"version.json", "asset index"}},
-			{"minecraft": "1.21.x", "loader": "fabric", "java": []int{21}, "status": "supported", "metadata": []string{"version.json", "fabric meta profile"}},
-			{"minecraft": "1.21.x", "loader": "quilt", "java": []int{21}, "status": "supported", "metadata": []string{"version.json", "quilt meta profile"}},
-			{"minecraft": "1.21.x", "loader": "neoforge", "java": []int{21}, "status": "supported", "metadata": []string{"version.json", "install_profile.json"}},
+		"status":        "engine-only",
+		"title":         "NeverRuntime Compatibility Engine 0.10.1",
+		"capabilities": []map[string]any{
+			{"feature": "version inheritance", "status": "implemented"},
+			{"feature": "Mojang OS/architecture/feature rules", "status": "implemented"},
+			{"feature": "ordered classpath", "status": "implemented"},
+			{"feature": "native classifier resolution", "status": "implemented"},
+			{"feature": "JVM/game argument resolution", "status": "implemented"},
+			{"feature": "signed metadata trust boundary", "status": "implemented"},
 		},
-		"os":    []string{"linux", "windows", "darwin"},
-		"rules": []string{"Mojang rules are evaluated before library selection", "natives are resolved by current GOOS and classifier", "loader libraries are merged after base runtime", "duplicate classpath entries are removed"},
+		"certifiedLoaders": []string{"vanilla-version-metadata"},
+		"notCertifiedYet":  []string{"fabric-installer", "quilt-installer", "forge-installer", "neoforge-installer", "managed-java", "real-client-e2e"},
+		"note":             "0.10.1 не публикует фиктивную compatibility matrix: loader installers и реальный Minecraft E2E входят в последующие релизы.",
 	}
 }
 
@@ -797,7 +780,7 @@ func resolveAssetIndex(index MojangAssetIndex) map[string]any {
 
 func realRuntimePlan(minecraftVersion, loader, username, gameDir, versionJSON, assetIndexPath string) (map[string]any, error) {
 	if versionJSON == "" {
-		return vanillaLaunchPlan(minecraftVersion, loader, username, gameDir), nil
+		return nil, errors.New("Compatibility Engine требует version.json; fallback launch plan запрещён")
 	}
 	var vf MojangVersionFile
 	if err := loadJSONSource(versionJSON, &vf); err != nil {
@@ -843,29 +826,6 @@ func realRuntimePlan(minecraftVersion, loader, username, gameDir, versionJSON, a
 		"status":          "resolved",
 		"productResolver": true,
 	}, nil
-}
-
-func vanillaLaunchPlan(minecraftVersion string, loader string, username string, gameDir string) map[string]any {
-	mainClass := "net.minecraft.client.main.Main"
-	if loader != "vanilla" {
-		mainClass = "<loader-main-class>"
-	}
-	return map[string]any{
-		"schemaVersion":    "0.8.8",
-		"toolVersion":      version,
-		"minecraftVersion": minecraftVersion,
-		"loader":           loader,
-		"mainClass":        mainClass,
-		"java":             map[string]any{"path": "java", "recommendedMajorVersion": 21},
-		"classpath":        []string{"versions/" + minecraftVersion + "/" + minecraftVersion + ".jar", "libraries/**/*.jar"},
-		"nativesDirectory": "natives/" + minecraftVersion,
-		"gameDirectory":    gameDir,
-		"assetsDirectory":  "assets",
-		"gameArgs":         []string{"--username", username, "--version", minecraftVersion, "--gameDir", gameDir, "--assetsDir", "assets", "--assetIndex", minecraftVersion, "--uuid", "00000000-0000-0000-0000-000000000000", "--accessToken", "offline"},
-		"jvmArgs":          []string{"-Xms1G", "-Xmx4G", "-Djava.library.path=natives/" + minecraftVersion},
-		"integrity":        []string{"client.jar", "libraries", "assets", "natives"},
-		"status":           "planned-fallback",
-	}
 }
 
 func runtimeChecks() []string {

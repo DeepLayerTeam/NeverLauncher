@@ -1,4 +1,4 @@
-# Production E2E NeverLauncher 0.10.0-P3.2v4
+# Production E2E NeverLauncher 0.10.1
 
 Production E2E запускается командой:
 

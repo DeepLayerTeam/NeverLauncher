@@ -291,7 +291,7 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, project_id, version_id, path, size, sha256, url, required FROM files WHERE project_id = $1`
+	query := `SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text FROM files WHERE project_id = $1`
 	args := []any{projectID}
 	if versionID != "" {
 		query += ` AND version_id = $2`
@@ -306,8 +306,12 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	var result []model.FileObject
 	for rows.Next() {
 		var item model.FileObject
-		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required); err != nil {
+		var targetOSRaw string
+		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required, &item.Executable, &targetOSRaw); err != nil {
 			return nil, err
+		}
+		if err := json.Unmarshal([]byte(targetOSRaw), &item.TargetOS); err != nil {
+			return nil, fmt.Errorf("files.target_os повреждён для %s: %w", item.Path, err)
 		}
 		result = append(result, item)
 	}
@@ -566,7 +570,7 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 	manifest.Version = version
 	manifest.CreatedAt = now.Format(time.RFC3339)
 
-	rows, err := tx.Query(`SELECT id, project_id, version_id, path, size, sha256, url, required
+	rows, err := tx.Query(`SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text
 		FROM files WHERE project_id=$1 AND version_id=$2 ORDER BY path`, projectID, releaseID)
 	if err != nil {
 		return model.ReleaseVersion{}, err
@@ -574,9 +578,14 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 	var files []model.FileObject
 	for rows.Next() {
 		var file model.FileObject
-		if err := rows.Scan(&file.ID, &file.ProjectID, &file.VersionID, &file.Path, &file.Size, &file.SHA256, &file.URL, &file.Required); err != nil {
+		var targetOSRaw string
+		if err := rows.Scan(&file.ID, &file.ProjectID, &file.VersionID, &file.Path, &file.Size, &file.SHA256, &file.URL, &file.Required, &file.Executable, &targetOSRaw); err != nil {
 			rows.Close()
 			return model.ReleaseVersion{}, err
+		}
+		if err := json.Unmarshal([]byte(targetOSRaw), &file.TargetOS); err != nil {
+			rows.Close()
+			return model.ReleaseVersion{}, fmt.Errorf("files.target_os повреждён для %s: %w", file.Path, err)
 		}
 		files = append(files, file)
 	}
@@ -586,7 +595,7 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 	if len(files) > 0 {
 		manifest.Files = manifest.Files[:0]
 		for _, file := range files {
-			manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required})
+			manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
 		}
 	}
 	manifestRaw, err := json.Marshal(manifest)
@@ -778,9 +787,13 @@ func (r *SQLRepository) AddFile(file model.FileObject) (model.FileObject, error)
 	if !file.Required {
 		file.Required = true
 	}
-	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required); err != nil {
+	targetOSRaw, err := json.Marshal(file.TargetOS)
+	if err != nil {
+		return model.FileObject{}, err
+	}
+	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)
+ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required, executable=EXCLUDED.executable, target_os=EXCLUDED.target_os`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required, file.Executable, string(targetOSRaw)); err != nil {
 		return model.FileObject{}, err
 	}
 	var manifest model.Manifest
@@ -788,13 +801,13 @@ ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED
 	updated := false
 	for i := range manifest.Files {
 		if manifest.Files[i].Path == file.Path {
-			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required}
+			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)}
 			updated = true
 			break
 		}
 	}
 	if !updated {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
 	}
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 	next, err := json.Marshal(manifest)

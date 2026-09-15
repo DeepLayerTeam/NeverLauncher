@@ -267,34 +267,10 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 		}
 		return metadata, metadataPath, nil
 	}
-	return defaultLoaderMetadata(loader, minecraftVersion, loaderVersion), "builtin-default", nil
-}
-
-func defaultLoaderMetadata(loader, minecraftVersion, loaderVersion string) LoaderMetadata {
-	if loaderVersion == "" {
-		switch loader {
-		case "fabric":
-			loaderVersion = "0.16.x"
-		case "quilt":
-			loaderVersion = "0.26.x"
-		case "forge", "neoforge":
-			loaderVersion = "recommended"
-		}
+	if loader == "vanilla" {
+		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	metadata := LoaderMetadata{Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: defaultLoaderMainClass(loader)}
-	switch loader {
-	case "fabric":
-		metadata.Libraries = []MojangLibrary{{Name: "net.fabricmc:fabric-loader:" + loaderVersion}, {Name: "net.fabricmc:intermediary:" + minecraftVersion}}
-	case "quilt":
-		metadata.Libraries = []MojangLibrary{{Name: "org.quiltmc:quilt-loader:" + loaderVersion}, {Name: "org.quiltmc:quilt-mappings:" + minecraftVersion + ":intermediary-v2"}}
-	case "forge":
-		metadata.Libraries = []MojangLibrary{{Name: "net.minecraftforge:forge:" + minecraftVersion + "-" + loaderVersion}}
-		metadata.GameArgs = []string{"--launchTarget", "forgeclient"}
-	case "neoforge":
-		metadata.Libraries = []MojangLibrary{{Name: "net.neoforged:neoforge:" + loaderVersion}}
-		metadata.GameArgs = []string{"--launchTarget", "forgeclient"}
-	}
-	return metadata
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует --metadata или --installer-profile; builtin fallback metadata в 0.10.1 запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {

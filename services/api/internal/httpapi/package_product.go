@@ -199,6 +199,11 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	sum := sha256.Sum256(payload)
 	actualSHA := hex.EncodeToString(sum[:])
+	executable, targetOS, metadataErr := releaseFileMetadata(r)
+	if metadataErr != nil {
+		writeError(w, http.StatusBadRequest, metadataErr.Error())
+		return
+	}
 	if expected := strings.TrimSpace(r.FormValue("sha256")); expected != "" && !strings.EqualFold(expected, actualSHA) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 не совпадает", "expected": expected, "actual": actualSHA}})
 		return
@@ -208,7 +213,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	object := model.FileObject{ID: fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()), ProjectID: lookup.Release.ProjectID, VersionID: lookup.Release.ID, Path: relativePath, Size: size, SHA256: actualSHA, URL: s.deliveryURL(lookup.Release.ProjectID, lookup.Release.ID, relativePath), Required: true}
+	object := model.FileObject{ID: fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()), ProjectID: lookup.Release.ProjectID, VersionID: lookup.Release.ID, Path: relativePath, Size: size, SHA256: actualSHA, URL: s.deliveryURL(lookup.Release.ProjectID, lookup.Release.ID, relativePath), Required: true, Executable: executable, TargetOS: targetOS}
 	saved, err := s.Repo.AddFile(object)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -285,7 +290,11 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	manifest := lookup.Release.Manifest
 	manifest.Files = manifest.Files[:0]
 	for _, file := range lookup.Files {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
+	}
+	if err := validateCompatibilityManifest(manifest); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
 	}
 	signed, err := s.signManifest(manifest)
 	if err != nil {
@@ -398,6 +407,10 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "publish требует криптографически проверенный Ed25519 manifest: "+err.Error())
 		return
 	}
+	if err := validateCompatibilityManifest(lookup.Release.Manifest); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
@@ -466,6 +479,10 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 	manifest.Version = rollbackVersion
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	manifest.Signature = nil
+	if err := validateCompatibilityManifest(manifest); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	signed, err := s.signManifest(manifest)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось подписать rollback manifest: "+err.Error())

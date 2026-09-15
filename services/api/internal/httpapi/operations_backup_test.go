@@ -78,7 +78,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 	if _, _, err := store.Save("demo-project", "demo-project-vanilla-3.4.0", "README.txt", strings.NewReader("before-backup")); err != nil {
 		t.Fatal(err)
 	}
-	h := Server{Version: "0.10.0-P3.2v4", Config: cfg, Repo: repo, Storage: store}.Handler()
+	h := Server{Version: "0.10.1", Config: cfg, Repo: repo, Storage: store}.Handler()
 	token := loginAdmin(t, h)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/backups", nil)

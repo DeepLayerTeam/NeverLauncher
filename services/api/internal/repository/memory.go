@@ -605,11 +605,13 @@ func (r *MemoryRepository) AddFile(file model.FileObject) (model.FileObject, err
 	for i := range r.releases {
 		if r.releases[i].ProjectID == file.ProjectID && r.releases[i].ID == file.VersionID {
 			r.releases[i].Manifest.Files = append(r.releases[i].Manifest.Files, model.ManifestFile{
-				Path:     file.Path,
-				Size:     file.Size,
-				SHA256:   file.SHA256,
-				URL:      file.URL,
-				Required: file.Required,
+				Path:       file.Path,
+				Size:       file.Size,
+				SHA256:     file.SHA256,
+				URL:        file.URL,
+				Required:   file.Required,
+				Executable: file.Executable,
+				TargetOS:   append([]string(nil), file.TargetOS...),
 			})
 			r.releases[i].Manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 			break

@@ -1,11 +1,13 @@
+pub mod compatibility;
 pub mod supervisor;
+pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     path::{Component, Path, PathBuf},
     process::Stdio,
     io::SeekFrom,
@@ -98,6 +100,10 @@ pub struct RuntimeLaunch {
     pub classpath_strategy: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub natives_directory: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub version_metadata_path: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub features: HashMap<String, bool>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub offline_mode: bool,
 }
@@ -123,6 +129,7 @@ pub struct ManifestFile {
     pub sha256: String,
     pub url: String,
     pub required: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub executable: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target_os: Vec<String>,
@@ -309,6 +316,7 @@ fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
 pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileCheckResult>, String> {
     let mut results = Vec::with_capacity(manifest.files.len());
     for file in &manifest.files {
+        if !manifest_file_applies(file) { continue; }
         let local_path = safe_join(root, &file.path)?;
         match fs::metadata(&local_path).await {
             Ok(metadata) => {
@@ -335,6 +343,7 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
     let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0, bytes_downloaded: 0, failed_files: Vec::new(), messages: Vec::new() };
 
     for file in &manifest.files {
+        if !manifest_file_applies(file) { result.skipped += 1; continue; }
         let local_path = safe_join(root, &file.path)?;
         let is_actual = match fs::metadata(&local_path).await {
             Ok(metadata) if metadata.len() == file.size => sha256_file(&local_path).await.map(|hash| hash.eq_ignore_ascii_case(&file.sha256)).unwrap_or(false),
@@ -493,7 +502,7 @@ pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>,
         .arg(join_classpath(&plan.classpath_entries))
         .arg(&plan.main_class)
         .args(&plan.game_args)
-        .current_dir(root)
+        .current_dir(Path::new(&plan.working_directory))
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file))
@@ -520,10 +529,83 @@ pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>,
 
 async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>) -> Result<LaunchPlan, String> {
     let java_executable = java_path.filter(|value| !value.trim().is_empty()).unwrap_or_else(|| "java".to_string());
+    let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
+    let mut required_java = manifest.runtime.java.major_version;
+    let mut plan = if strategy == "compatibility" || strategy == "mojang" {
+        let game_dir = manifest_directory(root, &manifest.directories.game, ".")?;
+        let assets_dir = manifest_directory(root, &manifest.directories.assets, "assets")?;
+        let natives_name = if !manifest.runtime.launch.natives_directory.trim().is_empty() {
+            manifest.runtime.launch.natives_directory.as_str()
+        } else if !manifest.directories.natives.trim().is_empty() {
+            manifest.directories.natives.as_str()
+        } else {
+            "natives"
+        };
+        let natives_dir = manifest_directory(root, natives_name, "natives")?;
+        let player_name = username.unwrap_or_else(|| "Player".to_string());
+        let metadata_path = if manifest.runtime.launch.version_metadata_path.trim().is_empty() {
+            None
+        } else {
+            Some(manifest.runtime.launch.version_metadata_path.as_str())
+        };
+        let context = CompatibilityContext {
+            username: player_name,
+            uuid: "00000000-0000-0000-0000-000000000000".to_string(),
+            access_token: "offline".to_string(),
+            user_type: "legacy".to_string(),
+            launcher_name: "NeverLauncher".to_string(),
+            launcher_version: env!("CARGO_PKG_VERSION").to_string(),
+            game_directory: game_dir.to_string_lossy().to_string(),
+            assets_directory: assets_dir.to_string_lossy().to_string(),
+            natives_directory: natives_dir.to_string_lossy().to_string(),
+            features: manifest.runtime.launch.features.clone(),
+        };
+        let resolution = resolve_compatibility(root, &manifest.minecraft.version, metadata_path, &context).await?;
+        if let Some(major) = resolution.java_major_version {
+            required_java = required_java.max(major);
+        }
+        validate_compatibility_resolution_trust(manifest, &resolution)?;
+        if !manifest.runtime.launch.main_class.trim().is_empty() && manifest.runtime.launch.main_class != resolution.main_class {
+            return Err(format!("manifest mainClass {} расходится с Compatibility Engine mainClass {}", manifest.runtime.launch.main_class, resolution.main_class));
+        }
+        if !manifest.minecraft.main_class.trim().is_empty() && manifest.minecraft.main_class != resolution.main_class {
+            return Err(format!("minecraft.mainClass {} расходится с Compatibility Engine mainClass {}", manifest.minecraft.main_class, resolution.main_class));
+        }
+        let classpath_entries = resolution.classpath.iter().map(|path| safe_join(root, path).map(|value| value.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
+        let mut jvm_args = resolution.jvm_args;
+        jvm_args.extend(manifest.runtime.jvm_args.clone());
+        let mut game_args = resolution.game_args;
+        game_args.extend(manifest.minecraft.game_args.clone());
+        LaunchPlan {
+            java_executable: java_executable.clone(),
+            working_directory: game_dir.to_string_lossy().to_string(),
+            main_class: resolution.main_class,
+            classpath_entries,
+            jvm_args,
+            game_args,
+            command_preview: String::new(),
+        }
+    } else {
+        create_manifest_launch_plan(manifest, root, &java_executable, username).await?
+    };
+
+    if required_java > 0 {
+        let java = check_java(Some(java_executable.clone()), Some(required_java)).await?;
+        if !java.found || !java.compatible {
+            return Err(format!("launch заблокирован: {}", java.message));
+        }
+    }
+    apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
+    plan.command_preview = format!("{} {} -cp {} {} {}", plan.java_executable, plan.jvm_args.join(" "), join_classpath(&plan.classpath_entries), plan.main_class, plan.game_args.join(" "));
+    Ok(plan)
+}
+
+async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_executable: &str, username: Option<String>) -> Result<LaunchPlan, String> {
     let main_class = if !manifest.runtime.launch.main_class.trim().is_empty() { manifest.runtime.launch.main_class.clone() } else { manifest.minecraft.main_class.clone() };
     if main_class.trim().is_empty() { return Err("в манифесте не указан mainClass".to_string()); }
     let mut classpath_entries = Vec::new();
     for file in &manifest.files {
+        if !manifest_file_applies(file) { continue; }
         if file.path.ends_with(".jar") && !file.path.contains("/mods/") && !file.path.starts_with("mods/") {
             let local_path = safe_join(root, &file.path)?;
             if fs::metadata(&local_path).await.is_ok() { classpath_entries.push(local_path.to_string_lossy().to_string()); }
@@ -531,11 +613,6 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
     }
     if classpath_entries.is_empty() { return Err("classpath пуст: JAR-файлы для запуска не найдены".to_string()); }
     let mut jvm_args = manifest.runtime.jvm_args.clone();
-    if manifest.runtime.memory.minimum_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xms")) { jvm_args.push(format!("-Xms{}M", manifest.runtime.memory.minimum_mb)); }
-    if manifest.runtime.memory.recommended_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
-        let max = if manifest.runtime.memory.maximum_mb > 0 { manifest.runtime.memory.recommended_mb.min(manifest.runtime.memory.maximum_mb) } else { manifest.runtime.memory.recommended_mb };
-        jvm_args.push(format!("-Xmx{}M", max));
-    }
     if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
         let natives_dir = if manifest.runtime.launch.natives_directory.trim().is_empty() { "natives" } else { manifest.runtime.launch.natives_directory.as_str() };
         jvm_args.push(format!("-Djava.library.path={}", root.join(natives_dir).to_string_lossy()));
@@ -545,8 +622,31 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
     replace_or_append_arg_pair(&mut game_args, "--version", manifest.minecraft.version.clone());
     replace_or_append_arg_pair(&mut game_args, "--gameDir", root.to_string_lossy().to_string());
     replace_or_append_arg_pair(&mut game_args, "--assetsDir", root.join("assets").to_string_lossy().to_string());
-    let command_preview = format!("{} {} -cp {} {} {}", java_executable, jvm_args.join(" "), join_classpath(&classpath_entries), main_class, game_args.join(" "));
-    Ok(LaunchPlan { java_executable, working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, jvm_args, game_args, command_preview })
+    Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, jvm_args, game_args, command_preview: String::new() })
+}
+
+fn apply_memory_policy(memory: &MemoryInfo, jvm_args: &mut Vec<String>) {
+    if memory.minimum_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xms")) { jvm_args.push(format!("-Xms{}M", memory.minimum_mb)); }
+    if memory.recommended_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
+        let max = if memory.maximum_mb > 0 { memory.recommended_mb.min(memory.maximum_mb) } else { memory.recommended_mb };
+        jvm_args.push(format!("-Xmx{}M", max));
+    }
+}
+
+fn manifest_directory(root: &Path, configured: &str, fallback: &str) -> Result<PathBuf, String> {
+    let value = if configured.trim().is_empty() { fallback } else { configured.trim() };
+    if value == "." { return Ok(root.to_path_buf()); }
+    safe_join(root, value)
+}
+
+fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &CompatibilityResolution) -> Result<(), String> {
+    let trusted = manifest.files.iter().filter(|file| manifest_file_applies(file)).map(|file| file.path.replace('\\', "/")).collect::<HashSet<_>>();
+    for path in resolution.metadata_paths.iter().chain(resolution.classpath.iter()).chain(resolution.natives.iter().map(|native| &native.path)) {
+        if !trusted.contains(path) {
+            return Err(format!("Compatibility Engine отклонил неподписанный release path: {path}"));
+        }
+    }
+    Ok(())
 }
 
 async fn read_log_tail(path: &Path, max_bytes: u64) -> Result<String, String> {
@@ -580,6 +680,25 @@ async fn sha256_file(path: &Path) -> Result<String, String> {
         hasher.update(&buffer[..n]);
     }
     Ok(hex::encode(hasher.finalize()))
+}
+
+fn manifest_file_applies(file: &ManifestFile) -> bool {
+    if file.target_os.is_empty() { return true; }
+    let current = match std::env::consts::OS {
+        "macos" => "osx",
+        "windows" => "windows",
+        "linux" => "linux",
+        other => other,
+    };
+    file.target_os.iter().any(|item| {
+        let normalized = match item.trim().to_ascii_lowercase().as_str() {
+            "macos" | "darwin" | "osx" => "osx",
+            "win" | "windows" => "windows",
+            "linux" => "linux",
+            other => other,
+        };
+        normalized == current
+    })
 }
 
 fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
@@ -643,7 +762,7 @@ mod tests {
             project_id: "demo".to_string(),
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
-            version: "0.10.0-P3.2v4-test".to_string(),
+            version: "0.10.1-test".to_string(),
             created_at: "2026-09-13T00:00:00Z".to_string(),
             minecraft: MinecraftInfo {
                 version: "1.21.1".to_string(),
@@ -668,6 +787,8 @@ mod tests {
                     main_class: "ru.neverlauncher.e2e.LaunchFixture".to_string(),
                     classpath_strategy: "manifest".to_string(),
                     natives_directory: "natives".to_string(),
+                    version_metadata_path: String::new(),
+                    features: HashMap::new(),
                     offline_mode: true,
                 },
             },

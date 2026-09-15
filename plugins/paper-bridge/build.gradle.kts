@@ -6,7 +6,7 @@ dependencies {
 }
 tasks.jar {
     archiveBaseName.set("neverlauncher-paper-bridge")
-    archiveVersion.set("0.10.0-P3.2v4")
+    archiveVersion.set("0.10.1")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }

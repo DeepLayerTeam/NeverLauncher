@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.10.1 — Compatibility Engine
+
+0.10.1 переносит разрешение Minecraft launch metadata в исполняемый NeverRuntime и убирает fallback-планы из production runtime path. Compatibility Engine работает по подписанному содержимому immutable release и строит детерминированный план запуска из реального Mojang-compatible `version.json`.
+
+### Исполняемый Compatibility Engine
+
+- NeverRuntime получил отдельный `compatibility` engine: разрешение цепочки `inheritsFrom`, объединение version metadata, Mojang library/rule evaluation, OS/architecture/features rules, ordered classpath, native classifiers, `arguments.jvm`/`arguments.game`, legacy `minecraftArguments`, Java major version и стандартные Mojang placeholders.
+- `classpathStrategy=compatibility`/`mojang` теперь используется непосредственно `Desktop -> NeverRuntime -> JVM`: main class, classpath и аргументы берутся из проверенного metadata, а не из перебора всех JAR-файлов.
+- Все metadata и classpath paths, которые использует Compatibility Engine, обязаны входить в подписанный release manifest; локальный неподписанный `version.json` или JAR fail-closed блокирует запуск.
+- Для multi-platform release NeverRuntime учитывает `targetOs`: чужие OS artifacts не блокируют verify/sync и не попадают в manifest classpath.
+- Java constraint из version metadata участвует в pre-launch проверке совместимости JVM вместе с policy manifest.
+
+### Backend / release integration
+
+- `RuntimeLaunch` поддерживает `versionMetadataPath` и feature flags для Mojang rules; при отсутствии явного пути применяется `versions/<minecraftVersion>/<minecraftVersion>.json`.
+- Backend проверяет compatibility metadata path на traversal и не публикует compatibility release без обязательного подписанного `version.json`.
+- Рекомендуемый launch template и runtime requirements переведены на `classpathStrategy=compatibility` без статического Fabric/mainClass placeholder.
+
+### CLI и runtime binary
+
+- Product runtime commands больше не создают fallback launch plan при отсутствии `version.json`, а loader metadata без `--metadata`/`--installer-profile` отклоняется.
+- Восстановлен фактический `neverruntime` binary, требуемый release pipeline и production E2E: `verify`, `sync`, `launch`; добавлена команда `compatibility` для прямого разрешения локального signed client tree.
+- Добавлены unit/regression tests для inheritance, Mojang rules/features, Maven paths, placeholders, path traversal и backend publish validation.
+
 ## 0.10.0-P3.2v4 — Production hardening
 
 P3.2v4 завершает следующий production-контур рабочим кодом: опубликованные релизы становятся неизменяемыми, client/desktop lifecycle выполняет реальные файловые операции, first-run становится автономным, а key lifecycle и supply-chain metadata получают фактическую криптографическую и dependency-backed реализацию.

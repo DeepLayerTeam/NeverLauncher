@@ -1,6 +1,6 @@
-# Политика безопасности NeverLauncher 0.10.0-P3.2v4
+# Политика безопасности NeverLauncher 0.10.1
 
-NeverLauncher 0.10.0-P3.2v4 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
+NeverLauncher 0.10.1 использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
 ## Обязательные production-настройки
 
@@ -82,6 +82,12 @@ ServerBridge должен работать в deny-by-default режиме:
 - недоступность backend трактуется как deny или degraded mode только при явном разрешении оператора;
 - ротация server token должна быть штатной операцией.
 
+## Compatibility Engine trust boundary
+
+При `classpathStrategy=compatibility` `version.json`, родительские metadata из `inheritsFrom` и каждый JAR, попавший в resolved classpath, должны присутствовать в подписанном release manifest. NeverRuntime не доверяет локальному metadata-файлу только потому, что он находится в каталоге клиента. Backend также запрещает публикацию compatibility release без обязательного `versionMetadataPath` (по умолчанию `versions/<version>/<version>.json`) и отклоняет traversal/небезопасные пути.
+
+Mojang rules обрабатываются до выбора library/native artifacts. Файлы с `targetOs` другой платформы не участвуют в verify/sync текущей ОС; `targetOs` и `executable` являются частью подписанного manifest metadata.
+
 ## Целостность пакетов
 
 Для клиентских пакетов обязательны:
@@ -94,7 +100,7 @@ ServerBridge должен работать в deny-by-default режиме:
 
 ## Псевдонимы совместимости
 
-Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.0-P3.2v4 используют канонические переменные:
+Backend API может читать устаревшие compatibility aliases только для миграции, но документация и production-развёртывание 0.10.1 используют канонические переменные:
 
 - `NEVERLAUNCHER_DATABASE_DSN` вместо `NEVERLAUNCHER_DATABASE_URL`;
 - `NEVERLAUNCHER_AUTH_TOKEN_SECRET` вместо `NEVERLAUNCHER_TOKEN_SECRET` или `NEVERLAUNCHER_JWT_SECRET`;

@@ -50,14 +50,16 @@ type ReleaseVersion struct {
 
 // FileObject описывает файл клиентской сборки.
 type FileObject struct {
-	ID        string `json:"id"`
-	ProjectID string `json:"projectId"`
-	VersionID string `json:"versionId"`
-	Path      string `json:"path"`
-	Size      int64  `json:"size"`
-	SHA256    string `json:"sha256"`
-	URL       string `json:"url"`
-	Required  bool   `json:"required"`
+	ID         string   `json:"id"`
+	ProjectID  string   `json:"projectId"`
+	VersionID  string   `json:"versionId"`
+	Path       string   `json:"path"`
+	Size       int64    `json:"size"`
+	SHA256     string   `json:"sha256"`
+	URL        string   `json:"url"`
+	Required   bool     `json:"required"`
+	Executable bool     `json:"executable,omitempty"`
+	TargetOS   []string `json:"targetOs,omitempty"`
 }
 
 // User описывает пользователя backend/admin panel.
@@ -150,10 +152,12 @@ type JavaInfo struct {
 }
 
 type RuntimeLaunch struct {
-	MainClass         string `json:"mainClass,omitempty"`
-	ClasspathStrategy string `json:"classpathStrategy,omitempty"`
-	NativesDirectory  string `json:"nativesDirectory,omitempty"`
-	OfflineMode       bool   `json:"offlineMode,omitempty"`
+	MainClass           string          `json:"mainClass,omitempty"`
+	ClasspathStrategy   string          `json:"classpathStrategy,omitempty"`
+	NativesDirectory    string          `json:"nativesDirectory,omitempty"`
+	VersionMetadataPath string          `json:"versionMetadataPath,omitempty"`
+	Features            map[string]bool `json:"features,omitempty"`
+	OfflineMode         bool            `json:"offlineMode,omitempty"`
 }
 
 type MemoryInfo struct {

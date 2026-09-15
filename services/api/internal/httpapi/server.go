@@ -130,7 +130,7 @@ func (s Server) runtimeRequirements(w http.ResponseWriter, r *http.Request) {
 			"maximumMb":     8192,
 		},
 		"launch": map[string]any{
-			"classpathStrategy": "libraries",
+			"classpathStrategy": "compatibility",
 			"nativesDirectory":  "natives",
 			"offlineMode":       true,
 		},
@@ -143,16 +143,14 @@ func (s Server) launchTemplate(w http.ResponseWriter, r *http.Request) {
 		"name":        "Recommended",
 		"description": "Шаблон профиля запуска Minecraft для NeverLauncher",
 		"minecraft": map[string]any{
-			"version":   "1.21.1",
-			"loader":    "fabric",
-			"mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient",
-			"gameArgs":  []string{"--username", "${player_name}", "--version", "${minecraft_version}", "--gameDir", "${game_directory}", "--assetsDir", "${assets_directory}"},
+			"version": "1.21.1",
+			"loader":  "vanilla",
 		},
 		"runtime": map[string]any{
 			"java":    map[string]any{"majorVersion": 21, "distribution": "any", "allowCustomPath": true},
 			"jvmArgs": []string{"-Xms2G", "-Xmx4G"},
 			"memory":  map[string]any{"minimumMb": 1024, "recommendedMb": 4096, "maximumMb": 8192},
-			"launch":  map[string]any{"mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient", "classpathStrategy": "libraries", "nativesDirectory": "natives", "offlineMode": true},
+			"launch":  map[string]any{"classpathStrategy": "compatibility", "nativesDirectory": "natives", "offlineMode": true},
 		},
 	})
 }
@@ -174,20 +172,26 @@ func (s Server) loader(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) loaderCompatibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
-		"version":   s.Version,
-		"minecraft": []string{"1.20.x", "1.21.x"},
-		"java":      []int{17, 21},
-		"loaders":   loaderCatalog(),
+		"version": s.Version,
+		"engine": map[string]any{
+			"status":                 "production",
+			"classpathStrategy":      "compatibility",
+			"signedMetadataRequired": true,
+			"inheritance":            true,
+			"mojangRules":            true,
+			"orderedClasspath":       true,
+		},
+		"loaders": loaderCatalog(),
 	})
 }
 
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
-		{"id": "vanilla", "name": "Vanilla", "mainClass": "net.minecraft.client.main.Main", "supportedJava": []int{17, 21}, "requiredLibraries": []string{"libraries"}},
-		{"id": "fabric", "name": "Fabric", "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient", "supportedJava": []int{17, 21}, "requiredLibraries": []string{"fabric-loader", "libraries"}},
-		{"id": "forge", "name": "Forge", "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher", "supportedJava": []int{17, 21}, "requiredLibraries": []string{"forge", "bootstraplauncher", "libraries"}},
-		{"id": "quilt", "name": "Quilt", "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient", "supportedJava": []int{17, 21}, "requiredLibraries": []string{"quilt-loader", "libraries"}},
-		{"id": "neoforge", "name": "NeoForge", "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher", "supportedJava": []int{17, 21}, "requiredLibraries": []string{"neoforge", "bootstraplauncher", "libraries"}},
+		{"id": "vanilla", "name": "Vanilla", "resolution": "version-json", "adapter": "compatibility-engine", "installer": "external/package-stage"},
+		{"id": "fabric", "name": "Fabric", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
+		{"id": "quilt", "name": "Quilt", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
+		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
+		{"id": "neoforge", "name": "NeoForge", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
 	}
 }
 

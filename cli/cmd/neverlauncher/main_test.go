@@ -135,11 +135,13 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 }
 
 func TestRuntimeResolver740Commands(t *testing.T) {
+	versionJSON := "../../../tests/fixtures/runtime/version-1.21.1.json"
+	fabricMetadata := "../../../tests/fixtures/runtime/fabric-profile.json"
 	for _, args := range [][]string{
 		{"runtime", "resolver", "--loader", "neoforge", "--minecraft", "1.21.1"},
 		{"runtime", "matrix"},
 		{"runtime", "metadata-policy"},
-		{"runtime", "launch-plan", "--loader", "fabric", "--loader-version", "0.16.x", "--output", "-"},
+		{"runtime", "launch-plan", "--loader", "fabric", "--loader-version", "0.16.0", "--version-json", versionJSON, "--metadata", fabricMetadata, "--output", "-"},
 	} {
 		if err := run(args); err != nil {
 			t.Fatalf("%v вернула ошибку: %v", args, err)

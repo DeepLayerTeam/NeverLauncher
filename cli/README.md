@@ -1,4 +1,4 @@
-# NeverLauncher CLI 0.10.0-P3.2v4
+# NeverLauncher CLI 0.10.1
 
 `nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
 
@@ -41,9 +41,9 @@ nl install bootstrap-admin \
 
 ```bash
 nl release doctor
-nl release build --out dist/release-0.10.0-P3.2v4
-nl release sign dist/release-0.10.0-P3.2v4 --private-key /secure/release-private.pem
-nl release verify dist/release-0.10.0-P3.2v4 --public-key /etc/neverlauncher/release-public.pem
+nl release build --out dist/release-0.10.1
+nl release sign dist/release-0.10.1 --private-key /secure/release-private.pem
+nl release verify dist/release-0.10.1 --public-key /etc/neverlauncher/release-public.pem
 nl packaging prepare
 nl packaging verify
 ```
@@ -91,7 +91,7 @@ nl install first-run --output-dir ./neverlauncher-production \
 Desktop package/verify работает только с реально собранными artifacts:
 
 ```bash
-nl desktop package --artifact-dir dist/release-0.10.0-P3.2v4 --out dist/desktop-package --platform linux
+nl desktop package --artifact-dir dist/release-0.10.1 --out dist/desktop-package --platform linux
 nl desktop verify dist/desktop-package
 ```
 
@@ -103,5 +103,5 @@ nl security keys --registry-dir /secure/neverlauncher-keys
 nl security revocation-list --registry-dir /secure/neverlauncher-keys --revoke <keyId>
 nl security attest --path PROVENANCE.json --private-key /secure/.../private.pem
 nl security sbom --source-root . --output SBOM.spdx.json
-nl security provenance --source-root . --artifact-dir dist/release-0.10.0-P3.2v4 --output PROVENANCE.json
+nl security provenance --source-root . --artifact-dir dist/release-0.10.1 --output PROVENANCE.json
 ```
