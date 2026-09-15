@@ -71,3 +71,59 @@ func TestLinkAuthenticatedIdentityRejectsReassignment(t *testing.T) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
+
+type jitFixtureConnector struct{}
+
+func (jitFixtureConnector) Metadata() authconnector.Metadata {
+	return authconnector.Metadata{ID: "website", DisplayName: "Website SQL", Version: "0.11.3", Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth, authconnector.CapabilityEmail}}
+}
+func (jitFixtureConnector) Health(context.Context) error { return nil }
+func (jitFixtureConnector) AuthenticatePassword(context.Context, authconnector.PasswordRequest) (authconnector.Authentication, error) {
+	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "42", Email: "player@example.test", Username: "player", DisplayName: "Player 42", Claims: map[string]any{"groups": []string{"vip"}}}, AuthMethods: []string{"password"}}, nil
+}
+
+func TestAuthenticatePasswordJITProvisionsCanonicalUser(t *testing.T) {
+	repo := repository.NewMemoryRepository("http://example.test")
+	core := New(repo)
+	if err := core.RegisterWithPolicy(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player"}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.User.RoleID != "player" || result.Identity.Provider != "website" || result.Identity.Subject != "42" {
+		t.Fatalf("unexpected JIT result: %+v", result)
+	}
+	if result.User.PasswordHash != "" {
+		t.Fatal("JIT federated user unexpectedly has a local password")
+	}
+	if _, err := repo.GetAuthIdentity("local", result.User.ID); err == nil {
+		t.Fatal("JIT federated user unexpectedly received local identity")
+	}
+	again, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.User.ID != result.User.ID {
+		t.Fatalf("JIT user id is not stable: %s != %s", again.User.ID, result.User.ID)
+	}
+}
+
+func TestJITProvisioningDoesNotAutoLinkMatchingEmail(t *testing.T) {
+	repo := repository.NewMemoryRepository("http://example.test")
+	if _, err := repo.SaveUser(model.User{ID: "existing", Email: "player@example.test", DisplayName: "Existing", RoleID: "player", Status: "active", PasswordHash: "sha256:deadbeef"}); err != nil {
+		t.Fatal(err)
+	}
+	core := New(repo)
+	if err := core.RegisterWithPolicy(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
+	if authconnector.CodeOf(err) != authconnector.ErrConflict {
+		t.Fatalf("expected explicit-link conflict, got %v", err)
+	}
+	if _, err := repo.GetAuthIdentity("website", "42"); err == nil {
+		t.Fatal("matching email silently linked external identity")
+	}
+}

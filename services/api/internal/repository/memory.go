@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -12,6 +13,7 @@ import (
 
 var ErrNotFound = errors.New("запись не найдена")
 var ErrImmutable = errors.New("published release immutable")
+var ErrConflict = errors.New("repository conflict")
 
 type Repository interface {
 	ListProjects() []model.Project
@@ -33,6 +35,7 @@ type Repository interface {
 	GetAuthIdentity(provider, subject string) (model.AuthIdentity, error)
 	ListAuthIdentities(userID string) []model.AuthIdentity
 	SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error)
+	SaveFederatedUser(ctx context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error)
 	TouchAuthIdentity(id string) (model.AuthIdentity, error)
 	ListRoles() []model.Role
 	ListAuditEvents() []model.AuditEvent
@@ -373,11 +376,13 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 		}
 		r.users = append(r.users, user)
 	}
-	if _, err := r.SaveAuthIdentity(model.AuthIdentity{
-		UserID: user.ID, Provider: "local", Subject: user.ID,
-		Email: user.Email, Username: user.Email, DisplayName: user.DisplayName,
-	}); err != nil {
-		return model.User{}, err
+	if strings.TrimSpace(user.PasswordHash) != "" {
+		if _, err := r.SaveAuthIdentity(model.AuthIdentity{
+			UserID: user.ID, Provider: "local", Subject: user.ID,
+			Email: user.Email, Username: user.Email, DisplayName: user.DisplayName,
+		}); err != nil {
+			return model.User{}, err
+		}
 	}
 	return user, nil
 }
@@ -488,6 +493,67 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	identity.UpdatedAt = now
 	r.identities = append(r.identities, identity)
 	return identity, nil
+}
+
+func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error) {
+	now := time.Now().UTC()
+	user.ID = strings.TrimSpace(user.ID)
+	user.Email = strings.TrimSpace(user.Email)
+	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
+	}
+	existingUserIndex := -1
+	for i, existing := range r.users {
+		if strings.EqualFold(existing.Email, user.Email) && existing.ID != user.ID {
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
+		}
+		if existing.ID == user.ID {
+			if !strings.EqualFold(existing.Email, user.Email) {
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
+			}
+			existingUserIndex = i
+		}
+	}
+	for _, existing := range r.identities {
+		if existing.Provider == identity.Provider && existing.Subject == identity.Subject {
+			if existing.UserID != user.ID {
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked", ErrConflict)
+			}
+			canonical, err := r.GetUser(existing.UserID)
+			return canonical, existing, err
+		}
+	}
+	if user.Status == "" {
+		user.Status = "active"
+	}
+	if user.RoleID == "" {
+		user.RoleID = "player"
+	}
+	if user.ProjectRoles == nil {
+		user.ProjectRoles = map[string]string{}
+	}
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = now
+	}
+	user.UpdatedAt = now
+	if existingUserIndex >= 0 {
+		user = r.users[existingUserIndex]
+	} else {
+		r.users = append(r.users, user)
+	}
+	identity.UserID = user.ID
+	if identity.ID == "" {
+		identity.ID = "identity-" + identity.Provider + "-" + user.ID
+	}
+	identity.CreatedAt = now
+	identity.UpdatedAt = now
+	if identity.LastAuthenticatedAt.IsZero() {
+		identity.LastAuthenticatedAt = now
+	}
+	r.identities = append(r.identities, identity)
+	return user, identity, nil
 }
 
 func (r *MemoryRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error) {

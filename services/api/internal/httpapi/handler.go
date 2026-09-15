@@ -1,6 +1,9 @@
 package httpapi
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 func (s Server) Handler() http.Handler {
 	if s.State == nil {
@@ -9,9 +12,9 @@ func (s Server) Handler() http.Handler {
 		// in-memory limiter and do not trust forwarded headers by default.
 	}
 	if s.Federation == nil {
-		core, err := NewFederationCore112(s.Repo)
+		core, err := NewFederationCore113(context.Background(), s.Repo, s.Config)
 		if err != nil {
-			panic("federation core 0.11.2 initialization failed: " + err.Error())
+			panic("federation core 0.11.3 initialization failed: " + err.Error())
 		}
 		s.Federation = core
 	}

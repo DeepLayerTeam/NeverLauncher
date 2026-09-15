@@ -26,6 +26,43 @@ POST /api/v1/install/first-project
 
 Начиная с `0.11.2`, login проходит через Federation Core: connector подтверждает credentials и возвращает provider identity, затем `(provider, subject)` разрешается через `auth_identities` в канонического Never user, и только после этого создаётся Never session. Встроенный `local` provider реализован через публичный `pkg/authconnector`; `/api/v1/auth/providers` отдаёт runtime registry, а `/api/v1/auth/identities` — связи текущего пользователя. Внешние provider tokens не принимаются как Never access tokens.
 
+Начиная с `0.11.3`, Federation Core умеет регистрировать реальные SQL providers из `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE`. SQL Connector поддерживает PostgreSQL, MySQL и MariaDB, выполняет только построенные NeverLauncher prepared/bound read-only запросы по валидированному mapping, имеет отдельные connect/query timeout и pool limits, проверяет TLS policy и поддерживает Argon2id, bcrypt, PBKDF2-SHA256 и явно разрешённый legacy SHA-256. При `provisioning.mode=jit` первый успешный вход атомарно создаёт canonical Never user + `auth_identity`; совпадение email с существующим Never user считается конфликтом и не приводит к неявному account linking.
+
+Пример provider-конфигурации:
+
+```json
+[
+  {
+    "id": "website",
+    "displayName": "Website account",
+    "driver": "postgresql",
+    "dsnEnv": "WEBSITE_AUTH_DATABASE_DSN",
+    "table": "public.users",
+    "columns": {
+      "id": "id",
+      "username": "username",
+      "email": "email",
+      "password": "password_hash",
+      "status": "status",
+      "displayName": "display_name",
+      "groups": "groups",
+      "roles": "roles",
+      "minecraftUuid": "minecraft_uuid"
+    },
+    "password": {"algorithm": "bcrypt"},
+    "activeStatusValues": ["active", "1"],
+    "provisioning": {"mode": "jit", "defaultRole": "player"},
+    "requireTls": true,
+    "connectTimeout": "5s",
+    "queryTimeout": "3s",
+    "maxOpenConns": 10,
+    "maxIdleConns": 2
+  }
+]
+```
+
+По умолчанию SQL provider требует TLS с проверкой сертификата. `allowInsecureTls: true` разрешает только зашифрованное соединение без строгой проверки сертификата (`sslmode=require`/эквивалент) и предназначено для контролируемых development/staging окружений; plaintext требует отдельного `requireTls: false`. В production рекомендуется read-only DB account и `dsnEnv`, а не DSN с паролем внутри JSON. `legacy-sha256` принимается только вместе с `password.allowLegacySha256=true`.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.
@@ -64,7 +101,7 @@ go vet ./...
 go build -trimpath ./cmd/neverlauncher-api
 ```
 
-Для offline-окружения без pgx в локальном module cache:
+Для offline-окружения без production SQL drivers (`pgx`/MySQL) в локальном module cache:
 
 ```bash
 go test -tags neverlauncher_nopgx ./...

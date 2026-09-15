@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.11.3 — SQL Connector
+
+`0.11.3` добавляет первый внешний production auth provider поверх Connector SDK/Federation Core: SQL Connector для PostgreSQL, MySQL и MariaDB. Это не отдельный endpoint/manifest слой — `/api/v1/auth/login` и `/api/v1/admin/login` реально маршрутизируют password authentication в зарегистрированный SQL provider по `providerId`, после чего Federation Core разрешает external subject в canonical Never user и выпускает обычную Never session.
+
+### SQL authentication runtime
+
+- Конфигурация нескольких SQL providers через `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE`; DSN может ссылаться на отдельную secret environment variable через `dsnEnv`.
+- Только NeverLauncher-generated `SELECT`: table/column mapping проходит identifier validation, lookup statements подготавливаются при startup, login values передаются bind-параметрами, произвольный SQL из login request не выполняется.
+- PostgreSQL, MySQL и MariaDB; connect/query timeout, bounded pool, connection lifetime, startup health check и fail-closed registration.
+- TLS включён по умолчанию для внешнего SQL provider; режимы с plaintext fallback (`sslmode=prefer`, `tls=preferred`) запрещены при `requireTls=true`, insecure certificate verification и plaintext требуют разных явных opt-in.
+- Каждый lookup выполняется в read-only transaction и возвращает не более одной identity; ambiguous username/email блокируется как conflict.
+- Mapping: external id, username, email, display name, status, groups, roles и Minecraft UUID; groups/roles понимают JSON arrays, comma-separated values и PostgreSQL `text[]`.
+
+### Password compatibility
+
+- Argon2id PHC verification с bounds на memory/time/parallelism.
+- bcrypt с ограничением допустимого work factor.
+- PBKDF2-SHA256 (включая Django-style format) с минимальным iteration policy.
+- Legacy SHA-256 выключен по умолчанию и требует `allowLegacySha256=true`.
+
+### Federation / provisioning
+
+- SQL provider может работать в `explicit-only` или `jit` provisioning mode.
+- `jit` после успешной SQL password verification атомарно создаёт canonical Never user + external `auth_identity`; исходная пользовательская таблица остаётся read-only и не мигрируется в NeverLauncher.
+- Canonical user ID стабильно выводится из `(provider, subject)`, а не из email.
+- Совпадение внешнего email с уже существующим Never user не используется для auto-linking и завершается conflict, требуя явной связи identity.
+- JIT federated user не получает фиктивный local-password identity.
+
+### Production hardening
+
+- Docker build теперь копирует `go.sum` и публичный `services/api/pkg`, поэтому production image действительно собирает Connector SDK/Federation Core.
+- Добавлены executable tests на prepared/bound queries, read-only transaction, PostgreSQL arrays, TLS fallback policy, duplicate identity detection, Argon2id/bcrypt/PBKDF2/legacy password compatibility, JIT provisioning и запрет email auto-linking.
+- Unknown identifier выполняет algorithm-equivalent dummy password work; identifier/password имеют верхние bounds, чтобы снизить timing enumeration и resource-abuse поверхность.
+- PostgreSQL JIT provisioning сериализуется transaction-scoped advisory lock по normalized email, поэтому case-insensitive email conflict остаётся fail-closed и при конкурентных первых входах.
+
 ## 0.11.2 — Connector SDK + Federation Core
 
 `0.11.2` переводит рабочий local password login на общий Federation Core. Встроенный `local` provider использует тот же публичный Connector SDK, который предназначен для SQL/HTTP/OIDC/Microsoft connectors следующих релизов; прямой password-check в `/auth/login` и `/admin/login` больше не является отдельным auth engine.

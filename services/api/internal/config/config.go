@@ -47,6 +47,8 @@ type Config struct {
 	DatabaseAutoMigrate                bool
 	BootstrapToken                     string
 	ManifestSigningPrivateKey          string
+	AuthSQLProvidersJSON               string
+	AuthSQLProvidersFile               string
 }
 
 // Load читает конфигурацию из переменных окружения.
@@ -98,6 +100,8 @@ func Load() Config {
 		DatabaseAutoMigrate:                envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
 		BootstrapToken:                     env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
 		ManifestSigningPrivateKey:          env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", ""),
+		AuthSQLProvidersJSON:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
+		AuthSQLProvidersFile:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
 	}
 }
 

@@ -50,6 +50,10 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, status, "auth provider не поддерживает password login")
 			return
 		}
+		if status == http.StatusConflict {
+			writeError(w, status, "external identity конфликтует с существующей учётной записью; требуется явное связывание")
+			return
+		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
 		return
 	}

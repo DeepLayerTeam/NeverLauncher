@@ -396,12 +396,14 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 	if err != nil {
 		return model.User{}, err
 	}
-	identityID := "identity-local-" + user.ID
-	_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
+	if strings.TrimSpace(user.PasswordHash) != "" {
+		identityID := "identity-local-" + user.ID
+		_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
 VALUES($1,$2,'local',$2,$3,$3,$4,'{}'::jsonb,now(),now())
 ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()`, identityID, user.ID, user.Email, user.DisplayName)
-	if err != nil {
-		return model.User{}, err
+		if err != nil {
+			return model.User{}, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return model.User{}, err
@@ -548,6 +550,125 @@ ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLU
 		return model.AuthIdentity{}, err
 	}
 	return r.GetAuthIdentity(identity.Provider, identity.Subject)
+}
+
+func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error) {
+	if err := r.check(); err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	now := time.Now().UTC()
+	user.ID = strings.TrimSpace(user.ID)
+	user.Email = strings.TrimSpace(user.Email)
+	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
+	}
+	if user.Status == "" {
+		user.Status = "active"
+	}
+	if user.RoleID == "" {
+		user.RoleID = "player"
+	}
+	if user.ProjectRoles == nil {
+		user.ProjectRoles = map[string]string{}
+	}
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = now
+	}
+	user.UpdatedAt = now
+	identity.UserID = user.ID
+	if identity.ID == "" {
+		identity.ID = "identity-" + identity.Provider + "-" + user.ID
+	}
+	if identity.CreatedAt.IsZero() {
+		identity.CreatedAt = now
+	}
+	identity.UpdatedAt = now
+	if identity.LastAuthenticatedAt.IsZero() {
+		identity.LastAuthenticatedAt = now
+	}
+	projectRoles, err := json.Marshal(user.ProjectRoles)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	claims, err := json.Marshal(identity.Claims)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	defer tx.Rollback()
+
+	// Serialize JIT provisioning on the normalized email even when no row exists yet.
+	// The users.email constraint may be case-sensitive, while identity linking policy
+	// deliberately treats email case-insensitively. The transaction-scoped advisory
+	// lock closes the otherwise unavoidable "check-then-insert" race.
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(lower($1), 0))`, user.Email); err != nil {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("lock federated canonical email: %w", err)
+	}
+	var emailOwner string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) LIMIT 1`, user.Email).Scan(&emailOwner)
+	if err == nil && emailOwner != user.ID {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+
+	// JIT provisioning is create-once. ON CONFLICT DO NOTHING also makes concurrent
+	// first logins for the same deterministic canonical id idempotent.
+	result, err := tx.ExecContext(ctx, `INSERT INTO users (id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,last_login_at,disabled_at,created_at,updated_at)
+VALUES($1,$2,$3,$4,$5,$6,'',NULL,NULL,NULL,$7,$8)
+ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, user.Status, string(projectRoles), user.CreatedAt, user.UpdatedAt)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated canonical user: %w", err)
+	}
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	if inserted == 0 {
+		var existingEmail string
+		if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id=$1`, user.ID).Scan(&existingEmail); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
+			}
+			return model.User{}, model.AuthIdentity{}, err
+		}
+		if !strings.EqualFold(strings.TrimSpace(existingEmail), user.Email) {
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
+		}
+	}
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11)
+ON CONFLICT(provider,subject) DO NOTHING`, identity.ID, identity.UserID, identity.Provider, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, identity.UpdatedAt, identity.LastAuthenticatedAt)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated identity: %w", err)
+	}
+	var linkedUserID string
+	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND subject=$2`, identity.Provider, identity.Subject).Scan(&linkedUserID); err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	if linkedUserID != user.ID {
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked to another Never user", ErrConflict)
+	}
+	if err := tx.Commit(); err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	canonical, err := r.GetUser(user.ID)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	linked, err := r.GetAuthIdentity(identity.Provider, identity.Subject)
+	return canonical, linked, err
 }
 
 func (r *SQLRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error) {

@@ -100,6 +100,10 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, status, "auth provider не поддерживает password login")
 			return
 		}
+		if status == http.StatusConflict {
+			writeError(w, status, "external identity конфликтует с существующей учётной записью; требуется явное связывание")
+			return
+		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
 		return
 	}
@@ -219,7 +223,7 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
 		"status":        "federation-core-active",
-		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "email-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
 		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),
@@ -231,7 +235,7 @@ func (s Server) sessionPolicyPayload(version string) map[string]any {
 }
 
 func desktopAuthPolicyPayload(version string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "desktop-auth-enforced", "loginEndpoint": "POST /api/v1/auth/login", "refreshEndpoint": "POST /api/v1/auth/refresh", "logoutEndpoint": "POST /api/v1/auth/logout", "secureStorage": map[string]any{"required": true, "linux": "secret-service/kwallet", "windows": "credential-manager", "macos": "keychain", "fallbackPlaintext": false}, "restore": map[string]any{"onStart": true, "refreshBeforeExpiry": true, "clearOnLogout": true}, "screens": []string{"email-password", "session-active", "session-expired", "project-access-denied"}}
+	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "desktop-auth-enforced", "loginEndpoint": "POST /api/v1/auth/login", "refreshEndpoint": "POST /api/v1/auth/refresh", "logoutEndpoint": "POST /api/v1/auth/logout", "secureStorage": map[string]any{"required": true, "linux": "secret-service/kwallet", "windows": "credential-manager", "macos": "keychain", "fallbackPlaintext": false}, "restore": map[string]any{"onStart": true, "refreshBeforeExpiry": true, "clearOnLogout": true}, "screens": []string{"identifier-password", "session-active", "session-expired", "project-access-denied"}}
 }
 
 func (s Server) accountSessionsPayload(version string, user model.User) map[string]any {

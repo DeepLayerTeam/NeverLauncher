@@ -2,6 +2,8 @@ package federation
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
@@ -36,17 +38,27 @@ type ProviderHealth struct {
 // Core owns provider dispatch and the mandatory ExternalIdentity -> canonical Never
 // User resolution boundary. Connectors authenticate external credentials; they never
 // mint Never access/refresh tokens and never bypass Never session policy.
+type ProviderPolicy struct {
+	AutoProvision bool
+	DefaultRole   string
+}
+
 type Core struct {
 	repo       repository.Repository
 	mu         sync.RWMutex
 	connectors map[string]authconnector.Connector
+	policies   map[string]ProviderPolicy
 }
 
 func New(repo repository.Repository) *Core {
-	return &Core{repo: repo, connectors: make(map[string]authconnector.Connector)}
+	return &Core{repo: repo, connectors: make(map[string]authconnector.Connector), policies: make(map[string]ProviderPolicy)}
 }
 
 func (c *Core) Register(connector authconnector.Connector) error {
+	return c.RegisterWithPolicy(connector, ProviderPolicy{})
+}
+
+func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy ProviderPolicy) error {
 	if connector == nil {
 		return errors.New("connector is nil")
 	}
@@ -79,12 +91,29 @@ func (c *Core) Register(connector authconnector.Connector) error {
 			return fmt.Errorf("connector %q advertises user-lookup without IdentityResolver", meta.ID)
 		}
 	}
+	policy.DefaultRole = strings.TrimSpace(policy.DefaultRole)
+	if policy.AutoProvision {
+		if policy.DefaultRole == "" {
+			policy.DefaultRole = "player"
+		}
+		roleExists := false
+		for _, role := range c.repo.ListRoles() {
+			if role.ID == policy.DefaultRole {
+				roleExists = true
+				break
+			}
+		}
+		if !roleExists {
+			return fmt.Errorf("connector %q auto-provision default role %q does not exist", meta.ID, policy.DefaultRole)
+		}
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.connectors[meta.ID]; exists {
 		return fmt.Errorf("connector %q already registered", meta.ID)
 	}
 	c.connectors[meta.ID] = connector
+	c.policies[meta.ID] = policy
 	return nil
 }
 
@@ -105,6 +134,13 @@ func (c *Core) Connector(id string) (authconnector.Connector, bool) {
 	defer c.mu.RUnlock()
 	connector, ok := c.connectors[id]
 	return connector, ok
+}
+
+func (c *Core) ProviderPolicy(id string) ProviderPolicy {
+	id = strings.ToLower(strings.TrimSpace(id))
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.policies[id]
 }
 
 func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, request authconnector.PasswordRequest) (Result, error) {
@@ -130,15 +166,33 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 		return Result{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
 	}
 	linked, err := c.repo.GetAuthIdentity(meta.ID, auth.Identity.Subject)
+	var user model.User
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if !errors.Is(err, repository.ErrNotFound) {
+			return Result{}, err
+		}
+		policy := c.ProviderPolicy(meta.ID)
+		if !policy.AutoProvision {
 			return Result{}, ErrIdentityNotLinked
 		}
-		return Result{}, err
+		user, linked, err = c.provisionAuthenticatedIdentity(ctx, meta.ID, policy, auth.Identity)
+		if err != nil {
+			if errors.Is(err, repository.ErrConflict) {
+				return Result{}, authconnector.WrapError(authconnector.ErrConflict, "external identity cannot be provisioned automatically", err)
+			}
+			return Result{}, err
+		}
+	} else {
+		user, err = c.repo.GetUser(linked.UserID)
+		if err != nil {
+			return Result{}, err
+		}
 	}
-	user, err := c.repo.GetUser(linked.UserID)
-	if err != nil {
-		return Result{}, err
+	if user.ID == "" {
+		user, err = c.repo.GetUser(linked.UserID)
+		if err != nil {
+			return Result{}, err
+		}
 	}
 	if user.Status == "disabled" {
 		return Result{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user is disabled")
@@ -153,6 +207,33 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 		return Result{}, err
 	}
 	return Result{Provider: meta, Identity: updated, User: user, AuthMethods: append([]string(nil), auth.AuthMethods...)}, nil
+}
+
+func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID string, policy ProviderPolicy, identity authconnector.Identity) (model.User, model.AuthIdentity, error) {
+	subject := strings.TrimSpace(identity.Subject)
+	if subject == "" {
+		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "authenticated identity subject is empty")
+	}
+	digest := sha256.Sum256([]byte(providerID + "\x00" + subject))
+	stableSuffix := hex.EncodeToString(digest[:12])
+	userID := "user-" + providerID + "-" + stableSuffix
+	email := strings.TrimSpace(identity.Email)
+	if email == "" {
+		email = stableSuffix + "@identity.invalid"
+	}
+	displayName := strings.TrimSpace(identity.DisplayName)
+	if displayName == "" {
+		displayName = strings.TrimSpace(identity.Username)
+	}
+	if displayName == "" {
+		displayName = email
+	}
+	now := time.Now().UTC()
+	return c.repo.SaveFederatedUser(ctx, model.User{
+		ID: userID, Email: email, DisplayName: displayName, RoleID: policy.DefaultRole, Status: "active", ProjectRoles: map[string]string{}, CreatedAt: now, UpdatedAt: now,
+	}, model.AuthIdentity{
+		UserID: userID, Provider: providerID, Subject: subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: now,
+	})
 }
 
 // LinkAuthenticatedIdentity persists a provider identity only after the caller has
@@ -179,6 +260,24 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 		return model.AuthIdentity{}, err
 	}
 	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims)})
+}
+
+func (c *Core) Close() error {
+	c.mu.RLock()
+	connectors := make([]authconnector.Connector, 0, len(c.connectors))
+	for _, connector := range c.connectors {
+		connectors = append(connectors, connector)
+	}
+	c.mu.RUnlock()
+	var firstErr error
+	for _, connector := range connectors {
+		if closer, ok := connector.(interface{ Close() error }); ok {
+			if err := closer.Close(); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
 }
 
 func (c *Core) Health(ctx context.Context) []ProviderHealth {
