@@ -2,8 +2,11 @@ package httpapi
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -201,5 +204,96 @@ func TestDeviceTrustRejectsWrongSignatureAndDuplicateKey0121(t *testing.T) {
 	code, out = register("Duplicate key", false)
 	if code != http.StatusConflict {
 		t.Fatalf("duplicate key accepted: %d %#v", code, out)
+	}
+}
+
+func signP256P1363Test0123(t *testing.T, priv *ecdsa.PrivateKey, payload string) string {
+	t.Helper()
+	digest := sha256.Sum256([]byte(payload))
+	r, ss, err := ecdsa.Sign(rand.Reader, priv, digest[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := make([]byte, 64)
+	r.FillBytes(raw[:32])
+	ss.FillBytes(raw[32:])
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
+
+func TestDeviceTrustHardwareP256RegistrationAndBinding0123(t *testing.T) {
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	repo := repository.NewMemoryRepository(cfg.PublicURL)
+	h := Server{Version: "0.12.3", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
+
+	access1, _ := deviceTrustLogin0121(t, h, "hardware-label-a")
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicKey := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
+
+	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access1, map[string]any{
+		"name":             "TPM workstation",
+		"platform":         "linux",
+		"clientVersion":    "0.12.3",
+		"keyAlgorithm":     "p256",
+		"keyBinding":       "hardware",
+		"hardwareProvider": "test-tpm-2.0",
+	})
+	if code != http.StatusOK {
+		t.Fatalf("hardware register begin status=%d body=%#v", code, beginOut)
+	}
+	begin := deviceTrustData0121(t, beginOut)
+	payload, _ := begin["signingPayload"].(string)
+	if payload == "" || begin["keyAlgorithm"] != "p256" || begin["keyBinding"] != "hardware" || begin["hardwareProvider"] != "test-tpm-2.0" {
+		t.Fatalf("bad hardware begin payload: %#v", begin)
+	}
+	completeBody := map[string]any{
+		"challengeId": begin["challengeId"],
+		"deviceId":    begin["deviceId"],
+		"challenge":   begin["challenge"],
+		"publicKey":   base64.RawURLEncoding.EncodeToString(publicKey),
+		"signature":   signP256P1363Test0123(t, priv, payload),
+	}
+	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", access1, completeBody)
+	if code != http.StatusCreated {
+		t.Fatalf("hardware register complete status=%d body=%#v", code, completeOut)
+	}
+	complete := deviceTrustData0121(t, completeOut)
+	device, _ := complete["device"].(map[string]any)
+	if device["keyAlgorithm"] != "p256" || device["keyBinding"] != "hardware" || device["hardwareProvider"] != "test-tpm-2.0" {
+		t.Fatalf("hardware identity metadata lost: %#v", device)
+	}
+	if device["assurance"] != "proof-of-possession" {
+		t.Fatalf("unattested hardware key must not elevate assurance: %#v", device)
+	}
+	if _, leaks := device["publicKey"]; leaks {
+		t.Fatalf("public key leaked in API device model: %#v", device)
+	}
+	deviceID, _ := device["id"].(string)
+	if deviceID == "" {
+		t.Fatalf("missing hardware device id: %#v", device)
+	}
+
+	access2, _ := deviceTrustLogin0121(t, h, "hardware-label-b")
+	code, verifyBeginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/begin", access2, map[string]any{})
+	if code != http.StatusOK {
+		t.Fatalf("hardware verify begin status=%d body=%#v", code, verifyBeginOut)
+	}
+	verifyBegin := deviceTrustData0121(t, verifyBeginOut)
+	verifyPayload, _ := verifyBegin["signingPayload"].(string)
+	if verifyPayload == "" || verifyBegin["keyAlgorithm"] != "p256" || verifyBegin["keyBinding"] != "hardware" {
+		t.Fatalf("bad hardware verify payload: %#v", verifyBegin)
+	}
+	code, verifyOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/verify/complete", access2, map[string]any{
+		"challengeId": verifyBegin["challengeId"],
+		"challenge":   verifyBegin["challenge"],
+		"signature":   signP256P1363Test0123(t, priv, verifyPayload),
+	})
+	if code != http.StatusOK {
+		t.Fatalf("hardware verify complete status=%d body=%#v", code, verifyOut)
+	}
+	if access, _ := deviceTrustData0121(t, verifyOut)["accessToken"].(string); access == "" {
+		t.Fatalf("hardware-bound session token missing: %#v", verifyOut)
 	}
 }

@@ -1,15 +1,19 @@
 package httpapi
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -19,9 +23,12 @@ import (
 const deviceChallengeTTL0121 = 5 * time.Minute
 
 type deviceRegisterBeginRequest0121 struct {
-	Name          string `json:"name"`
-	Platform      string `json:"platform,omitempty"`
-	ClientVersion string `json:"clientVersion,omitempty"`
+	Name             string `json:"name"`
+	Platform         string `json:"platform,omitempty"`
+	ClientVersion    string `json:"clientVersion,omitempty"`
+	KeyAlgorithm     string `json:"keyAlgorithm,omitempty"`
+	KeyBinding       string `json:"keyBinding,omitempty"`
+	HardwareProvider string `json:"hardwareProvider,omitempty"`
 }
 
 type deviceProofCompleteRequest0121 struct {
@@ -75,6 +82,110 @@ func normalizeDeviceMetadata0121(platform, clientVersion string) (string, string
 	return platform, clientVersion, nil
 }
 
+func validHardwareProvider0123(provider string) bool {
+	if provider == "" || len(provider) > 96 || !utf8.ValidString(provider) {
+		return false
+	}
+	for _, r := range provider {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeDeviceKeyProperties0123(algorithm, binding, provider string) (string, string, string, error) {
+	algorithm = strings.ToLower(strings.TrimSpace(algorithm))
+	binding = strings.ToLower(strings.TrimSpace(binding))
+	provider = strings.TrimSpace(provider)
+	if algorithm == "" {
+		algorithm = "ed25519"
+	}
+	if binding == "" {
+		binding = "software"
+	}
+	if algorithm != "ed25519" && algorithm != "p256" {
+		return "", "", "", errors.New("keyAlgorithm must be ed25519 or p256")
+	}
+	if binding != "software" && binding != "hardware" {
+		return "", "", "", errors.New("keyBinding must be software or hardware")
+	}
+	if binding == "hardware" {
+		if algorithm != "p256" {
+			return "", "", "", errors.New("hardware-bound identity requires p256")
+		}
+		if !validHardwareProvider0123(provider) {
+			return "", "", "", errors.New("hardwareProvider is required for hardware-bound identity")
+		}
+	} else {
+		if algorithm != "ed25519" {
+			return "", "", "", errors.New("software device identity requires ed25519")
+		}
+		provider = ""
+	}
+	return algorithm, binding, provider, nil
+}
+
+type decodedDevicePublicKey0123 struct {
+	algorithm   string
+	raw         []byte
+	ed25519Key  ed25519.PublicKey
+	p256Key     *ecdsa.PublicKey
+	fingerprint string
+}
+
+func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey0123, error) {
+	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
+	if err != nil {
+		return decodedDevicePublicKey0123{}, errors.New("publicKey must be base64url")
+	}
+	out := decodedDevicePublicKey0123{algorithm: algorithm, raw: append([]byte(nil), b...)}
+	switch algorithm {
+	case "ed25519":
+		if len(b) != ed25519.PublicKeySize {
+			return decodedDevicePublicKey0123{}, errors.New("publicKey must be a raw Ed25519 public key")
+		}
+		out.ed25519Key = ed25519.PublicKey(b)
+	case "p256":
+		x, y := elliptic.Unmarshal(elliptic.P256(), b)
+		if x == nil || y == nil || len(b) != 65 || b[0] != 0x04 {
+			return decodedDevicePublicKey0123{}, errors.New("publicKey must be an uncompressed SEC1 P-256 public key")
+		}
+		out.p256Key = &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
+	default:
+		return decodedDevicePublicKey0123{}, errors.New("unsupported device key algorithm")
+	}
+	sum := sha256.Sum256(b)
+	out.fingerprint = hex.EncodeToString(sum[:])
+	return out, nil
+}
+
+func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSignature string) error {
+	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(rawSignature))
+	if err != nil {
+		return errors.New("signature must be base64url")
+	}
+	switch key.algorithm {
+	case "ed25519":
+		if len(b) != ed25519.SignatureSize || !ed25519.Verify(key.ed25519Key, []byte(payload), b) {
+			return errors.New("device proof signature is invalid")
+		}
+	case "p256":
+		if len(b) != 64 {
+			return errors.New("P-256 signature must be raw IEEE P1363 r||s")
+		}
+		h := sha256.Sum256([]byte(payload))
+		r := new(big.Int).SetBytes(b[:32])
+		s := new(big.Int).SetBytes(b[32:])
+		if r.Sign() <= 0 || s.Sign() <= 0 || !ecdsa.Verify(key.p256Key, h[:], r, s) {
+			return errors.New("device proof signature is invalid")
+		}
+	default:
+		return errors.New("unsupported device key algorithm")
+	}
+	return nil
+}
+
 func deviceChallengeHash0121(challenge string) string {
 	sum := sha256.Sum256([]byte(challenge))
 	return hex.EncodeToString(sum[:])
@@ -87,23 +198,6 @@ func deviceProofPayload0121(purpose, challenge, userID, deviceID, sessionID stri
 		"user=" + strings.TrimSpace(userID) + "\n" +
 		"device=" + strings.TrimSpace(deviceID) + "\n" +
 		"session=" + strings.TrimSpace(sessionID) + "\n"
-}
-
-func decodeDevicePublicKey0121(raw string) (ed25519.PublicKey, string, error) {
-	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
-	if err != nil || len(b) != ed25519.PublicKeySize {
-		return nil, "", errors.New("publicKey must be a base64url Ed25519 public key")
-	}
-	sum := sha256.Sum256(b)
-	return ed25519.PublicKey(b), hex.EncodeToString(sum[:]), nil
-}
-
-func decodeDeviceSignature0121(raw string) ([]byte, error) {
-	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
-	if err != nil || len(b) != ed25519.SignatureSize {
-		return nil, errors.New("signature must be a base64url Ed25519 signature")
-	}
-	return b, nil
 }
 
 func metadataString0121(m map[string]any, key string) string {
@@ -153,6 +247,11 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	keyAlgorithm, keyBinding, hardwareProvider, err := normalizeDeviceKeyProperties0123(req.KeyAlgorithm, req.KeyBinding, req.HardwareProvider)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	deviceID, err := randomToken("dev")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать device id")
@@ -170,13 +269,13 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	}
 	now := time.Now().UTC()
 	expires := now.Add(deviceChallengeTTL0121)
-	entry := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: deviceID, Purpose: "register", ChallengeHash: deviceChallengeHash0121(challenge), Metadata: map[string]any{"sessionId": claims.SessionID, "name": name, "platform": platform, "clientVersion": clientVersion}, CreatedAt: now, ExpiresAt: expires}
+	entry := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: deviceID, Purpose: "register", ChallengeHash: deviceChallengeHash0121(challenge), Metadata: map[string]any{"sessionId": claims.SessionID, "name": name, "platform": platform, "clientVersion": clientVersion, "keyAlgorithm": keyAlgorithm, "keyBinding": keyBinding, "hardwareProvider": hardwareProvider}, CreatedAt: now, ExpiresAt: expires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить device challenge")
 		return
 	}
 	payload := deviceProofPayload0121("register", challenge, claims.Sub, deviceID, claims.SessionID)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"challengeId": challengeID, "deviceId": deviceID, "challenge": challenge, "expiresAt": expires, "keyAlgorithm": "ed25519", "assurance": "proof-of-possession", "signingPayload": payload}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"challengeId": challengeID, "deviceId": deviceID, "challenge": challenge, "expiresAt": expires, "keyAlgorithm": keyAlgorithm, "keyBinding": keyBinding, "hardwareProvider": hardwareProvider, "assurance": "proof-of-possession", "signingPayload": payload}})
 }
 
 func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Request) {
@@ -190,16 +289,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	pub, fingerprint, err := decodeDevicePublicKey0121(req.PublicKey)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	sig, err := decodeDeviceSignature0121(req.Signature)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	// The key algorithm/binding is fixed by the server-side registration challenge.
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, req.DeviceID, "register", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
@@ -211,12 +301,22 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusUnauthorized, "device challenge создан для другой сессии")
 		return
 	}
-	payload := deviceProofPayload0121("register", req.Challenge, claims.Sub, req.DeviceID, sessionID)
-	if !ed25519.Verify(pub, []byte(payload), sig) {
-		writeError(w, http.StatusUnauthorized, "device proof signature недействительна")
+	keyAlgorithm, keyBinding, hardwareProvider, err := normalizeDeviceKeyProperties0123(metadataString0121(ch.Metadata, "keyAlgorithm"), metadataString0121(ch.Metadata, "keyBinding"), metadataString0121(ch.Metadata, "hardwareProvider"))
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "device challenge key properties повреждены")
 		return
 	}
-	device := model.TrustedDevice{ID: req.DeviceID, UserID: claims.Sub, Name: metadataString0121(ch.Metadata, "name"), Status: "active", TrustState: "verified", Assurance: "proof-of-possession", KeyAlgorithm: "ed25519", PublicKey: base64.RawURLEncoding.EncodeToString(pub), KeyFingerprint: fingerprint, Platform: metadataString0121(ch.Metadata, "platform"), ClientVersion: metadataString0121(ch.Metadata, "clientVersion"), CreatedAt: now, UpdatedAt: now, LastSeenAt: now, LastVerifiedAt: now, LastIP: clientIP(r), LastUserAgent: r.UserAgent()}
+	pub, err := decodeDevicePublicKey0123(req.PublicKey, keyAlgorithm)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	payload := deviceProofPayload0121("register", req.Challenge, claims.Sub, req.DeviceID, sessionID)
+	if err := verifyDeviceSignature0123(pub, payload, req.Signature); err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	device := model.TrustedDevice{ID: req.DeviceID, UserID: claims.Sub, Name: metadataString0121(ch.Metadata, "name"), Status: "active", TrustState: "verified", Assurance: "proof-of-possession", KeyAlgorithm: keyAlgorithm, KeyBinding: keyBinding, HardwareProvider: hardwareProvider, PublicKey: base64.RawURLEncoding.EncodeToString(pub.raw), KeyFingerprint: pub.fingerprint, Platform: metadataString0121(ch.Metadata, "platform"), ClientVersion: metadataString0121(ch.Metadata, "clientVersion"), CreatedAt: now, UpdatedAt: now, LastSeenAt: now, LastVerifiedAt: now, LastIP: clientIP(r), LastUserAgent: r.UserAgent()}
 	device, err = s.Repo.SaveTrustedDevice(r.Context(), device)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
@@ -279,7 +379,7 @@ func (s Server) authDeviceVerifyBegin0121(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить device challenge")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"challengeId": challengeID, "deviceId": device.ID, "challenge": challenge, "expiresAt": expires, "keyAlgorithm": "ed25519", "signingPayload": deviceProofPayload0121("session-bind", challenge, claims.Sub, device.ID, claims.SessionID)}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"challengeId": challengeID, "deviceId": device.ID, "challenge": challenge, "expiresAt": expires, "keyAlgorithm": device.KeyAlgorithm, "keyBinding": device.KeyBinding, "hardwareProvider": device.HardwareProvider, "signingPayload": deviceProofPayload0121("session-bind", challenge, claims.Sub, device.ID, claims.SessionID)}})
 }
 
 func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Request) {
@@ -303,14 +403,9 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusNotFound, "активное устройство не найдено")
 		return
 	}
-	pub, _, err := decodeDevicePublicKey0121(device.PublicKey)
+	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "device public key повреждён")
-		return
-	}
-	sig, err := decodeDeviceSignature0121(req.Signature)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	now := time.Now().UTC()
@@ -325,8 +420,8 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	payload := deviceProofPayload0121("session-bind", req.Challenge, claims.Sub, deviceID, sessionID)
-	if !ed25519.Verify(pub, []byte(payload), sig) {
-		writeError(w, http.StatusUnauthorized, "device proof signature недействительна")
+	if err := verifyDeviceSignature0123(pub, payload, req.Signature); err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 	device, err = s.Repo.TouchTrustedDevice(r.Context(), claims.Sub, deviceID, clientIP(r), r.UserAgent())

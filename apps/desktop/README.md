@@ -10,7 +10,7 @@ Desktop Launcher — рабочий Tauri/React-клиент NeverLauncher по�
      -> Yggdrasil/authlib-injector и/или сессия ServerBridge
 ```
 
-Учётные данные Never session и отдельный Ed25519 device key хранятся в native OS secure storage. Device private key создаётся и используется только внутри Tauri: React получает public fingerprint и подпись одноразового Backend challenge, но не private seed. После login/restore Desktop автоматически регистрирует либо повторно подтверждает trusted device.
+Учётные данные Never session хранятся в native OS secure storage. Для device identity Desktop сначала пытается создать non-exportable P-256 key в platform HSM (Secure Enclave/TPM); если настоящий hardware backend недоступен, используется совместимый Ed25519 key в native OS secure storage. Private key создаётся и используется только внутри Tauri: React получает public fingerprint/binding/provider и подпись одноразового Backend challenge, но не private key material. После login/restore Desktop автоматически регистрирует либо повторно подтверждает trusted device.
 
 Перед запуском Desktop получает отдельный Minecraft access token/UUID от Backend и передаёт их NeverRuntime; token не пишется в command preview. Проверка manifest signature, SHA-256 и pinned Ed25519 public key выполняется fail-closed. Authlib-injector подключается только если его JAR присутствует в подписанном manifest.
 

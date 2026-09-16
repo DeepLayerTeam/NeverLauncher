@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.12.3 — Hardware-bound identities
+
+`0.12.3` добавляет реальный hardware-backed device-key path поверх Device Trust Core. Desktop сначала пытается создать non-exportable P-256 signing key в platform hardware provider (Secure Enclave / TPM). Если platform signer сообщает keyring/software/test backend, он не считается hardware-bound: клиент явно остаётся на существующем Ed25519 + OS secure storage пути.
+
+### Hardware identity lifecycle
+
+- Tauri использует pinned `hardware-enclave 0.2.10` и P-256 ECDSA. Hardware private key не сериализуется в NeverLauncher metadata/keyring record и не пересекает IPC; сохраняются только public SEC1 key, SHA-256 fingerprint, provider name и platform key label.
+- Device Trust protocol теперь принимает `ed25519/software` и `p256/hardware`. Для P-256 Backend проверяет uncompressed SEC1 public key и raw IEEE P1363 `r||s` signature над тем же canonical single-use challenge payload.
+- Hardware key автоматически используется в registration/session-bind flow официального Desktop. Если HSM недоступен, fallback остаётся явным `keyBinding=software`, без ложного hardware status.
+- Delete/reset удаляет platform hardware key и локальную metadata; existing `0.12.2` Ed25519 records автоматически продолжают работать как software-bound identities.
+
+### Server boundary / migration
+
+- Добавлена migration `0013_hardware_bound_identities_0123.sql`: `trusted_devices.key_binding`, `hardware_provider`, поддержка `key_algorithm=p256`, relational CHECK constraints и индекс по binding state. Backend/CLI catalogs byte-identical.
+- Access JWT содержит диагностические `device_key_binding` и `device_hardware_provider` для уже verified device. Эти claims **не** используются для RBAC, MFA strength или step-up decisions.
+- `keyBinding=hardware` в `0.12.3` означает локально выбранный non-exportable hardware provider, но ещё не remote attestation. Поэтому server-side `assurance` остаётся `proof-of-possession`. TPM/Secure Enclave attestation/challenge-response verification является отдельным следующим Device Trust этапом.
+
+### Release gates
+
+- HTTP E2E выполняет реальный P-256 registration + second-session bind и проверяет, что hardware metadata не повышает assurance.
+- Добавлен `hardware-bound-identity.py`; preflight/repository policy/CI требуют HSM path, P-256 verifier, migration `0013`, запрет keyring/software promotion и Linux TPM build dependency.
+
 ## 0.12.2 — Device keys + OS secure storage
 
 `0.12.2` переводит Device Trust из server-only proof API в рабочий Desktop lifecycle. Официальный Tauri-клиент сам создаёт Ed25519 device key, хранит private seed только в native OS credential store и автоматически выполняет registration/session-bind proof после Never login.

@@ -9,9 +9,23 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
+
+func validHardwareProvider0123(provider string) bool {
+	if provider == "" || len(provider) > 96 || !utf8.ValidString(provider) {
+		return false
+	}
+	for _, r := range provider {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
+}
 
 func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice, error) {
 	device.ID = strings.TrimSpace(device.ID)
@@ -21,6 +35,8 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	device.TrustState = strings.ToLower(strings.TrimSpace(device.TrustState))
 	device.Assurance = strings.ToLower(strings.TrimSpace(device.Assurance))
 	device.KeyAlgorithm = strings.ToLower(strings.TrimSpace(device.KeyAlgorithm))
+	device.KeyBinding = strings.ToLower(strings.TrimSpace(device.KeyBinding))
+	device.HardwareProvider = strings.TrimSpace(device.HardwareProvider)
 	device.PublicKey = strings.TrimSpace(device.PublicKey)
 	device.KeyFingerprint = strings.ToLower(strings.TrimSpace(device.KeyFingerprint))
 	device.Platform = strings.TrimSpace(device.Platform)
@@ -40,14 +56,30 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	if device.KeyAlgorithm == "" {
 		device.KeyAlgorithm = "ed25519"
 	}
+	if device.KeyBinding == "" {
+		device.KeyBinding = "software"
+	}
 	if device.Status != "active" && device.Status != "revoked" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported device status %q", device.Status)
 	}
 	if device.TrustState != "verified" && device.TrustState != "revoked" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported trust state %q", device.TrustState)
 	}
-	if device.KeyAlgorithm != "ed25519" {
+	if device.KeyAlgorithm != "ed25519" && device.KeyAlgorithm != "p256" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported device key algorithm %q", device.KeyAlgorithm)
+	}
+	if device.KeyBinding != "software" && device.KeyBinding != "hardware" {
+		return model.TrustedDevice{}, fmt.Errorf("unsupported device key binding %q", device.KeyBinding)
+	}
+	if device.KeyBinding == "hardware" {
+		if device.KeyAlgorithm != "p256" {
+			return model.TrustedDevice{}, errors.New("hardware-bound device keys must use p256")
+		}
+		if !validHardwareProvider0123(device.HardwareProvider) {
+			return model.TrustedDevice{}, errors.New("hardware-bound device key requires hardware provider")
+		}
+	} else {
+		device.HardwareProvider = ""
 	}
 	return device, nil
 }
@@ -232,12 +264,12 @@ func (r *MemoryRepository) ConsumeDeviceChallenge(ctx context.Context, id, userI
 	return model.DeviceChallenge{}, ErrNotFound
 }
 
-const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason`
+const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason`
 
 func scanTrustedDevice0121(row interface{ Scan(...any) error }) (model.TrustedDevice, error) {
 	var d model.TrustedDevice
 	var lastSeen, lastVerified, revoked sql.NullTime
-	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason)
+	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason)
 	if err != nil {
 		return model.TrustedDevice{}, err
 	}
@@ -270,9 +302,9 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 		device.CreatedAt = now
 	}
 	device.UpdatedAt = now
-	res, err := r.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($15,'0001-01-01T00:00:00Z')::timestamptz,$16,$17,NULLIF($18,'0001-01-01T00:00:00Z')::timestamptz,$19)
-ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
+	res, err := r.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NULLIF($16,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($17,'0001-01-01T00:00:00Z')::timestamptz,$18,$19,NULLIF($20,'0001-01-01T00:00:00Z')::timestamptz,$21)
+ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
 	if err != nil {
 		// key_fingerprint is globally unique. Resolve a concurrent or pre-existing
 		// registration back to the repository-level conflict contract instead of

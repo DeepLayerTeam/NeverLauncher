@@ -70,8 +70,8 @@ type DesktopDiagnosticsPolicy = { schemaVersion?: string; toolVersion?: string; 
 type DesktopBindingPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; required?: string[]; storage?: Record<string, unknown>; manifestUrlTemplate?: string; checks?: string[] };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
-type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; privateKeyExposedToFrontend: boolean };
-type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string };
+type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
+type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
@@ -335,13 +335,16 @@ function App() {
       name: `NeverLauncher Desktop · ${navigator.platform || 'desktop'}`.slice(0, 96),
       platform: navigator.platform || 'desktop',
       clientVersion: DESKTOP_VERSION,
+      keyAlgorithm: key.keyAlgorithm,
+      keyBinding: key.keyBinding,
+      hardwareProvider: key.hardwareProvider || undefined,
     });
     if (!beginResponse.ok) throw new Error(`Device registration begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
     if (!begin.challengeId || !begin.deviceId || !begin.challenge || !begin.signingPayload) throw new Error('Backend вернул неполный device registration challenge.');
     const signature = await callTauri<DeviceSignatureResult>('sign_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
-    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey) throw new Error('OS secure storage вернул другой device key fingerprint.');
+    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey || signature.keyAlgorithm !== key.keyAlgorithm || signature.keyBinding !== key.keyBinding) throw new Error('Native device key backend вернул другую identity.');
     const completeResponse = await postDeviceJson('/api/v1/auth/devices/register/complete', session.accessToken, {
       challengeId: begin.challengeId,
       deviceId: begin.deviceId,
@@ -362,7 +365,7 @@ function App() {
     const bound = await callTauri<DeviceKeyInfo>('bind_device_key', { backendUrl: settings.backendUrl, userId: session.userId, deviceId: begin.deviceId });
     setDeviceKey(bound);
     setDeviceTrustStatus('verified');
-    log(`Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; private key остаётся в ${bound.storageBackend}.`);
+    log(`Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; binding=${bound.keyBinding}; provider=${bound.hardwareProvider || bound.storageBackend}; private key не покидает native boundary.`);
     return persistTrustedAccess(session, data.accessToken);
   }
 
@@ -392,7 +395,7 @@ function App() {
     const data = completePayload.data ?? completePayload;
     if (!data.accessToken) throw new Error('Backend не вернул access token после device verification.');
     setDeviceTrustStatus('verified');
-    log(`Proof-of-possession подтверждён устройством ${key.deviceId}; ключ прочитан из ${key.storageBackend}.`);
+    log(`Proof-of-possession подтверждён устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`);
     return persistTrustedAccess(session, data.accessToken);
   }
 
@@ -891,7 +894,7 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
 }
 
 function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus }: any) {
-  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} хранит Never session и Ed25519 device key в native OS secure storage. Private device key не передаётся React или Backend: Tauri подписывает только одноразовый server challenge.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
+  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} сначала использует non-exportable P-256 device identity в Secure Enclave/TPM, если доступен настоящий hardware backend; иначе явно остаётся на Ed25519 + native OS secure storage. Private key не передаётся React или Backend: Tauri подписывает только одноразовый server challenge.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

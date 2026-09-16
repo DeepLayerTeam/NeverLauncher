@@ -291,6 +291,31 @@ if "scripts/smoke/offline/device-key-storage.py" not in ci:
     fail("CI не запускает 0.12.2 device key / OS secure storage gate")
 if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
     fail("CI не запускает Tauri device-key unit tests")
+
+# 0.12.3 hardware-bound identities: real non-exportable P-256 platform key
+# path with explicit software downgrade.  Hardware binding metadata is NOT
+# remote attestation and must never elevate MFA/authorization assurance.
+hardware_gate = read("scripts/smoke/offline/hardware-bound-identity.py")
+hardware_migration = read("services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql")
+for required in ["hardware-enclave", "try_new_hardware_record", "key_binding: \"hardware\".into()", "P256Signature::from_der", "!p.contains(\"keyring\")"]:
+    if required not in desktop_device_keys:
+        fail(f"0.12.3 hardware-bound Desktop path missing: {required}")
+for required in ["ecdsa.Verify", "elliptic.Unmarshal(elliptic.P256()", "keyBinding", "hardwareProvider"]:
+    if required not in device_trust:
+        fail(f"0.12.3 P-256 server proof path missing: {required}")
+for required in ["key_algorithm IN ('ed25519','p256')", "key_binding IN ('software','hardware')", "key_binding='hardware' AND key_algorithm='p256'"]:
+    if required not in hardware_migration:
+        fail(f"0.12.3 hardware identity migration incomplete: {required}")
+if "TestDeviceTrustHardwareP256RegistrationAndBinding0123" not in read("services/api/internal/httpapi/device_trust_0121_test.go"):
+    fail("0.12.3 P-256 HTTP E2E test missing")
+if "hardware-bound-identity.py" not in preflight or "scripts/smoke/offline/hardware-bound-identity.py" not in ci:
+    fail("0.12.3 hardware-bound identity gate is not wired into preflight/CI")
+if "libtss2-dev" not in ci:
+    fail("0.12.3 Linux TPM build dependency libtss2-dev missing from CI")
+if "Hardware-bound identity gate OK" not in hardware_gate:
+    fail("0.12.3 hardware identity gate is incomplete")
+if 'Assurance:         "hardware"' in device_trust or 'Assurance:         "attested"' in device_trust:
+    fail("0.12.3 self-reported hardware binding must not elevate server assurance before attestation")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

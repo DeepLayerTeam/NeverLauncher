@@ -12,6 +12,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 	}
 	for _, required := range []string{
 		"0012_device_trust_core_0121",
+		"0013_hardware_bound_identities_0123",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

@@ -237,6 +237,12 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Device Trust 0.12.3 — аппаратно-привязанные идентификаторы
+
+`0.12.3` добавляет hardware-backed identity к уже рабочему device registry. Официальный Desktop сначала пытается использовать non-exportable P-256 key через platform hardware signer: Secure Enclave на macOS, TPM/CNG на Windows или TPM 2.0 на Linux. Backend получает только SEC1 public key и ECDSA proof; private key не экспортируется NeverLauncher. Если platform backend является keyring/software fallback, Desktop не выдаёт его за hardware-bound и остаётся на `0.12.2` Ed25519 + OS secure storage.
+
+Server-side registry хранит `keyBinding` и `hardwareProvider`, а migration `0013_hardware_bound_identities_0123.sql` разрешает `p256/hardware` identity. Это **не remote attestation**: до отдельной attestation-версии hardware metadata диагностическая, JWT не получает повышенный auth strength, а device `assurance` остаётся `proof-of-possession`.
+
 ## Device Trust 0.12.2
 
 `0.12.1` добавил persistent registry и Ed25519 proof-of-possession; `0.12.2` доводит device key до официального Desktop-клиента. Tauri создаёт отдельный Ed25519 key для пары `Backend + canonical user`, хранит private seed только в native OS secure storage и подписывает server challenge внутри Rust boundary. React получает только public key/fingerprint/signature; private key не попадает в Backend, конфиг или `localStorage`.

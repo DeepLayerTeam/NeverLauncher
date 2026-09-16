@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Hardware-bound identities 0.12.3
+
+Device Trust принимает два proof key типа: `ed25519/software` и `p256/hardware`. P-256 public key передаётся как uncompressed SEC1 (65 bytes), signature — raw IEEE P1363 `r||s` (64 bytes); Backend выполняет ECDSA/SHA-256 verification над тем же canonical single-use payload. Registry хранит `keyBinding/hardwareProvider` через migration `0013_hardware_bound_identities_0123.sql`.
+
+Hardware binding в этой версии не является remote attestation и не повышает server-side `assurance`: до отдельной attestation ceremony Backend использует его только как device metadata.
+
 ### Device Trust 0.12.2
 
 Backend хранит trusted devices отдельно от legacy session `deviceId`. Registration/verification использует persistent single-use challenge и Ed25519 signature; успешный proof связывает текущую Never session с `trusted_device_id` и обновляет JWT device claims. Пользовательские endpoints находятся под `/api/v1/auth/devices*`, административный registry — `/api/v1/admin/auth/devices`. Revoke device отзывает связанные session/refresh families.

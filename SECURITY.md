@@ -9,6 +9,14 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Hardware-bound device identities 0.12.3
+
+`0.12.3` вводит отдельный hardware-backed key path: Desktop создаёт P-256 signing key через platform HSM abstraction и принимает его как `hardware` только если выбран TPM/Secure Enclave/WSL TPM bridge backend. Keyring/software/test backend остаётся software-bound fallback. Hardware private key не сериализуется в NeverLauncher keyring record, не передаётся React/Backend и используется только внутри native signer для canonical Device Trust challenge.
+
+Backend проверяет P-256 ECDSA proof и хранит `key_binding/hardware_provider`, но **не доверяет этим metadata как attestation**. Клиент пока может сообщить provider name, поэтому authorization/MFA/risk policy не должны повышаться из-за `device_key_binding=hardware`; `assurance` остаётся `proof-of-possession`. Remote attestation, TPM quote/Secure Enclave attestation и challenge-response device posture входят в следующий trust layer.
+
+Migration `0013_hardware_bound_identities_0123.sql` fail-closed ограничивает допустимые пары: software identity — Ed25519 без hardware provider; hardware identity — P-256 с непустым provider.
+
 ## Device Trust / device keys 0.12.2
 
 Поле `deviceId` из login/session metadata не является доказательством устройства. Trusted device создаётся только после Ed25519 proof-of-possession: Backend выдаёт одноразовый persistent challenge, привязанный к canonical user, device id, purpose и Never session; официальный Desktop подписывает payload ключом, private seed которого находится только в native OS secure storage.

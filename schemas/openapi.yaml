@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.12.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.12.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -7487,6 +7487,26 @@
           "clientVersion": {
             "type": "string",
             "maxLength": 96
+          },
+          "keyAlgorithm": {
+            "type": "string",
+            "enum": [
+              "ed25519",
+              "p256"
+            ],
+            "default": "ed25519"
+          },
+          "keyBinding": {
+            "type": "string",
+            "enum": [
+              "software",
+              "hardware"
+            ],
+            "default": "software"
+          },
+          "hardwareProvider": {
+            "type": "string",
+            "maxLength": 96
           }
         }
       },
@@ -7511,11 +7531,11 @@
           },
           "publicKey": {
             "type": "string",
-            "description": "Raw Ed25519 public key encoded as base64url"
+            "description": "Device public key encoded as base64url: raw Ed25519 (32 bytes) or uncompressed SEC1 P-256 (65 bytes)"
           },
           "signature": {
             "type": "string",
-            "description": "Ed25519 signature encoded as base64url"
+            "description": "Device proof signature encoded as base64url: Ed25519 (64 bytes) or raw P-256 IEEE P1363 r||s (64 bytes)"
           }
         }
       },
