@@ -267,6 +267,30 @@ for required in ["key_fingerprint", "status='revoked'", "device_challenges", "tr
         fail(f"0.12.1 Device Trust persistence/revocation incomplete: {required}")
 if not (ROOT / "services/api/internal/httpapi/device_trust_0121_test.go").is_file():
     fail("0.12.1 Device Trust HTTP E2E test is missing")
+# 0.12.2 official Desktop must own the device private-key lifecycle.  The
+# private seed may exist only inside the native Tauri/keyring boundary; React
+# receives public metadata and signatures, never secret key material.
+desktop_device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
+desktop_tauri = read("apps/desktop/src-tauri/src/main.rs")
+desktop_ui = read("apps/desktop/src/main.tsx")
+for required in ["SigningKey::generate", "keyring::v1::Entry::new", "private_seed_hex", "secret.zeroize()", "private_key_exposed_to_frontend: false", "sign_device_payload"]:
+    if required not in desktop_device_keys:
+        fail(f"0.12.2 Desktop device key secure-storage implementation missing: {required}")
+for required in ["ensure_device_key", "sign_device_payload", "bind_device_key", "reset_device_key"]:
+    if required not in desktop_tauri:
+        fail(f"0.12.2 Tauri device-key command missing: {required}")
+for required in ["ensureDesktopDeviceTrust", "/api/v1/auth/devices/register/begin", "/verify/begin", "privateKeyExposedToFrontend"]:
+    if required not in desktop_ui:
+        fail(f"0.12.2 Desktop automatic Device Trust flow missing: {required}")
+for forbidden in ["privateSeed", "private_seed", "localStorage.setItem('neverlauncher.device"]:
+    if forbidden in desktop_ui:
+        fail(f"0.12.2 private device key material leaked into React/localStorage: {forbidden}")
+if "device-key-storage.py" not in preflight:
+    fail("preflight не запускает 0.12.2 device key / OS secure storage gate")
+if "scripts/smoke/offline/device-key-storage.py" not in ci:
+    fail("CI не запускает 0.12.2 device key / OS secure storage gate")
+if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
+    fail("CI не запускает Tauri device-key unit tests")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

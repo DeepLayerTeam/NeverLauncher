@@ -215,11 +215,11 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
-### Device Trust 0.12.1
+### Device Trust 0.12.2
 
 Backend хранит trusted devices отдельно от legacy session `deviceId`. Registration/verification использует persistent single-use challenge и Ed25519 signature; успешный proof связывает текущую Never session с `trusted_device_id` и обновляет JWT device claims. Пользовательские endpoints находятся под `/api/v1/auth/devices*`, административный registry — `/api/v1/admin/auth/devices`. Revoke device отзывает связанные session/refresh families.
 
-Migration `0012_device_trust_core_0121` обязательна для persistent production режима. Assurance `proof-of-possession` не является hardware attestation.
+Начиная с `0.12.2` официальный Desktop автоматически создаёт device key в native OS secure storage и выполняет эти ceremonies после login/restore. Backend по-прежнему получает только public key и signatures и не повышает assurance выше `proof-of-possession`: факт использования secure storage не является hardware attestation. Migration `0012_device_trust_core_0121` остаётся достаточной для server-side persistent schema; `0.12.2` не требует новой DB migration.
 
 ### Auth Federation 0.12
 

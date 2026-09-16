@@ -1,3 +1,5 @@
+mod device_keys;
+
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
     LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
@@ -6,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
 use tauri::Manager;
+use device_keys::{DeviceKeyInfo, DeviceSignatureResult};
 use tokio::{fs, process::Command};
+use zeroize::Zeroize;
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -16,6 +20,8 @@ struct SecureAuthSession {
     refresh_token: String,
     session_id: String,
     email: String,
+    #[serde(default)]
+    user_id: String,
     #[serde(default)]
     expires_at: Option<String>,
 }
@@ -35,8 +41,11 @@ async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> 
     let username = auth_keyring_username(&backend_url)?;
     let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать auth session: {e}"))?;
     tokio::task::spawn_blocking(move || {
+        let mut secret = secret;
         let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
-        entry.set_password(&secret).map_err(|e| format!("не удалось сохранить auth session в OS credential store: {e}"))
+        let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить auth session в OS credential store: {e}"));
+        secret.zeroize();
+        result
     }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
 }
 
@@ -46,7 +55,11 @@ async fn load_auth_session(backend_url: String) -> Result<Option<SecureAuthSessi
     tokio::task::spawn_blocking(move || {
         let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
         match entry.get_password() {
-            Ok(secret) => serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("auth session в OS credential store повреждена: {e}")),
+            Ok(mut secret) => {
+                let parsed = serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("auth session в OS credential store повреждена: {e}"));
+                secret.zeroize();
+                parsed
+            },
             Err(keyring::v1::Error::NoEntry) => Ok(None),
             Err(e) => Err(format!("не удалось прочитать auth session из OS credential store: {e}")),
         }
@@ -63,6 +76,43 @@ async fn delete_auth_session(backend_url: String) -> Result<(), String> {
             Err(e) => Err(format!("не удалось удалить auth session из OS credential store: {e}")),
         }
     }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+}
+
+
+#[tauri::command]
+async fn ensure_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
+    tokio::task::spawn_blocking(move || device_keys::ensure_device_key(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
+    tokio::task::spawn_blocking(move || device_keys::device_key_status(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn sign_device_payload(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
+    tokio::task::spawn_blocking(move || device_keys::sign_device_payload(&backend_url, &user_id, &payload))
+        .await.map_err(|e| format!("device key signing task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn bind_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
+    tokio::task::spawn_blocking(move || device_keys::bind_device_key(&backend_url, &user_id, &device_id))
+        .await.map_err(|e| format!("device key bind task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn reset_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
+    tokio::task::spawn_blocking(move || device_keys::reset_device_key(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key reset task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn delete_device_key(backend_url: String, user_id: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || device_keys::delete_device_key(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key delete task завершилась ошибкой: {e}"))?
 }
 
 #[derive(Debug, Serialize)]
@@ -216,6 +266,6 @@ fn main() {
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,bind_device_key,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12.2 — Device keys + OS secure storage
+
+`0.12.2` переводит Device Trust из server-only proof API в рабочий Desktop lifecycle. Официальный Tauri-клиент сам создаёт Ed25519 device key, хранит private seed только в native OS credential store и автоматически выполняет registration/session-bind proof после Never login.
+
+### Device key lifecycle
+
+- Добавлен Tauri-модуль `device_keys`: Ed25519 key generation через OS CSPRNG, deterministic per-backend/per-user keyring namespace, self-check public key/fingerprint и zeroization временного seed/serialized secret.
+- Windows использует native credential manager, macOS — Keychain, Linux — Secret Service через `keyring`; plaintext/file/localStorage fallback отсутствует.
+- Private key не передаётся React и Backend. IPC возвращает только public key/fingerprint/device id и detached signature конкретного server challenge.
+- Auth session record получил canonical `userId`, чтобы device key namespace не зависел от изменяемого email. Старые сохранённые sessions восстанавливают `userId` из уже проверенного JWT `sub`.
+- После login Desktop автоматически выполняет `register/begin → local Ed25519 sign → register/complete`; на следующих sessions используется `verify/begin|complete`. Обновлённый verified-device access token атомарно заменяется в OS credential store.
+- Если локальная привязка указывает на отозванный/удалённый server device, Desktop создаёт новую local device identity. Fingerprint conflict после прерванной регистрации также fail-closed разрешается новой key pair, а не повторным использованием неизвестной server binding.
+- Logout удаляет session secrets, но сохраняет device key для следующего proof-of-possession.
+
+### Release gates
+
+- Добавлен `scripts/smoke/offline/device-key-storage.py`; обычный preflight проверяет наличие native key generation/keyring/signing path и запрещает появление private device key material в React/localStorage.
+- Repository policy закрепляет Tauri commands и automatic Desktop proof flow как обязательную часть `0.12.2`.
+- `proof-of-possession + OS secure storage` всё ещё не объявляется hardware-bound identity: TPM/Secure Enclave/Windows Hello/Keychain access-control attestation относятся к следующим Device Trust этапам.
+
 ## 0.12.1 — Device Trust Core + device registry
 
 `0.12.1` вводит первую рабочую границу Device Trust поверх стабильного Auth Federation release. Старое поле session `deviceId` остаётся недоверенной клиентской меткой для совместимости; доверенная device identity создаётся только после Ed25519 proof-of-possession и хранится отдельно в persistent registry.

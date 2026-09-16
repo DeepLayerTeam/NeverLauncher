@@ -30,6 +30,7 @@ jobs:
       - name: Repository policy and version alignment
         run: |
           python3 scripts/smoke/offline/repository-policy.py
+          python3 scripts/smoke/offline/device-key-storage.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -109,6 +110,7 @@ jobs:
         run: |
           npm ci
           npm run build
+          cargo test --manifest-path src-tauri/Cargo.toml
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
 

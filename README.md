@@ -237,11 +237,11 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
-## Device Trust 0.12.1
+## Device Trust 0.12.2
 
-`0.12.1` добавляет persistent device registry и криптографическую proof-of-possession границу. Значение `deviceId`, которое клиент передаёт при обычном login, остаётся недоверенной меткой сессии. Trusted device появляется только после `POST /api/v1/auth/devices/register/begin` → Ed25519 signature → `register/complete`; после проверки текущая session получает отдельные `trustedDeviceId`, `deviceTrustState=verified` и `deviceVerifiedAt`.
+`0.12.1` добавил persistent registry и Ed25519 proof-of-possession; `0.12.2` доводит device key до официального Desktop-клиента. Tauri создаёт отдельный Ed25519 key для пары `Backend + canonical user`, хранит private seed только в native OS secure storage и подписывает server challenge внутри Rust boundary. React получает только public key/fingerprint/signature; private key не попадает в Backend, конфиг или `localStorage`.
 
-Зарегистрированное устройство можно повторно доказать из новой Never session через `/api/v1/auth/devices/{deviceId}/verify/begin|complete`. Revoke устройства отзывает связанные Never sessions и refresh-token families. `proof-of-possession` в этой версии не означает hardware-bound key: TPM/Secure Enclave/OS secure storage и hardware attestation развиваются в следующих Device Trust релизах.
+После login Desktop автоматически выполняет регистрацию нового trusted device либо `verify/begin|complete` уже известного device id и сохраняет обновлённый access token с device claims в OS credential store. Revoke устройства по-прежнему отзывает связанные Never sessions/refresh families. Эта версия подтверждает software key possession + OS secure storage, но **не** заявляет hardware-bound identity/attestation — TPM/Secure Enclave/Windows Hello относятся к следующим этапам.
 
 Production upgrade: `nl db migrate apply && nl db migrate verify`. Migration `0012_device_trust_core_0121` создаёт `trusted_devices`, single-use `device_challenges` и отдельную связь trusted device с `auth_sessions`.
 

@@ -69,7 +69,9 @@ type DesktopReadiness = { schemaVersion?: string; toolVersion?: string; status?:
 type DesktopDiagnosticsPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; privacyMode?: string; sections?: string[]; export?: Record<string, unknown> };
 type DesktopBindingPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; required?: string[]; storage?: Record<string, unknown>; manifestUrlTemplate?: string; checks?: string[] };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
-type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; expiresAt?: string };
+type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
+type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; privateKeyExposedToFrontend: boolean };
+type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
@@ -160,6 +162,8 @@ function App() {
   const [email, setEmail] = useState('admin@neverlauncher.local');
   const [password, setPassword] = useState('admin');
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [deviceKey, setDeviceKey] = useState<DeviceKeyInfo | null>(null);
+  const [deviceTrustStatus, setDeviceTrustStatus] = useState<string>('не инициализирован');
 
   useEffect(() => {
     callTauri<DesktopSettings>('load_desktop_config')
@@ -181,9 +185,7 @@ function App() {
 
   useEffect(() => {
     if (!settings.backendUrl.trim()) return;
-    callTauri<AuthSession | null>('load_auth_session', { backendUrl: settings.backendUrl })
-      .then((session) => { if (session) { setAuthSession(session); log('Сессия восстановлена из системного хранилища учётных данных.'); } })
-      .catch((error) => log(`Системное хранилище учётных данных недоступно: ${String(error)}`));
+    void restoreSession();
   }, [settings.backendUrl]);
 
   useEffect(() => {
@@ -300,6 +302,121 @@ function App() {
     return response.json();
   }
 
+  function accessTokenSubject(token: string): string {
+    try {
+      const part = token.split('.')[1];
+      if (!part) return '';
+      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      const payload = JSON.parse(atob(padded));
+      return typeof payload?.sub === 'string' ? payload.sub : '';
+    } catch {
+      return '';
+    }
+  }
+
+  async function postDeviceJson(path: string, token: string, body: Record<string, unknown> = {}): Promise<Response> {
+    return fetch(endpoint(path), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function persistTrustedAccess(session: AuthSession, accessToken: string): Promise<AuthSession> {
+    const next = { ...session, accessToken };
+    await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: next });
+    setAuthSession(next);
+    return next;
+  }
+
+  async function registerDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo, retryOnConflict = true): Promise<AuthSession> {
+    const beginResponse = await postDeviceJson('/api/v1/auth/devices/register/begin', session.accessToken, {
+      name: `NeverLauncher Desktop · ${navigator.platform || 'desktop'}`.slice(0, 96),
+      platform: navigator.platform || 'desktop',
+      clientVersion: DESKTOP_VERSION,
+    });
+    if (!beginResponse.ok) throw new Error(`Device registration begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const beginPayload = await beginResponse.json();
+    const begin = beginPayload.data ?? beginPayload;
+    if (!begin.challengeId || !begin.deviceId || !begin.challenge || !begin.signingPayload) throw new Error('Backend вернул неполный device registration challenge.');
+    const signature = await callTauri<DeviceSignatureResult>('sign_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
+    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey) throw new Error('OS secure storage вернул другой device key fingerprint.');
+    const completeResponse = await postDeviceJson('/api/v1/auth/devices/register/complete', session.accessToken, {
+      challengeId: begin.challengeId,
+      deviceId: begin.deviceId,
+      challenge: begin.challenge,
+      publicKey: signature.publicKey,
+      signature: signature.signature,
+    });
+    if (completeResponse.status === 409 && retryOnConflict) {
+      const replacement = await callTauri<DeviceKeyInfo>('reset_device_key', { backendUrl: settings.backendUrl, userId: session.userId });
+      setDeviceKey(replacement);
+      log('Локальный device key уже зарегистрирован в другом server record; создан новый ключ в OS secure storage и регистрация повторяется.');
+      return registerDesktopDeviceKey(session, replacement, false);
+    }
+    if (!completeResponse.ok) throw new Error(`Device registration complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const completePayload = await completeResponse.json();
+    const data = completePayload.data ?? completePayload;
+    if (!data.accessToken) throw new Error('Backend не вернул access token после device registration.');
+    const bound = await callTauri<DeviceKeyInfo>('bind_device_key', { backendUrl: settings.backendUrl, userId: session.userId, deviceId: begin.deviceId });
+    setDeviceKey(bound);
+    setDeviceTrustStatus('verified');
+    log(`Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; private key остаётся в ${bound.storageBackend}.`);
+    return persistTrustedAccess(session, data.accessToken);
+  }
+
+  async function verifyDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo): Promise<AuthSession> {
+    if (!key.deviceId) return registerDesktopDeviceKey(session, key);
+    const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/begin`, session.accessToken);
+    if (beginResponse.status === 404) {
+      const replacement = await callTauri<DeviceKeyInfo>('reset_device_key', { backendUrl: settings.backendUrl, userId: session.userId });
+      setDeviceKey(replacement);
+      log('Server device record отсутствует или отозван; локальная identity заменена новым ключом в OS secure storage.');
+      return registerDesktopDeviceKey(session, replacement);
+    }
+    if (!beginResponse.ok) throw new Error(`Device verification begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const beginPayload = await beginResponse.json();
+    const begin = beginPayload.data ?? beginPayload;
+    if (!begin.challengeId || !begin.challenge || !begin.signingPayload) throw new Error('Backend вернул неполный device verification challenge.');
+    const signature = await callTauri<DeviceSignatureResult>('sign_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
+    if (signature.fingerprint !== key.fingerprint) throw new Error('Device key fingerprint изменился во время proof-of-possession.');
+    const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/complete`, session.accessToken, {
+      challengeId: begin.challengeId,
+      deviceId: key.deviceId,
+      challenge: begin.challenge,
+      signature: signature.signature,
+    });
+    if (!completeResponse.ok) throw new Error(`Device verification complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const completePayload = await completeResponse.json();
+    const data = completePayload.data ?? completePayload;
+    if (!data.accessToken) throw new Error('Backend не вернул access token после device verification.');
+    setDeviceTrustStatus('verified');
+    log(`Proof-of-possession подтверждён устройством ${key.deviceId}; ключ прочитан из ${key.storageBackend}.`);
+    return persistTrustedAccess(session, data.accessToken);
+  }
+
+  async function ensureDesktopDeviceTrust(session: AuthSession): Promise<AuthSession> {
+    const userId = session.userId || accessTokenSubject(session.accessToken);
+    if (!userId) throw new Error('Не удалось определить canonical user id для device key.');
+    const normalized = session.userId ? session : { ...session, userId };
+    if (!session.userId) await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: normalized });
+    setDeviceTrustStatus('проверяется');
+    const key = await callTauri<DeviceKeyInfo>('ensure_device_key', { backendUrl: settings.backendUrl, userId });
+    if (key.privateKeyExposedToFrontend) throw new Error('Device key backend сообщил private key exposed to frontend; fail-closed.');
+    setDeviceKey(key);
+    return verifyDesktopDeviceKey(normalized, key);
+  }
+
+  async function refreshDeviceKeyStatus() {
+    if (!authSession?.accessToken) return;
+    const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
+    if (!userId) return;
+    const key = await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
+    setDeviceKey(key);
+    setDeviceTrustStatus(key?.deviceId ? 'registered' : key ? 'local-key-only' : 'not-created');
+  }
+
   async function loginDesktop() {
     setStage('session');
     const response = await fetch(endpoint('/api/v1/auth/login'), {
@@ -314,10 +431,18 @@ function App() {
       refreshToken: payload.data.tokens.refreshToken,
       sessionId: payload.data.session.id,
       email,
+      userId: payload.data.user?.id || payload.data.session?.userId || accessTokenSubject(payload.data.tokens.accessToken),
     };
+    if (!next.userId) throw new Error('Backend не вернул canonical user id.');
     await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: next });
     setAuthSession(next);
     log(`Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; refresh token не записывается в конфигурацию/localStorage.`);
+    try {
+      await ensureDesktopDeviceTrust(next);
+    } catch (error) {
+      setDeviceTrustStatus('ошибка');
+      log(`Device Trust не активирован: ${String(error)}`);
+    }
   }
 
   async function rotateDesktopSession(session: AuthSession): Promise<AuthSession> {
@@ -327,7 +452,7 @@ function App() {
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const payload = await response.json();
-    const next: AuthSession = { ...session, accessToken: payload.data.tokens.accessToken, refreshToken: payload.data.tokens.refreshToken, sessionId: payload.data.session.id };
+    const next: AuthSession = { ...session, accessToken: payload.data.tokens.accessToken, refreshToken: payload.data.tokens.refreshToken, sessionId: payload.data.session.id, userId: session.userId || accessTokenSubject(payload.data.tokens.accessToken) };
     await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: next });
     setAuthSession(next);
     return next;
@@ -345,7 +470,8 @@ function App() {
     }
     await callTauri<void>('delete_auth_session', { backendUrl: settings.backendUrl });
     setAuthSession(null);
-    log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных.');
+    setDeviceTrustStatus(deviceKey ? 'ключ сохранён локально' : 'не инициализирован');
+    log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в OS secure storage для следующего входа.');
   }
 
   async function checkBackend() {
@@ -376,11 +502,19 @@ function App() {
       if (!stored) { setAuthSession(null); log('Сохранённая сессия в системном хранилище учётных данных отсутствует.'); return; }
       try {
         const payload = await fetchBackendJson('/api/v1/auth/accounts', stored.accessToken);
-        setAuthSession(stored);
+        const normalized = { ...stored, userId: stored.userId || accessTokenSubject(stored.accessToken) };
+        setAuthSession(normalized);
+        if (normalized.userId) await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: normalized });
         log(`Сессия восстановлена из системного хранилища учётных данных: ${Array.isArray(payload?.data?.items) ? payload.data.items.length : 'ok'}.`);
+        if (normalized.userId) {
+          try { await ensureDesktopDeviceTrust(normalized); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust при восстановлении не подтверждён: ${String(error)}`); }
+        }
       } catch {
-        await rotateDesktopSession(stored);
+        const rotated = await rotateDesktopSession({ ...stored, userId: stored.userId || accessTokenSubject(stored.accessToken) });
         log('Access token истёк; сессия восстановлена через ротацию refresh token из системного хранилища учётных данных.');
+        if (rotated.userId) {
+          try { await ensureDesktopDeviceTrust(rotated); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust после refresh не подтверждён: ${String(error)}`); }
+        }
       }
     } catch (error) {
       setAuthSession(null);
@@ -718,7 +852,7 @@ function App() {
 
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} />}
+        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
@@ -756,8 +890,8 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
   );
 }
 
-function AuthPanel({ email, setEmail, password, setPassword, session, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession }: any) {
-  return <section className="panel"><h3>Вход и сессия</h3><p>NeverLauncher {DESKTOP_VERSION} использует серверную сессию, access token и ротацию refresh token. Защищённые маршруты без Bearer-токена недоступны; перед запуском можно создать сессию входа ServerBridge для Velocity/Paper/Purpur.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button></div><pre>{session ? JSON.stringify({ email: session.email, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' }, null, 2) : 'Сессия не активна.'}</pre></section>;
+function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus }: any) {
+  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} хранит Never session и Ed25519 device key в native OS secure storage. Private device key не передаётся React или Backend: Tauri подписывает только одноразовый server challenge.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

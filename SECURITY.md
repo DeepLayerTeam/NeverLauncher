@@ -9,9 +9,13 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
-## Device Trust Core 0.12.1
+## Device Trust / device keys 0.12.2
 
-Поле `deviceId` из login/session metadata не является доказательством устройства. В `0.12.1` trusted device создаётся только после Ed25519 proof-of-possession: Backend выдаёт одноразовый persistent challenge, привязанный к canonical user, device id, purpose и Never session; клиент подписывает канонический payload, а Backend проверяет signature публичным ключом.
+Поле `deviceId` из login/session metadata не является доказательством устройства. Trusted device создаётся только после Ed25519 proof-of-possession: Backend выдаёт одноразовый persistent challenge, привязанный к canonical user, device id, purpose и Never session; официальный Desktop подписывает payload ключом, private seed которого находится только в native OS secure storage.
+
+Desktop key namespace строится по `Backend + canonical user id`, а не email. Windows использует Credential Manager, macOS Keychain, Linux Secret Service через native keyring backend. Plaintext/file/localStorage fallback запрещён; React не получает private seed и может запросить только public metadata или подпись конкретного bounded challenge payload. Временные seed/serialized secret buffers zeroize перед освобождением.
+
+OS secure storage само по себе не является hardware attestation. `0.12.2` сохраняет assurance `proof-of-possession`; hardware-bound assurance будет отдельным trust level только после проверяемой TPM/Secure Enclave/Windows Hello/аналогичной attestation.
 
 В `trusted_devices` хранится только public key и SHA-256 fingerprint. Private device key не должен передаваться Backend или попадать в логи. Assurance этой версии называется `proof-of-possession`; NeverLauncher не заявляет hardware-bound identity до появления отдельной TPM/Secure Enclave/OS secure-storage и attestation проверки.
 
