@@ -106,7 +106,7 @@ func (s Server) authProviders112(w http.ResponseWriter, r *http.Request) {
 	for _, provider := range providers {
 		items = append(items, map[string]any{"id": provider.ID, "displayName": provider.DisplayName, "version": provider.Version, "capabilities": provider.Capabilities, "healthy": healthByID[provider.ID]})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "federationVersion": federationSchema114, "items": items}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "federationVersion": s.Version, "items": items}})
 }
 
 func (s Server) authIdentities112(w http.ResponseWriter, r *http.Request) {

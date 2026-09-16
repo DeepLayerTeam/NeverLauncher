@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -359,17 +358,47 @@ func handleDB(args []string) error {
 		return errors.New("доступные db-подкоманды: migrations, migration-doctor, migrate, status, validate, repository")
 	}
 	out := flagValue(args, "--output", "")
-	items, _ := filepath.Glob(filepath.Join("services", "api", "migrations", "*.sql"))
 	switch args[0] {
 	case "migrations":
-		report := map[string]any{"schemaVersion": "1.0", "toolVersion": version, "count": len(items), "status": "listed", "migrations": items}
+		migrations, err := dbmigrate.List()
+		if err != nil {
+			return err
+		}
+		items := make([]map[string]any, 0, len(migrations))
+		for _, m := range migrations {
+			items = append(items, map[string]any{"version": m.Version, "checksum": m.Checksum})
+		}
+		report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "count": len(items), "status": "listed", "migrations": items}
 		if out != "" {
 			return writeJSONFile(out, report)
 		}
 		printJSON(report)
 		return nil
 	case "migration-doctor":
-		report := migrationDoctorReport(items)
+		migrations, err := dbmigrate.List()
+		if err != nil {
+			return err
+		}
+		duplicates := map[string][]string{}
+		seen := map[string]string{}
+		items := make([]map[string]any, 0, len(migrations))
+		for _, m := range migrations {
+			number := m.Version
+			if len(number) > 4 {
+				number = number[:4]
+			}
+			if prev, ok := seen[number]; ok {
+				duplicates[number] = []string{prev, m.Version}
+			} else {
+				seen[number] = m.Version
+			}
+			items = append(items, map[string]any{"version": m.Version, "checksum": m.Checksum})
+		}
+		status := "ok"
+		if len(duplicates) != 0 {
+			status = "requires-cleanup"
+		}
+		report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "status": status, "count": len(items), "duplicates": duplicates, "migrations": items, "latest": items[len(items)-1]}
 		if out != "" {
 			return writeJSONFile(out, report)
 		}
@@ -377,7 +406,7 @@ func handleDB(args []string) error {
 		return nil
 	case "migrate":
 		if len(args) < 2 {
-			return errors.New("db migrate требует подкоманду: plan или apply")
+			return errors.New("db migrate требует подкоманду: plan, apply или verify")
 		}
 		migrations, err := dbmigrate.List()
 		if err != nil {
@@ -405,6 +434,21 @@ func handleDB(args []string) error {
 				return err
 			}
 			report := map[string]any{"schemaVersion": "0.10.0-P0", "toolVersion": version, "status": "applied", "driver": "postgres", "migrations": versions, "output": strings.TrimSpace(output)}
+			if out != "" {
+				return writeJSONFile(out, report)
+			}
+			printJSON(report)
+			return nil
+		case "verify":
+			dsn := flagValue(args, "--dsn", os.Getenv("NEVERLAUNCHER_DATABASE_DSN"))
+			psql := flagValue(args, "--psql", "psql")
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			output, err := dbmigrate.VerifyWithPSQL(ctx, psql, dsn)
+			if err != nil {
+				return err
+			}
+			report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "status": "verified", "driver": "postgres", "migrations": versions, "output": strings.TrimSpace(output)}
 			if out != "" {
 				return writeJSONFile(out, report)
 			}

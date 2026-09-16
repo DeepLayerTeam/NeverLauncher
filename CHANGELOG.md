@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.11.10 — Federation E2E + migration + stabilization
+
+`0.11.10` не добавляет новый authentication provider: релиз превращает Federation Core `0.11.2–0.11.9` в исполняемо проверяемый release gate. Local, SQL, HTTP, OIDC, Microsoft и passkey проходят одну canonical session/Minecraft matrix; production PostgreSQL E2E проверяет restart/multi-instance refresh/revoke/replay, а migration tooling теперь fail-closed обнаруживает downgrade, checksum drift и незапечатанные legacy migration records до изменения схемы.
+
+### Federation release gates
+
+- `scripts/test/federation-e2e.py` запускает реальную connector/federation matrix: Local, SQL, HTTP, OIDC, Microsoft, passkey, canonical/JIT identity rules, Minecraft session exchange и security failure cases. Это release test, а не manifest/endpoint declaration.
+- `e2e/scripts/run-federation-postgres-e2e.sh` поднимает PostgreSQL/Redis и три Backend instances. Test выполняет login на A, restart A, refresh после restart, refresh на B, validation на C, replay старого refresh token на C и проверяет отзыв family на A/B/C.
+- CI запускает обе матрицы; strict preflight дополнительно включает PostgreSQL multi-instance E2E через `NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES=1`.
+- Federation provider registry больше не сообщает устаревшую внутреннюю версию: runtime metadata использует текущую `VERSION`.
+
+### Migration / upgrade stabilization
+
+- Добавлена migration `0010_federation_stabilization_01110.sql`. Перед добавлением constraints она fail-closed проверяет существующие session/refresh/provider-credential данные; повреждённая БД не «лечится» молча.
+- Усилена целостность refresh-token families: допустимые state значения, не более одного `current` refresh token на family, согласованность `session/user/family` и deferrable consistency foreign keys для транзакционной rotation.
+- Provider credentials теперь дополнительно связаны composite FK с canonical `auth_identity`, поэтому credential не может принадлежать другому user/provider/subject.
+- `nl db migrate apply` сначала проверяет unknown/future migrations и checksum drift. Blank checksum старой известной migration может быть безопасно запечатан текущим embedded checksum; несовпадающий checksum блокирует upgrade.
+- Добавлен `nl db migrate verify`: проверяет, что schema полностью применена, нет unknown migrations, нет blank checksum и каждый checksum совпадает с binary catalog.
+- Backend migration status возвращает `compatible`, `unknown` и `unverified` наряду с current/pending, чтобы upgrade tooling мог отличить pending upgrade от unsafe schema state.
+- Embedded CLI и Backend migration catalogs остаются byte-identical; repository policy проверяет это как release gate.
+
+### Stabilization / failure matrix
+
+- Release matrix отдельно проверяет OIDC issuer/audience errors, HTTP signature/replay/SSRF, Microsoft tenant/signing-key confusion, WebAuthn wrong-origin/challenge replay, SQL disabled/TLS/read-only behavior, refresh replay и canonical identity reassignment protection.
+- PostgreSQL E2E делает `db migrate verify` до запуска Backend и после replay/multi-instance сценария, поэтому успешный auth test одновременно подтверждает restart-safe schema state.
+- Новых пользовательских auth semantics в `0.11.10` нет: external provider token по-прежнему не является Never token, Minecraft session остаётся дочерней к Never session, а account linking не происходит по одному совпавшему email.
+
 ## 0.11.9 — Minecraft Auth Compatibility 2.0
 
 `0.11.9` отделяет Minecraft identity/session от способа входа в NeverLauncher. После local/SQL/HTTP/OIDC/Microsoft/passkey authentication канонический Never user получает persistent Minecraft profile и отдельный opaque Minecraft session token; Minecraft-слой больше не проверяет локальный password hash и не использует Never JWT как игровой access token.

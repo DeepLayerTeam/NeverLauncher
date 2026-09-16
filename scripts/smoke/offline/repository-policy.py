@@ -46,6 +46,7 @@ dynamic_version_expectations = {
     "plugins/paper-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/purpur-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "e2e/scripts/run-minecraft-e2e.sh": '< "$ROOT/VERSION"',
+    "e2e/scripts/run-federation-postgres-e2e.sh": '< "$ROOT/VERSION"',
     "scripts/compatibility/matrix.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
     "scripts/contracts/generate_openapi.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
 }
@@ -222,6 +223,10 @@ for legacy in ["release_manager.go", "client_package.go", "package_pipeline.go",
         fail(f"legacy handler должен быть удалён из production tree: {legacy}")
 if "compatibility-matrix" not in preflight:
     fail("preflight не запускает compatibility matrix definition/hardening tests")
+if "federation-e2e" not in preflight or "scripts/test/federation-e2e.py" not in preflight:
+    fail("preflight не запускает federation E2E release gate")
+if "NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
+    fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")
@@ -234,6 +239,14 @@ e2e_compose = read("e2e/docker-compose.minecraft-e2e.yml")
 for required in ["NEVERLAUNCHER_ENV: e2e-production", "NEVERLAUNCHER_BACKUP_ROOT", "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", "e2e-backups:/var/lib/neverlauncher/backups"]:
     if required not in e2e_compose:
         fail(f"production E2E не содержит обязательный hardening: {required}")
+federation_e2e_compose = read("e2e/docker-compose.federation-e2e.yml")
+for required in ["api-a:", "api-b:", "api-c:", "NEVERLAUNCHER_PERSISTENT_SESSIONS", "NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: \"false\""]:
+    if required not in federation_e2e_compose:
+        fail(f"federation PostgreSQL E2E incomplete: {required}")
+federation_e2e = read("e2e/scripts/run-federation-postgres-e2e.sh")
+for required in ["db migrate verify", "compose restart api-a", "api/v1/auth/refresh", "replay old refresh"]:
+    if required not in federation_e2e:
+        fail(f"federation PostgreSQL E2E missing stabilization check: {required}")
 if 'case "production", "prod", "e2e-production"' not in config_go:
     fail("config: e2e-production должен проходить production validation")
 

@@ -4,6 +4,10 @@ NeverLauncher использует модель безопасности, в к�
 
 ## Federated provider credentials
 
+С `0.11.10` migration history считается частью security boundary. Production upgrade должен выполняться через `nl db migrate apply` и завершаться `nl db migrate verify`. Unknown/future migration, checksum drift или незапечатанный checksum блокируют verify; apply не продолжает работу при неизвестной migration или несовпадающем checksum. Migration `0010` также fail-closed проверяет согласованность auth sessions, refresh-token families/tokens и provider credentials до установки новых relational constraints.
+
+Federation security regressions входят в release gate: HTTP HMAC/replay/SSRF, OIDC issuer/audience, Microsoft tenant/key issuer, WebAuthn origin/challenge replay, SQL TLS/read-only/disabled account и refresh-family replay выполняются как тесты, а не как документационные promises. Strict preflight дополнительно требует multi-instance PostgreSQL E2E.
+
 Начиная с 0.11.6 внешние refresh credentials (включая Microsoft) хранятся только server-side в application-layer AES-GCM envelope, привязанном к canonical user/identity/provider/subject. Provider token не является Never access/refresh token, не возвращается в login/link/refresh API и не должен попадать в логи или клиентское secure storage. Ротация `NEVERLAUNCHER_AUTH_TOKEN_SECRET` требует контролируемой миграции/повторной авторизации provider credentials.
 
 ## Passkeys / WebAuthn и step-up

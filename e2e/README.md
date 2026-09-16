@@ -46,3 +46,21 @@ materialize
 Канонический Compose-файл: `e2e/docker-compose.minecraft-e2e.yml`. Runtime/evidence создаются в `e2e/runtime/` и `e2e/compatibility-result/`, оба каталога исключены из source tree.
 
 Для локального запуска нужны Docker, Go, Rust/Cargo, JDK 21, Gradle, `curl`, `jq`, Python 3, `xvfb-run` и системные OpenGL/X11 библиотеки. Нужен сетевой доступ к Mojang, Fabric/Quilt Meta, Forge/NeoForge Maven и registry/репозиториям build pipeline.
+## Federation/PostgreSQL stabilization E2E (`0.11.10`)
+
+Для auth/federation release gate используется отдельный сценарий:
+
+```bash
+bash e2e/scripts/run-federation-postgres-e2e.sh
+```
+
+Он поднимает PostgreSQL, Redis и три Backend instance (`api-a`, `api-b`, `api-c`), применяет и проверяет migration catalog, выполняет login на A, перезапускает A, делает refresh через разные instances, воспроизводит старый refresh token и требует, чтобы compromise/revoke был виден всем трём Backend. Сценарий требует Docker/Compose, `psql`, `curl`, `jq`, Go и Python.
+
+Быстрый connector/failure gate без Docker:
+
+```bash
+python3 scripts/test/federation-e2e.py
+```
+
+Strict release preflight включает PostgreSQL сценарий автоматически; вручную это можно включить через `NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES=1`.
+

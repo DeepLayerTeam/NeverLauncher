@@ -1,0 +1,102 @@
+x-api-env: &api-env
+  NEVERLAUNCHER_ENV: e2e-production
+  NEVERLAUNCHER_REPOSITORY_DRIVER: postgres
+  NEVERLAUNCHER_SQL_DRIVER: pgx
+  NEVERLAUNCHER_DATABASE_DSN: postgres://neverlauncher:neverlauncher@postgres:5432/neverlauncher?sslmode=disable
+  NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"
+  NEVERLAUNCHER_PUBLIC_URL: http://127.0.0.1:18081
+  NEVERLAUNCHER_STORAGE_DRIVER: local
+  NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/neverlauncher/storage/current
+  NEVERLAUNCHER_BACKUP_ROOT: /var/lib/neverlauncher/backups
+  NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
+  NEVERLAUNCHER_AUTH_TOKEN_SECRET: ${NEVERLAUNCHER_E2E_AUTH_SECRET}
+  NEVERLAUNCHER_BOOTSTRAP_TOKEN: ${NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN}
+  NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_E2E_SIGNING_SEED}
+  NEVERLAUNCHER_REDIS_URL: redis://:${NEVERLAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0
+  NEVERLAUNCHER_RATE_LIMIT_ENABLED: "true"
+  NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED: "true"
+  NEVERLAUNCHER_PERSISTENT_SESSIONS: "true"
+  NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION: "true"
+  NEVERLAUNCHER_WEBAUTHN_RP_ID: 127.0.0.1
+  NEVERLAUNCHER_WEBAUTHN_RP_NAME: NeverLauncher E2E
+  NEVERLAUNCHER_WEBAUTHN_ORIGINS: http://127.0.0.1:18081
+
+x-api-common: &api-common
+  build:
+    context: ..
+    dockerfile: services/api/Dockerfile
+  depends_on:
+    volume-init:
+      condition: service_completed_successfully
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  volumes:
+    - federation-storage:/var/lib/neverlauncher/storage
+    - federation-backups:/var/lib/neverlauncher/backups
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: neverlauncher
+      POSTGRES_USER: neverlauncher
+      POSTGRES_PASSWORD: neverlauncher
+    ports:
+      - "55433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neverlauncher -d neverlauncher"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - federation-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${NEVERLAUNCHER_E2E_REDIS_PASSWORD}
+    command: ["sh", "-ec", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  volume-init:
+    image: alpine:3.20
+    user: "0:0"
+    command: ["sh", "-ec", "mkdir -p /storage/current /backups && chown -R 10001:10001 /storage /backups && chmod 0750 /storage /storage/current /backups"]
+    volumes:
+      - federation-storage:/storage
+      - federation-backups:/backups
+
+  api-a:
+    <<: *api-common
+    environment:
+      <<: *api-env
+      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+    ports:
+      - "18081:8080"
+
+  api-b:
+    <<: *api-common
+    environment:
+      <<: *api-env
+      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+    ports:
+      - "18082:8080"
+
+  api-c:
+    <<: *api-common
+    environment:
+      <<: *api-env
+      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+    ports:
+      - "18083:8080"
+
+volumes:
+  federation-postgres: {}
+  federation-storage: {}
+  federation-backups: {}

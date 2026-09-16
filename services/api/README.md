@@ -158,6 +158,10 @@ HTTP Connector использует собственный transport без envi
 
 ## Minecraft Auth Compatibility 2.0
 
+Начиная с `0.11.10`, migration compatibility проверяется до production startup/upgrade как отдельный release concern. Backend `dbmigrate.StatusOf` различает pending upgrade и несовместимое состояние (`unknown`, `unverified`, checksum drift), а migration `0010_federation_stabilization_01110` fail-closed проверяет существующие refresh-family/session/provider-credential связи до добавления constraints. CLI-команды `nl db migrate apply` и `nl db migrate verify` используют тот же embedded migration catalog и checksum, что Backend.
+
+Federation release gate запускается через `python3 scripts/test/federation-e2e.py`; реальный restart/multi-instance PostgreSQL сценарий — через `bash e2e/scripts/run-federation-postgres-e2e.sh`. Последний выполняет login/refresh/replay/revoke через Backend A/B/C и проверяет schema `verify` до и после сценария.
+
 Начиная с `0.11.9`, Minecraft profile/session отделены от Never session и от конкретного способа аутентификации. `POST /api/v1/minecraft/session` с permission `profile:launch` обменивает действующую Never session на opaque `nlmc_*` access token и persistent Minecraft profile. В PostgreSQL хранится только SHA-256 token hash; Minecraft session ссылается на parent `auth_sessions`, поэтому logout/revoke Never session сразу делает игровой token недействительным.
 
 Minecraft UUID стабильно выводится из canonical Never user ID и не зависит от email/provider subject. Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*` используют тот же persistent adapter. Password providers идут через Federation Core; OIDC/Microsoft/passkey не требуют повторного локального password login и используют session exchange. `join/hasJoined` хранится в PostgreSQL, повторно проверяет parent Never session и поддерживает optional IP binding.

@@ -15,11 +15,6 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-const federationSchema117 = "0.11.7"
-const federationSchema116 = federationSchema117
-const federationSchema115 = federationSchema116
-const federationSchema114 = federationSchema116
-
 // NewFederationCore116 builds the production provider registry. Every configured
 // provider is opened, health-checked, SDK-conformance checked and registered before
 // the API accepts traffic. A broken SQL/HTTP/OIDC provider therefore fails startup

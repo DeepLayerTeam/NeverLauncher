@@ -52,6 +52,8 @@ jobs:
           go test -race ./...
           go vet ./...
           go build -trimpath ./cmd/neverlauncher-api
+      - name: Federation E2E release matrix
+        run: python3 scripts/test/federation-e2e.py
 
   web:
     name: Admin and Desktop frontend
@@ -230,6 +232,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Federation PostgreSQL migration + restart + multi-instance E2E
+        run: bash e2e/scripts/run-federation-postgres-e2e.sh
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence

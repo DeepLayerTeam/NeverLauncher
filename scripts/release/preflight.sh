@@ -9,6 +9,7 @@ MODE="${NEVERLAUNCHER_PREFLIGHT_MODE:-offline}"
 STRICT="${NEVERLAUNCHER_PREFLIGHT_STRICT:-0}"
 RUN_FRONTEND="${NEVERLAUNCHER_PREFLIGHT_FRONTEND:-auto}"
 RUN_TAURI="${NEVERLAUNCHER_PREFLIGHT_TAURI:-0}"
+RUN_FEDERATION_POSTGRES="${NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES:-0}"
 
 is_true() {
   case "${1,,}" in
@@ -22,6 +23,7 @@ if is_true "${STRICT}"; then
   export NEVERLAUNCHER_PREFLIGHT_BRIDGE_STRICT=1
   RUN_FRONTEND=1
   RUN_TAURI=1
+  RUN_FEDERATION_POSTGRES=1
 fi
 
 echo "[NeverLauncher] Preflight ${VERSION}: build, test & release gate (strict=${STRICT}, mode=${MODE})"
@@ -35,6 +37,7 @@ run_step() {
 run_step repository-policy python3 "${ROOT_DIR}/scripts/smoke/offline/repository-policy.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
+run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"
 run_step cli-build bash "${ROOT_DIR}/scripts/smoke/offline/cli-build.sh"
 run_step backend-build bash "${ROOT_DIR}/scripts/smoke/offline/backend-build.sh"
 run_step version-alignment bash "${ROOT_DIR}/scripts/smoke/offline/version-alignment.sh"
@@ -69,6 +72,10 @@ fi
 
 if [[ "${MODE}" == "api" || "${MODE}" == "full" ]]; then
   run_step api-required bash "${ROOT_DIR}/scripts/smoke/api-required/api-smoke.sh" "${BASE_URL}"
+fi
+
+if is_true "${RUN_FEDERATION_POSTGRES}"; then
+  run_step federation-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-federation-postgres-e2e.sh"
 fi
 
 if [[ -d "${RELEASE_DIR}" ]]; then
