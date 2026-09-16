@@ -127,3 +127,33 @@ func TestJITProvisioningDoesNotAutoLinkMatchingEmail(t *testing.T) {
 		t.Fatal("matching email silently linked external identity")
 	}
 }
+
+type roleMappedConnector struct{}
+
+func (roleMappedConnector) Metadata() authconnector.Metadata {
+	return authconnector.Metadata{ID: "oidc-role", DisplayName: "OIDC Role", Version: "0.11.5", Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth}}
+}
+func (roleMappedConnector) Health(context.Context) error { return nil }
+func (roleMappedConnector) AuthenticatePassword(context.Context, authconnector.PasswordRequest) (authconnector.Authentication, error) {
+	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "role-42", Email: "role42@example.test", Groups: []string{"external-admins"}}}, nil
+}
+func TestJITRoleMappingRequiresExplicitLocalPolicy(t *testing.T) {
+	repo := repository.NewMemoryRepository("http://example.test")
+	core := New(repo)
+	if err := core.RegisterWithPolicy(roleMappedConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player", RoleMappings: map[string]string{"external-admins": "admin"}}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := core.AuthenticatePassword(context.Background(), "oidc-role", authconnector.PasswordRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.User.RoleID != "admin" {
+		t.Fatalf("expected explicit mapping to admin, got %q", result.User.RoleID)
+	}
+}
+func TestJITRoleMappingRejectsUnknownNeverRole(t *testing.T) {
+	core := New(repository.NewMemoryRepository("http://example.test"))
+	if err := core.RegisterWithPolicy(roleMappedConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player", RoleMappings: map[string]string{"external": "does-not-exist"}}); err == nil {
+		t.Fatal("unknown role mapping target was accepted")
+	}
+}

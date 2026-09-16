@@ -7,19 +7,21 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/oidcconnector"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlconnector"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-const federationSchema114 = "0.11.4"
+const federationSchema115 = "0.11.5"
+const federationSchema114 = federationSchema115
 
-// NewFederationCore114 builds the production provider registry. Every configured
+// NewFederationCore115 builds the production provider registry. Every configured
 // provider is opened, health-checked, SDK-conformance checked and registered before
-// the API accepts traffic. A broken SQL/HTTP provider therefore fails startup
+// the API accepts traffic. A broken SQL/HTTP/OIDC provider therefore fails startup
 // instead of silently degrading authentication to another provider.
-func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+func NewFederationCore115(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	core := federation.New(repo)
 	if err := core.Register(localAuthConnector112{repo: repo}); err != nil {
 		return nil, err
@@ -65,6 +67,24 @@ func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg c
 			return nil, fmt.Errorf("HTTP connector registration: %w", err)
 		}
 	}
+
+	oidcConfigs, err := oidcconnector.LoadConfigs(cfg.AuthOIDCProvidersJSON, cfg.AuthOIDCProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range oidcConfigs {
+		connector, err := oidcconnector.New(ctx, providerConfig)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = connector.Close()
+			_ = core.Close()
+			return nil, fmt.Errorf("OIDC connector registration: %w", err)
+		}
+	}
 	return core, nil
 }
 
@@ -77,12 +97,19 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 		return fmt.Errorf("connector %q failed SDK conformance: %+v", report.ConnectorID, report.Checks)
 	}
 	policy := federation.ProviderPolicy{AutoProvision: provisioningMode == "jit", DefaultRole: defaultRole}
+	if mapper, ok := connector.(interface{ RoleMappings() map[string]string }); ok {
+		policy.RoleMappings = mapper.RoleMappings()
+	}
 	return core.RegisterWithPolicy(connector, policy)
 }
 
 // NewFederationCore113 remains source-compatible for embedders/tests compiled against
 // 0.11.3. It now delegates to the current registry and therefore also loads HTTP
 // providers when they are configured.
+func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore115(ctx, repo, cfg)
+}
+
 func NewFederationCore113(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
-	return NewFederationCore114(ctx, repo, cfg)
+	return NewFederationCore115(ctx, repo, cfg)
 }

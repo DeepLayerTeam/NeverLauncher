@@ -26,6 +26,7 @@ server_token_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bri
 
 def is_public(method, path):
     if path in public_exact: return True
+    if path.startswith("/api/v1/auth/oidc/"): return True
     if method == "get" and any(path.startswith(p) for p in public_prefixes): return True
     return False
 
@@ -58,6 +59,10 @@ def path_parameters(path):
         out.append({"name":"versionId","in":"query","required":False,"schema":{"type":"string"}})
     if path == "/api/v1/session/has-joined":
         out += [{"name":"username","in":"query","required":False,"schema":{"type":"string"}},{"name":"serverId","in":"query","required":False,"schema":{"type":"string"}}]
+    if path.endswith("/oidc/{providerId}/start"):
+        out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
+    if path.endswith("/oidc/{providerId}/callback"):
+        out += [{"name":"code","in":"query","required":False,"schema":{"type":"string"}},{"name":"state","in":"query","required":False,"schema":{"type":"string"}},{"name":"error","in":"query","required":False,"schema":{"type":"string"}}]
     return out
 
 ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
@@ -67,6 +72,7 @@ def body_schema(path):
       "/api/v1/diagnostics/validate":"DiagnosticsReportRequest",
       "/api/v1/install/bootstrap-admin":"BootstrapAdminRequest", "/api/v1/install/first-project":"FirstProjectRequest",
       "/api/v1/admin/login":"LoginRequest", "/api/v1/auth/login":"LoginRequest", "/api/v1/auth/refresh":"RefreshRequest",
+      "/api/v1/auth/oidc/{providerId}/begin":"OIDCBeginRequest", "/api/v1/auth/oidc/{providerId}/complete":"OIDCCompleteRequest",
       "/api/v1/auth/sessions/revoke":"RevokeSessionsRequest", "/api/v1/auth/sessions/logout-all":"RevokeSessionsRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
@@ -109,6 +115,7 @@ def request_body_allowed(method,path):
     return True
 
 def success_status(method,path):
+    if path.endswith("/oidc/{providerId}/start"): return "302"
     if path in {"/api/v1/telemetry/events","/api/v1/crash-reports"}: return "202"
     created={
       "/api/v1/install/bootstrap-admin","/api/v1/install/first-project","/api/v1/admin/users","/api/v1/admin/projects",
@@ -156,6 +163,8 @@ schemas={
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
 "RefreshRequest":{"type":"object","required":["refreshToken"],"properties":{"refreshToken":{"type":"string","minLength":1}}},
+"OIDCBeginRequest":{"type":"object","properties":{"redirectUri":{"type":"string","format":"uri"},"deviceId":{"type":"string"}}},
+"OIDCCompleteRequest":{"type":"object","required":["code","state","transaction"],"properties":{"code":{"type":"string","minLength":1},"state":{"type":"string","minLength":1},"transaction":{"type":"string","minLength":1},"deviceId":{"type":"string"},"totp":{"type":"string"},"recoveryCode":{"type":"string"}}},
 "BootstrapAdminRequest":{"type":"object","required":["email","password"],"properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"password":{"type":"string","minLength":12},"actor":{"type":"string"}}},
 "FirstProjectRequest":{"type":"object","properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"},"actor":{"type":"string"}}},
 "Project":{"type":"object","required":["id","name","defaultChannel"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},

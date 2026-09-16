@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.5 — OIDC Connector
+
+`0.11.5` добавляет production OIDC federation поверх Connector SDK/Federation Core: OpenID Provider Discovery, Authorization Code + PKCE S256, state/nonce, JWKS key rotation, ID Token signature/issuer/audience/azp/time validation, optional UserInfo merge с обязательным совпадением `sub`, configurable claims mapping, explicit-only/JIT provisioning и browser/desktop begin/complete flow. OIDC transaction stateless и AEAD-защищён, поэтому не требует process-local session map. Provider tokens не используются как Never tokens.
+
 ## 0.11.4 — HTTP Connector
 
 `0.11.4` добавляет второй внешний production auth provider поверх Connector SDK/Federation Core: hardened HTTP Connector для существующих CMS/API. `/api/v1/auth/login` и `/api/v1/admin/login` реально маршрутизируют password authentication в удалённый provider по `providerId`; успешный external subject затем проходит обычный canonical identity/JIT flow и получает Never session, а provider token не становится Never token.

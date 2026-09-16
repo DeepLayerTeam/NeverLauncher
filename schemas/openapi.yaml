@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.11.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.11.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -1486,6 +1486,209 @@
             "BearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/auth/oidc/{providerId}/begin": {
+      "post": {
+        "operationId": "post_auth_oidc_by_providerId_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/oidc/{providerId}/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OIDCBeginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oidc/{providerId}/callback": {
+      "get": {
+        "operationId": "get_auth_oidc_by_providerId_callback",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/oidc/{providerId}/callback",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/api/v1/auth/oidc/{providerId}/complete": {
+      "post": {
+        "operationId": "post_auth_oidc_by_providerId_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/oidc/{providerId}/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OIDCCompleteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oidc/{providerId}/start": {
+      "get": {
+        "operationId": "get_auth_oidc_by_providerId_start",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/oidc/{providerId}/start",
+        "responses": {
+          "302": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "redirectUri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": []
       }
     },
     "/api/v1/auth/password-policy": {
@@ -4594,6 +4797,49 @@
           "refreshToken": {
             "type": "string",
             "minLength": 1
+          }
+        }
+      },
+      "OIDCBeginRequest": {
+        "type": "object",
+        "properties": {
+          "redirectUri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        }
+      },
+      "OIDCCompleteRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "state",
+          "transaction"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1
+          },
+          "transaction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "totp": {
+            "type": "string"
+          },
+          "recoveryCode": {
+            "type": "string"
           }
         }
       },

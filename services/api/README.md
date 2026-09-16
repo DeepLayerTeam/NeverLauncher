@@ -90,6 +90,36 @@ HTTP Connector использует собственный transport без envi
 ]
 ```
 
+Начиная с `0.11.5`, Federation Core также регистрирует production OIDC providers из `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE`. Connector использует OpenID Provider Discovery, Authorization Code Flow + PKCE `S256`, обязательные `state`/`nonce`, JWKS и полную проверку ID Token (`iss`, `aud`, `azp`, `exp`, `nbf`, `iat`, signature, `nonce`). `none` и HMAC ID Token algorithms не принимаются. Discovery/JWKS/token/UserInfo вызываются hardened transport без environment proxy, с host allowlist, DNS/IP validation, TLS 1.2+ и явным `allowedCidrs` для контролируемых private IdP.
+
+Для desktop/web API доступны `POST /api/v1/auth/oidc/{providerId}/begin` и `POST /api/v1/auth/oidc/{providerId}/complete`. PKCE verifier/nonce находятся внутри короткоживущего AEAD transaction token, поэтому flow не зависит от process-local state и работает между несколькими Backend instances. Для обычного браузера есть `GET .../start` + `GET .../callback`; transaction хранится в HttpOnly SameSite=Lax cookie.
+
+Пример OIDC provider:
+
+```json
+[
+  {
+    "id": "company-oidc",
+    "displayName": "Company SSO",
+    "issuer": "https://id.example.com/realms/company",
+    "clientId": "neverlauncher",
+    "clientSecretEnv": "OIDC_CLIENT_SECRET",
+    "tokenEndpointAuthMethod": "client_secret_basic",
+    "redirectUris": ["https://launcher.example.com/api/v1/auth/oidc/company-oidc/callback"],
+    "hostAllowlist": ["id.example.com"],
+    "scopes": ["openid", "profile", "email"],
+    "claims": {"subject":"sub","email":"email","username":"preferred_username","displayName":"name","groups":"groups","roles":"roles"},
+    "roleMappings": {"neverlauncher-admins":"admin"},
+    "requireVerifiedEmail": true,
+    "userInfoMode": "optional",
+    "allowedIdTokenAlgs": ["RS256", "PS256", "ES256", "EdDSA"],
+    "provisioning": {"mode":"jit","defaultRole":"player"}
+  }
+]
+```
+
+`provisioning.mode=explicit-only` остаётся безопасным default: совпадение email не связывает внешний аккаунт с существующим Never user. `jit` создаёт новый canonical user только после успешной криптографической проверки OIDC identity. External groups/roles сохраняются как identity claims, но не могут самостоятельно повысить глобальную Never role: JIT role задаётся локальной `defaultRole`.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

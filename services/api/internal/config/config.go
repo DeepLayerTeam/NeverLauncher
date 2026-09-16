@@ -51,6 +51,8 @@ type Config struct {
 	AuthSQLProvidersFile               string
 	AuthHTTPProvidersJSON              string
 	AuthHTTPProvidersFile              string
+	AuthOIDCProvidersJSON              string
+	AuthOIDCProvidersFile              string
 }
 
 // Load читает конфигурацию из переменных окружения.
@@ -106,6 +108,8 @@ func Load() Config {
 		AuthSQLProvidersFile:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
 		AuthHTTPProvidersJSON:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
 		AuthHTTPProvidersFile:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
+		AuthOIDCProvidersJSON:              env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
+		AuthOIDCProvidersFile:              env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
 	}
 }
 

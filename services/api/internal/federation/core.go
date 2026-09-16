@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -41,6 +42,7 @@ type ProviderHealth struct {
 type ProviderPolicy struct {
 	AutoProvision bool
 	DefaultRole   string
+	RoleMappings  map[string]string
 }
 
 type Core struct {
@@ -112,6 +114,23 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 			return fmt.Errorf("connector %q auto-provision default role %q does not exist", meta.ID, policy.DefaultRole)
 		}
 	}
+	knownRoles := make(map[string]struct{})
+	for _, role := range c.repo.ListRoles() {
+		knownRoles[role.ID] = struct{}{}
+	}
+	normalizedMappings := make(map[string]string, len(policy.RoleMappings))
+	for externalValue, roleID := range policy.RoleMappings {
+		externalValue = strings.TrimSpace(externalValue)
+		roleID = strings.TrimSpace(roleID)
+		if externalValue == "" || roleID == "" {
+			return fmt.Errorf("connector %q contains empty role mapping", meta.ID)
+		}
+		if _, ok := knownRoles[roleID]; !ok {
+			return fmt.Errorf("connector %q role mapping target %q does not exist", meta.ID, roleID)
+		}
+		normalizedMappings[externalValue] = roleID
+	}
+	policy.RoleMappings = normalizedMappings
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.connectors[meta.ID]; exists {
@@ -144,8 +163,12 @@ func (c *Core) Connector(id string) (authconnector.Connector, bool) {
 func (c *Core) ProviderPolicy(id string) ProviderPolicy {
 	id = strings.ToLower(strings.TrimSpace(id))
 	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.policies[id]
+	policy := c.policies[id]
+	c.mu.RUnlock()
+	if len(policy.RoleMappings) != 0 {
+		policy.RoleMappings = maps.Clone(policy.RoleMappings)
+	}
+	return policy
 }
 
 func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, request authconnector.PasswordRequest) (Result, error) {
@@ -166,6 +189,42 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 	if err != nil {
 		return Result{}, err
 	}
+	return c.resolveAuthentication(ctx, meta, auth)
+}
+
+func (c *Core) BeginBrowserAuth(ctx context.Context, providerID string, request authconnector.BrowserAuthRequest) (authconnector.BrowserAuthStart, error) {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return authconnector.BrowserAuthStart{}, ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	browserConnector, ok := connector.(authconnector.BrowserAuthenticator)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
+		return authconnector.BrowserAuthStart{}, ErrCapabilityUnsupported
+	}
+	return browserConnector.BeginBrowserAuth(ctx, request)
+}
+
+func (c *Core) CompleteBrowserAuth(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (Result, error) {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return Result{}, ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	browserConnector, ok := connector.(authconnector.BrowserAuthenticator)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
+		return Result{}, ErrCapabilityUnsupported
+	}
+	auth, err := browserConnector.CompleteBrowserAuth(ctx, callback)
+	if err != nil {
+		return Result{}, err
+	}
+	return c.resolveAuthentication(ctx, meta, auth)
+}
+
+func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Metadata, auth authconnector.Authentication) (Result, error) {
 	auth.Identity.Subject = strings.TrimSpace(auth.Identity.Subject)
 	if auth.Identity.Subject == "" {
 		return Result{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
@@ -233,9 +292,22 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	if displayName == "" {
 		displayName = email
 	}
+	roleID := policy.DefaultRole
+	mappedRoles := map[string]struct{}{}
+	for _, externalValue := range append(append([]string(nil), identity.Groups...), identity.Roles...) {
+		if mapped, ok := policy.RoleMappings[externalValue]; ok {
+			mappedRoles[mapped] = struct{}{}
+		}
+	}
+	if len(mappedRoles) > 1 {
+		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "external identity matches multiple Never role mappings")
+	}
+	for mapped := range mappedRoles {
+		roleID = mapped
+	}
 	now := time.Now().UTC()
 	return c.repo.SaveFederatedUser(ctx, model.User{
-		ID: userID, Email: email, DisplayName: displayName, RoleID: policy.DefaultRole, Status: "active", ProjectRoles: map[string]string{}, CreatedAt: now, UpdatedAt: now,
+		ID: userID, Email: email, DisplayName: displayName, RoleID: roleID, Status: "active", ProjectRoles: map[string]string{}, CreatedAt: now, UpdatedAt: now,
 	}, model.AuthIdentity{
 		UserID: userID, Provider: providerID, Subject: subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: now,
 	})
