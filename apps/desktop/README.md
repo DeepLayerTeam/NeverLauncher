@@ -6,10 +6,11 @@ Desktop Launcher — рабочий Tauri/React-клиент NeverLauncher по�
 
 ```text
 вход -> привязка проекта/профиля -> загрузка пакета -> проверка целостности -> восстановление
-     -> определение runtime -> план запуска -> запуск -> сессия ServerBridge
+     -> Never session -> Minecraft session exchange -> определение runtime -> authenticated launch
+     -> Yggdrasil/authlib-injector и/или сессия ServerBridge
 ```
 
-Учётные данные серверной сессии хранятся в системном защищённом хранилище. Проверка manifest signature, SHA-256 и pinned Ed25519 public key выполняется fail-closed.
+Учётные данные Never session хранятся в системном защищённом хранилище. Перед запуском `0.11.9` Desktop получает отдельный Minecraft access token/UUID от Backend и передаёт их NeverRuntime; token не пишется в command preview. Проверка manifest signature, SHA-256 и pinned Ed25519 public key выполняется fail-closed. Authlib-injector подключается только если его JAR присутствует в подписанном manifest.
 
 ## Проверка
 

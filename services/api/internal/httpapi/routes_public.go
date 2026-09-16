@@ -3,6 +3,7 @@ package httpapi
 import "net/http"
 
 func (s Server) registerPublicRoutesV1(mux *http.ServeMux) {
+	mux.HandleFunc("GET /{$}", s.yggdrasilMetadata119)
 	mux.HandleFunc("GET /api/v1/status", s.status)
 	mux.HandleFunc("GET /api/v1/diagnostics/policy", s.diagnosticsPolicy)
 	mux.HandleFunc("POST /api/v1/diagnostics/validate", s.diagnosticsValidate)

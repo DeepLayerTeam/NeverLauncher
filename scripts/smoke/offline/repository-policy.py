@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 import sys
@@ -65,6 +66,24 @@ for rel in (
 
 if '"productVersion"' in read("compatibility/targets.json"):
     fail("compatibility/targets.json: productVersion не должен дублировать VERSION")
+
+# 1.1 Backend auto-migrate и `nl db migrate apply` обязаны содержать одну и ту же
+# immutable migration chain. Иначе manual production install может считаться
+# успешным, оставив схему старее той, которую требует Backend.
+api_migrations = ROOT / "services/api/internal/dbmigrate/sql"
+cli_migrations = ROOT / "cli/internal/dbmigrate/sql"
+api_files = {p.name: p for p in api_migrations.glob("*.sql")}
+cli_files = {p.name: p for p in cli_migrations.glob("*.sql")}
+if set(api_files) != set(cli_files):
+    missing_cli = sorted(set(api_files) - set(cli_files))
+    missing_api = sorted(set(cli_files) - set(api_files))
+    fail(f"migration chain drift: missing-in-cli={missing_cli}, missing-in-api={missing_api}")
+else:
+    for name in sorted(api_files):
+        api_digest = hashlib.sha256(api_files[name].read_bytes()).digest()
+        cli_digest = hashlib.sha256(cli_files[name].read_bytes()).digest()
+        if api_digest != cli_digest:
+            fail(f"migration checksum drift between Backend and CLI: {name}")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [

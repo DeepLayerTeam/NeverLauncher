@@ -156,6 +156,14 @@ HTTP Connector использует собственный transport без envi
 
 `POST /api/v1/auth/providers/{providerId}/logout` выполняет только provider-side revoke сохранённого provider credential, если connector поддерживает revoke. Эта операция намеренно не отзывает Never session; для неё используется отдельный Never logout/session revoke.
 
+## Minecraft Auth Compatibility 2.0
+
+Начиная с `0.11.9`, Minecraft profile/session отделены от Never session и от конкретного способа аутентификации. `POST /api/v1/minecraft/session` с permission `profile:launch` обменивает действующую Never session на opaque `nlmc_*` access token и persistent Minecraft profile. В PostgreSQL хранится только SHA-256 token hash; Minecraft session ссылается на parent `auth_sessions`, поэтому logout/revoke Never session сразу делает игровой token недействительным.
+
+Minecraft UUID стабильно выводится из canonical Never user ID и не зависит от email/provider subject. Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*` используют тот же persistent adapter. Password providers идут через Federation Core; OIDC/Microsoft/passkey не требуют повторного локального password login и используют session exchange. `join/hasJoined` хранится в PostgreSQL, повторно проверяет parent Never session и поддерживает optional IP binding.
+
+Root `/` отдаёт authlib-injector metadata. Для стандартного Minecraft authlib NeverRuntime может подключить только `authlib-injector*.jar`, присутствующий в подписанном release manifest; Desktop передаёт runtime выданные Backend UUID/access token, а command preview редактирует credential.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

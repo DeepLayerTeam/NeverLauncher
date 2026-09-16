@@ -238,3 +238,44 @@ type ProviderCredential struct {
 	UpdatedAt             time.Time `json:"updatedAt"`
 	LastRefreshedAt       time.Time `json:"lastRefreshedAt,omitempty"`
 }
+
+// MinecraftProfile is the stable Minecraft identity owned by a canonical Never user.
+// UUID/name are independent from mutable email and from any external provider subject.
+type MinecraftProfile struct {
+	UserID    string    `json:"userId"`
+	UUID      string    `json:"uuid"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// MinecraftSession is an opaque Minecraft/Yggdrasil session derived from a Never
+// session. AccessTokenHash is the only persisted representation of the bearer token.
+type MinecraftSession struct {
+	ID              string    `json:"id"`
+	UserID          string    `json:"userId"`
+	NeverSessionID  string    `json:"neverSessionId"`
+	ProfileUUID     string    `json:"profileUuid"`
+	ClientToken     string    `json:"clientToken,omitempty"`
+	AccessTokenHash string    `json:"-"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"createdAt"`
+	LastSeenAt      time.Time `json:"lastSeenAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+	RevokedAt       time.Time `json:"revokedAt,omitempty"`
+	RevokedReason   string    `json:"revokedReason,omitempty"`
+}
+
+// MinecraftJoin is the short-lived proof created by the client /join call and
+// consumed by a Minecraft server through /hasJoined.
+type MinecraftJoin struct {
+	Username           string    `json:"username"`
+	UsernameNormalized string    `json:"-"`
+	ProfileUUID        string    `json:"profileUuid"`
+	UserID             string    `json:"userId"`
+	MinecraftSessionID string    `json:"minecraftSessionId"`
+	ServerID           string    `json:"serverId"`
+	IP                 string    `json:"ip,omitempty"`
+	CreatedAt          time.Time `json:"createdAt"`
+	ExpiresAt          time.Time `json:"expiresAt"`
+}

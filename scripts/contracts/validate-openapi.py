@@ -11,7 +11,7 @@ except Exception as exc: raise SystemExit(f"OpenAPI parse failed: {exc}")
 errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
 if spec.get('info',{}).get('version')!='1.0.0': errors.append('info.version must be 1.0.0')
-route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/(?:health|ready|metrics))')
+route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
 files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)
 code=set()
 for f in files:

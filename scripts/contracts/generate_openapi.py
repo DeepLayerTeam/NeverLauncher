@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/(?:health|ready|metrics))')
+route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
 files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
 routes = []
 for file in files:
@@ -25,6 +25,7 @@ public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v
 server_token_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/audit-event"}
 
 def is_public(method, path):
+    if path.startswith("/authserver/") or path.startswith("/sessionserver/session/minecraft/") or path.startswith("/api/profiles/minecraft/"): return True
     if path in public_exact: return True
     if path.startswith("/api/v1/auth/oidc/"): return True
     if method == "get" and any(path.startswith(p) for p in public_prefixes): return True
@@ -38,7 +39,7 @@ def security_for(method, path):
 
 def tags_for(path):
     if path in ("/health","/ready","/metrics","/api/v1/status"): return ["operations"]
-    for token, tag in [("/auth/","auth"),("/install/","install"),("/server-bridge/","bridge"),("/session/","bridge"),("/textures/","bridge"),("/projects","projects"),("/files/","packages"),("/admin/","admin"),("/runtime/","runtime"),("/loaders","runtime"),("/operations/","operations"),("/telemetry/","operations"),("/crash-reports","operations"),("/diagnostics/","operations")]:
+    for token, tag in [("/authserver/","minecraft-auth"),("/sessionserver/","minecraft-auth"),("/api/profiles/minecraft/","minecraft-auth"),("/minecraft/","minecraft-auth"),("/auth/","auth"),("/install/","install"),("/server-bridge/","bridge"),("/session/","bridge"),("/textures/","bridge"),("/projects","projects"),("/files/","packages"),("/admin/","admin"),("/runtime/","runtime"),("/loaders","runtime"),("/operations/","operations"),("/telemetry/","operations"),("/crash-reports","operations"),("/diagnostics/","operations")]:
         if token in path: return [tag]
     return ["api"]
 
@@ -59,6 +60,8 @@ def path_parameters(path):
         out.append({"name":"versionId","in":"query","required":False,"schema":{"type":"string"}})
     if path == "/api/v1/session/has-joined":
         out += [{"name":"username","in":"query","required":False,"schema":{"type":"string"}},{"name":"serverId","in":"query","required":False,"schema":{"type":"string"}}]
+    if path == "/sessionserver/session/minecraft/hasJoined":
+        out += [{"name":"username","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"serverId","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"ip","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/start"):
         out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/callback"):
@@ -89,6 +92,9 @@ def body_schema(path):
       "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest",
       "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
       "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
+      "/api/v1/minecraft/session":"MinecraftSessionRequest",
+      "/authserver/authenticate":"YggdrasilAuthenticateRequest", "/authserver/refresh":"YggdrasilRefreshRequest", "/authserver/validate":"YggdrasilTokenRequest", "/authserver/invalidate":"YggdrasilTokenRequest", "/authserver/signout":"YggdrasilSignoutRequest",
+      "/sessionserver/session/minecraft/join":"YggdrasilJoinRequest",
     }
     if path in exact:return ref(exact[path])
     if path.endswith("/heartbeat"):return ref("HeartbeatRequest")
@@ -210,6 +216,12 @@ schemas={
 "HasJoinedRequest":{"type":"object","properties":{"username":{"type":"string"},"serverId":{"type":"string"}}},
 "TelemetryRequest":{"type":"object","required":["projectId","event"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"event":{"type":"string"},"status":{"type":"string"}}},
 "CrashReportRequest":{"type":"object","required":["projectId","message"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"message":{"type":"string"},"log":{"type":"string"}}},
+"MinecraftSessionRequest":{"type":"object","properties":{"clientToken":{"type":"string"}}},
+"YggdrasilAuthenticateRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"clientToken":{"type":"string"},"requestUser":{"type":"boolean"},"providerId":{"type":"string"},"totp":{"type":"string"},"recoveryCode":{"type":"string"}}},
+"YggdrasilRefreshRequest":{"type":"object","required":["accessToken"],"properties":{"accessToken":{"type":"string"},"clientToken":{"type":"string"},"requestUser":{"type":"boolean"},"selectedProfile":{"type":"object","additionalProperties":True}}},
+"YggdrasilTokenRequest":{"type":"object","required":["accessToken"],"properties":{"accessToken":{"type":"string"},"clientToken":{"type":"string"}}},
+"YggdrasilSignoutRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"providerId":{"type":"string"}}},
+"YggdrasilJoinRequest":{"type":"object","required":["accessToken","selectedProfile","serverId"],"properties":{"accessToken":{"type":"string"},"selectedProfile":{"type":"string"},"serverId":{"type":"string"}}},
 "FreeFormObject":{"type":"object","additionalProperties":True},
 "ValidateJoinRequest":{"type":"object","required":["serverId","username"],"properties":{"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"}}}
 }
@@ -218,7 +230,7 @@ spec={
  "openapi":"3.1.1",
  "info":{"title":"NeverLauncher API","version":"1.0.0","description":f"Канонический production API NeverLauncher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
  "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
- "tags":[{"name":x} for x in ["auth","install","projects","packages","admin","runtime","bridge","operations"]],
+ "tags":[{"name":x} for x in ["auth","minecraft-auth","install","projects","packages","admin","runtime","bridge","operations"]],
  "paths":paths,
  "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"ServerToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Server-Token"},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required or invalid","content":{"application/json":{"schema":ref("Error")}}}}}
 }

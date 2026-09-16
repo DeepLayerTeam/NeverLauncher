@@ -1,6 +1,6 @@
 use crate::{
-    append_launch_history, check_files, create_launch_plan, join_classpath, now_unix,
-    verify_manifest_signature, LaunchHistoryEntry, Manifest,
+    append_launch_history, check_files, create_launch_plan, create_launch_plan_with_credentials, join_classpath, now_unix,
+    verify_manifest_signature, LaunchHistoryEntry, Manifest, MinecraftLaunchCredentials,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -49,6 +49,29 @@ impl ProcessSupervisor {
         username: Option<String>,
         pinned_public_key: &str,
     ) -> Result<ProcessStatus, String> {
+        self.start_inner(manifest, root, java_path, username, None, pinned_public_key).await
+    }
+
+    pub async fn start_authenticated(
+        &self,
+        manifest: &Manifest,
+        root: &Path,
+        java_path: Option<String>,
+        credentials: MinecraftLaunchCredentials,
+        pinned_public_key: &str,
+    ) -> Result<ProcessStatus, String> {
+        self.start_inner(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials), pinned_public_key).await
+    }
+
+    async fn start_inner(
+        &self,
+        manifest: &Manifest,
+        root: &Path,
+        java_path: Option<String>,
+        username: Option<String>,
+        credentials: Option<MinecraftLaunchCredentials>,
+        pinned_public_key: &str,
+    ) -> Result<ProcessStatus, String> {
         verify_manifest_signature(manifest, pinned_public_key)?;
         tokio::fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
         let checks = check_files(manifest, root).await?;
@@ -56,7 +79,11 @@ impl ProcessSupervisor {
             return Err("launch заблокирован: client files не прошли integrity check".to_string());
         }
 
-        let plan = create_launch_plan(manifest, root, java_path, username).await?;
+        let plan = if let Some(credentials) = credentials.as_ref() {
+            create_launch_plan_with_credentials(manifest, root, java_path, username, Some(credentials)).await?
+        } else {
+            create_launch_plan(manifest, root, java_path, username).await?
+        };
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;

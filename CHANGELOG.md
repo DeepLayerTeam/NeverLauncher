@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.9 — Minecraft Auth Compatibility 2.0
+
+`0.11.9` отделяет Minecraft identity/session от способа входа в NeverLauncher. После local/SQL/HTTP/OIDC/Microsoft/passkey authentication канонический Never user получает persistent Minecraft profile и отдельный opaque Minecraft session token; Minecraft-слой больше не проверяет локальный password hash и не использует Never JWT как игровой access token.
+
+### Minecraft identity / session adapter
+
+- `minecraft_profiles` хранит стабильный UUID, производный только от immutable canonical Never user ID. Email/provider subject не участвуют в UUID; созданное Minecraft name также остаётся стабильным при изменении профиля пользователя.
+- `POST /api/v1/minecraft/session` обменивает уже аутентифицированную Never session на отдельную Minecraft session. Opaque `nlmc_*` token хранится только как SHA-256 hash, связан с parent Never session и автоматически перестаёт быть действительным после её revoke/logout.
+- Persistent `minecraft_sessions` и short-lived `minecraft_joins` работают между Backend instances. Yggdrasil refresh потребляет старый token; повторный refresh отклоняется. `hasJoined` повторно проверяет Minecraft session и parent Never session и при переданном `ip` проверяет его против join request.
+- `profile:launch` достаточно для session exchange: обычный player не нуждается в admin/project-read permission.
+
+### Yggdrasil / Desktop / NeverRuntime
+
+- Реально зарегистрированы `/authserver/authenticate|refresh|validate|invalidate|signout`, `/sessionserver/session/minecraft/join|hasJoined`, profile lookup и `/api/profiles/minecraft/{username}`. Password-capable providers проходят Federation Core; passkey/OIDC/Microsoft используют Never-session exchange.
+- Root metadata совместим с authlib-injector. NeverRuntime автоматически добавляет подписанный `authlib-injector*.jar` из release manifest как `-javaagent` к текущему Backend; произвольный локальный JAR таким образом не принимается.
+- Desktop перед launch получает Minecraft session и передаёт NeverRuntime реальный UUID/access token вместо `offline` и нулевого UUID. Token редактируется в command preview/diagnostics. ServerBridge join использует то же canonical Minecraft profile name.
+- Microsoft sign-in по-прежнему не считается доказательством Minecraft ownership; `0.11.9` реализует Never-managed Minecraft compatibility identity/session, а не Mojang/Microsoft entitlement bypass.
+- Встроенная migration chain `nl db migrate apply` синхронизирована с Backend migrations `0001–0009`; repository policy теперь fail-closed проверяет одинаковый набор файлов и SHA-256 содержимого, чтобы manual production upgrade не отставал от Backend auto-migrate.
+
 ## 0.11.8 — Session Management 2.0
 
 `0.11.8` переводит Never sessions на полноценный production session-management контур: стандартные JWT/JWS access tokens с `iss`/`aud`/`sub`/`sid`/`jti`/`iat`/`exp`/`kid`/`auth_time`/`amr`, rotation-capable signing keyring, persistent device/risk metadata и пользовательские/административные session controls. Refresh-token family replay по-прежнему отзывает всю family и теперь явно переводит сессию в `compromised`.

@@ -6,6 +6,17 @@ import (
 )
 
 func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
+	mux.Handle("POST /api/v1/minecraft/session", s.requirePermission("profile:launch", s.minecraftSessionExchange119))
+	mux.Handle("GET /api/v1/minecraft/profile", s.requirePermission("profile:launch", s.minecraftProfileCurrent119))
+	mux.HandleFunc("POST /authserver/authenticate", s.yggdrasilAuthenticate119)
+	mux.HandleFunc("POST /authserver/refresh", s.yggdrasilRefresh119)
+	mux.HandleFunc("POST /authserver/validate", s.yggdrasilValidate119)
+	mux.HandleFunc("POST /authserver/invalidate", s.yggdrasilInvalidate119)
+	mux.HandleFunc("POST /authserver/signout", s.yggdrasilSignout119)
+	mux.HandleFunc("POST /sessionserver/session/minecraft/join", s.yggdrasilJoin119)
+	mux.HandleFunc("GET /sessionserver/session/minecraft/hasJoined", s.yggdrasilHasJoined119)
+	mux.HandleFunc("GET /sessionserver/session/minecraft/profile/{uuid}", s.yggdrasilProfile119)
+	mux.HandleFunc("GET /api/profiles/minecraft/{username}", s.yggdrasilProfileByName119)
 	mux.Handle("GET /api/v1/server-bridge/servers", s.requirePermission("project:read", s.serverBridgeServersList))
 	mux.Handle("POST /api/v1/server-bridge/servers/register", s.requirePermission("settings:manage", s.serverBridgeRegister))
 	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/rotate-token", s.requireFreshAuth117("settings:manage", "phishing-resistant", 5*time.Minute, s.serverBridgeRotateToken))

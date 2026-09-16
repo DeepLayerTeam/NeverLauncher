@@ -1,6 +1,6 @@
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
-    LaunchPlan, ManagedJavaResult, Manifest, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
+    LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -167,8 +167,12 @@ async fn ensure_managed_java(required_major_version: u32, distribution: String) 
 #[tauri::command]
 async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String) -> Result<LaunchPlan, String> { neverruntime::build_launch_plan(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await }
 #[tauri::command]
-async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> {
-    supervisor.start(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await
+async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, minecraft_credentials: Option<MinecraftLaunchCredentials>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> {
+    if let Some(credentials) = minecraft_credentials {
+        supervisor.start_authenticated(&manifest, &PathBuf::from(root), java_path, credentials, &pinned_public_key).await
+    } else {
+        supervisor.start(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await
+    }
 }
 #[tauri::command]
 async fn runtime_process_status(process_id: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> { supervisor.status(&process_id).await }

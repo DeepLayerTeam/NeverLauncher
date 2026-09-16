@@ -111,6 +111,20 @@ pub struct RuntimeLaunch {
     pub offline_mode: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MinecraftLaunchCredentials {
+    pub username: String,
+    pub uuid: String,
+    pub access_token: String,
+    #[serde(default = "default_minecraft_user_type")]
+    pub user_type: String,
+    #[serde(default)]
+    pub auth_server_base_url: String,
+}
+
+fn default_minecraft_user_type() -> String { "mojang".to_string() }
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Directories {
@@ -481,6 +495,11 @@ pub async fn build_launch_plan(manifest: &Manifest, root: &Path, java_path: Opti
     create_launch_plan(manifest, root, java_path, username).await
 }
 
+pub async fn build_authenticated_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, credentials: MinecraftLaunchCredentials, pinned_public_key: &str) -> Result<LaunchPlan, String> {
+    verify_manifest_signature(manifest, pinned_public_key)?;
+    create_launch_plan_with_credentials(manifest, root, java_path, Some(credentials.username.clone()), Some(&credentials)).await
+}
+
 pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, pinned_public_key: &str) -> Result<LaunchResult, String> {
     launch_with_timeout(manifest, root, java_path, username, pinned_public_key, None).await
 }
@@ -577,7 +596,11 @@ pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>,
     Ok(data.lines().filter(|line| !line.trim().is_empty()).filter_map(|line| serde_json::from_str::<LaunchHistoryEntry>(line).ok()).collect())
 }
 
-async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>) -> Result<LaunchPlan, String> {
+pub(crate) async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>) -> Result<LaunchPlan, String> {
+    create_launch_plan_with_credentials(manifest, root, java_path, username, None).await
+}
+
+pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
     let mut required_java = manifest.runtime.java.major_version;
     let mut plan = if strategy == "compatibility" || strategy == "mojang" {
@@ -592,7 +615,7 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
         };
         let natives_base = manifest_directory(root, natives_name, "natives")?;
         let natives_dir = platform_natives_directory(&natives_base).await;
-        let player_name = username.unwrap_or_else(|| "Player".to_string());
+        let player_name = credentials.map(|c| c.username.clone()).or(username).unwrap_or_else(|| "Player".to_string());
         let metadata_path = if manifest.runtime.launch.version_metadata_path.trim().is_empty() {
             None
         } else {
@@ -600,9 +623,9 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
         };
         let context = CompatibilityContext {
             username: player_name,
-            uuid: "00000000-0000-0000-0000-000000000000".to_string(),
-            access_token: "offline".to_string(),
-            user_type: "legacy".to_string(),
+            uuid: credentials.map(|c| c.uuid.clone()).unwrap_or_else(|| "00000000-0000-0000-0000-000000000000".to_string()),
+            access_token: credentials.map(|c| c.access_token.clone()).unwrap_or_else(|| "offline".to_string()),
+            user_type: credentials.map(|c| c.user_type.clone()).unwrap_or_else(|| "legacy".to_string()),
             launcher_name: "NeverLauncher".to_string(),
             launcher_version: env!("CARGO_PKG_VERSION").to_string(),
             game_directory: game_dir.to_string_lossy().to_string(),
@@ -641,8 +664,12 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
             command_preview: String::new(),
         }
     } else {
-        create_manifest_launch_plan(manifest, root, "", username).await?
+        create_manifest_launch_plan(manifest, root, "", credentials.map(|c| c.username.clone()).or(username), credentials).await?
     };
+
+    if let Some(credentials) = credentials {
+        apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
+    }
 
     if required_java == 0 {
         return Err("launch заблокирован: manifest/runtime metadata не задают требуемую major-версию Java".to_string());
@@ -657,7 +684,7 @@ async fn create_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<
     plan.java_executable = java_executable;
 
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
-    plan.command_preview = format!("{} {} -cp {} {} {}", plan.java_executable, plan.jvm_args.join(" "), join_classpath(&plan.classpath_entries), plan.main_class, plan.game_args.join(" "));
+    plan.command_preview = redacted_command_preview119(&plan, credentials.map(|c| c.access_token.as_str()));
     Ok(plan)
 }
 
@@ -676,13 +703,16 @@ async fn platform_natives_directory(base: &Path) -> PathBuf {
     }
 }
 
-async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_executable: &str, username: Option<String>) -> Result<LaunchPlan, String> {
+async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_executable: &str, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
     let main_class = if !manifest.runtime.launch.main_class.trim().is_empty() { manifest.runtime.launch.main_class.clone() } else { manifest.minecraft.main_class.clone() };
     if main_class.trim().is_empty() { return Err("в манифесте не указан mainClass".to_string()); }
     let mut classpath_entries = Vec::new();
     for file in &manifest.files {
         if !manifest_file_applies(file) { continue; }
         if file.path.ends_with(".jar") && !file.path.contains("/mods/") && !file.path.starts_with("mods/") {
+            let normalized = file.path.replace('\\', "/");
+            let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
+            if filename.starts_with("authlib-injector") { continue; }
             let local_path = safe_join(root, &file.path)?;
             if fs::metadata(&local_path).await.is_ok() { classpath_entries.push(local_path.to_string_lossy().to_string()); }
         }
@@ -694,11 +724,50 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
         jvm_args.push(format!("-Djava.library.path={}", root.join(natives_dir).to_string_lossy()));
     }
     let mut game_args = manifest.minecraft.game_args.clone();
-    replace_or_append_arg_pair(&mut game_args, "--username", username.unwrap_or_else(|| "Player".to_string()));
+    replace_or_append_arg_pair(&mut game_args, "--username", credentials.map(|c| c.username.clone()).or(username).unwrap_or_else(|| "Player".to_string()));
+    if let Some(credentials) = credentials {
+        replace_or_append_arg_pair(&mut game_args, "--uuid", credentials.uuid.clone());
+        replace_or_append_arg_pair(&mut game_args, "--accessToken", credentials.access_token.clone());
+        replace_or_append_arg_pair(&mut game_args, "--userType", credentials.user_type.clone());
+    }
     replace_or_append_arg_pair(&mut game_args, "--version", manifest.minecraft.version.clone());
     replace_or_append_arg_pair(&mut game_args, "--gameDir", root.to_string_lossy().to_string());
     replace_or_append_arg_pair(&mut game_args, "--assetsDir", root.join("assets").to_string_lossy().to_string());
     Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, jvm_args, game_args, command_preview: String::new() })
+}
+
+fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &MinecraftLaunchCredentials, plan: &mut LaunchPlan) -> Result<(), String> {
+    if credentials.access_token.trim().is_empty() || credentials.uuid.trim().is_empty() || credentials.username.trim().is_empty() {
+        return Err("authenticated Minecraft launch requires username, uuid and accessToken".to_string());
+    }
+    if !credentials.auth_server_base_url.trim().is_empty() {
+        let mut injector: Option<PathBuf> = None;
+        for file in &manifest.files {
+            let normalized = file.path.replace('\\', "/");
+            let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
+            if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && manifest_file_applies(file) {
+                let path = safe_join(root, &file.path)?;
+                injector = Some(path);
+                break;
+            }
+        }
+        if let Some(path) = injector {
+            if !tokio_path_exists119(&path) { return Err(format!("authlib-injector declared by signed manifest but missing: {}", path.display())); }
+            let base = credentials.auth_server_base_url.trim().trim_end_matches('/');
+            if !(base.starts_with("https://") || base.starts_with("http://127.0.0.1") || base.starts_with("http://localhost")) {
+                return Err("authlib-injector Backend URL must use HTTPS (HTTP is allowed only for localhost)".to_string());
+            }
+            plan.jvm_args.push(format!("-javaagent:{}={}", path.to_string_lossy(), base));
+        }
+    }
+    Ok(())
+}
+
+fn tokio_path_exists119(path: &Path) -> bool { std::fs::metadata(path).is_ok() }
+
+fn redacted_command_preview119(plan: &LaunchPlan, access_token: Option<&str>) -> String {
+    let raw = format!("{} {} -cp {} {} {}", plan.java_executable, plan.jvm_args.join(" "), join_classpath(&plan.classpath_entries), plan.main_class, plan.game_args.join(" "));
+    match access_token.filter(|v| !v.is_empty()) { Some(token) => raw.replace(token, "[REDACTED]"), None => raw }
 }
 
 fn apply_memory_policy(memory: &MemoryInfo, jvm_args: &mut Vec<String>) {

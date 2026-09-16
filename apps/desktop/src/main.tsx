@@ -70,6 +70,7 @@ type DesktopDiagnosticsPolicy = { schemaVersion?: string; toolVersion?: string; 
 type DesktopBindingPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; required?: string[]; storage?: Record<string, unknown>; manifestUrlTemplate?: string; checks?: string[] };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; expiresAt?: string };
+type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
@@ -571,7 +572,21 @@ function App() {
     }
   }
 
-  async function createServerJoinBeforeLaunch() {
+  async function createMinecraftLaunchSession(): Promise<MinecraftLaunchCredentials> {
+    if (!authSession?.accessToken) throw new Error('Для запуска Minecraft требуется активная Never session.');
+    const response = await fetch(endpoint('/api/v1/minecraft/session'), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientToken: `desktop-${authSession.sessionId}` }),
+    });
+    if (!response.ok) throw new Error(`Не удалось получить Minecraft session: ${response.status} ${response.statusText}`);
+    const payload = await response.json();
+    const data = payload.data ?? payload;
+    if (!data.accessToken || !data.profile?.id || !data.profile?.name) throw new Error('Backend вернул неполную Minecraft session.');
+    return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
+  }
+
+  async function createServerJoinBeforeLaunch(username: string) {
     if (!authSession?.accessToken || !settings.serverId) {
       log('Создание сессии входа ServerBridge пропущено: нет активной сессии или serverId. Для защищённого сервера заполните serverId в настройках.');
       return;
@@ -579,7 +594,7 @@ function App() {
     const response = await fetch(endpoint('/api/v1/session/join'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: settings.username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel }),
+      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel }),
     });
     if (!response.ok) throw new Error(`Не удалось создать сессию входа ServerBridge: ${response.status} ${response.statusText}`);
     const payload = await response.json();
@@ -593,12 +608,14 @@ function App() {
     }
     setStage('launching');
     try {
-      await createServerJoinBeforeLaunch();
+      const minecraftCredentials = await createMinecraftLaunchSession();
+      await createServerJoinBeforeLaunch(minecraftCredentials.username);
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         manifest,
         root: settings.gameDirectory,
         javaPath: settings.javaPath || null,
-        username: settings.username,
+        username: minecraftCredentials.username,
+        minecraftCredentials,
         pinnedPublicKey: settings.pinnedPublicKey,
       });
       setLaunchResult(result);

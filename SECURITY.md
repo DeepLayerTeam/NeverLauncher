@@ -18,6 +18,14 @@ NeverLauncher использует модель безопасности, в к�
 
 Session risk хранится в PostgreSQL: изменение IP/User-Agent переводит session в `elevated`, refresh-token replay — в `compromised` с отзывом всей token family. Массовый provider revoke доступен только после свежего phishing-resistant step-up. Provider logout и Never session logout являются разными действиями: отзыв внешнего provider credential сам по себе не завершает Never session.
 
+## Minecraft Auth Compatibility 2.0
+
+С `0.11.9` Never access token и Minecraft access token — разные credentials. Minecraft token является opaque `nlmc_*`, в persistent store сохраняется только его SHA-256 hash; запись привязана к canonical user, Minecraft profile и parent Never session. `validate`, `join` и `hasJoined` повторно проверяют активность parent session, поэтому Never logout/revoke не оставляет отдельную игровую сессию действительной. Yggdrasil refresh потребляет старый Minecraft token и не допускает его повторного использования.
+
+Minecraft UUID не зависит от email, username внешнего provider или Microsoft/OIDC claims. Authlib-injector никогда не подхватывается из произвольного локального пути: NeverRuntime ищет его только среди файлов подписанного release manifest и передаёт Backend URL только через HTTPS (HTTP разрешён лишь для localhost development). Minecraft access token редактируется в launch preview/log metadata.
+
+Этот слой не подменяет Microsoft/Mojang entitlement: успешный Microsoft identity login не доказывает владение официальной копией Minecraft.
+
 ## Обязательные production-настройки
 
 Для production-окружения используйте persistent backend и сильные секреты:

@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.11.8. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.11.9. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -14,6 +14,9 @@
   "tags": [
     {
       "name": "auth"
+    },
+    {
+      "name": "minecraft-auth"
     },
     {
       "name": "install"
@@ -38,6 +41,40 @@
     }
   ],
   "paths": {
+    "/api/profiles/minecraft/{username}": {
+      "get": {
+        "operationId": "get_api_profiles_minecraft_by_username",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "GET /api/profiles/minecraft/{username}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
     "/api/v1/admin/audit": {
       "get": {
         "operationId": "get_admin_audit",
@@ -3824,6 +3861,79 @@
         "security": []
       }
     },
+    "/api/v1/minecraft/profile": {
+      "get": {
+        "operationId": "get_minecraft_profile",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "GET /api/v1/minecraft/profile",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/minecraft/session": {
+      "post": {
+        "operationId": "post_minecraft_session",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /api/v1/minecraft/session",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MinecraftSessionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/operations/audit/export": {
       "get": {
         "operationId": "get_operations_audit_export",
@@ -5725,6 +5835,186 @@
         "security": []
       }
     },
+    "/authserver/authenticate": {
+      "post": {
+        "operationId": "post_authserver_authenticate",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /authserver/authenticate",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilAuthenticateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authserver/invalidate": {
+      "post": {
+        "operationId": "post_authserver_invalidate",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /authserver/invalidate",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilTokenRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authserver/refresh": {
+      "post": {
+        "operationId": "post_authserver_refresh",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /authserver/refresh",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilRefreshRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authserver/signout": {
+      "post": {
+        "operationId": "post_authserver_signout",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /authserver/signout",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilSignoutRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authserver/validate": {
+      "post": {
+        "operationId": "post_authserver_validate",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /authserver/validate",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilTokenRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "get_health",
@@ -5788,6 +6078,127 @@
             }
           }
         },
+        "security": []
+      }
+    },
+    "/sessionserver/session/minecraft/hasJoined": {
+      "get": {
+        "operationId": "get_sessionserver_session_minecraft_hasJoined",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "GET /sessionserver/session/minecraft/hasJoined",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "serverId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/sessionserver/session/minecraft/join": {
+      "post": {
+        "operationId": "post_sessionserver_session_minecraft_join",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /sessionserver/session/minecraft/join",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YggdrasilJoinRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessionserver/session/minecraft/profile/{uuid}": {
+      "get": {
+        "operationId": "get_sessionserver_session_minecraft_profile_by_uuid",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "GET /sessionserver/session/minecraft/profile/{uuid}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
         "security": []
       }
     }
@@ -6716,6 +7127,116 @@
             "type": "string"
           },
           "log": {
+            "type": "string"
+          }
+        }
+      },
+      "MinecraftSessionRequest": {
+        "type": "object",
+        "properties": {
+          "clientToken": {
+            "type": "string"
+          }
+        }
+      },
+      "YggdrasilAuthenticateRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "clientToken": {
+            "type": "string"
+          },
+          "requestUser": {
+            "type": "boolean"
+          },
+          "providerId": {
+            "type": "string"
+          },
+          "totp": {
+            "type": "string"
+          },
+          "recoveryCode": {
+            "type": "string"
+          }
+        }
+      },
+      "YggdrasilRefreshRequest": {
+        "type": "object",
+        "required": [
+          "accessToken"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "clientToken": {
+            "type": "string"
+          },
+          "requestUser": {
+            "type": "boolean"
+          },
+          "selectedProfile": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "YggdrasilTokenRequest": {
+        "type": "object",
+        "required": [
+          "accessToken"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "clientToken": {
+            "type": "string"
+          }
+        }
+      },
+      "YggdrasilSignoutRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "providerId": {
+            "type": "string"
+          }
+        }
+      },
+      "YggdrasilJoinRequest": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "selectedProfile",
+          "serverId"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "selectedProfile": {
+            "type": "string"
+          },
+          "serverId": {
             "type": "string"
           }
         }

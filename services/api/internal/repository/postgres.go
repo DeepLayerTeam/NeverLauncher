@@ -1318,3 +1318,204 @@ func (r *SQLRepository) DeleteProviderCredential(userID, provider string) error 
 	}
 	return nil
 }
+
+func (r *SQLRepository) GetMinecraftProfileByUser(userID string) (model.MinecraftProfile, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	var item model.MinecraftProfile
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE user_id=$1`, strings.TrimSpace(userID)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftProfile{}, ErrNotFound
+	}
+	return item, err
+}
+func (r *SQLRepository) GetMinecraftProfileByUUID(uuid string) (model.MinecraftProfile, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	var item model.MinecraftProfile
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE lower(uuid)=lower($1)`, strings.TrimSpace(uuid)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftProfile{}, ErrNotFound
+	}
+	return item, err
+}
+func (r *SQLRepository) GetMinecraftProfileByName(name string) (model.MinecraftProfile, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	var item model.MinecraftProfile
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE lower(name)=lower($1)`, strings.TrimSpace(name)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftProfile{}, ErrNotFound
+	}
+	return item, err
+}
+func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model.MinecraftProfile, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	item.UserID = strings.TrimSpace(item.UserID)
+	item.UUID = strings.ToLower(strings.TrimSpace(item.UUID))
+	item.Name = strings.TrimSpace(item.Name)
+	if item.UserID == "" || item.UUID == "" || item.Name == "" {
+		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	item.UpdatedAt = now
+	_, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,created_at,updated_at) VALUES($1,$2,$3,$4,$5)
+ON CONFLICT (user_id) DO UPDATE SET uuid=EXCLUDED.uuid,name=EXCLUDED.name,updated_at=EXCLUDED.updated_at`, item.UserID, item.UUID, item.Name, item.CreatedAt, item.UpdatedAt)
+	if err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	return r.GetMinecraftProfileByUser(item.UserID)
+}
+func (r *SQLRepository) SaveMinecraftSession(item model.MinecraftSession) (model.MinecraftSession, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftSession{}, err
+	}
+	if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.UserID) == "" || strings.TrimSpace(item.NeverSessionID) == "" || strings.TrimSpace(item.ProfileUUID) == "" || strings.TrimSpace(item.AccessTokenHash) == "" {
+		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	if item.LastSeenAt.IsZero() {
+		item.LastSeenAt = now
+	}
+	if item.Status == "" {
+		item.Status = "active"
+	}
+	_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+ON CONFLICT (id) DO UPDATE SET client_token=EXCLUDED.client_token,status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at,expires_at=EXCLUDED.expires_at,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason`, item.ID, item.UserID, item.NeverSessionID, item.ProfileUUID, item.ClientToken, item.AccessTokenHash, item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
+	if err != nil {
+		return model.MinecraftSession{}, err
+	}
+	return r.getMinecraftSessionByID(item.ID)
+}
+func (r *SQLRepository) getMinecraftSessionByID(id string) (model.MinecraftSession, error) {
+	var item model.MinecraftSession
+	var revoked sql.NullTime
+	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE id=$1`, id).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftSession{}, ErrNotFound
+	}
+	if revoked.Valid {
+		item.RevokedAt = revoked.Time
+	}
+	return item, err
+}
+func (r *SQLRepository) GetMinecraftSessionByTokenHash(hash string) (model.MinecraftSession, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftSession{}, err
+	}
+	var item model.MinecraftSession
+	var revoked sql.NullTime
+	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE access_token_hash=$1`, strings.TrimSpace(hash)).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftSession{}, ErrNotFound
+	}
+	if revoked.Valid {
+		item.RevokedAt = revoked.Time
+	}
+	return item, err
+}
+func (r *SQLRepository) TouchMinecraftSession(id string) (model.MinecraftSession, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftSession{}, err
+	}
+	res, err := r.db.Exec(`UPDATE minecraft_sessions SET last_seen_at=now() WHERE id=$1 AND status='active'`, strings.TrimSpace(id))
+	if err != nil {
+		return model.MinecraftSession{}, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return model.MinecraftSession{}, ErrNotFound
+	}
+	return r.getMinecraftSessionByID(id)
+}
+func (r *SQLRepository) RevokeMinecraftSession(id, reason string) error {
+	if err := r.check(); err != nil {
+		return err
+	}
+	res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,now()),revoked_reason=CASE WHEN revoked_reason='' THEN $2 ELSE revoked_reason END WHERE id=$1 AND status='active'`, strings.TrimSpace(id), strings.TrimSpace(reason))
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrConflict
+	}
+	return nil
+}
+func (r *SQLRepository) RevokeMinecraftSessionsByNeverSession(neverSessionID, reason string) int {
+	if err := r.check(); err != nil {
+		return 0
+	}
+	res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE never_session_id=$1 AND status='active'`, strings.TrimSpace(neverSessionID), strings.TrimSpace(reason))
+	if err != nil {
+		return 0
+	}
+	n, _ := res.RowsAffected()
+	return int(n)
+}
+func (r *SQLRepository) RevokeMinecraftSessionsByUser(userID, reason string) int {
+	if err := r.check(); err != nil {
+		return 0
+	}
+	res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE user_id=$1 AND status='active'`, strings.TrimSpace(userID), strings.TrimSpace(reason))
+	if err != nil {
+		return 0
+	}
+	n, _ := res.RowsAffected()
+	return int(n)
+}
+
+func (r *SQLRepository) GetMinecraftSession(id string) (model.MinecraftSession, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftSession{}, err
+	}
+	return r.getMinecraftSessionByID(strings.TrimSpace(id))
+}
+func (r *SQLRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
+	if err := r.check(); err != nil {
+		return err
+	}
+	item.Username = strings.TrimSpace(item.Username)
+	item.UsernameNormalized = strings.ToLower(item.Username)
+	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
+	item.ServerID = strings.TrimSpace(item.ServerID)
+	if item.Username == "" || item.UserID == "" || item.ProfileUUID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
+		return fmt.Errorf("minecraft join fields are required")
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	if item.ExpiresAt.IsZero() {
+		item.ExpiresAt = now.Add(2 * time.Minute)
+	}
+	_, err := r.db.Exec(`INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+ON CONFLICT (username_normalized,server_id) DO UPDATE SET username=EXCLUDED.username,profile_uuid=EXCLUDED.profile_uuid,user_id=EXCLUDED.user_id,minecraft_session_id=EXCLUDED.minecraft_session_id,ip=EXCLUDED.ip,created_at=EXCLUDED.created_at,expires_at=EXCLUDED.expires_at`, item.Username, item.UsernameNormalized, item.ProfileUUID, item.UserID, item.MinecraftSessionID, item.ServerID, item.IP, item.CreatedAt, item.ExpiresAt)
+	return err
+}
+func (r *SQLRepository) GetMinecraftJoin(username, serverID string) (model.MinecraftJoin, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftJoin{}, err
+	}
+	var item model.MinecraftJoin
+	err := r.db.QueryRow(`SELECT username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,created_at,expires_at FROM minecraft_joins WHERE username_normalized=lower($1) AND server_id=$2 AND expires_at>now()`, strings.TrimSpace(username), strings.TrimSpace(serverID)).Scan(&item.Username, &item.UsernameNormalized, &item.ProfileUUID, &item.UserID, &item.MinecraftSessionID, &item.ServerID, &item.IP, &item.CreatedAt, &item.ExpiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftJoin{}, ErrNotFound
+	}
+	return item, err
+}

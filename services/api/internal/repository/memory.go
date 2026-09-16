@@ -64,6 +64,9 @@ type MemoryRepository struct {
 	users               []model.User
 	identities          []model.AuthIdentity
 	providerCredentials []model.ProviderCredential
+	minecraftProfiles   []model.MinecraftProfile
+	minecraftSessions   []model.MinecraftSession
+	minecraftJoins      []model.MinecraftJoin
 	roles               []model.Role
 	audit               []model.AuditEvent
 	telemetry           []model.TelemetryEvent
@@ -917,4 +920,208 @@ func (r *MemoryRepository) DeleteProviderCredential(userID, provider string) err
 		}
 	}
 	return ErrNotFound
+}
+
+func (r *MemoryRepository) GetMinecraftProfileByUser(userID string) (model.MinecraftProfile, error) {
+	userID = strings.TrimSpace(userID)
+	for _, item := range r.minecraftProfiles {
+		if item.UserID == userID {
+			return item, nil
+		}
+	}
+	return model.MinecraftProfile{}, ErrNotFound
+}
+
+func (r *MemoryRepository) GetMinecraftProfileByUUID(uuid string) (model.MinecraftProfile, error) {
+	uuid = strings.ToLower(strings.TrimSpace(uuid))
+	for _, item := range r.minecraftProfiles {
+		if strings.EqualFold(item.UUID, uuid) {
+			return item, nil
+		}
+	}
+	return model.MinecraftProfile{}, ErrNotFound
+}
+
+func (r *MemoryRepository) GetMinecraftProfileByName(name string) (model.MinecraftProfile, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, item := range r.minecraftProfiles {
+		if strings.ToLower(item.Name) == name {
+			return item, nil
+		}
+	}
+	return model.MinecraftProfile{}, ErrNotFound
+}
+
+func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model.MinecraftProfile, error) {
+	item.UserID = strings.TrimSpace(item.UserID)
+	item.UUID = strings.ToLower(strings.TrimSpace(item.UUID))
+	item.Name = strings.TrimSpace(item.Name)
+	if item.UserID == "" || item.UUID == "" || item.Name == "" {
+		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
+	}
+	if _, err := r.GetUser(item.UserID); err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	item.UpdatedAt = now
+	for i, existing := range r.minecraftProfiles {
+		if existing.UserID == item.UserID || strings.EqualFold(existing.UUID, item.UUID) || strings.EqualFold(existing.Name, item.Name) {
+			if existing.UserID != item.UserID {
+				return model.MinecraftProfile{}, ErrConflict
+			}
+			item.CreatedAt = existing.CreatedAt
+			r.minecraftProfiles[i] = item
+			return item, nil
+		}
+	}
+	r.minecraftProfiles = append(r.minecraftProfiles, item)
+	return item, nil
+}
+
+func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (model.MinecraftSession, error) {
+	item.ID = strings.TrimSpace(item.ID)
+	item.UserID = strings.TrimSpace(item.UserID)
+	item.NeverSessionID = strings.TrimSpace(item.NeverSessionID)
+	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
+	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
+	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
+		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	if item.LastSeenAt.IsZero() {
+		item.LastSeenAt = now
+	}
+	if item.Status == "" {
+		item.Status = "active"
+	}
+	for i, existing := range r.minecraftSessions {
+		if existing.ID == item.ID {
+			r.minecraftSessions[i] = item
+			return item, nil
+		}
+		if existing.AccessTokenHash == item.AccessTokenHash {
+			return model.MinecraftSession{}, ErrConflict
+		}
+	}
+	r.minecraftSessions = append(r.minecraftSessions, item)
+	return item, nil
+}
+
+func (r *MemoryRepository) GetMinecraftSessionByTokenHash(hash string) (model.MinecraftSession, error) {
+	for _, item := range r.minecraftSessions {
+		if item.AccessTokenHash == strings.TrimSpace(hash) {
+			return item, nil
+		}
+	}
+	return model.MinecraftSession{}, ErrNotFound
+}
+
+func (r *MemoryRepository) TouchMinecraftSession(id string) (model.MinecraftSession, error) {
+	for i, item := range r.minecraftSessions {
+		if item.ID == id {
+			item.LastSeenAt = time.Now().UTC()
+			r.minecraftSessions[i] = item
+			return item, nil
+		}
+	}
+	return model.MinecraftSession{}, ErrNotFound
+}
+
+func (r *MemoryRepository) RevokeMinecraftSession(id, reason string) error {
+	for i, item := range r.minecraftSessions {
+		if item.ID != id {
+			continue
+		}
+		if item.Status != "active" {
+			return ErrConflict
+		}
+		item.Status = "revoked"
+		item.RevokedAt = time.Now().UTC()
+		item.RevokedReason = strings.TrimSpace(reason)
+		r.minecraftSessions[i] = item
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (r *MemoryRepository) RevokeMinecraftSessionsByNeverSession(neverSessionID, reason string) int {
+	count := 0
+	now := time.Now().UTC()
+	for i, item := range r.minecraftSessions {
+		if item.NeverSessionID == neverSessionID && item.Status == "active" {
+			item.Status = "revoked"
+			item.RevokedAt = now
+			item.RevokedReason = reason
+			r.minecraftSessions[i] = item
+			count++
+		}
+	}
+	return count
+}
+
+func (r *MemoryRepository) RevokeMinecraftSessionsByUser(userID, reason string) int {
+	count := 0
+	now := time.Now().UTC()
+	for i, item := range r.minecraftSessions {
+		if item.UserID == userID && item.Status == "active" {
+			item.Status = "revoked"
+			item.RevokedAt = now
+			item.RevokedReason = reason
+			r.minecraftSessions[i] = item
+			count++
+		}
+	}
+	return count
+}
+
+func (r *MemoryRepository) GetMinecraftSession(id string) (model.MinecraftSession, error) {
+	for _, item := range r.minecraftSessions {
+		if item.ID == strings.TrimSpace(id) {
+			return item, nil
+		}
+	}
+	return model.MinecraftSession{}, ErrNotFound
+}
+
+func (r *MemoryRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
+	item.Username = strings.TrimSpace(item.Username)
+	item.UsernameNormalized = strings.ToLower(item.Username)
+	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
+	item.ServerID = strings.TrimSpace(item.ServerID)
+	if item.Username == "" || item.ProfileUUID == "" || item.UserID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
+		return fmt.Errorf("minecraft join fields are required")
+	}
+	now := time.Now().UTC()
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = now
+	}
+	if item.ExpiresAt.IsZero() {
+		item.ExpiresAt = now.Add(2 * time.Minute)
+	}
+	for i, existing := range r.minecraftJoins {
+		if existing.UsernameNormalized == item.UsernameNormalized && existing.ServerID == item.ServerID {
+			r.minecraftJoins[i] = item
+			return nil
+		}
+	}
+	r.minecraftJoins = append(r.minecraftJoins, item)
+	return nil
+}
+
+func (r *MemoryRepository) GetMinecraftJoin(username, serverID string) (model.MinecraftJoin, error) {
+	name := strings.ToLower(strings.TrimSpace(username))
+	sid := strings.TrimSpace(serverID)
+	now := time.Now().UTC()
+	for _, item := range r.minecraftJoins {
+		if item.UsernameNormalized == name && item.ServerID == sid && item.ExpiresAt.After(now) {
+			return item, nil
+		}
+	}
+	return model.MinecraftJoin{}, ErrNotFound
 }

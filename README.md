@@ -231,6 +231,12 @@ Velocity/Purpur продолжают проходить быстрый protocol-
 bash e2e/scripts/run-minecraft-e2e.sh
 ```
 
+## Minecraft Auth Compatibility 2.0
+
+С `0.11.9` login identity и Minecraft identity разделены. Local/SQL/HTTP/OIDC/Microsoft/passkey приводят к одному canonical Never user; из действующей Never session Desktop получает отдельную Minecraft session через `/api/v1/minecraft/session`. Игровой access token opaque и server-side хранится только в виде hash, а стабильный Minecraft UUID строится из immutable Never user ID, а не email.
+
+NeverRuntime передаёт полученные UUID/token в реальный Minecraft launch. Если подписанный release manifest содержит `authlib-injector*.jar`, runtime подключает его как `-javaagent` к Backend, где доступны Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*`. Revoke/logout родительской Never session сразу делает Minecraft token непригодным для validate/join/hasJoined. ServerBridge остаётся отдельным дополнительным контуром доступа к защищённым проектным серверам.
+
 ## Production-развёртывание
 
 Основные файлы:

@@ -92,39 +92,6 @@ type bridgeInvalidateRequest struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
-type authlibAuthRequest struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	ClientToken string `json:"clientToken"`
-	RequestUser bool   `json:"requestUser"`
-}
-
-type authlibRefreshRequest struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ClientToken  string `json:"clientToken"`
-	RequestUser  bool   `json:"requestUser"`
-}
-
-type authlibTokenRequest struct {
-	AccessToken string `json:"accessToken"`
-	ClientToken string `json:"clientToken"`
-}
-
-type authlibSignoutRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type authlibJoinRequest struct {
-	AccessToken     string `json:"accessToken"`
-	SelectedProfile string `json:"selectedProfile"`
-	ServerID        string `json:"serverId"`
-	ProjectID       string `json:"projectId"`
-	ProfileID       string `json:"profileId"`
-	Channel         string `json:"channel"`
-}
-
 type textureUpdateRequest struct {
 	SkinURL string `json:"skinUrl"`
 	CapeURL string `json:"capeUrl"`
@@ -305,146 +272,6 @@ func (s Server) textureSkinUpdate(w http.ResponseWriter, r *http.Request) {
 	_ = s.flushPersistenceState950("server-bridge-texture-update")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-update"), Actor: user.Email, Action: "serverbridge:texture:update", Target: texture.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": textureProfile910(texture)})
-}
-
-func (s Server) authlibStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "authlib-compatible", "endpoints": []string{"authenticate", "refresh", "validate", "invalidate", "signout", "join", "hasJoined", "textures"}, "serverBridge": s.State.ServerBridge.summary()}})
-}
-
-func (s Server) authlibAuthenticate(w http.ResponseWriter, r *http.Request) {
-	var req authlibAuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	email := strings.ToLower(strings.TrimSpace(req.Username))
-	user, ok := s.findUserByEmail(email)
-	if !ok || user.Status == "disabled" || !verifyPassword(req.Password, user.PasswordHash) {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid credentials")
-		return
-	}
-	accessToken, refreshToken, session, err := s.issueLoginSession(user, r, firstNonEmpty(req.ClientToken, "authlib-client"))
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать authlib-сессию")
-		return
-	}
-	profile := authlibProfile910(user)
-	payload := map[string]any{"accessToken": accessToken, "clientToken": firstNonEmpty(req.ClientToken, session.ID), "availableProfiles": []map[string]string{profile}, "selectedProfile": profile, "refreshToken": refreshToken}
-	if req.RequestUser {
-		payload["user"] = map[string]any{"id": profile["id"], "username": user.Email, "properties": []any{}}
-	}
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("authlib-authenticate"), Actor: user.Email, Action: "authlib:authenticate", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, payload)
-}
-
-func (s Server) authlibRefresh(w http.ResponseWriter, r *http.Request) {
-	var req authlibRefreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	if req.RefreshToken != "" {
-		session, newRefresh, err := s.State.AuthSessions.rotate(req.RefreshToken, r)
-		if err != nil {
-			writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid token")
-			return
-		}
-		user, err := s.Repo.GetUser(session.UserID)
-		if err != nil {
-			writeError(w, http.StatusForbidden, "ForbiddenOperationException: User not found")
-			return
-		}
-		access, err := s.issueAccessToken(user, session.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"accessToken": access, "clientToken": firstNonEmpty(req.ClientToken, session.ID), "refreshToken": newRefresh, "selectedProfile": authlibProfile910(user)})
-		return
-	}
-	claims, err := s.verifyAdminToken(req.AccessToken)
-	if err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid token")
-		return
-	}
-	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: User not found")
-		return
-	}
-	access, err := s.issueAccessToken(user, claims.SessionID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"accessToken": access, "clientToken": firstNonEmpty(req.ClientToken, claims.SessionID), "selectedProfile": authlibProfile910(user)})
-}
-
-func (s Server) authlibValidate(w http.ResponseWriter, r *http.Request) {
-	var req authlibTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	if _, err := s.verifyAdminToken(req.AccessToken); err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid token")
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s Server) authlibInvalidate(w http.ResponseWriter, r *http.Request) {
-	var req authlibTokenRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
-	if claims, err := s.verifyAdminToken(req.AccessToken); err == nil {
-		s.State.AuthSessions.revoke(claims.SessionID, "authlib-invalidate")
-		_ = s.flushPersistenceState950("authlib-invalidate")
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s Server) authlibSignout(w http.ResponseWriter, r *http.Request) {
-	var req authlibSignoutRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	user, ok := s.findUserByEmail(strings.ToLower(strings.TrimSpace(req.Username)))
-	if !ok || !verifyPassword(req.Password, user.PasswordHash) {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid credentials")
-		return
-	}
-	s.State.AuthSessions.revokeUser(user.ID, "authlib-signout")
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s Server) authlibJoin(w http.ResponseWriter, r *http.Request) {
-	var req authlibJoinRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	claims, err := s.verifyAdminToken(req.AccessToken)
-	if err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid token")
-		return
-	}
-	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: User not found")
-		return
-	}
-	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, req.AccessToken, bridgeJoinRequest{ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable")})
-	if err != nil {
-		writeError(w, http.StatusForbidden, "ForbiddenOperationException: "+err.Error())
-		return
-	}
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("authlib-join"), Actor: user.Email, Action: "authlib:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s Server) authlibHasJoined(w http.ResponseWriter, r *http.Request) {
-	s.sessionHasJoined(w, r)
 }
 
 func (s Server) bridgeClaimsFromRequest910(r *http.Request) (authClaims, string, error) {
@@ -727,10 +554,6 @@ func playerUUID910(seed string) string {
 	sum := sha256.Sum256([]byte("neverlauncher-player:" + seed))
 	hexed := hex.EncodeToString(sum[:16])
 	return hexed[0:8] + "-" + hexed[8:12] + "-" + hexed[12:16] + "-" + hexed[16:20] + "-" + hexed[20:32]
-}
-
-func authlibProfile910(user model.User) map[string]string {
-	return map[string]string{"id": playerUUID910(user.ID), "name": user.Email}
 }
 
 func textureProperty910(texture bridgeTextureRecord) map[string]string {
