@@ -58,11 +58,22 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := result.User
-	if ok, reason := s.State.Security.verifySecondFactor(user.ID, req.TOTP, req.RecoveryCode); !ok {
+	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, req.TOTP, req.RecoveryCode)
+	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("admin-login-failed")
-		s.audit(r, user.Email, "admin:login:mfa-failed", reason)
-		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
+		s.audit(r, user.Email, "admin:login:mfa-failed", mfaErr.Error())
+		writeError(w, http.StatusUnauthorized, "требуется действительный настроенный метод MFA")
+		return
+	}
+	if mfa.NeedPasskey {
+		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, "admin-panel", mfa.Methods)
+		if err != nil {
+			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			return
+		}
+		s.audit(r, user.Email, "admin:login:passkey-required", result.Provider.ID)
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": continuation})
 		return
 	}
 	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))
@@ -70,7 +81,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	if updated, err := s.Repo.TouchUserLogin(user.ID); err == nil {
 		user = updated
 	}
-	token, refreshToken, session, err := s.issueLoginSession(user, r, "admin-panel")
+	token, refreshToken, session, err := s.issueLoginSessionWithAuth(user, r, "admin-panel", mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return

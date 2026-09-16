@@ -32,6 +32,11 @@ type authSessionRecord struct {
 	Status        string    `json:"status"`
 	RefreshHash   string    `json:"-"`
 	RefreshFamily string    `json:"refreshFamily"`
+	AuthMethods   []string  `json:"authMethods"`
+	AuthStrength  string    `json:"authStrength"`
+	AuthTime      time.Time `json:"authTime"`
+	IdentityID    string    `json:"identityId,omitempty"`
+	Provider      string    `json:"provider"`
 	CreatedAt     time.Time `json:"createdAt"`
 	LastSeenAt    time.Time `json:"lastSeenAt"`
 	ExpiresAt     time.Time `json:"expiresAt"`
@@ -84,8 +89,13 @@ func newAuthSessionStore111() *authSessionStore {
 }
 
 func (s *authSessionStore) create(user model.User, r *http.Request, deviceID string) (authSessionRecord, string, error) {
+	return s.createWithAuth(user, r, deviceID, []string{"password"}, "single-factor", time.Now().UTC(), "", "local")
+}
+
+func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, deviceID string, methods []string, strength string, authTime time.Time, identityID, provider string) (authSessionRecord, string, error) {
+	methods, strength, authTime, provider = normalizeSessionAuth117(methods, strength, authTime, provider)
 	if s.persistent != nil {
-		return s.persistent.create(user, r, deviceID)
+		return s.persistent.createWithAuth(user, r, deviceID, methods, strength, authTime, identityID, provider)
 	}
 
 	s.mu.Lock()
@@ -112,6 +122,11 @@ func (s *authSessionStore) create(user model.User, r *http.Request, deviceID str
 		Status:        "active",
 		RefreshHash:   hashRefreshToken(refreshToken),
 		RefreshFamily: familyID,
+		AuthMethods:   append([]string(nil), methods...),
+		AuthStrength:  strength,
+		AuthTime:      authTime,
+		IdentityID:    strings.TrimSpace(identityID),
+		Provider:      provider,
 		CreatedAt:     now,
 		LastSeenAt:    now,
 		ExpiresAt:     now.Add(refreshTokenTTL),
@@ -257,6 +272,88 @@ func (s *authSessionStore) listByUser(userID string) []authSessionRecord {
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].LastSeenAt.After(items[j].LastSeenAt) })
 	return items
+}
+
+func (s *authSessionStore) get(sessionID, userID string) (authSessionRecord, bool) {
+	if s.persistent != nil {
+		return s.persistent.get(sessionID, userID)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rec, ok := s.sessions[sessionID]
+	if !ok || rec.UserID != userID || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, false
+	}
+	return sanitizeSessionRecord(rec), true
+}
+
+func (s *authSessionStore) stepUp(sessionID, userID string, methods []string, strength string, authTime time.Time) (authSessionRecord, error) {
+	methods, strength, authTime, _ = normalizeSessionAuth117(methods, strength, authTime, "local")
+	if s.persistent != nil {
+		return s.persistent.stepUp(sessionID, userID, methods, strength, authTime)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rec, ok := s.sessions[sessionID]
+	if !ok || rec.UserID != userID || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errAuthRequired
+	}
+	rec.AuthMethods = mergeAuthMethods117(rec.AuthMethods, methods...)
+	if authStrengthLevel117(strength) > authStrengthLevel117(rec.AuthStrength) {
+		rec.AuthStrength = strength
+	}
+	rec.AuthTime = authTime
+	rec.LastSeenAt = time.Now().UTC()
+	s.sessions[rec.ID] = rec
+	return sanitizeSessionRecord(rec), nil
+}
+
+func normalizeSessionAuth117(methods []string, strength string, authTime time.Time, provider string) ([]string, string, time.Time, string) {
+	methods = mergeAuthMethods117(nil, methods...)
+	if len(methods) == 0 {
+		methods = []string{"unknown"}
+	}
+	if authStrengthLevel117(strength) < 0 {
+		strength = "single-factor"
+	}
+	if authTime.IsZero() {
+		authTime = time.Now().UTC()
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if provider == "" {
+		provider = "local"
+	}
+	return methods, strength, authTime.UTC(), provider
+}
+
+func mergeAuthMethods117(existing []string, extra ...string) []string {
+	seen := make(map[string]struct{}, len(existing)+len(extra))
+	out := make([]string, 0, len(existing)+len(extra))
+	for _, raw := range append(append([]string(nil), existing...), extra...) {
+		v := strings.ToLower(strings.TrimSpace(raw))
+		if v == "" {
+			continue
+		}
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
+}
+
+func authStrengthLevel117(v string) int {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "single-factor":
+		return 0
+	case "mfa":
+		return 1
+	case "phishing-resistant":
+		return 2
+	default:
+		return -1
+	}
 }
 
 func (s *authSessionStore) summary() map[string]any {

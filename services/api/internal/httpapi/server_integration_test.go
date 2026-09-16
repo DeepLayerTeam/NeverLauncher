@@ -28,6 +28,9 @@ func testServer(t *testing.T) http.Handler {
 		Environment:        "test",
 		AuthTokenSecret:    "test-secret-for-integration",
 		AuthTokenTTLHours:  1,
+		WebAuthnRPID:       "example.test",
+		WebAuthnRPName:     "NeverLauncher Test",
+		WebAuthnOrigins:    []string{"http://example.test"},
 		MetricsEnabled:     true,
 	}
 	store := storage.NewLocalStorage(cfg.StorageLocalPath)
@@ -80,6 +83,7 @@ func TestAdminAuthAndStorageHealth(t *testing.T) {
 func TestAdminVersionUploadPublishFlow(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)
+	token, _ = registerTestPasskey117(t, handler, token)
 
 	versionBody := strings.NewReader(`{"profileId":"vanilla","channel":"stable","version":"2.2.0"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions", versionBody)

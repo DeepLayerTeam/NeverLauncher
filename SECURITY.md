@@ -6,6 +6,12 @@ NeverLauncher использует модель безопасности, в к�
 
 Начиная с 0.11.6 внешние refresh credentials (включая Microsoft) хранятся только server-side в application-layer AES-GCM envelope, привязанном к canonical user/identity/provider/subject. Provider token не является Never access/refresh token, не возвращается в login/link/refresh API и не должен попадать в логи или клиентское secure storage. Ротация `NEVERLAUNCHER_AUTH_TOKEN_SECRET` требует контролируемой миграции/повторной авторизации provider credentials.
 
+## Passkeys / WebAuthn и step-up
+
+С `0.11.7` phishing-resistant authentication реализована WebAuthn passkeys. В production RP ID и origins задаются явно; origin должен быть HTTPS и находиться внутри RP ID. Registration и assertion требуют user verification, проверяют challenge/origin/RP ID hash и криптографическую подпись; challenge single-use и хранится в PostgreSQL. Значения private key authenticator никогда не передаются Backend — сохраняется только COSE public key и credential metadata.
+
+Критические действия не полагаются только на факт существования активной session: Backend проверяет `auth_strength` и свежий `auth_time`. Для операций, требующих phishing-resistant step-up, TOTP недостаточен.
+
 ## Обязательные production-настройки
 
 Для production-окружения используйте persistent backend и сильные секреты:
@@ -19,6 +25,9 @@ NEVERLAUNCHER_AUTH_TOKEN_SECRET=replace-with-at-least-32-random-bytes
 NEVERLAUNCHER_PERSISTENT_SESSIONS=true
 NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION=true
 NEVERLAUNCHER_BACKUP_ROOT=/var/lib/neverlauncher/backups
+NEVERLAUNCHER_WEBAUTHN_RP_ID=example.com
+NEVERLAUNCHER_WEBAUTHN_RP_NAME=NeverLauncher
+NEVERLAUNCHER_WEBAUTHN_ORIGINS=https://admin.example.com
 NEVERLAUNCHER_CORS_ALLOWED_ORIGINS=https://admin.example.com
 ```
 

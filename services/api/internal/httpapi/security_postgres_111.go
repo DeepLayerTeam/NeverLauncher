@@ -237,3 +237,59 @@ func stringsToUpperReplaceUnderscore111(value string) string {
 	value = strings.ReplaceAll(value, "_", "-")
 	return strings.ToUpper(value)
 }
+
+func (p *securityPostgres111) totpEnabled(userID string) bool {
+	rec, err := p.loadMFA(userID)
+	return err == nil && rec.Enabled
+}
+
+func (p *securityPostgres111) ensurePasskeyMethod117(userID string, enabled bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	_, err := p.db.ExecContext(ctx, `INSERT INTO mfa_methods(id,user_id,method_type,status,created_at,updated_at) VALUES($1,$2,'passkey',$3,now(),now()) ON CONFLICT(user_id,method_type) DO UPDATE SET status=EXCLUDED.status,updated_at=now()`, "mfa-passkey-"+userID, userID, status)
+	return err
+}
+
+func (p *securityPostgres111) generateRecoveryCodesForMethod117(userID string, count int, methodID string) ([]string, error) {
+	if count <= 0 {
+		return nil, errors.New("recovery code count должен быть > 0")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var active bool
+	if err := p.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM mfa_methods WHERE id=$1 AND user_id=$2 AND status='enabled')`, methodID, userID).Scan(&active); err != nil || !active {
+		return nil, errors.New("MFA method не активен")
+	}
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `UPDATE recovery_codes SET status='revoked' WHERE user_id=$1 AND status='active'`, userID); err != nil {
+		return nil, err
+	}
+	codes := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		token, err := randomToken("nlrec")
+		if err != nil {
+			return nil, err
+		}
+		code := normalizeRecoveryCode111(token)
+		id, err := randomToken("rec")
+		if err != nil {
+			return nil, err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO recovery_codes(id,user_id,method_id,code_hash,status,created_at) VALUES($1,$2,$3,$4,'active',now())`, id, userID, methodID, hashSecurityToken902(code)); err != nil {
+			return nil, err
+		}
+		codes = append(codes, code)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return codes, nil
+}

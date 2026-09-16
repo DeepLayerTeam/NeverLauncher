@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.11.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.11.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -88,6 +88,17 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "202": {
+            "description": "Primary authentication succeeded; passkey MFA continuation required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [],
@@ -1440,6 +1451,17 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "202": {
+            "description": "Primary authentication succeeded; passkey MFA continuation required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "security": [],
@@ -1479,6 +1501,105 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/mfa": {
+      "get": {
+        "operationId": "get_api_v1_auth_mfa",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/mfa",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/policy": {
+      "put": {
+        "operationId": "put_api_v1_auth_mfa_policy",
+        "tags": [
+          "auth"
+        ],
+        "summary": "PUT /api/v1/auth/mfa/policy",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/step-up/totp": {
+      "post": {
+        "operationId": "post_api_v1_auth_mfa_step_up_totp",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/mfa/step-up/totp",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         },
         "security": [
@@ -1851,6 +1972,350 @@
           }
         ],
         "security": []
+      }
+    },
+    "/api/v1/auth/passkeys": {
+      "get": {
+        "operationId": "get_api_v1_auth_passkeys",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/passkeys",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/login/begin": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_login_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/login/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/passkeys/login/complete": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_login_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/login/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/passkeys/mfa/complete": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_mfa_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/mfa/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/passkeys/register/begin": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_register_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/register/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/register/complete": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_register_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/register/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "201": {
+            "description": "Credential registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/step-up/begin": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_step_up_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/step-up/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/step-up/complete": {
+      "post": {
+        "operationId": "post_api_v1_auth_passkeys_step_up_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/passkeys/step-up/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/{credentialId}": {
+      "patch": {
+        "operationId": "patch_api_v1_auth_passkeys_credentialId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "PATCH /api/v1/auth/passkeys/{credentialId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "delete_api_v1_auth_passkeys_credentialId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "DELETE /api/v1/auth/passkeys/{credentialId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/api/v1/auth/password-policy": {

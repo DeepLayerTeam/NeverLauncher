@@ -5,7 +5,11 @@ import './styles.css';
 type ApiEnvelope<T> = { data?: T; error?: { message?: string } };
 type Section = { id: string; title: string; endpoint?: string; permission?: string };
 type ProductionUIData = { sections?: Section[]; primaryFlow?: string[]; toolVersion?: string };
-type LoginResponse = { token: string; refreshToken?: string; sessionId?: string; user?: Record<string, unknown> };
+type LoginResponse = { token?: string; refreshToken?: string; sessionId?: string; user?: Record<string, unknown>; status?: string; transactionToken?: string; publicKey?: PublicKeyCredentialRequestOptionsJSON };
+type PublicKeyCredentialRequestOptionsJSON = { challenge: string; rpId?: string; timeout?: number; userVerification?: UserVerificationRequirement; allowCredentials?: Array<{ type: PublicKeyCredentialType; id: string; transports?: AuthenticatorTransport[] }> };
+type PublicKeyCredentialCreationOptionsJSON = { challenge: string; rp: PublicKeyCredentialRpEntity; user: { id: string; name: string; displayName: string }; pubKeyCredParams: PublicKeyCredentialParameters[]; timeout?: number; excludeCredentials?: Array<{ type: PublicKeyCredentialType; id: string; transports?: AuthenticatorTransport[] }>; authenticatorSelection?: AuthenticatorSelectionCriteria; attestation?: AttestationConveyancePreference };
+type PasskeyBegin = { transactionToken: string; publicKey: PublicKeyCredentialRequestOptionsJSON | PublicKeyCredentialCreationOptionsJSON; expiresInSeconds?: number };
+type PasskeySessionResponse = { status?: string; accessToken?: string; session?: { id?: string }; tokens?: { accessToken?: string; refreshToken?: string }; user?: Record<string, unknown> };
 type DashboardData = { status?: string; metrics?: Record<string, number>; projects?: any[]; profiles?: any[]; channels?: any[]; users?: any[]; audit?: any[] };
 
 type ProjectForm = { id: string; name: string; description: string; homepage: string; repository: string; defaultChannel: string };
@@ -62,6 +66,72 @@ async function requestJSON<T>(backendUrl: string, path: string, token?: string, 
   return payload as T;
 }
 
+function b64urlToBuffer(value: string): ArrayBuffer {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  const raw = atob(padded);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function bufferToB64url(value: ArrayBuffer): string {
+  const bytes = new Uint8Array(value);
+  let raw = '';
+  for (const byte of bytes) raw += String.fromCharCode(byte);
+  return btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function creationOptionsFromJSON(input: PublicKeyCredentialCreationOptionsJSON): PublicKeyCredentialCreationOptions {
+  return {
+    ...input,
+    challenge: b64urlToBuffer(input.challenge),
+    user: { ...input.user, id: b64urlToBuffer(input.user.id) },
+    excludeCredentials: input.excludeCredentials?.map((item) => ({ ...item, id: b64urlToBuffer(item.id) })),
+  };
+}
+
+function requestOptionsFromJSON(input: PublicKeyCredentialRequestOptionsJSON): PublicKeyCredentialRequestOptions {
+  return {
+    ...input,
+    challenge: b64urlToBuffer(input.challenge),
+    allowCredentials: input.allowCredentials?.map((item) => ({ ...item, id: b64urlToBuffer(item.id) })),
+  };
+}
+
+async function createPasskeyCredential(input: PublicKeyCredentialCreationOptionsJSON) {
+  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает WebAuthn/passkeys.');
+  const credential = await navigator.credentials.create({ publicKey: creationOptionsFromJSON(input) });
+  if (!(credential instanceof PublicKeyCredential) || !(credential.response instanceof AuthenticatorAttestationResponse)) throw new Error('Authenticator не вернул WebAuthn registration credential.');
+  return {
+    id: credential.id,
+    rawId: bufferToB64url(credential.rawId),
+    type: credential.type,
+    response: {
+      clientDataJSON: bufferToB64url(credential.response.clientDataJSON),
+      attestationObject: bufferToB64url(credential.response.attestationObject),
+      transports: credential.response.getTransports?.() ?? [],
+    },
+  };
+}
+
+async function getPasskeyAssertion(input: PublicKeyCredentialRequestOptionsJSON) {
+  if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Этот браузер не поддерживает WebAuthn/passkeys.');
+  const credential = await navigator.credentials.get({ publicKey: requestOptionsFromJSON(input) });
+  if (!(credential instanceof PublicKeyCredential) || !(credential.response instanceof AuthenticatorAssertionResponse)) throw new Error('Authenticator не вернул WebAuthn assertion.');
+  return {
+    id: credential.id,
+    rawId: bufferToB64url(credential.rawId),
+    type: credential.type,
+    response: {
+      clientDataJSON: bufferToB64url(credential.response.clientDataJSON),
+      authenticatorData: bufferToB64url(credential.response.authenticatorData),
+      signature: bufferToB64url(credential.response.signature),
+      userHandle: credential.response.userHandle ? bufferToB64url(credential.response.userHandle) : undefined,
+    },
+  };
+}
+
 function MetricCard({ label, value }: { label: string; value: number | string }) {
   return <article className="card"><h3>{label}</h3><div className="metric">{value}</div></article>;
 }
@@ -85,6 +155,7 @@ function App() {
   const [password, setPassword] = useState('');
   const [totp, setTotp] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [mfaPolicy, setMfaPolicy] = useState<'optional' | 'required' | 'phishing-resistant'>('optional');
   const [active, setActive] = useState('dashboard');
   const [productionUI, setProductionUI] = useState<ProductionUIData>({ sections: fallbackSections, toolVersion: TOOL_VERSION });
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -114,14 +185,71 @@ function App() {
   useEffect(() => { refreshToken ? sessionStorage.setItem('neverlauncher.admin.refreshToken', refreshToken) : sessionStorage.removeItem('neverlauncher.admin.refreshToken'); }, [refreshToken]);
   useEffect(() => { sessionId ? sessionStorage.setItem('neverlauncher.admin.sessionId', sessionId) : sessionStorage.removeItem('neverlauncher.admin.sessionId'); }, [sessionId]);
 
+  function applyPasskeySession(data: PasskeySessionResponse, preserveRefresh = false) {
+    const nextToken = data.tokens?.accessToken ?? data.accessToken;
+    if (!nextToken) throw new Error('Backend не вернул Never access token.');
+    setToken(nextToken);
+    if (data.tokens?.refreshToken !== undefined) setRefreshToken(data.tokens.refreshToken);
+    else if (!preserveRefresh) setRefreshToken('');
+    if (data.session?.id) setSessionId(data.session.id);
+    setStatus('online');
+  }
+
+  async function finishPasskeyMFA(data: LoginResponse) {
+    if (!data.transactionToken || !data.publicKey) throw new Error('Backend запросил passkey MFA без WebAuthn transaction.');
+    const credential = await getPasskeyAssertion(data.publicKey);
+    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/mfa/complete', undefined, { method: 'POST', body: JSON.stringify({ transactionToken: data.transactionToken, deviceId: 'admin-browser', credential }) });
+    applyPasskeySession(completed);
+    setMessage('Вход завершён passkey MFA. Сессия имеет phishing-resistant authentication strength.');
+  }
+
   async function login() {
     setError(null); setMessage(null);
     const data = await requestJSON<LoginResponse>(backendUrl, '/api/v1/admin/login', undefined, { method: 'POST', body: JSON.stringify({ email, password, totp: totp || undefined, recoveryCode: recoveryCode || undefined }) });
+    if (data.status === 'mfa-required') {
+      await finishPasskeyMFA(data);
+      return;
+    }
+    if (!data.token) throw new Error('Backend не вернул access token.');
     setToken(data.token);
     setRefreshToken(data.refreshToken ?? '');
     setSessionId(data.sessionId ?? '');
     setStatus('online');
-    setMessage(`Вход выполнен: ${data.user?.email ?? email}`);
+    setMessage(`Вход выполнен: ${String(data.user?.email ?? email)}`);
+  }
+
+  async function passwordlessPasskeyLogin() {
+    setError(null); setMessage(null);
+    const begin = await requestJSON<PasskeyBegin>(backendUrl, '/api/v1/auth/passkeys/login/begin', undefined, { method: 'POST' });
+    const credential = await getPasskeyAssertion(begin.publicKey as PublicKeyCredentialRequestOptionsJSON);
+    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/login/complete', undefined, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, deviceId: 'admin-browser', credential }) });
+    applyPasskeySession(completed);
+    setMessage('Выполнен passwordless вход по passkey.');
+  }
+
+  async function registerPasskey() {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    const begin = await requestJSON<PasskeyBegin>(backendUrl, '/api/v1/auth/passkeys/register/begin', token, { method: 'POST' });
+    const credential = await createPasskeyCredential(begin.publicKey as PublicKeyCredentialCreationOptionsJSON);
+    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/register/complete', token, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, friendlyName: 'Admin browser passkey', credential }) });
+    applyPasskeySession(completed, true);
+    setMessage('Passkey зарегистрирован и текущая сессия повышена до phishing-resistant.');
+  }
+
+  async function stepUpPasskey() {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    const begin = await requestJSON<PasskeyBegin>(backendUrl, '/api/v1/auth/passkeys/step-up/begin', token, { method: 'POST' });
+    const credential = await getPasskeyAssertion(begin.publicKey as PublicKeyCredentialRequestOptionsJSON);
+    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/step-up/complete', token, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, deviceId: 'admin-browser', credential }) });
+    applyPasskeySession(completed, true);
+    setMessage('Passkey step-up выполнен. Критические операции разблокированы на ограниченное время.');
+  }
+
+  async function saveMfaPolicy() {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    const data = await requestJSON<{ requirement?: string }>(backendUrl, '/api/v1/auth/mfa/policy', token, { method: 'PUT', body: JSON.stringify({ requirement: mfaPolicy }) });
+    setMfaPolicy((data.requirement as typeof mfaPolicy) ?? mfaPolicy);
+    setMessage(`MFA policy сохранена: ${data.requirement ?? mfaPolicy}.`);
   }
 
   async function refreshSession() {
@@ -283,7 +411,8 @@ function App() {
       <section className="card wide">
         <label className="field"><span>URL Backend</span><input value={backendUrl} onChange={(event) => setBackendUrl(event.target.value)} /></label>
         <p className="muted"><code>{activeEndpoint}</code></p>
-        <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button>{token && <button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button>}{token && <button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button>}</div>
+        <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button>{token && <button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button>}{token && <button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button>}</div>
+        {token && <div className="passkeyRow"><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div>}
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}

@@ -304,6 +304,7 @@ func exportPersistenceSummary950(state *RuntimeState) map[string]any {
 	return map[string]any{
 		"authSessions": state.AuthSessions.summary(),
 		"security":     state.Security.summary(),
+		"passkeys":     state.Passkeys.summary(),
 		"serverBridge": state.ServerBridge.summary(),
 	}
 }

@@ -72,6 +72,9 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 		AuthTokenSecret:    "test-secret-for-backup-restore",
 		AuthTokenTTLHours:  1,
 		CORSAllowedOrigins: []string{"http://example.test"},
+		WebAuthnRPID:       "example.test",
+		WebAuthnRPName:     "NeverLauncher Test",
+		WebAuthnOrigins:    []string{"http://example.test"},
 	}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	store := storage.NewLocalStorage(cfg.StorageLocalPath)
@@ -80,6 +83,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 	}
 	h := Server{Version: "0.11.0", Config: cfg, Repo: repo, Storage: store}.Handler()
 	token := loginAdmin(t, h)
+	token, _ = registerTestPasskey117(t, h, token)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/operations/backups", nil)
 	req.Header.Set("Authorization", "Bearer "+token)

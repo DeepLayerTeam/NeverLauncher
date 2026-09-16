@@ -15,13 +15,17 @@ import (
 )
 
 type authClaims struct {
-	Sub         string   `json:"sub"`
-	Email       string   `json:"email"`
-	RoleID      string   `json:"roleId"`
-	SessionID   string   `json:"sid"`
-	TokenUse    string   `json:"tokenUse"`
-	Permissions []string `json:"permissions"`
-	Exp         int64    `json:"exp"`
+	Sub          string   `json:"sub"`
+	Email        string   `json:"email"`
+	RoleID       string   `json:"roleId"`
+	SessionID    string   `json:"sid"`
+	TokenUse     string   `json:"tokenUse"`
+	Permissions  []string `json:"permissions"`
+	Iat          int64    `json:"iat"`
+	AuthTime     int64    `json:"auth_time"`
+	AuthMethods  []string `json:"amr"`
+	AuthStrength string   `json:"authStrength"`
+	Exp          int64    `json:"exp"`
 }
 
 var errAuthRequired = errors.New("требуется авторизация")
@@ -42,12 +46,16 @@ func (s Server) requirePermission(permission string, next http.HandlerFunc) http
 }
 
 func (s Server) issueLoginSession(user model.User, r *http.Request, deviceID string) (string, string, authSessionRecord, error) {
-	session, refreshToken, err := s.State.AuthSessions.create(user, r, deviceID)
+	return s.issueLoginSessionWithAuth(user, r, deviceID, []string{"password"}, "single-factor", time.Now().UTC(), "", "local")
+}
+
+func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, deviceID string, methods []string, strength string, authTime time.Time, identityID, provider string) (string, string, authSessionRecord, error) {
+	session, refreshToken, err := s.State.AuthSessions.createWithAuth(user, r, deviceID, methods, strength, authTime, identityID, provider)
 	if err != nil {
 		return "", "", authSessionRecord{}, err
 	}
 	_ = s.flushPersistenceState950("auth-session-create")
-	accessToken, err := s.issueAccessToken(user, session.ID)
+	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
 		return "", "", authSessionRecord{}, err
 	}
@@ -55,14 +63,27 @@ func (s Server) issueLoginSession(user model.User, r *http.Request, deviceID str
 }
 
 func (s Server) issueAccessToken(user model.User, sessionID string) (string, error) {
+	session, ok := s.State.AuthSessions.get(sessionID, user.ID)
+	if !ok {
+		return "", errAuthRequired
+	}
+	return s.issueAccessTokenForSession(user, session)
+}
+
+func (s Server) issueAccessTokenForSession(user model.User, session authSessionRecord) (string, error) {
+	now := time.Now().UTC()
 	claims := authClaims{
-		Sub:         user.ID,
-		Email:       user.Email,
-		RoleID:      user.RoleID,
-		SessionID:   sessionID,
-		TokenUse:    "access",
-		Permissions: s.permissionsForRole(user.RoleID),
-		Exp:         time.Now().UTC().Add(accessTokenTTL).Unix(),
+		Sub:          user.ID,
+		Email:        user.Email,
+		RoleID:       user.RoleID,
+		SessionID:    session.ID,
+		TokenUse:     "access",
+		Permissions:  s.permissionsForRole(user.RoleID),
+		Iat:          now.Unix(),
+		AuthTime:     session.AuthTime.Unix(),
+		AuthMethods:  append([]string(nil), session.AuthMethods...),
+		AuthStrength: session.AuthStrength,
+		Exp:          now.Add(accessTokenTTL).Unix(),
 	}
 	payloadBytes, err := json.Marshal(claims)
 	if err != nil {
@@ -104,6 +125,12 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 	}
 	if claims.Exp <= time.Now().UTC().Unix() || claims.TokenUse != "access" || claims.SessionID == "" {
 		return authClaims{}, errAuthRequired
+	}
+	if claims.AuthStrength == "" {
+		claims.AuthStrength = "single-factor"
+	}
+	if claims.AuthTime == 0 {
+		claims.AuthTime = claims.Iat
 	}
 	if !s.State.AuthSessions.active(claims.SessionID, claims.Sub) {
 		return authClaims{}, errAuthRequired

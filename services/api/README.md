@@ -142,6 +142,12 @@ HTTP Connector использует собственный transport без envi
 
 `offline_access` включается Connector автоматически. Полученный Microsoft refresh token не возвращается клиенту: Backend шифрует его AES-GCM и сохраняет в `provider_credentials`. Для существующего Never user используется authenticated linking flow `POST /api/v1/auth/microsoft/{providerId}/link/begin` и `/link/complete`; provider credential можно ротировать через `POST /api/v1/auth/providers/{providerId}/credential/refresh`. Microsoft front-channel logout URL выдаётся отдельно через `/api/v1/auth/microsoft/{providerId}/logout-url` и не заменяет Never logout. Microsoft sign-in сам по себе **не означает владение Minecraft**; entitlement/profile verification остаётся отдельным слоем.
 
+## Passkeys / WebAuthn + MFA 2.0
+
+Начиная с `0.11.7`, Backend поддерживает discoverable passkeys/WebAuthn с обязательным user verification. RP настраивается через `NEVERLAUNCHER_WEBAUTHN_RP_ID`, `NEVERLAUNCHER_WEBAUTHN_RP_NAME` и `NEVERLAUNCHER_WEBAUTHN_ORIGINS`. Registration/login/step-up challenges одноразовые и в production хранятся в PostgreSQL. Доступны passwordless passkey login, MFA continuation после password/OIDC/Microsoft auth, управление credentials и policy `optional|required|phishing-resistant`.
+
+Сессия фиксирует `authMethods`, `authStrength` и `authTime`. Step-up не изменяет уже выданный access token: после успешного TOTP/recovery/passkey Backend выпускает новый access token для той же server session. Критические publish/restore/sign/role/token-rotation operations проверяют freshness и требуемую силу authentication перед выполнением.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

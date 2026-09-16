@@ -175,21 +175,33 @@ func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcT
 
 func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, result federation.Result, deviceID, totp, recoveryCode, rateKey string) {
 	user := result.User
-	if ok, reason := s.State.Security.verifySecondFactor(user.ID, totp, recoveryCode); !ok {
-		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
-		_ = s.flushPersistenceState950("auth-mfa-failed")
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
-		return
-	}
 	if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-credential-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider-credential:failed", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
 		return
 	}
+	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, totp, recoveryCode)
+	if mfaErr != nil {
+		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
+		_ = s.flushPersistenceState950("auth-mfa-failed")
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: mfaErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusUnauthorized, "требуется действительный настроенный метод MFA")
+		return
+	}
+	deviceID = firstNonEmpty(deviceID, "oidc-client")
+	if mfa.NeedPasskey {
+		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods)
+		if err != nil {
+			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			return
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-passkey-required-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:mfa:passkey-required", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": continuation})
+		return
+	}
 	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))
 	_ = s.flushPersistenceState950("auth-login-success")
-	accessToken, refreshToken, session, err := s.issueLoginSession(user, r, firstNonEmpty(deviceID, "oidc-client"))
+	accessToken, refreshToken, session, err := s.issueLoginSessionWithAuth(user, r, deviceID, mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
@@ -200,7 +212,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 	now := time.Now().UTC()
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "authenticated", "provider": result.Provider.ID, "identity": map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "subject": result.Identity.Subject}, "authMethods": result.AuthMethods, "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "authenticated", "provider": result.Provider.ID, "identity": map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "subject": result.Identity.Subject}, "authMethods": mfa.Methods, "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
 }
 
 func (s Server) writeOIDCError115(w http.ResponseWriter, err error) {

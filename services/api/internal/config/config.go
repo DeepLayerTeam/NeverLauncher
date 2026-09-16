@@ -55,6 +55,9 @@ type Config struct {
 	AuthOIDCProvidersFile              string
 	AuthMicrosoftProvidersJSON         string
 	AuthMicrosoftProvidersFile         string
+	WebAuthnRPID                       string
+	WebAuthnRPName                     string
+	WebAuthnOrigins                    []string
 }
 
 // Load читает конфигурацию из переменных окружения.
@@ -66,13 +69,15 @@ func Load() Config {
 		redisURL = "redis://" + redisAddr + "/0"
 	}
 	production := IsProductionEnvironment(environment)
+	publicURL := env("NEVERLAUNCHER_PUBLIC_URL", "http://localhost:8080")
+	webauthnRPID, webauthnOrigin := defaultWebAuthnScope(publicURL)
 	corsFallback := "http://localhost:5173,http://127.0.0.1:5173"
 	if production {
 		corsFallback = ""
 	}
 	return Config{
 		HTTPAddr:                           env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
-		PublicURL:                          env("NEVERLAUNCHER_PUBLIC_URL", "http://localhost:8080"),
+		PublicURL:                          publicURL,
 		DatabaseDSN:                        env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
 		RepositoryDriver:                   env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
 		SQLDriver:                          env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
@@ -114,7 +119,19 @@ func Load() Config {
 		AuthOIDCProvidersFile:              env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
 		AuthMicrosoftProvidersJSON:         env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
 		AuthMicrosoftProvidersFile:         env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
+		WebAuthnRPID:                       env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
+		WebAuthnRPName:                     env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
+		WebAuthnOrigins:                    envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
 	}
+}
+
+func defaultWebAuthnScope(publicURL string) (string, string) {
+	u, err := url.Parse(strings.TrimSpace(publicURL))
+	if err != nil || u.Hostname() == "" {
+		return "localhost", "http://localhost:8080"
+	}
+	origin := u.Scheme + "://" + u.Host
+	return strings.ToLower(u.Hostname()), origin
 }
 
 // IsProductionEnvironment возвращает true для production/prod и строгого e2e-production контура.
@@ -154,6 +171,33 @@ func ValidateProduction(cfg Config) error {
 	}
 	if !publicURLValid {
 		problems = append(problems, "NEVERLAUNCHER_PUBLIC_URL в production должен быть абсолютным HTTPS URL (HTTP loopback разрешён только для e2e-production)")
+	}
+	rpID := strings.ToLower(strings.TrimSpace(cfg.WebAuthnRPID))
+	if rpID == "" {
+		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_ID обязателен")
+	} else if strings.Contains(rpID, "://") || strings.ContainsAny(rpID, "/?#") || strings.Contains(rpID, ":") {
+		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_ID должен быть hostname/domain без scheme, port и path")
+	}
+	if strings.TrimSpace(cfg.WebAuthnRPName) == "" {
+		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_NAME обязателен")
+	}
+	if len(cfg.WebAuthnOrigins) == 0 {
+		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_ORIGINS обязателен")
+	}
+	for _, origin := range cfg.WebAuthnOrigins {
+		u, parseErr := url.Parse(strings.TrimSpace(origin))
+		secure := parseErr == nil && u.Host != "" && u.Scheme == "https" && (u.Path == "" || u.Path == "/") && u.RawQuery == "" && u.Fragment == ""
+		if !secure && isE2EProductionEnvironment(cfg.Environment) && parseErr == nil && u.Scheme == "http" && isLoopbackHost(u.Hostname()) {
+			secure = true
+		}
+		if !secure {
+			problems = append(problems, fmt.Sprintf("некорректный WebAuthn origin: %q", origin))
+			continue
+		}
+		host := strings.ToLower(strings.TrimSpace(u.Hostname()))
+		if rpID != "" && host != rpID && !strings.HasSuffix(host, "."+rpID) {
+			problems = append(problems, fmt.Sprintf("WebAuthn origin %q не находится внутри RP ID %q", origin, rpID))
+		}
 	}
 	if len(cfg.CORSAllowedOrigins) == 0 {
 		problems = append(problems, "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS обязателен в production")

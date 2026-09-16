@@ -15,7 +15,8 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-const federationSchema116 = "0.11.6"
+const federationSchema117 = "0.11.7"
+const federationSchema116 = federationSchema117
 const federationSchema115 = federationSchema116
 const federationSchema114 = federationSchema116
 

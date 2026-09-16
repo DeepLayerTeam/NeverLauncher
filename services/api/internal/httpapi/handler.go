@@ -14,7 +14,7 @@ func (s Server) Handler() http.Handler {
 	if s.Federation == nil {
 		core, err := NewFederationCore116(context.Background(), s.Repo, s.Config)
 		if err != nil {
-			panic("federation core 0.11.6 initialization failed: " + err.Error())
+			panic("federation core 0.11.7 initialization failed: " + err.Error())
 		}
 		s.Federation = core
 	}

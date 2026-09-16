@@ -25,7 +25,7 @@ type authSessionPostgres111 struct {
 // storage to normalized PostgreSQL tables. PostgreSQL is mandatory whenever the
 // repository itself is persistent; memory mode remains available only for dev/tests.
 func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
-	if state == nil || state.AuthSessions == nil || state.Security == nil {
+	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil {
 		return errors.New("auth core runtime state не инициализирован")
 	}
 	if isMemoryRepository950(cfg.RepositoryDriver) {
@@ -52,7 +52,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		return fmt.Errorf("auth core postgres ping: %w", err)
 	}
 	// Fail closed if migrations were disabled or did not create the normalized schema.
-	for _, table := range []string{"auth_sessions", "refresh_token_families", "refresh_tokens", "mfa_methods", "recovery_codes", "auth_events"} {
+	for _, table := range []string{"auth_sessions", "refresh_token_families", "refresh_tokens", "mfa_methods", "recovery_codes", "auth_events", "webauthn_credentials", "webauthn_challenges", "mfa_policies"} {
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
 			db.Close()
@@ -64,10 +64,16 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	}
 	state.AuthSessions.persistent = &authSessionPostgres111{db: db}
 	state.Security.persistent = &securityPostgres111{db: db, secret: cfg.AuthTokenSecret}
+	state.Passkeys.persistent = &passkeyPostgres117{db: db}
 	return nil
 }
 
 func (p *authSessionPostgres111) create(user model.User, r *http.Request, deviceID string) (authSessionRecord, string, error) {
+	return p.createWithAuth(user, r, deviceID, []string{"password"}, "single-factor", time.Now().UTC(), "", "local")
+}
+
+func (p *authSessionPostgres111) createWithAuth(user model.User, r *http.Request, deviceID string, methods []string, strength string, authTime time.Time, identityID, provider string) (authSessionRecord, string, error) {
+	methods, strength, authTime, provider = normalizeSessionAuth117(methods, strength, authTime, provider)
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	tx, err := p.db.BeginTx(ctx, nil)
@@ -98,9 +104,10 @@ func (p *authSessionPostgres111) create(user model.User, r *http.Request, device
 		return authSessionRecord{}, "", err
 	}
 	expires := now.Add(refreshTokenTTL)
-	record := authSessionRecord{ID: sessionID, UserID: user.ID, Email: user.Email, RoleID: user.RoleID, DeviceID: deviceID, Device: deviceID, Status: "active", RefreshHash: hashRefreshToken(refreshToken), RefreshFamily: familyID, CreatedAt: now, LastSeenAt: now, ExpiresAt: expires, IP: clientIP(r), UserAgent: r.UserAgent()}
+	record := authSessionRecord{ID: sessionID, UserID: user.ID, Email: user.Email, RoleID: user.RoleID, DeviceID: deviceID, Device: deviceID, Status: "active", RefreshHash: hashRefreshToken(refreshToken), RefreshFamily: familyID, AuthMethods: append([]string(nil), methods...), AuthStrength: strength, AuthTime: authTime, IdentityID: strings.TrimSpace(identityID), Provider: provider, CreatedAt: now, LastSeenAt: now, ExpiresAt: expires, IP: clientIP(r), UserAgent: r.UserAgent()}
 
-	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,created_at,last_seen_at,expires_at,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8,$8,$9,$10,$11)`, record.ID, record.UserID, record.Email, record.RoleID, record.DeviceID, record.Device, familyID, now, expires, record.IP, record.UserAgent); err != nil {
+	methodsJSON, _ := json.Marshal(record.AuthMethods)
+	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,$9,$10,$11,$12,$13,$13,$14,$15,$16)`, record.ID, record.UserID, record.Email, record.RoleID, record.DeviceID, record.Device, familyID, string(methodsJSON), record.AuthStrength, record.AuthTime, record.IdentityID, record.Provider, now, expires, record.IP, record.UserAgent); err != nil {
 		return authSessionRecord{}, "", err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status,created_at) VALUES($1,$2,$3,'active',$4)`, familyID, record.ID, user.ID, now); err != nil {
@@ -156,7 +163,7 @@ func (p *authSessionPostgres111) rotate(refreshToken string) (authSessionRecord,
 		return authSessionRecord{}, "", errRefreshTokenInvalid
 	}
 
-	record, err := scanSession111(tx.QueryRowContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE id=$1 FOR UPDATE`, sessionID))
+	record, err := scanSession111(tx.QueryRowContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE id=$1 FOR UPDATE`, sessionID))
 	if err != nil || record.Status != "active" || record.ExpiresAt.Before(time.Now().UTC()) {
 		if err == nil {
 			now := time.Now().UTC()
@@ -209,6 +216,45 @@ func (p *authSessionPostgres111) active(sessionID, userID string) bool {
 	}
 	n, _ := res.RowsAffected()
 	return n == 1
+}
+
+func (p *authSessionPostgres111) get(sessionID, userID string) (authSessionRecord, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	rec, err := scanSession111(p.db.QueryRowContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now()`, sessionID, userID))
+	return rec, err == nil
+}
+
+func (p *authSessionPostgres111) stepUp(sessionID, userID string, methods []string, strength string, authTime time.Time) (authSessionRecord, error) {
+	methods, strength, authTime, _ = normalizeSessionAuth117(methods, strength, authTime, "local")
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return authSessionRecord{}, err
+	}
+	defer tx.Rollback()
+	rec, err := scanSession111(tx.QueryRowContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now() FOR UPDATE`, sessionID, userID))
+	if err != nil {
+		return authSessionRecord{}, errAuthRequired
+	}
+	rec.AuthMethods = mergeAuthMethods117(rec.AuthMethods, methods...)
+	if authStrengthLevel117(strength) > authStrengthLevel117(rec.AuthStrength) {
+		rec.AuthStrength = strength
+	}
+	rec.AuthTime = authTime
+	raw, _ := json.Marshal(rec.AuthMethods)
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET auth_methods=$3::jsonb,auth_strength=$4,auth_time=$5,last_seen_at=now() WHERE id=$1 AND user_id=$2`, sessionID, userID, string(raw), rec.AuthStrength, rec.AuthTime); err != nil {
+		return authSessionRecord{}, err
+	}
+	if err := p.insertEventTx111(ctx, tx, userID, sessionID, rec.RefreshFamily, "session-step-up", map[string]any{"authStrength": rec.AuthStrength, "authMethods": rec.AuthMethods}); err != nil {
+		return authSessionRecord{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return authSessionRecord{}, err
+	}
+	rec.LastSeenAt = time.Now().UTC()
+	return rec, nil
 }
 
 func (p *authSessionPostgres111) revoke(sessionID, reason string) bool {
@@ -280,7 +326,7 @@ func (p *authSessionPostgres111) revokeUser(userID, reason string) int {
 func (p *authSessionPostgres111) listByUser(userID string) []authSessionRecord {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	rows, err := p.db.QueryContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE user_id=$1 ORDER BY last_seen_at DESC`, userID)
+	rows, err := p.db.QueryContext(ctx, `SELECT id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent FROM auth_sessions WHERE user_id=$1 ORDER BY last_seen_at DESC`, userID)
 	if err != nil {
 		return []authSessionRecord{}
 	}
@@ -369,7 +415,9 @@ func (p *authSessionPostgres111) importLegacySessions(items []authSessionRecord)
 			continue
 		}
 		status := firstNonEmpty(rec.Status, "active")
-		_, err = tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,'0001-01-01T00:00:00Z')::timestamptz,$13,$14,$15) ON CONFLICT(id) DO NOTHING`, rec.ID, rec.UserID, rec.Email, rec.RoleID, rec.DeviceID, rec.Device, status, rec.RefreshFamily, rec.CreatedAt, rec.LastSeenAt, rec.ExpiresAt, rec.RevokedAt.UTC().Format(time.RFC3339), rec.RevokedReason, rec.IP, rec.UserAgent)
+		methods, strength, authTime, provider := normalizeSessionAuth117(rec.AuthMethods, rec.AuthStrength, rec.AuthTime, rec.Provider)
+		methodsJSON, _ := json.Marshal(methods)
+		_, err = tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16,NULLIF($17,'0001-01-01T00:00:00Z')::timestamptz,$18,$19,$20) ON CONFLICT(id) DO NOTHING`, rec.ID, rec.UserID, rec.Email, rec.RoleID, rec.DeviceID, rec.Device, status, rec.RefreshFamily, string(methodsJSON), strength, authTime, rec.IdentityID, provider, rec.CreatedAt, rec.LastSeenAt, rec.ExpiresAt, rec.RevokedAt.UTC().Format(time.RFC3339), rec.RevokedReason, rec.IP, rec.UserAgent)
 		if err != nil {
 			return err
 		}
@@ -394,8 +442,13 @@ type rowScanner111 interface{ Scan(dest ...any) error }
 func scanSession111(row rowScanner111) (authSessionRecord, error) {
 	var rec authSessionRecord
 	var revoked sql.NullTime
-	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent); err != nil {
+	var methodsJSON []byte
+	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &methodsJSON, &rec.AuthStrength, &rec.AuthTime, &rec.IdentityID, &rec.Provider, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent); err != nil {
 		return authSessionRecord{}, err
+	}
+	_ = json.Unmarshal(methodsJSON, &rec.AuthMethods)
+	if len(rec.AuthMethods) == 0 {
+		rec.AuthMethods = []string{"unknown"}
 	}
 	if revoked.Valid {
 		rec.RevokedAt = revoked.Time

@@ -13,6 +13,7 @@ import (
 func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)
+	token, _ = registerTestPasskey117(t, handler, token)
 	authJSON := func(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
@@ -90,6 +91,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 func TestPublishedPackageIsImmutable(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)
+	token, _ = registerTestPasskey117(t, handler, token)
 	auth := func(req *http.Request) { req.Header.Set("Authorization", "Bearer "+token) }
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"immutable-v4-test"}`))

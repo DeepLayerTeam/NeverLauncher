@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.7 — Passkeys / WebAuthn + MFA 2.0
+
+`0.11.7` добавляет production WebAuthn/passkeys поверх существующего Federation Core. Passkeys являются реальным authentication method: credentials и одноразовые challenges сохраняются в PostgreSQL, assertion проверяет RP ID/origin/challenge/signature/user verification/sign counter, а password/SQL/HTTP/OIDC/Microsoft login проходит единый MFA policy до выпуска Never session.
+
+### WebAuthn / Passkeys
+
+- Discoverable credentials с `residentKey=required` и `userVerification=required`; поддерживаются ES256, Ed25519 и RS256 COSE keys.
+- Registration принимает только `attestation=none`, проверяет RP ID hash, UP/UV, AAGUID, credential ID и COSE public key.
+- Passwordless login и passkey continuation для password/federated login используют одноразовые PostgreSQL-backed challenges с TTL 5 минут.
+- Session metadata содержит `authMethods`, `authStrength` (`single-factor`/`mfa`/`phishing-resistant`) и `authTime`; refresh сохраняет эту силу, а step-up выпускает новый access token.
+- Passkey credential lifecycle: list/rename/revoke, backup flags, transports, `lastUsedAt`, sign counter и recovery-code cleanup при отзыве последнего credential.
+
+### MFA 2.0 / Step-up
+
+- Per-user policy: `optional`, `required`, `phishing-resistant`. TOTP и recovery codes остаются рабочими; passkey может удовлетворить MFA и обязателен для phishing-resistant policy.
+- Критические операции используют fresh authentication: release publish/rollback и migrations требуют свежую MFA; package signing, backup restore, user role changes и ServerBridge token rotation требуют свежую phishing-resistant authentication.
+- WebAuthn RP ID/origins валидируются fail-closed в production; sensitive passkey/OIDC/Microsoft auth routes используют auth rate-limit bucket.
+
+
 ## 0.11.6 — Microsoft Connector
 
 `0.11.6` добавляет production Microsoft identity connector как специализацию рабочего OIDC Connector/Federation Core, а не отдельный OAuth engine. Поддерживаются Microsoft identity platform v2 Authorization Code + PKCE S256, `common`/`organizations`/`consumers` и single-tenant GUID authorities, global/US Gov/China clouds, tenant-independent issuer validation, JWKS signing-key issuer validation и стабильная canonical identity на основе `tid + oid`. Microsoft login не считается доказательством владения Minecraft.

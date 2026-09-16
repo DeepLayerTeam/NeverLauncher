@@ -108,16 +108,28 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := result.User
-	if ok, reason := s.State.Security.verifySecondFactor(user.ID, req.TOTP, req.RecoveryCode); !ok {
+	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, req.TOTP, req.RecoveryCode)
+	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("auth-mfa-failed")
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: mfaErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusUnauthorized, "требуется действительный настроенный метод MFA")
+		return
+	}
+	deviceID := firstNonEmpty(req.DeviceID, "desktop-client")
+	if mfa.NeedPasskey {
+		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods)
+		if err != nil {
+			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			return
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-passkey-required-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:mfa:passkey-required", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": continuation})
 		return
 	}
 	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))
 	_ = s.flushPersistenceState950("auth-login-success")
-	accessToken, refreshToken, session, err := s.issueLoginSession(user, r, firstNonEmpty(req.DeviceID, "desktop-client"))
+	accessToken, refreshToken, session, err := s.issueLoginSessionWithAuth(user, r, deviceID, mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
@@ -133,7 +145,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		"status":        "authenticated",
 		"provider":      result.Provider.ID,
 		"identity":      map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "subject": result.Identity.Subject},
-		"authMethods":   result.AuthMethods,
+		"authMethods":   mfa.Methods,
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),
 		"tokens":        map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true},
@@ -223,15 +235,16 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
 		"status":        "federation-core-active",
-		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
 		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),
+		"passkeys":      s.State.Passkeys.summary(),
 	}
 }
 
 func (s Server) sessionPolicyPayload(version string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced", "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser, "revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke"}, "sessionBackend": s.State.AuthSessions.summary()}
+	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced", "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser, "revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke"}, "authStrengths": []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5, "sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary()}
 }
 
 func desktopAuthPolicyPayload(version string) map[string]any {

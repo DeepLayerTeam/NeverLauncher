@@ -32,6 +32,9 @@ func TestValidateProductionAcceptsSeparatedRootsAndExplicitOrigins(t *testing.T)
 		StorageLocalPath:   "/var/lib/neverlauncher/storage",
 		BackupRoot:         "/var/lib/neverlauncher/backups",
 		CORSAllowedOrigins: []string{"https://launcher.example.com"},
+		WebAuthnRPID:       "example.com",
+		WebAuthnRPName:     "NeverLauncher",
+		WebAuthnOrigins:    []string{"https://launcher.example.com"},
 	}
 	if err := ValidateProduction(cfg); err != nil {
 		t.Fatalf("valid production configuration rejected: %v", err)
@@ -50,6 +53,9 @@ func TestValidateE2EProductionAllowsOnlyLoopbackHTTP(t *testing.T) {
 		StorageLocalPath:   "/var/lib/neverlauncher/storage",
 		BackupRoot:         "/var/lib/neverlauncher/backups",
 		CORSAllowedOrigins: []string{"https://e2e.invalid"},
+		WebAuthnRPID:       "127.0.0.1",
+		WebAuthnRPName:     "NeverLauncher E2E",
+		WebAuthnOrigins:    []string{"http://127.0.0.1:18080"},
 	}
 	if err := ValidateProduction(cfg); err != nil {
 		t.Fatalf("loopback HTTP must be accepted only for e2e-production: %v", err)

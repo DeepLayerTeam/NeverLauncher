@@ -99,6 +99,9 @@ func isSensitiveAuthRoute(r *http.Request) bool {
 	return path == "/api/v1/auth/login" ||
 		path == "/api/v1/admin/login" ||
 		path == "/api/v1/install/bootstrap-admin" ||
+		strings.HasPrefix(path, "/api/v1/auth/passkeys/") ||
+		strings.HasPrefix(path, "/api/v1/auth/oidc/") ||
+		strings.HasPrefix(path, "/api/v1/auth/microsoft/") ||
 		strings.Contains(path, "/password-reset") ||
 		strings.Contains(path, "/email-verification")
 }

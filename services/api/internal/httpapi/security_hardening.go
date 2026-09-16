@@ -109,6 +109,9 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 		"implemented": []string{
 			"TOTP enrollment with RFC 6238 verification",
 			"TOTP enforcement during admin/player login when enabled",
+			"WebAuthn Level 3 passkey registration and passwordless authentication with user verification",
+			"MFA 2.0 policies: optional, required, phishing-resistant",
+			"fresh step-up authentication for critical operations",
 			"single-use recovery codes with SHA-256 hashing",
 			"single-use password reset tokens with session revocation",
 			"single-use email verification tokens",
@@ -118,6 +121,14 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 		"endpoints": []string{
 			"GET /api/v1/operations/compliance",
 			"GET /api/v1/operations/compliance",
+			"POST /api/v1/auth/passkeys/register/begin",
+			"POST /api/v1/auth/passkeys/register/complete",
+			"POST /api/v1/auth/passkeys/login/begin",
+			"POST /api/v1/auth/passkeys/login/complete",
+			"POST /api/v1/auth/passkeys/step-up/begin",
+			"POST /api/v1/auth/passkeys/step-up/complete",
+			"PUT /api/v1/auth/mfa/policy",
+			"POST /api/v1/auth/mfa/step-up/totp",
 			"POST /api/v1/auth/totp/enroll",
 			"POST /api/v1/auth/totp/verify",
 			"POST /api/v1/auth/totp/disable",
@@ -132,13 +143,17 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 			"passwordHashing":          "Argon2id/PHC for all new passwords",
 			"legacyHashMigration":      "sha256 accepted only for existing legacy admin users until password reset",
 			"totpAlgorithm":            "HMAC-SHA1, 30 second step, 6 digits",
+			"webauthn":                 "Level 3; UV required; discoverable credentials; ES256/Ed25519/RS256",
+			"mfaPolicy":                []string{"optional", "required", "phishing-resistant"},
+			"stepUpFreshnessMinutes":   5,
 			"recoveryCodes":            "generated once, stored hashed, consumed once",
 			"passwordResetTokenTtlMin": int(passwordResetTTL.Minutes()),
 			"emailVerificationTtlHour": int(emailVerificationTTL.Hours()),
 			"loginFailureLimit":        loginFailureLimit,
 			"lockoutMinutes":           int(loginLockoutDuration.Minutes()),
 		},
-		"state": s.State.Security.summary(),
+		"state":    s.State.Security.summary(),
+		"passkeys": s.State.Passkeys.summary(),
 	}
 }
 
@@ -208,6 +223,10 @@ func (s Server) authTOTPDisable(w http.ResponseWriter, r *http.Request) {
 	}
 	var req totpVerifyRequest902
 	_ = json.NewDecoder(r.Body).Decode(&req)
+	if s.State.Passkeys != nil && s.State.Passkeys.policy(claims.Sub) == mfaRequired117 && s.State.Passkeys.countByUser(claims.Sub) == 0 {
+		writeError(w, http.StatusConflict, "MFA policy REQUIRED требует сохранить хотя бы один активный MFA method")
+		return
+	}
 	if !s.State.Security.disableTOTP(claims.Sub, req.Code) {
 		writeError(w, http.StatusUnauthorized, "неверный TOTP код или TOTP не включён")
 		return
@@ -223,7 +242,15 @@ func (s Server) authRecoveryCodesRegenerate(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	codes, err := s.State.Security.generateRecoveryCodes(claims.Sub, 10)
+	methodID := "mfa-totp-" + claims.Sub
+	if !s.State.Security.totpEnabled(claims.Sub) {
+		if s.State.Passkeys == nil || s.State.Passkeys.countByUser(claims.Sub) == 0 {
+			writeError(w, http.StatusBadRequest, "сначала включите TOTP или зарегистрируйте passkey")
+			return
+		}
+		methodID = "mfa-passkey-" + claims.Sub
+	}
+	codes, err := s.State.Security.generateRecoveryCodesForMethod117(claims.Sub, 10, methodID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать recovery codes")
 		return
@@ -408,6 +435,51 @@ func (s *securityHardeningStore) verifySecondFactor(userID, totp, recovery strin
 		return true, "recovery-ok"
 	}
 	return false, "mfa-required"
+}
+
+func (s *securityHardeningStore) totpEnabled(userID string) bool {
+	if s.persistent != nil {
+		return s.persistent.totpEnabled(userID)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.mfa[userID].Enabled
+}
+
+func (s *securityHardeningStore) ensurePasskeyMethod117(userID string, enabled bool) error {
+	if s.persistent != nil {
+		return s.persistent.ensurePasskeyMethod117(userID, enabled)
+	}
+	return nil
+}
+
+func (s *securityHardeningStore) generateRecoveryCodesForMethod117(userID string, count int, methodID string) ([]string, error) {
+	if s.persistent != nil {
+		return s.persistent.generateRecoveryCodesForMethod117(userID, count, methodID)
+	}
+	// Memory mode has no relational method foreign key; reuse the existing single-use store.
+	s.mu.Lock()
+	rec := s.mfa[userID]
+	if rec.Recovery == nil {
+		rec.Recovery = map[string]string{}
+	}
+	codes := make([]string, 0, count)
+	fresh := map[string]string{}
+	for i := 0; i < count; i++ {
+		token, err := randomToken("nlrec")
+		if err != nil {
+			s.mu.Unlock()
+			return nil, err
+		}
+		code := strings.ToUpper(strings.ReplaceAll(token, "_", "-"))
+		codes = append(codes, code)
+		fresh[hashSecurityToken902(code)] = "active"
+	}
+	rec.Recovery = fresh
+	rec.UpdatedAt = time.Now().UTC()
+	s.mfa[userID] = rec
+	s.mu.Unlock()
+	return codes, nil
 }
 
 func (s *securityHardeningStore) generateRecoveryCodes(userID string, count int) ([]string, error) {
