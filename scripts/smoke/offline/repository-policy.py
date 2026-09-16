@@ -91,6 +91,12 @@ release_migration = api_files["0011_auth_federation_release_0120.sql"].read_text
 for required in ["trg_users_require_local_identity", "trg_auth_identities_preserve_local", "auth_identities_provider_canonical_check"]:
     if required not in release_migration:
         fail(f"0.12.0 federation release migration missing invariant: {required}")
+if "0012_device_trust_core_0121.sql" not in api_files:
+    fail("0.12.1 Device Trust Core migration is missing")
+device_migration = api_files["0012_device_trust_core_0121.sql"].read_text(encoding="utf-8")
+for required in ["trusted_devices", "device_challenges", "trusted_device_id", "device_trust_state", "auth_sessions_trusted_device_fk"]:
+    if required not in device_migration:
+        fail(f"0.12.1 device trust migration missing invariant: {required}")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [
@@ -247,6 +253,20 @@ if "INSERT INTO auth_identities" in auth_session_postgres:
 passkey_handlers = read("services/api/internal/httpapi/webauthn_handlers_117.go")
 if '"local", "identity-local-"+user.ID' in passkey_handlers or 'firstNonEmpty(provider, "local")' in passkey_handlers:
     fail("0.12.0 passwordless passkey must not masquerade as a local provider identity")
+device_routes = read("services/api/internal/httpapi/routes_auth.go")
+device_trust = read("services/api/internal/httpapi/device_trust_0121.go")
+device_repo = read("services/api/internal/repository/devices_0121.go")
+for required in ["/api/v1/auth/devices/register/begin", "/api/v1/auth/devices/register/complete", "/api/v1/auth/devices/{deviceId}/verify/complete", "/api/v1/auth/device-trust", "/api/v1/admin/auth/devices"]:
+    if required not in device_routes:
+        fail(f"0.12.1 Device Trust route missing: {required}")
+for required in ["ed25519.Verify", "ConsumeDeviceChallenge", "bindTrustedDevice121", "deviceProofPayload0121"]:
+    if required not in device_trust:
+        fail(f"0.12.1 Device Trust proof path missing: {required}")
+for required in ["key_fingerprint", "status='revoked'", "device_challenges", "trusted_device_id"]:
+    if required not in device_repo:
+        fail(f"0.12.1 Device Trust persistence/revocation incomplete: {required}")
+if not (ROOT / "services/api/internal/httpapi/device_trust_0121_test.go").is_file():
+    fail("0.12.1 Device Trust HTTP E2E test is missing")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

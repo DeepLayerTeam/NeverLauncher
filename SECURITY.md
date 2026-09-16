@@ -9,6 +9,16 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Device Trust Core 0.12.1
+
+Поле `deviceId` из login/session metadata не является доказательством устройства. В `0.12.1` trusted device создаётся только после Ed25519 proof-of-possession: Backend выдаёт одноразовый persistent challenge, привязанный к canonical user, device id, purpose и Never session; клиент подписывает канонический payload, а Backend проверяет signature публичным ключом.
+
+В `trusted_devices` хранится только public key и SHA-256 fingerprint. Private device key не должен передаваться Backend или попадать в логи. Assurance этой версии называется `proof-of-possession`; NeverLauncher не заявляет hardware-bound identity до появления отдельной TPM/Secure Enclave/OS secure-storage и attestation проверки.
+
+`device_challenges` single-use и расходуются атомарно; replay/expired challenge отклоняется. После успешного proof session получает `trusted_device_id/device_trust_state/device_verified_at`, а новый access JWT — `device_id/device_trust/device_verified_at`. Revoke registry device отзывает все связанные Never sessions и refresh-token families и переводит session risk в `compromised`.
+
+Административный revoke устройства требует свежую phishing-resistant authentication. Device registry не заменяет WebAuthn user authentication: passkey доказывает пользователя/RP ceremony, device key доказывает владение конкретной зарегистрированной installation/device identity.
+
 ## Federated provider credentials
 
 С `0.11.10` migration history считается частью security boundary. Production upgrade должен выполняться через `nl db migrate apply` и завершаться `nl db migrate verify`. Unknown/future migration, checksum drift или незапечатанный checksum блокируют verify; apply не продолжает работу при неизвестной migration или несовпадающем checksum. Migration `0010` также fail-closed проверяет согласованность auth sessions, refresh-token families/tokens и provider credentials до установки новых relational constraints.

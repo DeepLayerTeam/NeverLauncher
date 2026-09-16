@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.12.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.12.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -98,6 +98,99 @@
             "$ref": "#/components/responses/Unauthorized"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/auth/devices": {
+      "get": {
+        "operationId": "get_admin_auth_devices",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/admin/auth/devices",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "revoked"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/auth/devices/{deviceId}": {
+      "delete": {
+        "operationId": "delete_admin_auth_devices_by_deviceId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "DELETE /api/v1/admin/auth/devices/{deviceId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -1528,6 +1621,353 @@
             "BearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/auth/device-trust": {
+      "get": {
+        "operationId": "get_auth_device_trust",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/device-trust",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/devices": {
+      "get": {
+        "operationId": "get_auth_devices",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/auth/devices",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/devices/register/begin": {
+      "post": {
+        "operationId": "post_auth_devices_register_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/register/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegisterBeginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/register/complete": {
+      "post": {
+        "operationId": "post_auth_devices_register_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/register/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceProofCompleteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/{deviceId}": {
+      "delete": {
+        "operationId": "delete_auth_devices_by_deviceId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "DELETE /api/v1/auth/devices/{deviceId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "patch_auth_devices_by_deviceId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "PATCH /api/v1/auth/devices/{deviceId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrustedDeviceRenameRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/{deviceId}/verify/begin": {
+      "post": {
+        "operationId": "post_auth_devices_by_deviceId_verify_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/{deviceId}/verify/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/{deviceId}/verify/complete": {
+      "post": {
+        "operationId": "post_auth_devices_by_deviceId_verify_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/{deviceId}/verify/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceProofCompleteRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/auth/email-verification/confirm": {
@@ -7028,6 +7468,69 @@
             ]
           }
         ]
+      },
+      "DeviceRegisterBeginRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "platform": {
+            "type": "string",
+            "maxLength": 48
+          },
+          "clientVersion": {
+            "type": "string",
+            "maxLength": 96
+          }
+        }
+      },
+      "DeviceProofCompleteRequest": {
+        "type": "object",
+        "required": [
+          "challengeId",
+          "challenge",
+          "signature"
+        ],
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 1
+          },
+          "publicKey": {
+            "type": "string",
+            "description": "Raw Ed25519 public key encoded as base64url"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Ed25519 signature encoded as base64url"
+          }
+        }
+      },
+      "TrustedDeviceRenameRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        }
       },
       "PasswordResetRequest": {
         "type": "object",

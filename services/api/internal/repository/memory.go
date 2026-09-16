@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -37,6 +38,15 @@ type Repository interface {
 	SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error)
 	SaveFederatedUser(ctx context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error)
 	TouchAuthIdentity(id string) (model.AuthIdentity, error)
+	SaveTrustedDevice(ctx context.Context, device model.TrustedDevice) (model.TrustedDevice, error)
+	GetTrustedDevice(userID, deviceID string) (model.TrustedDevice, error)
+	GetTrustedDeviceByID(deviceID string) (model.TrustedDevice, error)
+	ListTrustedDevices(userID, status string) []model.TrustedDevice
+	RenameTrustedDevice(userID, deviceID, name string) (model.TrustedDevice, error)
+	RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.TrustedDevice, error)
+	TouchTrustedDevice(ctx context.Context, userID, deviceID, ip, userAgent string) (model.TrustedDevice, error)
+	SaveDeviceChallenge(ctx context.Context, challenge model.DeviceChallenge) error
+	ConsumeDeviceChallenge(ctx context.Context, id, userID, deviceID, purpose, challengeHash string, now time.Time) (model.DeviceChallenge, error)
 	ListRoles() []model.Role
 	ListAuditEvents() []model.AuditEvent
 	AddAuditEvent(event model.AuditEvent)
@@ -56,6 +66,7 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	deviceMu            sync.Mutex
 	projects            []model.Project
 	profiles            []model.Profile
 	channels            []model.ReleaseChannel
@@ -67,6 +78,8 @@ type MemoryRepository struct {
 	minecraftProfiles   []model.MinecraftProfile
 	minecraftSessions   []model.MinecraftSession
 	minecraftJoins      []model.MinecraftJoin
+	trustedDevices      []model.TrustedDevice
+	deviceChallenges    []model.DeviceChallenge
 	roles               []model.Role
 	audit               []model.AuditEvent
 	telemetry           []model.TelemetryEvent

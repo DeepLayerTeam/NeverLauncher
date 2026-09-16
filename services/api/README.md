@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Device Trust 0.12.1
+
+Backend хранит trusted devices отдельно от legacy session `deviceId`. Registration/verification использует persistent single-use challenge и Ed25519 signature; успешный proof связывает текущую Never session с `trusted_device_id` и обновляет JWT device claims. Пользовательские endpoints находятся под `/api/v1/auth/devices*`, административный registry — `/api/v1/admin/auth/devices`. Revoke device отзывает связанные session/refresh families.
+
+Migration `0012_device_trust_core_0121` обязательна для persistent production режима. Assurance `proof-of-possession` не является hardware attestation.
+
 ### Auth Federation 0.12
 
 Stable registry создаётся через `httpapi.NewFederationCore(...)`; Local/SQL/HTTP/OIDC/Microsoft проходят Connector SDK conformance до приёма трафика. Generic browser identity linking доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает runtime health и provisioning policy providers. Migration `0011_auth_federation_release_0120` закрепляет canonical local identity для password-capable users.

@@ -23,34 +23,37 @@ const (
 )
 
 type authSessionRecord struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"userId"`
-	Email           string    `json:"email"`
-	RoleID          string    `json:"roleId"`
-	DeviceID        string    `json:"deviceId"`
-	Device          string    `json:"device"`
-	Status          string    `json:"status"`
-	RefreshHash     string    `json:"-"`
-	RefreshFamily   string    `json:"refreshFamily"`
-	AuthMethods     []string  `json:"authMethods"`
-	AuthStrength    string    `json:"authStrength"`
-	AuthTime        time.Time `json:"authTime"`
-	IdentityID      string    `json:"identityId,omitempty"`
-	Provider        string    `json:"provider"`
-	CreatedAt       time.Time `json:"createdAt"`
-	LastSeenAt      time.Time `json:"lastSeenAt"`
-	ExpiresAt       time.Time `json:"expiresAt"`
-	RevokedAt       time.Time `json:"revokedAt,omitempty"`
-	RevokedReason   string    `json:"revokedReason,omitempty"`
-	IP              string    `json:"ip"`
-	UserAgent       string    `json:"userAgent"`
-	LastIP          string    `json:"lastIp"`
-	LastUserAgent   string    `json:"lastUserAgent"`
-	RiskState       string    `json:"riskState"`
-	RiskReasons     []string  `json:"riskReasons"`
-	RiskUpdatedAt   time.Time `json:"riskUpdatedAt,omitempty"`
-	DeviceRenamedAt time.Time `json:"deviceRenamedAt,omitempty"`
-	Current         bool      `json:"current,omitempty"`
+	ID               string    `json:"id"`
+	UserID           string    `json:"userId"`
+	Email            string    `json:"email"`
+	RoleID           string    `json:"roleId"`
+	DeviceID         string    `json:"deviceId"`
+	Device           string    `json:"device"`
+	Status           string    `json:"status"`
+	RefreshHash      string    `json:"-"`
+	RefreshFamily    string    `json:"refreshFamily"`
+	AuthMethods      []string  `json:"authMethods"`
+	AuthStrength     string    `json:"authStrength"`
+	AuthTime         time.Time `json:"authTime"`
+	IdentityID       string    `json:"identityId,omitempty"`
+	Provider         string    `json:"provider"`
+	CreatedAt        time.Time `json:"createdAt"`
+	LastSeenAt       time.Time `json:"lastSeenAt"`
+	ExpiresAt        time.Time `json:"expiresAt"`
+	RevokedAt        time.Time `json:"revokedAt,omitempty"`
+	RevokedReason    string    `json:"revokedReason,omitempty"`
+	IP               string    `json:"ip"`
+	UserAgent        string    `json:"userAgent"`
+	LastIP           string    `json:"lastIp"`
+	LastUserAgent    string    `json:"lastUserAgent"`
+	RiskState        string    `json:"riskState"`
+	RiskReasons      []string  `json:"riskReasons"`
+	RiskUpdatedAt    time.Time `json:"riskUpdatedAt,omitempty"`
+	DeviceRenamedAt  time.Time `json:"deviceRenamedAt,omitempty"`
+	TrustedDeviceID  string    `json:"trustedDeviceId,omitempty"`
+	DeviceTrustState string    `json:"deviceTrustState"`
+	DeviceVerifiedAt time.Time `json:"deviceVerifiedAt,omitempty"`
+	Current          bool      `json:"current,omitempty"`
 }
 
 type refreshTokenRecord111 struct {
@@ -120,29 +123,30 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 	}
 	familyID := fmt.Sprintf("rtf-%d", now.UnixNano())
 	record := authSessionRecord{
-		ID:            fmt.Sprintf("sess-%d", now.UnixNano()),
-		UserID:        user.ID,
-		Email:         user.Email,
-		RoleID:        user.RoleID,
-		DeviceID:      deviceID,
-		Device:        deviceID,
-		Status:        "active",
-		RefreshHash:   hashRefreshToken(refreshToken),
-		RefreshFamily: familyID,
-		AuthMethods:   append([]string(nil), methods...),
-		AuthStrength:  strength,
-		AuthTime:      authTime,
-		IdentityID:    strings.TrimSpace(identityID),
-		Provider:      provider,
-		CreatedAt:     now,
-		LastSeenAt:    now,
-		ExpiresAt:     now.Add(refreshTokenTTL),
-		IP:            clientIP(r),
-		UserAgent:     r.UserAgent(),
-		LastIP:        clientIP(r),
-		LastUserAgent: r.UserAgent(),
-		RiskState:     "normal",
-		RiskReasons:   []string{},
+		ID:               fmt.Sprintf("sess-%d", now.UnixNano()),
+		UserID:           user.ID,
+		Email:            user.Email,
+		RoleID:           user.RoleID,
+		DeviceID:         deviceID,
+		Device:           deviceID,
+		Status:           "active",
+		RefreshHash:      hashRefreshToken(refreshToken),
+		RefreshFamily:    familyID,
+		AuthMethods:      append([]string(nil), methods...),
+		AuthStrength:     strength,
+		AuthTime:         authTime,
+		IdentityID:       strings.TrimSpace(identityID),
+		Provider:         provider,
+		CreatedAt:        now,
+		LastSeenAt:       now,
+		ExpiresAt:        now.Add(refreshTokenTTL),
+		IP:               clientIP(r),
+		UserAgent:        r.UserAgent(),
+		LastIP:           clientIP(r),
+		LastUserAgent:    r.UserAgent(),
+		RiskState:        "normal",
+		RiskReasons:      []string{},
+		DeviceTrustState: "unverified",
 	}
 	s.sessions[record.ID] = record
 	s.families[familyID] = refreshFamilyRecord111{ID: familyID, SessionID: record.ID, UserID: user.ID, Status: "active", CreatedAt: now}
@@ -483,8 +487,55 @@ func (s *authSessionStore) revokeFamilyLocked111(familyID, reason string, now ti
 	}
 }
 
+func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID string, verifiedAt time.Time) (authSessionRecord, error) {
+	if s.persistent != nil {
+		return s.persistent.bindTrustedDevice121(sessionID, userID, deviceID, verifiedAt)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rec, ok := s.sessions[sessionID]
+	if !ok || rec.UserID != userID || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errSessionNotFound118
+	}
+	rec.TrustedDeviceID = strings.TrimSpace(deviceID)
+	rec.DeviceTrustState = "verified"
+	rec.DeviceVerifiedAt = verifiedAt.UTC()
+	rec.LastSeenAt = time.Now().UTC()
+	s.sessions[sessionID] = rec
+	return sanitizeSessionRecord(rec), nil
+}
+
+func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason string) int {
+	if s.persistent != nil {
+		return s.persistent.revokeTrustedDevice121(userID, deviceID, reason)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	count := 0
+	for id, rec := range s.sessions {
+		if rec.UserID != strings.TrimSpace(userID) || rec.TrustedDeviceID != strings.TrimSpace(deviceID) || rec.Status != "active" {
+			continue
+		}
+		rec.Status = "revoked"
+		rec.RevokedAt = now
+		rec.RevokedReason = firstNonEmpty(strings.TrimSpace(reason), "device-revoked")
+		rec.RiskState = "compromised"
+		rec.RiskReasons = mergeRiskReasons118(rec.RiskReasons, rec.RevokedReason)
+		rec.RiskUpdatedAt = now
+		rec.DeviceTrustState = "revoked"
+		s.sessions[id] = rec
+		s.revokeFamilyLocked111(rec.RefreshFamily, rec.RevokedReason, now)
+		count++
+	}
+	return count
+}
+
 func sanitizeSessionRecord(record authSessionRecord) authSessionRecord {
 	record.RefreshHash = ""
+	if strings.TrimSpace(record.DeviceTrustState) == "" {
+		record.DeviceTrustState = "unverified"
+	}
 	return record
 }
 

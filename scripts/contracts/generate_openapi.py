@@ -66,6 +66,11 @@ def path_parameters(path):
         out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/callback"):
         out += [{"name":"code","in":"query","required":False,"schema":{"type":"string"}},{"name":"state","in":"query","required":False,"schema":{"type":"string"}},{"name":"error","in":"query","required":False,"schema":{"type":"string"}}]
+    if path == "/api/v1/admin/auth/devices":
+        out += [
+          {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}},
+        ]
     if path == "/api/v1/admin/auth/sessions":
         out += [
           {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
@@ -86,6 +91,11 @@ def body_schema(path):
       "/api/v1/auth/providers/{providerId}/link/begin":"OIDCBeginRequest", "/api/v1/auth/providers/{providerId}/link/complete":"OIDCCompleteRequest",
       "/api/v1/auth/sessions/revoke":"RevokeSessionsRequest", "/api/v1/auth/sessions/logout-all":"RevokeSessionsRequest",
       "/api/v1/auth/sessions/{sessionId}":"RenameSessionRequest",
+      "/api/v1/auth/devices/register/begin":"DeviceRegisterBeginRequest",
+      "/api/v1/auth/devices/register/complete":"DeviceProofCompleteRequest",
+      "/api/v1/auth/devices/{deviceId}/verify/begin":"FreeFormObject",
+      "/api/v1/auth/devices/{deviceId}/verify/complete":"DeviceProofCompleteRequest",
+      "/api/v1/auth/devices/{deviceId}":"TrustedDeviceRenameRequest",
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
@@ -206,6 +216,9 @@ schemas={
 "RevokeSessionsRequest":{"type":"object","properties":{"allExceptCurrent":{"type":"boolean"}}},
 "RenameSessionRequest":{"type":"object","required":["device"],"properties":{"device":{"type":"string","minLength":1,"maxLength":96}}},
 "AdminSessionRevokeRequest":{"type":"object","properties":{"userId":{"type":"string"},"providerId":{"type":"string"},"riskState":{"type":"string","enum":["normal","elevated","compromised"]},"reason":{"type":"string","maxLength":256}},"anyOf":[{"required":["userId"]},{"required":["providerId"]},{"required":["riskState"]}]},
+"DeviceRegisterBeginRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96},"platform":{"type":"string","maxLength":48},"clientVersion":{"type":"string","maxLength":96}}},
+"DeviceProofCompleteRequest":{"type":"object","required":["challengeId","challenge","signature"],"properties":{"challengeId":{"type":"string","minLength":1},"deviceId":{"type":"string"},"challenge":{"type":"string","minLength":1},"publicKey":{"type":"string","description":"Raw Ed25519 public key encoded as base64url"},"signature":{"type":"string","description":"Ed25519 signature encoded as base64url"}}},
+"TrustedDeviceRenameRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96}}},
 "PasswordResetRequest":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":12}}},
 "ProjectWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
 "ProfileWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},

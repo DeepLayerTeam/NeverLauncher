@@ -239,6 +239,45 @@ type ProviderCredential struct {
 	LastRefreshedAt       time.Time `json:"lastRefreshedAt,omitempty"`
 }
 
+// TrustedDevice is a canonical device identity registered to one Never user.
+// PublicKey contains raw Ed25519 public key bytes encoded as base64url in storage;
+// API responses intentionally expose only KeyFingerprint.
+type TrustedDevice struct {
+	ID             string    `json:"id"`
+	UserID         string    `json:"userId"`
+	Name           string    `json:"name"`
+	Status         string    `json:"status"`
+	TrustState     string    `json:"trustState"`
+	Assurance      string    `json:"assurance"`
+	KeyAlgorithm   string    `json:"keyAlgorithm"`
+	PublicKey      string    `json:"-"`
+	KeyFingerprint string    `json:"keyFingerprint"`
+	Platform       string    `json:"platform,omitempty"`
+	ClientVersion  string    `json:"clientVersion,omitempty"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	LastSeenAt     time.Time `json:"lastSeenAt,omitempty"`
+	LastVerifiedAt time.Time `json:"lastVerifiedAt,omitempty"`
+	LastIP         string    `json:"lastIp,omitempty"`
+	LastUserAgent  string    `json:"lastUserAgent,omitempty"`
+	RevokedAt      time.Time `json:"revokedAt,omitempty"`
+	RevokedReason  string    `json:"revokedReason,omitempty"`
+}
+
+// DeviceChallenge is a short-lived, single-use proof-of-possession challenge.
+// Only the SHA-256 of the wire challenge is persisted.
+type DeviceChallenge struct {
+	ID            string         `json:"id"`
+	UserID        string         `json:"userId"`
+	DeviceID      string         `json:"deviceId"`
+	Purpose       string         `json:"purpose"`
+	ChallengeHash string         `json:"-"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	ExpiresAt     time.Time      `json:"expiresAt"`
+	ConsumedAt    time.Time      `json:"consumedAt,omitempty"`
+}
+
 // MinecraftProfile is the stable Minecraft identity owned by a canonical Never user.
 // UUID/name are independent from mutable email and from any external provider subject.
 type MinecraftProfile struct {

@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.12.1 — Device Trust Core + device registry
+
+`0.12.1` вводит первую рабочую границу Device Trust поверх стабильного Auth Federation release. Старое поле session `deviceId` остаётся недоверенной клиентской меткой для совместимости; доверенная device identity создаётся только после Ed25519 proof-of-possession и хранится отдельно в persistent registry.
+
+### Device registry / proof-of-possession
+
+- Добавлен persistent `trusted_devices` registry с canonical `device id → user`, Ed25519 public key, SHA-256 fingerprint, platform/client metadata, status/trust state, first-class revoke metadata и timestamps последней успешной криптографической проверки.
+- Регистрация устройства — реальная challenge-response ceremony: Backend создаёт short-lived single-use challenge, клиент подписывает канонический payload Ed25519 private key, Backend проверяет подпись и только после этого создаёт trusted device. В БД хранится только public key; private key никогда не передаётся Backend.
+- Challenge хранится persistent в `device_challenges`, привязан к `user + device + purpose + session`, расходуется атомарно и не может быть replayed. Истёкшие/старые consumed challenges очищаются при записи новых.
+- `assurance=proof-of-possession` сознательно не называется hardware-bound: привязка к TPM/Secure Enclave/OS secure storage относится к следующим Device Trust версиям.
+
+### Session binding / revocation
+
+- `auth_sessions.device_id` не переосмысляется как trusted identity. Добавлены отдельные `trusted_device_id`, `device_trust_state` и `device_verified_at`.
+- После регистрации или повторного proof текущая Never session криптографически связывается с registry device. Обновлённый access JWT получает `device_id`, `device_trust` и `device_verified_at`.
+- Повторная сессия может доказать владение уже зарегистрированным device key через `verify/begin|complete`; challenge дополнительно привязан к конкретной Never session.
+- Revoke устройства переводит device в `revoked` и отзывает все связанные Never sessions и refresh-token families; связанные session risk state становятся `compromised`.
+- Пользователь может list/rename/revoke свои устройства, администратор — фильтровать registry и выполнять revoke после свежего phishing-resistant step-up.
+
+### Migration / release gates
+
+- Добавлена migration `0012_device_trust_core_0121.sql`: `trusted_devices`, `device_challenges`, session trust columns, relational FK/check constraints и индексы.
+- Backend и CLI migration catalogs содержат byte-identical `0012`.
+- HTTP E2E проверяет login → registration challenge → Ed25519 proof → trusted session → second-session proof → challenge replay rejection → device revoke → session/refresh-family invalidation.
+- OpenAPI и repository policy считают device registry, proof path и migration обязательными `0.12.1` release gates.
+
 ## 0.12.0 — Auth Federation Release
 
 `0.12.0` завершает линию Auth Federation `0.11.1–0.11.10` как стабильный production release. Local, SQL, HTTP, OIDC и Microsoft являются providers одного Federation Core; passkeys/TOTP/recovery применяются как auth methods/MFA поверх canonical Never user, а Minecraft Auth Adapter получает уже каноническую Never session независимо от источника входа.

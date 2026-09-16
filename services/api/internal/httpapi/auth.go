@@ -14,20 +14,23 @@ import (
 )
 
 type authClaims struct {
-	Iss          string   `json:"iss"`
-	Aud          string   `json:"aud"`
-	JTI          string   `json:"jti"`
-	Sub          string   `json:"sub"`
-	Email        string   `json:"email"`
-	RoleID       string   `json:"roleId"`
-	SessionID    string   `json:"sid"`
-	TokenUse     string   `json:"tokenUse"`
-	Permissions  []string `json:"permissions"`
-	Iat          int64    `json:"iat"`
-	AuthTime     int64    `json:"auth_time"`
-	AuthMethods  []string `json:"amr"`
-	AuthStrength string   `json:"authStrength"`
-	Exp          int64    `json:"exp"`
+	Iss              string   `json:"iss"`
+	Aud              string   `json:"aud"`
+	JTI              string   `json:"jti"`
+	Sub              string   `json:"sub"`
+	Email            string   `json:"email"`
+	RoleID           string   `json:"roleId"`
+	SessionID        string   `json:"sid"`
+	TokenUse         string   `json:"tokenUse"`
+	Permissions      []string `json:"permissions"`
+	Iat              int64    `json:"iat"`
+	AuthTime         int64    `json:"auth_time"`
+	AuthMethods      []string `json:"amr"`
+	AuthStrength     string   `json:"authStrength"`
+	TrustedDeviceID  string   `json:"device_id,omitempty"`
+	DeviceTrustState string   `json:"device_trust,omitempty"`
+	DeviceVerifiedAt int64    `json:"device_verified_at,omitempty"`
+	Exp              int64    `json:"exp"`
 }
 
 var errAuthRequired = errors.New("требуется авторизация")
@@ -75,17 +78,22 @@ func (s Server) issueAccessToken(user model.User, sessionID string) (string, err
 func (s Server) issueAccessTokenForSession(user model.User, session authSessionRecord) (string, error) {
 	now := time.Now().UTC()
 	claims := authClaims{
-		Sub:          user.ID,
-		Email:        user.Email,
-		RoleID:       user.RoleID,
-		SessionID:    session.ID,
-		TokenUse:     "access",
-		Permissions:  s.permissionsForRole(user.RoleID),
-		Iat:          now.Unix(),
-		AuthTime:     session.AuthTime.Unix(),
-		AuthMethods:  append([]string(nil), session.AuthMethods...),
-		AuthStrength: session.AuthStrength,
-		Exp:          now.Add(accessTokenTTL).Unix(),
+		Sub:              user.ID,
+		Email:            user.Email,
+		RoleID:           user.RoleID,
+		SessionID:        session.ID,
+		TokenUse:         "access",
+		Permissions:      s.permissionsForRole(user.RoleID),
+		Iat:              now.Unix(),
+		AuthTime:         session.AuthTime.Unix(),
+		AuthMethods:      append([]string(nil), session.AuthMethods...),
+		AuthStrength:     session.AuthStrength,
+		TrustedDeviceID:  session.TrustedDeviceID,
+		DeviceTrustState: firstNonEmpty(session.DeviceTrustState, "unverified"),
+		Exp:              now.Add(accessTokenTTL).Unix(),
+	}
+	if !session.DeviceVerifiedAt.IsZero() {
+		claims.DeviceVerifiedAt = session.DeviceVerifiedAt.Unix()
 	}
 	return s.encodeAccessToken118(claims)
 }

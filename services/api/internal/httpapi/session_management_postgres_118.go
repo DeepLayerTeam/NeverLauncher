@@ -11,13 +11,14 @@ import (
 	"time"
 )
 
-const sessionColumns118 = `id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent,last_ip,last_user_agent,risk_state,risk_reasons,risk_updated_at,device_renamed_at`
+const sessionColumns118 = `id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent,last_ip,last_user_agent,risk_state,risk_reasons,risk_updated_at,device_renamed_at,trusted_device_id,device_trust_state,device_verified_at`
 
 func scanSession118(row rowScanner111) (authSessionRecord, error) {
 	var rec authSessionRecord
-	var revoked, riskUpdated, renamed sql.NullTime
+	var revoked, riskUpdated, renamed, deviceVerified sql.NullTime
+	var trustedDeviceID sql.NullString
 	var methodsJSON, riskJSON []byte
-	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &methodsJSON, &rec.AuthStrength, &rec.AuthTime, &rec.IdentityID, &rec.Provider, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent, &rec.LastIP, &rec.LastUserAgent, &rec.RiskState, &riskJSON, &riskUpdated, &renamed); err != nil {
+	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &methodsJSON, &rec.AuthStrength, &rec.AuthTime, &rec.IdentityID, &rec.Provider, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent, &rec.LastIP, &rec.LastUserAgent, &rec.RiskState, &riskJSON, &riskUpdated, &renamed, &trustedDeviceID, &rec.DeviceTrustState, &deviceVerified); err != nil {
 		return authSessionRecord{}, err
 	}
 	_ = json.Unmarshal(methodsJSON, &rec.AuthMethods)
@@ -37,6 +38,15 @@ func scanSession118(row rowScanner111) (authSessionRecord, error) {
 	}
 	if renamed.Valid {
 		rec.DeviceRenamedAt = renamed.Time.UTC()
+	}
+	if trustedDeviceID.Valid {
+		rec.TrustedDeviceID = trustedDeviceID.String
+	}
+	if rec.DeviceTrustState == "" {
+		rec.DeviceTrustState = "unverified"
+	}
+	if deviceVerified.Valid {
+		rec.DeviceVerifiedAt = deviceVerified.Time.UTC()
 	}
 	return rec, nil
 }
@@ -228,6 +238,87 @@ func (p *authSessionPostgres111) revokeFiltered118(userID, provider, risk, reaso
 			return 0
 		}
 		if err := p.insertEventTx111(ctx, tx, it.user, it.id, it.family, "session-revoked", map[string]any{"reason": reason, "admin": true}); err != nil {
+			return 0
+		}
+	}
+	if tx.Commit() != nil {
+		return 0
+	}
+	return len(items)
+}
+
+func (p *authSessionPostgres111) bindTrustedDevice121(sessionID, userID, deviceID string, verifiedAt time.Time) (authSessionRecord, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return authSessionRecord{}, err
+	}
+	defer tx.Rollback()
+	var familyID string
+	if err := tx.QueryRowContext(ctx, `SELECT refresh_family_id FROM auth_sessions WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now() FOR UPDATE`, sessionID, userID).Scan(&familyID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return authSessionRecord{}, errSessionNotFound118
+		}
+		return authSessionRecord{}, err
+	}
+	var owner, status string
+	if err := tx.QueryRowContext(ctx, `SELECT user_id,status FROM trusted_devices WHERE id=$1 FOR SHARE`, deviceID).Scan(&owner, &status); err != nil {
+		return authSessionRecord{}, err
+	}
+	if owner != userID || status != "active" {
+		return authSessionRecord{}, errSessionNotFound118
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,last_seen_at=now() WHERE id=$1 AND user_id=$2`, sessionID, userID, deviceID, verifiedAt.UTC()); err != nil {
+		return authSessionRecord{}, err
+	}
+	if err := p.insertEventTx111(ctx, tx, userID, sessionID, familyID, "trusted-device-bound", map[string]any{"deviceId": deviceID}); err != nil {
+		return authSessionRecord{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return authSessionRecord{}, err
+	}
+	rec, ok := p.get118(sessionID, userID)
+	if !ok {
+		return authSessionRecord{}, errSessionNotFound118
+	}
+	return rec, nil
+}
+
+func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason string) int {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	reason = firstNonEmpty(strings.TrimSpace(reason), "device-revoked")
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0
+	}
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, userID, deviceID)
+	if err != nil {
+		return 0
+	}
+	type item struct{ session, family string }
+	items := []item{}
+	for rows.Next() {
+		var it item
+		if rows.Scan(&it.session, &it.family) == nil {
+			items = append(items, it)
+		}
+	}
+	rows.Close()
+	now := time.Now().UTC()
+	for _, it := range items {
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
+			return 0
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, it.family, now, reason); err != nil {
+			return 0
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, it.family, now); err != nil {
+			return 0
+		}
+		if err := p.insertEventTx111(ctx, tx, userID, it.session, it.family, "trusted-device-revoked", map[string]any{"deviceId": deviceID, "reason": reason}); err != nil {
 			return 0
 		}
 	}

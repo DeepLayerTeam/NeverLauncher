@@ -237,6 +237,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Device Trust 0.12.1
+
+`0.12.1` добавляет persistent device registry и криптографическую proof-of-possession границу. Значение `deviceId`, которое клиент передаёт при обычном login, остаётся недоверенной меткой сессии. Trusted device появляется только после `POST /api/v1/auth/devices/register/begin` → Ed25519 signature → `register/complete`; после проверки текущая session получает отдельные `trustedDeviceId`, `deviceTrustState=verified` и `deviceVerifiedAt`.
+
+Зарегистрированное устройство можно повторно доказать из новой Never session через `/api/v1/auth/devices/{deviceId}/verify/begin|complete`. Revoke устройства отзывает связанные Never sessions и refresh-token families. `proof-of-possession` в этой версии не означает hardware-bound key: TPM/Secure Enclave/OS secure storage и hardware attestation развиваются в следующих Device Trust релизах.
+
+Production upgrade: `nl db migrate apply && nl db migrate verify`. Migration `0012_device_trust_core_0121` создаёт `trusted_devices`, single-use `device_challenges` и отдельную связь trusted device с `auth_sessions`.
+
 ## Minecraft Auth Compatibility 2.0
 
 С `0.11.10` federation/migration stability является исполняемым release gate. `python3 scripts/test/federation-e2e.py` прогоняет Local/SQL/HTTP/OIDC/Microsoft/passkey через canonical session и Minecraft compatibility flow, а `bash e2e/scripts/run-federation-postgres-e2e.sh` проверяет restart и multi-instance refresh/revoke/replay на PostgreSQL. Перед production upgrade используйте `nl db migrate apply`, затем `nl db migrate verify`; verify fail-closed отклоняет unknown/future migrations, незапечатанные checksum и checksum drift.
