@@ -2,6 +2,10 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Federated provider credentials
+
+Начиная с 0.11.6 внешние refresh credentials (включая Microsoft) хранятся только server-side в application-layer AES-GCM envelope, привязанном к canonical user/identity/provider/subject. Provider token не является Never access/refresh token, не возвращается в login/link/refresh API и не должен попадать в логи или клиентское secure storage. Ротация `NEVERLAUNCHER_AUTH_TOKEN_SECRET` требует контролируемой миграции/повторной авторизации provider credentials.
+
 ## Обязательные production-настройки
 
 Для production-окружения используйте persistent backend и сильные секреты:

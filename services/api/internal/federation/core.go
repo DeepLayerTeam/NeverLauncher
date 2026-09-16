@@ -24,10 +24,12 @@ var (
 )
 
 type Result struct {
-	Provider    authconnector.Metadata
-	Identity    model.AuthIdentity
-	User        model.User
-	AuthMethods []string
+	Provider          authconnector.Metadata
+	Identity          model.AuthIdentity
+	User              model.User
+	AuthMethods       []string
+	ProviderToken     string
+	ProviderExpiresAt time.Time
 }
 
 type ProviderHealth struct {
@@ -207,21 +209,62 @@ func (c *Core) BeginBrowserAuth(ctx context.Context, providerID string, request 
 }
 
 func (c *Core) CompleteBrowserAuth(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (Result, error) {
-	providerID = strings.ToLower(strings.TrimSpace(providerID))
-	connector, ok := c.Connector(providerID)
-	if !ok {
-		return Result{}, ErrProviderNotFound
-	}
-	meta := authconnector.NormalizedMetadata(connector.Metadata())
-	browserConnector, ok := connector.(authconnector.BrowserAuthenticator)
-	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
-		return Result{}, ErrCapabilityUnsupported
-	}
-	auth, err := browserConnector.CompleteBrowserAuth(ctx, callback)
+	meta, auth, err := c.CompleteBrowserAuthProof(ctx, providerID, callback)
 	if err != nil {
 		return Result{}, err
 	}
 	return c.resolveAuthentication(ctx, meta, auth)
+}
+
+// CompleteBrowserAuthProof verifies the external browser flow without resolving or
+// auto-provisioning a canonical Never user. This is the security boundary required
+// for explicit account linking: a proof can be linked only to the already-authenticated
+// Never user chosen by the caller.
+func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (authconnector.Metadata, authconnector.Authentication, error) {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return authconnector.Metadata{}, authconnector.Authentication{}, ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	browserConnector, ok := connector.(authconnector.BrowserAuthenticator)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
+		return authconnector.Metadata{}, authconnector.Authentication{}, ErrCapabilityUnsupported
+	}
+	auth, err := browserConnector.CompleteBrowserAuth(ctx, callback)
+	if err != nil {
+		return authconnector.Metadata{}, authconnector.Authentication{}, err
+	}
+	if strings.TrimSpace(auth.Identity.Subject) == "" {
+		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
+	}
+	return meta, auth, nil
+}
+
+// RefreshProviderCredential rotates/revalidates an external provider credential.
+// The returned provider token remains internal and is never a Never access token.
+func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, providerToken, expectedSubject string) (authconnector.Authentication, error) {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return authconnector.Authentication{}, ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	refresher, ok := connector.(authconnector.TokenRefresher)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
+		return authconnector.Authentication{}, ErrCapabilityUnsupported
+	}
+	auth, err := refresher.Refresh(ctx, providerToken)
+	if err != nil {
+		return authconnector.Authentication{}, err
+	}
+	if strings.TrimSpace(auth.Identity.Subject) == "" {
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector refresh returned empty subject")
+	}
+	if expected := strings.TrimSpace(expectedSubject); expected != "" && auth.Identity.Subject != expected {
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrConflict, "provider refresh changed identity subject")
+	}
+	return auth, nil
 }
 
 func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Metadata, auth authconnector.Authentication) (Result, error) {
@@ -270,7 +313,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 	if err != nil {
 		return Result{}, err
 	}
-	return Result{Provider: meta, Identity: updated, User: user, AuthMethods: append([]string(nil), auth.AuthMethods...)}, nil
+	return Result{Provider: meta, Identity: updated, User: user, AuthMethods: append([]string(nil), auth.AuthMethods...), ProviderToken: auth.ProviderToken, ProviderExpiresAt: auth.ExpiresAt}, nil
 }
 
 func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID string, policy ProviderPolicy, identity authconnector.Identity) (model.User, model.AuthIdentity, error) {
@@ -336,7 +379,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return model.AuthIdentity{}, err
 	}
-	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims)})
+	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: time.Now().UTC()})
 }
 
 func (c *Core) Close() error {

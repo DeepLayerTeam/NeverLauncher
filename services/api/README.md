@@ -120,6 +120,28 @@ HTTP Connector использует собственный transport без envi
 
 `provisioning.mode=explicit-only` остаётся безопасным default: совпадение email не связывает внешний аккаунт с существующим Never user. `jit` создаёт новый canonical user только после успешной криптографической проверки OIDC identity. External groups/roles сохраняются как identity claims, но не могут самостоятельно повысить глобальную Never role: JIT role задаётся локальной `defaultRole`.
 
+Начиная с `0.11.6`, Microsoft identity platform подключается отдельным `microsoftconnector`, который использует тот же OIDC engine, но добавляет Microsoft-specific trust rules. Конфигурация задаётся через `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` / `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Поддерживаются `common`, `organizations`, `consumers` и tenant GUID, а также global/US Gov/China clouds. Для multitenant metadata проверяются `tid`, tenant-specific `iss` и `issuer` signing key из JWKS. Canonical subject формируется как `tid:oid`; email/UPN не используются как identity key.
+
+Пример Microsoft provider:
+
+```json
+[
+  {
+    "id": "microsoft",
+    "cloud": "global",
+    "tenant": "organizations",
+    "clientId": "00000000-0000-0000-0000-000000000000",
+    "clientSecretEnv": "MICROSOFT_CLIENT_SECRET",
+    "redirectUris": ["https://launcher.example.com/api/v1/auth/oidc/microsoft/callback"],
+    "postLogoutRedirectUris": ["https://launcher.example.com/"],
+    "allowedTenantIds": ["11111111-2222-3333-4444-555555555555"],
+    "provisioning": {"mode":"explicit-only"}
+  }
+]
+```
+
+`offline_access` включается Connector автоматически. Полученный Microsoft refresh token не возвращается клиенту: Backend шифрует его AES-GCM и сохраняет в `provider_credentials`. Для существующего Never user используется authenticated linking flow `POST /api/v1/auth/microsoft/{providerId}/link/begin` и `/link/complete`; provider credential можно ротировать через `POST /api/v1/auth/providers/{providerId}/credential/refresh`. Microsoft front-channel logout URL выдаётся отдельно через `/api/v1/auth/microsoft/{providerId}/logout-url` и не заменяет Never logout. Microsoft sign-in сам по себе **не означает владение Minecraft**; entitlement/profile verification остаётся отдельным слоем.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

@@ -56,17 +56,18 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
-	projects   []model.Project
-	profiles   []model.Profile
-	channels   []model.ReleaseChannel
-	releases   []model.ReleaseVersion
-	files      []model.FileObject
-	users      []model.User
-	identities []model.AuthIdentity
-	roles      []model.Role
-	audit      []model.AuditEvent
-	telemetry  []model.TelemetryEvent
-	crashes    []model.CrashReport
+	projects            []model.Project
+	profiles            []model.Profile
+	channels            []model.ReleaseChannel
+	releases            []model.ReleaseVersion
+	files               []model.FileObject
+	users               []model.User
+	identities          []model.AuthIdentity
+	providerCredentials []model.ProviderCredential
+	roles               []model.Role
+	audit               []model.AuditEvent
+	telemetry           []model.TelemetryEvent
+	crashes             []model.CrashReport
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
@@ -854,4 +855,66 @@ func (r *MemoryRepository) ListCrashReports() []model.CrashReport {
 	items := append([]model.CrashReport(nil), r.crashes...)
 	sort.Slice(items, func(i, j int) bool { return items[i].CreatedAt.After(items[j].CreatedAt) })
 	return items
+}
+
+func (r *MemoryRepository) GetProviderCredential(userID, provider string) (model.ProviderCredential, error) {
+	userID = strings.TrimSpace(userID)
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	for _, item := range r.providerCredentials {
+		if item.UserID == userID && item.Provider == provider {
+			return item, nil
+		}
+	}
+	return model.ProviderCredential{}, ErrNotFound
+}
+
+func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential) (model.ProviderCredential, error) {
+	item.UserID = strings.TrimSpace(item.UserID)
+	item.IdentityID = strings.TrimSpace(item.IdentityID)
+	item.Provider = strings.ToLower(strings.TrimSpace(item.Provider))
+	item.Subject = strings.TrimSpace(item.Subject)
+	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
+	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
+		return model.ProviderCredential{}, fmt.Errorf("provider credential fields are required")
+	}
+	if _, err := r.GetUser(item.UserID); err != nil {
+		return model.ProviderCredential{}, err
+	}
+	identity, err := r.GetAuthIdentity(item.Provider, item.Subject)
+	if err != nil || identity.UserID != item.UserID || identity.ID != item.IdentityID {
+		return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
+	}
+	now := time.Now().UTC()
+	for i := range r.providerCredentials {
+		existing := r.providerCredentials[i]
+		if existing.Provider == item.Provider && existing.Subject == item.Subject && existing.UserID != item.UserID {
+			return model.ProviderCredential{}, ErrConflict
+		}
+		if existing.UserID == item.UserID && existing.Provider == item.Provider {
+			item.ID = existing.ID
+			item.CreatedAt = existing.CreatedAt
+			item.UpdatedAt = now
+			r.providerCredentials[i] = item
+			return item, nil
+		}
+	}
+	if item.ID == "" {
+		item.ID = "provider-credential-" + item.Provider + "-" + item.UserID
+	}
+	item.CreatedAt = now
+	item.UpdatedAt = now
+	r.providerCredentials = append(r.providerCredentials, item)
+	return item, nil
+}
+
+func (r *MemoryRepository) DeleteProviderCredential(userID, provider string) error {
+	userID = strings.TrimSpace(userID)
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	for i, item := range r.providerCredentials {
+		if item.UserID == userID && item.Provider == provider {
+			r.providerCredentials = append(r.providerCredentials[:i], r.providerCredentials[i+1:]...)
+			return nil
+		}
+	}
+	return ErrNotFound
 }

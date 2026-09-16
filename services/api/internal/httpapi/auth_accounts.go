@@ -223,7 +223,7 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
 		"status":        "federation-core-active",
-		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
 		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),

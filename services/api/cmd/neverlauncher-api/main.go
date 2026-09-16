@@ -65,10 +65,10 @@ func main() {
 		log.Fatal(err)
 	}
 	federationCtx, federationCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	federationCore, err := httpapi.NewFederationCore115(federationCtx, repo, cfg)
+	federationCore, err := httpapi.NewFederationCore116(federationCtx, repo, cfg)
 	federationCancel()
 	if err != nil {
-		log.Fatalf("federation core 0.11.5 initialization failed: %v", err)
+		log.Fatalf("federation core 0.11.6 initialization failed: %v", err)
 	}
 	defer federationCore.Close()
 	if err := httpapi.ConfigureAuthCore111(cfg, state); err != nil {

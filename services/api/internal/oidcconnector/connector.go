@@ -20,6 +20,7 @@ type discoveryDocument struct {
 	AuthorizationEndpoint             string   `json:"authorization_endpoint"`
 	TokenEndpoint                     string   `json:"token_endpoint"`
 	UserInfoEndpoint                  string   `json:"userinfo_endpoint,omitempty"`
+	EndSessionEndpoint                string   `json:"end_session_endpoint,omitempty"`
 	JWKSURI                           string   `json:"jwks_uri"`
 	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported,omitempty"`
 	IDTokenSigningAlgs                []string `json:"id_token_signing_alg_values_supported,omitempty"`
@@ -37,16 +38,24 @@ type tokenResponse struct {
 }
 
 type Connector struct {
-	cfg         RuntimeConfig
-	client      *http.Client
-	transport   *http.Transport
-	mu          sync.RWMutex
-	discovery   discoveryDocument
-	keys        []jwk
-	refreshedAt time.Time
+	cfg          RuntimeConfig
+	client       *http.Client
+	transport    *http.Transport
+	mu           sync.RWMutex
+	discovery    discoveryDocument
+	keys         []jwk
+	refreshedAt  time.Time
+	issuerPolicy IssuerPolicy
 }
 
 func New(ctx context.Context, input Config) (*Connector, error) {
+	return NewWithIssuerPolicy(ctx, input, ExactIssuerPolicy{})
+}
+
+func NewWithIssuerPolicy(ctx context.Context, input Config, policy IssuerPolicy) (*Connector, error) {
+	if policy == nil {
+		policy = ExactIssuerPolicy{}
+	}
 	cfg, err := Normalize(input)
 	if err != nil {
 		return nil, err
@@ -55,7 +64,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("OIDC connector %q transport: %w", cfg.ID, err)
 	}
-	c := &Connector{cfg: cfg, client: client, transport: transport}
+	c := &Connector{cfg: cfg, client: client, transport: transport, issuerPolicy: policy}
 	refreshCtx, cancel := context.WithTimeout(ctx, cfg.RequestTimeoutValue)
 	defer cancel()
 	if err := c.refreshMetadata(refreshCtx); err != nil {
@@ -192,6 +201,27 @@ func (c *Connector) DefaultRedirectURI() string {
 	return c.cfg.RedirectURIs[0]
 }
 
+// EndSessionURL builds a provider front-channel logout URL when discovery exposes
+// end_session_endpoint. This is deliberately separate from Never session logout.
+func (c *Connector) EndSessionURL(postLogoutRedirectURI string) (string, error) {
+	c.mu.RLock()
+	endpoint := c.discovery.EndSessionEndpoint
+	c.mu.RUnlock()
+	if strings.TrimSpace(endpoint) == "" {
+		return "", authconnector.NewError(authconnector.ErrUnsupported, "OIDC provider does not advertise end_session_endpoint")
+	}
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return "", authconnector.WrapError(authconnector.ErrMisconfigured, "OIDC end_session_endpoint is invalid", err)
+	}
+	if v := strings.TrimSpace(postLogoutRedirectURI); v != "" {
+		q := u.Query()
+		q.Set("post_logout_redirect_uri", v)
+		u.RawQuery = q.Encode()
+	}
+	return u.String(), nil
+}
+
 func (c *Connector) exchangeCode(ctx context.Context, cb authconnector.BrowserAuthCallback) (tokenResponse, error) {
 	c.mu.RLock()
 	endpoint := c.discovery.TokenEndpoint
@@ -262,8 +292,8 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 	if err := c.doJSON(req, &doc); err != nil {
 		return err
 	}
-	if doc.Issuer != c.cfg.Issuer {
-		return fmt.Errorf("discovery issuer mismatch: got %q", doc.Issuer)
+	if err := c.issuerPolicy.ValidateDiscoveryIssuer(c.cfg.Issuer, doc.Issuer); err != nil {
+		return err
 	}
 	for name, raw := range map[string]string{"authorization_endpoint": doc.AuthorizationEndpoint, "token_endpoint": doc.TokenEndpoint, "jwks_uri": doc.JWKSURI} {
 		if err := c.validateDiscoveredURL(name, raw); err != nil {
@@ -272,6 +302,11 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 	}
 	if doc.UserInfoEndpoint != "" {
 		if err := c.validateDiscoveredURL("userinfo_endpoint", doc.UserInfoEndpoint); err != nil {
+			return err
+		}
+	}
+	if doc.EndSessionEndpoint != "" {
+		if err := c.validateDiscoveredURL("end_session_endpoint", doc.EndSessionEndpoint); err != nil {
 			return err
 		}
 	}
@@ -319,7 +354,10 @@ func (c *Connector) verifyTokenWithRefresh(ctx context.Context, raw, nonce strin
 	c.mu.RLock()
 	keys := append([]jwk(nil), c.keys...)
 	c.mu.RUnlock()
-	verified, err := verifyIDToken(raw, keys, c.cfg, nonce, requireNonce)
+	c.mu.RLock()
+	discoveredIssuer := c.discovery.Issuer
+	c.mu.RUnlock()
+	verified, err := verifyIDTokenWithPolicy(raw, keys, c.cfg, discoveredIssuer, c.issuerPolicy, nonce, requireNonce)
 	if err == nil {
 		return verified, nil
 	}
@@ -329,7 +367,10 @@ func (c *Connector) verifyTokenWithRefresh(ctx context.Context, raw, nonce strin
 	c.mu.RLock()
 	keys = append([]jwk(nil), c.keys...)
 	c.mu.RUnlock()
-	return verifyIDToken(raw, keys, c.cfg, nonce, requireNonce)
+	c.mu.RLock()
+	discoveredIssuer = c.discovery.Issuer
+	c.mu.RUnlock()
+	return verifyIDTokenWithPolicy(raw, keys, c.cfg, discoveredIssuer, c.issuerPolicy, nonce, requireNonce)
 }
 func (c *Connector) userInfo(ctx context.Context, accessToken string) (map[string]any, error) {
 	c.mu.RLock()

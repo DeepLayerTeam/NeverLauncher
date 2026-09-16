@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.11.6 — Microsoft Connector
+
+`0.11.6` добавляет production Microsoft identity connector как специализацию рабочего OIDC Connector/Federation Core, а не отдельный OAuth engine. Поддерживаются Microsoft identity platform v2 Authorization Code + PKCE S256, `common`/`organizations`/`consumers` и single-tenant GUID authorities, global/US Gov/China clouds, tenant-independent issuer validation, JWKS signing-key issuer validation и стабильная canonical identity на основе `tid + oid`. Microsoft login не считается доказательством владения Minecraft.
+
+### Microsoft identity runtime
+
+- Microsoft provider регистрируется через `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` / `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE` и проходит discovery/JWKS/health/conformance до открытия API трафику.
+- `offline_access` добавляется обязательно для server-side refresh credential lifecycle; app secret берётся только из environment/file.
+- Multitenant token проверяется одновременно по `tid`, фактическому tenant-specific `iss` и `issuer` конкретного JWKS signing key; `allowedTenantIds` может дополнительно сузить trusted tenants.
+- Stable external subject — `tid:oid`; mutable email/UPN/name используются только как profile attributes и не участвуют в identity ownership.
+- Microsoft external groups/roles не становятся Never roles напрямую: повышение возможно только через локальный `roleMappings` policy при JIT provisioning.
+
+### Account linking / provider credentials
+
+- `explicit-only` остаётся default. Authenticated Never user может выполнить `POST /api/v1/auth/microsoft/{providerId}/link/begin` → provider proof → `.../link/complete`; совпадение email не используется для auto-linking.
+- Microsoft/OIDC refresh tokens сохраняются только server-side в `provider_credentials` как AES-GCM envelope, привязанный AAD к user/identity/provider/subject. Plaintext provider token не возвращается клиенту и не становится Never access/refresh token.
+- `POST /api/v1/auth/providers/{providerId}/credential/refresh` выполняет provider rotation через Connector SDK и fail-closed проверяет неизменность subject. `DELETE .../credential` удаляет локально сохранённый provider credential.
+- `POST /api/v1/auth/microsoft/{providerId}/logout-url` строит allowlisted Microsoft front-channel logout URL отдельно от Never logout/session revoke.
+
+### Scope boundary
+
+Microsoft identity и Minecraft ownership/profile намеренно разделены. `0.11.6` не интерпретирует успешный Microsoft sign-in как Minecraft entitlement и не запрашивает Xbox/Minecraft ownership APIs; это остаётся отдельным entitlement/profile verification layer последующих compatibility работ.
+
 ## 0.11.5 — OIDC Connector
 
 `0.11.5` добавляет production OIDC federation поверх Connector SDK/Federation Core: OpenID Provider Discovery, Authorization Code + PKCE S256, state/nonce, JWKS key rotation, ID Token signature/issuer/audience/azp/time validation, optional UserInfo merge с обязательным совпадением `sub`, configurable claims mapping, explicit-only/JIT provisioning и browser/desktop begin/complete flow. OIDC transaction stateless и AEAD-защищён, поэтому не требует process-local session map. Provider tokens не используются как Never tokens.

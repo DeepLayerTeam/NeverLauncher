@@ -223,3 +223,18 @@ type CrashReport struct {
 	Log             string    `json:"log,omitempty"`
 	CreatedAt       time.Time `json:"createdAt"`
 }
+
+// ProviderCredential stores an opaque external-provider credential only after it
+// has been encrypted by the auth service. Plaintext provider tokens must never be
+// persisted by Repository implementations or exposed through API models.
+type ProviderCredential struct {
+	ID                    string    `json:"id"`
+	UserID                string    `json:"userId"`
+	IdentityID            string    `json:"identityId"`
+	Provider              string    `json:"provider"`
+	Subject               string    `json:"subject"`
+	EncryptedRefreshToken string    `json:"-"`
+	CreatedAt             time.Time `json:"createdAt"`
+	UpdatedAt             time.Time `json:"updatedAt"`
+	LastRefreshedAt       time.Time `json:"lastRefreshedAt,omitempty"`
+}

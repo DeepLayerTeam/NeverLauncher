@@ -1243,3 +1243,78 @@ func ProductionPostgresTables() []string {
 	sort.Strings(items)
 	return items
 }
+
+func (r *SQLRepository) GetProviderCredential(userID, provider string) (model.ProviderCredential, error) {
+	if err := r.check(); err != nil {
+		return model.ProviderCredential{}, err
+	}
+	userID = strings.TrimSpace(userID)
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	var item model.ProviderCredential
+	var refreshed sql.NullTime
+	err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND provider=$2`, userID, provider).Scan(&item.ID, &item.UserID, &item.IdentityID, &item.Provider, &item.Subject, &item.EncryptedRefreshToken, &item.CreatedAt, &item.UpdatedAt, &refreshed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ProviderCredential{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ProviderCredential{}, err
+	}
+	if refreshed.Valid {
+		item.LastRefreshedAt = refreshed.Time
+	}
+	return item, nil
+}
+
+func (r *SQLRepository) SaveProviderCredential(item model.ProviderCredential) (model.ProviderCredential, error) {
+	if err := r.check(); err != nil {
+		return model.ProviderCredential{}, err
+	}
+	item.UserID = strings.TrimSpace(item.UserID)
+	item.IdentityID = strings.TrimSpace(item.IdentityID)
+	item.Provider = strings.ToLower(strings.TrimSpace(item.Provider))
+	item.Subject = strings.TrimSpace(item.Subject)
+	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
+	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
+		return model.ProviderCredential{}, fmt.Errorf("provider credential fields are required")
+	}
+	var linkedUserID string
+	if err := r.db.QueryRow(`SELECT user_id FROM auth_identities WHERE id=$1 AND provider=$2 AND subject=$3`, item.IdentityID, item.Provider, item.Subject).Scan(&linkedUserID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
+		}
+		return model.ProviderCredential{}, err
+	}
+	if linkedUserID != item.UserID {
+		return model.ProviderCredential{}, fmt.Errorf("provider credential identity belongs to another user")
+	}
+	if item.ID == "" {
+		item.ID = "provider-credential-" + item.Provider + "-" + item.UserID
+	}
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = time.Now().UTC()
+	}
+	_, err := r.db.Exec(`INSERT INTO provider_credentials(id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,now(),$8)
+ON CONFLICT(user_id,provider) DO UPDATE SET identity_id=EXCLUDED.identity_id,subject=EXCLUDED.subject,encrypted_refresh_token=EXCLUDED.encrypted_refresh_token,updated_at=now(),last_refreshed_at=EXCLUDED.last_refreshed_at`, item.ID, item.UserID, item.IdentityID, item.Provider, item.Subject, item.EncryptedRefreshToken, item.CreatedAt, nullTime(item.LastRefreshedAt))
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "unique") {
+			return model.ProviderCredential{}, fmt.Errorf("%w: provider credential identity already belongs to another user", ErrConflict)
+		}
+		return model.ProviderCredential{}, err
+	}
+	return r.GetProviderCredential(item.UserID, item.Provider)
+}
+
+func (r *SQLRepository) DeleteProviderCredential(userID, provider string) error {
+	if err := r.check(); err != nil {
+		return err
+	}
+	result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND provider=$2`, strings.TrimSpace(userID), strings.ToLower(strings.TrimSpace(provider)))
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

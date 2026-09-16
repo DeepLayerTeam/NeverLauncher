@@ -39,6 +39,7 @@ type oidcTransaction115 struct {
 	Nonce        string `json:"nonce"`
 	PKCEVerifier string `json:"pkceVerifier"`
 	DeviceID     string `json:"deviceId"`
+	LinkUserID   string `json:"linkUserId,omitempty"`
 	ExpiresAt    int64  `json:"exp"`
 }
 
@@ -179,6 +180,11 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 		_ = s.flushPersistenceState950("auth-mfa-failed")
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
+		return
+	}
+	if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-credential-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider-credential:failed", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
 		return
 	}
 	s.State.Security.recordLoginSuccess(rateKey, clientIP(r))

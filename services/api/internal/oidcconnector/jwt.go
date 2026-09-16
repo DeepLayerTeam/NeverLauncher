@@ -21,22 +21,23 @@ type jwkSet struct {
 	Keys []jwk `json:"keys"`
 }
 type jwk struct {
-	Kty string `json:"kty"`
-	Kid string `json:"kid"`
-	Use string `json:"use,omitempty"`
-	Alg string `json:"alg,omitempty"`
-	N   string `json:"n,omitempty"`
-	E   string `json:"e,omitempty"`
-	Crv string `json:"crv,omitempty"`
-	X   string `json:"x,omitempty"`
-	Y   string `json:"y,omitempty"`
-	D   string `json:"d,omitempty"`
-	P   string `json:"p,omitempty"`
-	Q   string `json:"q,omitempty"`
-	DP  string `json:"dp,omitempty"`
-	DQ  string `json:"dq,omitempty"`
-	QI  string `json:"qi,omitempty"`
-	K   string `json:"k,omitempty"`
+	Kty    string `json:"kty"`
+	Kid    string `json:"kid"`
+	Use    string `json:"use,omitempty"`
+	Alg    string `json:"alg,omitempty"`
+	N      string `json:"n,omitempty"`
+	E      string `json:"e,omitempty"`
+	Crv    string `json:"crv,omitempty"`
+	X      string `json:"x,omitempty"`
+	Y      string `json:"y,omitempty"`
+	D      string `json:"d,omitempty"`
+	P      string `json:"p,omitempty"`
+	Q      string `json:"q,omitempty"`
+	DP     string `json:"dp,omitempty"`
+	DQ     string `json:"dq,omitempty"`
+	QI     string `json:"qi,omitempty"`
+	K      string `json:"k,omitempty"`
+	Issuer string `json:"issuer,omitempty"`
 }
 type jwtHeader struct {
 	Alg string `json:"alg"`
@@ -72,6 +73,10 @@ func validateJWKS(keys []jwk, cfg RuntimeConfig) error {
 }
 
 func verifyIDToken(raw string, keys []jwk, cfg RuntimeConfig, expectedNonce string, requireNonce bool) (verifiedToken, error) {
+	return verifyIDTokenWithPolicy(raw, keys, cfg, cfg.Issuer, ExactIssuerPolicy{}, expectedNonce, requireNonce)
+}
+
+func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discoveredIssuer string, issuerPolicy IssuerPolicy, expectedNonce string, requireNonce bool) (verifiedToken, error) {
 	parts := strings.Split(raw, ".")
 	if len(parts) != 3 {
 		return verifiedToken{}, errors.New("ID token is not a compact JWS")
@@ -103,6 +108,7 @@ func verifyIDToken(raw string, keys []jwk, cfg RuntimeConfig, expectedNonce stri
 	}
 	input := []byte(parts[0] + "." + parts[1])
 	verified := false
+	matchedKeyIssuer := ""
 	for _, key := range keys {
 		if header.Kid != "" && key.Kid != header.Kid {
 			continue
@@ -116,15 +122,18 @@ func verifyIDToken(raw string, keys []jwk, cfg RuntimeConfig, expectedNonce stri
 		ok, _ := verifySignature(header.Alg, key, input, sig)
 		if ok {
 			verified = true
+			matchedKeyIssuer = strings.TrimSpace(key.Issuer)
 			break
 		}
 	}
 	if !verified {
 		return verifiedToken{}, errors.New("ID token signature verification failed")
 	}
-	issuer, _ := claims["iss"].(string)
-	if issuer != cfg.Issuer {
-		return verifiedToken{}, fmt.Errorf("ID token issuer mismatch")
+	if issuerPolicy == nil {
+		issuerPolicy = ExactIssuerPolicy{}
+	}
+	if err := issuerPolicy.ValidateTokenIssuer(discoveredIssuer, claims, matchedKeyIssuer); err != nil {
+		return verifiedToken{}, err
 	}
 	if !audienceContains(claims["aud"], cfg.ClientID) {
 		return verifiedToken{}, fmt.Errorf("ID token audience does not contain clientId")
