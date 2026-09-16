@@ -148,6 +148,14 @@ HTTP Connector использует собственный transport без envi
 
 Сессия фиксирует `authMethods`, `authStrength` и `authTime`. Step-up не изменяет уже выданный access token: после успешного TOTP/recovery/passkey Backend выпускает новый access token для той же server session. Критические publish/restore/sign/role/token-rotation operations проверяют freshness и требуемую силу authentication перед выполнением.
 
+## Session Management 2.0
+
+Начиная с `0.11.8`, Never access token — compact JWS/JWT с `kid`, issuer/audience validation и session/authentication claims. Key rotation настраивается через `NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON` + `NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID`; старый key можно оставить только для verification до истечения ранее выпущенных access tokens.
+
+`GET /api/v1/auth/sessions` возвращает persistent device/provider/auth/risk metadata и отмечает текущую session. `PATCH /api/v1/auth/sessions/{sessionId}` переименовывает устройство, `DELETE` отзывает одну session, `POST /api/v1/auth/sessions/revoke-others` отзывает остальные. Admin session API поддерживает фильтры `userId`, `providerId`, `status`, `riskState` и массовый revoke; provider-wide revoke требует fresh phishing-resistant step-up. IP/User-Agent drift повышает risk до `elevated`, refresh replay — до `compromised` с family revoke.
+
+`POST /api/v1/auth/providers/{providerId}/logout` выполняет только provider-side revoke сохранённого provider credential, если connector поддерживает revoke. Эта операция намеренно не отзывает Never session; для неё используется отдельный Never logout/session revoke.
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

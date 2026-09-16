@@ -344,7 +344,7 @@ func (s Server) authlibRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.RefreshToken != "" {
-		session, newRefresh, err := s.State.AuthSessions.rotate(req.RefreshToken)
+		session, newRefresh, err := s.State.AuthSessions.rotate(req.RefreshToken, r)
 		if err != nil {
 			writeError(w, http.StatusForbidden, "ForbiddenOperationException: Invalid token")
 			return

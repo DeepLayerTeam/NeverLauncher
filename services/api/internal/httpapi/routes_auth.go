@@ -1,6 +1,9 @@
 package httpapi
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/login", s.authLogin)
@@ -16,6 +19,7 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/microsoft/{providerId}/logout-url", s.authMicrosoftLogoutURL116)
 	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/credential/refresh", s.authProviderCredentialRefresh116)
 	mux.HandleFunc("DELETE /api/v1/auth/providers/{providerId}/credential", s.authProviderCredentialDelete116)
+	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/logout", s.authProviderLogout118)
 	mux.HandleFunc("GET /api/v1/auth/providers", s.authProviders112)
 	mux.HandleFunc("GET /api/v1/auth/identities", s.authIdentities112)
 	mux.HandleFunc("POST /api/v1/auth/refresh", s.authRefresh)
@@ -32,8 +36,14 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/auth/mfa/step-up/totp", s.requirePermission("project:read", s.authMFAStepUpTOTP117))
 	mux.Handle("GET /api/v1/auth/accounts", s.requirePermission("project:read", s.authAccounts))
 	mux.Handle("GET /api/v1/auth/sessions", s.requirePermission("project:read", s.v1AuthSessions))
+	mux.Handle("PATCH /api/v1/auth/sessions/{sessionId}", s.requirePermission("project:read", s.v1AuthRenameSession118))
+	mux.Handle("DELETE /api/v1/auth/sessions/{sessionId}", s.requirePermission("project:read", s.v1AuthRevokeOne118))
 	mux.Handle("POST /api/v1/auth/sessions/revoke", s.requirePermission("project:read", s.v1AuthRevokeSessions))
+	mux.Handle("POST /api/v1/auth/sessions/revoke-others", s.requirePermission("project:read", s.v1AuthRevokeOthers118))
 	mux.Handle("POST /api/v1/auth/sessions/logout-all", s.requirePermission("project:read", s.v1AuthRevokeSessions))
+	mux.Handle("GET /api/v1/admin/auth/sessions", s.requirePermission("users:manage", s.adminAuthSessions118))
+	mux.Handle("POST /api/v1/admin/auth/sessions/revoke", s.requireFreshAuth117("users:manage", "phishing-resistant", 5*time.Minute, s.adminAuthRevokeSessions118))
+	mux.Handle("POST /api/v1/admin/auth/providers/{providerId}/sessions/revoke", s.requireFreshAuth117("users:manage", "phishing-resistant", 5*time.Minute, s.adminAuthRevokeProviderSessions118))
 	mux.HandleFunc("GET /api/v1/auth/capabilities", s.authCapabilities)
 	mux.HandleFunc("GET /api/v1/auth/password-policy", s.authPasswordPolicy)
 	mux.HandleFunc("GET /api/v1/auth/session-policy", s.authSessionPolicy)

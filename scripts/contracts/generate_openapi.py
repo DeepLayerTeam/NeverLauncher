@@ -63,6 +63,13 @@ def path_parameters(path):
         out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/callback"):
         out += [{"name":"code","in":"query","required":False,"schema":{"type":"string"}},{"name":"state","in":"query","required":False,"schema":{"type":"string"}},{"name":"error","in":"query","required":False,"schema":{"type":"string"}}]
+    if path == "/api/v1/admin/auth/sessions":
+        out += [
+          {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"providerId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}},
+          {"name":"riskState","in":"query","required":False,"schema":{"type":"string","enum":["normal","elevated","compromised"]}},
+        ]
     return out
 
 ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
@@ -74,6 +81,8 @@ def body_schema(path):
       "/api/v1/admin/login":"LoginRequest", "/api/v1/auth/login":"LoginRequest", "/api/v1/auth/refresh":"RefreshRequest",
       "/api/v1/auth/oidc/{providerId}/begin":"OIDCBeginRequest", "/api/v1/auth/oidc/{providerId}/complete":"OIDCCompleteRequest",
       "/api/v1/auth/sessions/revoke":"RevokeSessionsRequest", "/api/v1/auth/sessions/logout-all":"RevokeSessionsRequest",
+      "/api/v1/auth/sessions/{sessionId}":"RenameSessionRequest",
+      "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
@@ -99,6 +108,8 @@ def request_body_required(method,path):
     if method not in ("post","put","patch"): return False
     optional={
       "/api/v1/auth/logout", "/api/v1/admin/logout", "/api/v1/auth/sessions/revoke", "/api/v1/auth/sessions/logout-all",
+      "/api/v1/auth/sessions/revoke-others", "/api/v1/auth/providers/{providerId}/logout",
+      "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
     }
     if path.endswith("/rotate-token") or path.endswith("/heartbeat") or path.endswith("/disable") or path.endswith("/enable"):
@@ -109,7 +120,11 @@ def request_body_required(method,path):
 
 def request_body_allowed(method,path):
     if method not in ("post","put","patch"): return False
-    no_body={"/api/v1/auth/logout","/api/v1/admin/logout","/api/v1/session/invalidate-all"}
+    no_body={
+      "/api/v1/auth/logout","/api/v1/admin/logout","/api/v1/session/invalidate-all",
+      "/api/v1/auth/sessions/revoke-others","/api/v1/auth/providers/{providerId}/logout",
+      "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
+    }
     if path in no_body or path.endswith("/rotate-token") or path.endswith("/disable") or path.endswith("/enable") or path.endswith("/versions/{versionId}/publish"):
         return False
     return True
@@ -182,6 +197,8 @@ schemas={
 "JoinRequest":{"type":"object","required":["username","serverId","projectId","profileId"],"properties":{"username":{"type":"string","minLength":3,"maxLength":16,"pattern":"^[A-Za-z0-9_]+$"},"serverId":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string","default":"stable"}}},
 "InvalidateRequest":{"type":"object","properties":{"serverId":{"type":"string"},"reason":{"type":"string"}}},
 "RevokeSessionsRequest":{"type":"object","properties":{"allExceptCurrent":{"type":"boolean"}}},
+"RenameSessionRequest":{"type":"object","required":["device"],"properties":{"device":{"type":"string","minLength":1,"maxLength":96}}},
+"AdminSessionRevokeRequest":{"type":"object","properties":{"userId":{"type":"string"},"providerId":{"type":"string"},"riskState":{"type":"string","enum":["normal","elevated","compromised"]},"reason":{"type":"string","maxLength":256}},"anyOf":[{"required":["userId"]},{"required":["providerId"]},{"required":["riskState"]}]},
 "PasswordResetRequest":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":12}}},
 "ProjectWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
 "ProfileWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},

@@ -23,27 +23,34 @@ const (
 )
 
 type authSessionRecord struct {
-	ID            string    `json:"id"`
-	UserID        string    `json:"userId"`
-	Email         string    `json:"email"`
-	RoleID        string    `json:"roleId"`
-	DeviceID      string    `json:"deviceId"`
-	Device        string    `json:"device"`
-	Status        string    `json:"status"`
-	RefreshHash   string    `json:"-"`
-	RefreshFamily string    `json:"refreshFamily"`
-	AuthMethods   []string  `json:"authMethods"`
-	AuthStrength  string    `json:"authStrength"`
-	AuthTime      time.Time `json:"authTime"`
-	IdentityID    string    `json:"identityId,omitempty"`
-	Provider      string    `json:"provider"`
-	CreatedAt     time.Time `json:"createdAt"`
-	LastSeenAt    time.Time `json:"lastSeenAt"`
-	ExpiresAt     time.Time `json:"expiresAt"`
-	RevokedAt     time.Time `json:"revokedAt,omitempty"`
-	RevokedReason string    `json:"revokedReason,omitempty"`
-	IP            string    `json:"ip"`
-	UserAgent     string    `json:"userAgent"`
+	ID              string    `json:"id"`
+	UserID          string    `json:"userId"`
+	Email           string    `json:"email"`
+	RoleID          string    `json:"roleId"`
+	DeviceID        string    `json:"deviceId"`
+	Device          string    `json:"device"`
+	Status          string    `json:"status"`
+	RefreshHash     string    `json:"-"`
+	RefreshFamily   string    `json:"refreshFamily"`
+	AuthMethods     []string  `json:"authMethods"`
+	AuthStrength    string    `json:"authStrength"`
+	AuthTime        time.Time `json:"authTime"`
+	IdentityID      string    `json:"identityId,omitempty"`
+	Provider        string    `json:"provider"`
+	CreatedAt       time.Time `json:"createdAt"`
+	LastSeenAt      time.Time `json:"lastSeenAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+	RevokedAt       time.Time `json:"revokedAt,omitempty"`
+	RevokedReason   string    `json:"revokedReason,omitempty"`
+	IP              string    `json:"ip"`
+	UserAgent       string    `json:"userAgent"`
+	LastIP          string    `json:"lastIp"`
+	LastUserAgent   string    `json:"lastUserAgent"`
+	RiskState       string    `json:"riskState"`
+	RiskReasons     []string  `json:"riskReasons"`
+	RiskUpdatedAt   time.Time `json:"riskUpdatedAt,omitempty"`
+	DeviceRenamedAt time.Time `json:"deviceRenamedAt,omitempty"`
+	Current         bool      `json:"current,omitempty"`
 }
 
 type refreshTokenRecord111 struct {
@@ -132,6 +139,10 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 		ExpiresAt:     now.Add(refreshTokenTTL),
 		IP:            clientIP(r),
 		UserAgent:     r.UserAgent(),
+		LastIP:        clientIP(r),
+		LastUserAgent: r.UserAgent(),
+		RiskState:     "normal",
+		RiskReasons:   []string{},
 	}
 	s.sessions[record.ID] = record
 	s.families[familyID] = refreshFamilyRecord111{ID: familyID, SessionID: record.ID, UserID: user.ID, Status: "active", CreatedAt: now}
@@ -140,9 +151,15 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 	return record, refreshToken, nil
 }
 
-func (s *authSessionStore) rotate(refreshToken string) (authSessionRecord, string, error) {
+func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (authSessionRecord, string, error) {
 	if s.persistent != nil {
-		return s.persistent.rotate(refreshToken)
+		record, token, err := s.persistent.rotate(refreshToken)
+		if err == nil && len(r) > 0 && r[0] != nil {
+			if observed, ok := s.persistent.observe118(record.ID, record.UserID, r[0]); ok {
+				record = observed
+			}
+		}
+		return record, token, err
 	}
 
 	s.mu.Lock()
@@ -203,18 +220,27 @@ func (s *authSessionStore) rotate(refreshToken string) (authSessionRecord, strin
 }
 
 func (s *authSessionStore) active(sessionID, userID string) bool {
+	_, ok := s.observe(sessionID, userID, nil)
+	return ok
+}
+
+func (s *authSessionStore) observe(sessionID, userID string, r *http.Request) (authSessionRecord, bool) {
 	if s.persistent != nil {
-		return s.persistent.active(sessionID, userID)
+		return s.persistent.observe118(sessionID, userID, r)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	record, ok := s.sessions[sessionID]
 	if !ok || record.UserID != userID || record.Status != "active" || record.ExpiresAt.Before(time.Now().UTC()) {
-		return false
+		return authSessionRecord{}, false
 	}
-	record.LastSeenAt = time.Now().UTC()
+	now := time.Now().UTC()
+	if r != nil {
+		applySessionObservation118(&record, clientIP(r), r.UserAgent(), now)
+	}
+	record.LastSeenAt = now
 	s.sessions[sessionID] = record
-	return true
+	return sanitizeSessionRecord(record), true
 }
 
 func (s *authSessionStore) revoke(sessionID, reason string) bool {
@@ -260,7 +286,7 @@ func (s *authSessionStore) revokeUser(userID, reason string) int {
 
 func (s *authSessionStore) listByUser(userID string) []authSessionRecord {
 	if s.persistent != nil {
-		return s.persistent.listByUser(userID)
+		return s.persistent.listByUser118(userID)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -276,7 +302,7 @@ func (s *authSessionStore) listByUser(userID string) []authSessionRecord {
 
 func (s *authSessionStore) get(sessionID, userID string) (authSessionRecord, bool) {
 	if s.persistent != nil {
-		return s.persistent.get(sessionID, userID)
+		return s.persistent.get118(sessionID, userID)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -358,7 +384,7 @@ func authStrengthLevel117(v string) int {
 
 func (s *authSessionStore) summary() map[string]any {
 	if s.persistent != nil {
-		return s.persistent.summary()
+		return s.persistent.summary118()
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -371,7 +397,17 @@ func (s *authSessionStore) summary() map[string]any {
 			revoked++
 		}
 	}
-	return map[string]any{"active": active, "revokedOrExpired": revoked, "total": len(s.sessions), "backend": "in-process-dev-session-registry", "reuseDetection": "token-family"}
+	elevated := 0
+	compromised := 0
+	for _, record := range s.sessions {
+		switch record.RiskState {
+		case "elevated":
+			elevated++
+		case "compromised":
+			compromised++
+		}
+	}
+	return map[string]any{"active": active, "revokedOrExpired": revoked, "total": len(s.sessions), "backend": "in-process-dev-session-registry", "reuseDetection": "token-family", "risk": map[string]int{"elevated": elevated, "compromised": compromised}}
 }
 
 func (s *authSessionStore) enforceSessionLimitLocked(userID string) {
@@ -417,6 +453,9 @@ func (s *authSessionStore) compromiseFamilyLocked111(familyID, reason string) {
 		record.Status = "revoked"
 		record.RevokedAt = now
 		record.RevokedReason = reason
+		record.RiskState = "compromised"
+		record.RiskReasons = mergeRiskReasons118(record.RiskReasons, reason)
+		record.RiskUpdatedAt = now
 		s.sessions[record.ID] = record
 	}
 	for hash, token := range s.tokens {

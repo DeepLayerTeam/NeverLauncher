@@ -425,3 +425,24 @@ func cloneClaims(input map[string]any) map[string]any {
 	}
 	return out
 }
+
+// RevokeProviderCredential performs provider-side logout/revocation only. It does
+// not revoke the Never session; callers must make that a separate explicit action.
+func (c *Core) RevokeProviderCredential(ctx context.Context, providerID, subject, providerToken string) error {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	revoker, ok := connector.(authconnector.Revoker)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
+		return ErrCapabilityUnsupported
+	}
+	subject = strings.TrimSpace(subject)
+	providerToken = strings.TrimSpace(providerToken)
+	if subject == "" || providerToken == "" {
+		return authconnector.NewError(authconnector.ErrInvalidCredentials, "provider subject/token are required for revoke")
+	}
+	return revoker.Revoke(ctx, authconnector.RevokeRequest{Subject: subject, ProviderToken: providerToken})
+}

@@ -11,6 +11,7 @@ type PublicKeyCredentialCreationOptionsJSON = { challenge: string; rp: PublicKey
 type PasskeyBegin = { transactionToken: string; publicKey: PublicKeyCredentialRequestOptionsJSON | PublicKeyCredentialCreationOptionsJSON; expiresInSeconds?: number };
 type PasskeySessionResponse = { status?: string; accessToken?: string; session?: { id?: string }; tokens?: { accessToken?: string; refreshToken?: string }; user?: Record<string, unknown> };
 type DashboardData = { status?: string; metrics?: Record<string, number>; projects?: any[]; profiles?: any[]; channels?: any[]; users?: any[]; audit?: any[] };
+type SessionView = { id: string; device: string; deviceId?: string; provider?: string; status?: string; riskState?: string; lastIp?: string; lastSeenAt?: string; expiresAt?: string; current?: boolean };
 
 type ProjectForm = { id: string; name: string; description: string; homepage: string; repository: string; defaultChannel: string };
 type ProfileForm = { projectId: string; id: string; name: string; description: string; loader: string; preset: string; isDefault: boolean };
@@ -163,6 +164,7 @@ function App() {
   const [status, setStatus] = useState('offline');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<SessionView[]>([]);
 
   const [projectForm, setProjectForm] = useState<ProjectForm>({ id: 'neverlauncher-project', name: 'Проект NeverLauncher', description: 'Production-проект Minecraft', homepage: '', repository: '', defaultChannel: 'stable' });
   const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: 'neverlauncher-project', id: 'vanilla-java21', name: 'Vanilla Java 21', description: 'Production-профиль клиента', loader: 'vanilla', preset: 'recommended', isDefault: true });
@@ -264,6 +266,36 @@ function App() {
   async function logout() {
     if (token) await requestJSON<any>(backendUrl, '/api/v1/admin/logout', token, { method: 'POST' }).catch(() => undefined);
     setToken(''); setRefreshToken(''); setSessionId(''); setDashboard(null); setPayload(null); setMessage('Сессия завершена.');
+  }
+
+  async function loadSessions(currentToken = token) {
+    if (!currentToken) { setSessions([]); return; }
+    const data = await requestJSON<{ items?: SessionView[] }>(backendUrl, '/api/v1/auth/sessions', currentToken);
+    setSessions(data.items ?? []);
+  }
+
+  async function renameSession(item: SessionView) {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    const nextName = window.prompt('Название устройства', item.device || item.deviceId || 'Устройство');
+    if (!nextName) return;
+    await requestJSON(backendUrl, `/api/v1/auth/sessions/${encodeURIComponent(item.id)}`, token, { method: 'PATCH', body: JSON.stringify({ device: nextName }) });
+    await loadSessions();
+    setMessage('Название устройства обновлено.');
+  }
+
+  async function revokeSession(item: SessionView) {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    await requestJSON(backendUrl, `/api/v1/auth/sessions/${encodeURIComponent(item.id)}`, token, { method: 'DELETE' });
+    if (item.current) { setToken(''); setRefreshToken(''); setSessionId(''); setSessions([]); setMessage('Текущая сессия отозвана.'); return; }
+    await loadSessions();
+    setMessage('Сессия отозвана.');
+  }
+
+  async function revokeOtherSessions() {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    await requestJSON(backendUrl, '/api/v1/auth/sessions/revoke-others', token, { method: 'POST' });
+    await loadSessions();
+    setMessage('Все остальные сессии отозваны.');
   }
 
   async function loadDashboard(currentToken = token) {
@@ -414,6 +446,8 @@ function App() {
         <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button>{token && <button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button>}{token && <button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button>}</div>
         {token && <div className="passkeyRow"><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div>}
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
+        {token && <div className="passkeyRow"><button onClick={() => loadSessions().catch((err: Error) => setError(err.message))}>Сессии</button><button onClick={() => revokeOtherSessions().catch((err: Error) => setError(err.message))}>Выйти на других устройствах</button></div>}
+        {token && sessions.length > 0 && <div className="sessionList">{sessions.map((item) => <article className="subcard" key={item.id}><strong>{item.device || item.deviceId || 'Устройство'}{item.current ? ' · текущая' : ''}</strong><p className="muted">{item.provider ?? 'local'} · risk: {item.riskState ?? 'normal'} · {item.lastIp ?? 'IP неизвестен'}</p><div className="buttonRow"><button onClick={() => renameSession(item).catch((err: Error) => setError(err.message))}>Переименовать</button><button onClick={() => revokeSession(item).catch((err: Error) => setError(err.message))}>{item.current ? 'Завершить' : 'Отозвать'}</button></div></article>)}</div>}
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
       </section>

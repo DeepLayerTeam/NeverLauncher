@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -15,6 +14,9 @@ import (
 )
 
 type authClaims struct {
+	Iss          string   `json:"iss"`
+	Aud          string   `json:"aud"`
+	JTI          string   `json:"jti"`
 	Sub          string   `json:"sub"`
 	Email        string   `json:"email"`
 	RoleID       string   `json:"roleId"`
@@ -85,13 +87,7 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 		AuthStrength: session.AuthStrength,
 		Exp:          now.Add(accessTokenTTL).Unix(),
 	}
-	payloadBytes, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-	payload := base64.RawURLEncoding.EncodeToString(payloadBytes)
-	signature := signPayload(payload, s.Config.AuthTokenSecret)
-	return payload + "." + signature, nil
+	return s.encodeAccessToken118(claims)
 }
 
 func (s Server) verifyAdminTokenFromRequest(r *http.Request) (authClaims, error) {
@@ -103,27 +99,19 @@ func (s Server) verifyAdminTokenFromRequest(r *http.Request) (authClaims, error)
 	if token == header {
 		return authClaims{}, errAuthRequired
 	}
-	return s.verifyAdminToken(token)
-}
-
-func (s Server) verifyAdminToken(token string) (authClaims, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 2 {
-		return authClaims{}, errAuthRequired
-	}
-	expected := signPayload(parts[0], s.Config.AuthTokenSecret)
-	if !hmac.Equal([]byte(expected), []byte(parts[1])) {
-		return authClaims{}, errAuthRequired
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
+	claims, err := s.verifyAdminToken(token)
 	if err != nil {
 		return authClaims{}, err
 	}
-	var claims authClaims
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return authClaims{}, err
+	if _, ok := s.State.AuthSessions.observe(claims.SessionID, claims.Sub, r); !ok {
+		return authClaims{}, errAuthRequired
 	}
-	if claims.Exp <= time.Now().UTC().Unix() || claims.TokenUse != "access" || claims.SessionID == "" {
+	return claims, nil
+}
+
+func (s Server) verifyAdminToken(token string) (authClaims, error) {
+	claims, err := s.decodeAccessToken118(token)
+	if err != nil {
 		return authClaims{}, errAuthRequired
 	}
 	if claims.AuthStrength == "" {

@@ -12,6 +12,12 @@ NeverLauncher использует модель безопасности, в к�
 
 Критические действия не полагаются только на факт существования активной session: Backend проверяет `auth_strength` и свежий `auth_time`. Для операций, требующих phishing-resistant step-up, TOTP недостаточен.
 
+## Session Management 2.0
+
+С `0.11.8` access tokens являются подписанными JWS/JWT с обязательными `iss`, `aud`, `sub`, `sid`, `jti`, `iat`, `exp`, `kid`, `auth_time` и `amr`. Для rotation используйте `NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON` и переключайте `NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID`, сохраняя предыдущий verification key до истечения всех выпущенных им access tokens. `AUTH_TOKEN_SECRET` остаётся обязательным root secret и backward-compatible single-key fallback.
+
+Session risk хранится в PostgreSQL: изменение IP/User-Agent переводит session в `elevated`, refresh-token replay — в `compromised` с отзывом всей token family. Массовый provider revoke доступен только после свежего phishing-resistant step-up. Provider logout и Never session logout являются разными действиями: отзыв внешнего provider credential сам по себе не завершает Never session.
+
 ## Обязательные production-настройки
 
 Для production-окружения используйте persistent backend и сильные секреты:
@@ -22,6 +28,9 @@ NEVERLAUNCHER_REPOSITORY_DRIVER=postgres
 NEVERLAUNCHER_SQL_DRIVER=pgx
 NEVERLAUNCHER_DATABASE_DSN=postgres://neverlauncher:password@postgres:5432/neverlauncher?sslmode=disable
 NEVERLAUNCHER_AUTH_TOKEN_SECRET=replace-with-at-least-32-random-bytes
+NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE=neverlauncher-api
+NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID=primary
+# NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON={"primary":"...","previous":"..."}
 NEVERLAUNCHER_PERSISTENT_SESSIONS=true
 NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION=true
 NEVERLAUNCHER_BACKUP_ROOT=/var/lib/neverlauncher/backups

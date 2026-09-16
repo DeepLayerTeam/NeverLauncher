@@ -62,6 +62,16 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 			return fmt.Errorf("auth core schema table %s отсутствует; примените database migrations", table)
 		}
 	}
+	for _, column := range []string{"last_ip", "last_user_agent", "risk_state", "risk_reasons", "risk_updated_at", "device_renamed_at"} {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_sessions' AND column_name=$1)`, column).Scan(&exists); err != nil || !exists {
+			db.Close()
+			if err != nil {
+				return fmt.Errorf("session management 2.0 schema check %s: %w", column, err)
+			}
+			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0008_session_management_2_0118.sql", column)
+		}
+	}
 	state.AuthSessions.persistent = &authSessionPostgres111{db: db}
 	state.Security.persistent = &securityPostgres111{db: db, secret: cfg.AuthTokenSecret}
 	state.Passkeys.persistent = &passkeyPostgres117{db: db}
@@ -104,10 +114,10 @@ func (p *authSessionPostgres111) createWithAuth(user model.User, r *http.Request
 		return authSessionRecord{}, "", err
 	}
 	expires := now.Add(refreshTokenTTL)
-	record := authSessionRecord{ID: sessionID, UserID: user.ID, Email: user.Email, RoleID: user.RoleID, DeviceID: deviceID, Device: deviceID, Status: "active", RefreshHash: hashRefreshToken(refreshToken), RefreshFamily: familyID, AuthMethods: append([]string(nil), methods...), AuthStrength: strength, AuthTime: authTime, IdentityID: strings.TrimSpace(identityID), Provider: provider, CreatedAt: now, LastSeenAt: now, ExpiresAt: expires, IP: clientIP(r), UserAgent: r.UserAgent()}
+	record := authSessionRecord{ID: sessionID, UserID: user.ID, Email: user.Email, RoleID: user.RoleID, DeviceID: deviceID, Device: deviceID, Status: "active", RefreshHash: hashRefreshToken(refreshToken), RefreshFamily: familyID, AuthMethods: append([]string(nil), methods...), AuthStrength: strength, AuthTime: authTime, IdentityID: strings.TrimSpace(identityID), Provider: provider, CreatedAt: now, LastSeenAt: now, ExpiresAt: expires, IP: clientIP(r), UserAgent: r.UserAgent(), LastIP: clientIP(r), LastUserAgent: r.UserAgent(), RiskState: "normal", RiskReasons: []string{}}
 
 	methodsJSON, _ := json.Marshal(record.AuthMethods)
-	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,$9,$10,$11,$12,$13,$13,$14,$15,$16)`, record.ID, record.UserID, record.Email, record.RoleID, record.DeviceID, record.Device, familyID, string(methodsJSON), record.AuthStrength, record.AuthTime, record.IdentityID, record.Provider, now, expires, record.IP, record.UserAgent); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,ip,user_agent,last_ip,last_user_agent,risk_state,risk_reasons) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,$9,$10,$11,$12,$13,$13,$14,$15,$16,$15,$16,'normal','[]'::jsonb)`, record.ID, record.UserID, record.Email, record.RoleID, record.DeviceID, record.Device, familyID, string(methodsJSON), record.AuthStrength, record.AuthTime, record.IdentityID, record.Provider, now, expires, record.IP, record.UserAgent); err != nil {
 		return authSessionRecord{}, "", err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status,created_at) VALUES($1,$2,$3,'active',$4)`, familyID, record.ID, user.ID, now); err != nil {
@@ -358,7 +368,7 @@ func (p *authSessionPostgres111) compromiseFamilyTx111(ctx context.Context, tx *
 	if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='compromised',compromised_at=$2,revoked_at=$2,revoked_reason=$3 WHERE id=$1`, familyID, now, reason); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, sessionID, now, reason); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=jsonb_build_array($3),risk_updated_at=$2 WHERE id=$1`, sessionID, now, reason); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1`, familyID, now); err != nil {

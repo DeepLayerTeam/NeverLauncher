@@ -134,6 +134,13 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
+	if strings.TrimSpace(result.ProviderToken) != "" {
+		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
+			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
+			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			return
+		}
+	}
 	if updated, err := s.Repo.TouchUserLogin(user.ID); err == nil {
 		user = updated
 	}
@@ -163,7 +170,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "refreshToken обязателен")
 		return
 	}
-	session, newRefreshToken, err := s.State.AuthSessions.rotate(req.RefreshToken)
+	session, newRefreshToken, err := s.State.AuthSessions.rotate(req.RefreshToken, r)
 	_ = s.flushPersistenceState950("auth-refresh-rotate")
 	if err != nil {
 		if errors.Is(err, errRefreshTokenReuseDetected) {
@@ -235,7 +242,7 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
 		"status":        "federation-core-active",
-		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
+		"capabilities":  []string{"connector-sdk", "federation-core", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "session-management-2", "session-device-management", "session-risk-state", "provider-session-revocation", "jwt-access-tokens", "access-token-key-rotation", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit"},
 		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),
@@ -244,7 +251,7 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 }
 
 func (s Server) sessionPolicyPayload(version string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced", "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser, "revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke"}, "authStrengths": []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5, "sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary()}
+	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced", "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser, "revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke"}, "authStrengths": []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5, "accessTokenFormat": "JWT/JWS HS256", "accessTokenClaims": []string{"iss", "aud", "sub", "sid", "jti", "iat", "exp", "kid(header)", "auth_time", "amr"}, "riskStates": []string{"normal", "elevated", "compromised"}, "sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary()}
 }
 
 func desktopAuthPolicyPayload(version string) map[string]any {

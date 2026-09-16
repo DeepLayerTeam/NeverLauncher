@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -41,6 +42,10 @@ type Config struct {
 	Environment                        string
 	AuthTokenSecret                    string
 	AuthTokenTTLHours                  int
+	AuthTokenIssuer                    string
+	AuthTokenAudience                  string
+	AuthTokenActiveKID                 string
+	AuthTokenKeysJSON                  string
 	MetricsEnabled                     bool
 	PersistentSessions                 bool
 	RequirePersistentStoreInProduction bool
@@ -105,6 +110,10 @@ func Load() Config {
 		Environment:                        environment,
 		AuthTokenSecret:                    env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
 		AuthTokenTTLHours:                  envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
+		AuthTokenIssuer:                    env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
+		AuthTokenAudience:                  env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
+		AuthTokenActiveKID:                 env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
+		AuthTokenKeysJSON:                  env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
 		MetricsEnabled:                     envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
 		PersistentSessions:                 envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
 		RequirePersistentStoreInProduction: envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
@@ -163,6 +172,25 @@ func ValidateProduction(cfg Config) error {
 	secret := strings.TrimSpace(cfg.AuthTokenSecret)
 	if len(secret) < 32 || secret == "dev-only-change-me" || strings.Contains(strings.ToUpper(secret), "CHANGE_ME") {
 		problems = append(problems, "NEVERLAUNCHER_AUTH_TOKEN_SECRET должен содержать не менее 32 случайных символов и не быть значением по умолчанию")
+	}
+	if raw := strings.TrimSpace(cfg.AuthTokenKeysJSON); raw != "" {
+		keys := map[string]string{}
+		if err := json.Unmarshal([]byte(raw), &keys); err != nil {
+			problems = append(problems, "NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON должен быть JSON object kid->secret")
+		} else {
+			active := strings.TrimSpace(cfg.AuthTokenActiveKID)
+			if active == "" {
+				active = "primary"
+			}
+			if strings.TrimSpace(keys[active]) == "" {
+				problems = append(problems, "active auth token kid отсутствует в NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON")
+			}
+			for kid, key := range keys {
+				if strings.TrimSpace(kid) == "" || len(strings.TrimSpace(key)) < 32 {
+					problems = append(problems, fmt.Sprintf("auth token key %q должен содержать не менее 32 символов", kid))
+				}
+			}
+		}
 	}
 	publicURL, err := url.Parse(strings.TrimSpace(cfg.PublicURL))
 	publicURLValid := err == nil && publicURL.Host != "" && publicURL.Scheme == "https"

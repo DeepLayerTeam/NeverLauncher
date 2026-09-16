@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.8 — Session Management 2.0
+
+`0.11.8` переводит Never sessions на полноценный production session-management контур: стандартные JWT/JWS access tokens с `iss`/`aud`/`sub`/`sid`/`jti`/`iat`/`exp`/`kid`/`auth_time`/`amr`, rotation-capable signing keyring, persistent device/risk metadata и пользовательские/административные session controls. Refresh-token family replay по-прежнему отзывает всю family и теперь явно переводит сессию в `compromised`.
+
+### Sessions / risk / controls
+
+- PostgreSQL остаётся source of truth для sessions и refresh families; сохраняются identity/provider, device, first/last IP и User-Agent, auth methods/strength/time, last activity, expiry и risk state.
+- Изменение IP или User-Agent переводит активную session в `elevated` и пишет `auth_event`; refresh replay переводит family/session в `compromised` и отзывает её.
+- Пользователь может просматривать sessions, переименовывать устройство без изменения device ID, отзывать одну session, все остальные или выполнить logout-all. Admin API фильтрует sessions по user/provider/status/risk и умеет массово отзывать user/provider/risk выборку; provider-wide compromise требует свежую phishing-resistant authentication.
+- Provider logout отделён от Never logout: поддерживающий revoke connector получает provider credential server-side, credential удаляется после revoke, но Never session остаётся активной до отдельного revoke/logout.
+
+### Access-token key rotation
+
+- Access token теперь compact JWS/JWT `HS256`, а не custom `base64(payload).HMAC`. Header содержит `typ=JWT`, `alg=HS256`, `kid`; verifier проверяет issuer, audience, token use, timestamps, session id и key id.
+- `NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON` задаёт keyring `kid -> secret`, `NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID` выбирает signing key. Предыдущий key остаётся verify-only до истечения выпущенных им access tokens, после чего его можно удалить. Старые production-конфиги с одним `AUTH_TOKEN_SECRET` продолжают работать через `primary` key.
+
 ## 0.11.7 — Passkeys / WebAuthn + MFA 2.0
 
 `0.11.7` добавляет production WebAuthn/passkeys поверх существующего Federation Core. Passkeys являются реальным authentication method: credentials и одноразовые challenges сохраняются в PostgreSQL, assertion проверяет RP ID/origin/challenge/signature/user verification/sign counter, а password/SQL/HTTP/OIDC/Microsoft login проходит единый MFA policy до выпуска Never session.
