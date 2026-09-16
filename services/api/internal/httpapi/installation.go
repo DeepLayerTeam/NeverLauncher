@@ -237,6 +237,11 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	if err != nil {
 		return model.User{}, err
 	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
+VALUES($1,$2,'local',$2,$3,$3,$4,'{}'::jsonb,$5,$5)
+ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=EXCLUDED.updated_at`, "identity-local-"+user.ID, user.ID, user.Email, user.DisplayName, now); err != nil {
+		return model.User{}, err
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {
 		return model.User{}, err
 	}

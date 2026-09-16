@@ -94,6 +94,15 @@ CASES = [
         "coverage": ["canonical-user", "jit", "explicit-link", "conflict"],
     },
     {
+        "id": "release-linking-status",
+        "package": "./internal/httpapi",
+        "tests": [
+            "TestGenericBrowserProviderExplicitLink0120",
+            "TestFederationStatus0120ReportsProviderHealth",
+        ],
+        "coverage": ["provider-agnostic-explicit-link", "runtime-provider-health"],
+    },
+    {
         "id": "minecraft-after-federation",
         "package": "./internal/httpapi",
         "tests": [
@@ -128,9 +137,6 @@ def run_case(case: dict) -> dict:
 
 
 def main() -> int:
-    if VERSION != "0.11.10":
-        print(f"federation e2e expects VERSION=0.11.10, got {VERSION}", file=sys.stderr)
-        return 2
     results = []
     failed = False
     for case in CASES:
@@ -143,7 +149,7 @@ def main() -> int:
         else:
             print(f"[federation-e2e] {case['id']} PASS ({result['durationMs']} ms)")
     report = {
-        "schemaVersion": "0.11.10",
+        "schemaVersion": "1",
         "toolVersion": VERSION,
         "status": "failed" if failed else "passed",
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

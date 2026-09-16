@@ -65,7 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 	federationCtx, federationCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	federationCore, err := httpapi.NewFederationCore116(federationCtx, repo, cfg)
+	federationCore, err := httpapi.NewFederationCore(federationCtx, repo, cfg)
 	federationCancel()
 	if err != nil {
 		log.Fatalf("federation core initialization failed: %v", err)

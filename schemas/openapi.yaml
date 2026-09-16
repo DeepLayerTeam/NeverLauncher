@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.11.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.12.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -82,6 +82,36 @@
           "admin"
         ],
         "summary": "GET /api/v1/admin/audit",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/auth/federation/status": {
+      "get": {
+        "operationId": "get_admin_auth_federation_status",
+        "tags": [
+          "auth"
+        ],
+        "summary": "GET /api/v1/admin/auth/federation/status",
         "responses": {
           "200": {
             "description": "Success",
@@ -2818,6 +2848,114 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/providers/{providerId}/link/begin": {
+      "post": {
+        "operationId": "post_auth_providers_by_providerId_link_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/providers/{providerId}/link/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OIDCBeginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/providers/{providerId}/link/complete": {
+      "post": {
+        "operationId": "post_auth_providers_by_providerId_link_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/providers/{providerId}/link/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OIDCCompleteRequest"
               }
             }
           }

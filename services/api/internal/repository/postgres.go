@@ -431,7 +431,26 @@ func (r *SQLRepository) SetUserPassword(id, passwordHash string) (model.User, er
 	if err := r.check(); err != nil {
 		return model.User{}, err
 	}
-	if _, err := r.db.Exec(`UPDATE users SET password_hash = $2, password_updated_at = now(), updated_at = now() WHERE id = $1`, id, passwordHash); err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return model.User{}, err
+	}
+	defer tx.Rollback()
+	var email, displayName string
+	if err := tx.QueryRow(`UPDATE users SET password_hash = $2, password_updated_at = now(), updated_at = now() WHERE id = $1 RETURNING email,display_name`, id, passwordHash).Scan(&email, &displayName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.User{}, ErrNotFound
+		}
+		return model.User{}, err
+	}
+	if strings.TrimSpace(passwordHash) != "" {
+		if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
+VALUES($1,$2,'local',$2,$3,$3,$4,'{}'::jsonb,now(),now())
+ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()`, "identity-local-"+id, id, email, displayName); err != nil {
+			return model.User{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return model.User{}, err
 	}
 	return r.GetUser(id)

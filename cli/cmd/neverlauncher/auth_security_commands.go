@@ -368,7 +368,7 @@ func handleDB(args []string) error {
 		for _, m := range migrations {
 			items = append(items, map[string]any{"version": m.Version, "checksum": m.Checksum})
 		}
-		report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "count": len(items), "status": "listed", "migrations": items}
+		report := map[string]any{"schemaVersion": "1", "toolVersion": version, "count": len(items), "status": "listed", "migrations": items}
 		if out != "" {
 			return writeJSONFile(out, report)
 		}
@@ -398,7 +398,7 @@ func handleDB(args []string) error {
 		if len(duplicates) != 0 {
 			status = "requires-cleanup"
 		}
-		report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "status": status, "count": len(items), "duplicates": duplicates, "migrations": items, "latest": items[len(items)-1]}
+		report := map[string]any{"schemaVersion": "1", "toolVersion": version, "status": status, "count": len(items), "duplicates": duplicates, "migrations": items, "latest": items[len(items)-1]}
 		if out != "" {
 			return writeJSONFile(out, report)
 		}
@@ -448,7 +448,7 @@ func handleDB(args []string) error {
 			if err != nil {
 				return err
 			}
-			report := map[string]any{"schemaVersion": "0.11.10", "toolVersion": version, "status": "verified", "driver": "postgres", "migrations": versions, "output": strings.TrimSpace(output)}
+			report := map[string]any{"schemaVersion": "1", "toolVersion": version, "status": "verified", "driver": "postgres", "migrations": versions, "output": strings.TrimSpace(output)}
 			if out != "" {
 				return writeJSONFile(out, report)
 			}

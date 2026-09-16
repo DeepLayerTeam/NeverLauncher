@@ -15,13 +15,17 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-// NewFederationCore116 builds the production provider registry. Every configured
+// NewFederationCore builds the stable 0.12+ production provider registry. Every configured
 // provider is opened, health-checked, SDK-conformance checked and registered before
 // the API accepts traffic. A broken SQL/HTTP/OIDC provider therefore fails startup
 // instead of silently degrading authentication to another provider.
-func NewFederationCore116(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+func NewFederationCore(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	core := federation.New(repo)
-	if err := core.Register(localAuthConnector112{repo: repo}); err != nil {
+	local := localAuthConnector112{repo: repo}
+	if report := conformance.Run(ctx, local); !report.Passed {
+		return nil, fmt.Errorf("local connector failed SDK conformance: %+v", report.Checks)
+	}
+	if err := core.Register(local); err != nil {
 		return nil, err
 	}
 
@@ -119,18 +123,23 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 	return core.RegisterWithPolicy(connector, policy)
 }
 
+// NewFederationCore116 remains source-compatible for 0.11.6+ embedders.
+func NewFederationCore116(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
+	return NewFederationCore(ctx, repo, cfg)
+}
+
 // NewFederationCore115 remains source-compatible for 0.11.5 embedders.
 func NewFederationCore115(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
-	return NewFederationCore116(ctx, repo, cfg)
+	return NewFederationCore(ctx, repo, cfg)
 }
 
 // NewFederationCore113 remains source-compatible for embedders/tests compiled against
 // 0.11.3. It now delegates to the current registry and therefore also loads HTTP
 // providers when they are configured.
 func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
-	return NewFederationCore116(ctx, repo, cfg)
+	return NewFederationCore(ctx, repo, cfg)
 }
 
 func NewFederationCore113(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
-	return NewFederationCore116(ctx, repo, cfg)
+	return NewFederationCore(ctx, repo, cfg)
 }

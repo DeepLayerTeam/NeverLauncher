@@ -214,3 +214,7 @@ go vet -tags neverlauncher_nopgx ./...
 ```
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
+
+### Auth Federation 0.12
+
+Stable registry создаётся через `httpapi.NewFederationCore(...)`; Local/SQL/HTTP/OIDC/Microsoft проходят Connector SDK conformance до приёма трафика. Generic browser identity linking доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает runtime health и provisioning policy providers. Migration `0011_auth_federation_release_0120` закрепляет canonical local identity для password-capable users.

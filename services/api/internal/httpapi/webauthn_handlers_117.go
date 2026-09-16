@@ -198,7 +198,7 @@ func (s Server) authPasskeyLoginComplete117(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "не удалось обновить passkey state")
 		return
 	}
-	s.issuePasskeyLogin117(w, r, user, firstNonEmpty(req.DeviceID, "passkey-client"), "local", "identity-local-"+user.ID, nil)
+	s.issuePasskeyLogin117(w, r, user, firstNonEmpty(req.DeviceID, "passkey-client"), "passkey", "", nil)
 }
 
 func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Request) {
@@ -429,7 +429,7 @@ func (s Server) authMFAPolicy117(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, user model.User, deviceID, provider, identityID string, baseMethods []string) {
 	methods := mergeAuthMethods117(baseMethods, "passkey", "user-verification")
-	access, refresh, session, err := s.issueLoginSessionWithAuth(user, r, deviceID, methods, "phishing-resistant", time.Now().UTC(), identityID, firstNonEmpty(provider, "local"))
+	access, refresh, session, err := s.issueLoginSessionWithAuth(user, r, deviceID, methods, "phishing-resistant", time.Now().UTC(), identityID, firstNonEmpty(provider, "passkey"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return

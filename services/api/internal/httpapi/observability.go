@@ -45,6 +45,21 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if s.Federation != nil {
+		health := s.Federation.Health(ctx)
+		healthy := 0
+		for _, item := range health {
+			if item.Healthy {
+				healthy++
+			}
+		}
+		checks["federation"] = fmt.Sprintf("%d/%d providers healthy", healthy, len(health))
+		if len(health) == 0 || healthy == 0 {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "no healthy authentication provider"})
+			return
+		}
+	}
+
 	if migrator, ok := s.Repo.(interface {
 		MigrationStatus(context.Context) (dbmigrate.Status, error)
 	}); ok {

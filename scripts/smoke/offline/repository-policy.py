@@ -85,6 +85,12 @@ else:
         cli_digest = hashlib.sha256(cli_files[name].read_bytes()).digest()
         if api_digest != cli_digest:
             fail(f"migration checksum drift between Backend and CLI: {name}")
+if "0011_auth_federation_release_0120.sql" not in api_files:
+    fail("0.12.0 Auth Federation release migration is missing")
+release_migration = api_files["0011_auth_federation_release_0120.sql"].read_text(encoding="utf-8")
+for required in ["trg_users_require_local_identity", "trg_auth_identities_preserve_local", "auth_identities_provider_canonical_check"]:
+    if required not in release_migration:
+        fail(f"0.12.0 federation release migration missing invariant: {required}")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [
@@ -227,6 +233,20 @@ if "federation-e2e" not in preflight or "scripts/test/federation-e2e.py" not in 
     fail("preflight не запускает federation E2E release gate")
 if "NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
     fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
+federation_routes = read("services/api/internal/httpapi/routes_auth.go")
+federation_registry = read("services/api/internal/httpapi/sql_connector_113.go")
+for required in ["/api/v1/auth/providers/{providerId}/link/begin", "/api/v1/auth/providers/{providerId}/link/complete", "/api/v1/admin/auth/federation/status"]:
+    if required not in federation_routes:
+        fail(f"0.12.0 Auth Federation route missing: {required}")
+for required in ["func NewFederationCore(", "conformance.Run(ctx, local)"]:
+    if required not in federation_registry:
+        fail(f"0.12.0 canonical federation registry missing: {required}")
+auth_session_postgres = read("services/api/internal/httpapi/auth_core_postgres_111.go")
+if "INSERT INTO auth_identities" in auth_session_postgres:
+    fail("0.12.0 session issuance must not fabricate local identities; identity lifecycle belongs to canonical user/password operations")
+passkey_handlers = read("services/api/internal/httpapi/webauthn_handlers_117.go")
+if '"local", "identity-local-"+user.ID' in passkey_handlers or 'firstNonEmpty(provider, "local")' in passkey_handlers:
+    fail("0.12.0 passwordless passkey must not masquerade as a local provider identity")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")
@@ -244,7 +264,7 @@ for required in ["api-a:", "api-b:", "api-c:", "NEVERLAUNCHER_PERSISTENT_SESSION
     if required not in federation_e2e_compose:
         fail(f"federation PostgreSQL E2E incomplete: {required}")
 federation_e2e = read("e2e/scripts/run-federation-postgres-e2e.sh")
-for required in ["db migrate verify", "compose restart api-a", "api/v1/auth/refresh", "replay old refresh"]:
+for required in ["db migrate verify", "0011_auth_federation_release_0120", "localIdentityInvariant", "passwordPromotionIdentityInvariant", "user-federation-external-e2e", "compose restart api-a", "api/v1/auth/refresh", "replay old refresh"]:
     if required not in federation_e2e:
         fail(f"federation PostgreSQL E2E missing stabilization check: {required}")
 if 'case "production", "prod", "e2e-production"' not in config_go:

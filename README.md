@@ -231,6 +231,12 @@ Velocity/Purpur продолжают проходить быстрый protocol-
 bash e2e/scripts/run-minecraft-e2e.sh
 ```
 
+## Auth Federation 0.12
+
+`0.12.0` — стабильный Auth Federation release. Local/SQL/HTTP/OIDC/Microsoft проходят один Connector SDK/Federation Core и разрешаются в canonical Never user до выпуска Never session; passkeys/TOTP/recovery являются auth methods/MFA, а Minecraft session создаётся только поверх canonical Never session. Generic browser providers можно явно связать через `/api/v1/auth/providers/{providerId}/link/begin|complete` без auto-link по email.
+
+Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
+
 ## Minecraft Auth Compatibility 2.0
 
 С `0.11.10` federation/migration stability является исполняемым release gate. `python3 scripts/test/federation-e2e.py` прогоняет Local/SQL/HTTP/OIDC/Microsoft/passkey через canonical session и Minecraft compatibility flow, а `bash e2e/scripts/run-federation-postgres-e2e.sh` проверяет restart и multi-instance refresh/revoke/replay на PostgreSQL. Перед production upgrade используйте `nl db migrate apply`, затем `nl db migrate verify`; verify fail-closed отклоняет unknown/future migrations, незапечатанные checksum и checksum drift.

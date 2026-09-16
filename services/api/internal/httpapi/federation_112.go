@@ -12,12 +12,12 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
 
-const federationSchema112 = "0.11.2"
+const localConnectorVersion0120 = "1.0.0"
 
 type localAuthConnector112 struct{ repo repository.Repository }
 
 func (c localAuthConnector112) Metadata() authconnector.Metadata {
-	return authconnector.Metadata{ID: "local", DisplayName: "NeverLauncher Local", Version: federationSchema112, Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth, authconnector.CapabilityUserLookup, authconnector.CapabilityEmail, authconnector.CapabilityProfile, authconnector.CapabilityRoles}}
+	return authconnector.Metadata{ID: "local", DisplayName: "NeverLauncher Local", Version: localConnectorVersion0120, Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth, authconnector.CapabilityUserLookup, authconnector.CapabilityEmail, authconnector.CapabilityProfile, authconnector.CapabilityRoles}}
 }
 func (c localAuthConnector112) Health(ctx context.Context) error {
 	if c.repo == nil {

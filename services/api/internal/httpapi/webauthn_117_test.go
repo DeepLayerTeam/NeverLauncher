@@ -164,10 +164,17 @@ func passkeyLogin117(t *testing.T, h http.Handler, fixture testPasskey117) strin
 				AccessToken string `json:"accessToken"`
 			} `json:"tokens"`
 			AuthStrength string `json:"authStrength"`
+			Session      struct {
+				Provider   string `json:"provider"`
+				IdentityID string `json:"identityId"`
+			} `json:"session"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil || out.Data.Tokens.AccessToken == "" || out.Data.AuthStrength != "phishing-resistant" {
 		t.Fatalf("passkey login payload invalid: %v %s", err, rr.Body.String())
+	}
+	if out.Data.Session.Provider != "passkey" || out.Data.Session.IdentityID != "" {
+		t.Fatalf("passwordless passkey must not fabricate local identity: provider=%q identity=%q body=%s", out.Data.Session.Provider, out.Data.Session.IdentityID, rr.Body.String())
 	}
 	return out.Data.Tokens.AccessToken
 }

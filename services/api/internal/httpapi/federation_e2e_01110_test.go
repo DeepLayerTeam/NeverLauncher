@@ -64,7 +64,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 	}
 	state := NewRuntimeState()
 	server := Server{
-		Version: "0.11.10",
+		Version: "0.12.0",
 		Config:  config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-matrix"},
 		Repo:    repo, State: state, Federation: core,
 	}
@@ -147,7 +147,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			t.Fatal(err)
 		}
 		req := httptest.NewRequest("POST", "/api/v1/auth/webauthn/authenticate/complete", nil)
-		session, refresh, err := state.AuthSessions.createWithAuth(user, req, "matrix-passkey", []string{"passkey"}, "phishing-resistant", time.Now().UTC(), "", "local")
+		session, refresh, err := state.AuthSessions.createWithAuth(user, req, "matrix-passkey", []string{"passkey"}, "phishing-resistant", time.Now().UTC(), "", "passkey")
 		if err != nil {
 			t.Fatal(err)
 		}

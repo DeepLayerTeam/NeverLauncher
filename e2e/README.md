@@ -46,7 +46,7 @@ materialize
 Канонический Compose-файл: `e2e/docker-compose.minecraft-e2e.yml`. Runtime/evidence создаются в `e2e/runtime/` и `e2e/compatibility-result/`, оба каталога исключены из source tree.
 
 Для локального запуска нужны Docker, Go, Rust/Cargo, JDK 21, Gradle, `curl`, `jq`, Python 3, `xvfb-run` и системные OpenGL/X11 библиотеки. Нужен сетевой доступ к Mojang, Fabric/Quilt Meta, Forge/NeoForge Maven и registry/репозиториям build pipeline.
-## Federation/PostgreSQL stabilization E2E (`0.11.10`)
+## Federation/PostgreSQL Auth Federation E2E (`0.12.0`)
 
 Для auth/federation release gate используется отдельный сценарий:
 

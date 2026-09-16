@@ -126,9 +126,6 @@ func (p *authSessionPostgres111) createWithAuth(user model.User, r *http.Request
 	if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_tokens(id,family_id,session_id,token_hash,status,created_at,expires_at) VALUES($1,$2,$3,$4,'current',$5,$6)`, tokenID, familyID, record.ID, record.RefreshHash, now, expires); err != nil {
 		return authSessionRecord{}, "", err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,subject) VALUES($1,$2,'local',$2) ON CONFLICT DO NOTHING`, "identity-local-"+user.ID, user.ID); err != nil {
-		return authSessionRecord{}, "", err
-	}
 	if err := p.enforceSessionLimitTx111(ctx, tx, user.ID); err != nil {
 		return authSessionRecord{}, "", err
 	}

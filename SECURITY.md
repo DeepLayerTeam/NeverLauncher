@@ -2,6 +2,13 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Auth Federation 0.12 boundary
+
+В `0.12.0` единственной authentication boundary является Federation Core: connector проверяет external proof, затем `(provider, subject)` разрешается в canonical Never user и только после этого NeverLauncher выпускает собственную session. Local password provider проходит тот же Connector SDK conformance gate. Generic explicit linking требует одновременно действующую Never session и завершённый browser-provider proof; совпадение email никогда не считается proof.
+
+Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
+Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
+
 ## Federated provider credentials
 
 С `0.11.10` migration history считается частью security boundary. Production upgrade должен выполняться через `nl db migrate apply` и завершаться `nl db migrate verify`. Unknown/future migration, checksum drift или незапечатанный checksum блокируют verify; apply не продолжает работу при неизвестной migration или несовпадающем checksum. Migration `0010` также fail-closed проверяет согласованность auth sessions, refresh-token families/tokens и provider credentials до установки новых relational constraints.

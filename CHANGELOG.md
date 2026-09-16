@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.12.0 — Auth Federation Release
+
+`0.12.0` завершает линию Auth Federation `0.11.1–0.11.10` как стабильный production release. Local, SQL, HTTP, OIDC и Microsoft являются providers одного Federation Core; passkeys/TOTP/recovery применяются как auth methods/MFA поверх canonical Never user, а Minecraft Auth Adapter получает уже каноническую Never session независимо от источника входа.
+
+### Stable federation boundary
+
+- Production startup использует стабильный `NewFederationCore(...)`; versioned constructors оставлены только для source compatibility. Встроенный `local` provider теперь проходит тот же Connector SDK conformance gate, что SQL/HTTP/OIDC/Microsoft.
+- Добавлены provider-agnostic explicit-link endpoints `POST /api/v1/auth/providers/{providerId}/link/begin|complete`. Любой `browser-auth` connector может быть связан с уже аутентифицированным Never user по доказательству provider identity; совпадение email не является доказательством и не запускает auto-link.
+- `GET /api/v1/admin/auth/federation/status` показывает health/capabilities/provisioning policy и количество linked identities для каждого provider. `/ready` дополнительно проверяет, что в registry есть хотя бы один реально здоровый authentication provider.
+- External provider token остаётся только server-side credential: он не становится Never access/refresh token и не возвращается из linking/login API.
+- Session issuance больше не создаёт `local` identity как побочный эффект. Passwordless passkey создаёт canonical session с `provider=passkey` и без фиктивной `identity-local-*`; MFA continuation после SQL/HTTP/OIDC/Microsoft сохраняет исходные provider/identity. Local identity принадлежит только реальному local-password lifecycle.
+
+### Release migration / canonical local identity
+
+- Добавлена migration `0011_auth_federation_release_0120.sql`. Она backfill/normalize canonical `local` identities для password-capable users и fail-closed отклоняет non-canonical provider/subject values.
+- PostgreSQL constraint triggers гарантируют invariant: пользователь с локальным password hash обязан иметь `local` identity с `subject == user.id`; такую identity нельзя удалить/повредить, пока пароль активен.
+- Bootstrap admin и `SetUserPassword` теперь транзакционно создают/обновляют local identity. Это закрывает обход Federation Core для первоначальной установки и для добавления локального пароля external-only пользователю.
+- Backend и CLI содержат byte-identical migration catalog `0001–0011`; PostgreSQL federation E2E дополнительно проверяет применение `0011` и local-identity invariant.
+
+### Stable release gates
+
+- Federation E2E больше не привязан к конкретной milestone-версии: report schema стабилизирован отдельно от `toolVersion`, поэтому тот же gate применяется к `0.12.x` без изменения тестовой семантики.
+- Release matrix включает generic explicit linking/runtime provider health наряду с Local/SQL/HTTP/OIDC/Microsoft/passkey, refresh replay, multi-instance PostgreSQL и Minecraft session exchange.
+- OpenAPI и repository policy проверяют stable federation routes, canonical registry и release migration как обязательные `0.12.0` gates.
+
 ## 0.11.10 — Federation E2E + migration + stabilization
 
 `0.11.10` не добавляет новый authentication provider: релиз превращает Federation Core `0.11.2–0.11.9` в исполняемо проверяемый release gate. Local, SQL, HTTP, OIDC, Microsoft и passkey проходят одну canonical session/Minecraft matrix; production PostgreSQL E2E проверяет restart/multi-instance refresh/revoke/replay, а migration tooling теперь fail-closed обнаруживает downgrade, checksum drift и незапечатанные legacy migration records до изменения схемы.

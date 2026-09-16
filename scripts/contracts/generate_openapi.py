@@ -83,6 +83,7 @@ def body_schema(path):
       "/api/v1/install/bootstrap-admin":"BootstrapAdminRequest", "/api/v1/install/first-project":"FirstProjectRequest",
       "/api/v1/admin/login":"LoginRequest", "/api/v1/auth/login":"LoginRequest", "/api/v1/auth/refresh":"RefreshRequest",
       "/api/v1/auth/oidc/{providerId}/begin":"OIDCBeginRequest", "/api/v1/auth/oidc/{providerId}/complete":"OIDCCompleteRequest",
+      "/api/v1/auth/providers/{providerId}/link/begin":"OIDCBeginRequest", "/api/v1/auth/providers/{providerId}/link/complete":"OIDCCompleteRequest",
       "/api/v1/auth/sessions/revoke":"RevokeSessionsRequest", "/api/v1/auth/sessions/logout-all":"RevokeSessionsRequest",
       "/api/v1/auth/sessions/{sessionId}":"RenameSessionRequest",
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",

@@ -62,6 +62,7 @@ printf '[federation-postgres-e2e] explicit migration apply + sealed verification
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.json"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
+psql "$DB_DSN" -Atqc "SELECT 1 FROM schema_migrations WHERE version='0011_auth_federation_release_0120' AND checksum<>''" | grep -qx '1'
 
 printf '[federation-postgres-e2e] start three Backend instances sharing PostgreSQL/Redis\n'
 compose up -d --build api-a api-b api-c
@@ -73,9 +74,19 @@ curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Toke
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"Federation E2E\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"federation-e2e\"}" \
   http://127.0.0.1:18081/api/v1/install/bootstrap-admin > "$RUNTIME_DIR/bootstrap.json"
 
+local_identity_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM users u JOIN auth_identities ai ON ai.user_id=u.id AND ai.provider='local' AND ai.subject=u.id WHERE lower(u.email)=lower('$ADMIN_EMAIL') AND btrim(u.password_hash)<>''")"
+[[ "$local_identity_count" == "1" ]] || { echo "canonical local identity invariant failed: $local_identity_count" >&2; exit 1; }
+
 login="$(curl -fsS -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\",\"deviceId\":\"e2e-a\"}" http://127.0.0.1:18081/api/v1/auth/login)"
 access_a="$(jq -er '.data.tokens.accessToken' <<<"$login")"
 refresh_a="$(jq -er '.data.tokens.refreshToken' <<<"$login")"
+
+printf '[federation-postgres-e2e] promote external-only user to local password auth transactionally\n'
+EXTERNAL_USER_ID="user-federation-external-e2e"
+psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES('$EXTERNAL_USER_ID','external-e2e@neverlauncher.local','External E2E','player','active','{}'::jsonb,'',now(),now()) ON CONFLICT(id) DO NOTHING; INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at) VALUES('identity-http-e2e','$EXTERNAL_USER_ID','http-e2e','subject-e2e','external-e2e@neverlauncher.local','external-e2e','External E2E','{}'::jsonb,now(),now()) ON CONFLICT DO NOTHING;" >/dev/null
+json_post http://127.0.0.1:18081/api/v1/admin/users/$EXTERNAL_USER_ID/password "$access_a" '{"password":"Federation-E2E-Local-Password-0120"}' > "$RUNTIME_DIR/password-promotion.json"
+promoted_local_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM auth_identities WHERE user_id='$EXTERNAL_USER_ID' AND provider='local' AND subject='$EXTERNAL_USER_ID'")"
+[[ "$promoted_local_count" == "1" ]] || { echo "password promotion did not create canonical local identity: $promoted_local_count" >&2; exit 1; }
 
 printf '[federation-postgres-e2e] restart login instance and refresh persisted session\n'
 compose restart api-a >/dev/null
@@ -105,5 +116,5 @@ printf '[federation-postgres-e2e] verify database remains migration-clean after 
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify-after.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify-after.json"
 
-jq -n --arg version "$VERSION" '{schemaVersion:"0.11.10",toolVersion:$version,status:"passed",checks:{migrationApply:true,migrationVerify:true,restartPersistence:true,multiInstanceRefresh:true,replayCompromisePropagation:true}}' > "$RUNTIME_DIR/result.json"
+jq -n --arg version "$VERSION" '{schemaVersion:"1",toolVersion:$version,status:"passed",checks:{migrationApply:true,migrationVerify:true,restartPersistence:true,multiInstanceRefresh:true,replayCompromisePropagation:true,localIdentityInvariant:true,passwordPromotionIdentityInvariant:true}}' > "$RUNTIME_DIR/result.json"
 printf '[federation-postgres-e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"
