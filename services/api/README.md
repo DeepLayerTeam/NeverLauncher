@@ -63,6 +63,33 @@ POST /api/v1/install/first-project
 
 По умолчанию SQL provider требует TLS с проверкой сертификата. `allowInsecureTls: true` разрешает только зашифрованное соединение без строгой проверки сертификата (`sslmode=require`/эквивалент) и предназначено для контролируемых development/staging окружений; plaintext требует отдельного `requireTls: false`. В production рекомендуется read-only DB account и `dsnEnv`, а не DSN с паролем внутри JSON. `legacy-sha256` принимается только вместе с `password.allowLegacySha256=true`.
 
+Начиная с `0.11.4`, Federation Core также регистрирует production HTTP providers из `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE`. Это не webhook и не generic proxy: Connector вызывает только заранее заданные HTTPS endpoints `/authenticate`, `/refresh`, `/resolve`, `/logout`, `/health`, подписывает каждый request HMAC-SHA256 и принимает только подписанные JSON responses с ожидаемыми `issuer`, protocol version, nonce и timestamp. Redirects отключены, response body ограничен по размеру, JSON декодируется strict schema decoder.
+
+HTTP Connector использует собственный transport без environment proxy, проверяет `hostAllowlist`, сам разрешает DNS, валидирует каждый IP до dial и блокирует private/loopback/link-local/shared/reserved сети. Контролируемый private endpoint разрешается только явным `allowedCidrs`. Дополнительный CA и optional mTLS client certificate поддерживаются через `mtls.caFile/certFile/keyFile`. `providerToken` остаётся credential внешнего provider и не используется как Never access/refresh token. Полный protocol и canonical HMAC strings описаны в `internal/httpconnector/README.md`.
+
+Пример HTTP provider:
+
+```json
+[
+  {
+    "id": "website-http",
+    "displayName": "Website account",
+    "baseUrl": "https://auth.example.com/v1",
+    "issuer": "website-auth-prod",
+    "hostAllowlist": ["auth.example.com"],
+    "hmac": {
+      "keyId": "neverlauncher-prod",
+      "secretEnv": "WEBSITE_AUTH_HTTP_HMAC_SECRET",
+      "maxClockSkew": "2m"
+    },
+    "requestTimeout": "5s",
+    "connectTimeout": "3s",
+    "maxResponseBytes": 1048576,
+    "provisioning": {"mode": "jit", "defaultRole": "player"}
+  }
+]
+```
+
 ## Пакеты и манифесты
 
 Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.

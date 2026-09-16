@@ -12,9 +12,9 @@ func (s Server) Handler() http.Handler {
 		// in-memory limiter and do not trust forwarded headers by default.
 	}
 	if s.Federation == nil {
-		core, err := NewFederationCore113(context.Background(), s.Repo, s.Config)
+		core, err := NewFederationCore114(context.Background(), s.Repo, s.Config)
 		if err != nil {
-			panic("federation core 0.11.3 initialization failed: " + err.Error())
+			panic("federation core 0.11.4 initialization failed: " + err.Error())
 		}
 		s.Federation = core
 	}

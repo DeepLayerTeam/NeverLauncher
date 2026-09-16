@@ -18,6 +18,7 @@ const (
 	CapabilityPasswordAuth     Capability = "password-auth"
 	CapabilityBrowserAuth      Capability = "browser-auth"
 	CapabilityTokenRefresh     Capability = "token-refresh"
+	CapabilityTokenRevoke      Capability = "token-revoke"
 	CapabilityUserLookup       Capability = "user-lookup"
 	CapabilityProfile          Capability = "profile"
 	CapabilityTextures         Capability = "textures"

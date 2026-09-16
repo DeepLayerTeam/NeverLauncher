@@ -49,6 +49,8 @@ type Config struct {
 	ManifestSigningPrivateKey          string
 	AuthSQLProvidersJSON               string
 	AuthSQLProvidersFile               string
+	AuthHTTPProvidersJSON              string
+	AuthHTTPProvidersFile              string
 }
 
 // Load читает конфигурацию из переменных окружения.
@@ -102,6 +104,8 @@ func Load() Config {
 		ManifestSigningPrivateKey:          env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", ""),
 		AuthSQLProvidersJSON:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
 		AuthSQLProvidersFile:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
+		AuthHTTPProvidersJSON:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
+		AuthHTTPProvidersFile:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
 	}
 }
 

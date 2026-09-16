@@ -68,6 +68,13 @@ func Run(ctx context.Context, connector authconnector.Connector) Report {
 			appendCheck("capability:token-refresh", nil)
 		}
 	}
+	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
+		if _, ok := connector.(authconnector.Revoker); !ok {
+			appendCheck("capability:token-revoke", fmt.Errorf("advertised token-revoke but Revoker is not implemented"))
+		} else {
+			appendCheck("capability:token-revoke", nil)
+		}
+	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
 		if _, ok := connector.(authconnector.IdentityResolver); !ok {
 			appendCheck("capability:user-lookup", fmt.Errorf("advertised user-lookup but IdentityResolver is not implemented"))

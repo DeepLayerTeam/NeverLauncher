@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.4 — HTTP Connector
+
+`0.11.4` добавляет второй внешний production auth provider поверх Connector SDK/Federation Core: hardened HTTP Connector для существующих CMS/API. `/api/v1/auth/login` и `/api/v1/admin/login` реально маршрутизируют password authentication в удалённый provider по `providerId`; успешный external subject затем проходит обычный canonical identity/JIT flow и получает Never session, а provider token не становится Never token.
+
+### Remote authentication protocol
+
+- Реальные `POST /authenticate`, `POST /refresh`, `POST /resolve`, `POST /logout` и `GET /health`; paths могут быть переопределены только в startup config и всегда остаются относительными к одному `baseUrl`.
+- Strict protocol envelope `neverlauncher-http-auth/1`, обязательный `issuer`, стабильный `subject`, bounded identity fields/groups/roles/claims и fail-closed schema decoding.
+- `/resolve` обязан вернуть тот же subject, который был запрошен; изменение subject считается provider misconfiguration.
+- Remote error statuses преобразуются в typed Connector SDK errors без утечки произвольного текста upstream пользователю.
+- HTTP provider поддерживает SDK password auth, user lookup, token refresh и token revoke; conformance проверяет заявленные capabilities при startup.
+
+### Transport security / SSRF protection
+
+- Только HTTPS; redirects и proxy environment отключены. TLS verification обязательна, поддерживаются custom CA и optional mutual TLS client certificate.
+- `hostAllowlist` применяется к каждому dial. Connector выполняет DNS resolution сам, валидирует все полученные IP и соединяется непосредственно с уже проверенным IP, сохраняя TLS hostname verification.
+- Loopback, private, link-local, shared, multicast, reserved и documentation networks заблокированы по умолчанию; private endpoint требует явного минимального `allowedCidrs`.
+- Connect/request/response-header timeout, bounded connection pool, idle timeout и response size limit конфигурируются с безопасными пределами.
+
+### Request/response authenticity
+
+- Каждый request подписывается HMAC-SHA256 по method/path/timestamp/nonce/body SHA-256; secret берётся только из environment variable или secret file, не из provider JSON.
+- Каждый response, включая error response, обязан вернуть тот же nonce и valid HMAC над status/timestamp/nonce/body. Используются constant-time comparison, timestamp replay window и consumed-nonce cache.
+- Неподписанный, просроченный, повторный или подписанный другим key response отклоняется до разбора identity.
+
+### Federation / production integration
+
+- `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON` / `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE` подключены к реальному startup registry рядом с SQL providers; unreachable/misconfigured provider останавливает startup fail-closed.
+- `jit` и `explicit-only` используют тот же Federation Core policy: JIT создаёт canonical Never user + `auth_identity`, но не fake local password; совпадение email не даёт implicit linking.
+- Production Compose/CLI templates передают HTTP provider config и отдельный HMAC secret environment variable.
+- Integration test поднимает настоящий TLS auth service, проверяет HMAC request/response flow и выполняет HTTP provider authentication через `NewFederationCore114` до persistent canonical identity.
+
 ## 0.11.3 — SQL Connector
 
 `0.11.3` добавляет первый внешний production auth provider поверх Connector SDK/Federation Core: SQL Connector для PostgreSQL, MySQL и MariaDB. Это не отдельный endpoint/manifest слой — `/api/v1/auth/login` и `/api/v1/admin/login` реально маршрутизируют password authentication в зарегистрированный SQL provider по `providerId`, после чего Federation Core разрешает external subject в canonical Never user и выпускает обычную Never session.

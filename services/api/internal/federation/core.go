@@ -86,6 +86,11 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 			return fmt.Errorf("connector %q advertises token-refresh without TokenRefresher", meta.ID)
 		}
 	}
+	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
+		if _, ok := connector.(authconnector.Revoker); !ok {
+			return fmt.Errorf("connector %q advertises token-revoke without Revoker", meta.ID)
+		}
+	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
 		if _, ok := connector.(authconnector.IdentityResolver); !ok {
 			return fmt.Errorf("connector %q advertises user-lookup without IdentityResolver", meta.ID)
