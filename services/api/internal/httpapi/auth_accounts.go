@@ -22,7 +22,9 @@ type authLoginRequest struct {
 }
 
 type authRefreshRequest struct {
-	RefreshToken string `json:"refreshToken"`
+	RefreshToken    string `json:"refreshToken"`
+	DeviceID        string `json:"deviceId,omitempty"`
+	DeviceSignature string `json:"deviceSignature,omitempty"`
 }
 
 func (s Server) authCapabilities(w http.ResponseWriter, r *http.Request) {
@@ -166,10 +168,32 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	if strings.TrimSpace(req.RefreshToken) == "" {
+	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
+	if req.RefreshToken == "" {
 		writeError(w, http.StatusBadRequest, "refreshToken обязателен")
 		return
 	}
+
+	preview, err := s.State.AuthSessions.previewRefresh0126(req.RefreshToken)
+	if err != nil {
+		if errors.Is(err, errRefreshTokenReuseDetected) {
+			// Preserve the existing family-compromise semantics: preview is read-only,
+			// rotate performs the transactional compromise when a consumed token is replayed.
+			_, _, _ = s.State.AuthSessions.rotate(req.RefreshToken, r)
+			_ = s.flushPersistenceState950("auth-refresh-reuse")
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		}
+		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
+		return
+	}
+	if preview.TrustedDeviceID != "" {
+		if err := s.verifyRefreshDeviceProof0126(r, req.RefreshToken, strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceSignature), preview); err != nil {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-device-proof-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: preview.Email, Action: "auth:refresh:device-proof-failed", Target: preview.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+			writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{"code": http.StatusPreconditionRequired, "message": "refresh привязанной сессии требует подпись текущим device key", "deviceProofRequired": true, "deviceId": preview.TrustedDeviceID, "bindingEpoch": preview.BindingEpoch}})
+			return
+		}
+	}
+
 	session, newRefreshToken, err := s.State.AuthSessions.rotate(req.RefreshToken, r)
 	_ = s.flushPersistenceState950("auth-refresh-rotate")
 	if err != nil {
@@ -179,13 +203,18 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
 		return
 	}
+	session, err = s.reconcileSessionDeviceRisk0126(r, session)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		return
+	}
 	user, err := s.Repo.GetUser(session.UserID)
 	if err != nil || user.Status == "disabled" {
 		s.State.AuthSessions.revoke(session.ID, "user-disabled-or-missing")
 		writeError(w, http.StatusUnauthorized, "пользователь недоступен")
 		return
 	}
-	accessToken, err := s.issueAccessToken(user, session.ID)
+	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
 		return
@@ -195,7 +224,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authRefreshPlan(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"verify refresh token hash", "detect revoked/expired session", "rotate refresh token", "issue new access token", "write session audit event"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"verify refresh token hash", "load server-side session/device binding", "verify bound device key proof when present", "detect revoked/expired session", "rotate refresh token", "recompute session risk", "issue new access token", "write session audit event"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
 }
 
 func (s Server) authLogout(w http.ResponseWriter, r *http.Request) {
@@ -242,7 +271,7 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   version,
 		"status":        "auth-federation-release",
-		"capabilities":  []string{"auth-federation-release", "connector-sdk", "federation-core", "provider-agnostic-explicit-linking", "federation-runtime-status", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "session-management-2", "session-device-management", "device-trust-core", "trusted-device-registry", "device-proof-of-possession", "device-keys", "device-keys-os-secure-storage", "desktop-device-key-auto-registration", "hardware-bound-device-identities", "p256-device-proof", "challenge-response-device-attestation", "device-attestation-freshness", "hardware-provenance-unverified", "session-risk-state", "provider-session-revocation", "jwt-access-tokens", "access-token-key-rotation", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit", "minecraft-auth-compatibility-2", "minecraft-session-adapter", "yggdrasil-authlib"},
+		"capabilities":  []string{"auth-federation-release", "connector-sdk", "federation-core", "provider-agnostic-explicit-linking", "federation-runtime-status", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "session-management-2", "session-device-management", "session-device-binding", "binding-epoch-enforcement", "device-bound-refresh", "session-risk-engine", "risk-step-up-integration", "risk-reattest-integration", "device-trust-core", "trusted-device-registry", "device-proof-of-possession", "device-keys", "device-keys-os-secure-storage", "desktop-device-key-auto-registration", "hardware-bound-device-identities", "p256-device-proof", "challenge-response-device-attestation", "device-attestation-freshness", "hardware-provenance-unverified", "session-risk-state", "provider-session-revocation", "jwt-access-tokens", "access-token-key-rotation", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit", "minecraft-auth-compatibility-2", "minecraft-session-adapter", "yggdrasil-authlib"},
 		"providers":     s.Federation.Providers(),
 		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
 		"sessions":      s.State.AuthSessions.summary(),
@@ -252,11 +281,32 @@ func (s Server) authCapabilitiesPayload(version string) map[string]any {
 }
 
 func (s Server) sessionPolicyPayload(version string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced", "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser, "revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke"}, "authStrengths": []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5, "accessTokenFormat": "JWT/JWS HS256", "accessTokenClaims": []string{"iss", "aud", "sub", "sid", "jti", "iat", "exp", "kid(header)", "auth_time", "amr", "device_id", "device_trust", "device_verified_at", "device_key_binding", "device_hardware_provider", "device_attestation", "device_attestation_method", "device_attested_at", "device_attestation_expires_at"}, "riskStates": []string{"normal", "elevated", "compromised"}, "sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary()}
+	return map[string]any{
+		"schemaVersion": apiContractVersion, "toolVersion": version, "status": "enforced",
+		"accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24),
+		"rotation": true, "reuseDetection": true, "maxSessionsPerUser": maxSessionsPerUser,
+		"revocationTriggers": []string{"logout", "password-reset", "role-change", "user-disable", "admin-revoke", "trusted-device-revoke", "risk-compromise"},
+		"authStrengths":      []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5,
+		"accessTokenFormat":    "JWT/JWS HS256",
+		"accessTokenClaims":    []string{"iss", "aud", "sub", "sid", "jti", "iat", "exp", "kid(header)", "auth_time", "amr", "binding_epoch", "risk_state", "risk_score", "risk_action", "risk_updated_at", "device_id", "device_trust", "device_verified_at", "device_key_binding", "device_hardware_provider", "device_attestation", "device_attestation_method", "device_attested_at", "device_attestation_expires_at"},
+		"sessionDeviceBinding": map[string]any{"serverAuthoritative": true, "bindingEpoch": true, "staleAccessTokenRejected": true, "boundRefreshRequiresDeviceSignature": true, "refreshProofPayload": "NeverLauncher Session Device Binding v1", "refreshSecretDisclosure": false},
+		"riskStates":           []string{"normal", "elevated", "compromised"}, "riskActions": []string{"allow", "step-up", "reattest", "revoke"},
+		"riskSignals":    []string{"ip-changed", "user-agent-changed", "trusted-device-missing", "trusted-device-revoked", "device-attestation-stale", "refresh-token-reuse"},
+		"sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary(),
+	}
 }
 
 func desktopAuthPolicyPayload(version string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": version, "status": "desktop-auth-enforced", "loginEndpoint": "POST /api/v1/auth/login", "refreshEndpoint": "POST /api/v1/auth/refresh", "logoutEndpoint": "POST /api/v1/auth/logout", "secureStorage": map[string]any{"required": true, "linux": "secret-service", "windows": "credential-manager", "macos": "keychain", "fallbackPlaintext": false, "sessionSecrets": true, "devicePrivateKey": true, "devicePrivateKeyFrontendExposed": false}, "deviceTrust": map[string]any{"automaticDesktopRegistration": true, "keyAlgorithms": []string{"ed25519", "p256"}, "proof": "challenge-response", "hardwareAttestation": "challenge-response-v1", "attestationFreshnessHours": 12, "hardwareProvenance": "not-remotely-verified", "privateKeyLocation": "os-secure-storage"}, "restore": map[string]any{"onStart": true, "refreshBeforeExpiry": true, "clearOnLogout": true}, "screens": []string{"identifier-password", "session-active", "session-expired", "project-access-denied"}}
+	return map[string]any{
+		"schemaVersion": apiContractVersion, "toolVersion": version, "status": "desktop-auth-enforced",
+		"loginEndpoint": "POST /api/v1/auth/login", "refreshEndpoint": "POST /api/v1/auth/refresh", "logoutEndpoint": "POST /api/v1/auth/logout",
+		"secureStorage":        map[string]any{"required": true, "linux": "secret-service", "windows": "credential-manager", "macos": "keychain", "fallbackPlaintext": false, "sessionSecrets": true, "devicePrivateKey": true, "devicePrivateKeyFrontendExposed": false},
+		"deviceTrust":          map[string]any{"automaticDesktopRegistration": true, "keyAlgorithms": []string{"ed25519", "p256"}, "proof": "challenge-response", "hardwareAttestation": "challenge-response-v1", "attestationFreshnessHours": 12, "hardwareProvenance": "not-remotely-verified", "privateKeyLocation": "os-secure-storage"},
+		"sessionDeviceBinding": map[string]any{"bindingEpoch": true, "boundRefreshDeviceProof": true, "nativeSigningCommand": "sign_session_refresh", "refreshTokenSignedAsSha256Only": true},
+		"risk":                 map[string]any{"actions": []string{"allow", "step-up", "reattest", "revoke"}, "sensitiveOperationsEnforced": true},
+		"restore":              map[string]any{"onStart": true, "refreshBeforeExpiry": true, "clearOnLogout": true},
+		"screens":              []string{"identifier-password", "session-active", "session-expired", "project-access-denied"},
+	}
 }
 
 func (s Server) accountSessionsPayload(version string, user model.User) map[string]any {

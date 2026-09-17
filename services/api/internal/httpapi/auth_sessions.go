@@ -53,6 +53,10 @@ type authSessionRecord struct {
 	TrustedDeviceID  string    `json:"trustedDeviceId,omitempty"`
 	DeviceTrustState string    `json:"deviceTrustState"`
 	DeviceVerifiedAt time.Time `json:"deviceVerifiedAt,omitempty"`
+	BindingEpoch     int64     `json:"bindingEpoch"`
+	RiskScore        int       `json:"riskScore"`
+	RiskAction       string    `json:"riskAction"`
+	RiskEvaluatedAt  time.Time `json:"riskEvaluatedAt,omitempty"`
 	Current          bool      `json:"current,omitempty"`
 }
 
@@ -146,6 +150,10 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 		LastUserAgent:    r.UserAgent(),
 		RiskState:        "normal",
 		RiskReasons:      []string{},
+		BindingEpoch:     1,
+		RiskScore:        0,
+		RiskAction:       "allow",
+		RiskEvaluatedAt:  now,
 		DeviceTrustState: "unverified",
 	}
 	s.sessions[record.ID] = record
@@ -219,8 +227,11 @@ func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (auth
 	record.RefreshHash = newHash
 	record.LastSeenAt = now
 	record.ExpiresAt = now.Add(refreshTokenTTL)
+	if len(r) > 0 && r[0] != nil {
+		applySessionObservation118(&record, clientIP(r[0]), r[0].UserAgent(), now)
+	}
 	s.sessions[record.ID] = record
-	return record, newRefresh, nil
+	return sanitizeSessionRecord(record), newRefresh, nil
 }
 
 func (s *authSessionStore) active(sessionID, userID string) bool {
@@ -333,7 +344,9 @@ func (s *authSessionStore) stepUp(sessionID, userID string, methods []string, st
 		rec.AuthStrength = strength
 	}
 	rec.AuthTime = authTime
-	rec.LastSeenAt = time.Now().UTC()
+	now := time.Now().UTC()
+	clearStepUpRisk0126(&rec, now)
+	rec.LastSeenAt = now
 	s.sessions[rec.ID] = rec
 	return sanitizeSessionRecord(rec), nil
 }
@@ -459,6 +472,9 @@ func (s *authSessionStore) compromiseFamilyLocked111(familyID, reason string) {
 		record.RevokedReason = reason
 		record.RiskState = "compromised"
 		record.RiskReasons = mergeRiskReasons118(record.RiskReasons, reason)
+		record.RiskScore = 100
+		record.RiskAction = "revoke"
+		record.RiskEvaluatedAt = now
 		record.RiskUpdatedAt = now
 		s.sessions[record.ID] = record
 	}
@@ -500,6 +516,10 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 	rec.TrustedDeviceID = strings.TrimSpace(deviceID)
 	rec.DeviceTrustState = "verified"
 	rec.DeviceVerifiedAt = verifiedAt.UTC()
+	if rec.BindingEpoch < 1 {
+		rec.BindingEpoch = 1
+	}
+	rec.BindingEpoch++
 	rec.LastSeenAt = time.Now().UTC()
 	s.sessions[sessionID] = rec
 	return sanitizeSessionRecord(rec), nil
@@ -522,6 +542,9 @@ func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason strin
 		rec.RevokedReason = firstNonEmpty(strings.TrimSpace(reason), "device-revoked")
 		rec.RiskState = "compromised"
 		rec.RiskReasons = mergeRiskReasons118(rec.RiskReasons, rec.RevokedReason)
+		rec.RiskScore = 100
+		rec.RiskAction = "revoke"
+		rec.RiskEvaluatedAt = now
 		rec.RiskUpdatedAt = now
 		rec.DeviceTrustState = "revoked"
 		s.sessions[id] = rec
@@ -531,10 +554,75 @@ func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason strin
 	return ids
 }
 
+func (s *authSessionStore) applyRisk0126(sessionID, userID, state string, score int, action string, reasons []string, evaluatedAt, riskUpdatedAt time.Time) (authSessionRecord, error) {
+	if s.persistent != nil {
+		return s.persistent.applyRisk0126(sessionID, userID, state, score, action, reasons, evaluatedAt, riskUpdatedAt)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rec, ok := s.sessions[sessionID]
+	if !ok || rec.UserID != userID || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errSessionNotFound118
+	}
+	rec.RiskState = normalizeRiskState118(state)
+	rec.RiskScore = score
+	rec.RiskAction = action
+	rec.RiskReasons = mergeRiskReasons118(nil, reasons...)
+	rec.RiskEvaluatedAt = evaluatedAt.UTC()
+	if rec.RiskState == "normal" {
+		rec.RiskUpdatedAt = time.Time{}
+	} else {
+		rec.RiskUpdatedAt = riskUpdatedAt.UTC()
+	}
+	s.sessions[sessionID] = rec
+	return sanitizeSessionRecord(rec), nil
+}
+
+func (s *authSessionStore) previewRefresh0126(refreshToken string) (authSessionRecord, error) {
+	if s.persistent != nil {
+		return s.persistent.previewRefresh0126(refreshToken)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hash := hashRefreshToken(refreshToken)
+	token, ok := s.tokens[hash]
+	if !ok {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	if token.Status == "consumed" {
+		return authSessionRecord{}, errRefreshTokenReuseDetected
+	}
+	if token.Status != "current" || token.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	rec, ok := s.sessions[token.SessionID]
+	if !ok || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	return sanitizeSessionRecord(rec), nil
+}
+
 func sanitizeSessionRecord(record authSessionRecord) authSessionRecord {
 	record.RefreshHash = ""
 	if strings.TrimSpace(record.DeviceTrustState) == "" {
 		record.DeviceTrustState = "unverified"
+	}
+	if record.BindingEpoch < 1 {
+		record.BindingEpoch = 1
+	}
+	if strings.TrimSpace(record.RiskAction) == "" {
+		switch normalizeRiskState118(record.RiskState) {
+		case "compromised":
+			record.RiskAction = "revoke"
+			record.RiskScore = 100
+		case "elevated":
+			record.RiskAction = "step-up"
+			if record.RiskScore < 25 {
+				record.RiskScore = 25
+			}
+		default:
+			record.RiskAction = "allow"
+		}
 	}
 	return record
 }

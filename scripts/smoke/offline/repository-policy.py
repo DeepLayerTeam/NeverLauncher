@@ -365,6 +365,32 @@ if "device-management-revocation.py" not in preflight or "scripts/smoke/offline/
 if "Device Management + Revocation gate OK" not in device_management_gate:
     fail("0.12.5 device management gate is incomplete")
 
+# 0.12.6 Session <-> Device binding + risk integration. Binding is
+# server-authoritative, stale access tokens fail on binding_epoch mismatch,
+# bound refresh requires proof by the current device key, and risk decisions
+# are enforced by sensitive-operation step-up/reattest/revoke policy.
+session_device_gate = read("scripts/smoke/offline/session-device-risk-0126.py")
+session_risk = read("services/api/internal/httpapi/session_device_risk_0126.go")
+session_risk_test = read("services/api/internal/httpapi/session_device_risk_0126_test.go")
+auth_go = read("services/api/internal/httpapi/auth.go")
+auth_accounts = read("services/api/internal/httpapi/auth_accounts.go")
+for required in ["binding_epoch", "sessionBindingClaimsMatch0126", "reconcileSessionDeviceRisk0126"]:
+    if required not in auth_go:
+        fail(f"0.12.6 authoritative session/device binding missing: {required}")
+for required in ["NeverLauncher Session Device Binding v1", "refresh-token-sha256=", "verifyRefreshDeviceProof0126", "device-attestation-stale", '"step-up"', '"reattest"', '"revoke"']:
+    if required not in session_risk:
+        fail(f"0.12.6 risk/device proof path missing: {required}")
+for required in ["previewRefresh0126(req.RefreshToken)", "verifyRefreshDeviceProof0126", "deviceSignature", "device-bound-refresh"]:
+    if required not in auth_accounts:
+        fail(f"0.12.6 bound refresh integration missing: {required}")
+for required in ["TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126", "TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126", "refresh family survived replay compromise"]:
+    if required not in session_risk_test:
+        fail(f"0.12.6 session/device risk regression coverage missing: {required}")
+if "session-device-risk-0126.py" not in preflight or "scripts/smoke/offline/session-device-risk-0126.py" not in ci:
+    fail("0.12.6 session/device risk gate is not wired into preflight/CI")
+if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
+    fail("0.12.6 session/device risk gate is incomplete")
+
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

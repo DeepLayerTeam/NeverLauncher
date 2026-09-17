@@ -69,9 +69,8 @@ func applySessionObservation118(rec *authSessionRecord, ip, userAgent string, no
 		rec.RiskReasons = mergeRiskReasons118(rec.RiskReasons, "user-agent-changed")
 		changed = true
 	}
-	if changed && rec.RiskState != "compromised" {
-		rec.RiskState = "elevated"
-		rec.RiskUpdatedAt = now.UTC()
+	if changed {
+		recomputeSessionRisk0126(rec, now)
 	}
 	if ip != "" {
 		rec.LastIP = ip

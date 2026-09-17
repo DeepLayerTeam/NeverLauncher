@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-const sessionColumns118 = `id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent,last_ip,last_user_agent,risk_state,risk_reasons,risk_updated_at,device_renamed_at,trusted_device_id,device_trust_state,device_verified_at`
+const sessionColumns118 = `id,user_id,email,role_id,device_id,device,status,refresh_family_id,auth_methods,auth_strength,auth_time,identity_id,provider,created_at,last_seen_at,expires_at,revoked_at,revoked_reason,ip,user_agent,last_ip,last_user_agent,risk_state,risk_reasons,risk_updated_at,device_renamed_at,trusted_device_id,device_trust_state,device_verified_at,binding_epoch,risk_score,risk_action,risk_evaluated_at`
 
 func scanSession118(row rowScanner111) (authSessionRecord, error) {
 	var rec authSessionRecord
-	var revoked, riskUpdated, renamed, deviceVerified sql.NullTime
+	var revoked, riskUpdated, renamed, deviceVerified, riskEvaluated sql.NullTime
 	var trustedDeviceID sql.NullString
 	var methodsJSON, riskJSON []byte
-	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &methodsJSON, &rec.AuthStrength, &rec.AuthTime, &rec.IdentityID, &rec.Provider, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent, &rec.LastIP, &rec.LastUserAgent, &rec.RiskState, &riskJSON, &riskUpdated, &renamed, &trustedDeviceID, &rec.DeviceTrustState, &deviceVerified); err != nil {
+	if err := row.Scan(&rec.ID, &rec.UserID, &rec.Email, &rec.RoleID, &rec.DeviceID, &rec.Device, &rec.Status, &rec.RefreshFamily, &methodsJSON, &rec.AuthStrength, &rec.AuthTime, &rec.IdentityID, &rec.Provider, &rec.CreatedAt, &rec.LastSeenAt, &rec.ExpiresAt, &revoked, &rec.RevokedReason, &rec.IP, &rec.UserAgent, &rec.LastIP, &rec.LastUserAgent, &rec.RiskState, &riskJSON, &riskUpdated, &renamed, &trustedDeviceID, &rec.DeviceTrustState, &deviceVerified, &rec.BindingEpoch, &rec.RiskScore, &rec.RiskAction, &riskEvaluated); err != nil {
 		return authSessionRecord{}, err
 	}
 	_ = json.Unmarshal(methodsJSON, &rec.AuthMethods)
@@ -48,6 +48,15 @@ func scanSession118(row rowScanner111) (authSessionRecord, error) {
 	if deviceVerified.Valid {
 		rec.DeviceVerifiedAt = deviceVerified.Time.UTC()
 	}
+	if rec.BindingEpoch < 1 {
+		rec.BindingEpoch = 1
+	}
+	if strings.TrimSpace(rec.RiskAction) == "" {
+		rec.RiskAction = "allow"
+	}
+	if riskEvaluated.Valid {
+		rec.RiskEvaluatedAt = riskEvaluated.Time.UTC()
+	}
 	return rec, nil
 }
 
@@ -74,10 +83,14 @@ func (p *authSessionPostgres111) observe118(sessionID, userID string, r *http.Re
 		applySessionObservation118(&rec, clientIP(r), r.UserAgent(), now)
 	}
 	riskJSON, _ := json.Marshal(rec.RiskReasons)
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET last_seen_at=$3,last_ip=$4,last_user_agent=$5,risk_state=$6,risk_reasons=$7::jsonb,risk_updated_at=NULLIF($8,'0001-01-01T00:00:00Z')::timestamptz WHERE id=$1 AND user_id=$2`, sessionID, userID, now, rec.LastIP, rec.LastUserAgent, rec.RiskState, string(riskJSON), rec.RiskUpdatedAt.UTC().Format(time.RFC3339)); err != nil {
+	var riskEvaluated any
+	if !rec.RiskEvaluatedAt.IsZero() {
+		riskEvaluated = rec.RiskEvaluatedAt.UTC()
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET last_seen_at=$3,last_ip=$4,last_user_agent=$5,risk_state=$6,risk_reasons=$7::jsonb,risk_updated_at=NULLIF($8,'0001-01-01T00:00:00Z')::timestamptz,risk_score=$9,risk_action=$10,risk_evaluated_at=$11 WHERE id=$1 AND user_id=$2`, sessionID, userID, now, rec.LastIP, rec.LastUserAgent, rec.RiskState, string(riskJSON), rec.RiskUpdatedAt.UTC().Format(time.RFC3339), rec.RiskScore, rec.RiskAction, riskEvaluated); err != nil {
 		return authSessionRecord{}, false
 	}
-	if rec.RiskState != previousRisk || len(rec.RiskReasons) != len(previousReasons) {
+	if rec.RiskState != previousRisk || strings.Join(rec.RiskReasons, "\x00") != strings.Join(previousReasons, "\x00") {
 		if err := p.insertEventTx111(ctx, tx, userID, sessionID, rec.RefreshFamily, "session-risk-elevated", map[string]any{"riskState": rec.RiskState, "reasons": rec.RiskReasons}); err != nil {
 			return authSessionRecord{}, false
 		}
@@ -269,7 +282,7 @@ func (p *authSessionPostgres111) bindTrustedDevice121(sessionID, userID, deviceI
 	if owner != userID || status != "active" {
 		return authSessionRecord{}, errSessionNotFound118
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,last_seen_at=now() WHERE id=$1 AND user_id=$2`, sessionID, userID, deviceID, verifiedAt.UTC()); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=now() WHERE id=$1 AND user_id=$2`, sessionID, userID, deviceID, verifiedAt.UTC()); err != nil {
 		return authSessionRecord{}, err
 	}
 	if err := p.insertEventTx111(ctx, tx, userID, sessionID, familyID, "trusted-device-bound", map[string]any{"deviceId": deviceID}); err != nil {
@@ -283,6 +296,47 @@ func (p *authSessionPostgres111) bindTrustedDevice121(sessionID, userID, deviceI
 		return authSessionRecord{}, errSessionNotFound118
 	}
 	return rec, nil
+}
+
+func (p *authSessionPostgres111) applyRisk0126(sessionID, userID, state string, score int, action string, reasons []string, evaluatedAt, riskUpdatedAt time.Time) (authSessionRecord, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	raw, _ := json.Marshal(mergeRiskReasons118(nil, reasons...))
+	var updated any
+	if !riskUpdatedAt.IsZero() {
+		updated = riskUpdatedAt.UTC()
+	}
+	_, err := p.db.ExecContext(ctx, `UPDATE auth_sessions SET risk_state=$3,risk_score=$4,risk_action=$5,risk_reasons=$6::jsonb,risk_evaluated_at=$7,risk_updated_at=$8 WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now()`, sessionID, userID, normalizeRiskState118(state), score, firstNonEmpty(action, "allow"), string(raw), evaluatedAt.UTC(), updated)
+	if err != nil {
+		return authSessionRecord{}, err
+	}
+	rec, ok := p.get118(sessionID, userID)
+	if !ok {
+		return authSessionRecord{}, errSessionNotFound118
+	}
+	return rec, nil
+}
+
+func (p *authSessionPostgres111) previewRefresh0126(refreshToken string) (authSessionRecord, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	hash := hashRefreshToken(refreshToken)
+	var sessionID, status string
+	var expires time.Time
+	if err := p.db.QueryRowContext(ctx, `SELECT session_id,status,expires_at FROM refresh_tokens WHERE token_hash=$1`, hash).Scan(&sessionID, &status, &expires); err != nil {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	if status == "consumed" {
+		return authSessionRecord{}, errRefreshTokenReuseDetected
+	}
+	if status != "current" || expires.Before(time.Now().UTC()) {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	rec, err := scanSession118(p.db.QueryRowContext(ctx, `SELECT `+sessionColumns118+` FROM auth_sessions WHERE id=$1 AND status='active' AND expires_at>now()`, sessionID))
+	if err != nil {
+		return authSessionRecord{}, errRefreshTokenInvalid
+	}
+	return sanitizeSessionRecord(rec), nil
 }
 
 func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason string) []string {
@@ -309,7 +363,7 @@ func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason
 	rows.Close()
 	now := time.Now().UTC()
 	for _, it := range items {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
 			return nil
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, it.family, now, reason); err != nil {

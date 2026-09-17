@@ -304,17 +304,33 @@ function App() {
     return response.json();
   }
 
-  function accessTokenSubject(token: string): string {
+  function accessTokenPayload(token: string): Record<string, unknown> {
     try {
       const part = token.split('.')[1];
-      if (!part) return '';
+      if (!part) return {};
       const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
       const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
       const payload = JSON.parse(atob(padded));
-      return typeof payload?.sub === 'string' ? payload.sub : '';
+      return payload && typeof payload === 'object' ? payload : {};
     } catch {
-      return '';
+      return {};
     }
+  }
+
+  function accessTokenSubject(token: string): string {
+    const payload = accessTokenPayload(token);
+    return typeof payload.sub === 'string' ? payload.sub : '';
+  }
+
+  function accessTokenDeviceId(token: string): string {
+    const payload = accessTokenPayload(token);
+    return typeof payload.device_id === 'string' ? payload.device_id : '';
+  }
+
+  function accessTokenBindingEpoch(token: string): number {
+    const payload = accessTokenPayload(token);
+    const epoch = typeof payload.binding_epoch === 'number' ? Math.trunc(payload.binding_epoch) : 0;
+    return epoch >= 1 ? epoch : 1;
   }
 
   async function postDeviceJson(path: string, token: string, body: Record<string, unknown> = {}): Promise<Response> {
@@ -548,12 +564,37 @@ function App() {
 
   async function rotateDesktopSession(session: AuthSession): Promise<AuthSession> {
     if (!session.refreshToken) throw new Error('нет refresh token: выполните вход заново');
+    const userId = session.userId || accessTokenSubject(session.accessToken);
+    const body: Record<string, unknown> = { refreshToken: session.refreshToken };
+    const tokenDeviceId = accessTokenDeviceId(session.accessToken);
+    if (userId && tokenDeviceId) {
+      const key = await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
+      if (!key?.deviceId || key.deviceId !== tokenDeviceId) {
+        throw new Error('сессия привязана к trusted device, но соответствующий device key отсутствует в OS secure storage');
+      }
+      const proof = await callTauri<DeviceSignatureResult>('sign_session_refresh', {
+        backendUrl: settings.backendUrl,
+        userId,
+        sessionId: session.sessionId,
+        deviceId: tokenDeviceId,
+        bindingEpoch: accessTokenBindingEpoch(session.accessToken),
+        refreshToken: session.refreshToken,
+      });
+      if (proof.fingerprint !== key.fingerprint) throw new Error('refresh proof подписан неожиданным device key');
+      body.deviceId = tokenDeviceId;
+      body.deviceSignature = proof.signature;
+      setDeviceKey(key);
+    }
     const response = await fetch(endpoint('/api/v1/auth/refresh'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: session.refreshToken }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => null);
+      const message = errorPayload?.error?.message || `${response.status} ${response.statusText}`;
+      throw new Error(message);
+    }
     const payload = await response.json();
-    const next: AuthSession = { ...session, accessToken: payload.data.tokens.accessToken, refreshToken: payload.data.tokens.refreshToken, sessionId: payload.data.session.id, userId: session.userId || accessTokenSubject(payload.data.tokens.accessToken) };
+    const next: AuthSession = { ...session, accessToken: payload.data.tokens.accessToken, refreshToken: payload.data.tokens.refreshToken, sessionId: payload.data.session.id, userId: userId || accessTokenSubject(payload.data.tokens.accessToken) };
     await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: next });
     setAuthSession(next);
     return next;

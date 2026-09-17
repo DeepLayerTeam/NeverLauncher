@@ -9,6 +9,12 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Привязка сессии к устройству и применение risk policy 0.12.6
+
+Сам по себе access JWT больше не считается достаточным подтверждением актуальной привязки к устройству: Backend сверяет `binding_epoch`, `device_id` и trust state с текущей server-side session. Bind/re-bind устройства инвалидирует старые JWT. Refresh привязанной session дополнительно требует подпись зарегистрированным device key по canonical payload, в котором присутствует только SHA-256 refresh token, но не сам секрет.
+
+Risk decision применяется как `allow`, `step-up`, `reattest` или `revoke`. Изменение сетевого/клиентского контекста требует новой phishing-resistant ceremony для чувствительных операций; устаревшая hardware-key attestation требует повторной attestation; отсутствующее/отозванное trusted device или reuse refresh token отзывает session/family. Device assurance по-прежнему не заменяет пользовательские MFA/RBAC.
+
 ## Device Management + Revocation 0.12.5
 
 Device revoke является необратимым security transition, а не удалением строки из UI. Backend сохраняет revoked trusted-device record как tombstone: прежний key fingerprint нельзя зарегистрировать снова, а повторное подключение требует новой device identity. Повторный revoke идемпотентен.

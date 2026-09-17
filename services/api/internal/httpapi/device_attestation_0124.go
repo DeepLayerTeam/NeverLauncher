@@ -234,6 +234,11 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 		writeError(w, http.StatusUnauthorized, "сессия недействительна")
 		return
 	}
+	session, err = s.reconcileSessionDeviceRisk0126(r, session)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		return
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "пользователь не найден")

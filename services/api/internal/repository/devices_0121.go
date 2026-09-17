@@ -536,7 +536,7 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 	rows.Close()
 	families := map[string]struct{}{}
 	for _, a := range affected {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
 			return model.DeviceRevocationResult{}, err
 		}
 		if a.family != "" {

@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Привязка сессии к устройству и интеграция риска 0.12.6
+
+Backend 0.12.6 хранит `binding_epoch` в `auth_sessions` и включает его в JWT. `verifyAdminToken` и request observation сверяют JWT binding с server-side session, а registration/re-bind увеличивает epoch. Старый JWT после изменения binding больше не принимается.
+
+Для session с `trusted_device_id` refresh требует `deviceId + deviceSignature`. Подпись проверяется до rotation по canonical `NeverLauncher Session Device Binding v1` payload (`user/session/device/binding_epoch/refresh-token-sha256`). Wrong proof не расходует refresh token; consumed-token replay сохраняет family-wide compromise semantics. Risk evaluation объединяет IP/User-Agent drift, trusted-device state, hardware-attestation freshness и refresh reuse в `risk_score` + `risk_action`; sensitive endpoints выполняют `step-up/reattest/revoke` policy. Migration: `0015_session_device_risk_0126.sql`.
+
 ### Device Management + Revocation 0.12.5
 
 Backend 0.12.5 делает device revocation единым security lifecycle. Пользовательские management endpoints: `GET /api/v1/auth/devices?status=active|revoked`, `PATCH /api/v1/auth/devices/{deviceId}`, `POST /api/v1/auth/devices/{deviceId}/revoke`, `POST /api/v1/auth/devices/revoke-others`; совместимый `DELETE` также выполняет permanent revoke. `revoke-others` требует, чтобы текущая session была привязана к active verified trusted device, которое и сохраняется.

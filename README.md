@@ -237,6 +237,12 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Привязка сессии к устройству и интеграция риска 0.12.6
+
+`0.12.6` связывает access/refresh lifecycle с реальным server-side состоянием trusted device. Persistent `binding_epoch` увеличивается при device bind/re-bind и входит в access JWT; Backend сверяет epoch, `device_id` и `device_trust` с текущей session, поэтому старый pre-bind token отклоняется сразу после смены binding.
+
+Для bound-session `/api/v1/auth/refresh` теперь требует подпись текущим device key. Desktop выполняет её native-командой `sign_session_refresh`; signed payload содержит session/device/epoch и только SHA-256 refresh token. Risk engine хранит score/action (`allow|step-up|reattest|revoke`): network drift требует step-up на sensitive operations, stale hardware attestation — повторной attestation, а missing/revoked device или reuse refresh token приводит к revoke. PostgreSQL schema обновляется migration `0015_session_device_risk_0126.sql`.
+
 ## Device Management 0.12.5 — управление и необратимый revoke
 
 `0.12.5` добавляет рабочий lifecycle trusted devices поверх Device Trust 0.12.1–0.12.4. `GET /api/v1/auth/devices?status=active|revoked` возвращает registry с признаком текущего устройства; `POST /api/v1/auth/devices/{deviceId}/revoke` необратимо отзывает конкретное устройство, а `POST /api/v1/auth/devices/revoke-others` сохраняет текущее verified device и отзывает остальные. Старый fingerprint после revoke остаётся tombstone и не может быть повторно зарегистрирован.

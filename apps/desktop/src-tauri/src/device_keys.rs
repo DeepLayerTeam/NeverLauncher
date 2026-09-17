@@ -444,6 +444,62 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
     })
 }
 
+fn session_refresh_payload(user_id: &str, session_id: &str, device_id: &str, binding_epoch: i64, refresh_token: &str) -> Result<String, String> {
+    let session_id = session_id.trim();
+    let device_id = device_id.trim();
+    if session_id.is_empty() || session_id.len() > 256 || device_id.is_empty() || device_id.len() > 160 {
+        return Err("session/device binding для refresh недействителен".into());
+    }
+    if binding_epoch < 1 {
+        return Err("bindingEpoch для refresh должен быть >= 1".into());
+    }
+    if refresh_token.is_empty() || refresh_token.len() > 4096 {
+        return Err("refresh token имеет недопустимый размер".into());
+    }
+    let digest = hex::encode(Sha256::digest(refresh_token.as_bytes()));
+    Ok(format!(
+        "NeverLauncher Session Device Binding v1\npurpose=refresh\nuser={}\nsession={}\ndevice={}\nbinding-epoch={}\nrefresh-token-sha256={}\n",
+        user_id, session_id, device_id, binding_epoch, digest
+    ))
+}
+
+pub fn sign_session_refresh(
+    backend_url: &str,
+    user_id: &str,
+    session_id: &str,
+    device_id: &str,
+    binding_epoch: i64,
+    refresh_token: &str,
+) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let registered_device = record.device_id.as_deref().unwrap_or("").trim();
+    if registered_device.is_empty() || registered_device != device_id.trim() {
+        return Err("refresh proof запрошен не для локально зарегистрированного device key".into());
+    }
+    let payload = session_refresh_payload(&user, session_id, registered_device, binding_epoch, refresh_token)?;
+    let signature = if record.key_binding == "hardware" {
+        let (signer, _) = validate_hardware_record(&record)?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes())
+            .map_err(|e| format!("hardware session refresh signing failed: {e}"))?;
+        URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
+    } else {
+        let signing = validate_software_record(&mut record)?;
+        URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes())
+    };
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint,
+        public_key: record.public_key,
+        signature,
+        key_algorithm: record.key_algorithm,
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: record.key_binding == "hardware",
+    })
+}
+
 pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(user_id)?;
     let mut record = load_record(backend_url, &user)?
@@ -555,6 +611,18 @@ mod tests {
         assert!(validate_device_signing_payload(good, "user-a").is_ok());
         assert!(validate_device_signing_payload(good, "user-b").is_err());
         assert!(validate_device_signing_payload("arbitrary payload", "user-a").is_err());
+    }
+
+    #[test]
+    fn refresh_payload_binds_session_device_epoch_and_token_hash_without_token_disclosure() {
+        let payload = session_refresh_payload("user-a", "sess-1", "dev-1", 3, "nlr_secret-refresh").unwrap();
+        assert!(payload.contains("user=user-a\n"));
+        assert!(payload.contains("session=sess-1\n"));
+        assert!(payload.contains("device=dev-1\n"));
+        assert!(payload.contains("binding-epoch=3\n"));
+        assert!(payload.contains("refresh-token-sha256="));
+        assert!(!payload.contains("nlr_secret-refresh"));
+        assert!(session_refresh_payload("user-a", "sess-1", "dev-1", 0, "x").is_err());
     }
 
     #[test]

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.6 — Session ↔ Device binding + risk integration
+
+`0.12.6` делает связь Never session с trusted device server-authoritative. Каждая session получает persistent `binding_epoch`; registration/re-bind атомарно увеличивает epoch, а Backend сравнивает его и `device_id/device_trust` с каждым access JWT. Поэтому access token, выпущенный до нового bind, больше не может продолжать работать только потому, что сама session ещё active.
+
+### Device-bound refresh
+
+- Refresh привязанной session требует proof текущим registered device key. Canonical `NeverLauncher Session Device Binding v1` payload связывает `user + session + device + binding_epoch` и SHA-256 текущего refresh token; сам refresh secret в подписываемый payload не включается.
+- Backend сначала read-only проверяет refresh family/session binding и device signature, и только затем выполняет rotation. Wrong/missing device proof возвращает `428` и не расходует действительный refresh token. Replay уже consumed refresh token по-прежнему компрометирует всю family и отзывает replacement token.
+- Desktop подписывает refresh внутри отдельной Tauri IPC-команды `sign_session_refresh`; команда сама строит canonical payload и сверяет local persisted `deviceId`, поэтому React не может использовать её как arbitrary signing primitive. Software Ed25519 и hardware P-256 используют уже зарегистрированный ключ.
+
+### Risk enforcement
+
+- Migration `0015_session_device_risk_0126.sql` добавляет `binding_epoch`, `risk_score`, `risk_action`, `risk_evaluated_at`; API/CLI migration catalogs синхронизированы. Risk actions: `allow`, `step-up`, `reattest`, `revoke`.
+- IP/User-Agent drift становится `step-up`; stale hardware attestation — `reattest`; missing/revoked/invalid trusted device и refresh-token reuse ведут к `revoke`. `risk_updated_at` меняется только при изменении решения, поэтому успешный step-up не становится немедленно устаревшим из-за очередной оценки.
+- Sensitive handlers через `requireFreshAuth117` теперь проверяют risk action до обычной freshness policy. Step-up очищает network-drift reasons; hardware attestation completion снимает `reattest` после повторной server-side проверки device state.
+- E2E покрывает invalidation pre-bind JWT, mandatory bound-refresh proof, wrong-proof non-consumption, refresh replay family compromise, persisted risk decision и secret-free canonical payload. Gate `session-device-risk-0126.py` подключён к preflight, repository policy и CI.
+
 ## 0.12.5 — Device Management + Revocation
 
 `0.12.5` превращает существующий device revoke из разрозненной операции в единый production lifecycle. Пользователь видит active/revoked trusted devices, текущее устройство, может переименовать устройство, необратимо отозвать одно устройство или атомарно отозвать все остальные. Администратор получает тот же registry и revoke после fresh phishing-resistant step-up.

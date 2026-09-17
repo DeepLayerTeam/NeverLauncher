@@ -36,6 +36,11 @@ type authClaims struct {
 	DeviceAttestationMethod    string   `json:"device_attestation_method,omitempty"`
 	DeviceAttestedAt           int64    `json:"device_attested_at,omitempty"`
 	DeviceAttestationExpiresAt int64    `json:"device_attestation_expires_at,omitempty"`
+	BindingEpoch               int64    `json:"binding_epoch"`
+	RiskState                  string   `json:"risk_state,omitempty"`
+	RiskScore                  int      `json:"risk_score,omitempty"`
+	RiskAction                 string   `json:"risk_action,omitempty"`
+	RiskUpdatedAt              int64    `json:"risk_updated_at,omitempty"`
 	Exp                        int64    `json:"exp"`
 }
 
@@ -96,10 +101,17 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 		AuthStrength:     session.AuthStrength,
 		TrustedDeviceID:  session.TrustedDeviceID,
 		DeviceTrustState: firstNonEmpty(session.DeviceTrustState, "unverified"),
+		BindingEpoch:     session.BindingEpoch,
+		RiskState:        normalizeRiskState118(session.RiskState),
+		RiskScore:        session.RiskScore,
+		RiskAction:       firstNonEmpty(session.RiskAction, "allow"),
 		Exp:              now.Add(accessTokenTTL).Unix(),
 	}
 	if !session.DeviceVerifiedAt.IsZero() {
 		claims.DeviceVerifiedAt = session.DeviceVerifiedAt.Unix()
+	}
+	if !session.RiskUpdatedAt.IsZero() {
+		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
 	// keyBinding/provider stay informational: challenge-response attestation proves
 	// possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance.
@@ -133,8 +145,22 @@ func (s Server) verifyAdminTokenFromRequest(r *http.Request) (authClaims, error)
 	if err != nil {
 		return authClaims{}, err
 	}
-	if _, ok := s.State.AuthSessions.observe(claims.SessionID, claims.Sub, r); !ok {
+	session, ok := s.State.AuthSessions.observe(claims.SessionID, claims.Sub, r)
+	if !ok {
 		return authClaims{}, errAuthRequired
+	}
+	session, err = s.reconcileSessionDeviceRisk0126(r, session)
+	if err != nil {
+		return authClaims{}, errAuthRequired
+	}
+	if !sessionBindingClaimsMatch0126(claims, session) {
+		return authClaims{}, errAuthRequired
+	}
+	claims.RiskState = normalizeRiskState118(session.RiskState)
+	claims.RiskScore = session.RiskScore
+	claims.RiskAction = firstNonEmpty(session.RiskAction, "allow")
+	if !session.RiskUpdatedAt.IsZero() {
+		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
 	return claims, nil
 }
@@ -150,7 +176,11 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 	if claims.AuthTime == 0 {
 		claims.AuthTime = claims.Iat
 	}
-	if !s.State.AuthSessions.active(claims.SessionID, claims.Sub) {
+	session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
+	if !ok || normalizeRiskState118(session.RiskState) == "compromised" || firstNonEmpty(session.RiskAction, "allow") == "revoke" {
+		return authClaims{}, errAuthRequired
+	}
+	if !sessionBindingClaimsMatch0126(claims, session) {
 		return authClaims{}, errAuthRequired
 	}
 	return claims, nil

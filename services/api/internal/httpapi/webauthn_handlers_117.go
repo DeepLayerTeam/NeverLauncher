@@ -644,6 +644,9 @@ func (s Server) requireFreshAuth117(permission, strength string, maxAge time.Dur
 			writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 			return
 		}
+		if s.writeRiskRequirement0126(w, claims) {
+			return
+		}
 		if !freshAuth117(claims, strength, maxAge) {
 			writeStepUpRequired117(w, strength)
 			return

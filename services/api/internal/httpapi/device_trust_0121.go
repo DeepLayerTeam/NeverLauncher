@@ -327,6 +327,11 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusConflict, "не удалось привязать устройство к текущей сессии")
 		return
 	}
+	session, err = s.reconcileSessionDeviceRisk0126(r, session)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
+		return
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "пользователь не найден")
@@ -423,6 +428,11 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 	session, err := s.State.AuthSessions.bindTrustedDevice121(claims.SessionID, claims.Sub, deviceID, now)
 	if err != nil {
 		writeError(w, http.StatusConflict, "не удалось привязать устройство к текущей сессии")
+		return
+	}
+	session, err = s.reconcileSessionDeviceRisk0126(r, session)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "сессия отозвана risk policy")
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
