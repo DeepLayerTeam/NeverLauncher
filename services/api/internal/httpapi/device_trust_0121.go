@@ -215,18 +215,8 @@ func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
 }
 
 func (s Server) authDevices0121(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.verifyAdminTokenFromRequest(r)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
-		return
-	}
-	items := s.Repo.ListTrustedDevices(claims.Sub, "")
-	for i := range items {
-		items[i] = sanitizeTrustedDevice0121(items[i])
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"items": items, "count": len(items)}})
+	s.authDevices0125(w, r)
 }
-
 func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
@@ -473,66 +463,14 @@ func (s Server) authDeviceRename0121(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authDeviceRevoke0121(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.verifyAdminTokenFromRequest(r)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
-		return
-	}
-	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
-	device, err := s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, deviceID, "user-device-revoke")
-	if err != nil {
-		writeError(w, http.StatusNotFound, "устройство не найдено")
-		return
-	}
-	revoked := s.State.AuthSessions.revokeTrustedDevice121(claims.Sub, deviceID, "device-revoked:"+deviceID)
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "device-revoke-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:device:revoke", Target: deviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"device": sanitizeTrustedDevice0121(device), "revokedSessions": revoked}})
+	s.authDeviceRevoke0125(w, r)
 }
-
 func (s Server) adminAuthDevices0121(w http.ResponseWriter, r *http.Request) {
-	userID := strings.TrimSpace(r.URL.Query().Get("userId"))
-	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
-	if status != "" && status != "active" && status != "revoked" {
-		writeError(w, http.StatusBadRequest, "status должен быть active|revoked")
-		return
-	}
-	items := s.Repo.ListTrustedDevices(userID, status)
-	for i := range items {
-		items[i] = sanitizeTrustedDevice0121(items[i])
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"items": items, "count": len(items)}})
+	s.adminAuthDevices0125(w, r)
 }
-
 func (s Server) adminAuthDeviceRevoke0121(w http.ResponseWriter, r *http.Request) {
-	claims, err := s.verifyAdminTokenFromRequest(r)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
-		return
-	}
-	var req adminDeviceRevokeRequest0121
-	if r.Body != nil {
-		_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10)).Decode(&req)
-	}
-	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
-	existing, err := s.Repo.GetTrustedDeviceByID(deviceID)
-	if err != nil {
-		writeError(w, http.StatusNotFound, "устройство не найдено")
-		return
-	}
-	reason := strings.TrimSpace(req.Reason)
-	if reason == "" {
-		reason = "admin-device-revoke"
-	}
-	device, err := s.Repo.RevokeTrustedDevice(r.Context(), "", deviceID, reason)
-	if err != nil {
-		writeError(w, http.StatusConflict, "не удалось отозвать устройство")
-		return
-	}
-	revoked := s.State.AuthSessions.revokeTrustedDevice121(existing.UserID, deviceID, "device-revoked:"+deviceID)
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "device-admin-revoke-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:device:admin-revoke", Target: deviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"device": sanitizeTrustedDevice0121(device), "revokedSessions": revoked}})
+	s.adminAuthDeviceRevoke0125(w, r)
 }
-
 func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {

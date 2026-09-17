@@ -505,14 +505,14 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 	return sanitizeSessionRecord(rec), nil
 }
 
-func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason string) int {
+func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason string) []string {
 	if s.persistent != nil {
 		return s.persistent.revokeTrustedDevice121(userID, deviceID, reason)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
-	count := 0
+	ids := []string{}
 	for id, rec := range s.sessions {
 		if rec.UserID != strings.TrimSpace(userID) || rec.TrustedDeviceID != strings.TrimSpace(deviceID) || rec.Status != "active" {
 			continue
@@ -526,9 +526,9 @@ func (s *authSessionStore) revokeTrustedDevice121(userID, deviceID, reason strin
 		rec.DeviceTrustState = "revoked"
 		s.sessions[id] = rec
 		s.revokeFamilyLocked111(rec.RefreshFamily, rec.RevokedReason, now)
-		count++
+		ids = append(ids, id)
 	}
-	return count
+	return ids
 }
 
 func sanitizeSessionRecord(record authSessionRecord) authSessionRecord {

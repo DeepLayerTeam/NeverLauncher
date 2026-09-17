@@ -343,6 +343,28 @@ if "Challenge-response attestation gate OK" not in attestation_gate:
 for forbidden in ["authorizationElevation\": true", "phishingResistantElevation\": true", "hardwareProvenance\": \"verified\""]:
     if forbidden in attestation_handler:
         fail(f"0.12.4 attestation overstates authorization/vendor assurance: {forbidden}")
+# 0.12.5 Device Management + Revocation: device revoke is an irreversible
+# security lifecycle transition, not a UI-only delete. Production PostgreSQL
+# must cascade revocation transactionally and clients/admins must expose the
+# management flow without allowing the old fingerprint to be re-enrolled.
+device_management_gate = read("scripts/smoke/offline/device-management-revocation.py")
+device_management = read("services/api/internal/httpapi/device_management_0125.go")
+device_management_test = read("services/api/internal/httpapi/device_management_0125_test.go")
+device_repository = read("services/api/internal/repository/devices_0121.go")
+for required in ["RevokeOtherTrustedDevices", "invalidatedChallenges", "revokedMinecraftSessions", "invalidatedBridgeJoins", "reEnrollmentRequiresNewKey", "currentTrustedDeviceID0125"]:
+    if required not in device_management:
+        fail(f"0.12.5 device management path missing: {required}")
+for required in ["UPDATE device_challenges SET consumed_at", "UPDATE auth_sessions SET status='revoked'", "UPDATE refresh_token_families SET status='revoked'", "UPDATE refresh_tokens SET status='revoked'", "UPDATE minecraft_sessions SET status='revoked'", "FOR UPDATE", "assurance='proof-of-possession'"]:
+    if required not in device_repository:
+        fail(f"0.12.5 transactional device revocation missing: {required}")
+for required in ["TestDeviceManagementRevokeOthersAndChallengeInvalidation0125", "TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125", "pre-revocation challenge completed after revoke", "revoked device key was re-enrolled", "repeat revoke is not idempotent", "self-revoked session remained active"]:
+    if required not in device_management_test:
+        fail(f"0.12.5 device management regression coverage missing: {required}")
+if "device-management-revocation.py" not in preflight or "scripts/smoke/offline/device-management-revocation.py" not in ci:
+    fail("0.12.5 device management gate is not wired into preflight/CI")
+if "Device Management + Revocation gate OK" not in device_management_gate:
+    fail("0.12.5 device management gate is incomplete")
+
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

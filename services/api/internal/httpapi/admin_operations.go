@@ -61,6 +61,7 @@ func (s Server) adminOps9100Payload(kind string) map[string]any {
 			{"id": "packages", "title": "Пакеты"},
 			{"id": "bridge", "title": "ServerBridge"},
 			{"id": "sessions", "title": "Сессии"},
+			{"id": "devices", "title": "Trusted devices"},
 			{"id": "audit", "title": "Аудит"},
 			{"id": "diagnostics", "title": "Диагностика"},
 			{"id": "backup", "title": "Резервные копии и восстановление"},

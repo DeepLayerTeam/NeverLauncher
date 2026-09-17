@@ -66,6 +66,8 @@ def path_parameters(path):
         out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/callback"):
         out += [{"name":"code","in":"query","required":False,"schema":{"type":"string"}},{"name":"state","in":"query","required":False,"schema":{"type":"string"}},{"name":"error","in":"query","required":False,"schema":{"type":"string"}}]
+    if path == "/api/v1/auth/devices":
+        out += [{"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}}]
     if path == "/api/v1/admin/auth/devices":
         out += [
           {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
@@ -98,6 +100,9 @@ def body_schema(path):
       "/api/v1/auth/devices/{deviceId}/attest/begin":"FreeFormObject",
       "/api/v1/auth/devices/{deviceId}/attest/complete":"DeviceProofCompleteRequest",
       "/api/v1/auth/devices/{deviceId}":"TrustedDeviceRenameRequest",
+      "/api/v1/auth/devices/{deviceId}/revoke":"TrustedDeviceRevokeRequest",
+      "/api/v1/auth/devices/revoke-others":"TrustedDeviceRevokeRequest",
+      "/api/v1/admin/auth/devices/{deviceId}/revoke":"TrustedDeviceRevokeRequest",
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
@@ -128,6 +133,7 @@ def request_body_required(method,path):
     optional={
       "/api/v1/auth/logout", "/api/v1/admin/logout", "/api/v1/auth/sessions/revoke", "/api/v1/auth/sessions/logout-all",
       "/api/v1/auth/sessions/revoke-others", "/api/v1/auth/providers/{providerId}/logout",
+      "/api/v1/auth/devices/{deviceId}/revoke", "/api/v1/auth/devices/revoke-others", "/api/v1/admin/auth/devices/{deviceId}/revoke",
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
     }
@@ -221,6 +227,7 @@ schemas={
 "DeviceRegisterBeginRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96},"platform":{"type":"string","maxLength":48},"clientVersion":{"type":"string","maxLength":96},"keyAlgorithm":{"type":"string","enum":["ed25519","p256"],"default":"ed25519"},"keyBinding":{"type":"string","enum":["software","hardware"],"default":"software"},"hardwareProvider":{"type":"string","maxLength":96}}},
 "DeviceProofCompleteRequest":{"type":"object","required":["challengeId","challenge","signature"],"properties":{"challengeId":{"type":"string","minLength":1},"deviceId":{"type":"string"},"challenge":{"type":"string","minLength":1},"publicKey":{"type":"string","description":"Device public key encoded as base64url: raw Ed25519 (32 bytes) or uncompressed SEC1 P-256 (65 bytes)"},"signature":{"type":"string","description":"Device proof signature encoded as base64url: Ed25519 (64 bytes) or raw P-256 IEEE P1363 r||s (64 bytes)"}}},
 "TrustedDeviceRenameRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96}}},
+"TrustedDeviceRevokeRequest":{"type":"object","properties":{"reason":{"type":"string","minLength":1,"maxLength":160}},"additionalProperties":False},
 "PasswordResetRequest":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":12}}},
 "ProjectWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
 "ProfileWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},

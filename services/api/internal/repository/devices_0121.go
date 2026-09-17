@@ -208,27 +208,76 @@ func (r *MemoryRepository) RenameTrustedDevice(userID, deviceID, name string) (m
 	return model.TrustedDevice{}, ErrNotFound
 }
 
-func (r *MemoryRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.TrustedDevice, error) {
-	_ = ctx
-	r.deviceMu.Lock()
-	defer r.deviceMu.Unlock()
+func (r *MemoryRepository) revokeTrustedDeviceLocked0125(userID, deviceID, reason string, now time.Time) (model.DeviceRevocationResult, error) {
+	userID = strings.TrimSpace(userID)
+	deviceID = strings.TrimSpace(deviceID)
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		reason = "device-revoked"
+	}
 	for i, item := range r.trustedDevices {
-		if item.ID != strings.TrimSpace(deviceID) || (strings.TrimSpace(userID) != "" && item.UserID != strings.TrimSpace(userID)) {
+		if item.ID != deviceID || (userID != "" && item.UserID != userID) {
 			continue
 		}
-		if item.Status != "revoked" {
-			now := time.Now().UTC()
+		result := model.DeviceRevocationResult{Device: item, AlreadyRevoked: item.Status == "revoked", CascadeHandled: false}
+		if !result.AlreadyRevoked {
 			item.Status = "revoked"
 			item.TrustState = "revoked"
 			item.AttestationState = "revoked"
+			item.Assurance = "proof-of-possession"
 			item.RevokedAt = now
-			item.RevokedReason = strings.TrimSpace(reason)
+			item.RevokedReason = reason
 			item.UpdatedAt = now
 			r.trustedDevices[i] = item
+			result.Device = item
 		}
-		return item, nil
+		for ci, ch := range r.deviceChallenges {
+			if ch.DeviceID == deviceID && ch.ConsumedAt.IsZero() {
+				ch.ConsumedAt = now
+				r.deviceChallenges[ci] = ch
+				result.InvalidatedChallenges++
+			}
+		}
+		return result, nil
 	}
-	return model.TrustedDevice{}, ErrNotFound
+	return model.DeviceRevocationResult{}, ErrNotFound
+}
+
+func (r *MemoryRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.DeviceRevocationResult, error) {
+	_ = ctx
+	r.deviceMu.Lock()
+	defer r.deviceMu.Unlock()
+	return r.revokeTrustedDeviceLocked0125(userID, deviceID, reason, time.Now().UTC())
+}
+
+func (r *MemoryRepository) RevokeOtherTrustedDevices(ctx context.Context, userID, exceptDeviceID, reason string) (model.DeviceRevocationBatch, error) {
+	_ = ctx
+	userID = strings.TrimSpace(userID)
+	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
+	if userID == "" || exceptDeviceID == "" {
+		return model.DeviceRevocationBatch{}, errors.New("user id and preserved device id are required")
+	}
+	r.deviceMu.Lock()
+	defer r.deviceMu.Unlock()
+	now := time.Now().UTC()
+	batch := model.DeviceRevocationBatch{CascadeHandled: false}
+	for _, item := range append([]model.TrustedDevice(nil), r.trustedDevices...) {
+		if item.UserID != userID || item.ID == exceptDeviceID || item.Status != "active" {
+			continue
+		}
+		result, err := r.revokeTrustedDeviceLocked0125(userID, item.ID, reason, now)
+		if err != nil {
+			return model.DeviceRevocationBatch{}, err
+		}
+		batch.Devices = append(batch.Devices, result.Device)
+		if result.AlreadyRevoked {
+			batch.AlreadyRevoked++
+		} else {
+			batch.RevokedDevices++
+		}
+		batch.InvalidatedChallenges += result.InvalidatedChallenges
+	}
+	return batch, nil
 }
 
 func (r *MemoryRepository) TouchTrustedDevice(ctx context.Context, userID, deviceID, ip, userAgent string) (model.TrustedDevice, error) {
@@ -438,39 +487,37 @@ func (r *SQLRepository) RenameTrustedDevice(userID, deviceID, name string) (mode
 	return r.GetTrustedDevice(userID, deviceID)
 }
 
-func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.TrustedDevice, error) {
-	if err := r.check(); err != nil {
-		return model.TrustedDevice{}, err
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return model.TrustedDevice{}, err
-	}
-	defer tx.Rollback()
-	var owner string
-	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM trusted_devices WHERE id=$1 FOR UPDATE`, strings.TrimSpace(deviceID)).Scan(&owner); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return model.TrustedDevice{}, ErrNotFound
-		}
-		return model.TrustedDevice{}, err
-	}
-	if strings.TrimSpace(userID) != "" && owner != strings.TrimSpace(userID) {
-		return model.TrustedDevice{}, ErrNotFound
-	}
-	now := time.Now().UTC()
+func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, deviceID, reason string, now time.Time) (model.DeviceRevocationResult, error) {
+	deviceID = strings.TrimSpace(deviceID)
+	userID = strings.TrimSpace(userID)
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		reason = "device-revoked"
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',attestation_state='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
-		return model.TrustedDevice{}, err
+	var owner, status string
+	if err := tx.QueryRowContext(ctx, `SELECT user_id,status FROM trusted_devices WHERE id=$1 FOR UPDATE`, deviceID).Scan(&owner, &status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.DeviceRevocationResult{}, ErrNotFound
+		}
+		return model.DeviceRevocationResult{}, err
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE trusted_device_id=$1 AND status='active' FOR UPDATE`, deviceID)
+	if userID != "" && owner != userID {
+		return model.DeviceRevocationResult{}, ErrNotFound
+	}
+	result := model.DeviceRevocationResult{AlreadyRevoked: status == "revoked", CascadeHandled: true}
+	if !result.AlreadyRevoked {
+		if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
+			return model.DeviceRevocationResult{}, err
+		}
+	}
+	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, deviceID, now); err != nil {
+		return model.DeviceRevocationResult{}, err
+	} else if n, err := res.RowsAffected(); err == nil {
+		result.InvalidatedChallenges = int(n)
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, owner, deviceID)
 	if err != nil {
-		return model.TrustedDevice{}, err
+		return model.DeviceRevocationResult{}, err
 	}
 	type pair struct{ session, family string }
 	affected := []pair{}
@@ -478,27 +525,142 @@ func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceI
 		var p pair
 		if err := rows.Scan(&p.session, &p.family); err != nil {
 			rows.Close()
-			return model.TrustedDevice{}, err
+			return model.DeviceRevocationResult{}, err
 		}
 		affected = append(affected, p)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return model.DeviceRevocationResult{}, err
+	}
 	rows.Close()
+	families := map[string]struct{}{}
 	for _, a := range affected {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, a.session, now, reason); err != nil {
-			return model.TrustedDevice{}, err
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
+			return model.DeviceRevocationResult{}, err
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, a.family, now, reason); err != nil {
-			return model.TrustedDevice{}, err
+		if a.family != "" {
+			families[a.family] = struct{}{}
+			if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status<>'revoked'`, a.family, now, reason); err != nil {
+				return model.DeviceRevocationResult{}, err
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
+				return model.DeviceRevocationResult{}, err
+			}
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
-			return model.TrustedDevice{}, err
+		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
+			return model.DeviceRevocationResult{}, err
+		} else if n, err := res.RowsAffected(); err == nil {
+			result.RevokedMinecraftSessions += int(n)
 		}
-		_, _ = tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4,'reason',$5),$6)`, owner, a.session, a.family, deviceID, reason, now)
+		if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4,'reason',$5),$6)`, owner, a.session, a.family, deviceID, reason, now); err != nil {
+			return model.DeviceRevocationResult{}, err
+		}
+		result.RevokedSessionIDs = append(result.RevokedSessionIDs, a.session)
+	}
+	result.RevokedSessions = len(affected)
+	result.RevokedRefreshFamilies = len(families)
+	return result, nil
+}
+
+func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.DeviceRevocationResult, error) {
+	if err := r.check(); err != nil {
+		return model.DeviceRevocationResult{}, err
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.DeviceRevocationResult{}, err
+	}
+	defer tx.Rollback()
+	result, err := revokeTrustedDeviceSQLTx0125(ctx, tx, userID, deviceID, reason, time.Now().UTC())
+	if err != nil {
+		return model.DeviceRevocationResult{}, err
 	}
 	if err := tx.Commit(); err != nil {
-		return model.TrustedDevice{}, err
+		return model.DeviceRevocationResult{}, err
 	}
-	return r.GetTrustedDevice(owner, deviceID)
+	owner := strings.TrimSpace(userID)
+	if owner == "" {
+		device, err := r.GetTrustedDeviceByID(deviceID)
+		if err != nil {
+			return model.DeviceRevocationResult{}, err
+		}
+		result.Device = device
+	} else {
+		device, err := r.GetTrustedDevice(owner, deviceID)
+		if err != nil {
+			return model.DeviceRevocationResult{}, err
+		}
+		result.Device = device
+	}
+	return result, nil
+}
+
+func (r *SQLRepository) RevokeOtherTrustedDevices(ctx context.Context, userID, exceptDeviceID, reason string) (model.DeviceRevocationBatch, error) {
+	if err := r.check(); err != nil {
+		return model.DeviceRevocationBatch{}, err
+	}
+	userID = strings.TrimSpace(userID)
+	exceptDeviceID = strings.TrimSpace(exceptDeviceID)
+	if userID == "" || exceptDeviceID == "" {
+		return model.DeviceRevocationBatch{}, errors.New("user id and preserved device id are required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.DeviceRevocationBatch{}, err
+	}
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM trusted_devices WHERE user_id=$1 AND id<>$2 AND status='active' ORDER BY id FOR UPDATE`, userID, exceptDeviceID)
+	if err != nil {
+		return model.DeviceRevocationBatch{}, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return model.DeviceRevocationBatch{}, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return model.DeviceRevocationBatch{}, err
+	}
+	rows.Close()
+	batch := model.DeviceRevocationBatch{CascadeHandled: true}
+	now := time.Now().UTC()
+	for _, id := range ids {
+		result, err := revokeTrustedDeviceSQLTx0125(ctx, tx, userID, id, reason, now)
+		if err != nil {
+			return model.DeviceRevocationBatch{}, err
+		}
+		if result.AlreadyRevoked {
+			batch.AlreadyRevoked++
+		} else {
+			batch.RevokedDevices++
+		}
+		batch.RevokedSessions += result.RevokedSessions
+		batch.RevokedRefreshFamilies += result.RevokedRefreshFamilies
+		batch.RevokedMinecraftSessions += result.RevokedMinecraftSessions
+		batch.InvalidatedChallenges += result.InvalidatedChallenges
+		batch.RevokedSessionIDs = append(batch.RevokedSessionIDs, result.RevokedSessionIDs...)
+	}
+	if err := tx.Commit(); err != nil {
+		return model.DeviceRevocationBatch{}, err
+	}
+	for _, id := range ids {
+		if device, err := r.GetTrustedDevice(userID, id); err == nil {
+			batch.Devices = append(batch.Devices, device)
+		}
+	}
+	return batch, nil
 }
 
 func (r *SQLRepository) TouchTrustedDevice(ctx context.Context, userID, deviceID, ip, userAgent string) (model.TrustedDevice, error) {

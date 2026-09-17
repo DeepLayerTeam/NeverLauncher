@@ -72,6 +72,7 @@ type DesktopBindingResult = { status: string; configPath: string; gameDirectory:
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
 type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
 type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
+type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; current: boolean; revocationPermanent: boolean };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
@@ -164,6 +165,7 @@ function App() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [deviceKey, setDeviceKey] = useState<DeviceKeyInfo | null>(null);
   const [deviceTrustStatus, setDeviceTrustStatus] = useState<string>('не инициализирован');
+  const [managedDevices, setManagedDevices] = useState<ManagedDevice[]>([]);
 
   useEffect(() => {
     callTauri<DesktopSettings>('load_desktop_config')
@@ -458,6 +460,63 @@ function App() {
     setDeviceTrustStatus(key?.deviceId ? 'registered' : key ? 'local-key-only' : 'not-created');
   }
 
+  async function loadManagedDevices(session: AuthSession | null = authSession) {
+    if (!session?.accessToken) { setManagedDevices([]); return; }
+    const response = await fetch(endpoint('/api/v1/auth/devices'), { headers: { Authorization: `Bearer ${session.accessToken}` } });
+    if (!response.ok) throw new Error(`Device list: ${response.status} ${response.statusText}`);
+    const payload = await response.json();
+    const data = payload.data ?? payload;
+    setManagedDevices(Array.isArray(data.items) ? data.items : []);
+  }
+
+  async function renameManagedDevice(device: ManagedDevice) {
+    if (!authSession?.accessToken || device.status !== 'active') return;
+    const name = window.prompt('Новое имя устройства', device.name)?.trim();
+    if (!name || name === device.name) return;
+    const response = await fetch(endpoint(`/api/v1/auth/devices/${encodeURIComponent(device.id)}`), {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error(`Device rename: ${response.status} ${response.statusText}`);
+    await loadManagedDevices(authSession);
+    log(`Trusted device ${device.id} переименован.`);
+  }
+
+  async function revokeManagedDevice(device: ManagedDevice) {
+    if (!authSession?.accessToken || device.status !== 'active') return;
+    const warning = device.current
+      ? 'Отозвать текущее устройство? Текущая Never session, refresh token, Minecraft session и device key станут недействительными. Для повторной регистрации будет создан новый ключ.'
+      : `Отозвать устройство «${device.name}»? Все связанные с ним сессии будут немедленно завершены, а старый ключ нельзя будет зарегистрировать повторно.`;
+    if (!window.confirm(warning)) return;
+    const response = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(device.id)}/revoke`, authSession.accessToken, { reason: device.current ? 'desktop-self-revoke' : 'desktop-device-revoke' });
+    if (!response.ok) throw new Error(`Device revoke: ${response.status} ${response.statusText}`);
+    const payload = await response.json();
+    const data = payload.data ?? payload;
+    log(`Устройство ${device.id} отозвано: sessions=${data.revokedSessions ?? 0}, refreshFamilies=${data.revokedRefreshFamilies ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}.`);
+    if (device.current) {
+      if (authSession.userId) await callTauri<void>('delete_device_key', { backendUrl: settings.backendUrl, userId: authSession.userId }).catch(() => undefined);
+      await callTauri<void>('delete_auth_session', { backendUrl: settings.backendUrl }).catch(() => undefined);
+      setAuthSession(null);
+      setDeviceKey(null);
+      setManagedDevices([]);
+      setDeviceTrustStatus('revoked · требуется новый вход и новый device key');
+      return;
+    }
+    await loadManagedDevices(authSession);
+  }
+
+  async function revokeOtherManagedDevices() {
+    if (!authSession?.accessToken) return;
+    if (!window.confirm('Отозвать все остальные trusted devices? Текущее устройство останется активным; остальные device keys и связанные сессии будут отозваны без возможности восстановления ключа.')) return;
+    const response = await postDeviceJson('/api/v1/auth/devices/revoke-others', authSession.accessToken, { reason: 'desktop-revoke-other-devices' });
+    if (!response.ok) throw new Error(`Revoke other devices: ${response.status} ${response.statusText}`);
+    const payload = await response.json();
+    const data = payload.data ?? payload;
+    log(`Другие устройства отозваны: devices=${data.revokedDevices ?? 0}, sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}.`);
+    await loadManagedDevices(authSession);
+  }
+
   async function loginDesktop() {
     setStage('session');
     const response = await fetch(endpoint('/api/v1/auth/login'), {
@@ -479,7 +538,8 @@ function App() {
     setAuthSession(next);
     log(`Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; refresh token не записывается в конфигурацию/localStorage.`);
     try {
-      await ensureDesktopDeviceTrust(next);
+      const trusted = await ensureDesktopDeviceTrust(next);
+      await loadManagedDevices(trusted);
     } catch (error) {
       setDeviceTrustStatus('ошибка');
       log(`Device Trust не активирован: ${String(error)}`);
@@ -511,6 +571,7 @@ function App() {
     }
     await callTauri<void>('delete_auth_session', { backendUrl: settings.backendUrl });
     setAuthSession(null);
+    setManagedDevices([]);
     setDeviceTrustStatus(deviceKey ? 'ключ сохранён локально' : 'не инициализирован');
     log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в OS secure storage для следующего входа.');
   }
@@ -548,13 +609,13 @@ function App() {
         if (normalized.userId) await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: normalized });
         log(`Сессия восстановлена из системного хранилища учётных данных: ${Array.isArray(payload?.data?.items) ? payload.data.items.length : 'ok'}.`);
         if (normalized.userId) {
-          try { await ensureDesktopDeviceTrust(normalized); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust при восстановлении не подтверждён: ${String(error)}`); }
+          try { const trusted = await ensureDesktopDeviceTrust(normalized); await loadManagedDevices(trusted); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust при восстановлении не подтверждён: ${String(error)}`); }
         }
       } catch {
         const rotated = await rotateDesktopSession({ ...stored, userId: stored.userId || accessTokenSubject(stored.accessToken) });
         log('Access token истёк; сессия восстановлена через ротацию refresh token из системного хранилища учётных данных.');
         if (rotated.userId) {
-          try { await ensureDesktopDeviceTrust(rotated); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust после refresh не подтверждён: ${String(error)}`); }
+          try { const trusted = await ensureDesktopDeviceTrust(rotated); await loadManagedDevices(trusted); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust после refresh не подтверждён: ${String(error)}`); }
         }
       }
     } catch (error) {
@@ -893,7 +954,7 @@ function App() {
 
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} />}
+        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
@@ -931,8 +992,8 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
   );
 }
 
-function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus }: any) {
-  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} использует non-exportable P-256 device identity в Secure Enclave/TPM, если доступен hardware backend; иначе явно остаётся на Ed25519 + native OS secure storage. После session-bind hardware key проходит отдельный одноразовый challenge-response attestation с ограниченным freshness window. Private key не передаётся React или Backend; эта проверка подтверждает владение зарегистрированным hardware key, но не выдаёт себя за vendor TPM/Secure Enclave remote provenance.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
+function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices }: any) {
+  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

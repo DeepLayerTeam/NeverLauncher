@@ -12,6 +12,7 @@ type PasskeyBegin = { transactionToken: string; publicKey: PublicKeyCredentialRe
 type PasskeySessionResponse = { status?: string; accessToken?: string; session?: { id?: string }; tokens?: { accessToken?: string; refreshToken?: string }; user?: Record<string, unknown> };
 type DashboardData = { status?: string; metrics?: Record<string, number>; projects?: any[]; profiles?: any[]; channels?: any[]; users?: any[]; audit?: any[] };
 type SessionView = { id: string; device: string; deviceId?: string; provider?: string; status?: string; riskState?: string; lastIp?: string; lastSeenAt?: string; expiresAt?: string; current?: boolean };
+type TrustedDeviceView = { id: string; userId: string; name: string; status: string; trustState?: string; keyAlgorithm?: string; keyBinding?: string; hardwareProvider?: string; keyFingerprint?: string; lastSeenAt?: string; revokedAt?: string; revokedReason?: string; attestationState?: string; revocationPermanent?: boolean };
 
 type ProjectForm = { id: string; name: string; description: string; homepage: string; repository: string; defaultChannel: string };
 type ProfileForm = { projectId: string; id: string; name: string; description: string; loader: string; preset: string; isDefault: boolean };
@@ -30,6 +31,7 @@ const fallbackSections: Section[] = [
   { id: 'releases', title: 'Релизы' },
   { id: 'users', title: 'Пользователи' },
   { id: 'roles', title: 'Роли' },
+  { id: 'devices', title: 'Устройства' },
   { id: 'audit', title: 'Аудит' },
   { id: 'storage', title: 'Хранилище' },
   { id: 'server-bridge', title: 'ServerBridge' },
@@ -46,6 +48,7 @@ const endpointBySection: Record<string, string> = {
   releases: '/api/v1/projects/{projectId}/versions',
   users: '/api/v1/admin/users',
   roles: '/api/v1/admin/roles',
+  devices: '/api/v1/admin/auth/devices',
   audit: '/api/v1/admin/audit',
   storage: '/api/v1/admin/storage/health',
   'server-bridge': '/api/v1/server-bridge/servers',
@@ -165,6 +168,7 @@ function App() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionView[]>([]);
+  const [devices, setDevices] = useState<TrustedDeviceView[]>([]);
 
   const [projectForm, setProjectForm] = useState<ProjectForm>({ id: 'neverlauncher-project', name: 'Проект NeverLauncher', description: 'Production-проект Minecraft', homepage: '', repository: '', defaultChannel: 'stable' });
   const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: 'neverlauncher-project', id: 'vanilla-java21', name: 'Vanilla Java 21', description: 'Production-профиль клиента', loader: 'vanilla', preset: 'recommended', isDefault: true });
@@ -265,7 +269,7 @@ function App() {
 
   async function logout() {
     if (token) await requestJSON<any>(backendUrl, '/api/v1/admin/logout', token, { method: 'POST' }).catch(() => undefined);
-    setToken(''); setRefreshToken(''); setSessionId(''); setDashboard(null); setPayload(null); setMessage('Сессия завершена.');
+    setToken(''); setRefreshToken(''); setSessionId(''); setDashboard(null); setPayload(null); setSessions([]); setDevices([]); setMessage('Сессия завершена.');
   }
 
   async function loadSessions(currentToken = token) {
@@ -296,6 +300,23 @@ function App() {
     await requestJSON(backendUrl, '/api/v1/auth/sessions/revoke-others', token, { method: 'POST' });
     await loadSessions();
     setMessage('Все остальные сессии отозваны.');
+  }
+
+  async function loadTrustedDevices(currentToken = token) {
+    if (!currentToken) { setDevices([]); return; }
+    const data = await requestJSON<{ items?: TrustedDeviceView[] }>(backendUrl, '/api/v1/admin/auth/devices', currentToken);
+    setDevices(data.items ?? []);
+  }
+
+  async function revokeTrustedDevice(item: TrustedDeviceView) {
+    if (!token) throw new Error('Сначала войдите в NeverLauncher.');
+    if (item.status === 'revoked') return;
+    const reason = window.prompt('Причина необратимого отзыва устройства', 'admin-device-revoke');
+    if (reason === null) return;
+    if (!window.confirm(`Отозвать устройство ${item.name || item.id}? Старый device key больше нельзя будет зарегистрировать повторно.`)) return;
+    const data = await requestJSON<{ revokedSessions?: number; revokedMinecraftSessions?: number; invalidatedChallenges?: number }>(backendUrl, `/api/v1/admin/auth/devices/${encodeURIComponent(item.id)}/revoke`, token, { method: 'POST', body: JSON.stringify({ reason }) });
+    await loadTrustedDevices();
+    setMessage(`Устройство отозвано: sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}. Если Backend требует fresh phishing-resistant step-up, сначала нажмите «Подтвердить passkey».`);
   }
 
   async function loadDashboard(currentToken = token) {
@@ -448,6 +469,8 @@ function App() {
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
         {token && <div className="passkeyRow"><button onClick={() => loadSessions().catch((err: Error) => setError(err.message))}>Сессии</button><button onClick={() => revokeOtherSessions().catch((err: Error) => setError(err.message))}>Выйти на других устройствах</button></div>}
         {token && sessions.length > 0 && <div className="sessionList">{sessions.map((item) => <article className="subcard" key={item.id}><strong>{item.device || item.deviceId || 'Устройство'}{item.current ? ' · текущая' : ''}</strong><p className="muted">{item.provider ?? 'local'} · risk: {item.riskState ?? 'normal'} · {item.lastIp ?? 'IP неизвестен'}</p><div className="buttonRow"><button onClick={() => renameSession(item).catch((err: Error) => setError(err.message))}>Переименовать</button><button onClick={() => revokeSession(item).catch((err: Error) => setError(err.message))}>{item.current ? 'Завершить' : 'Отозвать'}</button></div></article>)}</div>}
+        {token && <div className="passkeyRow"><button onClick={() => loadTrustedDevices().catch((err: Error) => setError(err.message))}>Trusted devices</button><span className="muted">Admin revoke необратим и требует fresh phishing-resistant step-up.</span></div>}
+        {token && devices.length > 0 && <div className="sessionList">{devices.map((item) => <article className="subcard" key={item.id}><strong>{item.name || item.id}</strong><p className="muted">{item.status} · {item.keyAlgorithm ?? 'key n/a'}/{item.keyBinding ?? 'binding n/a'}{item.hardwareProvider ? ` · ${item.hardwareProvider}` : ''} · trust: {item.trustState ?? 'n/a'} · attestation: {item.attestationState ?? 'unattested'}</p><p className="muted"><code>{item.id}</code> · user <code>{item.userId}</code>{item.revokedAt ? ` · revoked ${new Date(item.revokedAt).toLocaleString()}` : ''}{item.revokedReason ? ` · ${item.revokedReason}` : ''}</p>{item.status === 'active' && <div className="buttonRow"><button onClick={() => revokeTrustedDevice(item).catch((err: Error) => setError(err.message))}>Необратимо отозвать</button></div>}</article>)}</div>}
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
       </section>

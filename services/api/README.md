@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Device Management + Revocation 0.12.5
+
+Backend 0.12.5 делает device revocation единым security lifecycle. Пользовательские management endpoints: `GET /api/v1/auth/devices?status=active|revoked`, `PATCH /api/v1/auth/devices/{deviceId}`, `POST /api/v1/auth/devices/{deviceId}/revoke`, `POST /api/v1/auth/devices/revoke-others`; совместимый `DELETE` также выполняет permanent revoke. `revoke-others` требует, чтобы текущая session была привязана к active verified trusted device, которое и сохраняется.
+
+Для PostgreSQL trusted-device tombstone, consumption открытых device challenges, revoke связанных auth sessions, refresh families/tokens и Minecraft sessions выполняются в одной транзакции с row locks. После commit ServerBridge joins затронутых Never sessions инвалидируются. API возвращает реальные cascade counters. Отозванный key fingerprint повторно зарегистрировать нельзя; reconnect требует нового key. Admin list/revoke находится под `/api/v1/admin/auth/devices*`, а revoke защищён fresh phishing-resistant step-up. Новая migration для 0.12.5 не требуется.
+
 ### Challenge-response attestation 0.12.4
 
 Backend добавляет отдельные `POST /api/v1/auth/devices/{deviceId}/attest/begin|complete`. Они доступны только active session, которая уже связана с тем же verified trusted device. Persistent `attest` challenge привязан к session и сохранённым key properties, имеет TTL 2 минуты и single-use semantics; signature проверяется зарегистрированным P-256 public key.

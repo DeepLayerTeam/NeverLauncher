@@ -285,18 +285,18 @@ func (p *authSessionPostgres111) bindTrustedDevice121(sessionID, userID, deviceI
 	return rec, nil
 }
 
-func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason string) int {
+func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason string) []string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	reason = firstNonEmpty(strings.TrimSpace(reason), "device-revoked")
 	tx, err := p.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0
+		return nil
 	}
 	defer tx.Rollback()
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, userID, deviceID)
 	if err != nil {
-		return 0
+		return nil
 	}
 	type item struct{ session, family string }
 	items := []item{}
@@ -310,22 +310,26 @@ func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason
 	now := time.Now().UTC()
 	for _, it := range items {
 		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
-			return 0
+			return nil
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, it.family, now, reason); err != nil {
-			return 0
+			return nil
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, it.family, now); err != nil {
-			return 0
+			return nil
 		}
 		if err := p.insertEventTx111(ctx, tx, userID, it.session, it.family, "trusted-device-revoked", map[string]any{"deviceId": deviceID, "reason": reason}); err != nil {
-			return 0
+			return nil
 		}
 	}
 	if tx.Commit() != nil {
-		return 0
+		return nil
 	}
-	return len(items)
+	ids := make([]string, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.session)
+	}
+	return ids
 }
 
 func (p *authSessionPostgres111) summary118() map[string]any {

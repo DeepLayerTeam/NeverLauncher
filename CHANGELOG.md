@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.5 — Device Management + Revocation
+
+`0.12.5` превращает существующий device revoke из разрозненной операции в единый production lifecycle. Пользователь видит active/revoked trusted devices, текущее устройство, может переименовать устройство, необратимо отозвать одно устройство или атомарно отозвать все остальные. Администратор получает тот же registry и revoke после fresh phishing-resistant step-up.
+
+### Runtime revocation
+
+- PostgreSQL revoke выполняется одной транзакцией: trusted device становится permanent tombstone, свежая attestation снимается, незавершённые device challenges расходуются, связанные Never sessions, refresh-token families/tokens и Minecraft sessions отзываются. Возвращаются фактические счётчики, а не результат повторного in-memory revoke.
+- ServerBridge joins для затронутых Never sessions инвалидируются немедленно. Access JWT перестаёт проходить session observation после server-side revoke; refresh family также больше не может ротироваться.
+- `POST /api/v1/auth/devices/{deviceId}/revoke` и `POST /api/v1/auth/devices/revoke-others` дают явный management API; прежний `DELETE` сохранён как совместимый revoke. `revoke-others` разрешён только session, уже связанной с active verified trusted device, и сохраняет именно это текущее устройство.
+- Revocation необратим для прежнего device key/fingerprint: повторная регистрация отозванного ключа запрещена, повторный revoke идемпотентен. Для повторного подключения установка должна создать новый device key.
+
+### Clients / operations / gates
+
+- Desktop показывает trusted-device registry, current/revoked state, rename/revoke/revoke-others. При self-revoke удаляются локальный device key и сохранённая auth session из OS secure storage.
+- Admin UI показывает trusted devices и выполняет permanent revoke через защищённый admin endpoint; критическая операция остаётся за fresh phishing-resistant step-up.
+- HTTP E2E проверяет challenge invalidation, access/refresh cutoff, tombstone re-enrollment denial, self-revoke и idempotency. `device-management-revocation.py` включён в preflight, repository policy и CI. Новая DB migration не требуется: schema 0.12.4 уже содержит необходимые trusted-device/session/challenge поля; 0.12.5 меняет runtime semantics и transaction boundaries, а не добавляет пустую schema-заготовку.
+
 ## 0.12.4 — Challenge-response attestation
 
 `0.12.4` добавляет отдельную рабочую attestation-церемонию поверх hardware-bound identity из `0.12.3`. Backend выдаёт короткоживущий single-use challenge только сессии, которая уже доказала владение зарегистрированным P-256 hardware key и привязана к тому же trusted device. Native Desktop подписывает отдельный canonical `NeverLauncher Device Attestation v1` payload тем же non-exportable platform key; software Ed25519 fallback к этой IPC-команде не допускается.

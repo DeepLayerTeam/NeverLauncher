@@ -9,6 +9,14 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Device Management + Revocation 0.12.5
+
+Device revoke является необратимым security transition, а не удалением строки из UI. Backend сохраняет revoked trusted-device record как tombstone: прежний key fingerprint нельзя зарегистрировать снова, а повторное подключение требует новой device identity. Повторный revoke идемпотентен.
+
+В PostgreSQL одна транзакция блокирует device/session rows, переводит device в `revoked`, сбрасывает effective assurance до `proof-of-possession`, помечает attestation revoked, расходует незавершённые device challenges, отзывает связанные Never sessions, refresh families/tokens и Minecraft sessions. После commit ServerBridge joins инвалидируются по затронутым Never session IDs. Это предотвращает окно, в котором устройство уже отображается revoked, но старый refresh/challenge ещё пригоден.
+
+`revoke-others` разрешается только текущей session, криптографически связанной с active verified trusted device, и исключает это устройство из batch revoke. Admin revoke требует `users:manage` и fresh phishing-resistant authentication. Revocation не повышает auth strength и не заменяет MFA; она только прекращает доверие к конкретной device identity и связанным credentials.
+
 ## Challenge-response device attestation 0.12.4
 
 `0.12.4` отделяет hardware-key registration от свежей attestation ceremony. Backend выдаёт `attest` challenge только активной Never session, уже связанной с тем же verified trusted device. Challenge хранится persistent, привязан к user/device/session и зарегистрированным fingerprint/algorithm/binding/provider, живёт 2 минуты и расходуется атомарно. Native Tauri-команда `attest_device_payload` разрешена только для persisted `p256/hardware` key и не имеет software fallback.

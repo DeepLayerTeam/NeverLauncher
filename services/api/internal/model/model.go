@@ -284,6 +284,34 @@ type DeviceChallenge struct {
 	ConsumedAt    time.Time      `json:"consumedAt,omitempty"`
 }
 
+// DeviceRevocationResult is the authoritative result of a trusted-device revoke.
+// RevokedSessionIDs is internal cascade evidence used by the HTTP layer in the
+// in-memory test/runtime path and is never serialized to clients.
+type DeviceRevocationResult struct {
+	Device                   TrustedDevice `json:"device"`
+	AlreadyRevoked           bool          `json:"alreadyRevoked"`
+	RevokedSessions          int           `json:"revokedSessions"`
+	RevokedRefreshFamilies   int           `json:"revokedRefreshFamilies"`
+	RevokedMinecraftSessions int           `json:"revokedMinecraftSessions"`
+	InvalidatedChallenges    int           `json:"invalidatedChallenges"`
+	RevokedSessionIDs        []string      `json:"-"`
+	CascadeHandled           bool          `json:"-"`
+}
+
+// DeviceRevocationBatch is returned by "revoke other devices" and keeps the
+// whole server-side cascade observable without exposing refresh/session secrets.
+type DeviceRevocationBatch struct {
+	Devices                  []TrustedDevice `json:"devices"`
+	RevokedDevices           int             `json:"revokedDevices"`
+	AlreadyRevoked           int             `json:"alreadyRevoked"`
+	RevokedSessions          int             `json:"revokedSessions"`
+	RevokedRefreshFamilies   int             `json:"revokedRefreshFamilies"`
+	RevokedMinecraftSessions int             `json:"revokedMinecraftSessions"`
+	InvalidatedChallenges    int             `json:"invalidatedChallenges"`
+	RevokedSessionIDs        []string        `json:"-"`
+	CascadeHandled           bool            `json:"-"`
+}
+
 // MinecraftProfile is the stable Minecraft identity owned by a canonical Never user.
 // UUID/name are independent from mutable email and from any external provider subject.
 type MinecraftProfile struct {

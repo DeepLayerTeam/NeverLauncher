@@ -237,6 +237,12 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Device Management 0.12.5 — управление и необратимый revoke
+
+`0.12.5` добавляет рабочий lifecycle trusted devices поверх Device Trust 0.12.1–0.12.4. `GET /api/v1/auth/devices?status=active|revoked` возвращает registry с признаком текущего устройства; `POST /api/v1/auth/devices/{deviceId}/revoke` необратимо отзывает конкретное устройство, а `POST /api/v1/auth/devices/revoke-others` сохраняет текущее verified device и отзывает остальные. Старый fingerprint после revoke остаётся tombstone и не может быть повторно зарегистрирован.
+
+В PostgreSQL revoke выполняется транзакционно и каскадирует на Never sessions, refresh families/tokens, Minecraft sessions и незавершённые device challenges; связанные ServerBridge joins инвалидируются сразу после commit. Desktop показывает registry, умеет rename/revoke/revoke-others и при self-revoke удаляет local device key + auth session из OS secure storage. Admin registry/revoke доступен через `/api/v1/admin/auth/devices*`; admin revoke требует fresh phishing-resistant step-up. Новая migration не нужна — 0.12.5 использует уже существующую persistent schema и усиливает runtime semantics.
+
 ## Device Trust 0.12.4 — проверка challenge-response
 
 `0.12.4` добавляет свежую проверяемую ceremony поверх hardware-bound P-256 identity из `0.12.3`. После обычного registration/session-bind Backend выдаёт уже привязанной сессии отдельный short-lived single-use attestation challenge. Tauri подписывает canonical `NeverLauncher Device Attestation v1` payload тем же non-exportable hardware key; software Ed25519 key в этот flow не допускается.
