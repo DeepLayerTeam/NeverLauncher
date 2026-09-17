@@ -215,11 +215,15 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
-### Hardware-bound identities 0.12.3
+### Challenge-response attestation 0.12.4
 
-Device Trust принимает два proof key типа: `ed25519/software` и `p256/hardware`. P-256 public key передаётся как uncompressed SEC1 (65 bytes), signature — raw IEEE P1363 `r||s` (64 bytes); Backend выполняет ECDSA/SHA-256 verification над тем же canonical single-use payload. Registry хранит `keyBinding/hardwareProvider` через migration `0013_hardware_bound_identities_0123.sql`.
+Backend добавляет отдельные `POST /api/v1/auth/devices/{deviceId}/attest/begin|complete`. Они доступны только active session, которая уже связана с тем же verified trusted device. Persistent `attest` challenge привязан к session и сохранённым key properties, имеет TTL 2 минуты и single-use semantics; signature проверяется зарегистрированным P-256 public key.
 
-Hardware binding в этой версии не является remote attestation и не повышает server-side `assurance`: до отдельной attestation ceremony Backend использует его только как device metadata.
+Успех сохраняет `attestation_state=verified`, `attestation_method=challenge-response-v1` и 12-часовой freshness window через migration `0014_challenge_response_attestation_0124.sql`. Fresh state отражается в JWT и `/api/v1/auth/device-trust` как `challenge-response-attested`; после expiry effective assurance снова `proof-of-possession`. Attestation не повышает RBAC/MFA/auth strength.
+
+Эта ceremony доказывает свежое владение уже зарегистрированным hardware-bound key, но не vendor TPM/Secure Enclave provenance: platform signer не предоставляет Backend проверяемый quote/certificate, поэтому `hardwareProvider` остаётся metadata и API явно возвращает `hardwareProvenance=not-remotely-verified`.
+
+Базовый `0.12.3` device proof продолжает принимать `ed25519/software` и `p256/hardware`; hardware binding сам по себе attestation не создаёт.
 
 ### Device Trust 0.12.2
 

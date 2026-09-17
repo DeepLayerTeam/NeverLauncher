@@ -97,6 +97,12 @@ device_migration = api_files["0012_device_trust_core_0121.sql"].read_text(encodi
 for required in ["trusted_devices", "device_challenges", "trusted_device_id", "device_trust_state", "auth_sessions_trusted_device_fk"]:
     if required not in device_migration:
         fail(f"0.12.1 device trust migration missing invariant: {required}")
+if "0014_challenge_response_attestation_0124.sql" not in api_files:
+    fail("0.12.4 Challenge-response attestation migration is missing")
+attestation_migration = api_files["0014_challenge_response_attestation_0124.sql"].read_text(encoding="utf-8")
+for required in ["attestation_state", "attestation_method", "attestation_expires_at", "challenge-response-attested", "'attest'"]:
+    if required not in attestation_migration:
+        fail(f"0.12.4 attestation migration missing invariant: {required}")
 
 # 2. Исторические milestone-версии 4.x-8.x запрещены как schemaVersion в CLI.
 legacy_schema_patterns = [
@@ -316,6 +322,27 @@ if "Hardware-bound identity gate OK" not in hardware_gate:
     fail("0.12.3 hardware identity gate is incomplete")
 if 'Assurance:         "hardware"' in device_trust or 'Assurance:         "attested"' in device_trust:
     fail("0.12.3 self-reported hardware binding must not elevate server assurance before attestation")
+
+# 0.12.4 challenge-response attestation is a separate server-issued, single-use
+# ceremony bound to the already verified session and registered hardware key.
+# It may raise only device assurance while fresh; it must not claim vendor TPM /
+# Secure Enclave provenance or raise RBAC/MFA authentication strength.
+attestation_gate = read("scripts/smoke/offline/challenge-response-attestation.py")
+attestation_handler = read("services/api/internal/httpapi/device_attestation_0124.go")
+attestation_test = read("services/api/internal/httpapi/device_attestation_0124_test.go")
+for required in ["Purpose:       \"attest\"", "ConsumeDeviceChallenge", "sessionBoundToDevice0124", "verifyDeviceSignature0123", "AttestTrustedDevice", "not-remotely-verified"]:
+    if required not in attestation_handler:
+        fail(f"0.12.4 challenge-response attestation path missing: {required}")
+for required in ["TestDeviceChallengeResponseAttestation0124", "TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124", "attestation replay accepted", "wrong attestation signature accepted"]:
+    if required not in attestation_test:
+        fail(f"0.12.4 attestation E2E test missing: {required}")
+if "challenge-response-attestation.py" not in preflight or "scripts/smoke/offline/challenge-response-attestation.py" not in ci:
+    fail("0.12.4 challenge-response attestation gate is not wired into preflight/CI")
+if "Challenge-response attestation gate OK" not in attestation_gate:
+    fail("0.12.4 challenge-response attestation gate is incomplete")
+for forbidden in ["authorizationElevation\": true", "phishingResistantElevation\": true", "hardwareProvenance\": \"verified\""]:
+    if forbidden in attestation_handler:
+        fail(f"0.12.4 attestation overstates authorization/vendor assurance: {forbidden}")
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

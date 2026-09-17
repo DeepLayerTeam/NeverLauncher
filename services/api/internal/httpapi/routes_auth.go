@@ -49,6 +49,8 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/devices/register/complete", s.authDeviceRegisterComplete0121)
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/verify/begin", s.authDeviceVerifyBegin0121)
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/verify/complete", s.authDeviceVerifyComplete0121)
+	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/attest/begin", s.authDeviceAttestationBegin0124)
+	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/attest/complete", s.authDeviceAttestationComplete0124)
 	mux.HandleFunc("PATCH /api/v1/auth/devices/{deviceId}", s.authDeviceRename0121)
 	mux.HandleFunc("DELETE /api/v1/auth/devices/{deviceId}", s.authDeviceRevoke0121)
 	mux.Handle("GET /api/v1/admin/auth/sessions", s.requirePermission("users:manage", s.adminAuthSessions118))

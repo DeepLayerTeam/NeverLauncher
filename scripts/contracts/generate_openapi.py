@@ -95,6 +95,8 @@ def body_schema(path):
       "/api/v1/auth/devices/register/complete":"DeviceProofCompleteRequest",
       "/api/v1/auth/devices/{deviceId}/verify/begin":"FreeFormObject",
       "/api/v1/auth/devices/{deviceId}/verify/complete":"DeviceProofCompleteRequest",
+      "/api/v1/auth/devices/{deviceId}/attest/begin":"FreeFormObject",
+      "/api/v1/auth/devices/{deviceId}/attest/complete":"DeviceProofCompleteRequest",
       "/api/v1/auth/devices/{deviceId}":"TrustedDeviceRenameRequest",
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",

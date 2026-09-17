@@ -45,6 +45,7 @@ type Repository interface {
 	RenameTrustedDevice(userID, deviceID, name string) (model.TrustedDevice, error)
 	RevokeTrustedDevice(ctx context.Context, userID, deviceID, reason string) (model.TrustedDevice, error)
 	TouchTrustedDevice(ctx context.Context, userID, deviceID, ip, userAgent string) (model.TrustedDevice, error)
+	AttestTrustedDevice(ctx context.Context, userID, deviceID, method string, attestedAt, expiresAt time.Time) (model.TrustedDevice, error)
 	SaveDeviceChallenge(ctx context.Context, challenge model.DeviceChallenge) error
 	ConsumeDeviceChallenge(ctx context.Context, id, userID, deviceID, purpose, challengeHash string, now time.Time) (model.DeviceChallenge, error)
 	ListRoles() []model.Role

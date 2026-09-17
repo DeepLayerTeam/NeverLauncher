@@ -9,13 +9,19 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
-## Hardware-bound device identities 0.12.3
+## Challenge-response device attestation 0.12.4
 
-`0.12.3` вводит отдельный hardware-backed key path: Desktop создаёт P-256 signing key через platform HSM abstraction и принимает его как `hardware` только если выбран TPM/Secure Enclave/WSL TPM bridge backend. Keyring/software/test backend остаётся software-bound fallback. Hardware private key не сериализуется в NeverLauncher keyring record, не передаётся React/Backend и используется только внутри native signer для canonical Device Trust challenge.
+`0.12.4` отделяет hardware-key registration от свежей attestation ceremony. Backend выдаёт `attest` challenge только активной Never session, уже связанной с тем же verified trusted device. Challenge хранится persistent, привязан к user/device/session и зарегистрированным fingerprint/algorithm/binding/provider, живёт 2 минуты и расходуется атомарно. Native Tauri-команда `attest_device_payload` разрешена только для persisted `p256/hardware` key и не имеет software fallback.
 
-Backend проверяет P-256 ECDSA proof и хранит `key_binding/hardware_provider`, но **не доверяет этим metadata как attestation**. Клиент пока может сообщить provider name, поэтому authorization/MFA/risk policy не должны повышаться из-за `device_key_binding=hardware`; `assurance` остаётся `proof-of-possession`. Remote attestation, TPM quote/Secure Enclave attestation и challenge-response device posture входят в следующий trust layer.
+После успешной P-256 подписи Backend сохраняет `challenge-response-v1` attestation на 12 часов. Пока freshness window действует, device assurance равен `challenge-response-attested`; после expiry внешнее представление снова считается `proof-of-possession`. Этот device assurance не меняет RBAC, MFA/auth strength или phishing-resistant step-up. WebAuthn остаётся отдельной user-authentication boundary.
 
-Migration `0013_hardware_bound_identities_0123.sql` fail-closed ограничивает допустимые пары: software identity — Ed25519 без hardware provider; hardware identity — P-256 с непустым provider.
+Challenge-response подтверждает владение уже зарегистрированным hardware key, но не доказывает vendor provenance платформы. Текущий signer abstraction не предоставляет проверяемый TPM quote или Secure Enclave attestation certificate, поэтому `hardware_provider` остаётся описательной metadata, а API использует `hardwareProvenance=not-remotely-verified`. Нельзя принимать provider name, `key_binding=hardware` или сам факт успешной ceremony за vendor TPM/Secure Enclave remote attestation.
+
+Migration `0014_challenge_response_attestation_0124.sql` хранит state/method/freshness и расширяет single-use `device_challenges` purpose значением `attest`. Revoke устройства переводит attestation state в `revoked` вместе с существующим session/refresh-family revoke.
+
+### Hardware-bound identity base 0.12.3
+
+Desktop создаёт P-256 signing key через platform HSM abstraction и принимает его как `hardware` только для TPM/Secure Enclave/WSL TPM bridge backend. Keyring/software/test backend остаётся software-bound Ed25519 fallback. Hardware private key не сериализуется в NeverLauncher metadata, не передаётся React/Backend и используется только внутри native signer. Само наличие hardware binding без успешной `0.12.4` ceremony оставляет assurance на `proof-of-possession`.
 
 ## Device Trust / device keys 0.12.2
 

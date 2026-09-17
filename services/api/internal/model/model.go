@@ -243,27 +243,31 @@ type ProviderCredential struct {
 // PublicKey contains raw Ed25519 public key bytes encoded as base64url in storage;
 // API responses intentionally expose only KeyFingerprint.
 type TrustedDevice struct {
-	ID               string    `json:"id"`
-	UserID           string    `json:"userId"`
-	Name             string    `json:"name"`
-	Status           string    `json:"status"`
-	TrustState       string    `json:"trustState"`
-	Assurance        string    `json:"assurance"`
-	KeyAlgorithm     string    `json:"keyAlgorithm"`
-	KeyBinding       string    `json:"keyBinding"`
-	HardwareProvider string    `json:"hardwareProvider,omitempty"`
-	PublicKey        string    `json:"-"`
-	KeyFingerprint   string    `json:"keyFingerprint"`
-	Platform         string    `json:"platform,omitempty"`
-	ClientVersion    string    `json:"clientVersion,omitempty"`
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
-	LastSeenAt       time.Time `json:"lastSeenAt,omitempty"`
-	LastVerifiedAt   time.Time `json:"lastVerifiedAt,omitempty"`
-	LastIP           string    `json:"lastIp,omitempty"`
-	LastUserAgent    string    `json:"lastUserAgent,omitempty"`
-	RevokedAt        time.Time `json:"revokedAt,omitempty"`
-	RevokedReason    string    `json:"revokedReason,omitempty"`
+	ID                   string    `json:"id"`
+	UserID               string    `json:"userId"`
+	Name                 string    `json:"name"`
+	Status               string    `json:"status"`
+	TrustState           string    `json:"trustState"`
+	Assurance            string    `json:"assurance"`
+	KeyAlgorithm         string    `json:"keyAlgorithm"`
+	KeyBinding           string    `json:"keyBinding"`
+	HardwareProvider     string    `json:"hardwareProvider,omitempty"`
+	AttestationState     string    `json:"attestationState"`
+	AttestationMethod    string    `json:"attestationMethod,omitempty"`
+	AttestedAt           time.Time `json:"attestedAt,omitempty"`
+	AttestationExpiresAt time.Time `json:"attestationExpiresAt,omitempty"`
+	PublicKey            string    `json:"-"`
+	KeyFingerprint       string    `json:"keyFingerprint"`
+	Platform             string    `json:"platform,omitempty"`
+	ClientVersion        string    `json:"clientVersion,omitempty"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
+	LastSeenAt           time.Time `json:"lastSeenAt,omitempty"`
+	LastVerifiedAt       time.Time `json:"lastVerifiedAt,omitempty"`
+	LastIP               string    `json:"lastIp,omitempty"`
+	LastUserAgent        string    `json:"lastUserAgent,omitempty"`
+	RevokedAt            time.Time `json:"revokedAt,omitempty"`
+	RevokedReason        string    `json:"revokedReason,omitempty"`
 }
 
 // DeviceChallenge is a short-lived, single-use proof-of-possession challenge.

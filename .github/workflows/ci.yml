@@ -32,6 +32,7 @@ jobs:
           python3 scripts/smoke/offline/repository-policy.py
           python3 scripts/smoke/offline/device-key-storage.py
           python3 scripts/smoke/offline/hardware-bound-identity.py
+          python3 scripts/smoke/offline/challenge-response-attestation.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py

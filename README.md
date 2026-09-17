@@ -237,11 +237,15 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
-## Device Trust 0.12.3 — аппаратно-привязанные идентификаторы
+## Device Trust 0.12.4 — проверка challenge-response
 
-`0.12.3` добавляет hardware-backed identity к уже рабочему device registry. Официальный Desktop сначала пытается использовать non-exportable P-256 key через platform hardware signer: Secure Enclave на macOS, TPM/CNG на Windows или TPM 2.0 на Linux. Backend получает только SEC1 public key и ECDSA proof; private key не экспортируется NeverLauncher. Если platform backend является keyring/software fallback, Desktop не выдаёт его за hardware-bound и остаётся на `0.12.2` Ed25519 + OS secure storage.
+`0.12.4` добавляет свежую проверяемую ceremony поверх hardware-bound P-256 identity из `0.12.3`. После обычного registration/session-bind Backend выдаёт уже привязанной сессии отдельный short-lived single-use attestation challenge. Tauri подписывает canonical `NeverLauncher Device Attestation v1` payload тем же non-exportable hardware key; software Ed25519 key в этот flow не допускается.
 
-Server-side registry хранит `keyBinding` и `hardwareProvider`, а migration `0013_hardware_bound_identities_0123.sql` разрешает `p256/hardware` identity. Это **не remote attestation**: до отдельной attestation-версии hardware metadata диагностическая, JWT не получает повышенный auth strength, а device `assurance` остаётся `proof-of-possession`.
+Успешная проверка сохраняет `attestationState=verified`, `attestationMethod=challenge-response-v1` и 12-часовое freshness window. Пока окно действительно, device assurance отражается как `challenge-response-attested`; после expiry API/JWT эффективно возвращают `proof-of-possession` до новой ceremony. Migration `0014_challenge_response_attestation_0124.sql` добавляет persistent state и purpose `attest` в существующий challenge registry.
+
+Это подтверждает свежое владение зарегистрированным hardware key, но не подменяет vendor remote attestation: текущий signer API не даёт NeverLauncher TPM quote/Secure Enclave attestation certificate, поэтому `hardwareProvider` остаётся описательной metadata, а ответы явно содержат `hardwareProvenance=not-remotely-verified`. Device attestation не повышает RBAC/MFA/auth strength и не заменяет WebAuthn.
+
+`0.12.3` остаётся базовым hardware identity layer: platform Secure Enclave/TPM → P-256 public key + ECDSA proof, с явным Ed25519/software fallback при отсутствии настоящего hardware backend.
 
 ## Device Trust 0.12.2
 

@@ -37,6 +37,8 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	device.KeyAlgorithm = strings.ToLower(strings.TrimSpace(device.KeyAlgorithm))
 	device.KeyBinding = strings.ToLower(strings.TrimSpace(device.KeyBinding))
 	device.HardwareProvider = strings.TrimSpace(device.HardwareProvider)
+	device.AttestationState = strings.ToLower(strings.TrimSpace(device.AttestationState))
+	device.AttestationMethod = strings.ToLower(strings.TrimSpace(device.AttestationMethod))
 	device.PublicKey = strings.TrimSpace(device.PublicKey)
 	device.KeyFingerprint = strings.ToLower(strings.TrimSpace(device.KeyFingerprint))
 	device.Platform = strings.TrimSpace(device.Platform)
@@ -59,6 +61,9 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	if device.KeyBinding == "" {
 		device.KeyBinding = "software"
 	}
+	if device.AttestationState == "" {
+		device.AttestationState = "unattested"
+	}
 	if device.Status != "active" && device.Status != "revoked" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported device status %q", device.Status)
 	}
@@ -70,6 +75,24 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	}
 	if device.KeyBinding != "software" && device.KeyBinding != "hardware" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported device key binding %q", device.KeyBinding)
+	}
+	if device.Assurance != "proof-of-possession" && device.Assurance != "challenge-response-attested" {
+		return model.TrustedDevice{}, fmt.Errorf("unsupported device assurance %q", device.Assurance)
+	}
+	if device.AttestationState != "unattested" && device.AttestationState != "verified" && device.AttestationState != "revoked" {
+		return model.TrustedDevice{}, fmt.Errorf("unsupported device attestation state %q", device.AttestationState)
+	}
+	if device.AttestationState == "verified" {
+		if device.AttestationMethod != "challenge-response-v1" || device.AttestedAt.IsZero() || device.AttestationExpiresAt.IsZero() || !device.AttestationExpiresAt.After(device.AttestedAt) {
+			return model.TrustedDevice{}, errors.New("verified device attestation requires method and a valid freshness window")
+		}
+	} else if device.AttestationState == "unattested" {
+		device.AttestationMethod = ""
+		device.AttestedAt = time.Time{}
+		device.AttestationExpiresAt = time.Time{}
+		if device.Assurance == "challenge-response-attested" {
+			device.Assurance = "proof-of-possession"
+		}
 	}
 	if device.KeyBinding == "hardware" {
 		if device.KeyAlgorithm != "p256" {
@@ -197,6 +220,7 @@ func (r *MemoryRepository) RevokeTrustedDevice(ctx context.Context, userID, devi
 			now := time.Now().UTC()
 			item.Status = "revoked"
 			item.TrustState = "revoked"
+			item.AttestationState = "revoked"
 			item.RevokedAt = now
 			item.RevokedReason = strings.TrimSpace(reason)
 			item.UpdatedAt = now
@@ -222,6 +246,30 @@ func (r *MemoryRepository) TouchTrustedDevice(ctx context.Context, userID, devic
 			r.trustedDevices[i] = item
 			return item, nil
 		}
+	}
+	return model.TrustedDevice{}, ErrNotFound
+}
+
+func (r *MemoryRepository) AttestTrustedDevice(ctx context.Context, userID, deviceID, method string, attestedAt, expiresAt time.Time) (model.TrustedDevice, error) {
+	_ = ctx
+	r.deviceMu.Lock()
+	defer r.deviceMu.Unlock()
+	for i, item := range r.trustedDevices {
+		if item.ID != strings.TrimSpace(deviceID) || item.UserID != strings.TrimSpace(userID) || item.Status != "active" || item.TrustState != "verified" {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(method)) != "challenge-response-v1" || attestedAt.IsZero() || !expiresAt.After(attestedAt) {
+			return model.TrustedDevice{}, errors.New("invalid attestation result")
+		}
+		item.AttestationState = "verified"
+		item.AttestationMethod = "challenge-response-v1"
+		item.AttestedAt = attestedAt.UTC()
+		item.AttestationExpiresAt = expiresAt.UTC()
+		item.Assurance = "challenge-response-attested"
+		item.LastVerifiedAt = attestedAt.UTC()
+		item.UpdatedAt = attestedAt.UTC()
+		r.trustedDevices[i] = item
+		return item, nil
 	}
 	return model.TrustedDevice{}, ErrNotFound
 }
@@ -264,14 +312,20 @@ func (r *MemoryRepository) ConsumeDeviceChallenge(ctx context.Context, id, userI
 	return model.DeviceChallenge{}, ErrNotFound
 }
 
-const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason`
+const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason`
 
 func scanTrustedDevice0121(row interface{ Scan(...any) error }) (model.TrustedDevice, error) {
 	var d model.TrustedDevice
-	var lastSeen, lastVerified, revoked sql.NullTime
-	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason)
+	var lastSeen, lastVerified, attested, attestationExpires, revoked sql.NullTime
+	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.AttestationState, &d.AttestationMethod, &attested, &attestationExpires, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason)
 	if err != nil {
 		return model.TrustedDevice{}, err
+	}
+	if attested.Valid {
+		d.AttestedAt = attested.Time.UTC()
+	}
+	if attestationExpires.Valid {
+		d.AttestationExpiresAt = attestationExpires.Time.UTC()
 	}
 	if lastSeen.Valid {
 		d.LastSeenAt = lastSeen.Time.UTC()
@@ -302,9 +356,9 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 		device.CreatedAt = now
 	}
 	device.UpdatedAt = now
-	res, err := r.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NULLIF($16,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($17,'0001-01-01T00:00:00Z')::timestamptz,$18,$19,NULLIF($20,'0001-01-01T00:00:00Z')::timestamptz,$21)
-ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
+	res, err := r.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($13,'0001-01-01T00:00:00Z')::timestamptz,$14,$15,$16,$17,$18,$19,NULLIF($20,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($21,'0001-01-01T00:00:00Z')::timestamptz,$22,$23,NULLIF($24,'0001-01-01T00:00:00Z')::timestamptz,$25)
+ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,attestation_state=EXCLUDED.attestation_state,attestation_method=EXCLUDED.attestation_method,attested_at=EXCLUDED.attested_at,attestation_expires_at=EXCLUDED.attestation_expires_at,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.AttestationState, device.AttestationMethod, device.AttestedAt.UTC().Format(time.RFC3339), device.AttestationExpiresAt.UTC().Format(time.RFC3339), device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
 	if err != nil {
 		// key_fingerprint is globally unique. Resolve a concurrent or pre-existing
 		// registration back to the repository-level conflict contract instead of
@@ -411,7 +465,7 @@ func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceI
 	if reason == "" {
 		reason = "device-revoked"
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',attestation_state='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
 		return model.TrustedDevice{}, err
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE trusted_device_id=$1 AND status='active' FOR UPDATE`, deviceID)
@@ -455,6 +509,27 @@ func (r *SQLRepository) TouchTrustedDevice(ctx context.Context, userID, deviceID
 		ctx = context.Background()
 	}
 	res, err := r.db.ExecContext(ctx, `UPDATE trusted_devices SET last_seen_at=now(),last_verified_at=now(),last_ip=$3,last_user_agent=$4,updated_at=now() WHERE id=$1 AND user_id=$2 AND status='active'`, strings.TrimSpace(deviceID), strings.TrimSpace(userID), strings.TrimSpace(ip), strings.TrimSpace(userAgent))
+	if err != nil {
+		return model.TrustedDevice{}, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return model.TrustedDevice{}, ErrNotFound
+	}
+	return r.GetTrustedDevice(userID, deviceID)
+}
+
+func (r *SQLRepository) AttestTrustedDevice(ctx context.Context, userID, deviceID, method string, attestedAt, expiresAt time.Time) (model.TrustedDevice, error) {
+	if err := r.check(); err != nil {
+		return model.TrustedDevice{}, err
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	method = strings.ToLower(strings.TrimSpace(method))
+	if method != "challenge-response-v1" || attestedAt.IsZero() || !expiresAt.After(attestedAt) {
+		return model.TrustedDevice{}, errors.New("invalid attestation result")
+	}
+	res, err := r.db.ExecContext(ctx, `UPDATE trusted_devices SET attestation_state='verified',attestation_method=$3,attested_at=$4,attestation_expires_at=$5,assurance='challenge-response-attested',last_verified_at=$4,updated_at=$4 WHERE id=$1 AND user_id=$2 AND status='active' AND trust_state='verified'`, strings.TrimSpace(deviceID), strings.TrimSpace(userID), method, attestedAt.UTC(), expiresAt.UTC())
 	if err != nil {
 		return model.TrustedDevice{}, err
 	}

@@ -58,7 +58,7 @@ need('services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sq
 need('services/api/internal/httpapi/auth.go', [
     'DeviceKeyBinding',
     'DeviceHardwareProvider',
-    'informational until remote attestation lands',
+    'possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance',
 ])
 need('.github/workflows/ci.yml', [
     'scripts/smoke/offline/hardware-bound-identity.py',
@@ -83,4 +83,4 @@ if errors:
         print(' - ' + item, file=sys.stderr)
     raise SystemExit(1)
 
-print('Hardware-bound identity gate OK: P-256 HSM path is wired, software fallback is explicit, remote assurance is not forged')
+print('Hardware-bound identity gate OK: P-256 HSM path is wired, software fallback is explicit, hardware binding alone does not forge remote provenance')

@@ -378,6 +378,38 @@ fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), S
     Ok(())
 }
 
+fn validate_device_attestation_payload(payload: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
+    if payload.is_empty() || payload.len() > 16 * 1024 {
+        return Err("device attestation payload имеет недопустимый размер".into());
+    }
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" {
+        return Err("device attestation требует hardware-bound P-256 key".into());
+    }
+    let device_id = record.device_id.as_deref().unwrap_or("").trim();
+    if device_id.is_empty() {
+        return Err("device attestation требует уже зарегистрированный deviceId".into());
+    }
+    let lines = payload.split_terminator('\n').collect::<Vec<_>>();
+    if lines.len() != 13 || lines[0] != "NeverLauncher Device Attestation v1" || lines[1] != "purpose=attest" {
+        return Err("device attestation payload не является каноническим NeverLauncher Device Attestation v1 payload".into());
+    }
+    if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
+        || lines[3] != format!("user={}", user_id)
+        || lines[4] != format!("device={}", device_id)
+        || lines[5].strip_prefix("session=").unwrap_or("").is_empty()
+        || lines[6] != format!("fingerprint={}", record.fingerprint)
+        || lines[7] != "algorithm=p256"
+        || lines[8] != "binding=hardware"
+        || lines[9] != format!("provider={}", record.hardware_provider)
+        || lines[10].strip_prefix("issued-at=").unwrap_or("").is_empty()
+        || lines[11].strip_prefix("challenge-expires-at=").unwrap_or("").is_empty()
+        || lines[12].strip_prefix("attestation-valid-until=").unwrap_or("").is_empty()
+    {
+        return Err("device attestation payload не совпадает с зарегистрированной hardware identity/session/freshness binding".into());
+    }
+    Ok(())
+}
+
 fn der_ecdsa_to_p1363(der: &[u8]) -> Result<[u8; 64], String> {
     let sig = P256Signature::from_der(der).map_err(|_| "hardware ECDSA signature DER повреждена".to_string())?;
     let bytes = sig.to_bytes();
@@ -409,6 +441,31 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
         key_binding: record.key_binding.clone(),
         hardware_provider: record.hardware_provider.clone(),
         hardware_bound: record.key_binding == "hardware",
+    })
+}
+
+pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    validate_device_attestation_payload(payload, &user, &record)?;
+
+    // Attestation intentionally has no software fallback. It is a separate IPC
+    // boundary from generic proof-of-possession and can only use the persisted
+    // non-exportable hardware key that was previously registered by the server.
+    let (signer, _) = validate_hardware_record(&record)?;
+    let der = signer.sign(&record.hardware_label, payload.as_bytes())
+        .map_err(|e| format!("hardware device attestation signing failed: {e}"))?;
+    let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint,
+        public_key: record.public_key,
+        signature,
+        key_algorithm: record.key_algorithm,
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: true,
     })
 }
 
@@ -498,5 +555,32 @@ mod tests {
         assert!(validate_device_signing_payload(good, "user-a").is_ok());
         assert!(validate_device_signing_payload(good, "user-b").is_err());
         assert!(validate_device_signing_payload("arbitrary payload", "user-a").is_err());
+    }
+
+    #[test]
+    fn attestation_payload_is_hardware_only_and_identity_bound() {
+        let record = SecureDeviceKeyRecord {
+            schema_version: DEVICE_KEY_SCHEMA_VERSION.into(),
+            user_id: "user-a".into(),
+            public_key: "pub".into(),
+            fingerprint: "fp123".into(),
+            private_seed_hex: String::new(),
+            device_id: Some("dev-1".into()),
+            created_at_unix: 1,
+            storage_backend: "platform-hardware-enclave".into(),
+            key_algorithm: "p256".into(),
+            key_binding: "hardware".into(),
+            hardware_provider: "WindowsTpm".into(),
+            hardware_label: "nl-device-test".into(),
+        };
+        let good = "NeverLauncher Device Attestation v1\npurpose=attest\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\nfingerprint=fp123\nalgorithm=p256\nbinding=hardware\nprovider=WindowsTpm\nissued-at=2026-09-16T20:00:00Z\nchallenge-expires-at=2026-09-16T20:02:00Z\nattestation-valid-until=2026-09-17T08:00:00Z\n";
+        assert!(validate_device_attestation_payload(good, "user-a", &record).is_ok());
+        assert!(validate_device_attestation_payload(good, "user-b", &record).is_err());
+        assert!(validate_device_attestation_payload(&good.replace("fingerprint=fp123", "fingerprint=other"), "user-a", &record).is_err());
+
+        let mut software = record;
+        software.key_algorithm = "ed25519".into();
+        software.key_binding = "software".into();
+        assert!(validate_device_attestation_payload(good, "user-a", &software).is_err());
     }
 }

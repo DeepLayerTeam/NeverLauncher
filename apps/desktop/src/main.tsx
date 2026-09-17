@@ -330,6 +330,42 @@ function App() {
     return next;
   }
 
+  async function attestDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo): Promise<AuthSession> {
+    if (key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256') {
+      setDeviceTrustStatus('verified · software proof-of-possession');
+      return session;
+    }
+    if (!key.deviceId) throw new Error('Hardware attestation требует зарегистрированный deviceId.');
+    setDeviceTrustStatus('hardware attestation');
+    const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/attest/begin`, session.accessToken);
+    if (!beginResponse.ok) throw new Error(`Device attestation begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const beginPayload = await beginResponse.json();
+    const begin = beginPayload.data ?? beginPayload;
+    if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.attestationValidUntil) throw new Error('Backend вернул неполный device attestation challenge.');
+    if (begin.hardwareProvenance !== 'not-remotely-verified') throw new Error('Backend вернул неизвестную hardware provenance semantics; fail-closed.');
+
+    const signature = await callTauri<DeviceSignatureResult>('attest_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
+    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey || signature.keyAlgorithm !== 'p256' || signature.keyBinding !== 'hardware' || !signature.hardwareBound) {
+      throw new Error('Native attestation signer вернул другую или не-hardware identity.');
+    }
+    const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/attest/complete`, session.accessToken, {
+      challengeId: begin.challengeId,
+      deviceId: key.deviceId,
+      challenge: begin.challenge,
+      signature: signature.signature,
+    });
+    if (!completeResponse.ok) throw new Error(`Device attestation complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const completePayload = await completeResponse.json();
+    const data = completePayload.data ?? completePayload;
+    if (!data.accessToken || data.attestationState !== 'verified' || data.attestationMethod !== 'challenge-response-v1') throw new Error('Backend не подтвердил challenge-response attestation.');
+    if (data.hardwareProvenance !== 'not-remotely-verified' || data.authorizationElevation !== false || data.phishingResistantElevation !== false) {
+      throw new Error('Backend изменил security semantics device attestation; fail-closed.');
+    }
+    setDeviceTrustStatus(`attested · до ${new Date(data.attestationExpiresAt).toLocaleString()}`);
+    log(`Challenge-response attestation подтверждён для ${key.deviceId}; freshness=${data.attestationExpiresAt}. Проверено владение зарегистрированным hardware key; vendor TPM/Secure Enclave provenance не заявляется.`);
+    return persistTrustedAccess(session, data.accessToken);
+  }
+
   async function registerDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo, retryOnConflict = true): Promise<AuthSession> {
     const beginResponse = await postDeviceJson('/api/v1/auth/devices/register/begin', session.accessToken, {
       name: `NeverLauncher Desktop · ${navigator.platform || 'desktop'}`.slice(0, 96),
@@ -366,7 +402,8 @@ function App() {
     setDeviceKey(bound);
     setDeviceTrustStatus('verified');
     log(`Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; binding=${bound.keyBinding}; provider=${bound.hardwareProvider || bound.storageBackend}; private key не покидает native boundary.`);
-    return persistTrustedAccess(session, data.accessToken);
+    const trusted = await persistTrustedAccess(session, data.accessToken);
+    return attestDesktopDeviceKey(trusted, bound);
   }
 
   async function verifyDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo): Promise<AuthSession> {
@@ -396,7 +433,8 @@ function App() {
     if (!data.accessToken) throw new Error('Backend не вернул access token после device verification.');
     setDeviceTrustStatus('verified');
     log(`Proof-of-possession подтверждён устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`);
-    return persistTrustedAccess(session, data.accessToken);
+    const trusted = await persistTrustedAccess(session, data.accessToken);
+    return attestDesktopDeviceKey(trusted, key);
   }
 
   async function ensureDesktopDeviceTrust(session: AuthSession): Promise<AuthSession> {
@@ -894,7 +932,7 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
 }
 
 function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus }: any) {
-  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} сначала использует non-exportable P-256 device identity в Secure Enclave/TPM, если доступен настоящий hardware backend; иначе явно остаётся на Ed25519 + native OS secure storage. Private key не передаётся React или Backend: Tauri подписывает только одноразовый server challenge.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
+  return <section className="panel"><h3>Вход, сессия и Device Trust</h3><p>NeverLauncher {DESKTOP_VERSION} использует non-exportable P-256 device identity в Secure Enclave/TPM, если доступен hardware backend; иначе явно остаётся на Ed25519 + native OS secure storage. После session-bind hardware key проходит отдельный одноразовый challenge-response attestation с ограниченным freshness window. Private key не передаётся React или Backend; эта проверка подтверждает владение зарегистрированным hardware key, но не выдаёт себя за vendor TPM/Secure Enclave remote provenance.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button></div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre></section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

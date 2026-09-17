@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.4 — Challenge-response attestation
+
+`0.12.4` добавляет отдельную рабочую attestation-церемонию поверх hardware-bound identity из `0.12.3`. Backend выдаёт короткоживущий single-use challenge только сессии, которая уже доказала владение зарегистрированным P-256 hardware key и привязана к тому же trusted device. Native Desktop подписывает отдельный canonical `NeverLauncher Device Attestation v1` payload тем же non-exportable platform key; software Ed25519 fallback к этой IPC-команде не допускается.
+
+### Attestation lifecycle
+
+- Добавлены `POST /api/v1/auth/devices/{deviceId}/attest/begin|complete`. Challenge persistent, привязан к `user + device + session + fingerprint + algorithm + binding + provider`, имеет TTL 2 минуты и расходуется атомарно до проверки подписи, поэтому replay и повтор после неверного proof отклоняются.
+- Успешный proof сохраняет `attestation_state=verified`, `attestation_method=challenge-response-v1`, `attested_at`, `attestation_expires_at` и device assurance `challenge-response-attested`. Freshness window — 12 часов; после истечения API/JWT эффективно возвращаются к `proof-of-possession`, пока ceremony не выполнена снова.
+- Access JWT и `/api/v1/auth/device-trust` отражают свежий attestation state. Это диагностический device assurance: он не повышает RBAC, MFA/auth strength и не считается phishing-resistant user authentication.
+- Desktop автоматически выполняет attestation после registration/session-bind только для `p256/hardware`. Новый native `attest_device_payload` принимает исключительно canonical attestation payload, сверяет user/device/fingerprint/provider и не имеет software/create fallback.
+
+### Security boundary / persistence
+
+- Migration `0014_challenge_response_attestation_0124.sql` добавляет persistent attestation state/freshness, расширяет допустимый device assurance и разрешает purpose `attest` в существующем single-use challenge registry. Backend и CLI catalogs byte-identical.
+- Challenge-response подтверждает свежое владение уже зарегистрированным hardware-bound key. Текущий platform signer не предоставляет NeverLauncher проверяемый vendor TPM quote / Secure Enclave attestation certificate, поэтому `hardwareProvider` не объявляется remote provenance; API явно возвращает `hardwareProvenance=not-remotely-verified`.
+- HTTP E2E проверяет success, unbound-session rejection, replay, wrong-signature consumption и software-key rejection. Новый offline gate `challenge-response-attestation.py` включён в preflight и CI.
+
 ## 0.12.3 — Hardware-bound identities
 
 `0.12.3` добавляет реальный hardware-backed device-key path поверх Device Trust Core. Desktop сначала пытается создать non-exportable P-256 signing key в platform hardware provider (Secure Enclave / TPM). Если platform signer сообщает keyring/software/test backend, он не считается hardware-bound: клиент явно остаётся на существующем Ed25519 + OS secure storage пути.

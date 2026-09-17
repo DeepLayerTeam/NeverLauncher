@@ -209,6 +209,7 @@ func metadataString0121(m map[string]any, key string) string {
 }
 
 func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
+	d = sanitizeAttestationFreshness0124(d)
 	d.PublicKey = ""
 	return d
 }
@@ -544,12 +545,21 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var device any
+	attestationState := "unattested"
+	attestationMethod := ""
+	var attestedAt, attestationExpiresAt time.Time
 	if session.TrustedDeviceID != "" {
 		if d, err := s.Repo.GetTrustedDevice(claims.Sub, session.TrustedDeviceID); err == nil {
+			attestationState, _ = effectiveDeviceAttestation0124(d, time.Now().UTC())
+			if attestationState == "verified" {
+				attestationMethod = d.AttestationMethod
+				attestedAt = d.AttestedAt
+				attestationExpiresAt = d.AttestationExpiresAt
+			}
 			device = sanitizeTrustedDevice0121(d)
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"sessionId": session.ID, "deviceTrustState": firstNonEmpty(session.DeviceTrustState, "unverified"), "trustedDeviceId": session.TrustedDeviceID, "deviceVerifiedAt": session.DeviceVerifiedAt, "device": device}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"sessionId": session.ID, "deviceTrustState": firstNonEmpty(session.DeviceTrustState, "unverified"), "trustedDeviceId": session.TrustedDeviceID, "deviceVerifiedAt": session.DeviceVerifiedAt, "deviceAttestationState": attestationState, "deviceAttestationMethod": attestationMethod, "deviceAttestedAt": attestedAt, "deviceAttestationExpiresAt": attestationExpiresAt, "device": device}})
 }
 
 func deviceTrustSummary0121(repo repository.Repository) map[string]any {
@@ -562,5 +572,11 @@ func deviceTrustSummary0121(repo repository.Repository) map[string]any {
 			revoked++
 		}
 	}
-	return map[string]any{"registered": len(items), "active": active, "revoked": revoked, "keyAlgorithm": "ed25519", "assurance": "proof-of-possession"}
+	attested := 0
+	for _, d := range items {
+		if state, _ := effectiveDeviceAttestation0124(d, time.Now().UTC()); state == "verified" {
+			attested++
+		}
+	}
+	return map[string]any{"registered": len(items), "active": active, "revoked": revoked, "attested": attested, "keyAlgorithms": []string{"ed25519", "p256"}, "assurance": []string{"proof-of-possession", "challenge-response-attested"}}
 }
