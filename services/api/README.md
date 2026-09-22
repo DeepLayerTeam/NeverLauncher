@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Кроссплатформенная ротация и восстановление ключей 0.12.8
+
+Backend реализует два server-authoritative replacement flow. `key-rotation` проверяет подписи старого и нового ключа по одному canonical challenge; `key-recovery` требует fresh phishing-resistant step-up и proof staged-новым ключом. SQL repository выполняет replacement одной транзакцией и сохраняет permanent replacement chain через migration `0017_device_key_recovery_rotation_0128.sql`. Текущая session перепривязывается к новой identity с увеличенным `binding_epoch`, остальные credentials старой identity отзываются.
+
+Desktop/Tauri хранит staged key отдельно от active key и commit-ит его только после Backend success. Hardware generations получают разные labels; interrupted local commit восстанавливается через fingerprint reconciliation. Ordinary registration из уже bound session не используется как обход replacement.
+
 ### Minecraft / ServerBridge trust enforcement 0.12.7
 
 Backend 0.12.7 pin-ит каждый новый Minecraft session к `trusted_device_id + binding_epoch` parent Never session. Официальный `POST /api/v1/minecraft/session` требует bound verified device; legacy Yggdrasil authenticate может сохранить protocol compatibility, но `/sessionserver/session/minecraft/join` всё равно fail-closed применяет gameplay trust policy.

@@ -100,7 +100,7 @@ func TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind(t *
 		t.Fatalf("bound minecraft token did not validate: %d %s", vv.Code, vv.Body.String())
 	}
 
-	rebound := bindAccessToken0127(t, h, bound.Access, "Minecraft trust device B")
+	rebound := rotateBoundAccess0128(t, h, bound, "Minecraft trust device B")
 	if rebound.BindingEpoch <= bound.BindingEpoch {
 		t.Fatalf("re-bind did not advance epoch: before=%d after=%d", bound.BindingEpoch, rebound.BindingEpoch)
 	}

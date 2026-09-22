@@ -748,6 +748,28 @@ for required in [
 if not (ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go").is_file():
     fail("compatibility release certification regression tests are missing")
 
+
+# 0.12.8 Cross-platform hardening + device key recovery/rotation.
+key_recovery_gate = read("scripts/smoke/offline/cross-platform-key-recovery-0128.py")
+key_recovery_handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
+key_recovery_native = read("apps/desktop/src-tauri/src/device_keys.rs")
+key_recovery_desktop = read("apps/desktop/src/main.tsx")
+key_recovery_migration_api = read("services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql")
+key_recovery_migration_cli = read("cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql")
+for required in ["NeverLauncher Device Key Replacement v1", "oldSignature", "newSignature", "phishing-resistant", "ReplaceTrustedDeviceKey", "oldFingerprintPermanentTombstone"]:
+    if required not in key_recovery_handler:
+        fail(f"0.12.8 key replacement ceremony missing: {required}")
+for required in ["hardware_key_label_generation", "stage_device_key_replacement", "sign_staged_device_replacement", "commit_staged_device_key", "abort_staged_device_key"]:
+    if required not in key_recovery_native:
+        fail(f"0.12.8 native staged-key lifecycle missing: {required}")
+for required in ["replaceDesktopDeviceKey", "passkeyStepUp", "reconcileStagedReplacement", "serverCommitted"]:
+    if required not in key_recovery_desktop:
+        fail(f"0.12.8 desktop replacement flow missing: {required}")
+if key_recovery_migration_api != key_recovery_migration_cli:
+    fail("0.12.8 API/CLI migration 0017 differs")
+if "cross-platform-key-recovery-0128.py" not in preflight or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci:
+    fail("0.12.8 key recovery gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

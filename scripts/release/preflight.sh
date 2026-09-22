@@ -41,6 +41,7 @@ run_step challenge-response-attestation python3 "${ROOT_DIR}/scripts/smoke/offli
 run_step device-management-revocation python3 "${ROOT_DIR}/scripts/smoke/offline/device-management-revocation.py"
 run_step session-device-risk-0126 python3 "${ROOT_DIR}/scripts/smoke/offline/session-device-risk-0126.py"
 run_step minecraft-serverbridge-trust-0127 python3 "${ROOT_DIR}/scripts/smoke/offline/minecraft-serverbridge-trust-0127.py"
+run_step cross-platform-key-recovery-0128 python3 "${ROOT_DIR}/scripts/smoke/offline/cross-platform-key-recovery-0128.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
 run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"

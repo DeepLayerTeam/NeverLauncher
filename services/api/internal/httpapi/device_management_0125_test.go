@@ -136,13 +136,13 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 	}
 
 	// A revoked fingerprint is a tombstone: the same key cannot be enrolled again.
-	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", primary.Access, map[string]any{"name": "Reuse revoked key"})
+	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", unboundAccess, map[string]any{"name": "Reuse revoked key"})
 	if code != http.StatusOK {
 		t.Fatalf("reuse begin failed unexpectedly: %d %#v", code, beginOut)
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	reusePayload, _ := begin["signingPayload"].(string)
-	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", primary.Access, map[string]any{
+	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", unboundAccess, map[string]any{
 		"challengeId": begin["challengeId"], "deviceId": begin["deviceId"], "challenge": begin["challenge"],
 		"publicKey": base64.RawURLEncoding.EncodeToString(secondary.Public), "signature": base64.RawURLEncoding.EncodeToString(ed25519.Sign(secondary.Private, []byte(reusePayload))),
 	})

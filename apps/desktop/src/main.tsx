@@ -72,11 +72,38 @@ type DesktopBindingResult = { status: string; configPath: string; gameDirectory:
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
 type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
 type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
-type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; current: boolean; revocationPermanent: boolean };
+type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; replacedAt?: string; replacedByDeviceId?: string; replacementReason?: string; current: boolean; revocationPermanent: boolean };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
+
+
+function base64UrlToBytes(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  const raw = atob(padded);
+  return Uint8Array.from(raw, (ch) => ch.charCodeAt(0));
+}
+
+function bytesToBase64Url(value: ArrayBuffer | ArrayBufferView): string {
+  const bytes = value instanceof ArrayBuffer
+    ? new Uint8Array(value)
+    : new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  let raw = '';
+  for (const byte of bytes) raw += String.fromCharCode(byte);
+  return btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeWebAuthnRequestOptions(publicKey: any): PublicKeyCredentialRequestOptions {
+  return {
+    ...publicKey,
+    challenge: base64UrlToBytes(publicKey.challenge),
+    allowCredentials: Array.isArray(publicKey.allowCredentials)
+      ? publicKey.allowCredentials.map((item: any) => ({ ...item, id: base64UrlToBytes(item.id) }))
+      : undefined,
+  } as PublicKeyCredentialRequestOptions;
+}
 
 const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;
 const RELEASE_DOCTOR_MARKER = 'Desktop First-Run Binding';
@@ -348,6 +375,110 @@ function App() {
     return next;
   }
 
+
+  async function passkeyStepUp(session: AuthSession): Promise<AuthSession> {
+    if (!navigator.credentials?.get) throw new Error('WebAuthn/passkey недоступен в текущем desktop webview.');
+    const beginResponse = await postDeviceJson('/api/v1/auth/passkeys/step-up/begin', session.accessToken);
+    if (!beginResponse.ok) throw new Error(`Passkey step-up begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const beginPayload = await beginResponse.json();
+    const begin = beginPayload.data ?? beginPayload;
+    if (!begin.transactionToken || !begin.publicKey?.challenge) throw new Error('Backend вернул неполный passkey step-up challenge.');
+    const credential = await navigator.credentials.get({ publicKey: decodeWebAuthnRequestOptions(begin.publicKey) }) as PublicKeyCredential | null;
+    if (!credential) throw new Error('Passkey step-up отменён.');
+    const assertion = credential.response as AuthenticatorAssertionResponse;
+    const completeResponse = await postDeviceJson('/api/v1/auth/passkeys/step-up/complete', session.accessToken, {
+      transactionToken: begin.transactionToken,
+      credential: {
+        id: credential.id, rawId: bytesToBase64Url(credential.rawId), type: credential.type,
+        response: {
+          clientDataJSON: bytesToBase64Url(assertion.clientDataJSON),
+          authenticatorData: bytesToBase64Url(assertion.authenticatorData),
+          signature: bytesToBase64Url(assertion.signature),
+          userHandle: assertion.userHandle ? bytesToBase64Url(assertion.userHandle) : undefined,
+        },
+      },
+    });
+    if (!completeResponse.ok) throw new Error(`Passkey step-up complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const completePayload = await completeResponse.json();
+    const data = completePayload.data ?? completePayload;
+    if (!data.accessToken) throw new Error('Backend не вернул access token после passkey step-up.');
+    log('Выполнена свежая phishing-resistant step-up authentication для восстановления device key.');
+    return persistTrustedAccess(session, data.accessToken);
+  }
+
+  async function replaceDesktopDeviceKey(mode: 'rotate' | 'recover'): Promise<void> {
+    if (!authSession?.accessToken) throw new Error('Требуется активная сессия.');
+    const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
+    if (!userId) throw new Error('Не удалось определить userId.');
+    let session = authSession;
+    let oldDeviceId = deviceKey?.deviceId || accessTokenDeviceId(session.accessToken);
+    if (!oldDeviceId) throw new Error('Не удалось определить исходный trusted device.');
+    if (mode === 'recover') session = await passkeyStepUp(session);
+
+    const staged = await callTauri<DeviceKeyInfo>('stage_device_key_replacement', { backendUrl: settings.backendUrl, userId });
+    if (staged.privateKeyExposedToFrontend) throw new Error('Staged private key покинул native boundary; fail-closed.');
+    setDeviceTrustStatus(mode === 'rotate' ? 'key rotation' : 'key recovery');
+    let serverCommitted = false;
+    try {
+      const beginPath = mode === 'rotate' ? '/api/v1/auth/devices/key-rotation/begin' : '/api/v1/auth/devices/key-recovery/begin';
+      const beginResponse = await postDeviceJson(beginPath, session.accessToken, {
+        oldDeviceId, name: `NeverLauncher Desktop · ${navigator.platform || 'desktop'}`.slice(0, 96),
+        platform: navigator.platform || 'desktop', clientVersion: DESKTOP_VERSION, publicKey: staged.publicKey,
+        keyAlgorithm: staged.keyAlgorithm, keyBinding: staged.keyBinding, hardwareProvider: staged.hardwareProvider || undefined,
+      });
+      if (!beginResponse.ok) {
+        const body = await beginResponse.json().catch(() => null);
+        throw new Error(body?.error?.message || `${mode} begin: ${beginResponse.status} ${beginResponse.statusText}`);
+      }
+      const beginPayload = await beginResponse.json();
+      const begin = beginPayload.data ?? beginPayload;
+      if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.newDeviceId) throw new Error('Backend вернул неполный key replacement challenge.');
+      if (begin.newFingerprint !== staged.fingerprint) throw new Error('Backend replacement fingerprint не совпадает со staged key.');
+      const newProof = await callTauri<DeviceSignatureResult>('sign_staged_device_replacement', { backendUrl: settings.backendUrl, userId, payload: begin.signingPayload });
+      if (newProof.fingerprint !== staged.fingerprint) throw new Error('Staged signer вернул другую identity.');
+      let oldSignature = '';
+      if (mode === 'rotate') {
+        const oldProof = await callTauri<DeviceSignatureResult>('sign_current_device_replacement', { backendUrl: settings.backendUrl, userId, payload: begin.signingPayload });
+        if (!deviceKey || oldProof.fingerprint !== deviceKey.fingerprint) throw new Error('Current-key rotation proof подписан неожиданной identity.');
+        oldSignature = oldProof.signature;
+      }
+      const completePath = `/api/v1/auth/devices/${encodeURIComponent(oldDeviceId)}/key-${mode === 'rotate' ? 'rotation' : 'recovery'}/complete`;
+      const completeResponse = await postDeviceJson(completePath, session.accessToken, { challengeId: begin.challengeId, challenge: begin.challenge, oldSignature: oldSignature || undefined, newSignature: newProof.signature });
+      const completePayload = await completeResponse.json().catch(() => null);
+      if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `${mode} complete: ${completeResponse.status} ${completeResponse.statusText}`);
+      const data = completePayload.data ?? completePayload;
+      if (!data.accessToken || !data.device?.id) throw new Error('Backend не вернул replacement device/access token.');
+      serverCommitted = true;
+      session = await persistTrustedAccess(session, data.accessToken);
+      const committed = await callTauri<DeviceKeyInfo>('commit_staged_device_key', { backendUrl: settings.backendUrl, userId, deviceId: data.device.id });
+      setDeviceKey(committed);
+      setDeviceTrustStatus(committed.keyBinding === 'hardware' ? 'rotated · требуется attestation' : 'rotated · verified');
+      log(`Device key ${mode === 'rotate' ? 'rotated' : 'recovered'}: ${oldDeviceId} → ${data.device.id}; старый fingerprint оставлен permanent tombstone.`);
+      if (committed.keyBinding === 'hardware') session = await attestDesktopDeviceKey(session, committed);
+      await loadManagedDevices(session);
+    } catch (error) {
+      if (!serverCommitted) await callTauri<void>('abort_staged_device_key', { backendUrl: settings.backendUrl, userId }).catch(() => undefined);
+      else log('Backend уже завершил replacement; staged key сохранён для повторного commit/reconciliation после ошибки native storage.');
+      throw error;
+    }
+  }
+
+  async function reconcileStagedReplacement(session: AuthSession): Promise<DeviceKeyInfo | null> {
+    const userId = session.userId || accessTokenSubject(session.accessToken);
+    if (!userId) return null;
+    const staged = await callTauri<DeviceKeyInfo | null>('staged_device_key_status', { backendUrl: settings.backendUrl, userId });
+    if (!staged) return null;
+    const response = await fetch(endpoint('/api/v1/auth/devices?status=active'), { headers: { Authorization: `Bearer ${session.accessToken}` } });
+    if (!response.ok) return null;
+    const payload = await response.json(); const data = payload.data ?? payload;
+    const match = (Array.isArray(data.items) ? data.items : []).find((item: ManagedDevice) => item.status === 'active' && item.keyFingerprint === staged.fingerprint);
+    if (!match) return null;
+    const committed = await callTauri<DeviceKeyInfo>('commit_staged_device_key', { backendUrl: settings.backendUrl, userId, deviceId: match.id });
+    setDeviceKey(committed);
+    log(`Завершён interrupted staged-key commit для device ${match.id}; текущая session повторно подтвердит possession и binding.`);
+    return committed;
+  }
+
   async function attestDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo): Promise<AuthSession> {
     if (key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256') {
       setDeviceTrustStatus('verified · software proof-of-possession');
@@ -428,10 +559,8 @@ function App() {
     if (!key.deviceId) return registerDesktopDeviceKey(session, key);
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/begin`, session.accessToken);
     if (beginResponse.status === 404) {
-      const replacement = await callTauri<DeviceKeyInfo>('reset_device_key', { backendUrl: settings.backendUrl, userId: session.userId });
-      setDeviceKey(replacement);
-      log('Server device record отсутствует или отозван; локальная identity заменена новым ключом в OS secure storage.');
-      return registerDesktopDeviceKey(session, replacement);
+      setDeviceTrustStatus('требуется recovery');
+      throw new Error('Server device record отсутствует или отозван. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.');
     }
     if (!beginResponse.ok) throw new Error(`Device verification begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
@@ -461,6 +590,8 @@ function App() {
     const normalized = session.userId ? session : { ...session, userId };
     if (!session.userId) await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: normalized });
     setDeviceTrustStatus('проверяется');
+    const reconciled = await reconcileStagedReplacement(normalized);
+    if (reconciled) return verifyDesktopDeviceKey(normalized, reconciled);
     const key = await callTauri<DeviceKeyInfo>('ensure_device_key', { backendUrl: settings.backendUrl, userId });
     if (key.privateKeyExposedToFrontend) throw new Error('Device key backend сообщил private key exposed to frontend; fail-closed.');
     setDeviceKey(key);
@@ -995,7 +1126,7 @@ function App() {
 
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} />}
+        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
@@ -1033,8 +1164,8 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
   );
 }
 
-function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices }: any) {
-  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
+function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices, replaceDesktopDeviceKey }: any) {
+  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && deviceKey?.deviceId && <button onClick={() => replaceDesktopDeviceKey('rotate').catch((error: Error) => console.error(error))}>Ротировать ключ</button>}{session && <button onClick={() => replaceDesktopDeviceKey('recover').catch((error: Error) => console.error(error))}>Восстановить ключ</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}{device.replacedByDeviceId ? ` · replaced by ${device.replacedByDeviceId}` : ''}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

@@ -237,6 +237,12 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Кроссплатформенное усиление ключей 0.12.8
+
+`0.12.8` добавляет production lifecycle для плановой ротации и восстановления потерянного device key. Rotation требует proof старым и новым ключом; recovery требует свежий phishing-resistant WebAuthn/passkey step-up и proof staged-новым ключом. Backend всегда создаёт новую device identity, увеличивает `binding_epoch`, оставляет старый fingerprint permanent tombstone и отзывает связанные старой identity sessions/refresh/Minecraft credentials.
+
+Desktop/Tauri выполняет замену двухфазно (`stage → server ceremony → commit`) и умеет reconcile interrupted commit. Hardware P-256 ключи используют generation-specific labels, поэтому reset/rotation на TPM/Secure Enclave не переиспользует прежний ключ. При server-side revoke/missing device локальный key не уничтожается автоматически: используется recovery flow. API: `/api/v1/auth/devices/key-rotation/begin`, `/{deviceId}/key-rotation/complete`, `/key-recovery/begin`, `/{deviceId}/key-recovery/complete`.
+
 ## Minecraft / ServerBridge trust enforcement 0.12.7
 
 `0.12.7` применяет Device Trust к самому игровому входу. Официальный `/api/v1/minecraft/session` требует active Never session, привязанную к verified trusted device, и допустимое risk decision. Minecraft credential сохраняет snapshot `trusted_device_id + binding_epoch`; ServerBridge join сохраняет тот же snapshot вместе с `project/profile/channel`.

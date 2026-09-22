@@ -16,6 +16,14 @@ var ErrNotFound = errors.New("запись не найдена")
 var ErrImmutable = errors.New("published release immutable")
 var ErrConflict = errors.New("repository conflict")
 
+// DeviceKeyReplacementRepository is implemented by repositories that can
+// atomically replace a trusted-device identity together with the current
+// auth-session binding and revocation cascade. PostgreSQL implements it; the
+// in-memory development repository uses the HTTP-layer transactional fallback.
+type DeviceKeyReplacementRepository interface {
+	ReplaceTrustedDeviceKey(ctx context.Context, userID, oldDeviceID, currentSessionID, mode, reason string, replacement model.TrustedDevice, now time.Time) (model.DeviceKeyReplacementResult, error)
+}
+
 type Repository interface {
 	ListProjects() []model.Project
 	GetProject(id string) (model.Project, error)

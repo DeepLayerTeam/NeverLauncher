@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.12.8 — Cross-platform hardening + key recovery/rotation
+
+`0.12.8` завершает lifecycle Device Trust для потери и плановой замены локального device key. Rotation сохраняет continuity только при одновременном proof-of-possession старым и staged-новым ключом. Recovery не требует утраченного private key, но требует свежий phishing-resistant account step-up и proof новым staged key. В обоих случаях Backend создаёт новую device identity, перепривязывает текущую session с новым `binding_epoch`, превращает старый fingerprint в permanent tombstone и отзывает credentials, связанные со старой identity.
+
+### Runtime key lifecycle
+
+- Desktop/Tauri использует двухфазный `stage → server ceremony → commit`: рабочий локальный ключ не заменяется до успешного server response; при ошибке до commit staged key удаляется, а после server commit staged metadata сохраняется для reconciliation.
+- Hardware P-256 replacement больше не использует детерминированный label `backend+user`: каждый staged generation получает отдельный label, поэтому TPM/Secure Enclave key действительно меняется. Software Ed25519 replacement хранится отдельной staged записью OS keyring.
+- Rotation подписывает один canonical `NeverLauncher Device Key Replacement v1` payload старым и новым ключом. Recovery требует свежий `phishing-resistant` step-up и подписывает тот же server-issued одноразовый challenge новым ключом.
+- PostgreSQL replacement выполняется транзакционно: создаётся новый trusted device, текущая auth session получает новый device и `binding_epoch`, старая identity становится tombstone с replacement link, sibling sessions/refresh families/Minecraft sessions и незавершённые challenges отзываются. ServerBridge joins инвалидируются после commit.
+- Ordinary registration из уже bound session запрещена: replacement нельзя обойти вторым ключом в той же доверенной session. Если server record исчез/отозван, Desktop больше не удаляет локальный ключ автоматически и переводит пользователя в recovery.
+- Migration `0017_device_key_recovery_rotation_0128.sql` хранит replacement chain (`replaced_at`, `replaced_by_device_id`, `replacement_reason`) одинаково в API и CLI catalogs.
+
+### Verification / release gates
+
+- HTTP regressions проверяют обязательность old+new proof для rotation, fresh phishing-resistant step-up для recovery, permanent tombstone и запрет bypass через обычную регистрацию. Предыдущий Minecraft re-bind regression переведён на настоящий key-rotation flow.
+- Gate `cross-platform-key-recovery-0128.py` подключён к preflight, repository policy и CI и проверяет backend transaction, migration parity, native staged-key lifecycle, Desktop reconciliation и реальные Go regressions.
+
 ## 0.12.7 — Minecraft / ServerBridge trust enforcement
 
 `0.12.7` переносит Device Trust из launcher/auth boundary непосредственно в Minecraft gameplay boundary. Minecraft session и ServerBridge join теперь фиксируют server-authoritative snapshot `trusted_device_id + binding_epoch`, а последующая server-side проверка повторно сверяет его с текущей Never session, состоянием trusted device и risk decision. Поэтому старый Minecraft token или join нельзя продолжить использовать после re-bind, revoke или permanent risk transition.

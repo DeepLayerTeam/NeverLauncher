@@ -9,6 +9,12 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Граница безопасности ротации и восстановления device key 0.12.8
+
+Плановая rotation требует одновременный proof-of-possession старым registered key и новым staged key по одному server-issued одноразовому challenge. Recovery применяется при утрате старого private key и дополнительно требует свежий `phishing-resistant` account step-up; знание пароля или possession нового ключа отдельно недостаточны. После успешной операции старая device identity не перезаписывается: она остаётся revoked tombstone, а новая получает отдельные `device_id`, fingerprint и binding epoch.
+
+Tauri не заменяет active local key до server commit. Hardware replacement создаётся под новым generation-specific label, software replacement — в отдельной staged OS-keyring записи. Ошибка до server commit удаляет staged material; ошибка локального commit после server success восстанавливается reconciliation по server device fingerprint. Старые Never/refresh/Minecraft credentials и ServerBridge joins не должны переживать replacement.
+
 ## Minecraft / ServerBridge trust boundary 0.12.7
 
 Minecraft access token и ServerBridge join больше не считаются автономными credentials после выдачи. Backend сохраняет `trusted_device_id + binding_epoch` parent Never session и при каждом gameplay confirmation повторно проверяет актуальную session, trusted-device registry и risk action. Это закрывает окно, в котором уже выданный игровой credential переживал re-bind той же Never session.

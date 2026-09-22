@@ -268,6 +268,9 @@ type TrustedDevice struct {
 	LastUserAgent        string    `json:"lastUserAgent,omitempty"`
 	RevokedAt            time.Time `json:"revokedAt,omitempty"`
 	RevokedReason        string    `json:"revokedReason,omitempty"`
+	ReplacedAt           time.Time `json:"replacedAt,omitempty"`
+	ReplacedByDeviceID   string    `json:"replacedByDeviceId,omitempty"`
+	ReplacementReason    string    `json:"replacementReason,omitempty"`
 }
 
 // DeviceChallenge is a short-lived, single-use proof-of-possession challenge.
@@ -296,6 +299,20 @@ type DeviceRevocationResult struct {
 	InvalidatedChallenges    int           `json:"invalidatedChallenges"`
 	RevokedSessionIDs        []string      `json:"-"`
 	CascadeHandled           bool          `json:"-"`
+}
+
+// DeviceKeyReplacementResult is produced by the atomic PostgreSQL replacement
+// path used by key rotation/recovery. The current session is rebound before the
+// old device is revoked, so it survives while every other session still bound
+// to the old identity is revoked.
+type DeviceKeyReplacementResult struct {
+	OldDevice                TrustedDevice `json:"oldDevice"`
+	NewDevice                TrustedDevice `json:"newDevice"`
+	RevokedSessions          int           `json:"revokedSessions"`
+	RevokedRefreshFamilies   int           `json:"revokedRefreshFamilies"`
+	RevokedMinecraftSessions int           `json:"revokedMinecraftSessions"`
+	InvalidatedChallenges    int           `json:"invalidatedChallenges"`
+	RevokedSessionIDs        []string      `json:"-"`
 }
 
 // DeviceRevocationBatch is returned by "revoke other devices" and keeps the

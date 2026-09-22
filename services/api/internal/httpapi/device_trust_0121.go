@@ -223,6 +223,13 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
+	// 0.12.8 hardening: a session already bound to a verified device may not
+	// silently enroll a second key. Key continuity must go through rotation
+	// (old-key proof) or recovery (fresh phishing-resistant account proof).
+	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); ok && session.TrustedDeviceID != "" && session.DeviceTrustState == "verified" {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "сессия уже привязана к trusted device; используйте key rotation или key recovery", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
+		return
+	}
 	var req deviceRegisterBeginRequest0121
 	if err := decodeDeviceJSON0121(w, r, &req, 16<<10); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")

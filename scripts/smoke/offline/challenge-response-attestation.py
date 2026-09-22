@@ -59,7 +59,9 @@ need('apps/desktop/src-tauri/src/device_keys.rs', [
 need('apps/desktop/src-tauri/src/main.rs', [
     'async fn attest_device_payload',
     'device_keys::attest_device_payload',
-    'sign_device_payload,attest_device_payload,bind_device_key',
+    'sign_device_payload',
+    'attest_device_payload',
+    'bind_device_key',
 ])
 need('apps/desktop/src/main.tsx', [
     'attestDesktopDeviceKey',
@@ -89,7 +91,9 @@ if not api.is_file() or not cli.is_file() or api.read_bytes() != cli.read_bytes(
 
 native = (ROOT / 'apps/desktop/src-tauri/src/device_keys.rs').read_text(encoding='utf-8')
 start = native.find('pub fn attest_device_payload')
-end = native.find('pub fn bind_device_key', start)
+end = native.find('fn validate_device_replacement_payload', start)
+if end < 0:
+    end = native.find('pub fn bind_device_key', start)
 attest = native[start:end]
 if 'validate_software_record' in attest or 'new_software_record' in attest or 'try_new_hardware_record' in attest:
     errors.append('native attestation signer contains software/create fallback')

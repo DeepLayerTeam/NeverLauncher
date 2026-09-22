@@ -36,6 +36,7 @@ jobs:
           python3 scripts/smoke/offline/device-management-revocation.py
           python3 scripts/smoke/offline/session-device-risk-0126.py
           python3 scripts/smoke/offline/minecraft-serverbridge-trust-0127.py
+          python3 scripts/smoke/offline/cross-platform-key-recovery-0128.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py

@@ -110,6 +110,43 @@ async fn sign_session_refresh(backend_url: String, user_id: String, session_id: 
 }
 
 
+
+#[tauri::command]
+async fn stage_device_key_replacement(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
+    tokio::task::spawn_blocking(move || device_keys::stage_device_key_replacement(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key staging task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn staged_device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
+    tokio::task::spawn_blocking(move || device_keys::staged_device_key_status(&backend_url, &user_id))
+        .await.map_err(|e| format!("staged device key status task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn sign_staged_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
+    tokio::task::spawn_blocking(move || device_keys::sign_staged_device_replacement(&backend_url, &user_id, &payload))
+        .await.map_err(|e| format!("staged device key signing task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn sign_current_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
+    tokio::task::spawn_blocking(move || device_keys::sign_current_device_replacement(&backend_url, &user_id, &payload))
+        .await.map_err(|e| format!("current device rotation signing task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn commit_staged_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
+    tokio::task::spawn_blocking(move || device_keys::commit_staged_device_key(&backend_url, &user_id, &device_id))
+        .await.map_err(|e| format!("device key commit task завершилась ошибкой: {e}"))?
+}
+
+#[tauri::command]
+async fn abort_staged_device_key(backend_url: String, user_id: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || device_keys::abort_staged_device_key(&backend_url, &user_id))
+        .await.map_err(|e| format!("device key rollback task завершилась ошибкой: {e}"))?
+}
+
 #[tauri::command]
 async fn bind_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::bind_device_key(&backend_url, &user_id, &device_id))
@@ -279,6 +316,6 @@ fn main() {
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
