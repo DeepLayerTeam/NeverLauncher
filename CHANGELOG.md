@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.12.7 — Minecraft / ServerBridge trust enforcement
+
+`0.12.7` переносит Device Trust из launcher/auth boundary непосредственно в Minecraft gameplay boundary. Minecraft session и ServerBridge join теперь фиксируют server-authoritative snapshot `trusted_device_id + binding_epoch`, а последующая server-side проверка повторно сверяет его с текущей Never session, состоянием trusted device и risk decision. Поэтому старый Minecraft token или join нельзя продолжить использовать после re-bind, revoke или permanent risk transition.
+
+### Runtime enforcement
+
+- `POST /api/v1/minecraft/session` выдаёт официальный Minecraft credential только active Never session с verified bound device и допустимой risk policy. Persisted Minecraft session хранит device/binding snapshot через migration `0016_minecraft_serverbridge_trust_0127.sql`.
+- Yggdrasil-compatible password authentication остаётся совместимым для старых клиентов, но `/sessionserver/session/minecraft/join` fail-closed требует verified bound device. Сам legacy opaque token больше не является обходом Device Trust.
+- Minecraft validate/hasJoined и ServerBridge `validate-join`/`has-joined` повторно проверяют parent session/device/risk. `binding_epoch` mismatch, смена device, revoke/missing device или revoked risk делают credential непригодным; stale attestation и network-risk step-up дают временный deny до восстановления trust.
+- Server-side validation намеренно не записывает IP/User-Agent game server как контекст игрока: risk observation происходит на launcher/player requests, а plugin/hasJoined только читает и применяет уже server-authoritative risk state.
+- ServerBridge join дополнительно pin-ит `project/profile/channel`; plugin validation отклоняет `channel_mismatch` так же, как project/profile mismatch. Permanent trust failure инвалидирует join record немедленно.
+- Velocity/Paper/Purpur получают конкретные trust reasons (`trusted_device_required`, `session_binding_changed`, `device_reattest_required`, `session_step_up_required` и другие) и показывают игроку соответствующее действие вместо общего deny.
+
+### Verification / release gates
+
+- HTTP regression tests покрывают unbound Minecraft denial, успешный bound credential, invalidation после re-bind, live ServerBridge risk deny и channel pinning.
+- Minecraft E2E регистрирует реальный Ed25519 trusted-device key и подписывает production registration challenge перед server join; trust enforcement не обходится synthetic device metadata.
+- Gate `minecraft-serverbridge-trust-0127.py` подключён к preflight, repository policy и CI и проверяет runtime, persistence, migration, plugin messages и regression coverage.
+
 ## 0.12.6 — Session ↔ Device binding + risk integration
 
 `0.12.6` делает связь Never session с trusted device server-authoritative. Каждая session получает persistent `binding_epoch`; registration/re-bind атомарно увеличивает epoch, а Backend сравнивает его и `device_id/device_trust` с каждым access JWT. Поэтому access token, выпущенный до нового bind, больше не может продолжать работать только потому, что сама session ещё active.

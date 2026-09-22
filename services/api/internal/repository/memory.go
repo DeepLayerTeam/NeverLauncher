@@ -1001,6 +1001,10 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	item.UserID = strings.TrimSpace(item.UserID)
 	item.NeverSessionID = strings.TrimSpace(item.NeverSessionID)
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
+	item.TrustedDeviceID = strings.TrimSpace(item.TrustedDeviceID)
+	if item.BindingEpoch < 1 {
+		item.BindingEpoch = 1
+	}
 	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
 	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
 		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")

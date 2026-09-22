@@ -14,6 +14,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0012_device_trust_core_0121",
 		"0013_hardware_bound_identities_0123",
 		"0015_session_device_risk_0126",
+		"0016_minecraft_serverbridge_trust_0127",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

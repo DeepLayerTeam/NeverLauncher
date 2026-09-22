@@ -237,6 +237,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Minecraft / ServerBridge trust enforcement 0.12.7
+
+`0.12.7` применяет Device Trust к самому игровому входу. Официальный `/api/v1/minecraft/session` требует active Never session, привязанную к verified trusted device, и допустимое risk decision. Minecraft credential сохраняет snapshot `trusted_device_id + binding_epoch`; ServerBridge join сохраняет тот же snapshot вместе с `project/profile/channel`.
+
+При `validate`, Minecraft `join/hasJoined` и ServerBridge `validate-join/has-joined` Backend заново сверяет текущую parent session, device state, binding epoch и risk action. Re-bind или permanent revoke инвалидирует старый credential; `reattest` и `step-up` временно блокируют игровой вход до восстановления trust. Server-side plugin requests не изменяют IP/User-Agent risk игрока — они только применяют уже рассчитанное состояние. Legacy Yggdrasil authenticate остаётся совместимым, но фактический Minecraft `/join` без trusted device fail-closed, поэтому старый auth path не является bypass.
+
+Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет persisted trust snapshot для `minecraft_sessions`. ServerBridge дополнительно проверяет `channel` наряду с project/profile. Velocity/Paper/Purpur показывают конкретную причину trust deny и не имеют локального флага, отключающего Backend policy.
+
 ## Привязка сессии к устройству и интеграция риска 0.12.6
 
 `0.12.6` связывает access/refresh lifecycle с реальным server-side состоянием trusted device. Persistent `binding_epoch` увеличивается при device bind/re-bind и входит в access JWT; Backend сверяет epoch, `device_id` и `device_trust` с текущей session, поэтому старый pre-bind token отклоняется сразу после смены binding.
@@ -273,7 +281,7 @@ Production upgrade: `nl db migrate apply && nl db migrate verify`. Migration `00
 
 С `0.11.9` login identity и Minecraft identity разделены. Local/SQL/HTTP/OIDC/Microsoft/passkey приводят к одному canonical Never user; из действующей Never session Desktop получает отдельную Minecraft session через `/api/v1/minecraft/session`. Игровой access token opaque и server-side хранится только в виде hash, а стабильный Minecraft UUID строится из immutable Never user ID, а не email.
 
-NeverRuntime передаёт полученные UUID/token в реальный Minecraft launch. Если подписанный release manifest содержит `authlib-injector*.jar`, runtime подключает его как `-javaagent` к Backend, где доступны Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*`. Revoke/logout родительской Never session сразу делает Minecraft token непригодным для validate/join/hasJoined. ServerBridge остаётся отдельным дополнительным контуром доступа к защищённым проектным серверам.
+NeverRuntime передаёт полученные UUID/token в реальный Minecraft launch. Если подписанный release manifest содержит `authlib-injector*.jar`, runtime подключает его как `-javaagent` к Backend, где доступны Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*`. Начиная с 0.12.7 Minecraft token дополнительно привязан к trusted device и `binding_epoch`: re-bind/revoke/risk enforcement делает его непригодным для validate/join/hasJoined. ServerBridge применяет ту же live trust policy и pin project/profile/channel для защищённых серверов.
 
 ## Production-развёртывание
 

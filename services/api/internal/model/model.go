@@ -329,6 +329,8 @@ type MinecraftSession struct {
 	UserID          string    `json:"userId"`
 	NeverSessionID  string    `json:"neverSessionId"`
 	ProfileUUID     string    `json:"profileUuid"`
+	TrustedDeviceID string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch    int64     `json:"bindingEpoch"`
 	ClientToken     string    `json:"clientToken,omitempty"`
 	AccessTokenHash string    `json:"-"`
 	Status          string    `json:"status"`

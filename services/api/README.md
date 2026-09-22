@@ -215,6 +215,14 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Minecraft / ServerBridge trust enforcement 0.12.7
+
+Backend 0.12.7 pin-ит каждый новый Minecraft session к `trusted_device_id + binding_epoch` parent Never session. Официальный `POST /api/v1/minecraft/session` требует bound verified device; legacy Yggdrasil authenticate может сохранить protocol compatibility, но `/sessionserver/session/minecraft/join` всё равно fail-closed применяет gameplay trust policy.
+
+`validateMinecraftToken119`, Yggdrasil `hasJoined`, `/api/v1/session/has-joined` и `/api/v1/server-bridge/validate-join` выполняют live `session-device-risk-v1` evaluation. Permanent mismatch/revoke инвалидирует stale credential, а `reattest/step-up` возвращает recoverable deny. Server-side checks не вызывают player network observation, поэтому IP/UA bridge server не создаёт ложный risk drift. ServerBridge join фиксирует device epoch и `project/profile/channel`; plugin validation дополнительно проверяет channel equality.
+
+Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет `trusted_device_id` и `binding_epoch` в `minecraft_sessions` и backfill-ит существующие записи из `auth_sessions`. HTTP regression tests и gate `minecraft-serverbridge-trust-0127.py` проверяют unbound deny, re-bind invalidation, live risk deny и channel pinning.
+
 ### Привязка сессии к устройству и интеграция риска 0.12.6
 
 Backend 0.12.6 хранит `binding_epoch` в `auth_sessions` и включает его в JWT. `verifyAdminToken` и request observation сверяют JWT binding с server-side session, а registration/re-bind увеличивает epoch. Старый JWT после изменения binding больше не принимается.

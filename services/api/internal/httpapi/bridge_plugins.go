@@ -59,6 +59,8 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 			{"id": "purpur", "minMinecraft": "1.20.1", "recommendedMinecraft": "1.21.x", "java": []int{17, 21}, "artifact": "neverlauncher-purpur-bridge-" + s.Version + ".jar"},
 		},
 		"requiredBackendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
+		"trustPolicy":              gameplayTrustPolicy0127,
+		"trustEnforcement":         "required",
 	}})
 }
 
@@ -114,8 +116,26 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "profile_mismatch", req, join))
 		return
 	}
+	if req.Channel != "" && req.Channel != join.Channel {
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "channel_mismatch", req, join))
+		return
+	}
+	_, trust := s.evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
+			_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-trust-denied"), Actor: server.ID, Action: "serverbridge:validate-join:trust-denied", Target: req.Username + ":" + trust.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		payload := bridgeValidateResponse940(s.Version, false, trust.Reason, req, join)
+		payload["data"].(map[string]any)["trust"] = trust
+		writeJSON(w, http.StatusForbidden, payload)
+		return
+	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-allowed"), Actor: server.ID, Action: "serverbridge:validate-join:allowed", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, bridgeValidateResponse940(s.Version, true, "session_valid", req, join))
+	payload := bridgeValidateResponse940(s.Version, true, "session_valid", req, join)
+	payload["data"].(map[string]any)["trust"] = trust
+	writeJSON(w, http.StatusOK, payload)
 }
 
 func (s Server) serverBridgeAuditEvent(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +168,7 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 		"checks": []map[string]string{
 			{"id": "plugin-manifest", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
+			{"id": "gameplay-trust-enforcement", "status": "implemented"},
 			{"id": "heartbeat", "status": "implemented"},
 			{"id": "audit-event", "status": "implemented"},
 		},
@@ -178,10 +199,10 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion": bridgePluginsSchema940,
 		"toolVersion":   version,
-		"release":       "NeverLauncher 0.10.0 Real Bridge Plugins",
+		"release":       "NeverLauncher 0.12.7 Trust-Enforced Bridge Plugins",
 		"status":        "bridge-plugins-ready",
 		"mode":          "velocity-paper-purpur-server-integration",
-		"implemented":   []string{"Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":   []string{"Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":      []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":     bridgePluginsManifest940(version)["artifacts"],
 	}

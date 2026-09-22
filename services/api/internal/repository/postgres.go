@@ -1410,9 +1410,13 @@ func (r *SQLRepository) SaveMinecraftSession(item model.MinecraftSession) (model
 	if item.Status == "" {
 		item.Status = "active"
 	}
-	_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-ON CONFLICT (id) DO UPDATE SET client_token=EXCLUDED.client_token,status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at,expires_at=EXCLUDED.expires_at,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason`, item.ID, item.UserID, item.NeverSessionID, item.ProfileUUID, item.ClientToken, item.AccessTokenHash, item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
+	if item.BindingEpoch < 1 {
+		item.BindingEpoch = 1
+	}
+	item.TrustedDeviceID = strings.TrimSpace(item.TrustedDeviceID)
+	_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+ON CONFLICT (id) DO UPDATE SET trusted_device_id=EXCLUDED.trusted_device_id,binding_epoch=EXCLUDED.binding_epoch,client_token=EXCLUDED.client_token,status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at,expires_at=EXCLUDED.expires_at,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason`, item.ID, item.UserID, item.NeverSessionID, item.ProfileUUID, item.TrustedDeviceID, item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
 	if err != nil {
 		return model.MinecraftSession{}, err
 	}
@@ -1421,7 +1425,7 @@ ON CONFLICT (id) DO UPDATE SET client_token=EXCLUDED.client_token,status=EXCLUDE
 func (r *SQLRepository) getMinecraftSessionByID(id string) (model.MinecraftSession, error) {
 	var item model.MinecraftSession
 	var revoked sql.NullTime
-	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE id=$1`, id).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE id=$1`, id).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.TrustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftSession{}, ErrNotFound
 	}
@@ -1436,7 +1440,7 @@ func (r *SQLRepository) GetMinecraftSessionByTokenHash(hash string) (model.Minec
 	}
 	var item model.MinecraftSession
 	var revoked sql.NullTime
-	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE access_token_hash=$1`, strings.TrimSpace(hash)).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE access_token_hash=$1`, strings.TrimSpace(hash)).Scan(&item.ID, &item.UserID, &item.NeverSessionID, &item.ProfileUUID, &item.TrustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftSession{}, ErrNotFound
 	}

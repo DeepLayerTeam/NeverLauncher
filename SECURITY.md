@@ -9,6 +9,16 @@ NeverLauncher использует модель безопасности, в к�
 Migration `0011_auth_federation_release_0120` закрепляет local identity invariant на уровне PostgreSQL: password-capable user обязан иметь `provider=local, subject=user.id`. Bootstrap/password-reset пути обновлены транзакционно, поэтому invariant не обходится прямой записью в `users`. Runtime provider health доступен через административный federation status; production readiness не считается успешной, если не осталось ни одного здорового auth provider.
 Выдача Never session не имеет права создавать identity. В частности, passwordless WebAuthn является authentication method/origin (`provider=passkey`), а не доказательством существования local-password identity; external-only пользователь с passkey не получает фиктивную `local` identity.
 
+## Minecraft / ServerBridge trust boundary 0.12.7
+
+Minecraft access token и ServerBridge join больше не считаются автономными credentials после выдачи. Backend сохраняет `trusted_device_id + binding_epoch` parent Never session и при каждом gameplay confirmation повторно проверяет актуальную session, trusted-device registry и risk action. Это закрывает окно, в котором уже выданный игровой credential переживал re-bind той же Never session.
+
+Официальный Minecraft session exchange и фактический Yggdrasil `/join` требуют active verified trusted device. `session_binding_changed`, `session_device_changed`, missing/revoked device и revoked risk являются permanent trust failures: stale Minecraft session отзывается, а ServerBridge join инвалидируется. `device_reattest_required` и `session_step_up_required` являются recoverable deny и не уничтожают credential до успешного восстановления trust/expiry.
+
+Game server requests не являются наблюдением пользовательской сети. `validate-join`/`hasJoined` не записывают IP/User-Agent сервера в player risk; они только читают server-authoritative risk state, сформированный launcher/player traffic. ServerBridge также pin-ит project/profile/channel, а server token остаётся обязательной отдельной server-auth boundary. Плагин не может локально отключить gameplay trust enforcement.
+
+Migration `0016_minecraft_serverbridge_trust_0127.sql` backfill-ит существующие Minecraft sessions из текущего parent binding при upgrade и добавляет constraint/index для последующей live-проверки. Любой последующий re-bind меняет epoch и сразу делает предыдущий snapshot устаревшим.
+
 ## Привязка сессии к устройству и применение risk policy 0.12.6
 
 Сам по себе access JWT больше не считается достаточным подтверждением актуальной привязки к устройству: Backend сверяет `binding_epoch`, `device_id` и trust state с текущей server-side session. Bind/re-bind устройства инвалидирует старые JWT. Refresh привязанной session дополнительно требует подпись зарегистрированным device key по canonical payload, в котором присутствует только SHA-256 refresh token, но не сам секрет.

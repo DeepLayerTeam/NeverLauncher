@@ -39,7 +39,7 @@ public final class NeverLauncherPurpurBridge extends JavaPlugin implements Liste
         String ip = event.getAddress() == null ? "" : event.getAddress().getHostAddress();
         JoinValidationResult result = api.validateJoin(event.getName(), String.valueOf(event.getUniqueId()), ip);
         if (!result.allowed) {
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, mapKickMessage(result.reason));
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, result.userMessage());
             getLogger().info("neverlauncher.join.denied username=" + event.getName() + " reason=" + result.reason);
             return;
         }
@@ -65,11 +65,4 @@ public final class NeverLauncherPurpurBridge extends JavaPlugin implements Liste
         return true;
     }
 
-    private static String mapKickMessage(String reason) {
-        return switch (reason) {
-            case "backend_unavailable" -> "Сервис авторизации NeverLauncher временно недоступен.";
-            case "server_token_missing" -> "ServerBridge не настроен: отсутствует server token.";
-            default -> "Вход разрешён только через NeverLauncher.";
-        };
-    }
 }

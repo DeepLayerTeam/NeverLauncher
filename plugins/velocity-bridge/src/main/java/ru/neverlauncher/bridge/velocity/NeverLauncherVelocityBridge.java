@@ -37,12 +37,7 @@ public final class NeverLauncherVelocityBridge {
         String username = event.getUsername();
         JoinValidationResult result = api.validateJoin(username, username, "");
         if (!result.allowed) {
-            String message = switch (result.reason) {
-                case "backend_unavailable" -> "Сервис авторизации NeverLauncher временно недоступен.";
-                case "server_token_missing" -> "ServerBridge не настроен: отсутствует server token.";
-                default -> "Вход разрешён только через NeverLauncher.";
-            };
-            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text(message)));
+            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text(result.userMessage())));
             logger.info("neverlauncher.join.denied username=" + username + " reason=" + result.reason);
             return;
         }

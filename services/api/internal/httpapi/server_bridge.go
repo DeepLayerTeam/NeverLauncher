@@ -43,6 +43,8 @@ type bridgeJoinRecord struct {
 	ProfileID       string    `json:"profileId"`
 	Channel         string    `json:"channel"`
 	AccessTokenHash string    `json:"-"`
+	TrustedDeviceID string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch    int64     `json:"bindingEpoch"`
 	Status          string    `json:"status"`
 	CreatedAt       time.Time `json:"createdAt"`
 	ExpiresAt       time.Time `json:"expiresAt"`
@@ -171,12 +173,17 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "нет доступа к проекту")
 		return
 	}
+	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
+	if !trust.Allowed {
+		s.writeGameplayTrustRequirement0127(w, trust)
+		return
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, token, req)
+	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -212,8 +219,18 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "активная join-сессия не найдена")
 		return
 	}
+	_, trust := s.evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			s.State.ServerBridge.invalidateJoin(username, serverID)
+			_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-trust-denied"), Actor: server.ID, Action: "serverbridge:has-joined:trust-denied", Target: join.UUID + ":" + trust.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusForbidden, "trust policy denied join: "+trust.Reason)
+		return
+	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -283,7 +300,7 @@ func (s Server) bridgeClaimsFromRequest910(r *http.Request) (authClaims, string,
 	if token == header || token == "" {
 		return authClaims{}, "", errAuthRequired
 	}
-	claims, err := s.verifyAdminToken(token)
+	claims, err := s.verifyAdminTokenFromRequest(r)
 	return claims, token, err
 }
 
@@ -291,7 +308,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion": serverBridgeSchema910,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.10.0 ServerBridge & AuthBridge",
+		"release":       "NeverLauncher 0.12.7 Minecraft/ServerBridge Trust Enforcement",
 		"mode":          "minecraft-session-bridge",
 		"parentMode":    "launcherops-ecosystem-platform",
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
@@ -311,12 +328,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"server token registration and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "texture profile service", "join audit events"}
-		base["productFlow"] = []string{"admin registers Velocity/Paper/Purpur server", "Desktop/player logs in and receives access token", "Desktop sends session join with project/profile/channel", "server plugin calls has-joined with server token", "Backend returns profile/texture metadata or denies access", "session revoke invalidates future joins"}
+		base["implemented"] = []string{"server token registration and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["trustPolicy"] = gameplayTrustPolicy0127
+		base["trustEnforcement"] = "required"
+		base["productFlow"] = []string{"admin registers Velocity/Paper/Purpur server", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin calls validate-join/has-joined with server token", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
@@ -425,7 +444,7 @@ func minecraftUsernameFromAccount910(email, userID string) string {
 	return value
 }
 
-func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken string, req bridgeJoinRequest) (bridgeJoinRecord, error) {
+func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, req bridgeJoinRequest) (bridgeJoinRecord, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if strings.TrimSpace(req.ServerID) == "" || strings.TrimSpace(req.ProjectID) == "" || strings.TrimSpace(req.ProfileID) == "" {
@@ -450,7 +469,10 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken s
 	}
 	now := time.Now().UTC()
 	uuid := playerUUID910(user.ID)
-	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	if bindingEpoch < 1 {
+		bindingEpoch = 1
+	}
+	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)
 	return join, nil
@@ -464,6 +486,19 @@ func (b *serverBridgeStore) hasJoined(username, serverID string) (bridgeJoinReco
 		return bridgeJoinRecord{}, false
 	}
 	return join, true
+}
+
+func (b *serverBridgeStore) invalidateJoin(username, serverID string) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	key := b.joinKey(username, serverID)
+	join, ok := b.joins[key]
+	if !ok || join.Status != "active" {
+		return false
+	}
+	join.Status = "invalidated"
+	b.joins[key] = join
+	return true
 }
 
 func (b *serverBridgeStore) invalidateSession(sessionID, serverID string) int {
@@ -536,7 +571,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 func bridgeServerTokenFromRequest910(r *http.Request) string {

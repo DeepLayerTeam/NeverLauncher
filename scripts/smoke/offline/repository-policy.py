@@ -391,6 +391,36 @@ if "session-device-risk-0126.py" not in preflight or "scripts/smoke/offline/sess
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
     fail("0.12.6 session/device risk gate is incomplete")
 
+# 0.12.7 Minecraft/ServerBridge trust enforcement. Gameplay credentials carry
+# the trusted-device/binding snapshot and every server-side join confirmation
+# re-evaluates the current parent session/device/risk state without mutating
+# player network observations from the game server request.
+gameplay_trust_gate = read("scripts/smoke/offline/minecraft-serverbridge-trust-0127.py")
+gameplay_trust = read("services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go")
+minecraft_auth = read("services/api/internal/httpapi/minecraft_auth_119.go")
+server_bridge = read("services/api/internal/httpapi/server_bridge.go")
+bridge_plugins = read("services/api/internal/httpapi/bridge_plugins.go")
+gameplay_trust_test = read("services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go")
+for required in ["evaluateGameplayTrust0127", "session-device-risk-v1", "credential_trust_snapshot_missing", "session_binding_changed", "device_reattest_required", "session_step_up_required"]:
+    if required not in gameplay_trust:
+        fail(f"0.12.7 gameplay trust evaluator missing: {required}")
+for required in ["issueMinecraftSessionWithTrust119", "TrustedDeviceID: trustedDeviceID", "BindingEpoch: bindingEpoch", "parentSession.BindingEpoch != bindingEpoch", "trust-policy:", "evaluateGameplayTrust0127"]:
+    if required not in minecraft_auth:
+        fail(f"0.12.7 Minecraft credential trust binding missing: {required}")
+for required in ["TrustedDeviceID", "BindingEpoch", "invalidateJoin", "evaluateGameplayTrust0127"]:
+    if required not in server_bridge:
+        fail(f"0.12.7 ServerBridge trust binding missing: {required}")
+for required in ["channel_mismatch", "trustEnforcement", "evaluateGameplayTrust0127"]:
+    if required not in bridge_plugins:
+        fail(f"0.12.7 plugin trust enforcement missing: {required}")
+for required in ["TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind", "TestServerBridgeTrust0127LiveBindingAndRiskEnforcement", "bridge accepted mismatched channel"]:
+    if required not in gameplay_trust_test:
+        fail(f"0.12.7 gameplay trust regression coverage missing: {required}")
+if "minecraft-serverbridge-trust-0127.py" not in preflight or "scripts/smoke/offline/minecraft-serverbridge-trust-0127.py" not in ci:
+    fail("0.12.7 Minecraft/ServerBridge trust gate is not wired into preflight/CI")
+if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate:
+    fail("0.12.7 Minecraft/ServerBridge trust gate is incomplete")
+
 for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")

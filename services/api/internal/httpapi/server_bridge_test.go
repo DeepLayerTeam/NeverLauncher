@@ -31,6 +31,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin","deviceId":"desktop-smoke"}`))
 	req.Header.Set("Content-Type", "application/json")
+	setDeviceTrustClientMeta0127(req)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
@@ -46,10 +47,12 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	if err := json.Unmarshal(res.Body.Bytes(), &loginPayload); err != nil || loginPayload.Data.Tokens.AccessToken == "" {
 		t.Fatalf("access token отсутствует: err=%v body=%s", err, res.Body.String())
 	}
+	loginPayload.Data.Tokens.AccessToken = bindAccessToken0127(t, handler, loginPayload.Data.Tokens.AccessToken, "ServerBridge test device").Access
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/session/join", strings.NewReader(`{"serverId":"velocity-main","projectId":"demo-project","profileId":"vanilla","channel":"stable","username":"AdminPlayer"}`))
 	req.Header.Set("Authorization", "Bearer "+loginPayload.Data.Tokens.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
+	setDeviceTrustClientMeta0127(req)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "joined") {

@@ -168,7 +168,12 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 	if rec.RiskAction == "revoke" || rec.RiskState == "compromised" {
 		s.State.AuthSessions.revoke(rec.ID, "session-risk-policy")
 		_ = s.flushPersistenceState950("session-risk-revoke")
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: "session-risk-revoke-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: rec.Email, Action: "auth:session:risk-revoke", Target: rec.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
+		ip, userAgent := "", ""
+		if r != nil {
+			ip = clientIP(r)
+			userAgent = r.UserAgent()
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: "session-risk-revoke-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: rec.Email, Action: "auth:session:risk-revoke", Target: rec.ID, IP: ip, UserAgent: userAgent, CreatedAt: now})
 		return authSessionRecord{}, errSessionRiskDenied0126
 	}
 	return rec, nil

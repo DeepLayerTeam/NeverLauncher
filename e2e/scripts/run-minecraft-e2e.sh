@@ -37,7 +37,7 @@ fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go java cargo python3 gradle xvfb-run; do need "$cmd"; done
+for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl; do need "$cmd"; done
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
@@ -142,6 +142,26 @@ curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Toke
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
 LOGIN="$(curl -fsS -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
 ACCESS_TOKEN="$(jq -er '.token' <<<"$LOGIN")"
+
+printf '[e2e] bind canonical launcher session to a real Ed25519 trusted-device key for 0.12.7 gameplay trust\n'
+DEVICE_KEY="$RUNTIME_DIR/device-trust-ed25519.pem"
+DEVICE_MESSAGE="$RUNTIME_DIR/device-trust-message.bin"
+DEVICE_SIGNATURE="$RUNTIME_DIR/device-trust-signature.bin"
+openssl genpkey -algorithm Ed25519 -out "$DEVICE_KEY" >/dev/null 2>&1
+DEVICE_PUBLIC_KEY="$(openssl pkey -in "$DEVICE_KEY" -pubout -outform DER 2>/dev/null | python3 -c 'import base64,sys; d=sys.stdin.buffer.read(); print(base64.urlsafe_b64encode(d[-32:]).decode().rstrip("="))')"
+DEVICE_BEGIN="$(json_post "$API/api/v1/auth/devices/register/begin" "$ACCESS_TOKEN" "{\"name\":\"Minecraft E2E device\",\"platform\":\"linux\",\"clientVersion\":\"$VERSION\"}")"
+jq -ej '.data.signingPayload' <<<"$DEVICE_BEGIN" > "$DEVICE_MESSAGE"
+openssl pkeyutl -sign -rawin -inkey "$DEVICE_KEY" -in "$DEVICE_MESSAGE" -out "$DEVICE_SIGNATURE"
+DEVICE_SIGNATURE_B64="$(python3 -c 'import base64,sys; print(base64.urlsafe_b64encode(open(sys.argv[1],"rb").read()).decode().rstrip("="))' "$DEVICE_SIGNATURE")"
+DEVICE_COMPLETE="$(jq -cn \
+  --arg challengeId "$(jq -er '.data.challengeId' <<<"$DEVICE_BEGIN")" \
+  --arg deviceId "$(jq -er '.data.deviceId' <<<"$DEVICE_BEGIN")" \
+  --arg challenge "$(jq -er '.data.challenge' <<<"$DEVICE_BEGIN")" \
+  --arg publicKey "$DEVICE_PUBLIC_KEY" \
+  --arg signature "$DEVICE_SIGNATURE_B64" \
+  '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
+ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_TOKEN" "$DEVICE_COMPLETE" | jq -er '.data.accessToken')"
+
 json_post "$API/api/v1/install/first-project" "$ACCESS_TOKEN" "{\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\",\"version\":\"0.0.1-bootstrap\",\"actor\":\"github-actions\"}" > "$RUNTIME_DIR/first-project.json"
 
 register_server() {

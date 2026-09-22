@@ -146,11 +146,38 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 }
 
 func (s Server) issueMinecraftSession119(user model.User, neverSessionID, clientToken string) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	parentSession, ok := s.State.AuthSessions.get(neverSessionID, user.ID)
+	if !ok {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	if parentSession.BindingEpoch < 1 {
+		parentSession.BindingEpoch = 1
+	}
+	return s.issueMinecraftSessionWithTrust119(user, neverSessionID, clientToken, parentSession.TrustedDeviceID, parentSession.BindingEpoch)
+}
+
+// issueMinecraftSessionWithTrust119 persists the exact device/binding snapshot
+// that was already authorized by the caller. It never "upgrades" a request to
+// a newer concurrent binding: if a re-bind wins before this check, issuance
+// fails; if it wins after this check, the persisted old snapshot is rejected by
+// the next live trust evaluation. This closes a token-issuance TOCTOU window.
+func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64) (model.MinecraftSession, string, model.MinecraftProfile, error) {
 	repo, err := s.minecraftRepo119()
 	if err != nil {
 		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
 	}
-	if _, ok := s.State.AuthSessions.get(neverSessionID, user.ID); !ok {
+	parentSession, ok := s.State.AuthSessions.get(neverSessionID, user.ID)
+	if !ok {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
+	if parentSession.BindingEpoch < 1 {
+		parentSession.BindingEpoch = 1
+	}
+	trustedDeviceID = strings.TrimSpace(trustedDeviceID)
+	if bindingEpoch < 1 {
+		bindingEpoch = 1
+	}
+	if parentSession.BindingEpoch != bindingEpoch || strings.TrimSpace(parentSession.TrustedDeviceID) != trustedDeviceID {
 		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
 	}
 	profile, err := s.ensureMinecraftProfile119(user)
@@ -168,7 +195,7 @@ func (s Server) issueMinecraftSession119(user model.User, neverSessionID, client
 		}
 	}
 	now := time.Now().UTC()
-	session := model.MinecraftSession{ID: "mcs-" + strings.TrimPrefix(token, "nlmc_"), UserID: user.ID, NeverSessionID: neverSessionID, ProfileUUID: profile.UUID, ClientToken: clientToken, AccessTokenHash: tokenHash910(token), Status: "active", CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(minecraftSessionTTL119)}
+	session := model.MinecraftSession{ID: "mcs-" + strings.TrimPrefix(token, "nlmc_"), UserID: user.ID, NeverSessionID: neverSessionID, ProfileUUID: profile.UUID, TrustedDeviceID: trustedDeviceID, BindingEpoch: bindingEpoch, ClientToken: clientToken, AccessTokenHash: tokenHash910(token), Status: "active", CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(minecraftSessionTTL119)}
 	session, err = repo.SaveMinecraftSession(session)
 	return session, token, profile, err
 }
@@ -182,8 +209,11 @@ func (s Server) validateMinecraftToken119(token string) (model.MinecraftSession,
 	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) {
 		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
 	}
-	if !s.State.AuthSessions.active(session.NeverSessionID, session.UserID) {
-		_ = repo.RevokeMinecraftSession(session.ID, "parent-never-session-inactive")
+	_, trust := s.evaluateGameplayTrust0127(nil, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, false)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
 		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
 	}
 	user, err := s.Repo.GetUser(session.UserID)
@@ -228,12 +258,17 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "тело запроса должно содержать один JSON-объект")
 		return
 	}
+	_, trust := s.evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)
+	if !trust.Allowed {
+		s.writeGameplayTrustRequirement0127(w, trust)
+		return
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	session, token, profile, err := s.issueMinecraftSession119(user, claims.SessionID, req.ClientToken)
+	session, token, profile, err := s.issueMinecraftSessionWithTrust119(user, claims.SessionID, req.ClientToken, trust.TrustedDeviceID, trust.BindingEpoch)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать Minecraft session")
 		return
@@ -325,7 +360,7 @@ func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
 		return
 	}
-	fresh, token, profile, err := s.issueMinecraftSession119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken))
+	fresh, token, profile, err := s.issueMinecraftSessionWithTrust119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken), old.TrustedDeviceID, old.BindingEpoch)
 	if err != nil {
 		writeYggdrasilError119(w, http.StatusInternalServerError, "Session refresh failed")
 		return
@@ -399,6 +434,11 @@ func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
 		writeYggdrasilError119(w, http.StatusBadRequest, "serverId is required")
 		return
 	}
+	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
+	if !trust.Allowed {
+		writeYggdrasilError119(w, http.StatusForbidden, "NeverLauncher trust policy denied join: "+trust.Reason)
+		return
+	}
 	repo, _ := s.minecraftRepo119()
 	now := time.Now().UTC()
 	err = repo.SaveMinecraftJoin(model.MinecraftJoin{Username: profile.Name, UsernameNormalized: strings.ToLower(profile.Name), ProfileUUID: profile.UUID, UserID: session.UserID, MinecraftSessionID: session.ID, ServerID: req.ServerID, IP: clientIP(r), CreatedAt: now, ExpiresAt: now.Add(minecraftJoinTTL119)})
@@ -431,7 +471,15 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session, err := repo.GetMinecraftSession(join.MinecraftSessionID)
-	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) || !s.State.AuthSessions.active(session.NeverSessionID, session.UserID) {
+	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
+	if !trust.Allowed {
+		if gameplayTrustPermanentFailure0127(trust.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}

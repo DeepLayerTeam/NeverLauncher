@@ -25,21 +25,13 @@ func decodeMap119(t *testing.T, body *bytes.Buffer) map[string]any {
 
 func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	handler := testServer(t)
-	login := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin","deviceId":"mc-e2e"}`))
-	login.Header.Set("Content-Type", "application/json")
-	lr := httptest.NewRecorder()
-	handler.ServeHTTP(lr, login)
-	if lr.Code != http.StatusOK {
-		t.Fatalf("login=%d %s", lr.Code, lr.Body.String())
-	}
-	payload := decodeMap119(t, lr.Body)
-	data := payload["data"].(map[string]any)
-	tokens := data["tokens"].(map[string]any)
-	neverToken := tokens["accessToken"].(string)
+	neverToken, _ := deviceTrustLogin0121(t, handler, "mc-e2e")
+	neverToken = bindAccessToken0127(t, handler, neverToken, "Minecraft e2e device").Access
 
 	ex := httptest.NewRequest(http.MethodPost, "/api/v1/minecraft/session", strings.NewReader(`{"clientToken":"desktop-client"}`))
 	ex.Header.Set("Authorization", "Bearer "+neverToken)
 	ex.Header.Set("Content-Type", "application/json")
+	setDeviceTrustClientMeta0127(ex)
 	er := httptest.NewRecorder()
 	handler.ServeHTTP(er, ex)
 	if er.Code != http.StatusCreated {
@@ -150,6 +142,8 @@ func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
 	}
 	h := Server{Version: "0.11.9-test", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(cfg.StorageLocalPath)}.Handler()
 	login := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"player@example.test","password":"player-password"}`))
+	login.Header.Set("Content-Type", "application/json")
+	setDeviceTrustClientMeta0127(login)
 	lr := httptest.NewRecorder()
 	h.ServeHTTP(lr, login)
 	if lr.Code != http.StatusOK {
@@ -157,8 +151,10 @@ func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
 	}
 	p := decodeMap119(t, lr.Body)
 	token := p["data"].(map[string]any)["tokens"].(map[string]any)["accessToken"].(string)
+	token = bindAccessToken0127(t, h, token, "Player Minecraft device").Access
 	ex := httptest.NewRequest(http.MethodPost, "/api/v1/minecraft/session", strings.NewReader(`{}`))
 	ex.Header.Set("Authorization", "Bearer "+token)
+	setDeviceTrustClientMeta0127(ex)
 	er := httptest.NewRecorder()
 	h.ServeHTTP(er, ex)
 	if er.Code != http.StatusCreated {
