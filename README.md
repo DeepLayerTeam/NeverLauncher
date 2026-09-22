@@ -2,6 +2,7 @@
 
 [![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
+[![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
 NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Minecraft Compatibility Release**: Compatibility Engine, Managed Java, Vanilla/Fabric/Quilt/Forge/NeoForge materialization, настоящий Minecraft Client E2E и публичная CI Compatibility Matrix сведены в один release-grade контур.
 
@@ -236,6 +237,29 @@ bash e2e/scripts/run-minecraft-e2e.sh
 `0.12.0` — стабильный Auth Federation release. Local/SQL/HTTP/OIDC/Microsoft проходят один Connector SDK/Federation Core и разрешаются в canonical Never user до выпуска Never session; passkeys/TOTP/recovery являются auth methods/MFA, а Minecraft session создаётся только поверх canonical Never session. Generic browser providers можно явно связать через `/api/v1/auth/providers/{providerId}/link/begin|complete` без auto-link по email.
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
+
+## Device Trust E2E и публичная trust matrix 0.12.9
+
+`0.12.9` добавляет отдельный production E2E для всей Device Trust цепочки и публичную CI-матрицу. `e2e/scripts/run-device-trust-e2e.sh` запускается против production-configured PostgreSQL/Redis Backend и реальными Ed25519/P-256 ключами проверяет registration/replay deny, binding epoch, signed refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge invalidation, risk step-up, hardware-key challenge-response protocol, recovery prerequisite и revoke cascade.
+
+Публичные цели находятся в `device-trust/targets.json` и не содержат ручного поля PASS/FAIL. Workflow `.github/workflows/device-trust.yml` запускает PostgreSQL protocol target и native Tauri/key-policy tests на Linux/Windows/macOS, после чего `scripts/device_trust/matrix.py` принимает только evidence той же версии, exact commit и Actions run ID. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и artifact. Aggregator дополнительно сверяет SHA-256 каждого заявленного evidence-файла; отсутствующий, изменённый, неполный или чужой result делает matrix failed.
+
+Матрица не завышает assurance: CI P-256 case доказывает server-side challenge-response владение зарегистрированным ключом, но не vendor TPM/Secure Enclave provenance. Native platform targets доказывают compile/test path; headless runner не считается доказательством фактического OS secure-storage/HSM runtime конкретного устройства.
+
+Локальная проверка definition/aggregator:
+
+```bash
+python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
+python3 scripts/device_trust/test_matrix.py
+```
+
+Production protocol E2E при наличии Docker/PostgreSQL client:
+
+```bash
+bash e2e/scripts/run-device-trust-e2e.sh
+```
+
+Подробности: `device-trust/README.md`.
 
 ## Кроссплатформенное усиление ключей 0.12.8
 

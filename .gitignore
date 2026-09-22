@@ -33,8 +33,12 @@ src-tauri/target/
 /e2e/runtime-ci/
 /e2e/reports/
 /e2e/compatibility-result/
+/e2e/device-trust-runtime/
+/e2e/device-trust-result/
 /compatibility-results/
 /compatibility-public/
+/device-trust-results/
+/device-trust-public/
 /.neverlauncher/
 
 # Built application binaries

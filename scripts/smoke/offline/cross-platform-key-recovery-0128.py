@@ -15,8 +15,13 @@ def require(text, needles, label):
     if missing:
         raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
-if (ROOT / "VERSION").read_text().strip() != "0.12.8":
-    raise SystemExit("VERSION must be 0.12.8")
+version = (ROOT / "VERSION").read_text().strip()
+try:
+    version_tuple = tuple(int(part) for part in version.split("."))
+except ValueError as exc:
+    raise SystemExit(f"invalid VERSION: {version}") from exc
+if version_tuple < (0, 12, 8):
+    raise SystemExit(f"VERSION must be >= 0.12.8, got {version}")
 
 handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
 repo = read("services/api/internal/repository/devices_0121.go")

@@ -37,6 +37,7 @@ jobs:
           python3 scripts/smoke/offline/session-device-risk-0126.py
           python3 scripts/smoke/offline/minecraft-serverbridge-trust-0127.py
           python3 scripts/smoke/offline/cross-platform-key-recovery-0128.py
+          python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -44,6 +45,8 @@ jobs:
         run: |
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 scripts/compatibility/test_matrix.py
+          python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
+          python3 scripts/device_trust/test_matrix.py
           python3 e2e/scripts/test_publish_client_package.py
       - name: CLI test, race, vet and build
         working-directory: cli
@@ -242,6 +245,12 @@ jobs:
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
       - name: Federation PostgreSQL migration + restart + multi-instance E2E
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
+      - name: Device Trust PostgreSQL lifecycle E2E
+        env:
+          NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
+          NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
+          NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
+        run: bash e2e/scripts/run-device-trust-e2e.sh
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence
@@ -272,3 +281,11 @@ jobs:
             e2e/runtime/probe-*.txt
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload Device Trust protocol evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-device-trust-protocol-e2e-evidence
+          path: e2e/device-trust-result/
+          if-no-files-found: ignore
+          retention-days: 14

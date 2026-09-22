@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0",
+  "productVersion": "0.12.9",
+  "targets": [
+    {
+      "id": "postgres-protocol-linux-x64",
+      "kind": "protocol-e2e",
+      "runner": "ubuntu-24.04",
+      "os": "linux",
+      "arch": "x86_64",
+      "required": true,
+      "requiredChecks": [
+        "postgresRepository",
+        "registrationReplayDenied",
+        "sessionBindingEpoch",
+        "boundRefreshProof",
+        "rotationDualProof",
+        "oldKeyTombstone",
+        "serverBridgeBindingDeny",
+        "revocationCascade",
+        "riskStepUp",
+        "p256AttestationProtocol",
+        "attestationReplayDenied",
+        "recoveryRequiresPhishingResistantStepUp",
+        "recoveryPhishingResistantEndToEnd"
+      ]
+    },
+    {
+      "id": "native-linux",
+      "kind": "native-tests",
+      "runner": "ubuntu-24.04",
+      "os": "linux",
+      "arch": "runner-native",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation"
+      ]
+    },
+    {
+      "id": "native-windows",
+      "kind": "native-tests",
+      "runner": "windows-2022",
+      "os": "windows",
+      "arch": "runner-native",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation"
+      ]
+    },
+    {
+      "id": "native-macos",
+      "kind": "native-tests",
+      "runner": "macos-14",
+      "os": "macos",
+      "arch": "runner-native",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation"
+      ]
+    }
+  ]
+}

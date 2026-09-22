@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.9 — Device Trust E2E + public trust matrix
+
+`0.12.9` переводит Device Trust из набора отдельных regression/release gates в публично проверяемый end-to-end контур. Новый production E2E поднимает Backend с реальным PostgreSQL/Redis, применяет sealed migrations и проходит полный lifecycle device identity реальными Ed25519/P-256 подписями. PASS не хранится в репозитории: public trust matrix принимает только machine-verifiable evidence от exact Git commit и GitHub Actions run ID.
+
+### Production Device Trust E2E
+
+- `e2e/scripts/run-device-trust-e2e.sh` проверяет registration + single-use challenge replay deny, server-authoritative `binding_epoch`, device-bound refresh proof, ServerBridge trust before/after replacement, dual-proof key rotation, permanent old-key tombstone, persisted risk step-up, P-256 challenge-response attestation/replay deny, recovery deny без phishing-resistant step-up, успешный recovery после реальной WebAuthn P-256 registration/assertion ceremony и permanent revoke cascade.
+- E2E использует production PostgreSQL repository с explicit `nl db migrate apply`/`verify`; runtime проверяет replacement chain непосредственно в PostgreSQL. Ed25519/P-256 device signatures и WebAuthn ES256 assertion создаются test-only OpenSSL helpers; private keys остаются только во временном runtime directory.
+- Public evidence намеренно не содержит access/refresh tokens или private-key material; script fail-closed сканирует evidence перед публикацией. P-256 case подтверждает protocol proof-of-possession и явно фиксирует `vendorHardwareProvenance=not-verified`.
+
+### Public Device Trust Matrix
+
+- `device-trust/targets.json` задаёт четыре обязательных target без editable PASS/FAIL: PostgreSQL protocol E2E на Linux x86_64 и native Tauri/key-policy tests на Linux, Windows и macOS.
+- `.github/workflows/device-trust.yml` генерирует dynamic matrix, собирает per-target `device-trust-result.json` и агрегирует `matrix.json`/`matrix.md` только при совпадении version, target, commit, run ID и checks; каждый evidence-файл обязан существовать и совпасть с зафиксированным SHA-256.
+- Native targets компилируют Tauri key lifecycle и запускают security-policy unit tests, включая generation-scoped hardware labels, replacement payload, refresh binding и attestation payload. Матрица прямо указывает, что headless CI не является доказательством фактической работы OS secure storage/TPM/Secure Enclave на конкретном пользовательском устройстве.
+- Gate `device-trust-e2e-matrix-0129.py` включён в repository policy, основной CI и preflight; strict preflight дополнительно запускает PostgreSQL Device Trust E2E.
+
 ## 0.12.8 — Cross-platform hardening + key recovery/rotation
 
 `0.12.8` завершает lifecycle Device Trust для потери и плановой замены локального device key. Rotation сохраняет continuity только при одновременном proof-of-possession старым и staged-новым ключом. Recovery не требует утраченного private key, но требует свежий phishing-resistant account step-up и proof новым staged key. В обоих случаях Backend создаёт новую device identity, перепривязывает текущую session с новым `binding_epoch`, превращает старый fingerprint в permanent tombstone и отзывает credentials, связанные со старой identity.

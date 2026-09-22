@@ -1,0 +1,156 @@
+name: NeverLauncher Device Trust Matrix
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '43 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neverlauncher-device-trust-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  matrix-plan:
+    name: Validate Device Trust targets
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: plan
+        name: Validate target policy and generate immutable plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/device_trust/matrix.py validate --targets device-trust/targets.json
+          python scripts/device_trust/test_matrix.py
+          matrix="$(python scripts/device_trust/matrix.py plan --targets device-trust/targets.json)"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+
+  trust-evidence:
+    name: ${{ matrix.id }}
+    needs: matrix-plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix-plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        if: matrix.kind == 'protocol-e2e'
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: |
+            services/api/go.sum
+            cli/go.sum
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.kind == 'native-tests'
+      - name: Install PostgreSQL protocol E2E dependencies
+        if: matrix.kind == 'protocol-e2e'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jq postgresql-client openssl
+      - name: Install Linux native Device Trust dependencies
+        if: matrix.kind == 'native-tests' && matrix.os == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Run PostgreSQL Device Trust protocol E2E
+        if: matrix.kind == 'protocol-e2e'
+        shell: bash
+        env:
+          NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: ${{ matrix.id }}
+          NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
+          NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
+        run: bash e2e/scripts/run-device-trust-e2e.sh
+      - name: Compile Tauri key lifecycle and run native policy tests
+        if: matrix.kind == 'native-tests'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p e2e/device-trust-result
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml device_keys::tests -- --nocapture 2>&1 | tee e2e/device-trust-result/native-cargo-test.txt
+          python e2e/scripts/write-device-trust-native-result.py \
+            --target-id '${{ matrix.id }}' \
+            --os '${{ matrix.os }}' \
+            --arch '${{ matrix.arch }}' \
+            --commit '${{ github.sha }}' \
+            --run-id '${{ github.run_id }}' \
+            --log e2e/device-trust-result/native-cargo-test.txt \
+            --output e2e/device-trust-result/device-trust-result.json
+      - name: Upload machine-verifiable Device Trust evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-trust-${{ matrix.id }}
+          path: e2e/device-trust-result/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-matrix:
+    name: Publish public Device Trust matrix
+    if: always() && needs.matrix-plan.result == 'success'
+    needs: [matrix-plan, trust-evidence]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Device Trust evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: device-trust-*
+          path: device-trust-results
+      - name: Aggregate exact-commit trust matrix
+        shell: bash
+        run: |
+          set +e
+          mkdir -p device-trust-public
+          python scripts/device_trust/matrix.py aggregate \
+            --targets device-trust/targets.json \
+            --results-root device-trust-results \
+            --output-dir device-trust-public \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            > device-trust-public/aggregate.log 2>&1
+          rc=$?
+          if [[ -s device-trust-public/matrix.md ]]; then
+            cat device-trust-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            cat device-trust-public/aggregate.log >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cat device-trust-public/aggregate.log
+          exit "$rc"
+      - name: Upload public trust matrix JSON and Markdown
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-device-trust-matrix-${{ github.run_id }}
+          path: |
+            device-trust-public/matrix.json
+            device-trust-public/matrix.md
+            device-trust-public/aggregate.log
+          if-no-files-found: error
+          retention-days: 30

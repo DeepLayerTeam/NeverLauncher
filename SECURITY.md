@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Публичная проверка Device Trust 0.12.9
+
+Security status Device Trust не задаётся вручную. `device-trust/targets.json` содержит только обязательные targets/checks, а `.github/workflows/device-trust.yml` строит результат из machine-verifiable evidence, привязанного к exact product version, Git commit и Actions run ID. Missing, duplicate, failed, mismatched или изменённый после выполнения evidence делает public matrix failed: result содержит SHA-256 каждого публикуемого evidence-файла, а aggregator пересчитывает его перед PASS.
+
+PostgreSQL protocol E2E выполняет реальный lifecycle device identity: single-use registration challenge, binding epoch, device-bound refresh, dual-key rotation, permanent fingerprint tombstone, ServerBridge invalidation, risk step-up, P-256 attestation protocol, recovery step-up prerequisite и revocation cascade. В public evidence не сохраняются access/refresh credentials или private device keys; E2E отдельно сканирует publishable directory на такие секреты.
+
+Эта матрица не должна интерпретироваться как remote hardware provenance. P-256 CI case использует protocol-compatible key и проверяет challenge-response semantics, но фиксирует `vendorHardwareProvenance=not-verified`. Native Linux/Windows/macOS targets компилируют Tauri boundary и выполняют key-policy unit tests; headless CI не является доказательством фактического доступа к TPM, Secure Enclave, Windows Credential Manager, macOS Keychain или Linux Secret Service на пользовательском устройстве.
+
 ## Auth Federation 0.12 boundary
 
 В `0.12.0` единственной authentication boundary является Federation Core: connector проверяет external proof, затем `(provider, subject)` разрешается в canonical Never user и только после этого NeverLauncher выпускает собственную session. Local password provider проходит тот же Connector SDK conformance gate. Generic explicit linking требует одновременно действующую Never session и завершённый browser-provider proof; совпадение email никогда не считается proof.

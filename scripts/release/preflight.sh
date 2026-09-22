@@ -10,6 +10,7 @@ STRICT="${NEVERLAUNCHER_PREFLIGHT_STRICT:-0}"
 RUN_FRONTEND="${NEVERLAUNCHER_PREFLIGHT_FRONTEND:-auto}"
 RUN_TAURI="${NEVERLAUNCHER_PREFLIGHT_TAURI:-0}"
 RUN_FEDERATION_POSTGRES="${NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES:-0}"
+RUN_DEVICE_TRUST_E2E="${NEVERLAUNCHER_PREFLIGHT_DEVICE_TRUST_E2E:-0}"
 
 is_true() {
   case "${1,,}" in
@@ -24,6 +25,7 @@ if is_true "${STRICT}"; then
   RUN_FRONTEND=1
   RUN_TAURI=1
   RUN_FEDERATION_POSTGRES=1
+  RUN_DEVICE_TRUST_E2E=1
 fi
 
 echo "[NeverLauncher] Preflight ${VERSION}: build, test & release gate (strict=${STRICT}, mode=${MODE})"
@@ -42,6 +44,7 @@ run_step device-management-revocation python3 "${ROOT_DIR}/scripts/smoke/offline
 run_step session-device-risk-0126 python3 "${ROOT_DIR}/scripts/smoke/offline/session-device-risk-0126.py"
 run_step minecraft-serverbridge-trust-0127 python3 "${ROOT_DIR}/scripts/smoke/offline/minecraft-serverbridge-trust-0127.py"
 run_step cross-platform-key-recovery-0128 python3 "${ROOT_DIR}/scripts/smoke/offline/cross-platform-key-recovery-0128.py"
+run_step device-trust-e2e-matrix-0129 python3 "${ROOT_DIR}/scripts/smoke/offline/device-trust-e2e-matrix-0129.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
 run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"
@@ -83,6 +86,10 @@ fi
 
 if is_true "${RUN_FEDERATION_POSTGRES}"; then
   run_step federation-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-federation-postgres-e2e.sh"
+fi
+
+if is_true "${RUN_DEVICE_TRUST_E2E}"; then
+  run_step device-trust-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-e2e.sh"
 fi
 
 if [[ -d "${RELEASE_DIR}" ]]; then

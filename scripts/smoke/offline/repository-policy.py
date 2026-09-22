@@ -770,6 +770,64 @@ if key_recovery_migration_api != key_recovery_migration_cli:
 if "cross-platform-key-recovery-0128.py" not in preflight or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci:
     fail("0.12.8 key recovery gate is not wired into preflight/CI")
 
+
+# 0.12.9 Device Trust E2E + public trust matrix. PASS state must come only
+# from exact-commit/run CI evidence; public targets are policy, not results.
+device_trust_targets = read("device-trust/targets.json")
+device_trust_matrix = read("scripts/device_trust/matrix.py")
+device_trust_workflow = read(".github/workflows/device-trust.yml")
+device_trust_e2e = read("e2e/scripts/run-device-trust-e2e.sh")
+device_trust_webauthn = read("e2e/scripts/webauthn-test-authenticator.py")
+device_trust_native_result = read("e2e/scripts/write-device-trust-native-result.py")
+device_trust_gate = read("scripts/smoke/offline/device-trust-e2e-matrix-0129.py")
+for required in ["postgres-protocol-linux-x64", "native-linux", "native-windows", "native-macos", '"required": true']:
+    if required not in device_trust_targets:
+        fail(f"0.12.9 public Device Trust targets incomplete: {required}")
+for forbidden in ['"status": "passed"', '"status":"passed"', '"passed": true', '"pass": true']:
+    if forbidden in device_trust_targets.lower():
+        fail("device-trust/targets.json must not contain manually editable PASS state")
+for required in [
+    "verify_result", "missing required device trust result", "evidenceSha256", "evidence SHA-256 mismatch",
+    "vendorHardwareProvenance", "headless-ci-does-not-prove-os-secure-storage-runtime", "safe-basename",
+    "exact commit/run ID",
+]:
+    if required not in device_trust_matrix:
+        fail(f"0.12.9 trust matrix aggregator missing hardening primitive: {required}")
+for required in [
+    "db migrate apply", "/api/v1/auth/devices/register/begin", "/api/v1/auth/refresh",
+    "/api/v1/auth/devices/key-rotation/begin", "/api/v1/server-bridge/validate-join",
+    "/api/v1/auth/sessions", "/attest/begin", "/api/v1/auth/devices/key-recovery/begin",
+    "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",
+    "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
+    "secret material leaked into public evidence", 'repository:"postgresql"',
+]:
+    if required not in device_trust_e2e:
+        fail(f"0.12.9 PostgreSQL Device Trust E2E missing runtime primitive: {required}")
+for required in ["webauthn.create", "webauthn.get", "registration_auth_data", "assertion_auth_data", '"openssl", "dgst", "-sha256", "-sign"']:
+    if required not in device_trust_webauthn:
+        fail(f"0.12.9 WebAuthn Device Trust E2E helper incomplete: {required}")
+for required in [
+    "matrix.py plan", "runs-on: ${{ matrix.runner }}", "run-device-trust-e2e.sh",
+    "device_keys::tests", "write-device-trust-native-result.py", "matrix.py aggregate",
+    "GITHUB_SHA", "GITHUB_RUN_ID", "GITHUB_STEP_SUMMARY",
+]:
+    if required not in device_trust_workflow:
+        fail(f"0.12.9 public Device Trust workflow incomplete: {required}")
+for required in [
+    "hardware_generation_labels_are_scoped_and_rotate",
+    "replacement_payload_is_canonical_and_user_scoped",
+    "refresh_payload_binds_session_device_epoch_and_token_hash_without_token_disclosure",
+    "attestation_payload_is_hardware_only_and_identity_bound",
+]:
+    if required not in device_trust_native_result:
+        fail(f"0.12.9 native Device Trust evidence incomplete: {required}")
+if "device-trust-e2e-matrix-0129.py" not in preflight or "scripts/smoke/offline/device-trust-e2e-matrix-0129.py" not in ci:
+    fail("0.12.9 Device Trust matrix gate is not wired into preflight/CI")
+if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
+    fail("0.12.9 production/strict E2E wiring is incomplete")
+if "Device Trust E2E + public trust matrix 0.12.9 gate OK" not in device_trust_gate:
+    fail("0.12.9 mandatory Device Trust release gate is incomplete")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:
