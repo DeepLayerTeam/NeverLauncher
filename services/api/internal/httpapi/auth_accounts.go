@@ -268,15 +268,16 @@ func (s Server) desktopAuthPolicy(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) authCapabilitiesPayload(version string) map[string]any {
 	return map[string]any{
-		"schemaVersion": apiContractVersion,
-		"toolVersion":   version,
-		"status":        "auth-federation-release",
-		"capabilities":  []string{"auth-federation-release", "connector-sdk", "federation-core", "provider-agnostic-explicit-linking", "federation-runtime-status", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "session-management-2", "session-device-management", "session-device-binding", "binding-epoch-enforcement", "device-bound-refresh", "session-risk-engine", "risk-step-up-integration", "risk-reattest-integration", "device-trust-core", "trusted-device-registry", "device-proof-of-possession", "device-keys", "device-keys-os-secure-storage", "desktop-device-key-auto-registration", "hardware-bound-device-identities", "p256-device-proof", "challenge-response-device-attestation", "device-attestation-freshness", "hardware-provenance-unverified", "device-key-rotation", "device-key-recovery", "staged-device-key-replacement", "permanent-device-fingerprint-tombstones", "session-risk-state", "provider-session-revocation", "jwt-access-tokens", "access-token-key-rotation", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit", "minecraft-auth-compatibility-2", "minecraft-session-adapter", "yggdrasil-authlib"},
-		"providers":     s.Federation.Providers(),
-		"roles":         []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
-		"sessions":      s.State.AuthSessions.summary(),
-		"passkeys":      s.State.Passkeys.summary(),
-		"deviceTrust":   deviceTrustSummary0121(s.Repo),
+		"schemaVersion":      apiContractVersion,
+		"toolVersion":        version,
+		"status":             "auth-federation-release",
+		"capabilities":       []string{"auth-federation-release", "connector-sdk", "federation-core", "provider-agnostic-explicit-linking", "federation-runtime-status", "canonical-identity-resolution", "explicit-identity-linking", "sql-auth-provider", "http-auth-provider", "oidc-auth-provider", "microsoft-auth-provider", "encrypted-provider-credentials", "provider-credential-rotation", "jit-federated-provisioning", "identifier-password-login", "server-side-session-registry", "session-management-2", "session-device-management", "session-device-binding", "binding-epoch-enforcement", "device-bound-refresh", "session-risk-engine", "risk-step-up-integration", "risk-reattest-integration", "device-trust-release", "device-trust-core", "trusted-device-registry", "device-proof-of-possession", "device-keys", "device-keys-os-secure-storage", "desktop-device-key-auto-registration", "hardware-bound-device-identities", "p256-device-proof", "challenge-response-device-attestation", "device-attestation-freshness", "hardware-provenance-unverified", "device-key-rotation", "device-key-recovery", "staged-device-key-replacement", "permanent-device-fingerprint-tombstones", "session-risk-state", "provider-session-revocation", "jwt-access-tokens", "access-token-key-rotation", "access-refresh-tokens", "refresh-token-rotation", "session-revocation", "disabled-user-block", "rbac-middleware", "project-role-bindings", "login-audit", "desktop-secure-storage", "totp-enrollment", "totp-login-enforcement", "passkeys-webauthn", "passwordless-passkey-login", "mfa-policy", "phishing-resistant-step-up", "recovery-codes", "password-reset-tokens", "email-verification-tokens", "login-rate-limit", "minecraft-auth-compatibility-2", "minecraft-session-adapter", "yggdrasil-authlib"},
+		"providers":          s.Federation.Providers(),
+		"roles":              []string{"owner", "admin", "release-manager", "support", "viewer", "player"},
+		"sessions":           s.State.AuthSessions.summary(),
+		"passkeys":           s.State.Passkeys.summary(),
+		"deviceTrust":        deviceTrustSummary0121(s.Repo),
+		"deviceTrustRelease": deviceTrustReleasePayload0130(version),
 	}
 }
 
@@ -305,6 +306,7 @@ func desktopAuthPolicyPayload(version string) map[string]any {
 		"sessionDeviceBinding": map[string]any{"bindingEpoch": true, "boundRefreshDeviceProof": true, "nativeSigningCommand": "sign_session_refresh", "refreshTokenSignedAsSha256Only": true},
 		"risk":                 map[string]any{"actions": []string{"allow", "step-up", "reattest", "revoke"}, "sensitiveOperationsEnforced": true},
 		"restore":              map[string]any{"onStart": true, "refreshBeforeExpiry": true, "clearOnLogout": true},
+		"deviceTrustRelease":   deviceTrustReleasePayload0130(version),
 		"screens":              []string{"identifier-password", "session-active", "session-expired", "project-access-denied"},
 	}
 }

@@ -38,6 +38,8 @@ func handleRelease(args []string) error {
 			ver, out, flagValue(args, "--source-root", "."),
 			flagValue(args, "--compatibility-matrix", ""),
 			flagValue(args, "--compatibility-targets", "compatibility/targets.json"),
+			flagValue(args, "--device-trust-matrix", ""),
+			flagValue(args, "--device-trust-targets", "device-trust/targets.json"),
 			flagValue(args, "--source-commit", ""),
 		); err != nil {
 			return err
@@ -65,7 +67,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Minecraft compatibility certification: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility certification")
+			if deviceTrustCertificationRequired(manifestVersion) {
+				if err := verifyDeviceTrustCertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Device Trust certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility certification + Device Trust certification")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -85,6 +92,9 @@ func handleRelease(args []string) error {
 		artifacts := append([]string{}, releaseArtifacts(ver)...)
 		if compatibilityCertificationRequired(ver) {
 			artifacts = append(artifacts, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		}
+		if deviceTrustCertificationRequired(ver) {
+			artifacts = append(artifacts, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
 		}
 		plan := map[string]any{
 			"schemaVersion": "1.0",
@@ -302,7 +312,7 @@ func productionTables() []string {
 	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "registry_entries", "desktop_packages"}
 }
 
-func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, expectedCommit string) error {
+func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, expectedCommit string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
@@ -312,6 +322,14 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		if err := embedCompatibilityCertification(out, compatibilityMatrixPath, compatibilityTargetsPath, ver, expectedCommit); err != nil {
 			return fmt.Errorf("compatibility certification: %w", err)
+		}
+	}
+	if strings.TrimSpace(deviceTrustMatrixPath) != "" {
+		if !filepath.IsAbs(deviceTrustTargetsPath) {
+			deviceTrustTargetsPath = filepath.Join(sourceRoot, deviceTrustTargetsPath)
+		}
+		if err := embedDeviceTrustCertification(out, deviceTrustMatrixPath, deviceTrustTargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Device Trust certification: %w", err)
 		}
 	}
 	sbom, err := dependencySBOM(sourceRoot, ver)
@@ -341,6 +359,12 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		checks = append(checks, "minecraft-compatibility-certification")
 		compatibilityCertified = true
 	}
+	deviceTrustCertified := false
+	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+		checks = append(checks, "device-trust-certification")
+		deviceTrustCertified = true
+	}
 	manifest := map[string]any{
 		"schemaVersion":          cliSchemaVersion,
 		"name":                   "NeverLauncher",
@@ -351,6 +375,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"checks":                 checks,
 		"requiredFiles":          requiredFiles,
 		"compatibilityCertified": compatibilityCertified,
+		"deviceTrustCertified":   deviceTrustCertified,
 	}
 	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
@@ -372,6 +397,9 @@ func releaseBundleEntries(ver, out string) []map[string]any {
 	requiredNames := append([]string{}, releaseArtifacts(ver)...)
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredNames = append(requiredNames, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+	}
+	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
 	}
 	for _, name := range requiredNames {
 		known[name] = true
@@ -549,6 +577,9 @@ func releaseDescription(ver string) string {
 	extra := ""
 	if compatibilityCertificationRequired(ver) {
 		extra = "\n- официальный publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, привязанные к той же версии и source commit;"
+	}
+	if deviceTrustCertificationRequired(ver) {
+		extra += "\n- начиная с 0.13.0 официальный publish-check также требует DEVICE_TRUST_TARGETS/MATRIX/CERTIFICATION для того же product version и source commit;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

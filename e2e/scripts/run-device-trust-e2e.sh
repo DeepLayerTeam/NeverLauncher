@@ -109,6 +109,12 @@ curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Toke
 repo_driver="$(psql "$DB_DSN" -Atqc "SELECT current_database()")"
 [[ "$repo_driver" == "neverlauncher" ]]
 
+printf '[device-trust-e2e] verify 0.13.0 runtime release/readiness contract\n'
+curl -fsS "$API/api/v1/auth/capabilities" > "$RESULT_DIR/release-capabilities.json"
+jq -e --arg version "$VERSION" '.data.deviceTrustRelease.status=="released" and .data.deviceTrustRelease.releaseVersion=="0.13.0" and .data.deviceTrustRelease.runtimeVersion==$version and .data.deviceTrustRelease.schemaMigration=="0018_device_trust_stabilization_01210" and .data.deviceTrustRelease.schemaFrozen==true and .data.deviceTrustRelease.enforcement.sessionDeviceBinding==true and .data.deviceTrustRelease.enforcement.deviceBoundRefresh==true and .data.deviceTrustRelease.enforcement.riskActions==true and .data.deviceTrustRelease.enforcement.minecraftServerBridge==true and .data.deviceTrustRelease.releaseCertification.required==true and .data.deviceTrustRelease.attestation.vendorProvenance=="not-remotely-verified"' "$RESULT_DIR/release-capabilities.json" >/dev/null
+curl -fsS "$API/ready" > "$RESULT_DIR/release-readiness.json"
+jq -e '.status=="ready" and .checks.migrations=="0018_device_trust_stabilization_01210" and .repository=="pgx"' "$RESULT_DIR/release-readiness.json" >/dev/null
+
 printf '[device-trust-e2e] real Ed25519 registration, binding epoch and replay protection\n'
 LOGIN1="$(login dt-primary)"
 ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$LOGIN1")"
@@ -303,6 +309,7 @@ EVIDENCE_FILES=(
   registration.json trust-after-registration.json bridge-before-rotation.json rotation.json
   bridge-after-rotation.json old-key-tombstone.json risk-step-up.json p256-attestation.json
   recovery-step-up-required.json recovery.json revocation.json migration-stabilization.json migration-upgrade-e2e.json
+  release-capabilities.json release-readiness.json
 )
 EVIDENCE_FILES_JSON="$(printf '%s\n' "${EVIDENCE_FILES[@]}" | jq -R . | jq -s -c .)"
 EVIDENCE_SHA_JSON='{}'
@@ -316,9 +323,9 @@ jq -n \
   --arg version "$VERSION" --arg target "$TARGET_ID" --arg commit "$RESULT_COMMIT" --arg run "$RESULT_RUN_ID" \
   --argjson evidenceFiles "$EVIDENCE_FILES_JSON" --argjson evidenceSha "$EVIDENCE_SHA_JSON" \
   '{schemaVersion:"1.0",productVersion:$version,targetId:$target,kind:"protocol-e2e",os:"linux",arch:"x86_64",runtimeArch:"x86_64",commit:$commit,runId:$run,status:"passed",exitCode:0,
-    checks:{postgresRepository:true,migrationStabilization01210:true,registrationReplayDenied:true,sessionBindingEpoch:true,boundRefreshProof:true,rotationDualProof:true,oldKeyTombstone:true,serverBridgeBindingDeny:true,revocationCascade:true,riskStepUp:true,p256AttestationProtocol:true,attestationReplayDenied:true,recoveryRequiresPhishingResistantStepUp:true,recoveryPhishingResistantEndToEnd:true},
+    checks:{postgresRepository:true,migrationStabilization01210:true,registrationReplayDenied:true,sessionBindingEpoch:true,boundRefreshProof:true,rotationDualProof:true,oldKeyTombstone:true,serverBridgeBindingDeny:true,revocationCascade:true,riskStepUp:true,p256AttestationProtocol:true,attestationReplayDenied:true,recoveryRequiresPhishingResistantStepUp:true,recoveryPhishingResistantEndToEnd:true,deviceTrustRelease0130:true},
     evidence:{files:$evidenceFiles,sha256:$evidenceSha},
-    claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false}}' > "$RESULT_DIR/device-trust-result.json"
+    claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false,deviceTrustRelease:$version}}' > "$RESULT_DIR/device-trust-result.json"
 
 # Ensure public evidence cannot accidentally contain bearer/refresh/private-key material.
 if grep -RIEq 'accessToken"[[:space:]]*:[[:space:]]*"|refreshToken"[[:space:]]*:[[:space:]]*"|BEGIN (EC |ED25519 |)PRIVATE KEY' "$RESULT_DIR"; then

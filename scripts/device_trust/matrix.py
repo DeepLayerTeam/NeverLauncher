@@ -36,6 +36,7 @@ KIND_MANDATORY_CHECKS = {
         "attestationReplayDenied",
         "recoveryRequiresPhishingResistantStepUp",
         "recoveryPhishingResistantEndToEnd",
+        "deviceTrustRelease0130",
     },
     "native-tests": {
         "tauriCompile",
@@ -44,6 +45,7 @@ KIND_MANDATORY_CHECKS = {
         "replacementPayloadValidation",
         "refreshPayloadBinding",
         "attestationPayloadValidation",
+        "deviceTrustRelease0130",
     },
 }
 
@@ -220,10 +222,15 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, result_path
                 errors.append("protocol E2E must not claim vendor hardware provenance")
             if claims.get("privateKeyServerExposed") is not False:
                 errors.append("protocol E2E must explicitly assert private key is not server-exposed")
+            if claims.get("deviceTrustRelease") != PRODUCT_VERSION:
+                errors.append("protocol E2E is not bound to the current Device Trust release")
     elif target["kind"] == "native-tests":
         limitations = result.get("limitations")
         if not isinstance(limitations, list) or "headless-ci-does-not-prove-os-secure-storage-runtime" not in limitations:
             errors.append("native result must disclose secure-storage runtime limitation")
+        claims = result.get("claims")
+        if not isinstance(claims, dict) or claims.get("deviceTrustRelease") != PRODUCT_VERSION:
+            errors.append("native result is not bound to the current Device Trust release")
     return errors
 
 
@@ -253,7 +260,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Protocol E2E проверяет реальный PostgreSQL lifecycle и migration stabilization 0.12.10: sealed upgrade schema, registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up и P-256 challenge-response attestation protocol.",
+        "Protocol E2E проверяет Device Trust Release 0.13.0 на реальном PostgreSQL с migration stabilization 0.12.10: sealed migration baseline 0018, registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up, P-256 challenge-response attestation protocol и runtime release/readiness contract.",
         "",
         "Важно: P-256 challenge-response в этой матрице доказывает серверную проверку владения зарегистрированным ключом, но **не** vendor TPM/Secure Enclave provenance. Native Windows/macOS/Linux targets доказывают компиляцию и security-policy unit tests; headless CI не объявляется доказательством фактической работы OS secure storage/TPM/Secure Enclave на конкретном пользовательском устройстве.",
         "",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.12.10",
+  "productVersion": "0.13.0",
   "targets": [
     {
       "id": "postgres-protocol-linux-x64",
@@ -23,7 +23,8 @@
         "p256AttestationProtocol",
         "attestationReplayDenied",
         "recoveryRequiresPhishingResistantStepUp",
-        "recoveryPhishingResistantEndToEnd"
+        "recoveryPhishingResistantEndToEnd",
+        "deviceTrustRelease0130"
       ]
     },
     {
@@ -39,7 +40,8 @@
         "generationScopedHardwareLabels",
         "replacementPayloadValidation",
         "refreshPayloadBinding",
-        "attestationPayloadValidation"
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130"
       ]
     },
     {
@@ -55,7 +57,8 @@
         "generationScopedHardwareLabels",
         "replacementPayloadValidation",
         "refreshPayloadBinding",
-        "attestationPayloadValidation"
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130"
       ]
     },
     {
@@ -71,7 +74,8 @@
         "generationScopedHardwareLabels",
         "replacementPayloadValidation",
         "refreshPayloadBinding",
-        "attestationPayloadValidation"
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130"
       ]
     }
   ]

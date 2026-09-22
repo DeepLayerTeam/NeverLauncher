@@ -238,6 +238,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Device Trust Release 0.13.0
+
+`0.13.0` завершает roadmap Device Trust и делает trust evidence частью официального подписанного release bundle. Схема не получает пустую migration: production baseline остаётся `0018_device_trust_stabilization_01210`, а Backend `/ready` и Device Trust E2E обязаны подтвердить её перед PASS.
+
+Public matrix требует PostgreSQL lifecycle E2E и native Linux/Windows/macOS key-policy tests. Для официальной публикации `nl release publish-check` проверяет не только Minecraft Compatibility certification, но и `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json`, привязанные к той же версии и source commit. `build-release.sh` принимает public matrix через `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE`; без certification bundle остаётся release candidate.
+
+Backend публикует machine-readable `deviceTrustRelease` contract в `/api/v1/auth/capabilities`: server-authoritative binding epoch, device-bound refresh, risk actions, Minecraft/ServerBridge enforcement, permanent revocation, dual-proof rotation и phishing-resistant recovery. P-256 protocol proof не выдаётся за vendor TPM/Secure Enclave provenance.
+
 ## Migration + stabilization 0.12.10
 
 `0.12.10` является stabilization-релизом Device Trust schema и production-upgrade path. Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL challenge-purpose constraint для реально используемых `key-rotate`/`key-recover`, переводит optional device references с empty-string sentinel на SQL `NULL`, нормализует безопасные legacy revoked/challenge states и затем устанавливает ownership/lifecycle constraints между trusted devices, auth sessions и Minecraft sessions.

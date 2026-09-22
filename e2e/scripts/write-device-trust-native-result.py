@@ -16,6 +16,7 @@ TEST_MARKERS = {
     "replacementPayloadValidation": ["replacement_payload_is_canonical_and_user_scoped"],
     "refreshPayloadBinding": ["refresh_payload_binds_session_device_epoch_and_token_hash_without_token_disclosure"],
     "attestationPayloadValidation": ["attestation_payload_is_hardware_only_and_identity_bound"],
+    "deviceTrustRelease0130": ["device_trust_release_0130_is_fail_closed"],
 }
 
 
@@ -52,6 +53,7 @@ def main() -> int:
             "sha256": {args.log.name: hashlib.sha256(args.log.read_bytes()).hexdigest()},
         },
         "limitations": ["headless-ci-does-not-prove-os-secure-storage-runtime"],
+        "claims": {"deviceTrustRelease": VERSION},
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -18,6 +18,10 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Device Trust Release 0.13.0
+
+`0.13.0` не добавляет новую DB migration: перед запуском API `nl db migrate verify` должен подтверждать `0018_device_trust_stabilization_01210`. Для официальной публикации release bundle задайте `NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE`, `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE` и `NEVERLAUNCHER_SOURCE_COMMIT`; `nl release publish-check` fail-closed проверит обе certification для exact commit. Bundle без public matrices является release candidate, а не publishable Device Trust Release.
+
 ### Upgrade 0.12.9 → 0.12.10
 
 Перед обновлением существующей `0.12.9` БД создайте и проверьте backup, затем остановите старые API instance, чтобы они не писали Device Trust state параллельно migration. Примените `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"` и сразу `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"` до запуска `0.12.10` API. Migration `0018_device_trust_stabilization_01210` fail-closed остановится при cross-user/структурно противоречивых Device Trust связях; не обходите ошибку ручным удалением constraints — восстановите/исправьте данные из проверенного backup и повторите upgrade.

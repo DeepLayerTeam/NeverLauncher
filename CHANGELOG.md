@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.0 — Device Trust Release
+
+`0.13.0` закрепляет Device Trust как release-level production boundary. Схема остаётся на sealed migration `0018_device_trust_stabilization_01210`: пустая migration ради номера версии не добавляется. Backend публикует machine-readable release contract через auth capabilities, а PostgreSQL E2E требует этот contract и `/ready` с актуальной migration перед lifecycle-проверками.
+
+### Release certification
+
+- Public Device Trust matrix теперь требует `deviceTrustRelease0130` на PostgreSQL protocol target и native Linux/Windows/macOS targets.
+- Native evidence дополнительно запускает fail-closed key lifecycle test; protocol evidence проверяет runtime release contract, schema readiness и сохраняет их hash-verified evidence.
+- CLI release pipeline получил `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json`. Certification привязана к exact product version, source commit, Actions run ID и SHA-256 embedded targets/matrix.
+- Начиная с `0.13.0`, `nl release publish-check` требует одновременно Minecraft Compatibility certification и Device Trust certification. Изменённая, неполная или относящаяся к другому commit trust matrix блокирует публикацию.
+- `scripts/release/build-release.sh` принимает `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE` / `NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE`; CI bundle без публичного evidence остаётся release candidate и не считается официально publishable.
+
+### Runtime boundary
+
+- `/api/v1/auth/capabilities` и Desktop auth policy публикуют Device Trust Release contract: session↔device binding, device-bound refresh, risk enforcement, Minecraft/ServerBridge enforcement, permanent revoke/tombstones, dual-proof rotation и phishing-resistant recovery.
+- Hardware boundary не переименована в vendor attestation: P-256 challenge-response по-прежнему означает proof-of-possession, а `vendorProvenance=not-remotely-verified`.
+- Gate `device-trust-release-0130.py` запрещает пустую `0019`, проверяет migration parity, release certification code, runtime contract, public targets и обязательную CI/preflight интеграцию.
+
 ## 0.12.10 — Migration + stabilization
 
 `0.12.10` стабилизирует накопленный Device Trust schema/runtime после `0.12.4–0.12.9` и делает upgrade с реальной `0.12.9` БД отдельным обязательным release invariant. Главная исправленная production-проблема: constraint `device_challenges_purpose_check`, созданный в `0.12.4`, не был расширен после появления `key-rotate`/`key-recover` в `0.12.8`, из-за чего PostgreSQL мог отклонять replacement challenge, хотя memory regression проходил.

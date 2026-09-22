@@ -39,6 +39,7 @@ jobs:
           python3 scripts/smoke/offline/cross-platform-key-recovery-0128.py
           python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
           python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
+          python3 scripts/smoke/offline/device-trust-release-0130.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py

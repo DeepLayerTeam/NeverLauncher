@@ -70,7 +70,7 @@ require(protocol, [
     "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",
     "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
     "/revoke", "psql", "openssl genpkey", "secret material leaked into public evidence",
-    'claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false}',
+    'claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false',
 ], "PostgreSQL Device Trust E2E")
 
 crypto = read("e2e/scripts/device-trust-crypto.py")

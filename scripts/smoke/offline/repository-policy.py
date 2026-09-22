@@ -880,3 +880,20 @@ if errors:
     sys.exit(1)
 
 print(f"[NeverLauncher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны")
+
+# 0.13.0 Device Trust Release certification and runtime contract.
+if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
+    dt_release = read("cli/cmd/neverlauncher/device_trust_release.go")
+    dt_runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
+    dt_targets_0130 = read("device-trust/targets.json")
+    build_release_0130 = read("scripts/release/build-release.sh")
+    if "DEVICE_TRUST_CERTIFICATION.json" not in dt_release or "deviceTrustCertificationRequired" not in dt_release:
+        fail("0.13.0 release bundle lacks Device Trust certification enforcement")
+    if "exact-commit-public-device-trust-matrix" not in dt_runtime or "0018_device_trust_stabilization_01210" not in dt_runtime:
+        fail("0.13.0 runtime Device Trust release contract is incomplete")
+    if "deviceTrustRelease0130" not in dt_targets_0130:
+        fail("0.13.0 public Device Trust targets do not require release acceptance")
+    if "NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
+        fail("0.13.0 build-release cannot embed Device Trust matrix")
+    if "device-trust-release-0130.py" not in preflight or "device-trust-release-0130.py" not in ci:
+        fail("0.13.0 Device Trust Release gate is not wired into preflight/CI")

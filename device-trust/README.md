@@ -2,7 +2,12 @@
 
 `device-trust/targets.json` — policy-файл NeverLauncher Device Trust CI. Он описывает обязательные targets и checks, но **не** хранит PASS/FAIL. Результат создаётся только из CI evidence для exact product version, Git commit и GitHub Actions run ID.
 
-## Targets 0.12.10
+## Targets 0.13.0
+
+## Device Trust Release certification 0.13.0
+
+Каждый required target дополнительно обязан пройти `deviceTrustRelease0130`. Protocol target проверяет runtime `/api/v1/auth/capabilities`, `/ready` и sealed schema baseline `0018`; native targets запускают отдельный fail-closed key lifecycle test. Aggregate `matrix.json` используется как вход официальной release certification: `nl release build --device-trust-matrix ... --device-trust-targets ... --source-commit ...` создаёт `DEVICE_TRUST_CERTIFICATION.json`, а `nl release publish-check` для 0.13.0 отклоняет bundle без неё.
+
 
 - `postgres-protocol-linux-x64` — production PostgreSQL Device Trust protocol E2E.
 - `native-linux` — Tauri/device-key compile + key-policy unit tests на Linux runner.

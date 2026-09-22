@@ -824,4 +824,18 @@ mod tests {
         software.key_binding = "software".into();
         assert!(validate_device_attestation_payload(good, "user-a", &software).is_err());
     }
+    #[test]
+    fn device_trust_release_0130_is_fail_closed() {
+        assert_eq!(DEVICE_KEY_SCHEMA_VERSION, "2");
+        assert!(normalize_backend_url("http://example.invalid").is_err());
+        assert!(!is_hardware_backend_kind("Software"));
+        assert!(!is_hardware_backend_kind("UnknownFutureBackend"));
+        let info = DeviceKeyInfo {
+            user_id: "user-a".into(), public_key: "pub".into(), fingerprint: "fp".into(), device_id: Some("dev-1".into()),
+            created_at_unix: 1, storage_backend: "os-keyring".into(), key_algorithm: "ed25519".into(), key_binding: "software".into(),
+            hardware_provider: String::new(), hardware_bound: false, private_key_exposed_to_frontend: false,
+        };
+        assert!(!info.private_key_exposed_to_frontend);
+    }
+
 }

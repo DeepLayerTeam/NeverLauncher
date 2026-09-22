@@ -14,6 +14,8 @@ PRIVATE_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
 PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}"
 COMPATIBILITY_MATRIX="${NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE:-}"
 COMPATIBILITY_TARGETS="${NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE:-${ROOT_DIR}/compatibility/targets.json}"
+DEVICE_TRUST_MATRIX="${NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE:-}"
+DEVICE_TRUST_TARGETS="${NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE:-${ROOT_DIR}/device-trust/targets.json}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
@@ -44,11 +46,17 @@ python3 "${ROOT_DIR}/scripts/version/manage.py" check
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
   require_file "${COMPATIBILITY_MATRIX}"
   require_file "${COMPATIBILITY_TARGETS}"
+fi
+if [[ -n "${DEVICE_TRUST_MATRIX}" ]]; then
+  require_file "${DEVICE_TRUST_MATRIX}"
+  require_file "${DEVICE_TRUST_TARGETS}"
+fi
+if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" ]]; then
   if [[ -z "${SOURCE_COMMIT}" ]] && command -v git >/dev/null 2>&1; then
     SOURCE_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
   fi
   if [[ -z "${SOURCE_COMMIT}" ]]; then
-    echo "Ошибка: certified compatibility release требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
+    echo "Ошибка: certified release требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
     exit 1
   fi
 fi
@@ -124,7 +132,14 @@ log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
   log "Встраивание machine-verifiable Minecraft Compatibility certification для commit ${SOURCE_COMMIT}"
-  release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}" --source-commit "${SOURCE_COMMIT}")
+  release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}")
+fi
+if [[ -n "${DEVICE_TRUST_MATRIX}" ]]; then
+  log "Встраивание machine-verifiable Device Trust certification для commit ${SOURCE_COMMIT}"
+  release_build_args+=(--device-trust-matrix "${DEVICE_TRUST_MATRIX}" --device-trust-targets "${DEVICE_TRUST_TARGETS}")
+fi
+if [[ -n "${SOURCE_COMMIT}" ]]; then
+  release_build_args+=(--source-commit "${SOURCE_COMMIT}")
 fi
 "${OUT_DIR}/neverlauncher-cli-linux-amd64" "${release_build_args[@]}"
 
@@ -133,11 +148,13 @@ log "Ed25519 release signing"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
 "${OUT_DIR}/neverlauncher-cli-linux-amd64" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
-if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
-  log "Publish-check Minecraft Compatibility Release"
+if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" ]]; then
+  log "Publish-check Minecraft Compatibility + Device Trust Release"
   "${OUT_DIR}/neverlauncher-cli-linux-amd64" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+elif [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" ]]; then
+  log "Передан неполный certification set: bundle проверен криптографически, но официальный publish-check 0.13.0 требует и Compatibility, и Device Trust evidence"
 else
-  log "Compatibility evidence не передан: bundle является CI release candidate и не проходит 0.11+ publish-check"
+  log "Certification evidence не передан: bundle является CI release candidate и не проходит официальный publish-check"
 fi
 
 log "Каталог production-релиза готов: ${OUT_DIR}"

@@ -38,6 +38,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                         "replacementPayloadValidation",
                         "refreshPayloadBinding",
                         "attestationPayloadValidation",
+                        "deviceTrustRelease0130",
                     ],
                 }
             ],
@@ -63,9 +64,11 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "replacementPayloadValidation": True,
                 "refreshPayloadBinding": True,
                 "attestationPayloadValidation": True,
+                "deviceTrustRelease0130": True,
             },
             "evidence": {"files": ["native-cargo-test.txt"], "sha256": {"native-cargo-test.txt": "0" * 64}},
             "limitations": ["headless-ci-does-not-prove-os-secure-storage-runtime"],
+            "claims": {"deviceTrustRelease": VERSION},
         }
 
 
@@ -183,7 +186,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                     "postgresRepository", "migrationStabilization01210", "registrationReplayDenied", "sessionBindingEpoch", "boundRefreshProof",
                     "rotationDualProof", "oldKeyTombstone", "serverBridgeBindingDeny", "revocationCascade",
                     "riskStepUp", "p256AttestationProtocol", "attestationReplayDenied",
-                    "recoveryRequiresPhishingResistantStepUp", "recoveryPhishingResistantEndToEnd",
+                    "recoveryRequiresPhishingResistantStepUp", "recoveryPhishingResistantEndToEnd", "deviceTrustRelease0130",
                 ]),
             }],
         }
@@ -193,7 +196,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             "commit": "abc123", "runId": "77", "status": "passed", "exitCode": 0,
             "checks": {name: True for name in doc["targets"][0]["requiredChecks"]},
             "evidence": {"files": ["protocol-checks.json"]},
-            "claims": {"repository": "postgresql", "vendorHardwareProvenance": "verified", "privateKeyServerExposed": False},
+            "claims": {"repository": "postgresql", "vendorHardwareProvenance": "verified", "privateKeyServerExposed": False, "deviceTrustRelease": VERSION},
         }
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

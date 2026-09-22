@@ -245,6 +245,10 @@ func securityReleasePolicyModel() map[string]any {
 		required = append(required, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
 		checks = append(checks, "minecraft-compatibility-certification")
 	}
+	if deviceTrustCertificationRequired(version) {
+		required = append(required, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+		checks = append(checks, "device-trust-certification")
+	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": required, "checks": checks, "failureMode": "fail-closed"}
 }
 
