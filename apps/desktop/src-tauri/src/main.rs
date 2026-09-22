@@ -2,7 +2,9 @@ mod device_keys;
 
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
-    LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials, NeverGuardIntegrityEvidence, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
+    GuardProcessPolicyReport, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
+    NeverGuardIntegrityEvidence, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus,
+    ProcessSupervisor, RepairResult, SignatureCheckResult, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -274,7 +276,21 @@ async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<St
         if !status.authenticated || status.state != "ready" {
             return Err("launch заблокирован: NeverGuard Windows boundary не authenticated/ready".to_string());
         }
+        if !status.process_policy_enforced
+            || status.process_policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+        {
+            return Err("launch заблокирован: NeverGuard Windows runtime/process policy не enforced".to_string());
+        }
         neverguard.ping().await?;
+        let process_policy = neverguard
+            .process_policy()
+            .await
+            .map_err(|err| format!("launch заблокирован: NeverGuard Windows process policy verification failed: {err}"))?;
+        if !process_policy.enforced
+            || process_policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+        {
+            return Err("launch заблокирован: NeverGuard Windows process policy report rejected".to_string());
+        }
         neverguard
             .integrity_evidence()
             .await
@@ -297,6 +313,10 @@ async fn neverguard_status(neverguard: tauri::State<'_, NeverGuardSupervisor>) -
 #[tauri::command]
 async fn neverguard_integrity_evidence(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<NeverGuardIntegrityEvidence, String> {
     neverguard.integrity_evidence().await
+}
+#[tauri::command]
+async fn neverguard_process_policy(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<GuardProcessPolicyReport, String> {
+    neverguard.process_policy().await
 }
 #[tauri::command]
 async fn runtime_process_status(process_id: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> { supervisor.status(&process_id).await }
@@ -341,6 +361,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

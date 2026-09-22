@@ -1,6 +1,7 @@
 use crate::{
     append_launch_history, check_files, create_launch_plan, create_launch_plan_with_credentials, join_classpath, now_unix,
     verify_manifest_signature, LaunchHistoryEntry, Manifest, MinecraftLaunchCredentials,
+    RuntimeProcessPolicyReport,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -25,12 +26,16 @@ pub struct ProcessStatus {
     pub success: Option<bool>,
     pub log_path: String,
     pub message: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub windows_process_policy: Option<RuntimeProcessPolicyReport>,
 }
 
 #[derive(Clone)]
 struct ManagedProcess {
     status: ProcessStatus,
     child: Arc<Mutex<Option<Child>>>,
+    #[cfg(windows)]
+    runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
 }
 
 #[derive(Clone, Default)]
@@ -97,7 +102,8 @@ impl ProcessSupervisor {
         log_file.flush().map_err(|e| e.to_string())?;
         let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
 
-        let mut child = tokio::process::Command::new(&plan.java_executable)
+        let mut command = tokio::process::Command::new(&plan.java_executable);
+        command
             .args(&plan.jvm_args)
             .arg("-cp")
             .arg(join_classpath(&plan.classpath_entries))
@@ -106,19 +112,40 @@ impl ProcessSupervisor {
             .current_dir(Path::new(&plan.working_directory))
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
-            .stderr(Stdio::from(log_file))
+            .stderr(Stdio::from(log_file));
+        crate::windows_policy::prepare_runtime_command(&mut command);
+        let mut child = command
             .spawn()
             .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
+        let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
+            .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
 
         let pid = child.id();
+        #[cfg(windows)]
+        let windows_process_policy = Some(runtime_policy.report().clone());
+        #[cfg(not(windows))]
+        let windows_process_policy = {
+            let _ = runtime_policy;
+            None
+        };
+        #[cfg(windows)]
+        let launch_message = "Runtime запущен под supervision с Windows process policy enforcement";
+        #[cfg(not(windows))]
+        let launch_message = "Runtime запущен под supervision";
         let id = format!("runtime-{started_at}-{}", pid.unwrap_or(0));
         let status = ProcessStatus {
             id: id.clone(), pid, state: "running".to_string(), started_at: started_at.to_string(),
             finished_at: None, exit_code: None, success: None,
-            log_path: log_path.to_string_lossy().to_string(), message: "Runtime запущен под supervision".to_string(),
+            log_path: log_path.to_string_lossy().to_string(), message: launch_message.to_string(),
+            windows_process_policy,
         };
         let child = Arc::new(Mutex::new(Some(child)));
-        self.processes.lock().await.insert(id.clone(), ManagedProcess { status: status.clone(), child: child.clone() });
+        self.processes.lock().await.insert(id.clone(), ManagedProcess {
+            status: status.clone(),
+            child: child.clone(),
+            #[cfg(windows)]
+            runtime_policy: Some(runtime_policy),
+        });
 
         let processes = self.processes.clone();
         let root = PathBuf::from(root);
@@ -154,6 +181,10 @@ impl ProcessSupervisor {
                         process.status.exit_code = exit_code;
                         process.status.success = Some(success);
                         process.status.message = message.clone();
+                        #[cfg(windows)]
+                        {
+                            process.runtime_policy = None;
+                        }
                     }
                 }
                 let history = LaunchHistoryEntry {

@@ -238,6 +238,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## NeverGuard Windows: применение runtime/process policy — 0.13.3
+
+`0.13.3` делает Windows policy исполняемой, а не декларативной. `neverguard.exe` до запуска Tokio применяет и заново проверяет process mitigations (`DynamicCode`, `ExtensionPointDisable`, `StrictHandleCheck`, `ImageLoad`, `ChildProcess`). Applied state возвращается только по authenticated IPC `process-policy`; handshake protocol v2 также привязывает policy version/enforced bit к `ready` proof.
+
+Java/Minecraft на Windows создаётся с `CREATE_SUSPENDED`, назначается в отдельный non-breakaway Job Object с `KILL_ON_JOB_CLOSE` и `DIE_ON_UNHANDLED_EXCEPTION`, после чего NeverRuntime проверяет membership/limits и только затем выполняет `ResumeThread`. Если любой шаг enforcement не подтверждён, launch прекращается fail-closed. Job handle удерживается supervisor-ом на всём времени жизни runtime, поэтому закрытие boundary завершает связанное process tree. `ProcessStatus.windowsProcessPolicy` показывает фактически применённую policy.
+
+Java не получает `ProhibitDynamicCode`: HotSpot JIT требует динамически сгенерированный executable code. Строгие dynamic-code/image/child-process mitigations применяются к небольшому NeverGuard process, а Minecraft runtime изолируется process-tree policy без hooks/injection.
+
 ## NeverGuard Windows Integrity Evidence v1 — 0.13.2
 
 `0.13.2` расширяет authenticated process boundary реальным Windows Integrity Evidence v1. Evidence собирается внутри отдельного `neverguard.exe` после успешного IPC handshake и теперь является обязательным fail-closed шагом перед Windows Minecraft launch. Guard независимо проверяет фактический parent PID, хэширует собственный executable и launcher process image, фиксирует размер/mtime/process creation time, выполняет локальную Authenticode-проверку через `WinVerifyTrust`, считывает process mitigation flags через `GetProcessMitigationPolicy` и строит fingerprint загруженного module set через Toolhelp snapshot.

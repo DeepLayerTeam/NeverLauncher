@@ -896,6 +896,35 @@ if "neverguard-integrity-evidence-0132.py" not in preflight or "neverguard-integ
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
     fail("0.13.2 mandatory integrity evidence gate is incomplete")
 
+# 0.13.3 NeverGuard Windows runtime/process policy enforcement. NeverGuard
+# self-mitigations are applied before Tokio starts; Java starts suspended and
+# is assigned to a non-breakaway kill-on-close Job Object before execution.
+policy_0133 = read("runtime/neverruntime/src/windows_policy.rs")
+guard_0133 = read("runtime/neverruntime/src/guard_ipc.rs")
+supervisor_0133 = read("runtime/neverruntime/src/supervisor.rs")
+desktop_0133 = read("apps/desktop/src-tauri/src/main.rs")
+policy_gate_0133 = read("scripts/smoke/offline/neverguard-process-policy-0133.py")
+for required in [
+    "SetProcessMitigationPolicy", "GetProcessMitigationPolicy", "CreateJobObjectW",
+    "SetInformationJobObject", "AssignProcessToJobObject", "IsProcessInJob",
+    "QueryInformationJobObject", "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+    "JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION", "CREATE_SUSPENDED", "ResumeThread",
+]:
+    if required not in policy_0133:
+        fail(f"0.13.3 Windows runtime/process policy missing primitive: {required}")
+for required in ["process-policy", "process_policy_enforced", "validate_guard_process_policy"]:
+    if required not in guard_0133:
+        fail(f"0.13.3 authenticated process-policy IPC missing: {required}")
+for required in ["prepare_runtime_command", "enforce_runtime_process", "runtime_policy: Some(runtime_policy)"]:
+    if required not in supervisor_0133:
+        fail(f"0.13.3 runtime supervisor policy enforcement missing: {required}")
+if "launch заблокирован: NeverGuard Windows process policy verification failed" not in desktop_0133:
+    fail("0.13.3 Desktop launch is not fail-closed on process policy verification")
+if "neverguard-process-policy-0133.py" not in preflight or "neverguard-process-policy-0133.py" not in ci:
+    fail("0.13.3 process policy gate is not wired into preflight/CI")
+if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
+    fail("0.13.3 mandatory process policy release gate is incomplete")
+
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

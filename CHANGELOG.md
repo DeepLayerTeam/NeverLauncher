@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.13.3 — Windows runtime/process policy enforcement
+
+`0.13.3` переводит NeverGuard Windows policy из наблюдаемого evidence в реально применяемую runtime boundary. Политики включаются fail-closed: `neverguard.exe` усиливает собственный процесс до инициализации Tokio, а Java/Minecraft создаётся suspended и начинает выполнение только после успешного назначения в проверенный Windows Job Object.
+
+### NeverGuard self-policy
+
+- До создания async runtime NeverGuard применяет `SetProcessMitigationPolicy` для Dynamic Code, Extension Point Disable, Strict Handle Check, Image Load и Child Process policy, затем повторно считывает каждую policy через `GetProcessMitigationPolicy`. Ошибка применения или верификации завершает guard до открытия authenticated session.
+- Guard запрещает dynamic code и создание дочерних процессов, отключает legacy extension points, включает strict-handle checks и блокирует remote/low-integrity image loading с предпочтением System32. Применённое состояние доступно через authenticated IPC `process-policy` и привязано к `ready` handshake.
+- IPC protocol поднят до v2: ready proof теперь включает process-policy version/enforced bit, поэтому клиент не может принять старый guard как policy-enforced instance.
+
+### Minecraft runtime tree enforcement
+
+- NeverRuntime на Windows создаёт Java с `CREATE_SUSPENDED`. До выполнения пользовательского bytecode процесс назначается в новый Job Object с `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` и `JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION`. Breakaway flags запрещены и фактическая membership/limit mask проверяется Win32 API.
+- Только после успешного `AssignProcessToJobObject` + `IsProcessInJob` + `QueryInformationJobObject` NeverRuntime находит suspended primary thread и вызывает `ResumeThread`. Любая ошибка до resume блокирует launch и инициирует termination child process.
+- Job handle живёт столько же, сколько supervised runtime. Закрытие launcher/supervisor boundary завершает runtime tree через kill-on-close; `ProcessStatus` публикует фактически применённый `windowsProcessPolicy`.
+- Запрет dynamic code намеренно не применяется к Java/Minecraft process: HotSpot JIT требует executable generated code. Вместо несовместимого флага runtime ограничивается Job Object/process-tree policy, а строгие mitigations применяются к самому небольшому NeverGuard process.
+
+### Release verification
+
+- Windows native test проверяет реальное создание suspended child, Job Object assignment, non-breakaway policy и resume; NeverGuard integration test проверяет authenticated process-policy report вместе с Integrity Evidence v1.
+- CI/preflight получили обязательный `neverguard-process-policy-0133.py`; Windows job запускает policy unit/native tests, process-boundary integration test и `clippy -D warnings`.
+- Это user-mode Windows process policy enforcement, а не kernel anti-cheat и не server-verifiable attestation. Оно не использует aggressive hooks и служит enforced runtime boundary для последующих NeverGuard integrity/attestation этапов.
+
 ## 0.13.2 — Windows Integrity Evidence v1
 
 `0.13.2` добавляет первый рабочий Windows integrity-evidence слой поверх отдельного NeverGuard process boundary из `0.13.1`. Evidence собирается внутри `neverguard.exe` только после mutual-authenticated IPC и перед каждым Windows Minecraft launch; ошибка сбора, нарушение parent boundary, повреждённый digest или session proof блокируют launch.

@@ -49,6 +49,7 @@ run_step device-trust-migration-stabilization-01210 python3 "${ROOT_DIR}/scripts
 run_step device-trust-release-0130 python3 "${ROOT_DIR}/scripts/smoke/offline/device-trust-release-0130.py"
 run_step neverguard-windows-0131 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-windows-0131.py"
 run_step neverguard-integrity-evidence-0132 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-integrity-evidence-0132.py"
+run_step neverguard-process-policy-0133 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-process-policy-0133.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
 run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"

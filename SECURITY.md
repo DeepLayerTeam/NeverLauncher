@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## NeverGuard Windows: применение runtime/process policy — 0.13.3
+
+В `0.13.3` NeverGuard применяет Windows process mitigations до создания Tokio runtime и fail-closed сверяет их через `GetProcessMitigationPolicy`. Guard запрещает dynamic code и child-process creation, отключает extension points, включает strict-handle checks и ограничивает загрузку remote/low-integrity images. Authenticated IPC protocol v2 включает policy version/enforced state в `ready` proof и предоставляет отдельный `process-policy` report.
+
+Minecraft Java process создаётся с `CREATE_SUSPENDED`, затем назначается в Windows Job Object. До `ResumeThread` NeverRuntime обязан подтвердить `AssignProcessToJobObject`, `IsProcessInJob` и фактические limits; обязательны `KILL_ON_JOB_CLOSE` и `DIE_ON_UNHANDLED_EXCEPTION`, breakaway запрещён. При неуспехе process остаётся fail-closed и уничтожается. Job Object handle удерживается на время жизни supervised runtime tree.
+
+`ProhibitDynamicCode` **не применяется к Java/Minecraft**, поскольку HotSpot JIT генерирует executable code во время работы. Попытка навязать этот mitigation сделала бы нормальный runtime несовместимым. Эта версия является user-mode process/runtime policy enforcement, а не kernel anti-cheat, memory protection от privileged attacker или server-verifiable attestation; aggressive hooks/injection по-прежнему не используются.
+
 ## NeverGuard Windows Integrity Evidence v1 — 0.13.2
 
 В `0.13.2` отдельный NeverGuard process после authenticated IPC собирает **local evidence** о собственной Windows process boundary и о launcher process. Перед чтением bootstrap secret guard через Toolhelp проверяет фактический parent PID; mismatch с ожидаемым Desktop PID завершает startup. Evidence содержит SHA-256 process images, file metadata/process creation time, local Authenticode result через `WinVerifyTrust`, raw mitigation flags из `GetProcessMitigationPolicy` и fingerprint загруженного module set.

@@ -1,12 +1,28 @@
 #[cfg(windows)]
-use neverruntime::run_windows_guard_server;
+use neverruntime::{ensure_guard_process_policy, run_windows_guard_server};
 #[cfg(windows)]
 use std::env;
 use std::process::ExitCode;
 
-#[tokio::main]
-async fn main() -> ExitCode {
-    match run().await {
+fn main() -> ExitCode {
+    #[cfg(windows)]
+    if let Err(err) = ensure_guard_process_policy() {
+        eprintln!("neverguard: {err}");
+        return ExitCode::FAILURE;
+    }
+
+    let runtime = match tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            eprintln!("neverguard: failed to initialize async runtime: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    match runtime.block_on(run()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("neverguard: {err}");

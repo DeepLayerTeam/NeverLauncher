@@ -13,10 +13,16 @@ use sha2::Sha256;
 use subtle::ConstantTimeEq;
 use std::path::{Path, PathBuf};
 use crate::integrity::NeverGuardIntegrityEvidence;
+use crate::windows_policy::GuardProcessPolicyReport;
 #[cfg(windows)]
 use crate::integrity::{
     collect_windows_integrity_evidence, observed_windows_parent_pid, recompute_evidence_sha256,
     validate_evidence_shape,
+};
+#[cfg(windows)]
+use crate::windows_policy::{
+    ensure_guard_process_policy, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 #[cfg(windows)]
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -35,7 +41,7 @@ use tokio::{
     time::{sleep, timeout, Duration, Instant},
 };
 
-pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 1;
+pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 2;
 #[cfg(any(windows, test))]
 const NEVERGUARD_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.";
 #[cfg(windows)]
@@ -59,6 +65,8 @@ pub struct NeverGuardStatus {
     pub parent_pid: u32,
     pub protocol_version: u32,
     pub authenticated: bool,
+    pub process_policy_version: u32,
+    pub process_policy_enforced: bool,
     pub started_at_unix: u64,
     pub message: String,
 }
@@ -101,6 +109,8 @@ struct ServerReady {
     protocol_version: u32,
     guard_pid: u32,
     started_at_unix: u64,
+    process_policy_version: u32,
+    process_policy_enforced: bool,
     ready_proof: String,
 }
 
@@ -289,7 +299,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ensure_started(&self) -> Result<NeverGuardStatus, String> {
-        Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -319,7 +329,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ping(&self) -> Result<(), String> {
-        Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -338,7 +348,26 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn integrity_evidence(&self) -> Result<NeverGuardIntegrityEvidence, String> {
-        Err("NeverGuard 0.13.2 Windows integrity evidence доступен только для Windows".to_string())
+        Err("NeverGuard 0.13.3 Windows integrity evidence доступен только для Windows".to_string())
+    }
+
+    #[cfg(windows)]
+    pub async fn process_policy(&self) -> Result<GuardProcessPolicyReport, String> {
+        self.ensure_started().await?;
+        let mut state = self.inner.lock().await;
+        let handle = state
+            .as_mut()
+            .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
+        let payload = send_command(handle, "process-policy").await?;
+        let policy: GuardProcessPolicyReport = serde_json::from_value(payload)
+            .map_err(|err| format!("NeverGuard process policy payload повреждён: {err}"))?;
+        validate_guard_process_policy(handle, &policy)?;
+        Ok(policy)
+    }
+
+    #[cfg(not(windows))]
+    pub async fn process_policy(&self) -> Result<GuardProcessPolicyReport, String> {
+        Err("NeverGuard 0.13.3 Windows process policy доступен только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -478,10 +507,18 @@ async fn client_authenticate(
         || ready.protocol_version != NEVERGUARD_PROTOCOL_VERSION
         || ready.guard_pid != challenge.guard_pid
         || ready.started_at_unix != challenge.started_at_unix
+        || ready.process_policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+        || !ready.process_policy_enforced
     {
-        return Err("NeverGuard IPC ready response не соответствует handshake".to_string());
+        return Err("NeverGuard IPC ready response не соответствует handshake/policy".to_string());
     }
-    let expected_ready = ready_proof(&session_key, ready.guard_pid, ready.started_at_unix);
+    let expected_ready = ready_proof(
+        &session_key,
+        ready.guard_pid,
+        ready.started_at_unix,
+        ready.process_policy_version,
+        ready.process_policy_enforced,
+    );
     let actual_ready = decode_hex_32(&ready.ready_proof, "readyProof")?;
     if !constant_time_eq(&expected_ready, &actual_ready) {
         return Err("NeverGuard ready authentication failed".to_string());
@@ -493,8 +530,10 @@ async fn client_authenticate(
         parent_pid: client_pid,
         protocol_version: NEVERGUARD_PROTOCOL_VERSION,
         authenticated: true,
+        process_policy_version: ready.process_policy_version,
+        process_policy_enforced: ready.process_policy_enforced,
         started_at_unix: challenge.started_at_unix,
-        message: "NeverGuard Windows process boundary authenticated".to_string(),
+        message: "NeverGuard Windows process boundary authenticated; process policy enforced".to_string(),
     };
     Ok((pipe, session_key, status))
 }
@@ -600,12 +639,42 @@ fn validate_integrity_evidence(
 }
 
 #[cfg(windows)]
+fn validate_guard_process_policy(
+    handle: &GuardHandle,
+    policy: &GuardProcessPolicyReport,
+) -> Result<(), String> {
+    let guard_pid = handle
+        .child
+        .id()
+        .ok_or_else(|| "NeverGuard child PID unavailable during policy validation".to_string())?;
+    if policy.schema != NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA
+        || policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+        || policy.pid != guard_pid
+        || !policy.enforced
+        || !policy.dynamic_code_prohibited
+        || !policy.extension_points_disabled
+        || !policy.strict_handle_checks
+        || !policy.remote_images_blocked
+        || !policy.low_mandatory_label_images_blocked
+        || !policy.prefer_system32_images
+        || !policy.child_process_creation_blocked
+    {
+        return Err("NeverGuard Windows process policy verification failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
 pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Result<(), String> {
     validate_pipe_endpoint(&endpoint)?;
     if parent_pid == 0 {
         return Err("NeverGuard parent PID должен быть > 0".to_string());
     }
     let guard_pid = std::process::id();
+    let process_policy = ensure_guard_process_policy()?;
+    if process_policy.pid != guard_pid || !process_policy.enforced {
+        return Err("NeverGuard Windows process policy did not bind to guard PID".to_string());
+    }
     let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
     if observed_parent_pid != parent_pid {
         return Err(format!(
@@ -665,6 +734,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
                 guard_pid,
                 started_at_unix,
                 &bootstrap_secret,
+                &process_policy,
             ),
         )
         .await;
@@ -694,6 +764,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         guard_pid,
         started_at_unix,
         &session_key,
+        &process_policy,
     )
     .await;
     session_key.zeroize();
@@ -702,7 +773,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
 
 #[cfg(not(windows))]
 pub async fn run_windows_guard_server(_endpoint: String, _parent_pid: u32) -> Result<(), String> {
-    Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
+    Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
 }
 
 #[cfg(windows)]
@@ -713,6 +784,7 @@ async fn server_authenticate(
     guard_pid: u32,
     started_at_unix: u64,
     bootstrap_secret: &[u8; 32],
+    process_policy: &GuardProcessPolicyReport,
 ) -> Result<[u8; 32], String> {
     let hello: ClientHello = read_frame(server).await?;
     if hello.kind != "hello"
@@ -781,7 +853,15 @@ async fn server_authenticate(
             protocol_version: NEVERGUARD_PROTOCOL_VERSION,
             guard_pid,
             started_at_unix,
-            ready_proof: hex::encode(ready_proof(&session_key, guard_pid, started_at_unix)),
+            process_policy_version: process_policy.policy_version,
+            process_policy_enforced: process_policy.enforced,
+            ready_proof: hex::encode(ready_proof(
+                &session_key,
+                guard_pid,
+                started_at_unix,
+                process_policy.policy_version,
+                process_policy.enforced,
+            )),
         },
     )
     .await?;
@@ -795,6 +875,7 @@ async fn serve_authenticated_session(
     guard_pid: u32,
     started_at_unix: u64,
     session_key: &[u8; 32],
+    process_policy: &GuardProcessPolicyReport,
 ) -> Result<(), String> {
     let mut expected_sequence = 1u64;
     loop {
@@ -836,10 +917,19 @@ async fn serve_authenticated_session(
                     parent_pid,
                     protocol_version: NEVERGUARD_PROTOCOL_VERSION,
                     authenticated: true,
+                    process_policy_version: process_policy.policy_version,
+                    process_policy_enforced: process_policy.enforced,
                     started_at_unix,
-                    message: "NeverGuard Windows process boundary authenticated".to_string(),
+                    message: "NeverGuard Windows process boundary authenticated; process policy enforced".to_string(),
                 })
                 .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                false,
+            ),
+            "process-policy" => (
+                true,
+                serde_json::to_value(process_policy).map_err(|err| {
+                    format!("NeverGuard process policy serialization failed: {err}")
+                })?,
                 false,
             ),
             "integrity-evidence" => {
@@ -1002,7 +1092,7 @@ fn handshake_transcript(
     server_nonce: &[u8; 32],
 ) -> Vec<u8> {
     let mut data = Vec::with_capacity(192);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v1\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v2\0");
     append_len_prefixed(&mut data, label);
     append_len_prefixed(&mut data, endpoint.as_bytes());
     data.extend_from_slice(&client_pid.to_le_bytes());
@@ -1063,18 +1153,26 @@ fn derive_session_key(
 }
 
 #[cfg(any(windows, test))]
-fn ready_proof(session_key: &[u8; 32], guard_pid: u32, started_at_unix: u64) -> [u8; 32] {
-    let mut data = Vec::with_capacity(64);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v1\0");
+fn ready_proof(
+    session_key: &[u8; 32],
+    guard_pid: u32,
+    started_at_unix: u64,
+    process_policy_version: u32,
+    process_policy_enforced: bool,
+) -> [u8; 32] {
+    let mut data = Vec::with_capacity(80);
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v2\0");
     data.extend_from_slice(&guard_pid.to_le_bytes());
     data.extend_from_slice(&started_at_unix.to_le_bytes());
+    data.extend_from_slice(&process_policy_version.to_le_bytes());
+    data.push(u8::from(process_policy_enforced));
     hmac_sha256(session_key, &data)
 }
 
 #[cfg(any(windows, test))]
 fn request_mac(session_key: &[u8; 32], sequence: u64, request_id: &str, command: &str) -> [u8; 32] {
     let mut data = Vec::with_capacity(96);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v1\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v2\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     append_len_prefixed(&mut data, command.as_bytes());
@@ -1090,7 +1188,7 @@ fn response_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 96);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v1\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v2\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     data.push(u8::from(ok));
@@ -1218,7 +1316,17 @@ mod tests {
             &server_nonce,
         );
         assert_ne!(session, server);
-        assert_ne!(ready_proof(&session, 43, 44), session);
+        assert_ne!(ready_proof(&session, 43, 44, 1, true), session);
+    }
+
+    #[test]
+    fn ready_proof_is_bound_to_process_policy_state() {
+        let key = [6u8; 32];
+        let enforced = ready_proof(&key, 43, 44, 1, true);
+        let not_enforced = ready_proof(&key, 43, 44, 1, false);
+        let next_version = ready_proof(&key, 43, 44, 2, true);
+        assert_ne!(enforced, not_enforced);
+        assert_ne!(enforced, next_version);
     }
 
     #[test]

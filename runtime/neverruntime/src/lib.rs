@@ -3,6 +3,7 @@ pub mod managed_java;
 pub mod guard_ipc;
 mod integrity;
 pub mod supervisor;
+pub mod windows_policy;
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use integrity::{
@@ -12,6 +13,11 @@ pub use integrity::{
 };
 pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NeverGuardSupervisor, NEVERGUARD_PROTOCOL_VERSION};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
+pub use windows_policy::{
+    ensure_guard_process_policy, GuardProcessPolicyReport, RuntimeProcessPolicyReport,
+    RuntimeProcessPolicyGuard, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -539,7 +545,8 @@ pub async fn launch_with_timeout(
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
-    let mut child = Command::new(&plan.java_executable)
+    let mut command = Command::new(&plan.java_executable);
+    command
         .args(&plan.jvm_args)
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
@@ -548,9 +555,13 @@ pub async fn launch_with_timeout(
         .current_dir(Path::new(&plan.working_directory))
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
-        .stderr(Stdio::from(log_file))
+        .stderr(Stdio::from(log_file));
+    windows_policy::prepare_runtime_command(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
+    let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
+        .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
 
     let (status, timed_out) = if let Some(seconds) = max_runtime_seconds.filter(|seconds| *seconds > 0) {
         match timeout(Duration::from_secs(seconds), child.wait()).await {
