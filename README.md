@@ -238,6 +238,20 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## NeverGuard Windows 0.13.1
+
+`0.13.1` добавляет первый рабочий NeverGuard boundary для Windows. Guard — отдельный `neverguard.exe`; Desktop перед каждым Minecraft launch поднимает его и fail-closed требует успешный authenticated IPC handshake. Bootstrap secret генерируется на каждый запуск и передаётся guard как 32 raw bytes через унаследованный stdin, а не через argv/environment/файл.
+
+IPC работает через local-only Windows Named Pipe со случайным endpoint. Взаимная HMAC-SHA-256 аутентификация использует client/server nonces и отдельный session key; каждый последующий request/response подписан MAC и защищён монотонным sequence от replay/out-of-order. В `0.13.1` доступны operational commands `ping`, `status`, `shutdown`; integrity evidence и server-verifiable guard attestation относятся к следующим этапам NeverGuard и здесь намеренно не заявляются.
+
+Windows package собирается командой:
+
+```powershell
+./scripts/release/build-windows-desktop.ps1
+```
+
+ZIP содержит Desktop executable и обязательный соседний `neverguard.exe`; CI на `windows-2022` запускает реальный process-boundary integration test перед созданием release candidate.
+
 ## Device Trust Release 0.13.0
 
 `0.13.0` завершает roadmap Device Trust и делает trust evidence частью официального подписанного release bundle. Схема не получает пустую migration: production baseline остаётся `0018_device_trust_stabilization_01210`, а Backend `/ready` и Device Trust E2E обязаны подтвердить её перед PASS.

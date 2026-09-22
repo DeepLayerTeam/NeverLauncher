@@ -1,8 +1,10 @@
 pub mod compatibility;
 pub mod managed_java;
+pub mod guard_ipc;
 pub mod supervisor;
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
+pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NeverGuardSupervisor, NEVERGUARD_PROTOCOL_VERSION};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};

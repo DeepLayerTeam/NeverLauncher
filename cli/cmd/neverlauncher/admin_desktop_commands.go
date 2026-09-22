@@ -184,6 +184,7 @@ func desktopPackagePlatforms(ver string) []DesktopPackagePlatform {
 		{OS: "linux", Arch: "amd64", Format: "AppImage", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.AppImage", Status: "supported-if-built"},
 		{OS: "linux", Arch: "amd64", Format: "deb", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.deb", Status: "supported-if-built"},
 		{OS: "windows", Arch: "amd64", Format: "exe", Artifact: "neverlauncher-desktop-" + ver + "-windows-amd64.exe", Status: "supported-if-built"},
+		{OS: "windows", Arch: "amd64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-amd64.zip", Status: "supported-if-built"},
 		{OS: "windows", Arch: "amd64", Format: "msi", Artifact: "neverlauncher-desktop-" + ver + "-windows-amd64.msi", Status: "supported-if-built"},
 	}
 }

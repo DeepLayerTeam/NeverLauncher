@@ -2,6 +2,16 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## NeverGuard Windows 0.13.1
+
+NeverGuard в `0.13.1` является отдельной process boundary, а не injected DLL/hook. Desktop запускает соседний `neverguard.exe`, генерирует новый 256-bit bootstrap secret и передаёт его только через унаследованный stdin. Bootstrap secret не должен попадать в argv, environment, конфиг, telemetry или файл; обе стороны zeroize-ят его после derivation session key.
+
+Транспорт — Windows Named Pipe со случайным per-launch именем, единственным server instance и запрещёнными remote clients. Само имя pipe и parent PID не считаются secret. Mutual authentication строится на HMAC-SHA-256 по transcript, который включает endpoint, client PID, guard PID, время старта и два случайных nonce; server proof, client proof и session key используют разные labels.
+
+После handshake все IPC request/response MAC-ятся session key. Request обязан иметь точный следующий `sequence`; повтор, пропуск/перестановка sequence, неверный MAC, protocol mismatch, malformed JSON или frame >64 KiB закрывают authenticated session. `requestId` связывает response с конкретным request. Desktop перед Minecraft launch требует `ready + authenticated` и успешный `ping`; при сбое launch блокируется.
+
+Эта версия не заявляет process integrity evidence, anti-tamper hooks или server-verifiable NeverGuard attestation. Эти свойства должны добавляться отдельными последующими версиями и не выводятся из факта локального authenticated IPC.
+
 ## Migration hardening Device Trust 0.12.10
 
 `0.12.10` усиливает security boundary не новым trust signal, а целостностью persisted state. Migration `0018_device_trust_stabilization_01210.sql` сначала проверяет существующие данные и только затем добавляет relational ownership/lifecycle constraints. Cross-user session/device binding, replacement chain или Minecraft snapshot считаются unsafe state и блокируют upgrade вместо автоматического переписывания владельца.

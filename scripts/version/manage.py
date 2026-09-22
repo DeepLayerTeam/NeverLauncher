@@ -34,6 +34,14 @@ def render_json(path: Path, version: str) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 
 
+
+def render_product_version_json(path: Path, version: str) -> str:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "productVersion" not in data:
+        raise VersionError(f"{path.relative_to(ROOT)}: не найден productVersion")
+    data["productVersion"] = version
+    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
 def replace_package_version(text: str, version: str, path: Path) -> str:
     updated, count = re.subn(r'(?m)^(version\s*=\s*)"[^"]+"\s*$', rf'\1"{version}"', text, count=1)
     if count != 1:
@@ -63,6 +71,9 @@ def desired_files(version: str) -> dict[Path, str]:
     for rel in ("runtime/neverruntime/Cargo.toml", "apps/desktop/src-tauri/Cargo.toml"):
         path = ROOT / rel
         result[path] = replace_package_version(path.read_text(encoding="utf-8"), version, path)
+
+    device_trust_targets = ROOT / "device-trust/targets.json"
+    result[device_trust_targets] = render_product_version_json(device_trust_targets, version)
 
     for rel in ("deploy/production/env.production.example", "cli/cmd/neverlauncher/templates/production/env.production.example"):
         path = ROOT / rel

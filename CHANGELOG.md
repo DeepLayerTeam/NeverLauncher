@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.13.1 — NeverGuard Windows: process boundary + authenticated IPC
+
+`0.13.1` вводит первый production runtime boundary NeverGuard для Windows. Guard запускается отдельным `neverguard.exe` рядом с Desktop, а Windows launch становится fail-closed: Minecraft не стартует, пока Desktop не поднимет guard и не подтвердит authenticated IPC.
+
+### Process boundary
+
+- `neverguard.exe` является отдельным Rust process с собственным entrypoint; Desktop не загружает guard-код как hook/DLL в Minecraft-процесс.
+- Desktop генерирует криптографически случайный 256-bit bootstrap secret и передаёт его guard только через унаследованный stdin. Secret не помещается в argv, environment, config или временный файл и zeroize-ится после handshake.
+- IPC использует Windows Named Pipe в случайном per-launch namespace `NeverLauncher.Guard.*`, `FILE_FLAG_FIRST_PIPE_INSTANCE`, один server instance и `PIPE_REJECT_REMOTE_CLIENTS`.
+- Guard принимает только клиент с ожидаемым parent PID; знание PID не является аутентификацией и проверяется только вместе с possession bootstrap secret.
+
+### Authenticated IPC v1
+
+- Handshake взаимный: client/server nonces, HMAC-SHA-256 proofs в разных directions и отдельный derived session key. Transcript привязан к endpoint, обоим PID, guard start time и обоим nonce.
+- После handshake каждый request/response имеет HMAC и sequence/request ID; guard отклоняет replay и out-of-order requests, malformed frame, protocol mismatch и MAC mismatch. Размер JSON frame ограничен 64 KiB.
+- Реальные команды `ping`, `status`, `shutdown` проходят только после authentication. Потеря pipe завершает guard session; Desktop держит child handle с kill-on-drop.
+- Windows integration test запускает настоящий `neverguard.exe`, проходит handshake/ping/status/shutdown и проверяет привязку к parent PID.
+
+### Distribution and release gate
+
+- `scripts/release/build-windows-desktop.ps1` собирает Desktop и NeverGuard release binaries, кладёт `neverguard.exe` рядом с Desktop, фиксирует SHA-256/size в `WINDOWS_PACKAGE_MANIFEST.json` и формирует Windows ZIP.
+- Основной CI получил обязательный `windows-2022` job с real process integration test, clippy и сборкой side-by-side package; Linux release-candidate job зависит от успешного NeverGuard Windows job.
+- Добавлен gate `neverguard-windows-0131.py`; он проверяет, что process/IPC/security/release wiring не заменены декларацией.
+
 ## 0.13.0 — Device Trust Release
 
 `0.13.0` закрепляет Device Trust как release-level production boundary. Схема остаётся на sealed migration `0018_device_trust_stabilization_01210`: пустая migration ради номера версии не добавляется. Backend публикует machine-readable release contract через auth capabilities, а PostgreSQL E2E требует этот contract и `/ready` с актуальной migration перед lifecycle-проверками.

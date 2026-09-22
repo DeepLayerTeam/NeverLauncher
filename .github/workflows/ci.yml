@@ -40,6 +40,7 @@ jobs:
           python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
           python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
           python3 scripts/smoke/offline/device-trust-release-0130.py
+          python3 scripts/smoke/offline/neverguard-windows-0131.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -125,6 +126,35 @@ jobs:
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
 
+  neverguard-windows:
+    name: NeverGuard Windows process boundary
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - name: NeverGuard Windows integration test
+        run: |
+          cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
+          cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
+      - name: Build side-by-side Desktop + NeverGuard package
+        shell: pwsh
+        run: ./scripts/release/build-windows-desktop.ps1
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-windows-neverguard-${{ github.sha }}
+          path: dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
+          if-no-files-found: error
+
   bridge:
     name: ServerBridge plugins
     runs-on: ubuntu-24.04
@@ -165,7 +195,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, neverguard-windows, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

@@ -2,7 +2,7 @@ mod device_keys;
 
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
-    LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
+    LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -267,12 +267,28 @@ async fn ensure_managed_java(required_major_version: u32, distribution: String) 
 #[tauri::command]
 async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String) -> Result<LaunchPlan, String> { neverruntime::build_launch_plan(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await }
 #[tauri::command]
-async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, minecraft_credentials: Option<MinecraftLaunchCredentials>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> {
+async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, minecraft_credentials: Option<MinecraftLaunchCredentials>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>, neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<ProcessStatus, String> {
+    #[cfg(windows)]
+    {
+        let status = neverguard.ensure_started().await?;
+        if !status.authenticated || status.state != "ready" {
+            return Err("launch заблокирован: NeverGuard Windows boundary не authenticated/ready".to_string());
+        }
+        neverguard.ping().await?;
+    }
+    #[cfg(not(windows))]
+    let _ = &neverguard;
+
     if let Some(credentials) = minecraft_credentials {
         supervisor.start_authenticated(&manifest, &PathBuf::from(root), java_path, credentials, &pinned_public_key).await
     } else {
         supervisor.start(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await
     }
+}
+
+#[tauri::command]
+async fn neverguard_status(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<NeverGuardStatus, String> {
+    neverguard.status().await
 }
 #[tauri::command]
 async fn runtime_process_status(process_id: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> { supervisor.status(&process_id).await }
@@ -315,7 +331,8 @@ async fn open_game_directory(root: String) -> Result<String, String> {
 fn main() {
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
+        .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
