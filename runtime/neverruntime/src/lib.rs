@@ -1,9 +1,15 @@
 pub mod compatibility;
 pub mod managed_java;
 pub mod guard_ipc;
+mod integrity;
 pub mod supervisor;
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
+pub use integrity::{
+    AuthenticodeEvidence, BoundaryEvidence, ModuleSetEvidence, NeverGuardIntegrityEvidence,
+    ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
+    NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
+};
 pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NeverGuardSupervisor, NEVERGUARD_PROTOCOL_VERSION};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 

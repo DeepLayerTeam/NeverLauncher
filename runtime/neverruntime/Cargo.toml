@@ -1,6 +1,6 @@
 [package]
 name = "neverruntime"
-version = "0.13.1"
+version = "0.13.2"
 description = "NeverRuntime core library for NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
@@ -31,3 +31,6 @@ reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], defau
 tokio = { version = "1", features = ["fs", "io-util", "net", "process", "rt-multi-thread", "macros", "sync", "time"] }
 rand = "0.8"
 zeroize = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_Security_WinTrust", "Win32_System_Diagnostics_ToolHelp", "Win32_System_SystemServices", "Win32_System_Threading"] }

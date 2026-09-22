@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.13.2 — Windows Integrity Evidence v1
+
+`0.13.2` добавляет первый рабочий Windows integrity-evidence слой поверх отдельного NeverGuard process boundary из `0.13.1`. Evidence собирается внутри `neverguard.exe` только после mutual-authenticated IPC и перед каждым Windows Minecraft launch; ошибка сбора, нарушение parent boundary, повреждённый digest или session proof блокируют launch.
+
+### Evidence collection
+
+- NeverGuard независимо сверяет фактический parent PID через Windows Toolhelp snapshot с PID, переданным Desktop, и завершает startup при mismatch. Это усиливает прежнюю проверку PID внутри handshake фактическим OS-observed parent relation.
+- Для `neverguard.exe` и процесса launcher собираются image path, SHA-256 файла, размер/mtime и Windows process creation FILETIME. Хэш считается самим guard с диска, а не принимается от Desktop.
+- Authenticode проверяется локальным `WinVerifyTrust(WINTRUST_ACTION_GENERIC_VERIFY_V2)` без UI и без сетевой загрузки revocation-данных; evidence сохраняет `trusted` и исходный WinTrust status code, поэтому unsigned/невалидный binary не маскируется как trusted.
+- `GetProcessMitigationPolicy` снимает raw flags DEP, ASLR, Dynamic Code, Extension Point Disable, CFG, Binary Signature, Image Load, Child Process, User Shadow Stack и SEHOP. Неподдерживаемая отдельная policy попадает в `queryFailures`, сохраняя остальные evidence.
+- Toolhelp module snapshot для guard и launcher превращается в детерминированный SHA-256 fingerprint набора загруженных module paths + SHA-256 содержимого каждого module file + file metadata; отдельно публикуются только basename нестандартных non-system modules, чтобы не раскрывать дополнительные пользовательские пути.
+
+### Authenticated evidence transport
+
+- Новый IPC command `integrity-evidence` доступен только внутри уже authenticated NeverGuard session. Сбор файлов/Win32 evidence выполняется через blocking worker, не блокируя Tokio IPC runtime.
+- Canonical evidence core получает собственный SHA-256 (`evidenceSha256`). Guard дополнительно HMAC-привязывает digest к текущему IPC session key (`sessionProof`); Desktop заново проверяет schema/version, PID boundary, digest и proof constant-time перед возвратом evidence вызывающему коду.
+- Desktop export-команда `neverguard_integrity_evidence` возвращает только уже локально проверенный payload. Windows `launch_minecraft` становится fail-closed на evidence collection/verification.
+
+### Verification and security boundary
+
+- Windows integration test запускает настоящий `neverguard.exe`, проходит handshake, получает Integrity Evidence v1, проверяет PID/hash/module/session-proof shape и затем корректный shutdown. Отдельные platform-independent unit tests защищают canonical evidence digest от незаметной модификации полей.
+- CI/preflight получили обязательный gate `neverguard-integrity-evidence-0132.py`; Windows job компилирует и тестирует integrity implementation вместе с process-boundary integration test и clippy.
+- Integrity Evidence v1 является **local Windows evidence**. `0.13.2` не объявляет его server-verifiable attestation, kernel anti-cheat, memory integrity proof или TPM-backed quote; cryptographic server verification остаётся отдельным следующим этапом NeverGuard.
+
 ## 0.13.1 — NeverGuard Windows: process boundary + authenticated IPC
 
 `0.13.1` вводит первый production runtime boundary NeverGuard для Windows. Guard запускается отдельным `neverguard.exe` рядом с Desktop, а Windows launch становится fail-closed: Minecraft не стартует, пока Desktop не поднимет guard и не подтвердит authenticated IPC.

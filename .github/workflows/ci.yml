@@ -41,6 +41,7 @@ jobs:
           python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
           python3 scripts/smoke/offline/device-trust-release-0130.py
           python3 scripts/smoke/offline/neverguard-windows-0131.py
+          python3 scripts/smoke/offline/neverguard-integrity-evidence-0132.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -127,7 +128,7 @@ jobs:
           cargo build --release --manifest-path src-tauri/Cargo.toml
 
   neverguard-windows:
-    name: NeverGuard Windows process boundary
+    name: NeverGuard Windows process boundary + integrity evidence
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
@@ -143,6 +144,7 @@ jobs:
       - name: NeverGuard Windows integration test
         run: |
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
       - name: Build side-by-side Desktop + NeverGuard package

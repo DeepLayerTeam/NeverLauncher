@@ -873,6 +873,30 @@ if "e2e/device-trust-migration-result/" not in ci or "e2e/device-trust-migration
 if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
     fail("0.12.10 mandatory migration stabilization release gate is incomplete")
 
+# 0.13.2 NeverGuard Windows Integrity Evidence v1. Evidence is collected by the
+# separate guard process and authenticated over the existing local IPC session.
+integrity_0132 = read("runtime/neverruntime/src/integrity.rs")
+guard_0132 = read("runtime/neverruntime/src/guard_ipc.rs")
+desktop_0132 = read("apps/desktop/src-tauri/src/main.rs")
+integrity_gate_0132 = read("scripts/smoke/offline/neverguard-integrity-evidence-0132.py")
+for required in [
+    "WinVerifyTrust", "GetProcessMitigationPolicy", "QueryFullProcessImageNameW",
+    "CreateToolhelp32Snapshot", "module_set_sha256", "recompute_evidence_sha256",
+    "observed_parent_pid", "neverguard/windows-integrity-evidence/v1",
+]:
+    if required not in integrity_0132:
+        fail(f"0.13.2 Windows integrity evidence missing primitive: {required}")
+for required in ["integrity-evidence", "integrity_session_proof", "collect_windows_integrity_evidence"]:
+    if required not in guard_0132:
+        fail(f"0.13.2 authenticated integrity IPC missing: {required}")
+if "launch заблокирован: NeverGuard Windows Integrity Evidence v1 недоступен" not in desktop_0132:
+    fail("0.13.2 Desktop launch is not fail-closed on integrity evidence collection")
+if "neverguard-integrity-evidence-0132.py" not in preflight or "neverguard-integrity-evidence-0132.py" not in ci:
+    fail("0.13.2 integrity evidence gate is not wired into preflight/CI")
+if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
+    fail("0.13.2 mandatory integrity evidence gate is incomplete")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

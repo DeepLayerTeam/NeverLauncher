@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## NeverGuard Windows Integrity Evidence v1 — 0.13.2
+
+В `0.13.2` отдельный NeverGuard process после authenticated IPC собирает **local evidence** о собственной Windows process boundary и о launcher process. Перед чтением bootstrap secret guard через Toolhelp проверяет фактический parent PID; mismatch с ожидаемым Desktop PID завершает startup. Evidence содержит SHA-256 process images, file metadata/process creation time, local Authenticode result через `WinVerifyTrust`, raw mitigation flags из `GetProcessMitigationPolicy` и fingerprint загруженного module set.
+
+Evidence core хэшируется SHA-256 и привязывается HMAC `sessionProof` к текущему derived IPC session key. Desktop не принимает payload до повторной проверки schema/version, expected/observed PID, digest и session proof; Windows Minecraft launch fail-closed требует успешного evidence collection. Authenticode выполняется без UI и с cache-only retrieval, чтобы launch path не зависел от произвольного сетевого ответа проверки сертификата. Отдельная неподдерживаемая mitigation policy отражается в `queryFailures`, а не подменяется значением `0`.
+
+Эта граница намеренно **не является server-verifiable attestation**. `WinVerifyTrust`, file hashes, module snapshot и process mitigations — локальные измерения; Desktop знает IPC session key, а evidence ещё не подписывается отдельным server-challenged hardware/process identity. Поэтому Backend не должен повышать device assurance или authorization на основании одного payload `0.13.2`. Server-verifiable NeverGuard attestation, freshness challenge и anti-replay на удалённой стороне относятся к следующему этапу.
+
 ## NeverGuard Windows 0.13.1
 
 NeverGuard в `0.13.1` является отдельной process boundary, а не injected DLL/hook. Desktop запускает соседний `neverguard.exe`, генерирует новый 256-bit bootstrap secret и передаёт его только через унаследованный stdin. Bootstrap secret не должен попадать в argv, environment, конфиг, telemetry или файл; обе стороны zeroize-ят его после derivation session key.

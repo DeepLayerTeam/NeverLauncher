@@ -12,6 +12,12 @@ use sha2::Sha256;
 #[cfg(any(windows, test))]
 use subtle::ConstantTimeEq;
 use std::path::{Path, PathBuf};
+use crate::integrity::NeverGuardIntegrityEvidence;
+#[cfg(windows)]
+use crate::integrity::{
+    collect_windows_integrity_evidence, observed_windows_parent_pid, recompute_evidence_sha256,
+    validate_evidence_shape,
+};
 #[cfg(windows)]
 use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(windows)]
@@ -283,7 +289,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ensure_started(&self) -> Result<NeverGuardStatus, String> {
-        Err("NeverGuard 0.13.1 process boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -313,7 +319,26 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ping(&self) -> Result<(), String> {
-        Err("NeverGuard 0.13.1 process boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
+    }
+
+    #[cfg(windows)]
+    pub async fn integrity_evidence(&self) -> Result<NeverGuardIntegrityEvidence, String> {
+        self.ensure_started().await?;
+        let mut state = self.inner.lock().await;
+        let handle = state
+            .as_mut()
+            .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
+        let payload = send_command(handle, "integrity-evidence").await?;
+        let evidence: NeverGuardIntegrityEvidence = serde_json::from_value(payload)
+            .map_err(|err| format!("NeverGuard integrity evidence payload повреждён: {err}"))?;
+        validate_integrity_evidence(handle, &evidence)?;
+        Ok(evidence)
+    }
+
+    #[cfg(not(windows))]
+    pub async fn integrity_evidence(&self) -> Result<NeverGuardIntegrityEvidence, String> {
+        Err("NeverGuard 0.13.2 Windows integrity evidence доступен только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -543,10 +568,49 @@ fn parse_status(value: Value) -> Result<NeverGuardStatus, String> {
 }
 
 #[cfg(windows)]
+fn validate_integrity_evidence(
+    handle: &GuardHandle,
+    evidence: &NeverGuardIntegrityEvidence,
+) -> Result<(), String> {
+    validate_evidence_shape(evidence)?;
+    let guard_pid = handle
+        .child
+        .id()
+        .ok_or_else(|| "NeverGuard child PID unavailable during evidence validation".to_string())?;
+    let launcher_pid = std::process::id();
+    if evidence.guard.pid != guard_pid
+        || evidence.launcher.pid != launcher_pid
+        || evidence.boundary.expected_parent_pid != launcher_pid
+        || evidence.boundary.observed_parent_pid != launcher_pid
+    {
+        return Err("NeverGuard integrity evidence PID binding mismatch".to_string());
+    }
+
+    let expected_digest = recompute_evidence_sha256(evidence)?;
+    let actual_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
+    if !constant_time_eq(&expected_digest, &actual_digest) {
+        return Err("NeverGuard integrity evidence digest verification failed".to_string());
+    }
+    let expected_proof = integrity_session_proof(&handle.session_key, &actual_digest);
+    let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
+    if !constant_time_eq(&expected_proof, &actual_proof) {
+        return Err("NeverGuard integrity evidence session proof verification failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
 pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Result<(), String> {
     validate_pipe_endpoint(&endpoint)?;
     if parent_pid == 0 {
         return Err("NeverGuard parent PID должен быть > 0".to_string());
+    }
+    let guard_pid = std::process::id();
+    let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
+    if observed_parent_pid != parent_pid {
+        return Err(format!(
+            "NeverGuard actual parent PID mismatch: expected {parent_pid}, observed {observed_parent_pid}"
+        ));
     }
 
     let mut bootstrap_secret = [0u8; BOOTSTRAP_SECRET_LEN];
@@ -556,7 +620,6 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     drop(bootstrap_stdin);
 
     let started_at_unix = now_unix()?;
-    let guard_pid = std::process::id();
     let mut server = ServerOptions::new()
         .first_pipe_instance(true)
         .reject_remote_clients(true)
@@ -639,7 +702,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
 
 #[cfg(not(windows))]
 pub async fn run_windows_guard_server(_endpoint: String, _parent_pid: u32) -> Result<(), String> {
-    Err("NeverGuard 0.13.1 process boundary реализован только для Windows".to_string())
+    Err("NeverGuard 0.13.2 Windows integrity boundary реализован только для Windows".to_string())
 }
 
 #[cfg(windows)]
@@ -779,6 +842,22 @@ async fn serve_authenticated_session(
                 .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
                 false,
             ),
+            "integrity-evidence" => {
+                let mut evidence = tokio::task::spawn_blocking(move || {
+                    collect_windows_integrity_evidence(parent_pid)
+                })
+                .await
+                .map_err(|err| format!("NeverGuard integrity evidence worker failed: {err}"))??;
+                let digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
+                evidence.session_proof = hex::encode(integrity_session_proof(session_key, &digest));
+                (
+                    true,
+                    serde_json::to_value(evidence).map_err(|err| {
+                        format!("NeverGuard integrity evidence serialization failed: {err}")
+                    })?,
+                    false,
+                )
+            }
             "shutdown" => (true, json!({"shutdown": true}), true),
             other => (
                 false,
@@ -1020,6 +1099,14 @@ fn response_mac(
 }
 
 #[cfg(any(windows, test))]
+fn integrity_session_proof(session_key: &[u8; 32], evidence_digest: &[u8; 32]) -> [u8; 32] {
+    let mut data = Vec::with_capacity(80);
+    data.extend_from_slice(b"NeverLauncher NeverGuard integrity evidence session v1\0");
+    data.extend_from_slice(evidence_digest);
+    hmac_sha256(session_key, &data)
+}
+
+#[cfg(any(windows, test))]
 fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
     let mut mac = Hmac::<Sha256>::new_from_slice(key).expect("HMAC-SHA-256 accepts arbitrary key length");
     mac.update(message);
@@ -1132,6 +1219,18 @@ mod tests {
         );
         assert_ne!(session, server);
         assert_ne!(ready_proof(&session, 43, 44), session);
+    }
+
+    #[test]
+    fn integrity_evidence_proof_is_session_and_digest_bound() {
+        let digest = [0x5au8; 32];
+        let first = integrity_session_proof(&[1u8; 32], &digest);
+        let second = integrity_session_proof(&[2u8; 32], &digest);
+        let mut changed_digest = digest;
+        changed_digest[0] ^= 0xff;
+        let changed = integrity_session_proof(&[1u8; 32], &changed_digest);
+        assert_ne!(first, second);
+        assert_ne!(first, changed);
     }
 
     #[test]

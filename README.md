@@ -238,6 +238,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## NeverGuard Windows Integrity Evidence v1 — 0.13.2
+
+`0.13.2` расширяет authenticated process boundary реальным Windows Integrity Evidence v1. Evidence собирается внутри отдельного `neverguard.exe` после успешного IPC handshake и теперь является обязательным fail-closed шагом перед Windows Minecraft launch. Guard независимо проверяет фактический parent PID, хэширует собственный executable и launcher process image, фиксирует размер/mtime/process creation time, выполняет локальную Authenticode-проверку через `WinVerifyTrust`, считывает process mitigation flags через `GetProcessMitigationPolicy` и строит fingerprint загруженного module set через Toolhelp snapshot.
+
+Payload использует schema `neverguard/windows-integrity-evidence/v1`. Canonical core получает `evidenceSha256`, а затем guard привязывает digest к текущему authenticated IPC session key через HMAC `sessionProof`. Desktop повторно проверяет schema/version, PID boundary, SHA-256 и session proof перед использованием. Команда `neverguard_integrity_evidence` возвращает уже проверенный local payload; ошибка сбора или проверки блокирует `launch_minecraft`.
+
+Это **local evidence**, а не server-verifiable attestation: Desktop участвует в локальной IPC session и текущая версия не использует TPM quote, отдельный device-bound attestation key, kernel measurement или remote verifier. Следующий server-verifiable этап должен добавлять собственную challenge/freshness/signature boundary и не выводить удалённое доверие только из `WinVerifyTrust` или process mitigations.
+
 ## NeverGuard Windows 0.13.1
 
 `0.13.1` добавляет первый рабочий NeverGuard boundary для Windows. Guard — отдельный `neverguard.exe`; Desktop перед каждым Minecraft launch поднимает его и fail-closed требует успешный authenticated IPC handshake. Bootstrap secret генерируется на каждый запуск и передаётся guard как 32 raw bytes через унаследованный stdin, а не через argv/environment/файл.

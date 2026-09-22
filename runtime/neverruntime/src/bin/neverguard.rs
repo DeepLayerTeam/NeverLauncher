@@ -18,7 +18,7 @@ async fn main() -> ExitCode {
 async fn run() -> Result<(), String> {
     #[cfg(not(windows))]
     {
-        return Err("NeverGuard 0.13.1 is Windows-only; Linux/macOS implementations are planned later".to_string());
+        return Err("NeverGuard is Windows-only; Linux/macOS implementations are planned later".to_string());
     }
 
     #[cfg(windows)]
