@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0017_device_key_recovery_rotation_0128" {
+	if st.Current != "0018_device_trust_stabilization_01210" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0017_device_key_recovery_rotation_0128" {
+		if k != "0018_device_trust_stabilization_01210" {
 			pending[k] = v
 		}
 	}
@@ -66,6 +66,31 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 	st, err = EvaluateApplied(drift)
 	if err == nil || st.Compatible || !strings.Contains(err.Error(), "checksum migration") {
 		t.Fatalf("checksum drift was not rejected: status=%+v err=%v", st, err)
+	}
+}
+
+func TestDeviceTrustStabilizationMigration01210(t *testing.T) {
+	b, err := os.ReadFile("sql/0018_device_trust_stabilization_01210.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"key-rotate",
+		"key-recover",
+		"trusted_devices_replacement_owner_fk",
+		"auth_sessions_trusted_device_owner_fk",
+		"minecraft_sessions_never_session_owner_fk",
+		"minecraft_sessions_device_owner_fk",
+		"minecraft_sessions_profile_owner_fk",
+		"trusted_devices_replacement_shape_check",
+		"auth_sessions_device_binding_shape_check",
+		"legacy-device-revoked",
+		"UPDATE minecraft_sessions SET trusted_device_id=NULL",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.12.10 stabilization migration missing %q", required)
+		}
 	}
 }
 

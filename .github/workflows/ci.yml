@@ -38,6 +38,7 @@ jobs:
           python3 scripts/smoke/offline/minecraft-serverbridge-trust-0127.py
           python3 scripts/smoke/offline/cross-platform-key-recovery-0128.py
           python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
+          python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -245,6 +246,8 @@ jobs:
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
       - name: Federation PostgreSQL migration + restart + multi-instance E2E
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
+      - name: Device Trust 0.12.9 to 0.12.10 migration E2E
+        run: bash e2e/scripts/run-device-trust-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -286,6 +289,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: neverlauncher-device-trust-protocol-e2e-evidence
-          path: e2e/device-trust-result/
+          path: |
+            e2e/device-trust-result/
+            e2e/device-trust-migration-result/
           if-no-files-found: ignore
           retention-days: 14

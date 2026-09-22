@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Migration hardening Device Trust 0.12.10
+
+`0.12.10` усиливает security boundary не новым trust signal, а целостностью persisted state. Migration `0018_device_trust_stabilization_01210.sql` сначала проверяет существующие данные и только затем добавляет relational ownership/lifecycle constraints. Cross-user session/device binding, replacement chain или Minecraft snapshot считаются unsafe state и блокируют upgrade вместо автоматического переписывания владельца.
+
+Migration также исправляет production constraint `device_challenges_purpose_check`: после появления key rotation/recovery PostgreSQL обязан принимать `key-rotate` и `key-recover` наряду с прежними purpose. Optional replacement/Minecraft device references используют SQL `NULL`, чтобы foreign keys действительно контролировали ownership вместо empty-string sentinels.
+
+Exact-upgrade E2E строит schema `0.12.9` из sealed migrations `0001..0017`, применяет shipping CLI до `0018`, проверяет checksum verification и negative PostgreSQL enforcement. Public Device Trust protocol result в `0.12.10` не может получить PASS без этого migration evidence.
+
 ## Публичная проверка Device Trust 0.12.9
 
 Security status Device Trust не задаётся вручную. `device-trust/targets.json` содержит только обязательные targets/checks, а `.github/workflows/device-trust.yml` строит результат из machine-verifiable evidence, привязанного к exact product version, Git commit и Actions run ID. Missing, duplicate, failed, mismatched или изменённый после выполнения evidence делает public matrix failed: result содержит SHA-256 каждого публикуемого evidence-файла, а aggregator пересчитывает его перед PASS.

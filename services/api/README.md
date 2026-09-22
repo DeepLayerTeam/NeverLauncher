@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Migration stabilization 0.12.10
+
+Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL constraint для replacement challenge purposes (`key-rotate`, `key-recover`), переводит optional replacement/Minecraft device references на SQL `NULL` и закрепляет ownership между trusted device, auth session, replacement chain, Minecraft session и profile через composite foreign keys. Перед установкой constraints migration fail-closed проверяет существующие данные и нормализует только однозначно безопасные legacy revoked/challenge states.
+
+Repository paths для `replaced_by_device_id` и `minecraft_sessions.trusted_device_id` используют `sql.NullString`/NULL writer semantics. Exact-upgrade E2E создаёт schema `0.12.9` из `0001..0017` и применяет `0018` shipping CLI, поэтому migration path проверяется отдельно от fresh-install tests.
+
 ### Кроссплатформенная ротация и восстановление ключей 0.12.8
 
 Backend реализует два server-authoritative replacement flow. `key-rotation` проверяет подписи старого и нового ключа по одному canonical challenge; `key-recovery` требует fresh phishing-resistant step-up и proof staged-новым ключом. SQL repository выполняет replacement одной транзакцией и сохраняет permanent replacement chain через migration `0017_device_key_recovery_rotation_0128.sql`. Текущая session перепривязывается к новой identity с увеличенным `binding_epoch`, остальные credentials старой identity отзываются.

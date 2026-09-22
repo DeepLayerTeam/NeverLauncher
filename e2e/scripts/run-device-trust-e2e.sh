@@ -98,6 +98,7 @@ psql "$DB_DSN" -Atqc 'select 1' >/dev/null
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.json"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
+[[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210' AND checksum<>''")" == "1" ]]
 
 printf '[device-trust-e2e] start production PostgreSQL Backend and bootstrap account\n'
 compose up -d --build api-a
@@ -205,7 +206,7 @@ RISK_BEGIN="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/begin" "$RISK_
 RISK_SIG="$(sign_payload ed25519 "$KEY2" "$(jq -er '.data.signingPayload' <<<"$RISK_BEGIN")")"
 RISK_COMPLETE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/complete" "$RISK_ACCESS_PRE" "$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$RISK_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$RISK_BEGIN")" --arg sig "$RISK_SIG" '{challengeId:$id,challenge:$ch,signature:$sig}')")"
 RISK_ACCESS="$(jq -er '.data.accessToken' <<<"$RISK_COMPLETE")"
-RISK_UA="NeverLauncher-DeviceTrust-E2E/0.12.9-risk"
+RISK_UA="NeverLauncher-DeviceTrust-E2E/${VERSION}-risk"
 code="$(request_code GET "$API/api/v1/auth/sessions" "$RISK_ACCESS" '' "$RUNTIME_DIR/risk-sessions.json" "$RISK_UA")"; expect_code 200 "$code" 'risk observation request'
 jq -e --arg sid "$RISK_SESSION" '.data.items[] | select(.id==$sid) | .riskAction=="step-up" and .riskState=="elevated" and .riskScore>=35' "$RUNTIME_DIR/risk-sessions.json" >/dev/null
 jq --arg sid "$RISK_SESSION" '{data:{session:(.data.items[]|select(.id==$sid)|{id,riskState,riskScore,riskAction,riskReasons})}}' "$RUNTIME_DIR/risk-sessions.json" > "$RESULT_DIR/risk-step-up.json"
@@ -276,17 +277,32 @@ REVOKED_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE2" "
 REVOKED_REFRESH_SIG="$(sign_payload ed25519 "$KEY2" "$REVOKED_REFRESH_PAYLOAD")"
 code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH3" --arg device "$DEVICE2" --arg sig "$REVOKED_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/revoked-refresh.json")"; expect_code 401 "$code" 'revoked device refresh survived'
 
+printf '[device-trust-e2e] require 0.12.9 -> 0.12.10 upgrade evidence\n'
+MIGRATION_UPGRADE_EVIDENCE="$ROOT/e2e/device-trust-migration-result/migration-stabilization.json"
+[[ -f "$MIGRATION_UPGRADE_EVIDENCE" ]] || { echo '[device-trust-e2e] migration upgrade evidence missing; run run-device-trust-migration-e2e.sh first' >&2; exit 1; }
+jq -e --arg version "$VERSION" '.status=="passed" and .version==$version and .upgrade.fromMigration=="0017_device_key_recovery_rotation_0128" and .upgrade.toMigration=="0018_device_trust_stabilization_01210" and .upgrade.sealedChecksum==true and .ownershipEnforcement.constraints==7' "$MIGRATION_UPGRADE_EVIDENCE" >/dev/null
+cp "$MIGRATION_UPGRADE_EVIDENCE" "$RESULT_DIR/migration-upgrade-e2e.json"
+
 printf '[device-trust-e2e] verify runtime really used PostgreSQL and migrations remain sealed\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE user_id='$USER_ID'")" -ge 4 ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE id='$DEVICE1' AND status='revoked' AND replaced_by_device_id='$DEVICE2' AND replacement_reason='rotate'")" == "1" ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE id='$HW_DEVICE' AND status='revoked' AND replaced_by_device_id='$REC_DEVICE' AND replacement_reason='recover'")" == "1" ]]
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify-after.json"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify-after.json"
+psql "$DB_DSN" -Atqc "SELECT json_build_object(
+  'migration','0018_device_trust_stabilization_01210',
+  'sealed',(SELECT checksum<>'' FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'),
+  'replacementChallengePurposes',(SELECT position('key-rotate' in pg_get_constraintdef(oid))>0 AND position('key-recover' in pg_get_constraintdef(oid))>0 FROM pg_constraint WHERE conname='device_challenges_purpose_check'),
+  'ownershipConstraints',(SELECT count(*) FROM pg_constraint WHERE conname IN ('auth_sessions_trusted_device_owner_fk','trusted_devices_replacement_owner_fk','minecraft_sessions_never_session_owner_fk','minecraft_sessions_device_owner_fk','minecraft_sessions_profile_owner_fk')),
+  'bindingShapeConstraint',(SELECT count(*)=1 FROM pg_constraint WHERE conname='auth_sessions_device_binding_shape_check'),
+  'replacementShapeConstraint',(SELECT count(*)=1 FROM pg_constraint WHERE conname='trusted_devices_replacement_shape_check')
+)::text" | jq -c . > "$RESULT_DIR/migration-stabilization.json"
+jq -e '.sealed==true and .replacementChallengePurposes==true and .ownershipConstraints==5 and .bindingShapeConstraint==true and .replacementShapeConstraint==true' "$RESULT_DIR/migration-stabilization.json" >/dev/null
 
 EVIDENCE_FILES=(
   registration.json trust-after-registration.json bridge-before-rotation.json rotation.json
   bridge-after-rotation.json old-key-tombstone.json risk-step-up.json p256-attestation.json
-  recovery-step-up-required.json recovery.json revocation.json
+  recovery-step-up-required.json recovery.json revocation.json migration-stabilization.json migration-upgrade-e2e.json
 )
 EVIDENCE_FILES_JSON="$(printf '%s\n' "${EVIDENCE_FILES[@]}" | jq -R . | jq -s -c .)"
 EVIDENCE_SHA_JSON='{}'
@@ -300,7 +316,7 @@ jq -n \
   --arg version "$VERSION" --arg target "$TARGET_ID" --arg commit "$RESULT_COMMIT" --arg run "$RESULT_RUN_ID" \
   --argjson evidenceFiles "$EVIDENCE_FILES_JSON" --argjson evidenceSha "$EVIDENCE_SHA_JSON" \
   '{schemaVersion:"1.0",productVersion:$version,targetId:$target,kind:"protocol-e2e",os:"linux",arch:"x86_64",runtimeArch:"x86_64",commit:$commit,runId:$run,status:"passed",exitCode:0,
-    checks:{postgresRepository:true,registrationReplayDenied:true,sessionBindingEpoch:true,boundRefreshProof:true,rotationDualProof:true,oldKeyTombstone:true,serverBridgeBindingDeny:true,revocationCascade:true,riskStepUp:true,p256AttestationProtocol:true,attestationReplayDenied:true,recoveryRequiresPhishingResistantStepUp:true,recoveryPhishingResistantEndToEnd:true},
+    checks:{postgresRepository:true,migrationStabilization01210:true,registrationReplayDenied:true,sessionBindingEpoch:true,boundRefreshProof:true,rotationDualProof:true,oldKeyTombstone:true,serverBridgeBindingDeny:true,revocationCascade:true,riskStepUp:true,p256AttestationProtocol:true,attestationReplayDenied:true,recoveryRequiresPhishingResistantStepUp:true,recoveryPhishingResistantEndToEnd:true},
     evidence:{files:$evidenceFiles,sha256:$evidenceSha},
     claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false}}' > "$RESULT_DIR/device-trust-result.json"
 

@@ -825,8 +825,53 @@ if "device-trust-e2e-matrix-0129.py" not in preflight or "scripts/smoke/offline/
     fail("0.12.9 Device Trust matrix gate is not wired into preflight/CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
     fail("0.12.9 production/strict E2E wiring is incomplete")
-if "Device Trust E2E + public trust matrix 0.12.9 gate OK" not in device_trust_gate:
-    fail("0.12.9 mandatory Device Trust release gate is incomplete")
+if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_gate:
+    fail("0.12.9+ mandatory Device Trust release gate is incomplete")
+
+
+# 0.12.10 Migration + stabilization. The upgrade from the exact 0.12.9
+# schema is a first-class release property, not just a fresh-install check.
+stabilization_migration_api = read("services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
+stabilization_migration_cli = read("cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
+stabilization_upgrade_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
+stabilization_gate = read("scripts/smoke/offline/device-trust-migration-stabilization-01210.py")
+if stabilization_migration_api != stabilization_migration_cli:
+    fail("0.12.10 API/CLI migration 0018 differs")
+for required in [
+    "key-rotate", "key-recover", "device_challenges_purpose_check",
+    "trusted_devices_lifecycle_check", "trusted_devices_replacement_shape_check",
+    "auth_sessions_device_binding_shape_check", "auth_sessions_trusted_device_owner_fk",
+    "trusted_devices_replacement_owner_fk", "minecraft_sessions_never_session_owner_fk",
+    "minecraft_sessions_device_owner_fk", "minecraft_sessions_profile_owner_fk",
+    "UPDATE minecraft_sessions SET trusted_device_id=NULL", "legacy-device-revoked",
+]:
+    if required not in stabilization_migration_api:
+        fail(f"0.12.10 stabilization migration missing invariant: {required}")
+for required in [
+    "0.12.9 schema (0001..0017)", "0017_device_key_recovery_rotation_0128",
+    "0018_device_trust_stabilization_01210", "key-rotate", "key-recover",
+    "cross-user auth session/device binding unexpectedly succeeded",
+    "cross-user replacement link unexpectedly succeeded",
+    "cross-user Minecraft device snapshot unexpectedly succeeded",
+    "migration-stabilization.json",
+]:
+    if required not in stabilization_upgrade_e2e:
+        fail(f"0.12.10 exact-upgrade E2E missing: {required}")
+for required in ["migrationStabilization01210", "migration-upgrade-e2e.json", "0018_device_trust_stabilization_01210"]:
+    if required not in device_trust_e2e:
+        fail(f"0.12.10 public Device Trust evidence missing: {required}")
+if '"productVersion": "' + VERSION + '"' not in device_trust_targets or "migrationStabilization01210" not in device_trust_targets:
+    fail("0.12.10 public Device Trust policy is not aligned with VERSION/migration stabilization")
+if "migrationStabilization01210" not in device_trust_matrix or "migration stabilization 0.12.10" not in device_trust_matrix:
+    fail("0.12.10 public trust matrix does not expose migration stabilization evidence")
+if "device-trust-migration-stabilization-01210.py" not in preflight or "scripts/smoke/offline/device-trust-migration-stabilization-01210.py" not in ci:
+    fail("0.12.10 stabilization gate is not wired into preflight/CI")
+if "run-device-trust-migration-e2e.sh" not in preflight or "run-device-trust-migration-e2e.sh" not in ci or "run-device-trust-migration-e2e.sh" not in device_trust_workflow:
+    fail("0.12.10 exact-upgrade E2E is not wired into release/CI/public Device Trust workflow")
+if "e2e/device-trust-migration-result/" not in ci or "e2e/device-trust-migration-result/" not in device_trust_workflow:
+    fail("0.12.10 migration evidence is not retained by CI/public Device Trust workflow")
+if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
+    fail("0.12.10 mandatory migration stabilization release gate is incomplete")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

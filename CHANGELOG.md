@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12.10 — Migration + stabilization
+
+`0.12.10` стабилизирует накопленный Device Trust schema/runtime после `0.12.4–0.12.9` и делает upgrade с реальной `0.12.9` БД отдельным обязательным release invariant. Главная исправленная production-проблема: constraint `device_challenges_purpose_check`, созданный в `0.12.4`, не был расширен после появления `key-rotate`/`key-recover` в `0.12.8`, из-за чего PostgreSQL мог отклонять replacement challenge, хотя memory regression проходил.
+
+### Schema stabilization
+
+- Migration `0018_device_trust_stabilization_01210.sql` синхронно входит в API/CLI catalogs и расширяет challenge purpose до `register`, `session-bind`, `attest`, `key-rotate`, `key-recover`.
+- Старые empty-string sentinels в `trusted_devices.replaced_by_device_id` и `minecraft_sessions.trusted_device_id` переводятся в SQL `NULL`; repository scanners/writers используют nullable SQL semantics.
+- Валидные legacy revoked-device строки нормализуются в единое terminal state (`trust_state=revoked`, `attestation_state=revoked`, timestamp/reason); просроченные незавершённые challenge помечаются consumed.
+- Перед установкой ограничений migration fail-closed проверяет cross-user replacement links, session/device ownership, binding shape и Minecraft session/profile/device ownership. Повреждённая или неоднозначная БД не «чинится» молча.
+- После проверки устанавливаются ownership foreign keys и lifecycle/shape CHECK constraints для trusted devices, auth sessions и Minecraft trust snapshots. Replacement chain остаётся permanent tombstone и не может ссылаться на устройство другого пользователя.
+
+### Upgrade E2E и release enforcement
+
+- `e2e/scripts/run-device-trust-migration-e2e.sh` создаёт точную schema `0.12.9` (sealed migrations `0001..0017`), сеет допустимые legacy states, доказывает pre-upgrade failure `key-rotate`, затем запускает shipping CLI `nl db migrate apply/verify` и проверяет `0018` postconditions.
+- Upgrade E2E требует, чтобы cross-user auth binding, replacement link и Minecraft device snapshot после migration отклонялись самой PostgreSQL БД.
+- Production Device Trust E2E публикует upgrade evidence вместе с runtime evidence; public trust matrix требует `migrationStabilization01210`, поэтому PASS без проверенного `0.12.9 → 0.12.10` upgrade невозможен.
+- Gate `device-trust-migration-stabilization-01210.py` включён в repository policy, CI и release preflight; strict Device Trust flow запускает migration E2E перед lifecycle E2E.
+
+
 ## 0.12.9 — Device Trust E2E + public trust matrix
 
 `0.12.9` переводит Device Trust из набора отдельных regression/release gates в публично проверяемый end-to-end контур. Новый production E2E поднимает Backend с реальным PostgreSQL/Redis, применяет sealed migrations и проходит полный lifecycle device identity реальными Ed25519/P-256 подписями. PASS не хранится в репозитории: public trust matrix принимает только machine-verifiable evidence от exact Git commit и GitHub Actions run ID.

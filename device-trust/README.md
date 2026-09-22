@@ -2,7 +2,7 @@
 
 `device-trust/targets.json` — policy-файл NeverLauncher Device Trust CI. Он описывает обязательные targets и checks, но **не** хранит PASS/FAIL. Результат создаётся только из CI evidence для exact product version, Git commit и GitHub Actions run ID.
 
-## Targets 0.12.9
+## Targets 0.12.10
 
 - `postgres-protocol-linux-x64` — production PostgreSQL Device Trust protocol E2E.
 - `native-linux` — Tauri/device-key compile + key-policy unit tests на Linux runner.
@@ -19,6 +19,13 @@ Native targets проверяют compilation и security-policy tests суще�
 
 P-256 challenge-response в CI подтверждает корректность NeverLauncher protocol и владение зарегистрированным test key. Он не является TPM quote, Secure Enclave certificate или другим vendor remote-attestation proof. Native runner также не считается доказательством фактической работы защищённого хранилища/HSM на конкретном пользовательском компьютере.
 
+
+### Migration stabilization evidence 0.12.10
+
+Protocol target дополнительно требует `migrationStabilization01210`. Перед основным lifecycle E2E workflow воспроизводит exact `0.12.9` PostgreSQL schema (`0001..0017`) и запускает `e2e/scripts/run-device-trust-migration-e2e.sh`. Его `migration-stabilization.json` входит в hash-verified public evidence, поэтому агрегатор не принимает PASS, если upgrade `0.12.9 → 0.12.10` не выполнен или его evidence отсутствует/изменён.
+
+Проверяется не только применение `0018`, но и исправление `key-rotate`/`key-recover` purpose constraint, NULL-normalization optional device references и DB-level deny для cross-user session/device, replacement и Minecraft trust links.
+
 ## Локальная проверка policy/aggregator
 
 ```bash
@@ -26,9 +33,10 @@ python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.j
 python3 scripts/device_trust/test_matrix.py
 ```
 
-Production protocol E2E требует Docker и PostgreSQL client:
+Production protocol E2E требует Docker и PostgreSQL client. Сначала выполняется exact-upgrade E2E, затем lifecycle E2E:
 
 ```bash
+bash e2e/scripts/run-device-trust-migration-e2e.sh
 bash e2e/scripts/run-device-trust-e2e.sh
 ```
 

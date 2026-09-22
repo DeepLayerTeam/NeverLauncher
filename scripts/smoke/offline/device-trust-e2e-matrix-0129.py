@@ -22,18 +22,23 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
 
-if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.12.9":
-    raise SystemExit("VERSION must be 0.12.9")
+version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+try:
+    version_tuple = tuple(int(part) for part in version.split("."))
+except ValueError as exc:
+    raise SystemExit(f"invalid VERSION: {version}") from exc
+if version_tuple < (0, 12, 9):
+    raise SystemExit(f"VERSION must be >= 0.12.9, got {version}")
 
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))
-if targets.get("productVersion") != "0.12.9" or targets.get("schemaVersion") != "1.0":
+if targets.get("productVersion") != version or targets.get("schemaVersion") != "1.0":
     raise SystemExit("Device Trust target document version/schema mismatch")
 rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) != 4:
-    raise SystemExit("public Device Trust matrix must define exactly four required 0.12.9 targets")
+    raise SystemExit("public Device Trust matrix must define exactly four required Device Trust targets")
 if any(row.get("required") is not True for row in rows):
-    raise SystemExit("every 0.12.9 Device Trust target must be required")
+    raise SystemExit("every Device Trust target must be required")
 if any("status" in row or "passed" in row for row in rows):
     raise SystemExit("Device Trust targets must not contain editable pass/fail state")
 expected = {
@@ -109,4 +114,4 @@ subprocess.run([sys.executable, str(ROOT / "e2e/scripts/test_device_trust_crypto
 subprocess.run([sys.executable, str(ROOT / "e2e/scripts/test_webauthn_test_authenticator.py")], check=True)
 subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/matrix.py"), "validate", "--targets", str(targets_path)], check=True)
 subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True)
-print("[NeverLauncher] Device Trust E2E + public trust matrix 0.12.9 gate OK")
+print(f"[NeverLauncher] Device Trust E2E + public trust matrix 0.12.9+ gate OK ({version})")

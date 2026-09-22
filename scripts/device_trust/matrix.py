@@ -23,6 +23,7 @@ ALLOWED_ARCH = {"x86_64", "arm64", "runner-native"}
 KIND_MANDATORY_CHECKS = {
     "protocol-e2e": {
         "postgresRepository",
+        "migrationStabilization01210",
         "registrationReplayDenied",
         "sessionBindingEpoch",
         "boundRefreshProof",
@@ -252,7 +253,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Protocol E2E проверяет реальный PostgreSQL lifecycle: registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up и P-256 challenge-response attestation protocol.",
+        "Protocol E2E проверяет реальный PostgreSQL lifecycle и migration stabilization 0.12.10: sealed upgrade schema, registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up и P-256 challenge-response attestation protocol.",
         "",
         "Важно: P-256 challenge-response в этой матрице доказывает серверную проверку владения зарегистрированным ключом, но **не** vendor TPM/Secure Enclave provenance. Native Windows/macOS/Linux targets доказывают компиляцию и security-policy unit tests; headless CI не объявляется доказательством фактической работы OS secure storage/TPM/Secure Enclave на конкретном пользовательском устройстве.",
         "",

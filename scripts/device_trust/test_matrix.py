@@ -180,7 +180,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "arch": "x86_64",
                 "required": True,
                 "requiredChecks": sorted([
-                    "postgresRepository", "registrationReplayDenied", "sessionBindingEpoch", "boundRefreshProof",
+                    "postgresRepository", "migrationStabilization01210", "registrationReplayDenied", "sessionBindingEpoch", "boundRefreshProof",
                     "rotationDualProof", "oldKeyTombstone", "serverBridgeBindingDeny", "revocationCascade",
                     "riskStepUp", "p256AttestationProtocol", "attestationReplayDenied",
                     "recoveryRequiresPhishingResistantStepUp", "recoveryPhishingResistantEndToEnd",

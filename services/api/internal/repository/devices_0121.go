@@ -366,7 +366,8 @@ const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,k
 func scanTrustedDevice0121(row interface{ Scan(...any) error }) (model.TrustedDevice, error) {
 	var d model.TrustedDevice
 	var lastSeen, lastVerified, attested, attestationExpires, revoked, replaced sql.NullTime
-	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.AttestationState, &d.AttestationMethod, &attested, &attestationExpires, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason, &replaced, &d.ReplacedByDeviceID, &d.ReplacementReason)
+	var replacedBy sql.NullString
+	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.AttestationState, &d.AttestationMethod, &attested, &attestationExpires, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason, &replaced, &replacedBy, &d.ReplacementReason)
 	if err != nil {
 		return model.TrustedDevice{}, err
 	}
@@ -387,6 +388,9 @@ func scanTrustedDevice0121(row interface{ Scan(...any) error }) (model.TrustedDe
 	}
 	if replaced.Valid {
 		d.ReplacedAt = replaced.Time.UTC()
+	}
+	if replacedBy.Valid {
+		d.ReplacedByDeviceID = replacedBy.String
 	}
 	return d, nil
 }
@@ -727,7 +731,7 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	}
 
 	_, err = tx.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason)
-VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested','',NULL,NULL,$7,$8,$9,$10,$11,$11,$11,$11,$12,$13,NULL,'',NULL,'','')`, replacement.ID, replacement.UserID, replacement.Name, replacement.KeyAlgorithm, replacement.KeyBinding, replacement.HardwareProvider, replacement.PublicKey, replacement.KeyFingerprint, replacement.Platform, replacement.ClientVersion, now, replacement.LastIP, replacement.LastUserAgent)
+VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested','',NULL,NULL,$7,$8,$9,$10,$11,$11,$11,$11,$12,$13,NULL,'',NULL,NULL,'')`, replacement.ID, replacement.UserID, replacement.Name, replacement.KeyAlgorithm, replacement.KeyBinding, replacement.HardwareProvider, replacement.PublicKey, replacement.KeyFingerprint, replacement.Platform, replacement.ClientVersion, now, replacement.LastIP, replacement.LastUserAgent)
 	if err != nil {
 		var existingID string
 		if lookupErr := tx.QueryRowContext(ctx, `SELECT id FROM trusted_devices WHERE key_fingerprint=$1`, replacement.KeyFingerprint).Scan(&existingID); lookupErr == nil {

@@ -1,16 +1,19 @@
 # Production E2E NeverLauncher
 
-## Device Trust PostgreSQL E2E (`0.12.9`)
+## Device Trust migration + PostgreSQL E2E (`0.12.10`)
 
-Полный Device Trust lifecycle запускается отдельно от Minecraft actual-client E2E:
+Перед полным Device Trust lifecycle выполняется exact-upgrade `0.12.9 → 0.12.10`:
 
 ```bash
+bash e2e/scripts/run-device-trust-migration-e2e.sh
 bash e2e/scripts/run-device-trust-e2e.sh
 ```
 
+Первый сценарий создаёт schema строго из migrations `0001..0017`, сеет допустимые legacy states, доказывает старый PostgreSQL deny для `key-rotate`, затем применяет shipping CLI migration `0018` и проверяет новые ownership/lifecycle constraints. Второй сценарий требует созданное migration evidence и только после этого выполняет полный Device Trust lifecycle.
+
 Сценарий поднимает production-configured Backend, PostgreSQL и Redis через `docker-compose.federation-e2e.yml`, явно применяет и проверяет migrations и выполняет реальные Ed25519/P-256 signatures. Проверяются registration replay deny, `binding_epoch`, signed refresh, dual-proof rotation, tombstone старого fingerprint, ServerBridge deny после replacement, persisted risk step-up, challenge-response attestation + replay deny, deny recovery без phishing-resistant step-up, реальная WebAuthn P-256 registration/assertion ceremony, успешный key recovery и revoke cascade.
 
-Публикуемые evidence находятся только в `e2e/device-trust-result/`. Private keys и runtime credentials живут в `e2e/device-trust-runtime/` и не являются evidence; перед PASS script fail-closed проверяет publishable directory на access/refresh/private-key material. Public matrix собирается `.github/workflows/device-trust.yml` только из exact-commit/run results.
+Публикуемые lifecycle evidence находятся в `e2e/device-trust-result/`, а exact-upgrade evidence — в `e2e/device-trust-migration-result/`. Private keys и runtime credentials живут в `e2e/device-trust-runtime/` и не являются evidence; перед PASS script fail-closed проверяет publishable directory на access/refresh/private-key material. Public matrix собирается `.github/workflows/device-trust.yml` только из exact-commit/run results.
 
 Для локального protocol E2E нужны Docker/Compose, Go, `psql`, `curl`, `jq`, Python 3 и OpenSSL. Strict release preflight включает этот сценарий автоматически; вручную: `NEVERLAUNCHER_PREFLIGHT_DEVICE_TRUST_E2E=1 ./scripts/release/preflight.sh`.
 

@@ -16,6 +16,7 @@
 - [ ] `NEVERLAUNCHER_TRUSTED_PROXY_CIDRS` содержит только доверенные внутренние сети.
 - [ ] `NEVERLAUNCHER_BACKUP_ROOT` находится на отдельном от рабочего storage томе/каталоге.
 - [ ] Выполнены `nl backup create`, `nl backup inspect`, `nl backup restore-dry-run` и тестовое восстановление в изолированном окружении.
+- [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
 - [ ] `api-volume-init` завершился успешно; named volumes storage/backups принадлежат UID/GID `10001:10001`.
 
 ## После запуска

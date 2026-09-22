@@ -74,6 +74,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Run Device Trust 0.12.9 to 0.12.10 migration E2E
+        if: matrix.kind == 'protocol-e2e'
+        shell: bash
+        run: bash e2e/scripts/run-device-trust-migration-e2e.sh
       - name: Run PostgreSQL Device Trust protocol E2E
         if: matrix.kind == 'protocol-e2e'
         shell: bash
@@ -102,7 +106,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: device-trust-${{ matrix.id }}
-          path: e2e/device-trust-result/
+          path: |
+            e2e/device-trust-result/
+            e2e/device-trust-migration-result/
           if-no-files-found: error
           retention-days: 14
 

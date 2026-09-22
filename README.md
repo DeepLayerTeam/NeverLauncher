@@ -238,6 +238,19 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Migration + stabilization 0.12.10
+
+`0.12.10` является stabilization-релизом Device Trust schema и production-upgrade path. Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL challenge-purpose constraint для реально используемых `key-rotate`/`key-recover`, переводит optional device references с empty-string sentinel на SQL `NULL`, нормализует безопасные legacy revoked/challenge states и затем устанавливает ownership/lifecycle constraints между trusted devices, auth sessions и Minecraft sessions.
+
+Upgrade выполняется fail-closed: cross-user или структурно противоречивые связи не маскируются автоматическим repair, а останавливают migration до установки новых constraints. Отдельный `e2e/scripts/run-device-trust-migration-e2e.sh` воспроизводит exact `0.12.9` schema (`0001..0017`), применяет shipping CLI migration/verify и проверяет post-upgrade PostgreSQL enforcement. Public Device Trust matrix `0.12.10` принимает protocol PASS только вместе с evidence этого upgrade.
+
+Для strict локальной проверки при наличии Docker/PostgreSQL client:
+
+```bash
+bash e2e/scripts/run-device-trust-migration-e2e.sh
+bash e2e/scripts/run-device-trust-e2e.sh
+```
+
 ## Device Trust E2E и публичная trust matrix 0.12.9
 
 `0.12.9` добавляет отдельный production E2E для всей Device Trust цепочки и публичную CI-матрицу. `e2e/scripts/run-device-trust-e2e.sh` запускается против production-configured PostgreSQL/Redis Backend и реальными Ed25519/P-256 ключами проверяет registration/replay deny, binding epoch, signed refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge invalidation, risk step-up, hardware-key challenge-response protocol, recovery prerequisite и revoke cascade.

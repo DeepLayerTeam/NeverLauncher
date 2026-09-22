@@ -45,6 +45,7 @@ run_step session-device-risk-0126 python3 "${ROOT_DIR}/scripts/smoke/offline/ses
 run_step minecraft-serverbridge-trust-0127 python3 "${ROOT_DIR}/scripts/smoke/offline/minecraft-serverbridge-trust-0127.py"
 run_step cross-platform-key-recovery-0128 python3 "${ROOT_DIR}/scripts/smoke/offline/cross-platform-key-recovery-0128.py"
 run_step device-trust-e2e-matrix-0129 python3 "${ROOT_DIR}/scripts/smoke/offline/device-trust-e2e-matrix-0129.py"
+run_step device-trust-migration-stabilization-01210 python3 "${ROOT_DIR}/scripts/smoke/offline/device-trust-migration-stabilization-01210.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
 run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"
@@ -89,6 +90,7 @@ if is_true "${RUN_FEDERATION_POSTGRES}"; then
 fi
 
 if is_true "${RUN_DEVICE_TRUST_E2E}"; then
+  run_step device-trust-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-migration-e2e.sh"
   run_step device-trust-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-e2e.sh"
 fi
 

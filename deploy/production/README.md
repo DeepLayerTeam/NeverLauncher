@@ -17,6 +17,13 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
+
+### Upgrade 0.12.9 → 0.12.10
+
+Перед обновлением существующей `0.12.9` БД создайте и проверьте backup, затем остановите старые API instance, чтобы они не писали Device Trust state параллельно migration. Примените `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"` и сразу `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"` до запуска `0.12.10` API. Migration `0018_device_trust_stabilization_01210` fail-closed остановится при cross-user/структурно противоречивых Device Trust связях; не обходите ошибку ручным удалением constraints — восстановите/исправьте данные из проверенного backup и повторите upgrade.
+
+Для rehearsal на копии production schema используйте `e2e/scripts/run-device-trust-migration-e2e.sh`: release CI строит exact `0.12.9` schema (`0001..0017`) и требует подтверждённый переход на `0018`.
+
 Для новой установки:
 
 1. Задайте сильный одноразовый `NEVERLAUNCHER_BOOTSTRAP_TOKEN`.
