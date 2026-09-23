@@ -11,6 +11,7 @@ x-api-env: &api-env
   NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
   NEVERLAUNCHER_AUTH_TOKEN_SECRET: ${NEVERLAUNCHER_E2E_AUTH_SECRET}
   NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"0.13.4":{"guardSha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"launcherSha256":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],"requireAuthenticode":false}}'
+  NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
   NEVERLAUNCHER_BOOTSTRAP_TOKEN: ${NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN}
   NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_E2E_SIGNING_SEED}
   NEVERLAUNCHER_REDIS_URL: redis://:${NEVERLAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0

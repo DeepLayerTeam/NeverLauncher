@@ -14,7 +14,7 @@ if len(version_tuple)!=3 or version_tuple < (0,13,0): raise SystemExit(f'Device 
 api_migs=sorted((ROOT/'services/api/internal/dbmigrate/sql').glob('*.sql'))
 cli_migs=sorted((ROOT/'cli/internal/dbmigrate/sql').glob('*.sql'))
 if [p.name for p in api_migs] != [p.name for p in cli_migs]: raise SystemExit('API/CLI migration catalogs differ')
-if not api_migs or api_migs[-1].name!='0018_device_trust_stabilization_01210.sql': raise SystemExit('0.13+ must keep sealed 0018 as latest migration until a real schema change exists')
+if not any(p.name=='0018_device_trust_stabilization_01210.sql' for p in api_migs): raise SystemExit('0.13+ must retain sealed 0018 Device Trust stabilization migration')
 for a,b in zip(api_migs,cli_migs):
     if a.read_bytes()!=b.read_bytes(): raise SystemExit(f'migration differs: {a.name}')
 release=read('cli/cmd/neverlauncher/device_trust_release.go')

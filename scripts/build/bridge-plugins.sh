@@ -40,17 +40,25 @@ done
   cd "$OUT"
   sha256sum neverlauncher-*-bridge-"${VERSION}".jar | sort > SHA256SUMS
 )
+VELOCITY_SHA256="$(sha256sum "$OUT/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+PAPER_SHA256="$(sha256sum "$OUT/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
+PURPUR_SHA256="$(sha256sum "$OUT/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
+cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
+{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"]}}
+JSON
 cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "toolVersion": "$VERSION",
   "status": "built",
   "compiler": "gradle-real-platform-api",
+  "integrityPolicy": "serverbridge-artifact-sha256-v1",
+  "releaseAllowlist": "BRIDGE_RELEASE_ALLOWLIST.json",
   "artifacts": [
-    {"id":"velocity","file":"neverlauncher-velocity-bridge-${VERSION}.jar","platform":"velocity","descriptor":"velocity-plugin.json"},
-    {"id":"paper","file":"neverlauncher-paper-bridge-${VERSION}.jar","platform":"paper","descriptor":"plugin.yml"},
-    {"id":"purpur","file":"neverlauncher-purpur-bridge-${VERSION}.jar","platform":"purpur","descriptor":"plugin.yml"}
+    {"id":"velocity","file":"neverlauncher-velocity-bridge-${VERSION}.jar","platform":"velocity","descriptor":"velocity-plugin.json","sha256":"${VELOCITY_SHA256}"},
+    {"id":"paper","file":"neverlauncher-paper-bridge-${VERSION}.jar","platform":"paper","descriptor":"plugin.yml","sha256":"${PAPER_SHA256}"},
+    {"id":"purpur","file":"neverlauncher-purpur-bridge-${VERSION}.jar","platform":"purpur","descriptor":"plugin.yml","sha256":"${PURPUR_SHA256}"}
   ]
 }
 JSON
-printf 'Production bridge plugin artifacts built against real platform APIs in %s\n' "$OUT"
+printf 'Production bridge plugin artifacts and integrity allowlist built in %s\n' "$OUT"

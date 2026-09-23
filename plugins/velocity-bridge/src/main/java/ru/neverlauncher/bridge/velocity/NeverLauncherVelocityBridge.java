@@ -7,6 +7,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import net.kyori.adventure.text.Component;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 
@@ -24,9 +25,10 @@ public final class NeverLauncherVelocityBridge {
         try {
             Path configPath = Path.of("plugins", "neverlauncher-velocity", "config.yml");
             config = BridgeConfig.load(configPath);
-            api = new NeverLauncherApiClient(config);
+            String pluginSha256 = BridgeIntegrity.artifactSha256(NeverLauncherVelocityBridge.class);
+            api = new NeverLauncherApiClient(config, "velocity", BridgeDefaults.VERSION, pluginSha256);
             boolean ok = api.heartbeat("velocity", BridgeDefaults.VERSION);
-            logger.info("NeverLauncher Velocity Bridge " + BridgeDefaults.VERSION + " initialized; heartbeat=" + ok + "; backend=" + config.backendUrl + "; serverId=" + config.serverId);
+            logger.info("NeverLauncher Velocity Bridge " + BridgeDefaults.VERSION + " initialized; heartbeat=" + ok + "; backend=" + config.backendUrl + "; serverId=" + config.serverId + "; sha256=" + (pluginSha256.isBlank() ? "unavailable" : pluginSha256.substring(0, 12)));
         } catch (Exception e) {
             logger.warning("NeverLauncher Velocity Bridge config load failed: " + e.getMessage());
         }

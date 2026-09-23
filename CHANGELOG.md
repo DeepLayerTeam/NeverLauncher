@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.13.5 — Minecraft/ServerBridge integrity enforcement
+
+`0.13.5` переносит Guard Attestation из одноразового момента выдачи Minecraft token в live gameplay boundary. Integrity snapshot сохраняется вместе с Minecraft session, а каждый последующий token validation, Yggdrasil join/hasJoined и ServerBridge validate-join/has-joined повторно проверяет текущий Guard release allowlist. Удаление release hash из production policy немедленно отзывает уже выданные игровые credentials и связанные ServerBridge joins.
+
+### Minecraft integrity persistence and live revocation
+
+- Migration `0019_minecraft_serverbridge_integrity_0135.sql` сохраняет verified Guard attestation/evidence/release SHA-256, launcher version и verification time в `minecraft_sessions`; API и CLI используют идентичную sealed migration.
+- `/api/v1/session/join` для Windows Guard-enforced device теперь обязан получить конкретный `minecraftAccessToken` и сохранить `minecraftSessionId`. Это закрывает прежний обход, при котором Never-session могла создать ServerBridge join без связи с Guard-verified Minecraft credential.
+- Minecraft token validation, Yggdrasil join/hasJoined и ServerBridge validation заново сверяют snapshot с `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`. Release revocation действует на уже активные sessions без ожидания их TTL.
+- Desktop передаёт только что выданный Minecraft access token в ServerBridge join до запуска Java, поэтому gameplay join связан с тем же device/session/binding epoch и Guard evidence, которые прошли Backend verification.
+
+### ServerBridge artifact enforcement
+
+- Velocity/Paper/Purpur вычисляют SHA-256 собственного запущенного JAR через `CodeSource` и отправляют его в heartbeat и каждый `validate-join`. При невозможности измерить JAR плагин fail-closed, когда `security.requireIntegrity=true` (production default).
+- Backend принимает heartbeat только если `pluginVersion + serverType + pluginSha256` присутствуют в `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`. Accepted measurement сохраняется в ServerBridge state и повторно проверяется по текущему allowlist на каждом gameplay validation.
+- `validate-join` обязан повторить тот же version/hash, что был подтверждён heartbeat. Ротация server token сбрасывает integrity measurement и требует нового heartbeat. Legacy/authlib `has-joined` также требует актуальный verified bridge measurement.
+- `scripts/build/bridge-plugins.sh` строит реальные platform JAR, вычисляет их SHA-256, записывает hashes в `PLUGIN_MANIFEST.json` и генерирует `BRIDGE_RELEASE_ALLOWLIST.json`; release bundle включает оба файла. Production startup требует `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`.
+
+ServerBridge JAR hash — application-level self-measurement, а не hardware/server attestation самого Minecraft-сервера: полностью скомпрометированный host с server token может подделывать пользовательский процесс. Enforcement предназначен для release allowlisting, accidental/unauthorized artifact drift и live backend policy, а не для утверждения kernel-level integrity удалённого сервера.
+
 ## 0.13.4 — Guard Attestation + Backend verification
 
 `0.13.4` связывает локальный NeverGuard Windows boundary с Backend: сервер выдаёт persistent single-use challenge, отдельный `neverguard.exe` формирует свежую challenge-bound attestation поверх Integrity Evidence v1 и enforced process policy, а hardware P-256 device key подписывает каноническую привязку `user + device + session + bindingEpoch + release + attestation`. Backend пересчитывает evidence/attestation digests, проверяет device signature, freshness/replay и точные SHA-256 release binaries; только после этого выдаётся одноразовый короткоживущий Guard launch ticket, обязательный для Minecraft session в production.

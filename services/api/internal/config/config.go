@@ -48,6 +48,7 @@ type Config struct {
 	AuthTokenActiveKID                 string
 	AuthTokenKeysJSON                  string
 	GuardReleaseAllowlistJSON          string
+	BridgeReleaseAllowlistJSON         string
 	MetricsEnabled                     bool
 	PersistentSessions                 bool
 	RequirePersistentStoreInProduction bool
@@ -117,6 +118,7 @@ func Load() Config {
 		AuthTokenActiveKID:                 env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
 		AuthTokenKeysJSON:                  env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
 		GuardReleaseAllowlistJSON:          env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
+		BridgeReleaseAllowlistJSON:         env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
 		MetricsEnabled:                     envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
 		PersistentSessions:                 envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
 		RequirePersistentStoreInProduction: envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
@@ -219,6 +221,39 @@ func ValidateProduction(cfg Config) error {
 					}
 					if _, err := hex.DecodeString(value); err != nil {
 						problems = append(problems, fmt.Sprintf("Guard release policy %q содержит невалидный SHA-256", version))
+						break
+					}
+				}
+			}
+		}
+	}
+
+	bridgeAllowlistRaw := strings.TrimSpace(cfg.BridgeReleaseAllowlistJSON)
+	if bridgeAllowlistRaw == "" {
+		problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
+	} else {
+		var bridgeAllowlist map[string]struct {
+			VelocitySHA256 []string `json:"velocitySha256"`
+			PaperSHA256    []string `json:"paperSha256"`
+			PurpurSHA256   []string `json:"purpurSha256"`
+		}
+		if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil || len(bridgeAllowlist) == 0 {
+			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->ServerBridge hash allowlists")
+		} else {
+			for version, entry := range bridgeAllowlist {
+				if strings.TrimSpace(version) == "" || len(entry.VelocitySHA256) == 0 || len(entry.PaperSHA256) == 0 || len(entry.PurpurSHA256) == 0 {
+					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q должна содержать velocitySha256, paperSha256 и purpurSha256", version))
+					continue
+				}
+				values := append(append(append([]string(nil), entry.VelocitySHA256...), entry.PaperSHA256...), entry.PurpurSHA256...)
+				for _, value := range values {
+					value = strings.TrimSpace(value)
+					if len(value) != 64 {
+						problems = append(problems, fmt.Sprintf("ServerBridge release policy %q содержит SHA-256 неверной длины", version))
+						break
+					}
+					if _, err := hex.DecodeString(value); err != nil {
+						problems = append(problems, fmt.Sprintf("ServerBridge release policy %q содержит невалидный SHA-256", version))
 						break
 					}
 				}

@@ -10,14 +10,30 @@ import java.time.Duration;
 public final class NeverLauncherApiClient {
     private final BridgeConfig config;
     private final HttpClient client;
+    private final String serverType;
+    private final String pluginVersion;
+    private final String pluginSha256;
 
     public NeverLauncherApiClient(BridgeConfig config) {
+        this(config, "", "", "");
+    }
+
+    public NeverLauncherApiClient(BridgeConfig config, String serverType, String pluginVersion, String pluginSha256) {
         this.config = config;
+        this.serverType = normalized(serverType);
+        this.pluginVersion = normalized(pluginVersion);
+        this.pluginSha256 = normalized(pluginSha256).toLowerCase();
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(config.timeoutMs)).build();
     }
 
     public boolean heartbeat(String serverType, String pluginVersion) {
-        String json = "{\"serverId\":" + quote(config.serverId) + ",\"serverType\":" + quote(serverType) + ",\"pluginVersion\":" + quote(pluginVersion) + "}";
+        String actualType = first(serverType, this.serverType);
+        String actualVersion = first(pluginVersion, this.pluginVersion);
+        if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) return false;
+        String json = "{\"serverId\":" + quote(config.serverId) +
+            ",\"serverType\":" + quote(actualType) +
+            ",\"pluginVersion\":" + quote(actualVersion) +
+            ",\"pluginSha256\":" + quote(pluginSha256) + "}";
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(config.heartbeatUrl()))
                 .timeout(Duration.ofMillis(config.timeoutMs))
@@ -36,6 +52,9 @@ public final class NeverLauncherApiClient {
         if (config.serverToken == null || config.serverToken.isBlank()) {
             return new JoinValidationResult(!config.requireLauncherSession && "open".equals(config.failMode), "server_token_missing", "{}");
         }
+        if (config.requireIntegrity && (!BridgeIntegrity.isSha256(pluginSha256) || pluginVersion.isBlank() || serverType.isBlank())) {
+            return new JoinValidationResult(false, "bridge_integrity_unavailable", "{}");
+        }
         String body = "{" +
             "\"serverId\":" + quote(config.serverId) + "," +
             "\"username\":" + quote(username) + "," +
@@ -43,7 +62,9 @@ public final class NeverLauncherApiClient {
             "\"ip\":" + quote(ip) + "," +
             "\"projectId\":" + quote(config.projectId) + "," +
             "\"profileId\":" + quote(config.profileId) + "," +
-            "\"channel\":" + quote(config.channel) +
+            "\"channel\":" + quote(config.channel) + "," +
+            "\"pluginVersion\":" + quote(pluginVersion) + "," +
+            "\"pluginSha256\":" + quote(pluginSha256) +
             "}";
         IOException lastIo = null;
         InterruptedException lastInterrupted = null;
@@ -69,7 +90,7 @@ public final class NeverLauncherApiClient {
             }
         }
         String reason = lastInterrupted != null ? "backend_interrupted" : (lastIo != null ? "backend_unavailable" : "backend_denied");
-        boolean failOpen = "open".equalsIgnoreCase(config.failMode) && !config.requireLauncherSession;
+        boolean failOpen = "open".equalsIgnoreCase(config.failMode) && !config.requireLauncherSession && !config.requireIntegrity;
         return new JoinValidationResult(failOpen, reason, "{}");
     }
 
@@ -85,5 +106,14 @@ public final class NeverLauncherApiClient {
         int end = start >= 0 ? raw.indexOf('"', start + 1) : -1;
         if (start >= 0 && end > start) return raw.substring(start + 1, end);
         return "session_denied";
+    }
+
+    private static String normalized(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static String first(String preferred, String fallback) {
+        String value = normalized(preferred);
+        return value.isBlank() ? normalized(fallback) : value;
     }
 }

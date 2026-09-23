@@ -221,7 +221,7 @@ schemas={
 "PublishRequest":{"type":"object","properties":{"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"}}},
 "ManifestRuntimeUpdateRequest":{"type":"object","required":["minecraft","runtime"],"properties":{"minecraft":{"type":"object","additionalProperties":True},"runtime":{"type":"object","additionalProperties":True},"directories":{"type":"object","additionalProperties":True}}},
 "ServerRegisterRequest":{"type":"object","required":["id","kind","projectId"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"kind":{"type":"string","enum":["velocity","paper","purpur"]},"projectId":{"type":"string"},"profileId":{"type":"string"},"fingerprint":{"type":"string"}}},
-"JoinRequest":{"type":"object","required":["username","serverId","projectId","profileId"],"properties":{"username":{"type":"string","minLength":3,"maxLength":16,"pattern":"^[A-Za-z0-9_]+$"},"serverId":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string","default":"stable"}}},
+"JoinRequest":{"type":"object","required":["username","serverId","projectId","profileId"],"properties":{"username":{"type":"string","minLength":3,"maxLength":16,"pattern":"^[A-Za-z0-9_]+$"},"serverId":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string","default":"stable"},"minecraftAccessToken":{"type":"string","description":"Minecraft access token whose integrity-verified session is bound to this ServerBridge join when Guard enforcement applies"}}},
 "InvalidateRequest":{"type":"object","properties":{"serverId":{"type":"string"},"reason":{"type":"string"}}},
 "RevokeSessionsRequest":{"type":"object","properties":{"allExceptCurrent":{"type":"boolean"}}},
 "RenameSessionRequest":{"type":"object","required":["device"],"properties":{"device":{"type":"string","minLength":1,"maxLength":96}}},
@@ -236,7 +236,7 @@ schemas={
 "ChannelWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"protected":{"type":"boolean"}}},
 "UserWriteRequest":{"type":"object","properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"roleId":{"type":"string"},"password":{"type":"string"},"projectRoles":{"type":"object","additionalProperties":{"type":"string"}}}},
 "DiagnosticsReportRequest":{"type":"object","required":["schemaVersion","generatedAt","launcherVersion"],"properties":{"schemaVersion":{"type":"string"},"generatedAt":{"type":"string"},"launcherVersion":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"},"backendUrl":{"type":"string"},"status":{"type":"string"},"checks":{"type":"object","additionalProperties":{"type":"string"}}}},
-"HeartbeatRequest":{"type":"object","properties":{"serverId":{"type":"string"},"serverType":{"type":"string"},"pluginVersion":{"type":"string"}}},
+"HeartbeatRequest":{"type":"object","required":["serverId","serverType","pluginVersion","pluginSha256"],"properties":{"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","paper","purpur"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"}}},
 "BridgeAuditEventRequest":{"type":"object","required":["serverId","event"],"properties":{"serverId":{"type":"string"},"event":{"type":"string"},"player":{"type":"string"},"uuid":{"type":"string"},"details":{"type":"object","additionalProperties":True}}},
 "HasJoinedRequest":{"type":"object","properties":{"username":{"type":"string"},"serverId":{"type":"string"}}},
 "TelemetryRequest":{"type":"object","required":["projectId","event"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"event":{"type":"string"},"status":{"type":"string"}}},
@@ -250,7 +250,7 @@ schemas={
 "YggdrasilSignoutRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"providerId":{"type":"string"}}},
 "YggdrasilJoinRequest":{"type":"object","required":["accessToken","selectedProfile","serverId"],"properties":{"accessToken":{"type":"string"},"selectedProfile":{"type":"string"},"serverId":{"type":"string"}}},
 "FreeFormObject":{"type":"object","additionalProperties":True},
-"ValidateJoinRequest":{"type":"object","required":["serverId","username"],"properties":{"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"}}}
+"ValidateJoinRequest":{"type":"object","required":["serverId","username","pluginVersion","pluginSha256"],"properties":{"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"}}}
 }
 
 spec={

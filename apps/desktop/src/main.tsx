@@ -1046,7 +1046,7 @@ function App() {
     return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
   }
 
-  async function createServerJoinBeforeLaunch(username: string) {
+  async function createServerJoinBeforeLaunch(username: string, minecraftAccessToken: string) {
     if (!authSession?.accessToken || !settings.serverId) {
       log('Создание сессии входа ServerBridge пропущено: нет активной сессии или serverId. Для защищённого сервера заполните serverId в настройках.');
       return;
@@ -1054,7 +1054,7 @@ function App() {
     const response = await fetch(endpoint('/api/v1/session/join'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel }),
+      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel, minecraftAccessToken }),
     });
     if (!response.ok) throw new Error(`Не удалось создать сессию входа ServerBridge: ${response.status} ${response.statusText}`);
     const payload = await response.json();
@@ -1070,7 +1070,7 @@ function App() {
     try {
       const guardAttestationTicket = await createGuardLaunchTicket();
       const minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
-      await createServerJoinBeforeLaunch(minecraftCredentials.username);
+      await createServerJoinBeforeLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         manifest,
         root: settings.gameDirectory,

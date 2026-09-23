@@ -342,20 +342,27 @@ type MinecraftProfile struct {
 // MinecraftSession is an opaque Minecraft/Yggdrasil session derived from a Never
 // session. AccessTokenHash is the only persisted representation of the bearer token.
 type MinecraftSession struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"userId"`
-	NeverSessionID  string    `json:"neverSessionId"`
-	ProfileUUID     string    `json:"profileUuid"`
-	TrustedDeviceID string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch    int64     `json:"bindingEpoch"`
-	ClientToken     string    `json:"clientToken,omitempty"`
-	AccessTokenHash string    `json:"-"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"createdAt"`
-	LastSeenAt      time.Time `json:"lastSeenAt"`
-	ExpiresAt       time.Time `json:"expiresAt"`
-	RevokedAt       time.Time `json:"revokedAt,omitempty"`
-	RevokedReason   string    `json:"revokedReason,omitempty"`
+	ID                     string    `json:"id"`
+	UserID                 string    `json:"userId"`
+	NeverSessionID         string    `json:"neverSessionId"`
+	ProfileUUID            string    `json:"profileUuid"`
+	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch           int64     `json:"bindingEpoch"`
+	ClientToken            string    `json:"clientToken,omitempty"`
+	AccessTokenHash        string    `json:"-"`
+	IntegrityVerified      bool      `json:"integrityVerified"`
+	GuardAttestationSHA256 string    `json:"guardAttestationSha256,omitempty"`
+	GuardEvidenceSHA256    string    `json:"guardEvidenceSha256,omitempty"`
+	GuardSHA256            string    `json:"guardSha256,omitempty"`
+	LauncherSHA256         string    `json:"launcherSha256,omitempty"`
+	LauncherVersion        string    `json:"launcherVersion,omitempty"`
+	IntegrityVerifiedAt    time.Time `json:"integrityVerifiedAt,omitempty"`
+	Status                 string    `json:"status"`
+	CreatedAt              time.Time `json:"createdAt"`
+	LastSeenAt             time.Time `json:"lastSeenAt"`
+	ExpiresAt              time.Time `json:"expiresAt"`
+	RevokedAt              time.Time `json:"revokedAt,omitempty"`
+	RevokedReason          string    `json:"revokedReason,omitempty"`
 }
 
 // MinecraftJoin is the short-lived proof created by the client /join call and

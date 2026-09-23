@@ -163,6 +163,10 @@ func (s Server) issueMinecraftSession119(user model.User, neverSessionID, client
 // fails; if it wins after this check, the persisted old snapshot is rejected by
 // the next live trust evaluation. This closes a token-issuance TOCTOU window.
 func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	return s.issueMinecraftSessionWithTrustAndIntegrity119(user, neverSessionID, clientToken, trustedDeviceID, bindingEpoch, nil)
+}
+
+func (s Server) issueMinecraftSessionWithTrustAndIntegrity119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64, integrity *minecraftIntegritySnapshot0135) (model.MinecraftSession, string, model.MinecraftProfile, error) {
 	repo, err := s.minecraftRepo119()
 	if err != nil {
 		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
@@ -197,6 +201,15 @@ func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionI
 	}
 	now := time.Now().UTC()
 	session := model.MinecraftSession{ID: "mcs-" + strings.TrimPrefix(token, "nlmc_"), UserID: user.ID, NeverSessionID: neverSessionID, ProfileUUID: profile.UUID, TrustedDeviceID: trustedDeviceID, BindingEpoch: bindingEpoch, ClientToken: clientToken, AccessTokenHash: tokenHash910(token), Status: "active", CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(minecraftSessionTTL119)}
+	if integrity != nil {
+		session.IntegrityVerified = true
+		session.GuardAttestationSHA256 = integrity.GuardAttestationSHA256
+		session.GuardEvidenceSHA256 = integrity.GuardEvidenceSHA256
+		session.GuardSHA256 = integrity.GuardSHA256
+		session.LauncherSHA256 = integrity.LauncherSHA256
+		session.LauncherVersion = integrity.LauncherVersion
+		session.IntegrityVerifiedAt = integrity.VerifiedAt
+	}
 	session, err = repo.SaveMinecraftSession(session)
 	return session, token, profile, err
 }
@@ -214,6 +227,13 @@ func (s Server) validateMinecraftToken119(token string) (model.MinecraftSession,
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
 			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	integrity := s.evaluateMinecraftIntegrity0135(session)
+	if !integrity.Allowed {
+		if minecraftIntegrityPermanentFailure0135(integrity.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "integrity-policy:"+integrity.Reason)
 		}
 		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
 	}
@@ -270,19 +290,26 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusPreconditionFailed, "не удалось определить NeverGuard policy для trusted device")
 		return
 	}
+	var integritySnapshot *minecraftIntegritySnapshot0135
 	if guardRequired {
 		guardTicket, err = s.consumeGuardLaunchTicket0134(r, claims, req.GuardAttestationTicket)
 		if err != nil {
 			writeError(w, http.StatusPreconditionFailed, err.Error())
 			return
 		}
+		snapshot, snapshotErr := snapshotFromGuardLaunchTicket0135(guardTicket)
+		if snapshotErr != nil {
+			writeError(w, http.StatusPreconditionFailed, snapshotErr.Error())
+			return
+		}
+		integritySnapshot = &snapshot
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	session, token, profile, err := s.issueMinecraftSessionWithTrust119(user, claims.SessionID, req.ClientToken, trust.TrustedDeviceID, trust.BindingEpoch)
+	session, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, claims.SessionID, req.ClientToken, trust.TrustedDeviceID, trust.BindingEpoch, integritySnapshot)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать Minecraft session")
 		return
@@ -291,7 +318,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	if guardTicket.ID != "" {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "neverguard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"accessToken": token, "clientToken": session.ClientToken, "expiresAt": session.ExpiresAt, "profile": minecraftProfileJSON119(profile, s.minecraftTexture119(profile))}})
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"accessToken": token, "clientToken": session.ClientToken, "expiresAt": session.ExpiresAt, "profile": minecraftProfileJSON119(profile, s.minecraftTexture119(profile)), "integrity": integrityMetadataFromMinecraftSession0135(session)}})
 }
 
 func (s Server) minecraftProfileCurrent119(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +404,14 @@ func (s Server) yggdrasilRefresh119(w http.ResponseWriter, r *http.Request) {
 		writeYggdrasilError119(w, http.StatusForbidden, "Invalid token")
 		return
 	}
-	fresh, token, profile, err := s.issueMinecraftSessionWithTrust119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken), old.TrustedDeviceID, old.BindingEpoch)
+	var integritySnapshot *minecraftIntegritySnapshot0135
+	if old.IntegrityVerified {
+		integritySnapshot = &minecraftIntegritySnapshot0135{
+			GuardAttestationSHA256: old.GuardAttestationSHA256, GuardEvidenceSHA256: old.GuardEvidenceSHA256,
+			GuardSHA256: old.GuardSHA256, LauncherSHA256: old.LauncherSHA256, LauncherVersion: old.LauncherVersion, VerifiedAt: old.IntegrityVerifiedAt,
+		}
+	}
+	fresh, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, old.NeverSessionID, firstNonEmpty(req.ClientToken, old.ClientToken), old.TrustedDeviceID, old.BindingEpoch, integritySnapshot)
 	if err != nil {
 		writeYggdrasilError119(w, http.StatusInternalServerError, "Session refresh failed")
 		return
@@ -496,6 +530,14 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
 			_ = repo.RevokeMinecraftSession(session.ID, "trust-policy:"+trust.Reason)
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	integrity := s.evaluateMinecraftIntegrity0135(session)
+	if !integrity.Allowed {
+		if minecraftIntegrityPermanentFailure0135(integrity.Reason) {
+			_ = repo.RevokeMinecraftSession(session.ID, "integrity-policy:"+integrity.Reason)
 		}
 		w.WriteHeader(http.StatusNoContent)
 		return

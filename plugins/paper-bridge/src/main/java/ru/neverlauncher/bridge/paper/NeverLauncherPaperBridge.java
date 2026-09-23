@@ -10,6 +10,7 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 
@@ -28,11 +29,12 @@ public final class NeverLauncherPaperBridge extends JavaPlugin implements Listen
             config = BridgeConfig.fromEnv();
             getLogger().warning("Не удалось прочитать config.yml, используется env/default config: " + e.getMessage());
         }
-        api = new NeverLauncherApiClient(config);
+        String pluginSha256 = BridgeIntegrity.artifactSha256(NeverLauncherPaperBridge.class);
+        api = new NeverLauncherApiClient(config, "paper", BridgeDefaults.VERSION, pluginSha256);
         Bukkit.getPluginManager().registerEvents(this, this);
         if (getCommand("nlbridge") != null) getCommand("nlbridge").setExecutor(this);
         boolean ok = api.heartbeat("paper", BridgeDefaults.VERSION);
-        getLogger().info("NeverLauncher Paper Bridge " + BridgeDefaults.VERSION + " enabled; heartbeat=" + ok + "; serverId=" + config.serverId);
+        getLogger().info("NeverLauncher Paper Bridge " + BridgeDefaults.VERSION + " enabled; heartbeat=" + ok + "; serverId=" + config.serverId + "; sha256=" + (pluginSha256.isBlank() ? "unavailable" : pluginSha256.substring(0, 12)));
     }
 
     @EventHandler

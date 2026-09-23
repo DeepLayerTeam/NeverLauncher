@@ -571,7 +571,7 @@ func installWizardPayload(args []string) map[string]any {
 
 func installEnvPayload(args []string) map[string]any {
 	profile := flagValue(args, "--profile", "single-server-local")
-	return map[string]any{"schemaVersion": "1.0.0", "toolVersion": version, "profile": profile, "required": []string{"NEVERLAUNCHER_HTTP_ADDR", "NEVERLAUNCHER_PUBLIC_URL", "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres", "NEVERLAUNCHER_SQL_DRIVER=pgx", "NEVERLAUNCHER_DATABASE_DSN", "NEVERLAUNCHER_AUTH_TOKEN_SECRET", "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", "NEVERLAUNCHER_STORAGE_DRIVER"}, "generatedFiles": []string{".env", "deploy/production/env.production.example"}}
+	return map[string]any{"schemaVersion": "1.0.0", "toolVersion": version, "profile": profile, "required": []string{"NEVERLAUNCHER_HTTP_ADDR", "NEVERLAUNCHER_PUBLIC_URL", "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres", "NEVERLAUNCHER_SQL_DRIVER=pgx", "NEVERLAUNCHER_DATABASE_DSN", "NEVERLAUNCHER_AUTH_TOKEN_SECRET", "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", "NEVERLAUNCHER_STORAGE_DRIVER"}, "generatedFiles": []string{".env", "deploy/production/env.production.example"}}
 }
 
 func installStorageCheck(args []string) error {

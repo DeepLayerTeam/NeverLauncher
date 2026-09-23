@@ -15,6 +15,7 @@ public final class BridgeConfig {
     public final String channel;
     public final String failMode;
     public final boolean requireLauncherSession;
+    public final boolean requireIntegrity;
     public final int timeoutMs;
     public final int retries;
 
@@ -27,6 +28,7 @@ public final class BridgeConfig {
         this.channel = first(values, "profile.channel", "NEVERLAUNCHER_CHANNEL", "stable");
         this.failMode = first(values, "security.failMode", "NEVERLAUNCHER_FAIL_MODE", "closed");
         this.requireLauncherSession = Boolean.parseBoolean(first(values, "security.requireLauncherSession", "NEVERLAUNCHER_REQUIRE_SESSION", "true"));
+        this.requireIntegrity = Boolean.parseBoolean(first(values, "security.requireIntegrity", "NEVERLAUNCHER_REQUIRE_BRIDGE_INTEGRITY", "true"));
         this.timeoutMs = parseInt(first(values, "backend.timeoutMs", "NEVERLAUNCHER_TIMEOUT_MS", "5000"), 5000);
         this.retries = parseInt(first(values, "backend.retries", "NEVERLAUNCHER_RETRIES", "2"), 2);
     }

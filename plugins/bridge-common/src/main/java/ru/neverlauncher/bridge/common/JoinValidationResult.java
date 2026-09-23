@@ -22,6 +22,8 @@ public final class JoinValidationResult {
             case "session_risk_revoked", "parent_session_inactive" -> "Сессия NeverLauncher отозвана. Выполните вход заново.";
             case "project_mismatch", "profile_mismatch" -> "Эта сессия NeverLauncher не предназначена для данного сервера.";
             case "channel_mismatch" -> "Канал launcher session не совпадает с каналом сервера.";
+            case "bridge_integrity_unavailable", "bridge_integrity_measurement_missing", "bridge_integrity_heartbeat_required", "bridge_integrity_policy_unavailable", "bridge_integrity_release_revoked", "bridge_integrity_hash_rejected", "bridge_integrity_server_type_mismatch", "bridge_integrity_request_measurement_mismatch" -> "Целостность ServerBridge не подтверждена. Обновите или перезапустите серверный bridge.";
+            case "minecraft_integrity_session_required", "minecraft_integrity_binding_mismatch", "minecraft_integrity_repository_unavailable", "minecraft_integrity_session_inactive", "integrity_snapshot_missing", "integrity_release_revoked", "integrity_release_policy_unavailable", "integrity_attestation_not_fresh_at_issue", "integrity_attestation_hash_invalid", "integrity_evidence_hash_invalid", "integrity_guard_hash_invalid", "integrity_launcher_hash_invalid" -> "Целостность игровой сессии не подтверждена. Перезапустите Minecraft из NeverLauncher.";
             default -> "Вход разрешён только через действительную доверенную сессию NeverLauncher.";
         };
     }

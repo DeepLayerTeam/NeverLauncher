@@ -19,35 +19,40 @@ import (
 const serverBridgeSchema910 = apiContractVersion
 
 type bridgeServerRecord struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Kind        string    `json:"kind"`
-	ProjectID   string    `json:"projectId"`
-	ProfileID   string    `json:"profileId,omitempty"`
-	Fingerprint string    `json:"fingerprint,omitempty"`
-	TokenHash   string    `json:"-"`
-	TokenPrefix string    `json:"tokenPrefix"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
-	RotatedAt   time.Time `json:"rotatedAt,omitempty"`
+	ID                  string    `json:"id"`
+	Name                string    `json:"name"`
+	Kind                string    `json:"kind"`
+	ProjectID           string    `json:"projectId"`
+	ProfileID           string    `json:"profileId,omitempty"`
+	Fingerprint         string    `json:"fingerprint,omitempty"`
+	TokenHash           string    `json:"-"`
+	TokenPrefix         string    `json:"tokenPrefix"`
+	Status              string    `json:"status"`
+	PluginVersion       string    `json:"pluginVersion,omitempty"`
+	PluginSHA256        string    `json:"pluginSha256,omitempty"`
+	IntegrityStatus     string    `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt time.Time `json:"integrityVerifiedAt,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
+	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
 }
 
 type bridgeJoinRecord struct {
-	ID              string    `json:"id"`
-	Username        string    `json:"username"`
-	UUID            string    `json:"uuid"`
-	UserID          string    `json:"userId"`
-	SessionID       string    `json:"sessionId"`
-	ServerID        string    `json:"serverId"`
-	ProjectID       string    `json:"projectId"`
-	ProfileID       string    `json:"profileId"`
-	Channel         string    `json:"channel"`
-	AccessTokenHash string    `json:"-"`
-	TrustedDeviceID string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch    int64     `json:"bindingEpoch"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"createdAt"`
-	ExpiresAt       time.Time `json:"expiresAt"`
+	ID                 string    `json:"id"`
+	Username           string    `json:"username"`
+	UUID               string    `json:"uuid"`
+	UserID             string    `json:"userId"`
+	SessionID          string    `json:"sessionId"`
+	ServerID           string    `json:"serverId"`
+	ProjectID          string    `json:"projectId"`
+	ProfileID          string    `json:"profileId"`
+	Channel            string    `json:"channel"`
+	AccessTokenHash    string    `json:"-"`
+	TrustedDeviceID    string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch       int64     `json:"bindingEpoch"`
+	MinecraftSessionID string    `json:"minecraftSessionId,omitempty"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"createdAt"`
+	ExpiresAt          time.Time `json:"expiresAt"`
 }
 
 type bridgeTextureRecord struct {
@@ -76,11 +81,12 @@ type registerBridgeServerRequest struct {
 }
 
 type bridgeJoinRequest struct {
-	Username  string `json:"username,omitempty"`
-	ServerID  string `json:"serverId"`
-	ProjectID string `json:"projectId"`
-	ProfileID string `json:"profileId"`
-	Channel   string `json:"channel"`
+	Username             string `json:"username,omitempty"`
+	ServerID             string `json:"serverId"`
+	ProjectID            string `json:"projectId"`
+	ProfileID            string `json:"profileId"`
+	Channel              string `json:"channel"`
+	MinecraftAccessToken string `json:"minecraftAccessToken,omitempty"`
 }
 
 type bridgeHasJoinedRequest struct {
@@ -178,12 +184,26 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		s.writeGameplayTrustRequirement0127(w, trust)
 		return
 	}
+	minecraftSession, err := s.requireMinecraftIntegrityForBridgeSession0135(claims.Sub, claims.SessionID, trust.TrustedDeviceID, trust.BindingEpoch, req.MinecraftAccessToken)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, err.Error())
+		return
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, req)
+	if minecraftSession.ID != "" {
+		profile, profileErr := s.minecraftRepo119()
+		if profileErr == nil {
+			if minecraftProfile, getErr := profile.GetMinecraftProfileByUUID(minecraftSession.ProfileUUID); getErr == nil && req.Username != "" && !strings.EqualFold(req.Username, minecraftProfile.Name) {
+				writeError(w, http.StatusPreconditionFailed, "username не совпадает с integrity-verified Minecraft profile")
+				return
+			}
+		}
+	}
+	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, minecraftSession.ID, req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -213,6 +233,12 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "server token недействителен")
 		return
 	}
+	bridgeIntegrity := s.evaluateRegisteredBridgeIntegrity0135(server)
+	if !bridgeIntegrity.Allowed {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-bridge-integrity-denied"), Actor: server.ID, Action: "serverbridge:has-joined:bridge-integrity-denied", Target: username + ":" + bridgeIntegrity.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusPreconditionFailed, "server bridge integrity denied join: "+bridgeIntegrity.Reason)
+		return
+	}
 	join, ok := s.State.ServerBridge.hasJoined(username, serverID)
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-miss"), Actor: server.ID, Action: "serverbridge:has-joined:miss", Target: username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -229,8 +255,18 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "trust policy denied join: "+trust.Reason)
 		return
 	}
+	_, integrity := s.evaluateServerBridgeJoinIntegrity0135(join)
+	if !integrity.Allowed {
+		if minecraftIntegrityPermanentFailure0135(integrity.Reason) || integrity.Reason == "minecraft_integrity_session_required" || integrity.Reason == "minecraft_integrity_binding_mismatch" {
+			s.State.ServerBridge.invalidateJoin(username, serverID)
+			_ = s.flushPersistenceState950("server-bridge-integrity-invalidate")
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-integrity-denied"), Actor: server.ID, Action: "serverbridge:has-joined:integrity-denied", Target: join.UUID + ":" + integrity.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusForbidden, "integrity policy denied join: "+integrity.Reason)
+		return
+	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -308,7 +344,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion": serverBridgeSchema910,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.12.7 Minecraft/ServerBridge Trust Enforcement",
+		"release":       "NeverLauncher 0.13.5 Minecraft/ServerBridge Integrity Enforcement",
 		"mode":          "minecraft-session-bridge",
 		"parentMode":    "launcherops-ecosystem-platform",
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
@@ -377,6 +413,12 @@ func (b *serverBridgeStore) rotateToken(serverID string) (bridgeServerRecord, st
 	server.TokenHash = tokenHash910(token)
 	server.TokenPrefix = tokenPrefix910(token)
 	server.RotatedAt = time.Now().UTC()
+	// A rotated credential establishes a new bridge trust boundary. Require the
+	// plugin to prove its artifact hash again before accepting player joins.
+	server.PluginVersion = ""
+	server.PluginSHA256 = ""
+	server.IntegrityStatus = ""
+	server.IntegrityVerifiedAt = time.Time{}
 	b.servers[server.ID] = server
 	return server, token, nil
 }
@@ -444,7 +486,7 @@ func minecraftUsernameFromAccount910(email, userID string) string {
 	return value
 }
 
-func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, req bridgeJoinRequest) (bridgeJoinRecord, error) {
+func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, minecraftSessionID string, req bridgeJoinRequest) (bridgeJoinRecord, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if strings.TrimSpace(req.ServerID) == "" || strings.TrimSpace(req.ProjectID) == "" || strings.TrimSpace(req.ProfileID) == "" {
@@ -472,7 +514,7 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	if bindingEpoch < 1 {
 		bindingEpoch = 1
 	}
-	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)
 	return join, nil
@@ -571,7 +613,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "minecraftSessionId": join.MinecraftSessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 func bridgeServerTokenFromRequest910(r *http.Request) string {

@@ -267,6 +267,12 @@ Backend хранит trusted devices отдельно от legacy session `devic
 
 Stable registry создаётся через `httpapi.NewFederationCore(...)`; Local/SQL/HTTP/OIDC/Microsoft проходят Connector SDK conformance до приёма трафика. Generic browser identity linking доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает runtime health и provisioning policy providers. Migration `0011_auth_federation_release_0120` закрепляет canonical local identity для password-capable users.
 
+### Minecraft / ServerBridge integrity enforcement (0.13.5)
+
+Minecraft session теперь сохраняет verified Guard snapshot (`attestation/evidence/guard/launcher SHA-256`, release version и verification time). `/api/v1/session/join` связывает ServerBridge join с конкретным `minecraftAccessToken`; для Windows Guard-enforced device отсутствие такой связи возвращает `412`. Minecraft/Yggdrasil/ServerBridge validation заново проверяет snapshot по текущему Guard release allowlist, поэтому удаление hash отзывает уже активные игровые credentials.
+
+ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/Paper/Purpur JAR.
+
 ### Guard Attestation backend gate (0.13.4)
 
 `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` реализуют challenge-response verification Windows NeverGuard. Backend хранит challenge и launch ticket в том же persistent DeviceChallenge repository с atomic consume semantics. Complete требует свежую hardware P-256 device attestation, проверяет device signature, evidence/attestation digests, process boundary/policy и release SHA-256 allowlist. При включённой Guard policy `POST /api/v1/minecraft/session` требует одноразовый `guardAttestationTicket` для Windows trusted device; Linux/macOS не притворяются поддерживающими Windows Guard. В production `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен.

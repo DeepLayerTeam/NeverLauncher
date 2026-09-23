@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Minecraft/ServerBridge integrity enforcement — 0.13.5
+
+`0.13.5` делает Guard verification частью live gameplay authorization. Verified Guard release snapshot сохраняется в `minecraft_sessions`; Minecraft token validation, Yggdrasil join/hasJoined и ServerBridge validate-join/has-joined каждый раз повторно применяют текущий release allowlist. Для Windows Guard-enforced trusted device `/api/v1/session/join` обязан быть связан с конкретной integrity-verified Minecraft session. Удаление Guard/Desktop hash из allowlist является немедленным live revoke уже выданного credential.
+
+ServerBridge плагины Velocity/Paper/Purpur вычисляют SHA-256 собственного JAR и fail-closed отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend сверяет measurement с `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`; accepted measurement повторно проверяется при каждом join, а rotation server token сбрасывает его. Production Backend требует обе release policies: Guard/Desktop и ServerBridge. Release build генерирует `BRIDGE_RELEASE_ALLOWLIST.json` непосредственно из собранных JAR.
+
+Эта ServerBridge-проверка является application-level artifact allowlisting. Self-hash выполняется самим plugin process и аутентифицируется server token; она обнаруживает неподдерживаемый/изменённый release artifact и позволяет централизованно его отозвать, но не является remote hardware attestation Minecraft host. Host/root/kernel attacker, который контролирует server token и JVM, находится вне этой trust boundary.
+
 ## NeverGuard: Guard Attestation и Backend verification — 0.13.4
 
 В `0.13.4` Backend выдаёт persistent **single-use** challenge, который NeverGuard принимает только через authenticated IPC v3. Guard заново собирает Integrity Evidence v1, прикладывает enforced Windows process-policy report и вычисляет challenge-bound attestation digest; Desktop проверяет локальный IPC `sessionProof`, затем hardware-bound P-256 device key подписывает отдельный canonical binding к `user + device + session + bindingEpoch + launcherVersion + attestation/evidence/release hashes`.

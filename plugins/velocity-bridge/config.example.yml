@@ -8,6 +8,7 @@ server:
 security:
   failMode: "closed"
   requireLauncherSession: true
+  requireIntegrity: true
 profile:
   projectId: "default"
   profileId: "vanilla"

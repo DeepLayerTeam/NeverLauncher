@@ -238,6 +238,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Minecraft/ServerBridge integrity enforcement — 0.13.5
+
+`0.13.5` закрывает gameplay bypass между Guard Attestation и ServerBridge. Guard-verified metadata теперь сохраняется в самой Minecraft session и live-проверяется при validate/join/hasJoined. Для Windows Guard-enforced device Desktop передаёт новый Minecraft access token в `/api/v1/session/join`; Backend сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный join, не связанный с тем credential, который получил одноразовый Guard launch ticket.
+
+Velocity/Paper/Purpur дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation server token. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
+
+Удаление Guard/Desktop или ServerBridge hash из соответствующего allowlist действует как live revoke: уже созданная Minecraft/ServerBridge session перестаёт проходить Backend validation. ServerBridge JAR self-hash является application-level release enforcement и не выдаётся за TPM/kernel attestation удалённого Minecraft host.
+
 ## NeverGuard: Guard Attestation и Backend verification — 0.13.4
 
 `0.13.4` делает NeverGuard evidence серверно проверяемым в launch flow. Backend выдаёт одноразовый challenge, Desktop передаёт его в отдельный `neverguard.exe` через authenticated IPC v3, а Guard формирует свежую attestation поверх Integrity Evidence v1 и реально применённого Windows process policy. Hardware P-256 device key подписывает каноническую привязку attestation к текущим user/device/session/binding epoch и версии launcher; приватный ключ не передаётся Backend или frontend.

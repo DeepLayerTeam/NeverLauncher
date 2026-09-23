@@ -21,6 +21,7 @@ MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-1.21.1}"
 LOADER="$(printf '%s' "${NEVERLAUNCHER_E2E_LOADER:-vanilla}" | tr '[:upper:]' '[:lower:]')"
 LOADER_VERSION_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-}"
 PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
+BRIDGE_ALLOWLIST_JSON="{}"
 
 case "$MODE" in full|compatibility) ;; *) echo "[e2e] unsupported mode: $MODE" >&2; exit 2 ;; esac
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[e2e] unsupported loader: $LOADER" >&2; exit 2 ;; esac
@@ -49,6 +50,7 @@ NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
 NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
 NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
 NEVERLAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
+NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
 VELOCITY_SERVER_TOKEN=${VELOCITY_TOKEN:-token-not-initialized}
 PAPER_SERVER_TOKEN=${PAPER_TOKEN:-token-not-initialized}
 PURPUR_SERVER_TOKEN=${PURPUR_TOKEN:-token-not-initialized}
@@ -117,6 +119,8 @@ json_post() {
 
 printf '[e2e] build real ServerBridge artifacts\n'
 bash "$ROOT/scripts/build/bridge-plugins.sh"
+BRIDGE_ALLOWLIST_JSON="$(tr -d '\r\n' < "$ROOT/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json")"
+write_env_file
 cp "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/paper/neverlauncher-paper-bridge.jar"
 if [[ "$MODE" == "full" ]]; then
   cp "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/velocity/neverlauncher-velocity-bridge.jar"
