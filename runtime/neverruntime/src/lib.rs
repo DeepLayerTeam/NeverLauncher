@@ -6,22 +6,27 @@ mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
 pub mod linux_policy;
+pub mod macos_policy;
 #[cfg(target_os = "linux")]
 pub mod linux_guard;
-pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
+#[cfg(target_os = "macos")]
+pub mod macos_guard;
+pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use integrity::{
-    verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, LinuxProcessSecurityEvidence, ModuleSetEvidence,
+    verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, LinuxProcessSecurityEvidence, MacOSProcessSecurityEvidence, ModuleSetEvidence,
     NeverGuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
-    NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
+    NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
 };
 pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NEVERGUARD_PROTOCOL_VERSION};
 #[cfg(windows)]
 pub use guard_ipc::NeverGuardSupervisor;
 #[cfg(target_os = "linux")]
 pub use linux_guard::{run_linux_guard_server, NeverGuardSupervisor};
-#[cfg(all(not(windows), not(target_os = "linux")))]
+#[cfg(target_os = "macos")]
+pub use macos_guard::{run_macos_guard_server, NeverGuardSupervisor};
+#[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
 pub use guard_ipc::NeverGuardSupervisor;
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 pub use windows_policy::{
@@ -31,6 +36,7 @@ pub use windows_policy::{
     NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
+pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};

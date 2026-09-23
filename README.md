@@ -8,6 +8,12 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 
+## NeverGuard macOS production — 0.13.8
+
+macOS использует отдельный native NeverGuard boundary: authenticated Unix-domain socket protocol v4, kernel peer PID/UID validation, `PT_DENY_ATTACH`, `RLIMIT_CORE=0`, parent-exit kqueue watch и отдельную Minecraft process group. Integrity Evidence/Guard Attestation имеют собственные macOS schemas и включают SHA-256 Mach-O, process boundary, code signature, Hardened Runtime и library validation; Backend проверяет их независимо от Windows/Linux policy.
+
+Production package строится `scripts/release/build-macos-desktop.sh`: universal `arm64 + x86_64` `.app`, Developer ID Application signing, Hardened Runtime, notarization/stapling и Gatekeeper assessment. Перед spawn Guard Desktop fail-closed проверяет `MACOS_PACKAGE_MANIFEST.json`, expected signing identifiers/Team ID, подписи и notarization status. `--allow-ad-hoc` предназначен только для CI/development artifact и не является production-runnable package.
+
 ## Рабочий контур
 
 ```text

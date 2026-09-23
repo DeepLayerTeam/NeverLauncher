@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## macOS production implementation — 0.13.8
+
+`0.13.8` добавляет отдельную macOS user-mode boundary. Desktop/NeverGuard используют authenticated Unix socket `0600`, проверяют kernel peer PID/UID, запрещают debugger attach через `PT_DENY_ATTACH`, отключают core dumps, очищают dynamic-loader environment и fail-closed контролируют parent/runtime lifecycle. Minecraft запускается в отдельной process group, а Guard отслеживает смерть Desktop через kqueue.
+
+Integrity Evidence и Guard Attestation не переиспользуют Linux policy: Backend требует macOS-specific schema, валидную code signature, Hardened Runtime, library validation, совпадающие UID/GID/process boundary и точные release SHA-256. Production `.app` обязан быть подписан Developer ID Application и notarized; runtime дополнительно проверяет expected code-signing identifiers, Team ID, deep bundle signature и Gatekeeper assessment до запуска Guard.
+
+Ad-hoc signed artifact допускается только для CI/development build validation и намеренно не удовлетворяет production package verifier. Эти механизмы не являются защитой от root/kernel attacker и не заменяют server-side device-key signature, single-use challenge/ticket и release allowlist.
+
 ## Windows production hardening — 0.13.6
 
 В `0.13.6` локальная Windows boundary дополнительно fail-closed защищается до Minecraft launch. Desktop и NeverGuard включают terminate-on-heap-corruption и убирают current working directory из DLL search, оставляя default search только application directory + `System32`. NeverGuard Named Pipe protocol v4 создаётся с protected **current-user/System ACL**, `PIPE_REJECT_REMOTE_CLIENTS`, single first instance и прежней mutual HMAC authentication; hardening/ACL state входит в authenticated ready proof.

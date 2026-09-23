@@ -7,7 +7,8 @@ def require(text, needles, label):
     missing=[n for n in needles if n not in text]
     if missing: raise SystemExit(f'{label}: missing {missing}')
 
-if (root/'VERSION').read_text().strip()!='0.13.7': raise SystemExit('VERSION is not 0.13.7')
+def version_tuple(value): return tuple(int(part) for part in value.split('.'))
+if version_tuple((root/'VERSION').read_text().strip()) < (0,13,7): raise SystemExit('VERSION is older than 0.13.7')
 policy=read('runtime/neverruntime/src/linux_policy.rs')
 require(policy,['PR_SET_NO_NEW_PRIVS','PR_SET_DUMPABLE','RLIMIT_CORE','PR_SET_PDEATHSIG','SIGKILL','setpgid','neverguard/linux-runtime-process-policy/v1'],'Linux runtime policy')
 ipc=read('runtime/neverruntime/src/linux_guard.rs')

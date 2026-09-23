@@ -28,6 +28,9 @@ const (
 	guardLinuxAttestationSchema0137   = "neverguard/linux-guard-attestation/v1"
 	guardLinuxIntegritySchema0137     = "neverguard/linux-integrity-evidence/v1"
 	guardLinuxProcessPolicySchema0137 = "neverguard/linux-runtime-process-policy/v1"
+	guardMacOSAttestationSchema0138   = "neverguard/macos-guard-attestation/v1"
+	guardMacOSIntegritySchema0138     = "neverguard/macos-integrity-evidence/v1"
+	guardMacOSProcessPolicySchema0138 = "neverguard/macos-runtime-process-policy/v1"
 )
 
 type guardReleasePolicy0134 struct {
@@ -83,6 +86,26 @@ type guardLinuxProcessPolicyDetails0137 struct {
 	PrivateUmask      bool `json:"privateUmask"`
 }
 
+type guardMacOSProcessSecurityEvidence0138 struct {
+	UID                uint32 `json:"uid"`
+	GID                uint32 `json:"gid"`
+	ProcessGroupID     uint32 `json:"processGroupId"`
+	CodeSignatureValid bool   `json:"codeSignatureValid"`
+	HardenedRuntime    bool   `json:"hardenedRuntime"`
+	LibraryValidation  bool   `json:"libraryValidation"`
+}
+
+type guardMacOSProcessPolicyDetails0138 struct {
+	CoreDumpsDisabled        bool `json:"coreDumpsDisabled"`
+	DebuggerAttachDenied     bool `json:"debuggerAttachDenied"`
+	CodeSignatureValid       bool `json:"codeSignatureValid"`
+	HardenedRuntime          bool `json:"hardenedRuntime"`
+	LibraryValidation        bool `json:"libraryValidation"`
+	DyldEnvironmentSanitized bool `json:"dyldEnvironmentSanitized"`
+	ParentExitWatch          bool `json:"parentExitWatch"`
+	PrivateUmask             bool `json:"privateUmask"`
+}
+
 type guardProcessIntegrityEvidence0134 struct {
 	PID                    uint32                                 `json:"pid"`
 	ImagePath              string                                 `json:"imagePath"`
@@ -94,6 +117,7 @@ type guardProcessIntegrityEvidence0134 struct {
 	Mitigations            guardProcessMitigationEvidence0134     `json:"mitigations"`
 	Modules                guardModuleSetEvidence0134             `json:"modules"`
 	Linux                  *guardLinuxProcessSecurityEvidence0137 `json:"linux,omitempty"`
+	MacOS                  *guardMacOSProcessSecurityEvidence0138 `json:"macos,omitempty"`
 }
 
 type guardBoundaryEvidence0134 struct {
@@ -127,6 +151,7 @@ type guardProcessPolicyReport0134 struct {
 	PreferSystem32Images           bool                                `json:"preferSystem32Images"`
 	ChildProcessCreationBlocked    bool                                `json:"childProcessCreationBlocked"`
 	Linux                          *guardLinuxProcessPolicyDetails0137 `json:"linux,omitempty"`
+	MacOS                          *guardMacOSProcessPolicyDetails0138 `json:"macos,omitempty"`
 }
 
 type guardRemoteAttestation0134 struct {
@@ -204,11 +229,19 @@ func isLinuxDevicePlatform0137(platform string) bool {
 	return platform == "linux" || strings.HasPrefix(platform, "linux-") || strings.HasPrefix(platform, "linux ") || strings.Contains(platform, "linux")
 }
 
-func guardSchemasForPlatform0137(platform string) (string, string, string, bool) {
+func isMacOSDevicePlatform0138(platform string) bool {
+	platform = strings.ToLower(strings.TrimSpace(platform))
+	return platform == "macos" || platform == "darwin" || strings.HasPrefix(platform, "macos-") || strings.HasPrefix(platform, "darwin-") || strings.Contains(platform, "mac os")
+}
+
+func guardSchemasForPlatform0138(platform string) (string, string, string, string) {
 	if isLinuxDevicePlatform0137(platform) {
-		return guardLinuxAttestationSchema0137, guardLinuxIntegritySchema0137, guardLinuxProcessPolicySchema0137, true
+		return guardLinuxAttestationSchema0137, guardLinuxIntegritySchema0137, guardLinuxProcessPolicySchema0137, "linux"
 	}
-	return guardAttestationSchema0134, guardIntegritySchema0134, guardProcessPolicySchema0134, false
+	if isMacOSDevicePlatform0138(platform) {
+		return guardMacOSAttestationSchema0138, guardMacOSIntegritySchema0138, guardMacOSProcessPolicySchema0138, "macos"
+	}
+	return guardAttestationSchema0134, guardIntegritySchema0134, guardProcessPolicySchema0134, "windows"
 }
 
 func (s Server) guardAttestationRequiredForSession0134(claims authClaims) (bool, error) {
@@ -223,7 +256,7 @@ func (s Server) guardAttestationRequiredForSession0134(claims authClaims) (bool,
 	if err != nil {
 		return false, err
 	}
-	return isWindowsDevicePlatform0134(device.Platform) || isLinuxDevicePlatform0137(device.Platform), nil
+	return isWindowsDevicePlatform0134(device.Platform) || isLinuxDevicePlatform0137(device.Platform) || isMacOSDevicePlatform0138(device.Platform), nil
 }
 
 func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, error) {
@@ -307,6 +340,24 @@ func guardAttestationCorePayload0134(a guardRemoteAttestation0134) string {
 			"private-umask=" + strconv.FormatBool(l.PrivateUmask) + "\n" +
 			"collected-at=" + strconv.FormatUint(a.CollectedAtUnix, 10) + "\n"
 	}
+	if a.Schema == guardMacOSAttestationSchema0138 && a.ProcessPolicy.MacOS != nil && a.Evidence.Guard.MacOS != nil && a.Evidence.Launcher.MacOS != nil {
+		m := a.ProcessPolicy.MacOS
+		g := a.Evidence.Guard.MacOS
+		l := a.Evidence.Launcher.MacOS
+		return "NeverLauncher Guard Attestation Core macOS v1\n" +
+			"challenge-id=" + a.ChallengeID + "\n" + "challenge-sha256=" + a.ChallengeSHA256 + "\n" +
+			"evidence-id=" + a.Evidence.EvidenceID + "\n" + "evidence-sha256=" + a.Evidence.EvidenceSHA256 + "\n" +
+			"guard-sha256=" + a.Evidence.Guard.ImageSHA256 + "\n" + "launcher-sha256=" + a.Evidence.Launcher.ImageSHA256 + "\n" +
+			"guard-module-set-sha256=" + a.Evidence.Guard.Modules.ModuleSetSHA256 + "\n" + "launcher-module-set-sha256=" + a.Evidence.Launcher.Modules.ModuleSetSHA256 + "\n" +
+			"guard-code-signature-valid=" + strconv.FormatBool(g.CodeSignatureValid) + "\n" + "guard-hardened-runtime=" + strconv.FormatBool(g.HardenedRuntime) + "\n" + "guard-library-validation=" + strconv.FormatBool(g.LibraryValidation) + "\n" +
+			"launcher-code-signature-valid=" + strconv.FormatBool(l.CodeSignatureValid) + "\n" + "launcher-hardened-runtime=" + strconv.FormatBool(l.HardenedRuntime) + "\n" + "launcher-library-validation=" + strconv.FormatBool(l.LibraryValidation) + "\n" +
+			"process-policy-version=" + strconv.FormatUint(uint64(a.ProcessPolicy.PolicyVersion), 10) + "\n" + "process-policy-enforced=" + strconv.FormatBool(a.ProcessPolicy.Enforced) + "\n" +
+			"core-dumps-disabled=" + strconv.FormatBool(m.CoreDumpsDisabled) + "\n" + "debugger-attach-denied=" + strconv.FormatBool(m.DebuggerAttachDenied) + "\n" +
+			"code-signature-valid=" + strconv.FormatBool(m.CodeSignatureValid) + "\n" + "hardened-runtime=" + strconv.FormatBool(m.HardenedRuntime) + "\n" +
+			"library-validation=" + strconv.FormatBool(m.LibraryValidation) + "\n" + "dyld-environment-sanitized=" + strconv.FormatBool(m.DyldEnvironmentSanitized) + "\n" +
+			"parent-exit-watch=" + strconv.FormatBool(m.ParentExitWatch) + "\n" + "private-umask=" + strconv.FormatBool(m.PrivateUmask) + "\n" +
+			"collected-at=" + strconv.FormatUint(a.CollectedAtUnix, 10) + "\n"
+	}
 	return "NeverLauncher Guard Attestation Core v1\n" +
 		"challenge-id=" + a.ChallengeID + "\n" +
 		"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
@@ -354,7 +405,9 @@ func guardDeviceSigningPayload0134(challenge string, claims authClaims, device m
 }
 
 func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, challenge string, policy guardReleasePolicy0134, platform string, now time.Time, challengeCreatedAt time.Time) error {
-	expectedAttestationSchema, expectedEvidenceSchema, expectedPolicySchema, linux := guardSchemasForPlatform0137(platform)
+	expectedAttestationSchema, expectedEvidenceSchema, expectedPolicySchema, platformKind := guardSchemasForPlatform0138(platform)
+	linux := platformKind == "linux"
+	macos := platformKind == "macos"
 	if a.Schema != expectedAttestationSchema || a.AttestationVersion != 1 || a.ChallengeID != strings.TrimSpace(challengeID) {
 		return errors.New("Guard Attestation schema/version/challengeId mismatch")
 	}
@@ -421,6 +474,18 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 			a.Evidence.Guard.Linux.UID != a.Evidence.Launcher.Linux.UID || a.Evidence.Guard.Linux.GID != a.Evidence.Launcher.Linux.GID {
 			return errors.New("NeverGuard Linux integrity process state verification failed")
 		}
+	} else if macos {
+		if p.MacOS == nil || !p.MacOS.CoreDumpsDisabled || !p.MacOS.DebuggerAttachDenied || !p.MacOS.CodeSignatureValid ||
+			!p.MacOS.HardenedRuntime || !p.MacOS.LibraryValidation || !p.MacOS.DyldEnvironmentSanitized || !p.MacOS.ParentExitWatch || !p.MacOS.PrivateUmask {
+			return errors.New("NeverGuard macOS process policy verification failed")
+		}
+		if a.Evidence.Guard.MacOS == nil || a.Evidence.Launcher.MacOS == nil ||
+			!a.Evidence.Guard.MacOS.CodeSignatureValid || !a.Evidence.Guard.MacOS.HardenedRuntime || !a.Evidence.Guard.MacOS.LibraryValidation ||
+			!a.Evidence.Launcher.MacOS.CodeSignatureValid || !a.Evidence.Launcher.MacOS.HardenedRuntime || !a.Evidence.Launcher.MacOS.LibraryValidation ||
+			a.Evidence.Guard.MacOS.UID != a.Evidence.Launcher.MacOS.UID || a.Evidence.Guard.MacOS.GID != a.Evidence.Launcher.MacOS.GID ||
+			a.Evidence.Guard.MacOS.ProcessGroupID == 0 || a.Evidence.Launcher.MacOS.ProcessGroupID == 0 {
+			return errors.New("NeverGuard macOS integrity process state verification failed")
+		}
 	} else if !p.DynamicCodeProhibited || !p.ExtensionPointsDisabled || !p.StrictHandleChecks ||
 		!p.RemoteImagesBlocked || !p.LowMandatoryLabelImagesBlocked || !p.PreferSystem32Images || !p.ChildProcessCreationBlocked {
 		return errors.New("NeverGuard Windows process policy verification failed")
@@ -429,7 +494,7 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 		!containsHash0134(policy.LauncherSHA256, a.Evidence.Launcher.ImageSHA256) {
 		return errors.New("NeverGuard/Desktop release hash is not allowlisted")
 	}
-	if !linux && policy.RequireAuthenticode && (!a.Evidence.Guard.Authenticode.Trusted || !a.Evidence.Launcher.Authenticode.Trusted) {
+	if platformKind == "windows" && policy.RequireAuthenticode && (!a.Evidence.Guard.Authenticode.Trusted || !a.Evidence.Launcher.Authenticode.Trusted) {
 		return errors.New("release policy requires trusted Authenticode for NeverGuard and Desktop")
 	}
 	return nil
@@ -467,8 +532,8 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusNotFound, "устройство не найдено")
 		return
 	}
-	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux trusted device")
+	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) && !isMacOSDevicePlatform0138(device.Platform) {
+		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux/macOS trusted device")
 		return
 	}
 	if err := attestationEligibleDevice0124(device); err != nil {
@@ -508,7 +573,7 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard Attestation challenge")
 		return
 	}
-	attestationSchema, evidenceSchema, processPolicySchema, linuxPlatform := guardSchemasForPlatform0137(device.Platform)
+	attestationSchema, evidenceSchema, processPolicySchema, platformKind := guardSchemasForPlatform0138(device.Platform)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"challengeId":         challengeID,
 		"challenge":           challenge,
@@ -517,8 +582,8 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		"attestationSchema":   attestationSchema,
 		"evidenceSchema":      evidenceSchema,
 		"processPolicySchema": processPolicySchema,
-		"platform":            map[bool]string{true: "linux", false: "windows"}[linuxPlatform],
-		"requireAuthenticode": policy.RequireAuthenticode && !linuxPlatform,
+		"platform":            platformKind,
+		"requireAuthenticode": policy.RequireAuthenticode && platformKind == "windows",
 		"oneTime":             true,
 	}})
 }
@@ -556,8 +621,8 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusNotFound, "устройство не найдено")
 		return
 	}
-	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux trusted device")
+	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) && !isMacOSDevicePlatform0138(device.Platform) {
+		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux/macOS trusted device")
 		return
 	}
 	if err := attestationEligibleDevice0124(device); err != nil {

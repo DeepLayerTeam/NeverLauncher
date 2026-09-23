@@ -6,6 +6,7 @@ use sha2::{Digest, Sha256};
 pub const NEVERGUARD_REMOTE_ATTESTATION_VERSION: u32 = 1;
 pub const NEVERGUARD_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/windows-guard-attestation/v1";
 pub const NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/linux-guard-attestation/v1";
+pub const NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/macos-guard-attestation/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +54,31 @@ pub(crate) fn canonical_attestation_core(attestation: &NeverGuardRemoteAttestati
             linux.private_umask, attestation.collected_at_unix,
         ));
     }
+    if attestation.schema == NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA {
+        let macos = attestation.process_policy.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing macOS process policy details".to_string())?;
+        let guard = attestation.evidence.guard.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing guard security evidence".to_string())?;
+        let launcher = attestation.evidence.launcher.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing launcher security evidence".to_string())?;
+        return Ok(format!(
+            concat!(
+                "NeverLauncher Guard Attestation Core macOS v1\n",
+                "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
+                "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
+                "guard-code-signature-valid={}\n","guard-hardened-runtime={}\n","guard-library-validation={}\n",
+                "launcher-code-signature-valid={}\n","launcher-hardened-runtime={}\n","launcher-library-validation={}\n",
+                "process-policy-version={}\n","process-policy-enforced={}\n","core-dumps-disabled={}\n",
+                "debugger-attach-denied={}\n","code-signature-valid={}\n","hardened-runtime={}\n",
+                "library-validation={}\n","dyld-environment-sanitized={}\n","parent-exit-watch={}\n","private-umask={}\n","collected-at={}\n"
+            ),
+            attestation.challenge_id, attestation.challenge_sha256, attestation.evidence.evidence_id,
+            attestation.evidence.evidence_sha256, attestation.evidence.guard.image_sha256,
+            attestation.evidence.launcher.image_sha256, attestation.evidence.guard.modules.module_set_sha256,
+            attestation.evidence.launcher.modules.module_set_sha256, guard.code_signature_valid, guard.hardened_runtime,
+            guard.library_validation, launcher.code_signature_valid, launcher.hardened_runtime, launcher.library_validation,
+            attestation.process_policy.policy_version, attestation.process_policy.enforced, macos.core_dumps_disabled,
+            macos.debugger_attach_denied, macos.code_signature_valid, macos.hardened_runtime, macos.library_validation,
+            macos.dyld_environment_sanitized, macos.parent_exit_watch, macos.private_umask, attestation.collected_at_unix,
+        ));
+    }
     Ok(format!(
         concat!(
             "NeverLauncher Guard Attestation Core v1\n",
@@ -88,7 +114,8 @@ pub(crate) fn recompute_attestation_sha256(attestation: &NeverGuardRemoteAttesta
 
 pub(crate) fn validate_attestation_shape(attestation: &NeverGuardRemoteAttestation) -> Result<(), String> {
     if (attestation.schema != NEVERGUARD_REMOTE_ATTESTATION_SCHEMA
-        && attestation.schema != NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA)
+        && attestation.schema != NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA
+        && attestation.schema != NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA)
         || attestation.attestation_version != NEVERGUARD_REMOTE_ATTESTATION_VERSION
     {
         return Err("NeverGuard remote attestation schema/version mismatch".to_string());
@@ -142,6 +169,7 @@ mod tests {
             },
             modules: ModuleSetEvidence { module_count: 1, module_set_sha256: "33".repeat(32), non_system_module_names: vec![] },
             linux: None,
+            macos: None,
         }
     }
 
@@ -176,6 +204,7 @@ mod tests {
                 prefer_system32_images: true,
                 child_process_creation_blocked: true,
                 linux: None,
+                macos: None,
             },
             attestation_sha256: String::new(),
             session_proof: String::new(),

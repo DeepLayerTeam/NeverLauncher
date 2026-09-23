@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 pub const NEVERGUARD_INTEGRITY_EVIDENCE_VERSION: u32 = 1;
 pub const NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/windows-integrity-evidence/v1";
 pub const NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/linux-integrity-evidence/v1";
+pub const NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/macos-integrity-evidence/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -50,6 +51,17 @@ pub struct LinuxProcessSecurityEvidence {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct MacOSProcessSecurityEvidence {
+    pub uid: u32,
+    pub gid: u32,
+    pub process_group_id: u32,
+    pub code_signature_valid: bool,
+    pub hardened_runtime: bool,
+    pub library_validation: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessIntegrityEvidence {
     pub pid: u32,
     pub image_path: String,
@@ -62,6 +74,8 @@ pub struct ProcessIntegrityEvidence {
     pub modules: ModuleSetEvidence,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linux: Option<LinuxProcessSecurityEvidence>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub macos: Option<MacOSProcessSecurityEvidence>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -86,7 +100,7 @@ pub struct NeverGuardIntegrityEvidence {
     pub session_proof: String,
 }
 
-#[cfg(any(windows, target_os = "linux", test))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct IntegrityEvidenceCore<'a> {
@@ -99,7 +113,7 @@ struct IntegrityEvidenceCore<'a> {
     launcher: &'a ProcessIntegrityEvidence,
 }
 
-#[cfg(any(windows, target_os = "linux", test))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
 fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String> {
     serde_json::to_vec(&IntegrityEvidenceCore {
         schema: &evidence.schema,
@@ -113,7 +127,7 @@ fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String>
     .map_err(|err| format!("NeverGuard integrity evidence serialization failed: {err}"))
 }
 
-#[cfg(any(windows, target_os = "linux", test))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
 pub(crate) fn recompute_evidence_sha256(
     evidence: &NeverGuardIntegrityEvidence,
 ) -> Result<[u8; 32], String> {
@@ -123,10 +137,11 @@ pub(crate) fn recompute_evidence_sha256(
     Ok(out)
 }
 
-#[cfg(any(windows, target_os = "linux", test))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
 pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) -> Result<(), String> {
     let schema_ok = evidence.schema == NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA
-        || evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA;
+        || evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA
+        || evidence.schema == NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA;
     if !schema_ok || evidence.evidence_version != NEVERGUARD_INTEGRITY_EVIDENCE_VERSION {
         return Err("NeverGuard integrity evidence schema/version mismatch".to_string());
     }
@@ -170,6 +185,17 @@ pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) ->
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
             return Err("Linux NeverGuard/launcher uid/gid boundary mismatch".to_string());
+        }
+    }
+    if evidence.schema == NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA {
+        let guard = evidence.guard.macos.as_ref().ok_or_else(|| "macOS integrity evidence missing guard security state".to_string())?;
+        let launcher = evidence.launcher.macos.as_ref().ok_or_else(|| "macOS integrity evidence missing launcher security state".to_string())?;
+        if !guard.code_signature_valid || !guard.hardened_runtime || !guard.library_validation
+            || !launcher.code_signature_valid || !launcher.hardened_runtime || !launcher.library_validation {
+            return Err("macOS code-signing/Hardened Runtime state is not enforced".to_string());
+        }
+        if guard.uid != launcher.uid || guard.gid != launcher.gid {
+            return Err("macOS NeverGuard/launcher uid/gid boundary mismatch".to_string());
         }
     }
     Ok(())
@@ -340,6 +366,7 @@ mod windows_impl {
             mitigations: process_mitigations(process.raw()),
             modules: module_set(pid, &image_path)?,
             linux: None,
+            macos: None,
         })
     }
 
@@ -694,6 +721,7 @@ mod tests {
                 non_system_module_names: vec![],
             },
             linux: None,
+            macos: None,
         }
     }
 
@@ -808,7 +836,7 @@ mod linux_impl {
         let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("read exe link failed: {e}"))?;
         let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
-        Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), })
+        Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
     }
     pub fn collect(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{
         let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
@@ -824,3 +852,157 @@ mod linux_impl {
 pub(crate) fn collect_linux_integrity_evidence(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{ linux_impl::collect(expected_parent_pid) }
 #[cfg(target_os = "linux")]
 pub(crate) fn observed_linux_parent_pid(pid:u32)->Result<u32,String>{ linux_impl::parent(pid) }
+
+#[cfg(target_os = "macos")]
+mod macos_impl {
+    use super::*;
+    use crate::macos_policy::verify_macos_code_signature;
+    use rand::{rngs::OsRng, RngCore};
+    use std::{
+        ffi::c_void,
+        fs::File,
+        io::{BufReader, Read},
+        path::{Path, PathBuf},
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    const PROC_PIDTBSDINFO: libc::c_int = 3;
+    const PROC_PIDPATHINFO_MAXSIZE: usize = 4096;
+    const MAXCOMLEN: usize = 16;
+
+    #[repr(C)]
+    struct ProcBsdInfo {
+        pbi_flags: u32,
+        pbi_status: u32,
+        pbi_xstatus: u32,
+        pbi_pid: u32,
+        pbi_ppid: u32,
+        pbi_uid: u32,
+        pbi_gid: u32,
+        pbi_ruid: u32,
+        pbi_rgid: u32,
+        pbi_svuid: u32,
+        pbi_svgid: u32,
+        rfu_1: u32,
+        pbi_comm: [libc::c_char; MAXCOMLEN],
+        pbi_name: [libc::c_char; MAXCOMLEN * 2],
+        pbi_nfiles: u32,
+        pbi_pgid: u32,
+        pbi_pjobc: u32,
+        e_tdev: u32,
+        e_tpgid: u32,
+        pbi_nice: i32,
+        pbi_start_tvsec: u64,
+        pbi_start_tvusec: u64,
+    }
+
+    extern "C" {
+        fn proc_pidinfo(pid: libc::c_int, flavor: libc::c_int, arg: u64, buffer: *mut c_void, buffersize: libc::c_int) -> libc::c_int;
+        fn proc_pidpath(pid: libc::c_int, buffer: *mut c_void, buffersize: u32) -> libc::c_int;
+    }
+
+    fn bsd_info(pid: u32) -> Result<ProcBsdInfo, String> {
+        if pid == 0 || pid > i32::MAX as u32 { return Err("macOS process PID invalid".to_string()); }
+        let mut info: ProcBsdInfo = unsafe { std::mem::zeroed() };
+        let size = std::mem::size_of::<ProcBsdInfo>();
+        let read = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0, &mut info as *mut _ as *mut c_void, size as libc::c_int) };
+        if read < size as libc::c_int {
+            return Err(format!("macOS proc_pidinfo({pid}) failed: {}", std::io::Error::last_os_error()));
+        }
+        Ok(info)
+    }
+
+    fn image_path(pid: u32) -> Result<PathBuf, String> {
+        let mut buffer = vec![0u8; PROC_PIDPATHINFO_MAXSIZE];
+        let len = unsafe { proc_pidpath(pid as libc::c_int, buffer.as_mut_ptr() as *mut c_void, buffer.len() as u32) };
+        if len <= 0 { return Err(format!("macOS proc_pidpath({pid}) failed: {}", std::io::Error::last_os_error())); }
+        let len = len as usize;
+        buffer.truncate(len);
+        if buffer.last() == Some(&0) { buffer.pop(); }
+        let value = String::from_utf8(buffer).map_err(|_| "macOS process path is not UTF-8".to_string())?;
+        Ok(PathBuf::from(value))
+    }
+
+    fn sha256_file(path: &Path) -> Result<String, String> {
+        let file = File::open(path).map_err(|err| format!("open {} failed: {err}", path.display()))?;
+        let mut reader = BufReader::with_capacity(128 * 1024, file);
+        let mut hasher = Sha256::new();
+        let mut buffer = [0u8; 128 * 1024];
+        loop {
+            let count = reader.read(&mut buffer).map_err(|err| format!("read {} failed: {err}", path.display()))?;
+            if count == 0 { break; }
+            hasher.update(&buffer[..count]);
+        }
+        Ok(hex::encode(hasher.finalize()))
+    }
+
+    fn module_set(path: &Path, image_hash: &str) -> ModuleSetEvidence {
+        let normalized = path.to_string_lossy();
+        let mut digest = Sha256::new();
+        digest.update(b"NeverLauncher NeverGuard macOS signed-image-set v1\0");
+        digest.update((normalized.len() as u64).to_le_bytes());
+        digest.update(normalized.as_bytes());
+        digest.update(hex::decode(image_hash).unwrap_or_default());
+        ModuleSetEvidence { module_count: 1, module_set_sha256: hex::encode(digest.finalize()), non_system_module_names: Vec::new() }
+    }
+
+    fn process(pid: u32) -> Result<ProcessIntegrityEvidence, String> {
+        let info = bsd_info(pid)?;
+        let path = image_path(pid)?;
+        let metadata = std::fs::metadata(&path).map_err(|err| format!("metadata {} failed: {err}", path.display()))?;
+        if !metadata.is_file() { return Err(format!("macOS process image {} is not a regular file", path.display())); }
+        let image_sha256 = sha256_file(&path)?;
+        let modified = metadata.modified().ok().and_then(|value| value.duration_since(UNIX_EPOCH).ok()).map(|value| value.as_millis() as u64).unwrap_or(0);
+        let signature = verify_macos_code_signature(&path)?;
+        Ok(ProcessIntegrityEvidence {
+            pid,
+            image_path: path.to_string_lossy().into_owned(),
+            image_sha256: image_sha256.clone(),
+            image_size: metadata.len(),
+            image_modified_unix_ms: modified,
+            process_created_filetime: info.pbi_start_tvsec.saturating_mul(1_000_000).saturating_add(info.pbi_start_tvusec),
+            authenticode: AuthenticodeEvidence { trusted: signature.valid, status: "macos-codesign-valid".to_string() },
+            mitigations: ProcessMitigationEvidence { dep: None, aslr: None, dynamic_code: None, extension_point_disable: None, control_flow_guard: None, binary_signature: None, image_load: None, child_process: None, user_shadow_stack: None, sehop: None, query_failures: Vec::new() },
+            modules: module_set(&path, &image_sha256),
+            linux: None,
+            macos: Some(MacOSProcessSecurityEvidence {
+                uid: info.pbi_uid,
+                gid: info.pbi_gid,
+                process_group_id: info.pbi_pgid,
+                code_signature_valid: signature.valid,
+                hardened_runtime: signature.hardened_runtime,
+                library_validation: signature.library_validation,
+            }),
+        })
+    }
+
+    pub fn collect(expected_parent_pid: u32) -> Result<NeverGuardIntegrityEvidence, String> {
+        let guard_pid = std::process::id();
+        let observed = bsd_info(guard_pid)?.pbi_ppid;
+        if observed != expected_parent_pid { return Err(format!("macOS NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        let mut evidence_id = [0u8; 16];
+        OsRng.fill_bytes(&mut evidence_id);
+        let collected_at_unix = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|err| err.to_string())?.as_secs();
+        let mut evidence = NeverGuardIntegrityEvidence {
+            schema: NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA.to_string(),
+            evidence_version: NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
+            evidence_id: hex::encode(evidence_id),
+            collected_at_unix,
+            boundary: BoundaryEvidence { expected_parent_pid, observed_parent_pid: observed, parent_matches: true },
+            guard: process(guard_pid)?,
+            launcher: process(expected_parent_pid)?,
+            evidence_sha256: String::new(),
+            session_proof: String::new(),
+        };
+        evidence.evidence_sha256 = hex::encode(recompute_evidence_sha256(&evidence)?);
+        validate_evidence_shape(&evidence)?;
+        Ok(evidence)
+    }
+
+    pub fn parent(pid: u32) -> Result<u32, String> { Ok(bsd_info(pid)?.pbi_ppid) }
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) fn collect_macos_integrity_evidence(expected_parent_pid: u32) -> Result<NeverGuardIntegrityEvidence, String> { macos_impl::collect(expected_parent_pid) }
+#[cfg(target_os = "macos")]
+pub(crate) fn observed_macos_parent_pid(pid: u32) -> Result<u32, String> { macos_impl::parent(pid) }

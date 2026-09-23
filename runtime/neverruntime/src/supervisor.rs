@@ -30,6 +30,8 @@ pub struct ProcessStatus {
     pub windows_process_policy: Option<RuntimeProcessPolicyReport>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linux_process_policy: Option<crate::LinuxRuntimeProcessPolicyReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub macos_process_policy: Option<crate::MacOSRuntimeProcessPolicyReport>,
 }
 
 #[derive(Clone)]
@@ -119,6 +121,8 @@ impl ProcessSupervisor {
         crate::windows_policy::prepare_runtime_command(&mut command);
         #[cfg(target_os = "linux")]
         crate::linux_policy::prepare_runtime_command(&mut command);
+        #[cfg(target_os = "macos")]
+        crate::macos_policy::prepare_runtime_command(&mut command);
         let mut child = command
             .spawn()
             .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
@@ -128,6 +132,9 @@ impl ProcessSupervisor {
         #[cfg(target_os = "linux")]
         let linux_runtime_policy = crate::linux_policy::runtime_policy(&mut child)
             .map_err(|err| format!("launch заблокирован: Linux runtime/process policy enforcement failed: {err}"))?;
+        #[cfg(target_os = "macos")]
+        let macos_runtime_policy = crate::macos_policy::runtime_policy(&mut child)
+            .map_err(|err| format!("launch заблокирован: macOS runtime/process policy enforcement failed: {err}"))?;
 
         let pid = child.id();
         #[cfg(windows)]
@@ -138,11 +145,17 @@ impl ProcessSupervisor {
         let linux_process_policy = Some(linux_runtime_policy);
         #[cfg(not(target_os = "linux"))]
         let linux_process_policy = None;
+        #[cfg(target_os = "macos")]
+        let macos_process_policy = Some(macos_runtime_policy);
+        #[cfg(not(target_os = "macos"))]
+        let macos_process_policy = None;
         #[cfg(windows)]
         let launch_message = "Runtime запущен под supervision с Windows process policy enforcement";
         #[cfg(target_os = "linux")]
         let launch_message = "Runtime запущен под supervision с Linux process policy enforcement";
-        #[cfg(all(not(windows), not(target_os = "linux")))]
+        #[cfg(target_os = "macos")]
+        let launch_message = "Runtime запущен под supervision с macOS process policy enforcement";
+        #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
         let launch_message = "Runtime запущен под supervision";
         let id = format!("runtime-{started_at}-{}", pid.unwrap_or(0));
         let status = ProcessStatus {
@@ -151,6 +164,7 @@ impl ProcessSupervisor {
             log_path: log_path.to_string_lossy().to_string(), message: launch_message.to_string(),
             windows_process_policy,
             linux_process_policy,
+            macos_process_policy,
         };
         let child = Arc::new(Mutex::new(Some(child)));
         self.processes.lock().await.insert(id.clone(), ManagedProcess {
@@ -184,6 +198,10 @@ impl ProcessSupervisor {
                 #[cfg(target_os = "linux")]
                 if let Some(process_group) = pid {
                     let _ = crate::linux_policy::terminate_runtime_process_group(process_group);
+                }
+                #[cfg(target_os = "macos")]
+                if let Some(process_group) = pid {
+                    let _ = crate::macos_policy::terminate_runtime_process_group(process_group);
                 }
                 let finished_at = now_unix().unwrap_or_default().to_string();
                 let (exit_code, success, message) = match exit {
@@ -240,7 +258,12 @@ impl ProcessSupervisor {
                 let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
                 crate::linux_policy::terminate_runtime_process_group(pid)?;
             }
-            #[cfg(not(target_os = "linux"))]
+            #[cfg(target_os = "macos")]
+            {
+                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
+                crate::macos_policy::terminate_runtime_process_group(pid)?;
+            }
+            #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
             process.start_kill().map_err(|err| format!("не удалось остановить runtime process {id}: {err}"))?;
         }
         let mut map = self.processes.lock().await;

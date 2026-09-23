@@ -256,3 +256,59 @@ func TestLinuxGuardAttestationValidation0137(t *testing.T) {
 		t.Fatal("Linux Guard Attestation without no_new_privs was accepted")
 	}
 }
+
+func makeMacOSGuardAttestation0138(t *testing.T, challengeID, challenge string) guardRemoteAttestation0134 {
+	t.Helper()
+	process := func(pid uint32, imageHash, moduleHash string) guardProcessIntegrityEvidence0134 {
+		return guardProcessIntegrityEvidence0134{
+			PID: pid, ImagePath: "/Applications/NeverLauncher.app/Contents/MacOS/binary", ImageSHA256: imageHash,
+			ImageSize: 4096, ImageModifiedUnixMS: 3000, ProcessCreatedFiletime: 987654,
+			Authenticode: guardAuthenticodeEvidence0134{Trusted: true, Status: "macos-codesign-valid"},
+			Mitigations:  guardProcessMitigationEvidence0134{QueryFailures: []string{}},
+			Modules:      guardModuleSetEvidence0134{ModuleCount: 1, ModuleSetSHA256: moduleHash, NonSystemModuleNames: []string{}},
+			MacOS: &guardMacOSProcessSecurityEvidence0138{
+				UID: 501, GID: 20, ProcessGroupID: pid, CodeSignatureValid: true, HardenedRuntime: true, LibraryValidation: true,
+			},
+		}
+	}
+	now := uint64(time.Now().UTC().Unix())
+	evidence := guardIntegrityEvidence0134{
+		Schema: guardMacOSIntegritySchema0138, EvidenceVersion: 1, EvidenceID: strings.Repeat("c", 32), CollectedAtUnix: now,
+		Boundary:     guardBoundaryEvidence0134{ExpectedParentPID: 300, ObservedParentPID: 300, ParentMatches: true},
+		Guard:        process(301, testGuardHash0134, strings.Repeat("a", 64)),
+		Launcher:     process(300, testLauncherHash0134, strings.Repeat("b", 64)),
+		SessionProof: strings.Repeat("d", 64),
+	}
+	digest, err := recomputeGuardEvidenceSHA2560134(evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence.EvidenceSHA256 = digest
+	a := guardRemoteAttestation0134{
+		Schema: guardMacOSAttestationSchema0138, AttestationVersion: 1, ChallengeID: challengeID,
+		ChallengeSHA256: deviceChallengeHash0121(challenge), CollectedAtUnix: now, Evidence: evidence,
+		ProcessPolicy: guardProcessPolicyReport0134{
+			Schema: guardMacOSProcessPolicySchema0138, PolicyVersion: 1, PID: 301, Enforced: true,
+			MacOS: &guardMacOSProcessPolicyDetails0138{
+				CoreDumpsDisabled: true, DebuggerAttachDenied: true, CodeSignatureValid: true, HardenedRuntime: true,
+				LibraryValidation: true, DyldEnvironmentSanitized: true, ParentExitWatch: true, PrivateUmask: true,
+			},
+		},
+		SessionProof: strings.Repeat("e", 64),
+	}
+	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
+	return a
+}
+
+func TestMacOSGuardAttestationValidation0138(t *testing.T) {
+	policy := guardReleasePolicy0134{GuardSHA256: []string{testGuardHash0134}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: false}
+	a := makeMacOSGuardAttestation0138(t, "macos-challenge", "macos-secret")
+	if err := validateGuardAttestation0134(a, "macos-challenge", "macos-secret", policy, "macOS-arm64", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err != nil {
+		t.Fatalf("valid macOS Guard Attestation rejected: %v", err)
+	}
+	a.ProcessPolicy.MacOS.LibraryValidation = false
+	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
+	if err := validateGuardAttestation0134(a, "macos-challenge", "macos-secret", policy, "darwin", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
+		t.Fatal("macOS Guard Attestation without library validation was accepted")
+	}
+}

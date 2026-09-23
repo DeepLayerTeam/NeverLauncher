@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::linux_policy::LinuxGuardPolicyDetails;
+use crate::{linux_policy::LinuxGuardPolicyDetails, macos_policy::MacOSGuardPolicyDetails};
 
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1;
@@ -22,6 +22,8 @@ pub struct GuardProcessPolicyReport {
     pub child_process_creation_blocked: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linux: Option<LinuxGuardPolicyDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub macos: Option<MacOSGuardPolicyDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -302,6 +304,7 @@ mod windows_impl {
             prefer_system32_images: image_load & 0x4 != 0,
             child_process_creation_blocked: child_process & 0x1 != 0,
             linux: None,
+            macos: None,
         })
     }
 

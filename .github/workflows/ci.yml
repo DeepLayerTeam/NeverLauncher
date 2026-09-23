@@ -47,6 +47,7 @@ jobs:
           python3 scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py
           python3 scripts/smoke/offline/windows-production-hardening-0136.py
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
+          python3 scripts/smoke/offline/macos-production-implementation-0138.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -173,6 +174,51 @@ jobs:
           path: dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
           if-no-files-found: error
 
+  neverguard-macos:
+    name: NeverGuard macOS production implementation
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: macOS production gate and native Rust checks
+        shell: bash
+        run: |
+          python3 scripts/smoke/offline/macos-production-implementation-0138.py
+          cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
+          cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
+          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverguard
+      - name: Signed macOS NeverGuard integration test
+        shell: bash
+        run: |
+          TEST_BIN="$(cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="neverguard_macos" and x.get("executable")]; print(xs[-1])')"
+          test -n "${TEST_BIN}"
+          codesign --force --sign - --options runtime --timestamp=none runtime/neverruntime/target/debug/neverguard
+          codesign --force --sign - --options runtime --timestamp=none "${TEST_BIN}"
+          "${TEST_BIN}" --nocapture
+      - name: Build Desktop frontend
+        working-directory: apps/desktop
+        run: npm ci && npm run build
+      - name: Build ad-hoc universal macOS package
+        shell: bash
+        run: bash scripts/release/build-macos-desktop.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --allow-ad-hoc
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-macos-neverguard-${{ github.sha }}
+          path: dist/release-*/neverlauncher-desktop-*-macos-universal.zip
+          if-no-files-found: error
+
   bridge:
     name: ServerBridge plugins
     runs-on: ubuntu-24.04
@@ -215,7 +261,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, neverguard-windows, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, neverguard-windows, neverguard-macos, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

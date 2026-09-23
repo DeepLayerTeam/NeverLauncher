@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.13.8 — macOS production implementation
+
+`0.13.8` добавляет отдельный production NeverGuard boundary для macOS вместо Linux-compatible fallback. Desktop запускает соседний universal Mach-O `neverguard`, взаимно аутентифицирует его по Unix-domain socket/HMAC protocol v4 и проверяет PID/UID peer credentials до выдачи integrity/attestation данных.
+
+### macOS runtime boundary
+
+- Desktop и NeverGuard применяют `PT_DENY_ATTACH`, `RLIMIT_CORE=0`, private umask и очищают `DYLD_*`/`_XPC_DYLD_*` environment; Guard дополнительно ставит kqueue `EVFILT_PROC/NOTE_EXIT` watch на launcher parent. Ошибка hardening блокирует startup fail-closed.
+- IPC создаётся только в приватном runtime directory, socket имеет mode `0600`, а peer PID/UID сверяются kernel credentials. Bootstrap secret передаётся только через inherited stdin и после handshake заменяется derived session key.
+- Minecraft/Java запускается в отдельной process group; runtime policy и stop path управляют всей группой, чтобы дочерние процессы не переживали supervised primary process.
+- macOS Integrity Evidence v1 измеряет SHA-256 Desktop/Guard Mach-O, PID/parent/UID/GID/process-group boundary и code-signing state. Отдельная macOS Guard Attestation фиксирует Hardened Runtime, library validation и runtime policy в server-challenge-bound digest.
+- Backend проверяет отдельные macOS schemas, release SHA-256 allowlist, device signature, freshness/replay, UID/GID boundary, code signature, Hardened Runtime/library validation и все обязательные macOS process-policy flags.
+
+### Signed and notarized production package
+
+- `build-macos-desktop.sh` строит universal `arm64 + x86_64` Desktop/NeverGuard, подписывает их Developer ID Application с Hardened Runtime и формирует `.app`. Production build требует Team ID и `notarytool` profile, отправляет bundle на notarization, выполняет stapling и Gatekeeper assessment.
+- `MACOS_PACKAGE_MANIFEST.json` фиксирует version/platform/protocol/hardening/Team ID; release Desktop до spawn Guard проверяет layout, ownership/permissions, expected code-signing identifiers, Team ID, Hardened Runtime, library validation, deep app signature и Gatekeeper/notarization status.
+- Release build генерирует `GUARD_RELEASE_ALLOWLIST_MACOS.json` из SHA-256 финальных подписанных Mach-O. Ad-hoc signing разрешён только явным `--allow-ad-hoc` для CI/development и не проходит production package verifier.
+- CI использует отдельный macOS native job: Rust fmt/test/clippy, подписанный Guard integration test и universal build. Offline gate `macos-production-implementation-0138.py` обязателен в repository policy/preflight.
+
+Граница остаётся user-mode: root/kernel attacker и компрометация Developer ID ключа находятся вне локальной модели доверия. Удалённое решение всё равно принимает Backend по hardware/device-key signature, release allowlist и одноразовой Guard Attestation.
+
 ## 0.13.7 — Linux production implementation
 
 `0.13.7` переносит NeverGuard production boundary на Linux как отдельную native-реализацию, а не как Windows-compatible stub. Desktop запускает соседний `neverguard` через приватный Unix-domain socket, взаимно аутентифицирует процесс bootstrap-secret/HMAC протоколом v4 и проверяет kernel peer credentials до любого integrity/attestation ответа.
