@@ -1,9 +1,11 @@
+pub mod attestation;
 pub mod compatibility;
 pub mod managed_java;
 pub mod guard_ipc;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
+pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use integrity::{

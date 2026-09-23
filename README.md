@@ -238,6 +238,14 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## NeverGuard: Guard Attestation и Backend verification — 0.13.4
+
+`0.13.4` делает NeverGuard evidence серверно проверяемым в launch flow. Backend выдаёт одноразовый challenge, Desktop передаёт его в отдельный `neverguard.exe` через authenticated IPC v3, а Guard формирует свежую attestation поверх Integrity Evidence v1 и реально применённого Windows process policy. Hardware P-256 device key подписывает каноническую привязку attestation к текущим user/device/session/binding epoch и версии launcher; приватный ключ не передаётся Backend или frontend.
+
+Backend endpoints `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` проверяют одноразовость/freshness challenge, P-256 signature, evidence/attestation digests, PID boundary, process-policy flags и точные SHA-256 `neverguard.exe`/Desktop по `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`. После успешной проверки Backend выдаёт короткоживущий single-use Guard launch ticket. Для Windows trusted device в production `/api/v1/minecraft/session` не выдаёт игровую session без валидного ticket; повторное использование ticket отклоняется.
+
+Windows package build создаёт `GUARD_RELEASE_ALLOWLIST.json` рядом с `WINDOWS_PACKAGE_MANIFEST.json`; его значения должны быть перенесены в production configuration после финальной сборки/подписи binaries. `requireAuthenticode` можно включить только для release pipeline, где конечные файлы действительно подписаны до вычисления allowlist hashes. Эта схема является application-level Guard Attestation, а не TPM quote/Measured Boot или kernel anti-cheat.
+
 ## NeverGuard Windows: применение runtime/process policy — 0.13.3
 
 `0.13.3` делает Windows policy исполняемой, а не декларативной. `neverguard.exe` до запуска Tokio применяет и заново проверяет process mitigations (`DynamicCode`, `ExtensionPointDisable`, `StrictHandleCheck`, `ImageLoad`, `ChildProcess`). Applied state возвращается только по authenticated IPC `process-policy`; handshake protocol v2 также привязывает policy version/enforced bit к `ready` proof.

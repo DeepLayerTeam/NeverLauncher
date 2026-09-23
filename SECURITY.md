@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## NeverGuard: Guard Attestation и Backend verification — 0.13.4
+
+В `0.13.4` Backend выдаёт persistent **single-use** challenge, который NeverGuard принимает только через authenticated IPC v3. Guard заново собирает Integrity Evidence v1, прикладывает enforced Windows process-policy report и вычисляет challenge-bound attestation digest; Desktop проверяет локальный IPC `sessionProof`, затем hardware-bound P-256 device key подписывает отдельный canonical binding к `user + device + session + bindingEpoch + launcherVersion + attestation/evidence/release hashes`.
+
+Backend не доверяет присланным digest как готовым значениям: он пересчитывает evidence и attestation SHA-256, проверяет challenge freshness/replay, registered device public key/signature, parent PID boundary, обязательные process-policy flags и точное совпадение `neverguard.exe`/Desktop hashes с production release allowlist. Опциональная release policy может требовать trusted Authenticode. Успешная проверка создаёт persistent single-use launch ticket; Для Windows trusted device Minecraft session issuance потребляет его атомарно и отклоняет replay. Production startup fail-closed требует `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`.
+
+Граница доверия остаётся user-mode/application-level: это не TPM quote, не Measured Boot, не VBS/kernel attestation и не kernel anti-cheat. Server verification доказывает possession зарегистрированного hardware device key и согласованность свежей Guard evidence с allowlisted release binaries; она не заявляет невозможность компрометации уже привилегированным kernel/firmware attacker.
+
 ## NeverGuard Windows: применение runtime/process policy — 0.13.3
 
 В `0.13.3` NeverGuard применяет Windows process mitigations до создания Tokio runtime и fail-closed сверяет их через `GetProcessMitigationPolicy`. Guard запрещает dynamic code и child-process creation, отключает extension points, включает strict-handle checks и ограничивает загрузку remote/low-integrity images. Authenticated IPC protocol v2 включает policy version/enforced state в `ready` proof и предоставляет отдельный `process-policy` report.

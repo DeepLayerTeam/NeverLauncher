@@ -21,7 +21,8 @@ const minecraftSessionTTL119 = 24 * time.Hour
 const minecraftJoinTTL119 = 2 * time.Minute
 
 type minecraftSessionRequest119 struct {
-	ClientToken string `json:"clientToken,omitempty"`
+	ClientToken            string `json:"clientToken,omitempty"`
+	GuardAttestationTicket string `json:"guardAttestationTicket"`
 }
 
 type yggdrasilAuthenticateRequest119 struct {
@@ -263,6 +264,19 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 		s.writeGameplayTrustRequirement0127(w, trust)
 		return
 	}
+	var guardTicket model.DeviceChallenge
+	guardRequired, err := s.guardAttestationRequiredForSession0134(claims)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, "не удалось определить NeverGuard policy для trusted device")
+		return
+	}
+	if guardRequired {
+		guardTicket, err = s.consumeGuardLaunchTicket0134(r, claims, req.GuardAttestationTicket)
+		if err != nil {
+			writeError(w, http.StatusPreconditionFailed, err.Error())
+			return
+		}
+	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
@@ -274,6 +288,9 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("minecraft-session"), Actor: user.Email, Action: "minecraft:session:issued", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	if guardTicket.ID != "" {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "neverguard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	}
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"accessToken": token, "clientToken": session.ClientToken, "expiresAt": session.ExpiresAt, "profile": minecraftProfileJSON119(profile, s.minecraftTexture119(profile))}})
 }
 

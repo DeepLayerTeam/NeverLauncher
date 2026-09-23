@@ -415,7 +415,7 @@ impl RuntimeProcessPolicyGuard {
 
 #[cfg(not(windows))]
 pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
-    Err("NeverGuard 0.13.3 Windows process policy enforcement доступен только для Windows".to_string())
+    Err("NeverGuard 0.13.4 Windows process policy enforcement доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]

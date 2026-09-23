@@ -1,0 +1,207 @@
+package httpapi
+
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+)
+
+func authClaimsFromToken0134(t *testing.T, token string) authClaims {
+	t.Helper()
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("invalid access token shape")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("decode access token claims: %v", err)
+	}
+	var claims authClaims
+	if err := json.Unmarshal(raw, &claims); err != nil {
+		t.Fatalf("decode access token claims json: %v", err)
+	}
+	if claims.Sub == "" || claims.SessionID == "" {
+		t.Fatalf("access token is missing subject/session claims")
+	}
+	return claims
+}
+
+const (
+	testGuardHash0134    = "4444444444444444444444444444444444444444444444444444444444444444"
+	testLauncherHash0134 = "5555555555555555555555555555555555555555555555555555555555555555"
+)
+
+func makeGuardAttestation0134(t *testing.T, challengeID, challenge string) guardRemoteAttestation0134 {
+	t.Helper()
+	u := func(value uint32) *uint32 { return &value }
+	process := func(pid uint32, imageHash, moduleHash string) guardProcessIntegrityEvidence0134 {
+		return guardProcessIntegrityEvidence0134{
+			PID: pid, ImagePath: `C:\\NeverLauncher\\binary.exe`, ImageSHA256: imageHash,
+			ImageSize: 1024, ImageModifiedUnixMS: 1000, ProcessCreatedFiletime: 100,
+			Authenticode: guardAuthenticodeEvidence0134{Trusted: true, Status: "0x00000000"},
+			Mitigations: guardProcessMitigationEvidence0134{
+				DEP: u(1), ASLR: u(1), DynamicCode: u(1), ExtensionPointDisable: u(1), ControlFlowGuard: u(1),
+				BinarySignature: u(1), ImageLoad: u(7), ChildProcess: u(1), UserShadowStack: u(1), SEHOP: u(1),
+				QueryFailures: []string{},
+			},
+			Modules: guardModuleSetEvidence0134{ModuleCount: 2, ModuleSetSHA256: moduleHash, NonSystemModuleNames: []string{}},
+		}
+	}
+	now := uint64(time.Now().UTC().Unix())
+	evidence := guardIntegrityEvidence0134{
+		Schema: guardIntegritySchema0134, EvidenceVersion: 1, EvidenceID: strings.Repeat("a", 32), CollectedAtUnix: now,
+		Boundary:     guardBoundaryEvidence0134{ExpectedParentPID: 100, ObservedParentPID: 100, ParentMatches: true},
+		Guard:        process(101, testGuardHash0134, strings.Repeat("6", 64)),
+		Launcher:     process(100, testLauncherHash0134, strings.Repeat("7", 64)),
+		SessionProof: strings.Repeat("8", 64),
+	}
+	digest, err := recomputeGuardEvidenceSHA2560134(evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence.EvidenceSHA256 = digest
+	a := guardRemoteAttestation0134{
+		Schema: guardAttestationSchema0134, AttestationVersion: 1, ChallengeID: challengeID,
+		ChallengeSHA256: deviceChallengeHash0121(challenge), CollectedAtUnix: now, Evidence: evidence,
+		ProcessPolicy: guardProcessPolicyReport0134{
+			Schema: guardProcessPolicySchema0134, PolicyVersion: 1, PID: 101, Enforced: true,
+			DynamicCodeProhibited: true, ExtensionPointsDisabled: true, StrictHandleChecks: true,
+			RemoteImagesBlocked: true, LowMandatoryLabelImagesBlocked: true, PreferSystem32Images: true,
+			ChildProcessCreationBlocked: true,
+		},
+		SessionProof: strings.Repeat("9", 64),
+	}
+	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
+	return a
+}
+
+func registerWindowsHardwareDevice0134(t *testing.T, h http.Handler, access string, priv *ecdsa.PrivateKey) (string, string) {
+	t.Helper()
+	publicKey := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
+	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access, map[string]any{
+		"name": "NeverGuard Windows attestation workstation", "platform": "Win32", "clientVersion": "0.13.4",
+		"keyAlgorithm": "p256", "keyBinding": "hardware", "hardwareProvider": "test-windows-hardware-p256",
+	})
+	if code != http.StatusOK {
+		t.Fatalf("register begin status=%d body=%#v", code, beginOut)
+	}
+	begin := deviceTrustData0121(t, beginOut)
+	payload, _ := begin["signingPayload"].(string)
+	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/complete", access, map[string]any{
+		"challengeId": begin["challengeId"], "deviceId": begin["deviceId"], "challenge": begin["challenge"],
+		"publicKey": base64.RawURLEncoding.EncodeToString(publicKey), "signature": signP256P1363Test0123(t, priv, payload),
+	})
+	if code != http.StatusCreated {
+		t.Fatalf("register complete status=%d body=%#v", code, completeOut)
+	}
+	data := deviceTrustData0121(t, completeOut)
+	device, _ := data["device"].(map[string]any)
+	deviceID, _ := device["id"].(string)
+	trustedAccess, _ := data["accessToken"].(string)
+	if deviceID == "" || trustedAccess == "" {
+		t.Fatalf("incomplete registered Windows device: %#v", data)
+	}
+	return deviceID, trustedAccess
+}
+
+func attestHardwareDeviceForGuard0134(t *testing.T, h http.Handler, trustedAccess, deviceID string, priv *ecdsa.PrivateKey) string {
+	t.Helper()
+	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", trustedAccess, map[string]any{})
+	if code != http.StatusOK {
+		t.Fatalf("device attest begin status=%d body=%#v", code, beginOut)
+	}
+	begin := deviceTrustData0121(t, beginOut)
+	payload := begin["signingPayload"].(string)
+	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", trustedAccess, map[string]any{
+		"challengeId": begin["challengeId"], "deviceId": deviceID, "challenge": begin["challenge"],
+		"signature": signP256P1363Test0123(t, priv, payload),
+	})
+	if code != http.StatusOK {
+		t.Fatalf("device attest complete status=%d body=%#v", code, completeOut)
+	}
+	return deviceTrustData0121(t, completeOut)["accessToken"].(string)
+}
+
+func TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134(t *testing.T) {
+	allowlist := `{"0.13.4":{"guardSha256":["` + testGuardHash0134 + `"],"launcherSha256":["` + testLauncherHash0134 + `"],"requireAuthenticode":true}}`
+	cfg := config.Config{
+		PublicURL: "https://api.example.test", Environment: "test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-guard-attestation",
+		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api",
+		WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"},
+		GuardReleaseAllowlistJSON: allowlist,
+	}
+	repo := repository.NewMemoryRepository(cfg.PublicURL)
+	server := Server{Version: "0.13.4", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}
+	h := server.Handler()
+
+	access, _ := deviceTrustLogin0121(t, h, "guard-attestation-user")
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deviceID, trustedAccess := registerWindowsHardwareDevice0134(t, h, access, priv)
+	attestedAccess := attestHardwareDeviceForGuard0134(t, h, trustedAccess, deviceID, priv)
+	claims := authClaimsFromToken0134(t, attestedAccess)
+	device, err := repo.GetTrustedDevice(claims.Sub, deviceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, missingOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-missing"})
+	if code != http.StatusPreconditionFailed {
+		t.Fatalf("Windows Minecraft session without Guard ticket status=%d body=%#v", code, missingOut)
+	}
+
+	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest/begin", attestedAccess, map[string]any{"launcherVersion": "0.13.4"})
+	if code != http.StatusOK {
+		t.Fatalf("guard begin status=%d body=%#v", code, beginOut)
+	}
+	begin := deviceTrustData0121(t, beginOut)
+	challengeID := begin["challengeId"].(string)
+	challenge := begin["challenge"].(string)
+	expiresAt := begin["expiresAt"].(string)
+	attestation := makeGuardAttestation0134(t, challengeID, challenge)
+	payload := guardDeviceSigningPayload0134(challenge, claims, device, "0.13.4", attestation, expiresAt)
+
+	completeBody := map[string]any{
+		"challengeId": challengeID, "challenge": challenge, "challengeExpiresAt": expiresAt,
+		"launcherVersion": "0.13.4", "attestation": attestation,
+		"signature": signP256P1363Test0123(t, priv, payload),
+	}
+	code, completeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/guard-attest/complete", attestedAccess, completeBody)
+	if code != http.StatusOK {
+		t.Fatalf("guard complete status=%d body=%#v", code, completeOut)
+	}
+	complete := deviceTrustData0121(t, completeOut)
+	ticket, _ := complete["launchTicket"].(string)
+	if ticket == "" || complete["verified"] != true || complete["oneTime"] != true {
+		t.Fatalf("incomplete guard verification result: %#v", complete)
+	}
+
+	code, mcOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-client", "guardAttestationTicket": ticket})
+	if code != http.StatusCreated {
+		t.Fatalf("minecraft session with guard ticket status=%d body=%#v", code, mcOut)
+	}
+	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/minecraft/session", attestedAccess, map[string]any{"clientToken": "guard-client-2", "guardAttestationTicket": ticket})
+	if code != http.StatusPreconditionFailed {
+		t.Fatalf("replayed Guard ticket accepted status=%d body=%#v", code, replayOut)
+	}
+}
+
+func TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134(t *testing.T) {
+	policy := guardReleasePolicy0134{GuardSHA256: []string{strings.Repeat("1", 64)}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
+	a := makeGuardAttestation0134(t, "challenge-id", "challenge-secret")
+	if err := validateGuardAttestation0134(a, "challenge-id", "challenge-secret", policy, time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
+		t.Fatal("non-allowlisted NeverGuard image hash was accepted")
+	}
+}

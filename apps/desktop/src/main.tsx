@@ -74,6 +74,7 @@ type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; d
 type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; replacedAt?: string; replacedByDeviceId?: string; replacementReason?: string; current: boolean; revocationPermanent: boolean };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
+type GuardAttestationSubmission = { launcherVersion: string; attestation: any; signature: string; fingerprint: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
@@ -980,16 +981,67 @@ function App() {
     }
   }
 
-  async function createMinecraftLaunchSession(): Promise<MinecraftLaunchCredentials> {
+  async function createGuardLaunchTicket(): Promise<string> {
+    if (!authSession?.accessToken) throw new Error('Guard Attestation требует активную Never session.');
+    const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
+    const deviceId = accessTokenDeviceId(authSession.accessToken);
+    if (!userId || !deviceId) throw new Error('Guard Attestation требует session, привязанную к trusted device.');
+    const key = deviceKey ?? await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
+    if (!key?.deviceId || key.deviceId !== deviceId || key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256' || !key.hardwareBound) {
+      throw new Error('Guard Attestation требует локальный hardware-bound P-256 device key текущего trusted device.');
+    }
+
+    const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest/begin`, authSession.accessToken, {
+      launcherVersion: DESKTOP_VERSION,
+    });
+    const beginPayload = await beginResponse.json().catch(() => null);
+    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Guard Attestation begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const begin = beginPayload?.data ?? beginPayload;
+    if (!begin?.challengeId || !begin?.challenge || !begin?.expiresAt || begin.launcherVersion !== DESKTOP_VERSION) {
+      throw new Error('Backend вернул неполный или несовместимый Guard Attestation challenge.');
+    }
+
+    const submission = await callTauri<GuardAttestationSubmission>('neverguard_guard_attestation', {
+      backendUrl: settings.backendUrl,
+      userId,
+      deviceId,
+      sessionId: authSession.sessionId,
+      bindingEpoch: accessTokenBindingEpoch(authSession.accessToken),
+      launcherVersion: DESKTOP_VERSION,
+      challengeId: begin.challengeId,
+      challenge: begin.challenge,
+      challengeExpiresAt: begin.expiresAt,
+    });
+    if (submission.launcherVersion !== DESKTOP_VERSION || submission.fingerprint !== key.fingerprint || submission.keyAlgorithm !== 'p256' || submission.keyBinding !== 'hardware' || !submission.hardwareBound) {
+      throw new Error('Native Guard Attestation signer вернул неожиданную release/device identity.');
+    }
+
+    const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest/complete`, authSession.accessToken, {
+      challengeId: begin.challengeId,
+      challenge: begin.challenge,
+      challengeExpiresAt: begin.expiresAt,
+      launcherVersion: DESKTOP_VERSION,
+      attestation: submission.attestation,
+      signature: submission.signature,
+    });
+    const completePayload = await completeResponse.json().catch(() => null);
+    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Guard Attestation complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const data = completePayload?.data ?? completePayload;
+    if (!data?.verified || !data?.launchTicket || !data?.oneTime) throw new Error('Backend не выдал одноразовый Guard launch ticket.');
+    log(`NeverGuard attestation подтверждена Backend: evidence=${String(data.evidenceSha256 || '').slice(0, 16)}…, ticket до ${data.expiresAt}.`);
+    return data.launchTicket;
+  }
+
+  async function createMinecraftLaunchSession(guardAttestationTicket: string): Promise<MinecraftLaunchCredentials> {
     if (!authSession?.accessToken) throw new Error('Для запуска Minecraft требуется активная Never session.');
     const response = await fetch(endpoint('/api/v1/minecraft/session'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientToken: `desktop-${authSession.sessionId}` }),
+      body: JSON.stringify({ clientToken: `desktop-${authSession.sessionId}`, guardAttestationTicket }),
     });
-    if (!response.ok) throw new Error(`Не удалось получить Minecraft session: ${response.status} ${response.statusText}`);
-    const payload = await response.json();
-    const data = payload.data ?? payload;
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error?.message || `Не удалось получить Minecraft session: ${response.status} ${response.statusText}`);
+    const data = payload?.data ?? payload;
     if (!data.accessToken || !data.profile?.id || !data.profile?.name) throw new Error('Backend вернул неполную Minecraft session.');
     return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
   }
@@ -1016,7 +1068,8 @@ function App() {
     }
     setStage('launching');
     try {
-      const minecraftCredentials = await createMinecraftLaunchSession();
+      const guardAttestationTicket = await createGuardLaunchTicket();
+      const minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
       await createServerJoinBeforeLaunch(minecraftCredentials.username);
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         manifest,

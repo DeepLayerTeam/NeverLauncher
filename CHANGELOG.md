@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.4 — Guard Attestation + Backend verification
+
+`0.13.4` связывает локальный NeverGuard Windows boundary с Backend: сервер выдаёт persistent single-use challenge, отдельный `neverguard.exe` формирует свежую challenge-bound attestation поверх Integrity Evidence v1 и enforced process policy, а hardware P-256 device key подписывает каноническую привязку `user + device + session + bindingEpoch + release + attestation`. Backend пересчитывает evidence/attestation digests, проверяет device signature, freshness/replay и точные SHA-256 release binaries; только после этого выдаётся одноразовый короткоживущий Guard launch ticket, обязательный для Minecraft session в production.
+
+### Guard-side attestation
+
+- Authenticated IPC поднят до v3: request MAC теперь включает payload, а команда `guard-attestation` принимает server challenge только внутри уже аутентифицированной Desktop↔NeverGuard session. Guard заново собирает Integrity Evidence, прикладывает текущий enforced process-policy report и HMAC-привязывает attestation digest к IPC session.
+- Canonical attestation фиксирует challenge hash/ID, evidence ID/digest, SHA-256 Guard/Desktop, module-set fingerprints, Authenticode results, process-policy flags и collection time. Desktop повторно проверяет challenge, evidence, policy, digest и session proof до использования результата.
+- Windows integration test выполняет реальный handshake с `neverguard.exe`, получает challenge-bound attestation и проверяет связь с PID/process boundary.
+
+### Backend verification and launch gate
+
+- Добавлены `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete`. Challenge хранится в Repository, привязан к текущим `user/device/session/bindingEpoch/launcherVersion/keyFingerprint`, имеет TTL 90 секунд и потребляется атомарно.
+- Complete требует hardware-bound P-256 trusted device с актуальной device attestation. Backend заново вычисляет Integrity Evidence SHA-256 и Guard Attestation SHA-256, проверяет freshness, parent boundary, enforced process policy, device signature и release allowlist.
+- Успешная проверка выпускает persistent single-use Guard launch ticket с TTL 90 секунд. `/api/v1/minecraft/session` в production требует этот ticket и потребляет его атомарно; replay получает `412 Precondition Failed`.
+- `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен в production. Windows release script формирует `GUARD_RELEASE_ALLOWLIST.json` из фактических SHA-256 `neverguard.exe` и Desktop executable; policy может дополнительно требовать trusted Authenticode.
+- Это application-level server verification, а не TPM/Measured Boot quote и не kernel anti-cheat. Backend доверяет зарегистрированному hardware device key, challenge freshness, точным release hashes и evidence/policy, сформированным allowlisted NeverGuard/Desktop.
+
 ## 0.13.3 — Windows runtime/process policy enforcement
 
 `0.13.3` переводит NeverGuard Windows policy из наблюдаемого evidence в реально применяемую runtime boundary. Политики включаются fail-closed: `neverguard.exe` усиливает собственный процесс до инициализации Tokio, а Java/Minecraft создаётся suspended и начинает выполнение только после успешного назначения в проверенный Windows Job Object.

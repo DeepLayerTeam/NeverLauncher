@@ -266,3 +266,7 @@ Backend хранит trusted devices отдельно от legacy session `devic
 ### Auth Federation 0.12
 
 Stable registry создаётся через `httpapi.NewFederationCore(...)`; Local/SQL/HTTP/OIDC/Microsoft проходят Connector SDK conformance до приёма трафика. Generic browser identity linking доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает runtime health и provisioning policy providers. Migration `0011_auth_federation_release_0120` закрепляет canonical local identity для password-capable users.
+
+### Guard Attestation backend gate (0.13.4)
+
+`POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` реализуют challenge-response verification Windows NeverGuard. Backend хранит challenge и launch ticket в том же persistent DeviceChallenge repository с atomic consume semantics. Complete требует свежую hardware P-256 device attestation, проверяет device signature, evidence/attestation digests, process boundary/policy и release SHA-256 allowlist. При включённой Guard policy `POST /api/v1/minecraft/session` требует одноразовый `guardAttestationTicket` для Windows trusted device; Linux/macOS не притворяются поддерживающими Windows Guard. В production `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен.

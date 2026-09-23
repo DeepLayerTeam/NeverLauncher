@@ -12,9 +12,11 @@ use sha2::Sha256;
 #[cfg(any(windows, test))]
 use subtle::ConstantTimeEq;
 use std::path::{Path, PathBuf};
+use crate::attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation};
 use crate::integrity::NeverGuardIntegrityEvidence;
 use crate::windows_policy::GuardProcessPolicyReport;
 #[cfg(windows)]
+use crate::attestation::{challenge_sha256, recompute_attestation_sha256, validate_attestation_shape, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 use crate::integrity::{
     collect_windows_integrity_evidence, observed_windows_parent_pid, recompute_evidence_sha256,
     validate_evidence_shape,
@@ -41,7 +43,7 @@ use tokio::{
     time::{sleep, timeout, Duration, Instant},
 };
 
-pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 2;
+pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 3;
 #[cfg(any(windows, test))]
 const NEVERGUARD_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.";
 #[cfg(windows)]
@@ -122,6 +124,7 @@ struct RequestEnvelope {
     sequence: u64,
     request_id: String,
     command: String,
+    payload: String,
     mac: String,
 }
 
@@ -299,7 +302,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ensure_started(&self) -> Result<NeverGuardStatus, String> {
-        Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -329,7 +332,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn ping(&self) -> Result<(), String> {
-        Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
+        Err("NeverGuard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -348,7 +351,7 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn integrity_evidence(&self) -> Result<NeverGuardIntegrityEvidence, String> {
-        Err("NeverGuard 0.13.3 Windows integrity evidence доступен только для Windows".to_string())
+        Err("NeverGuard 0.13.4 Windows integrity evidence доступен только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -367,7 +370,46 @@ impl NeverGuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn process_policy(&self) -> Result<GuardProcessPolicyReport, String> {
-        Err("NeverGuard 0.13.3 Windows process policy доступен только для Windows".to_string())
+        Err("NeverGuard 0.13.4 Windows process policy доступен только для Windows".to_string())
+    }
+
+    #[cfg(windows)]
+    pub async fn remote_attestation(
+        &self,
+        challenge_id: &str,
+        challenge: &str,
+    ) -> Result<NeverGuardRemoteAttestation, String> {
+        self.ensure_started().await?;
+        if challenge_id.trim().is_empty() || challenge_id.len() > 160 {
+            return Err("NeverGuard attestation challengeId malformed".to_string());
+        }
+        if challenge.is_empty() || challenge.len() > 4096 {
+            return Err("NeverGuard attestation challenge malformed".to_string());
+        }
+        let request = GuardAttestationRequest {
+            challenge_id: challenge_id.to_string(),
+            challenge: challenge.to_string(),
+        };
+        let request_payload = serde_json::to_string(&request)
+            .map_err(|err| format!("NeverGuard attestation request serialization failed: {err}"))?;
+        let mut state = self.inner.lock().await;
+        let handle = state
+            .as_mut()
+            .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
+        let payload = send_command_with_payload(handle, "guard-attestation", &request_payload).await?;
+        let attestation: NeverGuardRemoteAttestation = serde_json::from_value(payload)
+            .map_err(|err| format!("NeverGuard remote attestation payload повреждён: {err}"))?;
+        validate_remote_attestation(handle, challenge_id, challenge, &attestation)?;
+        Ok(attestation)
+    }
+
+    #[cfg(not(windows))]
+    pub async fn remote_attestation(
+        &self,
+        _challenge_id: &str,
+        _challenge: &str,
+    ) -> Result<NeverGuardRemoteAttestation, String> {
+        Err("NeverGuard 0.13.4 Guard Attestation доступен только для Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -540,9 +582,18 @@ async fn client_authenticate(
 
 #[cfg(windows)]
 async fn send_command(handle: &mut GuardHandle, command: &str) -> Result<Value, String> {
+    send_command_with_payload(handle, command, "").await
+}
+
+#[cfg(windows)]
+async fn send_command_with_payload(
+    handle: &mut GuardHandle,
+    command: &str,
+    payload: &str,
+) -> Result<Value, String> {
     match timeout(
         Duration::from_secs(IPC_COMMAND_TIMEOUT_SECS),
-        send_command_inner(handle, command),
+        send_command_inner(handle, command, payload),
     )
     .await
     {
@@ -554,15 +605,23 @@ async fn send_command(handle: &mut GuardHandle, command: &str) -> Result<Value, 
 }
 
 #[cfg(windows)]
-async fn send_command_inner(handle: &mut GuardHandle, command: &str) -> Result<Value, String> {
+async fn send_command_inner(
+    handle: &mut GuardHandle,
+    command: &str,
+    payload: &str,
+) -> Result<Value, String> {
+    if payload.len() > 32 * 1024 {
+        return Err("NeverGuard IPC request payload exceeds 32 KiB".to_string());
+    }
     let sequence = handle.next_sequence;
     let request_id = random_id();
-    let mac = request_mac(&handle.session_key, sequence, &request_id, command);
+    let mac = request_mac(&handle.session_key, sequence, &request_id, command, payload);
     let request = RequestEnvelope {
         protocol_version: NEVERGUARD_PROTOCOL_VERSION,
         sequence,
         request_id: request_id.clone(),
         command: command.to_string(),
+        payload: payload.to_string(),
         mac: hex::encode(mac),
     };
     write_frame(&mut handle.pipe, &request).await?;
@@ -634,6 +693,34 @@ fn validate_integrity_evidence(
     let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
         return Err("NeverGuard integrity evidence session proof verification failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn validate_remote_attestation(
+    handle: &GuardHandle,
+    challenge_id: &str,
+    challenge: &str,
+    attestation: &NeverGuardRemoteAttestation,
+) -> Result<(), String> {
+    validate_attestation_shape(attestation)?;
+    if attestation.challenge_id != challenge_id
+        || attestation.challenge_sha256 != challenge_sha256(challenge)
+    {
+        return Err("NeverGuard remote attestation challenge binding mismatch".to_string());
+    }
+    validate_integrity_evidence(handle, &attestation.evidence)?;
+    validate_guard_process_policy(handle, &attestation.process_policy)?;
+    let expected_digest = recompute_attestation_sha256(attestation)?;
+    let actual_digest = decode_hex_32(&attestation.attestation_sha256, "attestationSha256")?;
+    if !constant_time_eq(&expected_digest, &actual_digest) {
+        return Err("NeverGuard remote attestation digest verification failed".to_string());
+    }
+    let expected_proof = attestation_session_proof(&handle.session_key, &actual_digest);
+    let actual_proof = decode_hex_32(&attestation.session_proof, "attestationSessionProof")?;
+    if !constant_time_eq(&expected_proof, &actual_proof) {
+        return Err("NeverGuard remote attestation session proof verification failed".to_string());
     }
     Ok(())
 }
@@ -773,7 +860,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
 
 #[cfg(not(windows))]
 pub async fn run_windows_guard_server(_endpoint: String, _parent_pid: u32) -> Result<(), String> {
-    Err("NeverGuard 0.13.3 Windows policy boundary реализован только для Windows".to_string())
+    Err("NeverGuard 0.13.4 Windows policy boundary реализован только для Windows".to_string())
 }
 
 #[cfg(windows)]
@@ -901,6 +988,7 @@ async fn serve_authenticated_session(
             request.sequence,
             &request.request_id,
             &request.command,
+            &request.payload,
         );
         let actual_mac = decode_hex_32(&request.mac, "requestMac")?;
         if !constant_time_eq(&expected_mac, &actual_mac) {
@@ -944,6 +1032,45 @@ async fn serve_authenticated_session(
                     true,
                     serde_json::to_value(evidence).map_err(|err| {
                         format!("NeverGuard integrity evidence serialization failed: {err}")
+                    })?,
+                    false,
+                )
+            }
+            "guard-attestation" => {
+                let request: GuardAttestationRequest = serde_json::from_str(&request.payload)
+                    .map_err(|err| format!("NeverGuard attestation request payload повреждён: {err}"))?;
+                if request.challenge_id.trim().is_empty()
+                    || request.challenge_id.len() > 160
+                    || request.challenge.is_empty()
+                    || request.challenge.len() > 4096
+                {
+                    return Err("NeverGuard attestation request is malformed".to_string());
+                }
+                let mut evidence = tokio::task::spawn_blocking(move || {
+                    collect_windows_integrity_evidence(parent_pid)
+                })
+                .await
+                .map_err(|err| format!("NeverGuard remote attestation evidence worker failed: {err}"))??;
+                let evidence_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
+                evidence.session_proof = hex::encode(integrity_session_proof(session_key, &evidence_digest));
+                let mut attestation = NeverGuardRemoteAttestation {
+                    schema: NEVERGUARD_REMOTE_ATTESTATION_SCHEMA.to_string(),
+                    attestation_version: NEVERGUARD_REMOTE_ATTESTATION_VERSION,
+                    challenge_id: request.challenge_id,
+                    challenge_sha256: challenge_sha256(&request.challenge),
+                    collected_at_unix: evidence.collected_at_unix,
+                    evidence,
+                    process_policy: process_policy.clone(),
+                    attestation_sha256: String::new(),
+                    session_proof: String::new(),
+                };
+                let digest = recompute_attestation_sha256(&attestation)?;
+                attestation.attestation_sha256 = hex::encode(digest);
+                attestation.session_proof = hex::encode(attestation_session_proof(session_key, &digest));
+                (
+                    true,
+                    serde_json::to_value(attestation).map_err(|err| {
+                        format!("NeverGuard remote attestation serialization failed: {err}")
                     })?,
                     false,
                 )
@@ -1092,7 +1219,7 @@ fn handshake_transcript(
     server_nonce: &[u8; 32],
 ) -> Vec<u8> {
     let mut data = Vec::with_capacity(192);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v2\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v3\0");
     append_len_prefixed(&mut data, label);
     append_len_prefixed(&mut data, endpoint.as_bytes());
     data.extend_from_slice(&client_pid.to_le_bytes());
@@ -1161,7 +1288,7 @@ fn ready_proof(
     process_policy_enforced: bool,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(80);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v2\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v3\0");
     data.extend_from_slice(&guard_pid.to_le_bytes());
     data.extend_from_slice(&started_at_unix.to_le_bytes());
     data.extend_from_slice(&process_policy_version.to_le_bytes());
@@ -1170,12 +1297,19 @@ fn ready_proof(
 }
 
 #[cfg(any(windows, test))]
-fn request_mac(session_key: &[u8; 32], sequence: u64, request_id: &str, command: &str) -> [u8; 32] {
-    let mut data = Vec::with_capacity(96);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v2\0");
+fn request_mac(
+    session_key: &[u8; 32],
+    sequence: u64,
+    request_id: &str,
+    command: &str,
+    payload: &str,
+) -> [u8; 32] {
+    let mut data = Vec::with_capacity(payload.len() + 112);
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v3\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     append_len_prefixed(&mut data, command.as_bytes());
+    append_len_prefixed(&mut data, payload.as_bytes());
     hmac_sha256(session_key, &data)
 }
 
@@ -1188,7 +1322,7 @@ fn response_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 96);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v2\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v3\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     data.push(u8::from(ok));
@@ -1201,6 +1335,14 @@ fn integrity_session_proof(session_key: &[u8; 32], evidence_digest: &[u8; 32]) -
     let mut data = Vec::with_capacity(80);
     data.extend_from_slice(b"NeverLauncher NeverGuard integrity evidence session v1\0");
     data.extend_from_slice(evidence_digest);
+    hmac_sha256(session_key, &data)
+}
+
+#[cfg(any(windows, test))]
+fn attestation_session_proof(session_key: &[u8; 32], attestation_digest: &[u8; 32]) -> [u8; 32] {
+    let mut data = Vec::with_capacity(80);
+    data.extend_from_slice(b"NeverLauncher NeverGuard remote attestation session v1\0");
+    data.extend_from_slice(attestation_digest);
     hmac_sha256(session_key, &data)
 }
 
@@ -1344,8 +1486,8 @@ mod tests {
     #[test]
     fn request_mac_changes_with_sequence_and_direction() {
         let key = [9u8; 32];
-        let first = request_mac(&key, 1, "00112233445566778899aabbccddeeff", "status");
-        let replay = request_mac(&key, 2, "00112233445566778899aabbccddeeff", "status");
+        let first = request_mac(&key, 1, "00112233445566778899aabbccddeeff", "status", "");
+        let replay = request_mac(&key, 2, "00112233445566778899aabbccddeeff", "status", "");
         let response = response_mac(
             &key,
             1,

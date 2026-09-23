@@ -19,6 +19,7 @@ ADMIN_EMAIL=""
 PUBLIC_URL="http://localhost"
 POSTGRES_PASSWORD_SET="false"
 TOKEN_SECRET_SET="false"
+GUARD_ALLOWLIST_SET="false"
 
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -27,6 +28,7 @@ if [[ -f "${ENV_FILE}" ]]; then
   PUBLIC_URL="${NEVERLAUNCHER_PUBLIC_URL:-${PUBLIC_URL}}"
   [[ "${POSTGRES_PASSWORD:-}" != "" && "${POSTGRES_PASSWORD:-}" != change-me* ]] && POSTGRES_PASSWORD_SET="true"
   [[ "${NEVERLAUNCHER_AUTH_TOKEN_SECRET:-}" != "" && "${NEVERLAUNCHER_AUTH_TOKEN_SECRET:-}" != change-me* ]] && TOKEN_SECRET_SET="true"
+  [[ "${NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON:-}" != "" ]] && GUARD_ALLOWLIST_SET="true"
 fi
 
 cat > "${REPORT}" <<JSON
@@ -56,6 +58,7 @@ cat > "${REPORT}" <<JSON
     {"id": "env.file", "status": "$( [[ -f "${ENV_FILE}" ]] && echo ok || echo failed )", "message": "${ENV_FILE}"},
     {"id": "postgres.password", "status": "${POSTGRES_PASSWORD_SET}", "message": "replace default POSTGRES_PASSWORD before production"},
     {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "replace default NEVERLAUNCHER_AUTH_TOKEN_SECRET before production"},
+    {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "set NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON from final Windows release hashes"},
     {"id": "compose.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/docker-compose.yml" ]] && echo ok || echo failed )", "message": "deploy/production/docker-compose.yml"},
     {"id": "nginx.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/nginx.conf" ]] && echo ok || echo failed )", "message": "deploy/production/nginx.conf"}
   ],

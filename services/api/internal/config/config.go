@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +47,7 @@ type Config struct {
 	AuthTokenAudience                  string
 	AuthTokenActiveKID                 string
 	AuthTokenKeysJSON                  string
+	GuardReleaseAllowlistJSON          string
 	MetricsEnabled                     bool
 	PersistentSessions                 bool
 	RequirePersistentStoreInProduction bool
@@ -114,6 +116,7 @@ func Load() Config {
 		AuthTokenAudience:                  env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
 		AuthTokenActiveKID:                 env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
 		AuthTokenKeysJSON:                  env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
+		GuardReleaseAllowlistJSON:          env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
 		MetricsEnabled:                     envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
 		PersistentSessions:                 envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
 		RequirePersistentStoreInProduction: envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
@@ -192,6 +195,37 @@ func ValidateProduction(cfg Config) error {
 			}
 		}
 	}
+	guardAllowlistRaw := strings.TrimSpace(cfg.GuardReleaseAllowlistJSON)
+	if guardAllowlistRaw == "" {
+		problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в production")
+	} else {
+		var guardAllowlist map[string]struct {
+			GuardSHA256    []string `json:"guardSha256"`
+			LauncherSHA256 []string `json:"launcherSha256"`
+		}
+		if err := json.Unmarshal([]byte(guardAllowlistRaw), &guardAllowlist); err != nil || len(guardAllowlist) == 0 {
+			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->hash allowlists")
+		} else {
+			for version, entry := range guardAllowlist {
+				if strings.TrimSpace(version) == "" || len(entry.GuardSHA256) == 0 || len(entry.LauncherSHA256) == 0 {
+					problems = append(problems, fmt.Sprintf("Guard release policy %q должна содержать guardSha256 и launcherSha256", version))
+					continue
+				}
+				for _, value := range append(append([]string(nil), entry.GuardSHA256...), entry.LauncherSHA256...) {
+					value = strings.TrimSpace(value)
+					if len(value) != 64 {
+						problems = append(problems, fmt.Sprintf("Guard release policy %q содержит SHA-256 неверной длины", version))
+						break
+					}
+					if _, err := hex.DecodeString(value); err != nil {
+						problems = append(problems, fmt.Sprintf("Guard release policy %q содержит невалидный SHA-256", version))
+						break
+					}
+				}
+			}
+		}
+	}
+
 	publicURL, err := url.Parse(strings.TrimSpace(cfg.PublicURL))
 	publicURLValid := err == nil && publicURL.Host != "" && publicURL.Scheme == "https"
 	if !publicURLValid && isE2EProductionEnvironment(cfg.Environment) && err == nil && publicURL.Scheme == "http" && isLoopbackHost(publicURL.Hostname()) {

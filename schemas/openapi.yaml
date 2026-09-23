@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.13.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.13.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -2161,6 +2161,114 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DeviceProofCompleteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/{deviceId}/guard-attest/begin": {
+      "post": {
+        "operationId": "post_auth_devices_by_deviceId_guard_attest_begin",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/{deviceId}/guard-attest/begin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardAttestationBeginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/devices/{deviceId}/guard-attest/complete": {
+      "post": {
+        "operationId": "post_auth_devices_by_deviceId_guard_attest_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/devices/{deviceId}/guard-attest/complete",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardAttestationCompleteRequest"
               }
             }
           }
@@ -8278,11 +8386,68 @@
           }
         }
       },
+      "GuardAttestationBeginRequest": {
+        "type": "object",
+        "required": [
+          "launcherVersion"
+        ],
+        "properties": {
+          "launcherVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "additionalProperties": false
+      },
+      "GuardAttestationCompleteRequest": {
+        "type": "object",
+        "required": [
+          "challengeId",
+          "challenge",
+          "challengeExpiresAt",
+          "launcherVersion",
+          "attestation",
+          "signature"
+        ],
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 1
+          },
+          "challengeExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "launcherVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "attestation": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "MinecraftSessionRequest": {
         "type": "object",
         "properties": {
           "clientToken": {
             "type": "string"
+          },
+          "guardAttestationTicket": {
+            "type": "string",
+            "description": "Single-use NeverGuard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled"
           }
         }
       },

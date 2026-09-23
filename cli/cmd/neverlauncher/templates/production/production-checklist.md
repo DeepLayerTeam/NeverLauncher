@@ -4,6 +4,7 @@
 
 - [ ] Заполнен production `.env`; значения `CHANGE_ME` отсутствуют.
 - [ ] Установлен сильный `NEVERLAUNCHER_AUTH_TOKEN_SECRET`.
+- [ ] `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` заполнен SHA-256 финальных `neverguard.exe` и Desktop из `GUARD_RELEASE_ALLOWLIST.json`; при `requireAuthenticode=true` hashes вычислены после подписи binaries.
 - [ ] Задан одноразовый `NEVERLAUNCHER_BOOTSTRAP_TOKEN` для новой установки и предусмотрено его удаление после bootstrap.
 - [ ] Задан `NEVERLAUNCHER_REPOSITORY_DRIVER=postgres`.
 - [ ] Задан `NEVERLAUNCHER_SQL_DRIVER=pgx`.

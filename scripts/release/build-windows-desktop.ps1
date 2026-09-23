@@ -70,13 +70,23 @@ $Manifest = [ordered]@{
     schemaVersion = "1.0"
     productVersion = $Version
     platform = "windows-amd64"
-    neverGuardProtocolVersion = 1
+    neverGuardProtocolVersion = 3
     processBoundary = "separate-neverguard-executable"
-    authenticatedIpc = "windows-named-pipe+hmac-sha256-v1"
+    authenticatedIpc = "windows-named-pipe+hmac-sha256-v3"
     requiredAdjacentArtifacts = @($GuardArtifact)
     artifacts = $Artifacts
 }
 $Manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $PackageDir "WINDOWS_PACKAGE_MANIFEST.json")
+
+$DesktopHash = ($Artifacts | Where-Object { $_.name -eq $DesktopArtifact }).sha256
+$GuardHash = ($Artifacts | Where-Object { $_.name -eq $GuardArtifact }).sha256
+$GuardReleaseAllowlist = [ordered]@{}
+$GuardReleaseAllowlist[$Version] = [ordered]@{
+    guardSha256 = @($GuardHash)
+    launcherSha256 = @($DesktopHash)
+    requireAuthenticode = $false
+}
+$GuardReleaseAllowlist | ConvertTo-Json -Depth 8 -Compress | Set-Content -Encoding UTF8 (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json")
 
 $ZipPath = Join-Path $OutDir $ZipArtifact
 if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }

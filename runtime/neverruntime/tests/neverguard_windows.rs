@@ -3,6 +3,7 @@
 use neverruntime::{
     NeverGuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION, NEVERGUARD_PROTOCOL_VERSION,
+    NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION,
     NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 use std::path::PathBuf;
@@ -73,6 +74,25 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
     );
     assert_eq!(evidence.guard.mitigations.image_load.map(|flags| flags & 0x7), Some(0x7));
     assert_eq!(evidence.guard.mitigations.child_process.map(|flags| flags & 0x1), Some(0x1));
+
+    let challenge_id = "integration-guard-attestation-0134";
+    let challenge = "integration-server-challenge-neverlauncher-0134";
+    let attestation = supervisor
+        .remote_attestation(challenge_id, challenge)
+        .await
+        .expect("challenge-bound Guard Attestation must be produced and authenticated");
+    assert_eq!(attestation.schema, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA);
+    assert_eq!(
+        attestation.attestation_version,
+        NEVERGUARD_REMOTE_ATTESTATION_VERSION
+    );
+    assert_eq!(attestation.challenge_id, challenge_id);
+    assert_eq!(attestation.evidence.guard.pid, status.pid);
+    assert_eq!(attestation.evidence.launcher.pid, std::process::id());
+    assert_eq!(attestation.process_policy.pid, status.pid);
+    assert!(attestation.process_policy.enforced);
+    assert_eq!(attestation.attestation_sha256.len(), 64);
+    assert_eq!(attestation.session_proof.len(), 64);
 
     supervisor.shutdown().await.expect("shutdown must pass");
     supervisor.shutdown().await.expect("shutdown must be idempotent");
