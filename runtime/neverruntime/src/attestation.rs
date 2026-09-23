@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 
 pub const NEVERGUARD_REMOTE_ATTESTATION_VERSION: u32 = 1;
 pub const NEVERGUARD_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/windows-guard-attestation/v1";
+pub const NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/linux-guard-attestation/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -33,49 +34,44 @@ pub(crate) fn challenge_sha256(challenge: &str) -> String {
 
 pub(crate) fn canonical_attestation_core(attestation: &NeverGuardRemoteAttestation) -> Result<String, String> {
     validate_attestation_shape(attestation)?;
+    if attestation.schema == NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA {
+        let linux = attestation.process_policy.linux.as_ref().ok_or_else(|| "Linux Guard Attestation missing Linux process policy details".to_string())?;
+        return Ok(format!(
+            concat!(
+                "NeverLauncher Guard Attestation Core Linux v1\n",
+                "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
+                "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
+                "process-policy-version={}\n","process-policy-enforced={}\n","no-new-privs={}\n","dumpable-disabled={}\n",
+                "core-dumps-disabled={}\n","ptrace-restricted={}\n","parent-death-signal={}\n","private-umask={}\n","collected-at={}\n"
+            ),
+            attestation.challenge_id, attestation.challenge_sha256, attestation.evidence.evidence_id,
+            attestation.evidence.evidence_sha256, attestation.evidence.guard.image_sha256,
+            attestation.evidence.launcher.image_sha256, attestation.evidence.guard.modules.module_set_sha256,
+            attestation.evidence.launcher.modules.module_set_sha256, attestation.process_policy.policy_version,
+            attestation.process_policy.enforced, linux.no_new_privs, linux.dumpable_disabled,
+            linux.core_dumps_disabled, linux.ptrace_restricted, linux.parent_death_signal,
+            linux.private_umask, attestation.collected_at_unix,
+        ));
+    }
     Ok(format!(
         concat!(
             "NeverLauncher Guard Attestation Core v1\n",
-            "challenge-id={}\n",
-            "challenge-sha256={}\n",
-            "evidence-id={}\n",
-            "evidence-sha256={}\n",
-            "guard-sha256={}\n",
-            "launcher-sha256={}\n",
-            "guard-module-set-sha256={}\n",
-            "launcher-module-set-sha256={}\n",
-            "guard-authenticode-trusted={}\n",
-            "launcher-authenticode-trusted={}\n",
-            "process-policy-version={}\n",
-            "process-policy-enforced={}\n",
-            "dynamic-code-prohibited={}\n",
-            "extension-points-disabled={}\n",
-            "strict-handle-checks={}\n",
-            "remote-images-blocked={}\n",
-            "low-mandatory-label-images-blocked={}\n",
-            "prefer-system32-images={}\n",
-            "child-process-creation-blocked={}\n",
-            "collected-at={}\n"
+            "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
+            "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
+            "guard-authenticode-trusted={}\n","launcher-authenticode-trusted={}\n","process-policy-version={}\n",
+            "process-policy-enforced={}\n","dynamic-code-prohibited={}\n","extension-points-disabled={}\n",
+            "strict-handle-checks={}\n","remote-images-blocked={}\n","low-mandatory-label-images-blocked={}\n",
+            "prefer-system32-images={}\n","child-process-creation-blocked={}\n","collected-at={}\n"
         ),
-        attestation.challenge_id,
-        attestation.challenge_sha256,
-        attestation.evidence.evidence_id,
-        attestation.evidence.evidence_sha256,
-        attestation.evidence.guard.image_sha256,
-        attestation.evidence.launcher.image_sha256,
-        attestation.evidence.guard.modules.module_set_sha256,
-        attestation.evidence.launcher.modules.module_set_sha256,
-        attestation.evidence.guard.authenticode.trusted,
-        attestation.evidence.launcher.authenticode.trusted,
-        attestation.process_policy.policy_version,
-        attestation.process_policy.enforced,
-        attestation.process_policy.dynamic_code_prohibited,
-        attestation.process_policy.extension_points_disabled,
-        attestation.process_policy.strict_handle_checks,
-        attestation.process_policy.remote_images_blocked,
-        attestation.process_policy.low_mandatory_label_images_blocked,
-        attestation.process_policy.prefer_system32_images,
-        attestation.process_policy.child_process_creation_blocked,
+        attestation.challenge_id, attestation.challenge_sha256, attestation.evidence.evidence_id,
+        attestation.evidence.evidence_sha256, attestation.evidence.guard.image_sha256,
+        attestation.evidence.launcher.image_sha256, attestation.evidence.guard.modules.module_set_sha256,
+        attestation.evidence.launcher.modules.module_set_sha256, attestation.evidence.guard.authenticode.trusted,
+        attestation.evidence.launcher.authenticode.trusted, attestation.process_policy.policy_version,
+        attestation.process_policy.enforced, attestation.process_policy.dynamic_code_prohibited,
+        attestation.process_policy.extension_points_disabled, attestation.process_policy.strict_handle_checks,
+        attestation.process_policy.remote_images_blocked, attestation.process_policy.low_mandatory_label_images_blocked,
+        attestation.process_policy.prefer_system32_images, attestation.process_policy.child_process_creation_blocked,
         attestation.collected_at_unix,
     ))
 }
@@ -91,7 +87,8 @@ pub(crate) fn recompute_attestation_sha256(attestation: &NeverGuardRemoteAttesta
 }
 
 pub(crate) fn validate_attestation_shape(attestation: &NeverGuardRemoteAttestation) -> Result<(), String> {
-    if attestation.schema != NEVERGUARD_REMOTE_ATTESTATION_SCHEMA
+    if (attestation.schema != NEVERGUARD_REMOTE_ATTESTATION_SCHEMA
+        && attestation.schema != NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA)
         || attestation.attestation_version != NEVERGUARD_REMOTE_ATTESTATION_VERSION
     {
         return Err("NeverGuard remote attestation schema/version mismatch".to_string());
@@ -144,6 +141,7 @@ mod tests {
                 child_process: Some(1), user_shadow_stack: Some(1), sehop: Some(1), query_failures: vec![],
             },
             modules: ModuleSetEvidence { module_count: 1, module_set_sha256: "33".repeat(32), non_system_module_names: vec![] },
+            linux: None,
         }
     }
 
@@ -177,6 +175,7 @@ mod tests {
                 low_mandatory_label_images_blocked: true,
                 prefer_system32_images: true,
                 child_process_creation_blocked: true,
+                linux: None,
             },
             attestation_sha256: String::new(),
             session_proof: String::new(),

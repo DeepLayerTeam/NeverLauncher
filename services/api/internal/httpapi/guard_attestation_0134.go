@@ -17,14 +17,17 @@ import (
 )
 
 const (
-	guardAttestationChallengeTTL0134 = 90 * time.Second
-	guardLaunchTicketTTL0134         = 90 * time.Second
-	guardAttestationClockSkew0134    = 15 * time.Second
-	guardAttestationPurpose0134      = "guard-attest-v1"
-	guardLaunchTicketPurpose0134     = "guard-launch-v1"
-	guardAttestationSchema0134       = "neverguard/windows-guard-attestation/v1"
-	guardIntegritySchema0134         = "neverguard/windows-integrity-evidence/v1"
-	guardProcessPolicySchema0134     = "neverguard/windows-runtime-process-policy/v1"
+	guardAttestationChallengeTTL0134  = 90 * time.Second
+	guardLaunchTicketTTL0134          = 90 * time.Second
+	guardAttestationClockSkew0134     = 15 * time.Second
+	guardAttestationPurpose0134       = "guard-attest-v1"
+	guardLaunchTicketPurpose0134      = "guard-launch-v1"
+	guardAttestationSchema0134        = "neverguard/windows-guard-attestation/v1"
+	guardIntegritySchema0134          = "neverguard/windows-integrity-evidence/v1"
+	guardProcessPolicySchema0134      = "neverguard/windows-runtime-process-policy/v1"
+	guardLinuxAttestationSchema0137   = "neverguard/linux-guard-attestation/v1"
+	guardLinuxIntegritySchema0137     = "neverguard/linux-integrity-evidence/v1"
+	guardLinuxProcessPolicySchema0137 = "neverguard/linux-runtime-process-policy/v1"
 )
 
 type guardReleasePolicy0134 struct {
@@ -62,16 +65,35 @@ type guardModuleSetEvidence0134 struct {
 	NonSystemModuleNames []string `json:"nonSystemModuleNames"`
 }
 
+type guardLinuxProcessSecurityEvidence0137 struct {
+	UID               uint32 `json:"uid"`
+	GID               uint32 `json:"gid"`
+	NoNewPrivs        bool   `json:"noNewPrivs"`
+	SeccompMode       uint32 `json:"seccompMode"`
+	DumpableDisabled  bool   `json:"dumpableDisabled"`
+	ParentDeathSignal bool   `json:"parentDeathSignal"`
+}
+
+type guardLinuxProcessPolicyDetails0137 struct {
+	NoNewPrivs        bool `json:"noNewPrivs"`
+	DumpableDisabled  bool `json:"dumpableDisabled"`
+	CoreDumpsDisabled bool `json:"coreDumpsDisabled"`
+	PtraceRestricted  bool `json:"ptraceRestricted"`
+	ParentDeathSignal bool `json:"parentDeathSignal"`
+	PrivateUmask      bool `json:"privateUmask"`
+}
+
 type guardProcessIntegrityEvidence0134 struct {
-	PID                    uint32                             `json:"pid"`
-	ImagePath              string                             `json:"imagePath"`
-	ImageSHA256            string                             `json:"imageSha256"`
-	ImageSize              uint64                             `json:"imageSize"`
-	ImageModifiedUnixMS    uint64                             `json:"imageModifiedUnixMs"`
-	ProcessCreatedFiletime uint64                             `json:"processCreatedFiletime"`
-	Authenticode           guardAuthenticodeEvidence0134      `json:"authenticode"`
-	Mitigations            guardProcessMitigationEvidence0134 `json:"mitigations"`
-	Modules                guardModuleSetEvidence0134         `json:"modules"`
+	PID                    uint32                                 `json:"pid"`
+	ImagePath              string                                 `json:"imagePath"`
+	ImageSHA256            string                                 `json:"imageSha256"`
+	ImageSize              uint64                                 `json:"imageSize"`
+	ImageModifiedUnixMS    uint64                                 `json:"imageModifiedUnixMs"`
+	ProcessCreatedFiletime uint64                                 `json:"processCreatedFiletime"`
+	Authenticode           guardAuthenticodeEvidence0134          `json:"authenticode"`
+	Mitigations            guardProcessMitigationEvidence0134     `json:"mitigations"`
+	Modules                guardModuleSetEvidence0134             `json:"modules"`
+	Linux                  *guardLinuxProcessSecurityEvidence0137 `json:"linux,omitempty"`
 }
 
 type guardBoundaryEvidence0134 struct {
@@ -93,17 +115,18 @@ type guardIntegrityEvidence0134 struct {
 }
 
 type guardProcessPolicyReport0134 struct {
-	Schema                         string `json:"schema"`
-	PolicyVersion                  uint32 `json:"policyVersion"`
-	PID                            uint32 `json:"pid"`
-	Enforced                       bool   `json:"enforced"`
-	DynamicCodeProhibited          bool   `json:"dynamicCodeProhibited"`
-	ExtensionPointsDisabled        bool   `json:"extensionPointsDisabled"`
-	StrictHandleChecks             bool   `json:"strictHandleChecks"`
-	RemoteImagesBlocked            bool   `json:"remoteImagesBlocked"`
-	LowMandatoryLabelImagesBlocked bool   `json:"lowMandatoryLabelImagesBlocked"`
-	PreferSystem32Images           bool   `json:"preferSystem32Images"`
-	ChildProcessCreationBlocked    bool   `json:"childProcessCreationBlocked"`
+	Schema                         string                              `json:"schema"`
+	PolicyVersion                  uint32                              `json:"policyVersion"`
+	PID                            uint32                              `json:"pid"`
+	Enforced                       bool                                `json:"enforced"`
+	DynamicCodeProhibited          bool                                `json:"dynamicCodeProhibited"`
+	ExtensionPointsDisabled        bool                                `json:"extensionPointsDisabled"`
+	StrictHandleChecks             bool                                `json:"strictHandleChecks"`
+	RemoteImagesBlocked            bool                                `json:"remoteImagesBlocked"`
+	LowMandatoryLabelImagesBlocked bool                                `json:"lowMandatoryLabelImagesBlocked"`
+	PreferSystem32Images           bool                                `json:"preferSystem32Images"`
+	ChildProcessCreationBlocked    bool                                `json:"childProcessCreationBlocked"`
+	Linux                          *guardLinuxProcessPolicyDetails0137 `json:"linux,omitempty"`
 }
 
 type guardRemoteAttestation0134 struct {
@@ -176,6 +199,18 @@ func isWindowsDevicePlatform0134(platform string) bool {
 		strings.HasPrefix(platform, "windows-") || strings.HasPrefix(platform, "win32-") || strings.HasPrefix(platform, "win64-")
 }
 
+func isLinuxDevicePlatform0137(platform string) bool {
+	platform = strings.ToLower(strings.TrimSpace(platform))
+	return platform == "linux" || strings.HasPrefix(platform, "linux-") || strings.HasPrefix(platform, "linux ") || strings.Contains(platform, "linux")
+}
+
+func guardSchemasForPlatform0137(platform string) (string, string, string, bool) {
+	if isLinuxDevicePlatform0137(platform) {
+		return guardLinuxAttestationSchema0137, guardLinuxIntegritySchema0137, guardLinuxProcessPolicySchema0137, true
+	}
+	return guardAttestationSchema0134, guardIntegritySchema0134, guardProcessPolicySchema0134, false
+}
+
 func (s Server) guardAttestationRequiredForSession0134(claims authClaims) (bool, error) {
 	if !s.guardAttestationRequired0134() {
 		return false, nil
@@ -188,7 +223,7 @@ func (s Server) guardAttestationRequiredForSession0134(claims authClaims) (bool,
 	if err != nil {
 		return false, err
 	}
-	return isWindowsDevicePlatform0134(device.Platform), nil
+	return isWindowsDevicePlatform0134(device.Platform) || isLinuxDevicePlatform0137(device.Platform), nil
 }
 
 func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, error) {
@@ -251,6 +286,27 @@ func recomputeGuardEvidenceSHA2560134(e guardIntegrityEvidence0134) (string, err
 }
 
 func guardAttestationCorePayload0134(a guardRemoteAttestation0134) string {
+	if a.Schema == guardLinuxAttestationSchema0137 && a.ProcessPolicy.Linux != nil {
+		l := a.ProcessPolicy.Linux
+		return "NeverLauncher Guard Attestation Core Linux v1\n" +
+			"challenge-id=" + a.ChallengeID + "\n" +
+			"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
+			"evidence-id=" + a.Evidence.EvidenceID + "\n" +
+			"evidence-sha256=" + a.Evidence.EvidenceSHA256 + "\n" +
+			"guard-sha256=" + a.Evidence.Guard.ImageSHA256 + "\n" +
+			"launcher-sha256=" + a.Evidence.Launcher.ImageSHA256 + "\n" +
+			"guard-module-set-sha256=" + a.Evidence.Guard.Modules.ModuleSetSHA256 + "\n" +
+			"launcher-module-set-sha256=" + a.Evidence.Launcher.Modules.ModuleSetSHA256 + "\n" +
+			"process-policy-version=" + strconv.FormatUint(uint64(a.ProcessPolicy.PolicyVersion), 10) + "\n" +
+			"process-policy-enforced=" + strconv.FormatBool(a.ProcessPolicy.Enforced) + "\n" +
+			"no-new-privs=" + strconv.FormatBool(l.NoNewPrivs) + "\n" +
+			"dumpable-disabled=" + strconv.FormatBool(l.DumpableDisabled) + "\n" +
+			"core-dumps-disabled=" + strconv.FormatBool(l.CoreDumpsDisabled) + "\n" +
+			"ptrace-restricted=" + strconv.FormatBool(l.PtraceRestricted) + "\n" +
+			"parent-death-signal=" + strconv.FormatBool(l.ParentDeathSignal) + "\n" +
+			"private-umask=" + strconv.FormatBool(l.PrivateUmask) + "\n" +
+			"collected-at=" + strconv.FormatUint(a.CollectedAtUnix, 10) + "\n"
+	}
 	return "NeverLauncher Guard Attestation Core v1\n" +
 		"challenge-id=" + a.ChallengeID + "\n" +
 		"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
@@ -297,8 +353,9 @@ func guardDeviceSigningPayload0134(challenge string, claims authClaims, device m
 		"challenge-expires-at=" + strings.TrimSpace(challengeExpiresAt) + "\n"
 }
 
-func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, challenge string, policy guardReleasePolicy0134, now time.Time, challengeCreatedAt time.Time) error {
-	if a.Schema != guardAttestationSchema0134 || a.AttestationVersion != 1 || a.ChallengeID != strings.TrimSpace(challengeID) {
+func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, challenge string, policy guardReleasePolicy0134, platform string, now time.Time, challengeCreatedAt time.Time) error {
+	expectedAttestationSchema, expectedEvidenceSchema, expectedPolicySchema, linux := guardSchemasForPlatform0137(platform)
+	if a.Schema != expectedAttestationSchema || a.AttestationVersion != 1 || a.ChallengeID != strings.TrimSpace(challengeID) {
 		return errors.New("Guard Attestation schema/version/challengeId mismatch")
 	}
 	expectedChallenge := deviceChallengeHash0121(challenge)
@@ -309,7 +366,7 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 		!isSHA256Hex0134(a.Evidence.EvidenceSHA256) || !isSHA256Hex0134(a.Evidence.SessionProof) {
 		return errors.New("Guard Attestation digest/proof malformed")
 	}
-	if a.Evidence.Schema != guardIntegritySchema0134 || a.Evidence.EvidenceVersion != 1 ||
+	if a.Evidence.Schema != expectedEvidenceSchema || a.Evidence.EvidenceVersion != 1 ||
 		len(a.Evidence.EvidenceID) != 32 || a.Evidence.EvidenceID != strings.ToLower(a.Evidence.EvidenceID) {
 		return errors.New("Integrity Evidence schema/version/id mismatch")
 	}
@@ -350,16 +407,29 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 		return errors.New("Guard Attestation digest verification failed")
 	}
 	p := a.ProcessPolicy
-	if p.Schema != guardProcessPolicySchema0134 || p.PolicyVersion != 1 || p.PID != a.Evidence.Guard.PID ||
-		!p.Enforced || !p.DynamicCodeProhibited || !p.ExtensionPointsDisabled || !p.StrictHandleChecks ||
-		!p.RemoteImagesBlocked || !p.LowMandatoryLabelImagesBlocked || !p.PreferSystem32Images || !p.ChildProcessCreationBlocked {
+	if p.Schema != expectedPolicySchema || p.PolicyVersion != 1 || p.PID != a.Evidence.Guard.PID || !p.Enforced {
 		return errors.New("NeverGuard process policy verification failed")
+	}
+	if linux {
+		if p.Linux == nil || !p.Linux.NoNewPrivs || !p.Linux.DumpableDisabled || !p.Linux.CoreDumpsDisabled ||
+			!p.Linux.PtraceRestricted || !p.Linux.ParentDeathSignal || !p.Linux.PrivateUmask {
+			return errors.New("NeverGuard Linux process policy verification failed")
+		}
+		if a.Evidence.Guard.Linux == nil || a.Evidence.Launcher.Linux == nil ||
+			!a.Evidence.Guard.Linux.NoNewPrivs || !a.Evidence.Guard.Linux.DumpableDisabled || !a.Evidence.Guard.Linux.ParentDeathSignal ||
+			!a.Evidence.Launcher.Linux.NoNewPrivs || !a.Evidence.Launcher.Linux.DumpableDisabled ||
+			a.Evidence.Guard.Linux.UID != a.Evidence.Launcher.Linux.UID || a.Evidence.Guard.Linux.GID != a.Evidence.Launcher.Linux.GID {
+			return errors.New("NeverGuard Linux integrity process state verification failed")
+		}
+	} else if !p.DynamicCodeProhibited || !p.ExtensionPointsDisabled || !p.StrictHandleChecks ||
+		!p.RemoteImagesBlocked || !p.LowMandatoryLabelImagesBlocked || !p.PreferSystem32Images || !p.ChildProcessCreationBlocked {
+		return errors.New("NeverGuard Windows process policy verification failed")
 	}
 	if !containsHash0134(policy.GuardSHA256, a.Evidence.Guard.ImageSHA256) ||
 		!containsHash0134(policy.LauncherSHA256, a.Evidence.Launcher.ImageSHA256) {
 		return errors.New("NeverGuard/Desktop release hash is not allowlisted")
 	}
-	if policy.RequireAuthenticode && (!a.Evidence.Guard.Authenticode.Trusted || !a.Evidence.Launcher.Authenticode.Trusted) {
+	if !linux && policy.RequireAuthenticode && (!a.Evidence.Guard.Authenticode.Trusted || !a.Evidence.Launcher.Authenticode.Trusted) {
 		return errors.New("release policy requires trusted Authenticode for NeverGuard and Desktop")
 	}
 	return nil
@@ -397,8 +467,8 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusNotFound, "устройство не найдено")
 		return
 	}
-	if !isWindowsDevicePlatform0134(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation 0.13.4 применяется только к Windows trusted device")
+	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) {
+		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux trusted device")
 		return
 	}
 	if err := attestationEligibleDevice0124(device); err != nil {
@@ -438,15 +508,17 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard Attestation challenge")
 		return
 	}
+	attestationSchema, evidenceSchema, processPolicySchema, linuxPlatform := guardSchemasForPlatform0137(device.Platform)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"challengeId":         challengeID,
 		"challenge":           challenge,
 		"expiresAt":           expires,
 		"launcherVersion":     req.LauncherVersion,
-		"attestationSchema":   guardAttestationSchema0134,
-		"evidenceSchema":      guardIntegritySchema0134,
-		"processPolicySchema": guardProcessPolicySchema0134,
-		"requireAuthenticode": policy.RequireAuthenticode,
+		"attestationSchema":   attestationSchema,
+		"evidenceSchema":      evidenceSchema,
+		"processPolicySchema": processPolicySchema,
+		"platform":            map[bool]string{true: "linux", false: "windows"}[linuxPlatform],
+		"requireAuthenticode": policy.RequireAuthenticode && !linuxPlatform,
 		"oneTime":             true,
 	}})
 }
@@ -484,8 +556,8 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusNotFound, "устройство не найдено")
 		return
 	}
-	if !isWindowsDevicePlatform0134(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation 0.13.4 применяется только к Windows trusted device")
+	if !isWindowsDevicePlatform0134(device.Platform) && !isLinuxDevicePlatform0137(device.Platform) {
+		writeError(w, http.StatusPreconditionFailed, "Guard Attestation production implementation поддерживает только Windows/Linux trusted device")
 		return
 	}
 	if err := attestationEligibleDevice0124(device); err != nil {
@@ -506,7 +578,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusInternalServerError, "device public key повреждён")
 		return
 	}
-	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, time.Now().UTC(), time.Now().UTC().Add(-guardAttestationChallengeTTL0134)); err != nil {
+	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, device.Platform, time.Now().UTC(), time.Now().UTC().Add(-guardAttestationChallengeTTL0134)); err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
@@ -530,7 +602,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusUnauthorized, "Guard Attestation challenge больше не соответствует session/device/release binding")
 		return
 	}
-	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, now, challenge.CreatedAt.UTC()); err != nil {
+	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, device.Platform, now, challenge.CreatedAt.UTC()); err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}

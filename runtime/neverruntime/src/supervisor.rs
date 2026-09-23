@@ -28,6 +28,8 @@ pub struct ProcessStatus {
     pub message: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub windows_process_policy: Option<RuntimeProcessPolicyReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linux_process_policy: Option<crate::LinuxRuntimeProcessPolicyReport>,
 }
 
 #[derive(Clone)]
@@ -113,24 +115,34 @@ impl ProcessSupervisor {
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(log_file));
+        #[cfg(windows)]
         crate::windows_policy::prepare_runtime_command(&mut command);
+        #[cfg(target_os = "linux")]
+        crate::linux_policy::prepare_runtime_command(&mut command);
         let mut child = command
             .spawn()
             .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
+        #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
             .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+        #[cfg(target_os = "linux")]
+        let linux_runtime_policy = crate::linux_policy::runtime_policy(&mut child)
+            .map_err(|err| format!("launch заблокирован: Linux runtime/process policy enforcement failed: {err}"))?;
 
         let pid = child.id();
         #[cfg(windows)]
         let windows_process_policy = Some(runtime_policy.report().clone());
         #[cfg(not(windows))]
-        let windows_process_policy = {
-            let _ = runtime_policy;
-            None
-        };
+        let windows_process_policy = None;
+        #[cfg(target_os = "linux")]
+        let linux_process_policy = Some(linux_runtime_policy);
+        #[cfg(not(target_os = "linux"))]
+        let linux_process_policy = None;
         #[cfg(windows)]
         let launch_message = "Runtime запущен под supervision с Windows process policy enforcement";
-        #[cfg(not(windows))]
+        #[cfg(target_os = "linux")]
+        let launch_message = "Runtime запущен под supervision с Linux process policy enforcement";
+        #[cfg(all(not(windows), not(target_os = "linux")))]
         let launch_message = "Runtime запущен под supervision";
         let id = format!("runtime-{started_at}-{}", pid.unwrap_or(0));
         let status = ProcessStatus {
@@ -138,6 +150,7 @@ impl ProcessSupervisor {
             finished_at: None, exit_code: None, success: None,
             log_path: log_path.to_string_lossy().to_string(), message: launch_message.to_string(),
             windows_process_policy,
+            linux_process_policy,
         };
         let child = Arc::new(Mutex::new(Some(child)));
         self.processes.lock().await.insert(id.clone(), ManagedProcess {
@@ -168,6 +181,10 @@ impl ProcessSupervisor {
                     }
                 };
                 let Some(exit) = exit else { continue; };
+                #[cfg(target_os = "linux")]
+                if let Some(process_group) = pid {
+                    let _ = crate::linux_policy::terminate_runtime_process_group(process_group);
+                }
                 let finished_at = now_unix().unwrap_or_default().to_string();
                 let (exit_code, success, message) = match exit {
                     Ok(status) => (status.code(), status.success(), if status.success() { "Runtime завершился успешно".to_string() } else { "Runtime завершился с ошибкой".to_string() }),
@@ -218,6 +235,12 @@ impl ProcessSupervisor {
         {
             let mut guard = child.lock().await;
             let process = guard.as_mut().ok_or_else(|| format!("runtime process {id} уже завершён"))?;
+            #[cfg(target_os = "linux")]
+            {
+                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
+                crate::linux_policy::terminate_runtime_process_group(pid)?;
+            }
+            #[cfg(not(target_os = "linux"))]
             process.start_kill().map_err(|err| format!("не удалось остановить runtime process {id}: {err}"))?;
         }
         let mut map = self.processes.lock().await;

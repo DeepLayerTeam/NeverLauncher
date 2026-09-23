@@ -5,15 +5,24 @@ pub mod guard_ipc;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
-pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
+pub mod linux_policy;
+#[cfg(target_os = "linux")]
+pub mod linux_guard;
+pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use integrity::{
-    verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, ModuleSetEvidence,
+    verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, LinuxProcessSecurityEvidence, ModuleSetEvidence,
     NeverGuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
-    NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
+    NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
 };
-pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NeverGuardSupervisor, NEVERGUARD_PROTOCOL_VERSION};
+pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NEVERGUARD_PROTOCOL_VERSION};
+#[cfg(windows)]
+pub use guard_ipc::NeverGuardSupervisor;
+#[cfg(target_os = "linux")]
+pub use linux_guard::{run_linux_guard_server, NeverGuardSupervisor};
+#[cfg(all(not(windows), not(target_os = "linux")))]
+pub use guard_ipc::NeverGuardSupervisor;
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 pub use windows_policy::{
     ensure_guard_process_policy, ensure_windows_production_hardening, GuardProcessPolicyReport,
@@ -21,6 +30,7 @@ pub use windows_policy::{
     NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
     NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
+pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};

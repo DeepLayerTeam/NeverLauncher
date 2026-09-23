@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.13.7 — Linux production implementation
+
+`0.13.7` переносит NeverGuard production boundary на Linux как отдельную native-реализацию, а не как Windows-compatible stub. Desktop запускает соседний `neverguard` через приватный Unix-domain socket, взаимно аутентифицирует процесс bootstrap-secret/HMAC протоколом v4 и проверяет kernel peer credentials до любого integrity/attestation ответа.
+
+### Linux runtime boundary
+
+- NeverGuard и Minecraft runtime получают `PR_SET_PDEATHSIG=SIGKILL`, `PR_SET_NO_NEW_PRIVS=1`, отдельную process group и `RLIMIT_CORE=0`; Guard дополнительно отключает dumpability/ptrace exception и использует приватный umask. Ошибка применения/проверки блокирует launch fail-closed; stop/выход primary Java дополнительно завершает всю runtime process group.
+- IPC размещается только в owner-only `XDG_RUNTIME_DIR/neverlauncher` (с безопасным fallback на `/run/user/<uid>`), socket создаётся с mode `0600`, а обе стороны проверяют PID/UID peer через `SO_PEERCRED`. Bootstrap secret по-прежнему передаётся только через inherited stdin и очищается после handshake.
+- Linux Integrity Evidence v1 измеряет реальные ELF/executable SHA-256, `/proc/<pid>/status`, parent boundary, process start ticks и SHA-256 набора executable-backed mappings из `/proc/<pid>/maps`. Linux Guard Attestation включает отдельную process-policy schema и session-bound proof.
+- Backend принимает Linux trusted devices в том же single-use challenge/ticket flow, но проверяет отдельные Linux schemas, UID/GID boundary, NoNewPrivs, dumpability/core/ptrace/PDEATHSIG state и release hashes. Authenticode на Linux не подменяется фиктивным trust result.
+
+### Production package and CI
+
+- `build-linux-desktop.sh` собирает side-by-side `neverlauncher-desktop + neverguard`, вычисляет SHA-256/size, создаёт `LINUX_PACKAGE_MANIFEST.json` и `GUARD_RELEASE_ALLOWLIST_LINUX.json`, затем формирует Linux production ZIP. Release Desktop до spawn Guard проверяет regular-file/symlink boundary, user-or-root ownership, write permissions, version/platform/protocol, IPC/hardening metadata и hashes.
+- Linux NeverGuard integration test выполняет реальный Unix-socket handshake, process policy, Integrity Evidence и challenge-bound attestation. CI/preflight содержит обязательный `linux-production-implementation-0137.py`; release bundle обязан содержать Linux NeverGuard и allowlist.
+
+Эта версия остаётся user-mode boundary: root/kernel attacker находится вне модели доверия. Backend release allowlist и hardware-bound device-key signature остаются обязательной удалённой точкой проверки.
+
 ## 0.13.6 — Windows production hardening
 
 `0.13.6` переводит Windows NeverGuard boundary из функционального enforcement-контура 0.13.1–0.13.5 в более жёсткий production runtime. IPC protocol поднят до v4, Named Pipe получает explicit protected current-user/System ACL, Desktop удерживает NeverGuard в `KILL_ON_JOB_CLOSE` Job Object, а Desktop/Guard применяют fail-closed heap/DLL-search hardening до основной runtime-инициализации.

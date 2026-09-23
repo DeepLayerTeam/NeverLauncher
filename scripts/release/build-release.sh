@@ -97,10 +97,12 @@ log "Сборка Desktop Web и native binary"
   npm run build
 )
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/desktop/dist" "${OUT_DIR}/neverlauncher-desktop-web-${VERSION}.zip" --prefix desktop
-cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-require_file "${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop"
-cp "${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
-chmod +x "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
+log "Сборка Linux Desktop + NeverGuard production package"
+bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
+require_file "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
+require_file "${OUT_DIR}/neverguard-linux-amd64"
+require_file "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
+require_file "${OUT_DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip"
 
 log "Формирование и проверка реального Desktop package"
 "${OUT_DIR}/neverlauncher-cli-linux-amd64" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux

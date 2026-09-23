@@ -201,7 +201,58 @@ func TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134(t *testin
 func TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134(t *testing.T) {
 	policy := guardReleasePolicy0134{GuardSHA256: []string{strings.Repeat("1", 64)}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
 	a := makeGuardAttestation0134(t, "challenge-id", "challenge-secret")
-	if err := validateGuardAttestation0134(a, "challenge-id", "challenge-secret", policy, time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
+	if err := validateGuardAttestation0134(a, "challenge-id", "challenge-secret", policy, "windows", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
 		t.Fatal("non-allowlisted NeverGuard image hash was accepted")
+	}
+}
+
+func makeLinuxGuardAttestation0137(t *testing.T, challengeID, challenge string) guardRemoteAttestation0134 {
+	t.Helper()
+	process := func(pid uint32, imageHash, moduleHash string, pdeath bool) guardProcessIntegrityEvidence0134 {
+		return guardProcessIntegrityEvidence0134{
+			PID: pid, ImagePath: "/opt/neverlauncher/binary", ImageSHA256: imageHash,
+			ImageSize: 2048, ImageModifiedUnixMS: 2000, ProcessCreatedFiletime: 12345,
+			Authenticode: guardAuthenticodeEvidence0134{Trusted: false, Status: "not-applicable-linux"},
+			Mitigations:  guardProcessMitigationEvidence0134{QueryFailures: []string{}},
+			Modules:      guardModuleSetEvidence0134{ModuleCount: 3, ModuleSetSHA256: moduleHash, NonSystemModuleNames: []string{}},
+			Linux:        &guardLinuxProcessSecurityEvidence0137{UID: 1000, GID: 1000, NoNewPrivs: true, SeccompMode: 2, DumpableDisabled: true, ParentDeathSignal: pdeath},
+		}
+	}
+	now := uint64(time.Now().UTC().Unix())
+	evidence := guardIntegrityEvidence0134{
+		Schema: guardLinuxIntegritySchema0137, EvidenceVersion: 1, EvidenceID: strings.Repeat("b", 32), CollectedAtUnix: now,
+		Boundary:     guardBoundaryEvidence0134{ExpectedParentPID: 200, ObservedParentPID: 200, ParentMatches: true},
+		Guard:        process(201, testGuardHash0134, strings.Repeat("6", 64), true),
+		Launcher:     process(200, testLauncherHash0134, strings.Repeat("7", 64), false),
+		SessionProof: strings.Repeat("8", 64),
+	}
+	digest, err := recomputeGuardEvidenceSHA2560134(evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence.EvidenceSHA256 = digest
+	a := guardRemoteAttestation0134{
+		Schema: guardLinuxAttestationSchema0137, AttestationVersion: 1, ChallengeID: challengeID,
+		ChallengeSHA256: deviceChallengeHash0121(challenge), CollectedAtUnix: now, Evidence: evidence,
+		ProcessPolicy: guardProcessPolicyReport0134{
+			Schema: guardLinuxProcessPolicySchema0137, PolicyVersion: 1, PID: 201, Enforced: true,
+			Linux: &guardLinuxProcessPolicyDetails0137{NoNewPrivs: true, DumpableDisabled: true, CoreDumpsDisabled: true, PtraceRestricted: true, ParentDeathSignal: true, PrivateUmask: true},
+		},
+		SessionProof: strings.Repeat("9", 64),
+	}
+	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
+	return a
+}
+
+func TestLinuxGuardAttestationValidation0137(t *testing.T) {
+	policy := guardReleasePolicy0134{GuardSHA256: []string{testGuardHash0134}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
+	a := makeLinuxGuardAttestation0137(t, "linux-challenge", "linux-secret")
+	if err := validateGuardAttestation0134(a, "linux-challenge", "linux-secret", policy, "Linux x86_64", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err != nil {
+		t.Fatalf("valid Linux Guard Attestation rejected: %v", err)
+	}
+	a.ProcessPolicy.Linux.NoNewPrivs = false
+	a.AttestationSHA256 = recomputeGuardAttestationSHA2560134(a)
+	if err := validateGuardAttestation0134(a, "linux-challenge", "linux-secret", policy, "linux", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
+		t.Fatal("Linux Guard Attestation without no_new_privs was accepted")
 	}
 }

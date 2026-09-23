@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::linux_policy::LinuxGuardPolicyDetails;
 
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1;
@@ -19,6 +20,8 @@ pub struct GuardProcessPolicyReport {
     pub low_mandatory_label_images_blocked: bool,
     pub prefer_system32_images: bool,
     pub child_process_creation_blocked: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linux: Option<LinuxGuardPolicyDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -298,6 +301,7 @@ mod windows_impl {
             low_mandatory_label_images_blocked: image_load & 0x2 != 0,
             prefer_system32_images: image_load & 0x4 != 0,
             child_process_creation_blocked: child_process & 0x1 != 0,
+            linux: None,
         })
     }
 

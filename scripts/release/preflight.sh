@@ -53,6 +53,7 @@ run_step neverguard-process-policy-0133 python3 "${ROOT_DIR}/scripts/smoke/offli
 run_step neverguard-guard-attestation-0134 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-guard-attestation-0134.py"
 run_step minecraft-serverbridge-integrity-0135 python3 "${ROOT_DIR}/scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py"
 run_step windows-production-hardening-0136 python3 "${ROOT_DIR}/scripts/smoke/offline/windows-production-hardening-0136.py"
+run_step linux-production-implementation-0137 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-production-implementation-0137.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
 run_step federation-e2e python3 "${ROOT_DIR}/scripts/test/federation-e2e.py"

@@ -5,7 +5,8 @@ use neverruntime::{
     GuardProcessPolicyReport, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
     NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus,
     ProcessSupervisor, RepairResult, SignatureCheckResult, NEVERGUARD_WINDOWS_HARDENING_VERSION,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION, NEVERGUARD_LINUX_HARDENING_VERSION,
+    NEVERGUARD_LINUX_PROCESS_POLICY_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -318,7 +319,31 @@ async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<St
             .await
             .map_err(|err| format!("launch заблокирован: NeverGuard Windows Integrity Evidence v1 недоступен: {err}"))?;
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        let status = neverguard.ensure_started().await?;
+        if !status.authenticated || status.state != "ready" {
+            return Err("launch заблокирован: NeverGuard Linux boundary не authenticated/ready".to_string());
+        }
+        if !status.process_policy_enforced || status.process_policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION {
+            return Err("launch заблокирован: NeverGuard Linux runtime/process policy не enforced".to_string());
+        }
+        if !status.hardening_enforced || status.hardening_version != NEVERGUARD_LINUX_HARDENING_VERSION
+            || !status.secure_pipe_acl || !status.lifetime_job_enforced
+            || (!cfg!(debug_assertions) && !status.package_manifest_verified)
+        {
+            return Err("launch заблокирован: NeverGuard Linux production hardening verification failed".to_string());
+        }
+        neverguard.ping().await?;
+        let policy = neverguard.process_policy().await
+            .map_err(|err| format!("launch заблокирован: NeverGuard Linux process policy verification failed: {err}"))?;
+        if !policy.enforced || policy.policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
+            return Err("launch заблокирован: NeverGuard Linux process policy report rejected".to_string());
+        }
+        neverguard.integrity_evidence().await
+            .map_err(|err| format!("launch заблокирован: NeverGuard Linux Integrity Evidence v1 недоступен: {err}"))?;
+    }
+    #[cfg(all(not(windows), not(target_os = "linux")))]
     let _ = &neverguard;
 
     if let Some(credentials) = minecraft_credentials {
@@ -341,12 +366,12 @@ async fn neverguard_guard_attestation(
     challenge_expires_at: String,
     neverguard: tauri::State<'_, NeverGuardSupervisor>,
 ) -> Result<GuardAttestationSubmission, String> {
-    #[cfg(not(windows))]
+    #[cfg(all(not(windows), not(target_os = "linux")))]
     {
         let _ = (backend_url, user_id, device_id, session_id, binding_epoch, launcher_version, challenge_id, challenge, challenge_expires_at, neverguard);
-        return Err("Guard Attestation 0.13.4 доступна только для Windows".to_string());
+        return Err("Guard Attestation production implementation доступна только для Windows и Linux".to_string());
     }
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     {
         let attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
         let evidence_sha256 = attestation.evidence.evidence_sha256.clone();
@@ -433,6 +458,12 @@ fn main() {
     #[cfg(windows)]
     if let Err(err) = neverruntime::ensure_windows_production_hardening() {
         eprintln!("NeverLauncher Desktop Windows production hardening failed: {err}");
+        std::process::exit(70);
+    }
+
+    #[cfg(target_os = "linux")]
+    if let Err(err) = neverruntime::linux_policy::ensure_linux_production_hardening() {
+        eprintln!("NeverLauncher Desktop Linux production hardening failed: {err}");
         std::process::exit(70);
     }
 

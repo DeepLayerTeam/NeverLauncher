@@ -46,6 +46,7 @@ jobs:
           python3 scripts/smoke/offline/neverguard-guard-attestation-0134.py
           python3 scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py
           python3 scripts/smoke/offline/windows-production-hardening-0136.py
+          python3 scripts/smoke/offline/linux-production-implementation-0137.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -117,9 +118,10 @@ jobs:
         run: |
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
-      - name: NeverRuntime test and clippy
+      - name: NeverRuntime + NeverGuard Linux test and clippy
         run: |
           cargo test --manifest-path runtime/neverruntime/Cargo.toml
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_linux -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path runtime/neverruntime/Cargo.toml
       - name: Build Desktop Tauri
@@ -130,6 +132,14 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
+      - name: Build Linux Desktop + NeverGuard production package
+        run: bash scripts/release/build-linux-desktop.sh
+      - name: Upload Linux NeverGuard package
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-linux-neverguard-${{ github.sha }}
+          path: dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
+          if-no-files-found: error
 
   neverguard-windows:
     name: NeverGuard Windows hardened production boundary
@@ -252,6 +262,8 @@ jobs:
           test -s "${DIR}/SHA256SUMS.sig"
           test -s "${DIR}/PROVENANCE.json.sig"
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
+          test -s "${DIR}/neverguard-linux-amd64"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
           test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
           test -s "${DIR}/neverruntime-linux-amd64"
           test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"

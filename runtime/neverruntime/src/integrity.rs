@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 
 pub const NEVERGUARD_INTEGRITY_EVIDENCE_VERSION: u32 = 1;
 pub const NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/windows-integrity-evidence/v1";
+pub const NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/linux-integrity-evidence/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -35,6 +36,18 @@ pub struct ModuleSetEvidence {
     pub non_system_module_names: Vec<String>,
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LinuxProcessSecurityEvidence {
+    pub uid: u32,
+    pub gid: u32,
+    pub no_new_privs: bool,
+    pub seccomp_mode: u32,
+    pub dumpable_disabled: bool,
+    pub parent_death_signal: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessIntegrityEvidence {
@@ -47,6 +60,8 @@ pub struct ProcessIntegrityEvidence {
     pub authenticode: AuthenticodeEvidence,
     pub mitigations: ProcessMitigationEvidence,
     pub modules: ModuleSetEvidence,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linux: Option<LinuxProcessSecurityEvidence>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -71,7 +86,7 @@ pub struct NeverGuardIntegrityEvidence {
     pub session_proof: String,
 }
 
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct IntegrityEvidenceCore<'a> {
@@ -84,7 +99,7 @@ struct IntegrityEvidenceCore<'a> {
     launcher: &'a ProcessIntegrityEvidence,
 }
 
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String> {
     serde_json::to_vec(&IntegrityEvidenceCore {
         schema: &evidence.schema,
@@ -98,7 +113,7 @@ fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String>
     .map_err(|err| format!("NeverGuard integrity evidence serialization failed: {err}"))
 }
 
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 pub(crate) fn recompute_evidence_sha256(
     evidence: &NeverGuardIntegrityEvidence,
 ) -> Result<[u8; 32], String> {
@@ -108,11 +123,11 @@ pub(crate) fn recompute_evidence_sha256(
     Ok(out)
 }
 
-#[cfg(any(windows, test))]
+#[cfg(any(windows, target_os = "linux", test))]
 pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) -> Result<(), String> {
-    if evidence.schema != NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA
-        || evidence.evidence_version != NEVERGUARD_INTEGRITY_EVIDENCE_VERSION
-    {
+    let schema_ok = evidence.schema == NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA
+        || evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA;
+    if !schema_ok || evidence.evidence_version != NEVERGUARD_INTEGRITY_EVIDENCE_VERSION {
         return Err("NeverGuard integrity evidence schema/version mismatch".to_string());
     }
     if evidence.evidence_id.len() != 32
@@ -146,6 +161,16 @@ pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) ->
         || evidence.launcher.pid != evidence.boundary.expected_parent_pid
     {
         return Err("NeverGuard integrity evidence process boundary mismatch".to_string());
+    }
+    if evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA {
+        let guard = evidence.guard.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
+        let launcher = evidence.launcher.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing launcher security state".to_string())?;
+        if !guard.no_new_privs || !guard.dumpable_disabled || !guard.parent_death_signal {
+            return Err("Linux NeverGuard security state is not enforced".to_string());
+        }
+        if guard.uid != launcher.uid || guard.gid != launcher.gid {
+            return Err("Linux NeverGuard/launcher uid/gid boundary mismatch".to_string());
+        }
     }
     Ok(())
 }
@@ -314,6 +339,7 @@ mod windows_impl {
             authenticode: verify_authenticode(&image_path),
             mitigations: process_mitigations(process.raw()),
             modules: module_set(pid, &image_path)?,
+            linux: None,
         })
     }
 
@@ -667,6 +693,7 @@ mod tests {
                 module_set_sha256: "22".repeat(32),
                 non_system_module_names: vec![],
             },
+            linux: None,
         }
     }
 
@@ -708,3 +735,92 @@ mod tests {
         assert!(validate_evidence_shape(&evidence).is_err());
     }
 }
+
+#[cfg(target_os = "linux")]
+mod linux_impl {
+    use super::*;
+    use rand::{rngs::OsRng, RngCore};
+    use std::{collections::BTreeMap, fs::File, io::{BufReader, Read}, os::unix::fs::MetadataExt, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+
+    const MAX_REPORTED_NON_SYSTEM_MODULES: usize = 64;
+
+    fn sha256_file(path: &Path) -> Result<String, String> {
+        let file = File::open(path).map_err(|e| format!("open {} failed: {e}", path.display()))?;
+        let mut reader = BufReader::new(file); let mut hasher = Sha256::new(); let mut buf=[0u8;64*1024];
+        loop { let n=reader.read(&mut buf).map_err(|e| format!("read {} failed: {e}", path.display()))?; if n==0 { break; } hasher.update(&buf[..n]); }
+        Ok(hex::encode(hasher.finalize()))
+    }
+
+    fn proc_status(pid: u32) -> Result<String, String> {
+        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("read /proc/{pid}/status failed: {e}"))
+    }
+    fn status_u32(status: &str, key: &str) -> Option<u32> {
+        status.lines().find_map(|l| l.strip_prefix(key)).and_then(|v| v.split_whitespace().next()).and_then(|v| v.parse().ok())
+    }
+    fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "PPid missing in /proc status".into()) }
+    fn process_start_ticks(pid: u32) -> Result<u64, String> {
+        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("read /proc/{pid}/stat failed: {e}"))?;
+        let end=stat.rfind(')').ok_or_else(|| "malformed /proc stat".to_string())?;
+        let rest=stat.get(end+2..).ok_or_else(|| "malformed /proc stat".to_string())?;
+        rest.split_whitespace().nth(19).ok_or_else(|| "starttime missing".to_string())?.parse().map_err(|_| "invalid process starttime".to_string())
+    }
+    fn pdeathsig(pid: u32) -> bool {
+        if pid != std::process::id() {
+            return false;
+        }
+        let mut sig = 0;
+        unsafe {
+            libc::prctl(
+                libc::PR_GET_PDEATHSIG,
+                &mut sig as *mut libc::c_int,
+            ) == 0 && sig == libc::SIGKILL
+        }
+    }
+    fn security(pid: u32) -> Result<LinuxProcessSecurityEvidence, String> {
+        let status=proc_status(pid)?;
+        Ok(LinuxProcessSecurityEvidence {
+            uid: status_u32(&status,"Uid:").ok_or_else(|| "Uid missing".to_string())?,
+            gid: status_u32(&status,"Gid:").ok_or_else(|| "Gid missing".to_string())?,
+            no_new_privs: status_u32(&status,"NoNewPrivs:")==Some(1),
+            seccomp_mode: status_u32(&status,"Seccomp:").unwrap_or(0),
+            dumpable_disabled: if pid==std::process::id() { unsafe { libc::prctl(libc::PR_GET_DUMPABLE,0,0,0,0)==0 } } else { true },
+            parent_death_signal: pdeathsig(pid),
+        })
+    }
+    fn modules(pid: u32, primary: &Path) -> Result<ModuleSetEvidence,String> {
+        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("read maps failed: {e}"))?;
+        let mut files=BTreeMap::<String,String>::new();
+        for line in maps.lines() {
+            let Some(raw)=line.split_whitespace().last() else { continue; };
+            if !raw.starts_with('/') { continue; }
+            let path=raw.strip_suffix(" (deleted)").unwrap_or(raw);
+            if files.contains_key(path) { continue; }
+            if let Ok(hash)=sha256_file(Path::new(path)) { files.insert(path.to_string(),hash); }
+        }
+        let mut h=Sha256::new(); let mut non_system=Vec::new();
+        for (path,hash) in &files { h.update((path.len() as u64).to_le_bytes()); h.update(path.as_bytes()); h.update(hex::decode(hash).unwrap_or_default());
+            let system=path.starts_with("/usr/lib/")||path.starts_with("/lib/")||path.starts_with("/lib64/")||Path::new(path)==primary;
+            if !system && non_system.len()<MAX_REPORTED_NON_SYSTEM_MODULES { non_system.push(path.clone()); }
+        }
+        Ok(ModuleSetEvidence { module_count: files.len() as u32, module_set_sha256: hex::encode(h.finalize()), non_system_module_names: non_system })
+    }
+    fn process(pid:u32)->Result<ProcessIntegrityEvidence,String>{
+        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("read exe link failed: {e}"))?;
+        let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
+        let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
+        Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), })
+    }
+    pub fn collect(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{
+        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        let mut id=[0u8;16]; OsRng.fill_bytes(&mut id);
+        let collected=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?.as_secs();
+        let mut evidence=NeverGuardIntegrityEvidence{ schema:NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
+        evidence.evidence_sha256=hex::encode(recompute_evidence_sha256(&evidence)?); validate_evidence_shape(&evidence)?; Ok(evidence)
+    }
+    pub fn parent(pid:u32)->Result<u32,String>{ observed_parent_pid(pid) }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn collect_linux_integrity_evidence(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{ linux_impl::collect(expected_parent_pid) }
+#[cfg(target_os = "linux")]
+pub(crate) fn observed_linux_parent_pid(pid:u32)->Result<u32,String>{ linux_impl::parent(pid) }
