@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION: u32 = 1;
+pub const NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA: &str =
     "neverguard/windows-runtime-process-policy/v1";
 
@@ -18,6 +19,17 @@ pub struct GuardProcessPolicyReport {
     pub low_mandatory_label_images_blocked: bool,
     pub prefer_system32_images: bool,
     pub child_process_creation_blocked: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowsProductionHardeningReport {
+    pub hardening_version: u32,
+    pub pid: u32,
+    pub enforced: bool,
+    pub heap_terminate_on_corruption: bool,
+    pub current_directory_removed_from_dll_search: bool,
+    pub restricted_default_dll_directories: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -58,6 +70,11 @@ mod windows_impl {
                 JobObjectExtendedLimitInformation, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
                 JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
             },
+            LibraryLoader::{
+                SetDefaultDllDirectories, SetDllDirectoryW, LOAD_LIBRARY_SEARCH_APPLICATION_DIR,
+                LOAD_LIBRARY_SEARCH_SYSTEM32,
+            },
+            Memory::{HeapSetInformation, HeapEnableTerminationOnCorruption},
             Threading::{
                 GetProcessMitigationPolicy, OpenThread, ResumeThread,
                 SetProcessMitigationPolicy, ProcessChildProcessPolicy, ProcessDynamicCodePolicy,
@@ -77,6 +94,7 @@ mod windows_impl {
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION;
 
     static GUARD_POLICY: OnceLock<Result<GuardProcessPolicyReport, String>> = OnceLock::new();
+    static PROCESS_HARDENING: OnceLock<Result<WindowsProductionHardeningReport, String>> = OnceLock::new();
 
     #[derive(Debug)]
     struct OwnedJob(usize);
@@ -99,6 +117,11 @@ mod windows_impl {
     }
 
     #[derive(Debug, Clone)]
+    pub struct GuardLifetimeJob {
+        _job: Arc<OwnedJob>,
+    }
+
+    #[derive(Debug, Clone)]
     pub struct RuntimeProcessPolicyGuard {
         report: RuntimeProcessPolicyReport,
         _job: Arc<OwnedJob>,
@@ -114,6 +137,111 @@ mod windows_impl {
         GUARD_POLICY
             .get_or_init(apply_guard_process_policy)
             .clone()
+    }
+
+    pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
+        PROCESS_HARDENING
+            .get_or_init(apply_windows_production_hardening)
+            .clone()
+    }
+
+    fn apply_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
+        let heap_ok = unsafe {
+            HeapSetInformation(
+                std::ptr::null_mut(),
+                HeapEnableTerminationOnCorruption,
+                std::ptr::null(),
+                0,
+            )
+        };
+        if heap_ok == 0 {
+            return Err(format!(
+                "Windows heap terminate-on-corruption hardening failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+
+        let empty = [0u16];
+        let dll_dir_ok = unsafe { SetDllDirectoryW(empty.as_ptr()) };
+        if dll_dir_ok == 0 {
+            return Err(format!(
+                "Windows DLL search hardening failed to remove current directory: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+
+        let search_flags = LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32;
+        let default_dirs_ok = unsafe { SetDefaultDllDirectories(search_flags) };
+        if default_dirs_ok == 0 {
+            return Err(format!(
+                "Windows DLL search hardening failed to restrict default directories: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+
+        Ok(WindowsProductionHardeningReport {
+            hardening_version: NEVERGUARD_WINDOWS_HARDENING_VERSION,
+            pid: std::process::id(),
+            enforced: true,
+            heap_terminate_on_corruption: true,
+            current_directory_removed_from_dll_search: true,
+            restricted_default_dll_directories: true,
+        })
+    }
+
+    pub fn prepare_guard_command(command: &mut Command) {
+        command.creation_flags(CREATE_SUSPENDED);
+    }
+
+    pub fn bind_guard_to_launcher_job(child: &mut Child) -> Result<GuardLifetimeJob, String> {
+        let pid = child
+            .id()
+            .ok_or_else(|| "NeverGuard PID unavailable for suspended lifetime boundary".to_string())?;
+        let process_handle = child
+            .raw_handle()
+            .ok_or_else(|| "NeverGuard process handle unavailable for lifetime job".to_string())?
+            as HANDLE;
+        let job_handle = unsafe { CreateJobObjectW(null(), null()) };
+        if job_handle.is_null() {
+            return Err(format!(
+                "NeverGuard lifetime Job Object creation failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let job = Arc::new(OwnedJob(job_handle as usize));
+        let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { zeroed() };
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let set_ok = unsafe {
+            SetInformationJobObject(
+                job.raw(),
+                JobObjectExtendedLimitInformation,
+                &limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION as *const c_void,
+                size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+            )
+        };
+        if set_ok == 0 {
+            return Err(format!(
+                "NeverGuard lifetime Job Object policy setup failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
+        if assign_ok == 0 {
+            return Err(format!(
+                "NeverGuard process cannot be assigned to launcher lifetime Job Object: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let mut in_job = 0i32;
+        let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
+        if membership_ok == 0 || in_job == 0 {
+            return Err(format!(
+                "NeverGuard launcher lifetime Job Object verification failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        resume_primary_thread(pid)?;
+        Ok(GuardLifetimeJob { _job: job })
     }
 
     fn apply_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
@@ -398,9 +526,15 @@ mod windows_impl {
 
 #[cfg(windows)]
 pub use windows_impl::{
-    enforce_runtime_process, ensure_guard_process_policy, prepare_runtime_command,
+    bind_guard_to_launcher_job, enforce_runtime_process, ensure_guard_process_policy,
+    ensure_windows_production_hardening, prepare_guard_command, prepare_runtime_command,
+    GuardLifetimeJob,
     RuntimeProcessPolicyGuard,
 };
+
+#[cfg(not(windows))]
+#[derive(Debug, Clone, Default)]
+pub struct GuardLifetimeJob;
 
 #[cfg(not(windows))]
 #[derive(Debug, Clone, Default)]
@@ -416,6 +550,21 @@ impl RuntimeProcessPolicyGuard {
 #[cfg(not(windows))]
 pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
     Err("NeverGuard 0.13.4 Windows process policy enforcement доступен только для Windows".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
+    Err("NeverGuard 0.13.6 Windows production hardening доступен только для Windows".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn prepare_guard_command(_command: &mut tokio::process::Command) {}
+
+#[cfg(not(windows))]
+pub fn bind_guard_to_launcher_job(
+    _child: &mut tokio::process::Child,
+) -> Result<GuardLifetimeJob, String> {
+    Err("NeverGuard 0.13.6 launcher lifetime Job Object доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
@@ -460,6 +609,33 @@ mod tests {
         assert_eq!(json["assignedToJob"], true);
         assert_eq!(json["breakawayAllowed"], false);
     }
+    #[test]
+    fn hardening_report_serializes_enforcement_state() {
+        let report = WindowsProductionHardeningReport {
+            hardening_version: NEVERGUARD_WINDOWS_HARDENING_VERSION,
+            pid: 42,
+            enforced: true,
+            heap_terminate_on_corruption: true,
+            current_directory_removed_from_dll_search: true,
+            restricted_default_dll_directories: true,
+        };
+        let json = serde_json::to_value(&report).expect("hardening report serializes");
+        assert_eq!(json["hardeningVersion"], NEVERGUARD_WINDOWS_HARDENING_VERSION);
+        assert_eq!(json["enforced"], true);
+        assert_eq!(json["restrictedDefaultDllDirectories"], true);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn process_hardening_is_enforced_for_current_test_process() {
+        let report = ensure_windows_production_hardening().expect("Windows production hardening");
+        assert_eq!(report.pid, std::process::id());
+        assert!(report.enforced);
+        assert!(report.heap_terminate_on_corruption);
+        assert!(report.current_directory_removed_from_dll_search);
+        assert!(report.restricted_default_dll_directories);
+    }
+
     #[cfg(windows)]
     #[tokio::test]
     async fn runtime_process_is_suspended_assigned_and_resumed() {

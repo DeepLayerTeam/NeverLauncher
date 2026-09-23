@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.13.6 — Windows production hardening
+
+`0.13.6` переводит Windows NeverGuard boundary из функционального enforcement-контура 0.13.1–0.13.5 в более жёсткий production runtime. IPC protocol поднят до v4, Named Pipe получает explicit protected current-user/System ACL, Desktop удерживает NeverGuard в `KILL_ON_JOB_CLOSE` Job Object, а Desktop/Guard применяют fail-closed heap/DLL-search hardening до основной runtime-инициализации.
+
+### Runtime and IPC hardening
+
+- `HeapSetInformation(..., HeapEnableTerminationOnCorruption, ...)`, `SetDllDirectoryW("")` и `SetDefaultDllDirectories(APPLICATION_DIR | SYSTEM32)` обязательны для Windows Desktop/NeverGuard; ошибка блокирует startup.
+- NeverGuard Named Pipe создаётся через explicit `SECURITY_ATTRIBUTES`/SDDL только для LocalSystem и object owner, дополнительно к local-only remote rejection и mutual HMAC. Protocol v4 включает hardening version/enforced и secure-ACL bit в authenticated ready proof.
+- Desktop назначает NeverGuard в отдельный Job Object с `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` и проверяет membership до передачи bootstrap secret. Minecraft launch требует authenticated Guard, process policy, hardening state, secure ACL, lifetime job и production package verification.
+
+### Release package hardening
+
+- Release Desktop до spawn Guard читает соседний `WINDOWS_PACKAGE_MANIFEST.json`, отклоняет symlink/non-regular PE, проверяет version/platform/protocol и size/SHA-256 обоих executable. Release build записывает protocol v4 и hardening metadata.
+- `build-windows-desktop.ps1` требует Authenticode для production по умолчанию (`-CodeSigningCertificateThumbprint ...`): Desktop/NeverGuard подписываются Authenticode перед hash manifest/allowlist, подписи повторно проверяются, а `authenticodeRequired` синхронизируется с Backend `requireAuthenticode`.
+- Windows native integration test проверяет protocol v4, production-hardening state, secure pipe ACL и lifetime Job Object; новый offline gate `windows-production-hardening-0136.py` обязателен в CI/preflight.
+
+Unsigned development package намеренно не проходит release-runtime Authenticode gate и предназначен только для CI/build validation.
+
+Граница остаётся user-mode и не заявляет защиту от kernel/administrator attacker; server-side Guard Attestation, Minecraft/ServerBridge integrity enforcement и release allowlists продолжают применяться независимо.
+
 ## 0.13.5 — Minecraft/ServerBridge integrity enforcement
 
 `0.13.5` переносит Guard Attestation из одноразового момента выдачи Minecraft token в live gameplay boundary. Integrity snapshot сохраняется вместе с Minecraft session, а каждый последующий token validation, Yggdrasil join/hasJoined и ServerBridge validate-join/has-joined повторно проверяет текущий Guard release allowlist. Удаление release hash из production policy немедленно отзывает уже выданные игровые credentials и связанные ServerBridge joins.

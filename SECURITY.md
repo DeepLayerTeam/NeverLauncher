@@ -2,6 +2,16 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Windows production hardening — 0.13.6
+
+В `0.13.6` локальная Windows boundary дополнительно fail-closed защищается до Minecraft launch. Desktop и NeverGuard включают terminate-on-heap-corruption и убирают current working directory из DLL search, оставляя default search только application directory + `System32`. NeverGuard Named Pipe protocol v4 создаётся с protected **current-user/System ACL**, `PIPE_REJECT_REMOTE_CLIENTS`, single first instance и прежней mutual HMAC authentication; hardening/ACL state входит в authenticated ready proof.
+
+NeverGuard назначается в отдельный launcher-owned Job Object с `KILL_ON_JOB_CLOSE`, поэтому потеря Desktop boundary завершает Guard на уровне ОС. Release Desktop до spawn Guard проверяет, что оба PE являются обычными соседними файлами (не symlink), и сверяет их size/SHA-256 с `WINDOWS_PACKAGE_MANIFEST.json`. Production release по умолчанию требует code-signing certificate; unsigned package разрешён только явным `-AllowUnsignedDevelopmentPackage` для CI/development: оба PE подписываются Authenticode до вычисления manifest/allowlist hashes, подпись немедленно проверяется, manifest помечается `authenticodeRequired=true`, а runtime выполняет WinVerifyTrust перед запуском NeverGuard.
+
+Unsigned development package намеренно не проходит release-runtime Authenticode gate и предназначен только для CI/build validation.
+
+Это hardening user-mode release boundary, а не абсолютная защита от локального администратора, kernel/firmware attacker или кражи code-signing key. Backend Guard Attestation и live release allowlists остаются независимыми обязательными слоями; Windows production hardening не ослабляет server-side verification.
+
 ## Minecraft/ServerBridge integrity enforcement — 0.13.5
 
 `0.13.5` делает Guard verification частью live gameplay authorization. Verified Guard release snapshot сохраняется в `minecraft_sessions`; Minecraft token validation, Yggdrasil join/hasJoined и ServerBridge validate-join/has-joined каждый раз повторно применяют текущий release allowlist. Для Windows Guard-enforced trusted device `/api/v1/session/join` обязан быть связан с конкретной integrity-verified Minecraft session. Удаление Guard/Desktop hash из allowlist является немедленным live revoke уже выданного credential.

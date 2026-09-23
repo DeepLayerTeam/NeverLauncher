@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "NeverLauncher",
-  "version": "0.13.5",
+  "version": "0.13.6",
   "identifier": "ru.skif4er.neverlauncher",
   "build": {
     "beforeDevCommand": "npm run dev",

@@ -4,7 +4,8 @@ use neverruntime::{
     NeverGuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION, NEVERGUARD_PROTOCOL_VERSION,
     NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 use std::path::PathBuf;
 
@@ -23,11 +24,19 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
         NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
     );
     assert!(status.process_policy_enforced);
+    assert_eq!(status.hardening_version, NEVERGUARD_WINDOWS_HARDENING_VERSION);
+    assert!(status.hardening_enforced);
+    assert!(status.secure_pipe_acl);
+    assert!(status.lifetime_job_enforced);
+    assert!(!status.package_manifest_verified); // integration binary deliberately bypasses release package validation
     assert!(status.pid > 0);
 
     supervisor.ping().await.expect("authenticated ping must pass");
     let status_again = supervisor.status().await.expect("status must pass");
     assert_eq!(status_again.pid, status.pid);
+    assert!(status_again.hardening_enforced);
+    assert!(status_again.secure_pipe_acl);
+    assert!(status_again.lifetime_job_enforced);
 
     let process_policy = supervisor
         .process_policy()

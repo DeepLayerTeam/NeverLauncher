@@ -66,7 +66,7 @@ if neverguard.find("ensure_guard_process_policy()") > neverguard.find("tokio::ru
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
 require(guard, [
-    'NEVERGUARD_PROTOCOL_VERSION: u32 = 3',
+    'NEVERGUARD_PROTOCOL_VERSION: u32 = 4',
     'process_policy_version',
     'process_policy_enforced',
     'send_command(handle, "process-policy")',

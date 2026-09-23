@@ -238,6 +238,16 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## Windows production hardening — 0.13.6
+
+`0.13.6` усиливает уже рабочий NeverGuard boundary без hooks/injection. Desktop и `neverguard.exe` до основной runtime-инициализации fail-closed включают heap termination-on-corruption и ограничивают default DLL search каталогом приложения и `System32`. NeverGuard IPC поднят до protocol v4: Named Pipe остаётся local-only, но теперь создаётся с protected current-user/System ACL; hardening version/state и наличие secure ACL входят в authenticated `ready` proof.
+
+Desktop удерживает отдельный NeverGuard Job Object с `KILL_ON_JOB_CLOSE`, поэтому аварийное завершение launcher закрывает OS-level lifetime boundary Guard. Release build создаёт `WINDOWS_PACKAGE_MANIFEST.json` после финальной сборки, а release Desktop до spawn `neverguard.exe` требует соседний regular/non-symlink artifact и сверяет size + SHA-256 обоих executable с manifest. Для production-signing `build-windows-desktop.ps1 -CodeSigningCertificateThumbprint <thumbprint>` подписывает оба PE через Authenticode **до** вычисления hashes, повторно проверяет подписи и выставляет `authenticodeRequired/requireAuthenticode=true`; runtime затем выполняет локальный WinVerifyTrust до запуска Guard.
+
+Unsigned development package намеренно не проходит release-runtime Authenticode gate и предназначен только для CI/build validation.
+
+Это user-mode production hardening: он уменьшает поверхность DLL hijacking, локального IPC и orphan Guard process и делает release corruption/replacement fail-closed в штатной модели. Он не является защитой от администратора/kernel attacker и не заменяет server-side Guard Attestation/allowlist из 0.13.4–0.13.5.
+
 ## Minecraft/ServerBridge integrity enforcement — 0.13.5
 
 `0.13.5` закрывает gameplay bypass между Guard Attestation и ServerBridge. Guard-verified metadata теперь сохраняется в самой Minecraft session и live-проверяется при validate/join/hasJoined. Для Windows Guard-enforced device Desktop передаёт новый Minecraft access token в `/api/v1/session/join`; Backend сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный join, не связанный с тем credential, который получил одноразовый Guard launch ticket.

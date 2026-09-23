@@ -1,10 +1,16 @@
 #[cfg(windows)]
-use neverruntime::{ensure_guard_process_policy, run_windows_guard_server};
+use neverruntime::{ensure_guard_process_policy, ensure_windows_production_hardening, run_windows_guard_server};
 #[cfg(windows)]
 use std::env;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
+    #[cfg(windows)]
+    if let Err(err) = ensure_windows_production_hardening() {
+        eprintln!("neverguard: {err}");
+        return ExitCode::FAILURE;
+    }
+
     #[cfg(windows)]
     if let Err(err) = ensure_guard_process_policy() {
         eprintln!("neverguard: {err}");

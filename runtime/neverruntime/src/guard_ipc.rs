@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 use hmac::{Hmac, Mac};
 #[cfg(any(windows, test))]
 use sha2::Sha256;
+#[cfg(windows)]
+use sha2::Digest;
 #[cfg(any(windows, test))]
 use subtle::ConstantTimeEq;
 use std::path::{Path, PathBuf};
@@ -17,17 +19,19 @@ use crate::integrity::NeverGuardIntegrityEvidence;
 use crate::windows_policy::GuardProcessPolicyReport;
 #[cfg(windows)]
 use crate::attestation::{challenge_sha256, recompute_attestation_sha256, validate_attestation_shape, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
+#[cfg(windows)]
 use crate::integrity::{
     collect_windows_integrity_evidence, observed_windows_parent_pid, recompute_evidence_sha256,
-    validate_evidence_shape,
+    validate_evidence_shape, verify_windows_authenticode_trust,
 };
 #[cfg(windows)]
 use crate::windows_policy::{
-    ensure_guard_process_policy, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    bind_guard_to_launcher_job, ensure_guard_process_policy, ensure_windows_production_hardening,
+    prepare_guard_command, GuardLifetimeJob, WindowsProductionHardeningReport, NEVERGUARD_WINDOWS_HARDENING_VERSION,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 #[cfg(windows)]
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{ffi::c_void, fs::File, io::{BufReader, Read}, mem::size_of, ptr::null_mut, time::{SystemTime, UNIX_EPOCH}};
 #[cfg(windows)]
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 #[cfg(windows)]
@@ -43,7 +47,18 @@ use tokio::{
     time::{sleep, timeout, Duration, Instant},
 };
 
-pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 3;
+#[cfg(windows)]
+use windows_sys::Win32::{
+    Foundation::{CloseHandle, LocalFree, HANDLE},
+    Security::{
+        Authorization::{ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW},
+        GetTokenInformation, PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
+        TokenUser,
+    },
+    System::Threading::{GetCurrentProcess, OpenProcessToken},
+};
+
+pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 4;
 #[cfg(any(windows, test))]
 const NEVERGUARD_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.";
 #[cfg(windows)]
@@ -58,6 +73,29 @@ const IPC_HANDSHAKE_TIMEOUT_SECS: u64 = 5;
 const IPC_COMMAND_TIMEOUT_SECS: u64 = 3;
 #[cfg(windows)]
 const IPC_STARTUP_AUTH_WINDOW_SECS: u64 = 12;
+#[cfg(windows)]
+const WINDOWS_PACKAGE_MANIFEST: &str = "WINDOWS_PACKAGE_MANIFEST.json";
+
+#[cfg(windows)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowsPackageManifest {
+    schema_version: String,
+    product_version: String,
+    platform: String,
+    never_guard_protocol_version: u32,
+    #[serde(default)]
+    authenticode_required: bool,
+    artifacts: Vec<WindowsPackageArtifact>,
+}
+
+#[cfg(windows)]
+#[derive(Debug, Deserialize)]
+struct WindowsPackageArtifact {
+    name: String,
+    size: u64,
+    sha256: String,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +107,11 @@ pub struct NeverGuardStatus {
     pub authenticated: bool,
     pub process_policy_version: u32,
     pub process_policy_enforced: bool,
+    pub hardening_version: u32,
+    pub hardening_enforced: bool,
+    pub secure_pipe_acl: bool,
+    pub lifetime_job_enforced: bool,
+    pub package_manifest_verified: bool,
     pub started_at_unix: u64,
     pub message: String,
 }
@@ -113,6 +156,9 @@ struct ServerReady {
     started_at_unix: u64,
     process_policy_version: u32,
     process_policy_enforced: bool,
+    hardening_version: u32,
+    hardening_enforced: bool,
+    secure_pipe_acl: bool,
     ready_proof: String,
 }
 
@@ -146,6 +192,8 @@ struct GuardHandle {
     pipe: NamedPipeClient,
     session_key: [u8; 32],
     next_sequence: u64,
+    _lifetime_job: GuardLifetimeJob,
+    package_manifest_verified: bool,
 }
 
 #[cfg(windows)]
@@ -160,6 +208,7 @@ impl Drop for GuardHandle {
 pub struct NeverGuardSupervisor {
     inner: Arc<Mutex<Option<GuardHandle>>>,
     executable: Option<PathBuf>,
+    require_package_manifest: bool,
 }
 
 #[cfg(windows)]
@@ -179,6 +228,7 @@ impl NeverGuardSupervisor {
         Self {
             inner: Arc::new(Mutex::new(None)),
             executable: None,
+            require_package_manifest: !cfg!(debug_assertions),
         }
     }
 
@@ -192,6 +242,7 @@ impl NeverGuardSupervisor {
         Self {
             inner: Arc::new(Mutex::new(None)),
             executable: Some(executable),
+            require_package_manifest: false,
         }
     }
 
@@ -212,7 +263,10 @@ impl NeverGuardSupervisor {
                 .is_none();
             if running {
                 if let Ok(status) = send_command(handle, "status").await {
-                    return parse_status(status);
+                    let mut status = parse_status(status)?;
+                    status.lifetime_job_enforced = true;
+                    status.package_manifest_verified = handle.package_manifest_verified;
+                    return Ok(status);
                 }
             }
         }
@@ -232,11 +286,18 @@ impl NeverGuardSupervisor {
                 executable.display()
             ));
         }
+        let package_manifest_verified = if self.require_package_manifest {
+            verify_windows_package_manifest(&executable)?;
+            true
+        } else {
+            false
+        };
 
         let parent_pid = std::process::id();
         let endpoint = make_pipe_endpoint(parent_pid);
         let mut bootstrap_secret = random_bytes_32();
-        let mut child = Command::new(&executable)
+        let mut command = Command::new(&executable);
+        command
             .arg("--pipe")
             .arg(&endpoint)
             .arg("--parent-pid")
@@ -244,9 +305,18 @@ impl NeverGuardSupervisor {
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .kill_on_drop(true)
+            .kill_on_drop(true);
+        prepare_guard_command(&mut command);
+        let mut child = command
             .spawn()
             .map_err(|err| format!("не удалось запустить NeverGuard {}: {err}", executable.display()))?;
+        let lifetime_job = match bind_guard_to_launcher_job(&mut child) {
+            Ok(job) => job,
+            Err(err) => {
+                let _ = child.kill().await;
+                return Err(format!("launch заблокирован: NeverGuard lifetime boundary failed: {err}"));
+            }
+        };
 
         let mut stdin = child
             .stdin
@@ -291,11 +361,16 @@ impl NeverGuardSupervisor {
         };
         bootstrap_secret.zeroize();
 
+        let mut status = status;
+        status.lifetime_job_enforced = true;
+        status.package_manifest_verified = package_manifest_verified;
         *state = Some(GuardHandle {
             child,
             pipe,
             session_key,
             next_sequence: 1,
+            _lifetime_job: lifetime_job,
+            package_manifest_verified,
         });
         Ok(status)
     }
@@ -440,6 +515,123 @@ impl NeverGuardSupervisor {
 }
 
 #[cfg(windows)]
+fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String> {
+    let current_exe = std::env::current_exe()
+        .map_err(|err| format!("не удалось определить Desktop executable для package verification: {err}"))?;
+    let current_dir = current_exe
+        .parent()
+        .ok_or_else(|| "Desktop executable не имеет parent directory".to_string())?;
+    let guard_dir = guard_executable
+        .parent()
+        .ok_or_else(|| "NeverGuard executable не имеет parent directory".to_string())?;
+    let current_dir = std::fs::canonicalize(current_dir)
+        .map_err(|err| format!("не удалось canonicalize Desktop directory: {err}"))?;
+    let guard_dir = std::fs::canonicalize(guard_dir)
+        .map_err(|err| format!("не удалось canonicalize NeverGuard directory: {err}"))?;
+    if current_dir != guard_dir {
+        return Err("NeverGuard package verification failed: Guard is not adjacent to Desktop".to_string());
+    }
+    for path in [&current_exe, guard_executable] {
+        let metadata = std::fs::symlink_metadata(path)
+            .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err(format!(
+                "NeverGuard package verification rejected non-regular/symlink artifact: {}",
+                path.display()
+            ));
+        }
+    }
+
+    let manifest_path = current_dir.join(WINDOWS_PACKAGE_MANIFEST);
+    let manifest_link_metadata = std::fs::symlink_metadata(&manifest_path).map_err(|err| {
+        format!(
+            "production Windows package manifest отсутствует {}: {err}",
+            manifest_path.display()
+        )
+    })?;
+    if manifest_link_metadata.file_type().is_symlink() || !manifest_link_metadata.is_file() {
+        return Err("Windows package manifest must be a regular non-symlink file".to_string());
+    }
+    let metadata = std::fs::metadata(&manifest_path).map_err(|err| {
+        format!(
+            "production Windows package manifest отсутствует {}: {err}",
+            manifest_path.display()
+        )
+    })?;
+    if metadata.len() == 0 || metadata.len() > 256 * 1024 {
+        return Err("Windows package manifest size is invalid".to_string());
+    }
+    let raw = std::fs::read(&manifest_path)
+        .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
+    let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
+        .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
+    if manifest.schema_version != "1.0"
+        || manifest.product_version != env!("CARGO_PKG_VERSION")
+        || manifest.platform != "windows-amd64"
+        || manifest.never_guard_protocol_version != NEVERGUARD_PROTOCOL_VERSION
+    {
+        return Err("Windows package manifest version/platform/protocol mismatch".to_string());
+    }
+
+    if !manifest.authenticode_required {
+        return Err(
+            "production Windows package manifest must require Authenticode; unsigned release packages are rejected"
+                .to_string(),
+        );
+    }
+    verify_package_artifact(&manifest, &current_exe)?;
+    verify_package_artifact(&manifest, guard_executable)?;
+    verify_windows_authenticode_trust(&current_exe)?;
+    verify_windows_authenticode_trust(guard_executable)?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Result<(), String> {
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "Windows package artifact filename is not UTF-8".to_string())?;
+    let artifact = manifest
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.name.eq_ignore_ascii_case(name))
+        .ok_or_else(|| format!("Windows package manifest does not contain artifact {name}"))?;
+    let metadata = std::fs::metadata(path)
+        .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+    if metadata.len() != artifact.size {
+        return Err(format!("Windows package artifact size mismatch: {name}"));
+    }
+    let actual = sha256_file(path)?;
+    if artifact.sha256.len() != 64
+        || !artifact.sha256.bytes().all(|b| b.is_ascii_hexdigit())
+        || !actual.eq_ignore_ascii_case(&artifact.sha256)
+    {
+        return Err(format!("Windows package artifact SHA-256 mismatch: {name}"));
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn sha256_file(path: &Path) -> Result<String, String> {
+    let file = File::open(path)
+        .map_err(|err| format!("не удалось открыть {} для SHA-256: {err}", path.display()))?;
+    let mut reader = BufReader::with_capacity(128 * 1024, file);
+    let mut digest = Sha256::new();
+    let mut buffer = [0u8; 128 * 1024];
+    loop {
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|err| format!("не удалось вычислить SHA-256 {}: {err}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        digest.update(&buffer[..read]);
+    }
+    Ok(hex::encode(digest.finalize()))
+}
+
+#[cfg(windows)]
 fn resolve_neverguard_executable() -> Result<PathBuf, String> {
     let current = std::env::current_exe()
         .map_err(|err| format!("не удалось определить путь NeverLauncher Desktop: {err}"))?;
@@ -551,8 +743,11 @@ async fn client_authenticate(
         || ready.started_at_unix != challenge.started_at_unix
         || ready.process_policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
         || !ready.process_policy_enforced
+        || ready.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
+        || !ready.hardening_enforced
+        || !ready.secure_pipe_acl
     {
-        return Err("NeverGuard IPC ready response не соответствует handshake/policy".to_string());
+        return Err("NeverGuard IPC ready response не соответствует handshake/policy/hardening".to_string());
     }
     let expected_ready = ready_proof(
         &session_key,
@@ -560,6 +755,9 @@ async fn client_authenticate(
         ready.started_at_unix,
         ready.process_policy_version,
         ready.process_policy_enforced,
+        ready.hardening_version,
+        ready.hardening_enforced,
+        ready.secure_pipe_acl,
     );
     let actual_ready = decode_hex_32(&ready.ready_proof, "readyProof")?;
     if !constant_time_eq(&expected_ready, &actual_ready) {
@@ -574,8 +772,13 @@ async fn client_authenticate(
         authenticated: true,
         process_policy_version: ready.process_policy_version,
         process_policy_enforced: ready.process_policy_enforced,
+        hardening_version: ready.hardening_version,
+        hardening_enforced: ready.hardening_enforced,
+        secure_pipe_acl: ready.secure_pipe_acl,
+        lifetime_job_enforced: false,
+        package_manifest_verified: false,
         started_at_unix: challenge.started_at_unix,
-        message: "NeverGuard Windows process boundary authenticated; process policy enforced".to_string(),
+        message: "NeverGuard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
     };
     Ok((pipe, session_key, status))
 }
@@ -752,12 +955,145 @@ fn validate_guard_process_policy(
 }
 
 #[cfg(windows)]
+fn current_windows_user_sid_string() -> Result<String, String> {
+    let mut token: HANDLE = null_mut();
+    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
+        return Err(format!(
+            "NeverGuard cannot open current process token for pipe ACL: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    struct TokenHandle(HANDLE);
+    impl Drop for TokenHandle {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                unsafe {
+                    let _ = CloseHandle(self.0);
+                }
+            }
+        }
+    }
+    let token = TokenHandle(token);
+
+    let mut needed = 0u32;
+    unsafe {
+        let _ = GetTokenInformation(token.0, TokenUser, null_mut(), 0, &mut needed);
+    }
+    if needed < size_of::<TOKEN_USER>() as u32 || needed > 4096 {
+        return Err("NeverGuard TokenUser size is invalid while building pipe ACL".to_string());
+    }
+    let words = (needed as usize).div_ceil(size_of::<usize>());
+    let mut buffer = vec![0usize; words];
+    if unsafe {
+        GetTokenInformation(
+            token.0,
+            TokenUser,
+            buffer.as_mut_ptr() as *mut c_void,
+            needed,
+            &mut needed,
+        )
+    } == 0
+    {
+        return Err(format!(
+            "NeverGuard cannot read current user SID for pipe ACL: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let token_user = unsafe { &*(buffer.as_ptr() as *const TOKEN_USER) };
+    if token_user.User.Sid.is_null() {
+        return Err("NeverGuard current user SID is null".to_string());
+    }
+
+    let mut sid_text: *mut u16 = null_mut();
+    if unsafe { ConvertSidToStringSidW(token_user.User.Sid, &mut sid_text) } == 0
+        || sid_text.is_null()
+    {
+        return Err(format!(
+            "NeverGuard cannot convert current user SID for pipe ACL: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    let mut len = 0usize;
+    unsafe {
+        while *sid_text.add(len) != 0 {
+            len += 1;
+            if len > 256 {
+                let _ = LocalFree(sid_text as *mut c_void);
+                return Err("NeverGuard current user SID text exceeds limit".to_string());
+            }
+        }
+    }
+    let sid = String::from_utf16(unsafe { std::slice::from_raw_parts(sid_text, len) })
+        .map_err(|_| "NeverGuard current user SID is not valid UTF-16".to_string());
+    unsafe {
+        let _ = LocalFree(sid_text as *mut c_void);
+    }
+    sid
+}
+
+#[cfg(windows)]
+fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> {
+    // Protected DACL: only LocalSystem and the exact launcher account receive access.
+    // Authentication still happens at the HMAC layer, so the ACL is defense in depth.
+    let user_sid = current_windows_user_sid_string()?;
+    let sddl: Vec<u16> = format!("D:P(A;;GA;;;SY)(A;;GA;;;{user_sid})")
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut security_descriptor: PSECURITY_DESCRIPTOR = null_mut();
+    let converted = unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl.as_ptr(),
+            1,
+            &mut security_descriptor,
+            null_mut(),
+        )
+    };
+    if converted == 0 || security_descriptor.is_null() {
+        return Err(format!(
+            "NeverGuard named pipe security descriptor creation failed: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+
+    let mut attributes = SECURITY_ATTRIBUTES {
+        nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: security_descriptor as *mut c_void,
+        bInheritHandle: 0,
+    };
+    let result = unsafe {
+        ServerOptions::new()
+            .first_pipe_instance(true)
+            .reject_remote_clients(true)
+            .max_instances(1)
+            .create_with_security_attributes_raw(
+                endpoint,
+                &mut attributes as *mut SECURITY_ATTRIBUTES as *mut c_void,
+            )
+    };
+    unsafe {
+        let _ = LocalFree(security_descriptor as *mut c_void);
+    }
+    result.map_err(|err| format!("не удалось создать hardened NeverGuard named pipe {endpoint}: {err}"))
+}
+
+#[cfg(windows)]
 pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Result<(), String> {
     validate_pipe_endpoint(&endpoint)?;
     if parent_pid == 0 {
         return Err("NeverGuard parent PID должен быть > 0".to_string());
     }
     let guard_pid = std::process::id();
+    let hardening = ensure_windows_production_hardening()?;
+    if hardening.pid != guard_pid
+        || hardening.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
+        || !hardening.enforced
+        || !hardening.heap_terminate_on_corruption
+        || !hardening.current_directory_removed_from_dll_search
+        || !hardening.restricted_default_dll_directories
+    {
+        return Err("NeverGuard Windows production hardening did not bind to guard PID".to_string());
+    }
     let process_policy = ensure_guard_process_policy()?;
     if process_policy.pid != guard_pid || !process_policy.enforced {
         return Err("NeverGuard Windows process policy did not bind to guard PID".to_string());
@@ -776,12 +1112,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     drop(bootstrap_stdin);
 
     let started_at_unix = now_unix()?;
-    let mut server = ServerOptions::new()
-        .first_pipe_instance(true)
-        .reject_remote_clients(true)
-        .max_instances(1)
-        .create(&endpoint)
-        .map_err(|err| format!("не удалось создать NeverGuard named pipe {endpoint}: {err}"))?;
+    let mut server = create_secure_pipe_server(&endpoint)?;
 
     let auth_deadline = Instant::now() + Duration::from_secs(IPC_STARTUP_AUTH_WINDOW_SECS);
     let mut last_auth_error: Option<String> = None;
@@ -822,6 +1153,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
                 started_at_unix,
                 &bootstrap_secret,
                 &process_policy,
+                &hardening,
             ),
         )
         .await;
@@ -852,6 +1184,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         started_at_unix,
         &session_key,
         &process_policy,
+        &hardening,
     )
     .await;
     session_key.zeroize();
@@ -872,6 +1205,7 @@ async fn server_authenticate(
     started_at_unix: u64,
     bootstrap_secret: &[u8; 32],
     process_policy: &GuardProcessPolicyReport,
+    hardening: &WindowsProductionHardeningReport,
 ) -> Result<[u8; 32], String> {
     let hello: ClientHello = read_frame(server).await?;
     if hello.kind != "hello"
@@ -942,12 +1276,18 @@ async fn server_authenticate(
             started_at_unix,
             process_policy_version: process_policy.policy_version,
             process_policy_enforced: process_policy.enforced,
+            hardening_version: hardening.hardening_version,
+            hardening_enforced: hardening.enforced,
+            secure_pipe_acl: true,
             ready_proof: hex::encode(ready_proof(
                 &session_key,
                 guard_pid,
                 started_at_unix,
                 process_policy.policy_version,
                 process_policy.enforced,
+                hardening.hardening_version,
+                hardening.enforced,
+                true,
             )),
         },
     )
@@ -963,6 +1303,7 @@ async fn serve_authenticated_session(
     started_at_unix: u64,
     session_key: &[u8; 32],
     process_policy: &GuardProcessPolicyReport,
+    hardening: &WindowsProductionHardeningReport,
 ) -> Result<(), String> {
     let mut expected_sequence = 1u64;
     loop {
@@ -1007,8 +1348,13 @@ async fn serve_authenticated_session(
                     authenticated: true,
                     process_policy_version: process_policy.policy_version,
                     process_policy_enforced: process_policy.enforced,
+                    hardening_version: hardening.hardening_version,
+                    hardening_enforced: hardening.enforced,
+                    secure_pipe_acl: true,
+                    lifetime_job_enforced: false,
+                    package_manifest_verified: false,
                     started_at_unix,
-                    message: "NeverGuard Windows process boundary authenticated; process policy enforced".to_string(),
+                    message: "NeverGuard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
                 })
                 .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
                 false,
@@ -1219,7 +1565,7 @@ fn handshake_transcript(
     server_nonce: &[u8; 32],
 ) -> Vec<u8> {
     let mut data = Vec::with_capacity(192);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v3\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v4\0");
     append_len_prefixed(&mut data, label);
     append_len_prefixed(&mut data, endpoint.as_bytes());
     data.extend_from_slice(&client_pid.to_le_bytes());
@@ -1286,13 +1632,19 @@ fn ready_proof(
     started_at_unix: u64,
     process_policy_version: u32,
     process_policy_enforced: bool,
+    hardening_version: u32,
+    hardening_enforced: bool,
+    secure_pipe_acl: bool,
 ) -> [u8; 32] {
-    let mut data = Vec::with_capacity(80);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v3\0");
+    let mut data = Vec::with_capacity(96);
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v4\0");
     data.extend_from_slice(&guard_pid.to_le_bytes());
     data.extend_from_slice(&started_at_unix.to_le_bytes());
     data.extend_from_slice(&process_policy_version.to_le_bytes());
     data.push(u8::from(process_policy_enforced));
+    data.extend_from_slice(&hardening_version.to_le_bytes());
+    data.push(u8::from(hardening_enforced));
+    data.push(u8::from(secure_pipe_acl));
     hmac_sha256(session_key, &data)
 }
 
@@ -1305,7 +1657,7 @@ fn request_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 112);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v3\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC request v4\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     append_len_prefixed(&mut data, command.as_bytes());
@@ -1322,7 +1674,7 @@ fn response_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 96);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v3\0");
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC response v4\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     data.push(u8::from(ok));
@@ -1458,17 +1810,21 @@ mod tests {
             &server_nonce,
         );
         assert_ne!(session, server);
-        assert_ne!(ready_proof(&session, 43, 44, 1, true), session);
+        assert_ne!(ready_proof(&session, 43, 44, 1, true, 1, true, true), session);
     }
 
     #[test]
     fn ready_proof_is_bound_to_process_policy_state() {
         let key = [6u8; 32];
-        let enforced = ready_proof(&key, 43, 44, 1, true);
-        let not_enforced = ready_proof(&key, 43, 44, 1, false);
-        let next_version = ready_proof(&key, 43, 44, 2, true);
+        let enforced = ready_proof(&key, 43, 44, 1, true, 1, true, true);
+        let not_enforced = ready_proof(&key, 43, 44, 1, false, 1, true, true);
+        let next_version = ready_proof(&key, 43, 44, 2, true, 1, true, true);
+        let no_hardening = ready_proof(&key, 43, 44, 1, true, 1, false, true);
+        let insecure_acl = ready_proof(&key, 43, 44, 1, true, 1, true, false);
         assert_ne!(enforced, not_enforced);
         assert_ne!(enforced, next_version);
+        assert_ne!(enforced, no_hardening);
+        assert_ne!(enforced, insecure_acl);
     }
 
     #[test]

@@ -545,7 +545,7 @@ mod windows_impl {
         Ok(hex::encode(digest.finalize()))
     }
 
-    fn verify_authenticode(path: &Path) -> AuthenticodeEvidence {
+    pub(super) fn verify_authenticode(path: &Path) -> AuthenticodeEvidence {
         let mut wide = path.as_os_str().encode_wide().collect::<Vec<u16>>();
         wide.push(0);
         let mut file_info = WINTRUST_FILE_INFO {
@@ -600,6 +600,25 @@ mod windows_impl {
             .map(|duration| duration.as_secs())
             .map_err(|err| format!("system clock error: {err}"))
     }
+}
+
+#[cfg(windows)]
+pub fn verify_windows_authenticode_trust(path: &std::path::Path) -> Result<(), String> {
+    let result = windows_impl::verify_authenticode(path);
+    if result.trusted {
+        Ok(())
+    } else {
+        Err(format!(
+            "Authenticode trust verification failed for {}: {}",
+            path.display(),
+            result.status
+        ))
+    }
+}
+
+#[cfg(not(windows))]
+pub fn verify_windows_authenticode_trust(_path: &std::path::Path) -> Result<(), String> {
+    Err("Authenticode trust verification доступен только на Windows".to_string())
 }
 
 #[cfg(windows)]

@@ -4,7 +4,8 @@ use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
     GuardProcessPolicyReport, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
     NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus,
-    ProcessSupervisor, RepairResult, SignatureCheckResult, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    ProcessSupervisor, RepairResult, SignatureCheckResult, NEVERGUARD_WINDOWS_HARDENING_VERSION,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -294,6 +295,14 @@ async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<St
         {
             return Err("launch заблокирован: NeverGuard Windows runtime/process policy не enforced".to_string());
         }
+        if !status.hardening_enforced
+            || status.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
+            || !status.secure_pipe_acl
+            || !status.lifetime_job_enforced
+            || (!cfg!(debug_assertions) && !status.package_manifest_verified)
+        {
+            return Err("launch заблокирован: NeverGuard Windows production hardening verification failed".to_string());
+        }
         neverguard.ping().await?;
         let process_policy = neverguard
             .process_policy()
@@ -421,6 +430,12 @@ async fn open_game_directory(root: String) -> Result<String, String> {
 }
 
 fn main() {
+    #[cfg(windows)]
+    if let Err(err) = neverruntime::ensure_windows_production_hardening() {
+        eprintln!("NeverLauncher Desktop Windows production hardening failed: {err}");
+        std::process::exit(70);
+    }
+
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())

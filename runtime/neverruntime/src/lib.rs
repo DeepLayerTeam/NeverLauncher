@@ -9,15 +9,16 @@ pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVE
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
 pub use integrity::{
-    AuthenticodeEvidence, BoundaryEvidence, ModuleSetEvidence, NeverGuardIntegrityEvidence,
-    ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
+    verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, ModuleSetEvidence,
+    NeverGuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
 };
 pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NeverGuardSupervisor, NEVERGUARD_PROTOCOL_VERSION};
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 pub use windows_policy::{
-    ensure_guard_process_policy, GuardProcessPolicyReport, RuntimeProcessPolicyReport,
-    RuntimeProcessPolicyGuard, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
+    ensure_guard_process_policy, ensure_windows_production_hardening, GuardProcessPolicyReport,
+    RuntimeProcessPolicyReport, RuntimeProcessPolicyGuard, WindowsProductionHardeningReport,
+    NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
     NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
 };
 

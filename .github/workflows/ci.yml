@@ -45,6 +45,7 @@ jobs:
           python3 scripts/smoke/offline/neverguard-process-policy-0133.py
           python3 scripts/smoke/offline/neverguard-guard-attestation-0134.py
           python3 scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py
+          python3 scripts/smoke/offline/windows-production-hardening-0136.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -131,7 +132,7 @@ jobs:
           cargo build --release --manifest-path src-tauri/Cargo.toml
 
   neverguard-windows:
-    name: NeverGuard Windows boundary + integrity + process policy
+    name: NeverGuard Windows hardened production boundary
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
@@ -154,7 +155,7 @@ jobs:
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
       - name: Build side-by-side Desktop + NeverGuard package
         shell: pwsh
-        run: ./scripts/release/build-windows-desktop.ps1
+        run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:

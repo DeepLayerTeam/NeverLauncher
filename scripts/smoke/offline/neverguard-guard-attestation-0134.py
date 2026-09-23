@@ -39,7 +39,7 @@ require(attestation, [
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
 require(guard, [
-    'NEVERGUARD_PROTOCOL_VERSION: u32 = 3',
+    'NEVERGUARD_PROTOCOL_VERSION: u32 = 4',
     'send_command_with_payload',
     '"guard-attestation"',
     'GuardAttestationRequest',
@@ -120,8 +120,8 @@ require(integration, [
 
 release = read("scripts/release/build-windows-desktop.ps1")
 require(release, [
-    'neverGuardProtocolVersion = 3',
-    'windows-named-pipe+hmac-sha256-v3',
+    'neverGuardProtocolVersion = 4',
+    'windows-named-pipe+current-user-system-acl+hmac-sha256-v4',
     'GUARD_RELEASE_ALLOWLIST.json',
     'guardSha256',
     'launcherSha256',

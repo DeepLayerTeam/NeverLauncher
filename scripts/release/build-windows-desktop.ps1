@@ -1,5 +1,9 @@
 param(
-    [string]$OutDir = ""
+    [string]$OutDir = "",
+    [string]$CodeSigningCertificateThumbprint = "",
+    [string]$TimestampServer = "http://timestamp.digicert.com",
+    [switch]$RequireCodeSigning,
+    [switch]$AllowUnsignedDevelopmentPackage
 )
 
 Set-StrictMode -Version Latest
@@ -24,6 +28,31 @@ function Invoke-Checked([scriptblock]$Command, [string]$Label) {
     & $Command
     if ($LASTEXITCODE -ne 0) {
         throw "$Label failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Get-CodeSigningCertificate([string]$Thumbprint) {
+    if ([string]::IsNullOrWhiteSpace($Thumbprint)) { return $null }
+    $Normalized = $Thumbprint.Replace(" ", "").ToUpperInvariant()
+    foreach ($Store in @("Cert:\CurrentUser\My", "Cert:\LocalMachine\My")) {
+        $Candidate = Get-ChildItem $Store -CodeSigningCert -ErrorAction SilentlyContinue |
+            Where-Object { $_.Thumbprint.Replace(" ", "").ToUpperInvariant() -eq $Normalized } |
+            Select-Object -First 1
+        if ($null -ne $Candidate) { return $Candidate }
+    }
+    throw "Code-signing certificate not found for thumbprint $Thumbprint"
+}
+
+function Set-And-VerifyAuthenticode([string]$Path, $Certificate) {
+    $Params = @{ FilePath = $Path; Certificate = $Certificate; HashAlgorithm = "SHA256" }
+    if (-not [string]::IsNullOrWhiteSpace($TimestampServer)) { $Params.TimestampServer = $TimestampServer }
+    $Signed = Set-AuthenticodeSignature @Params
+    if ($Signed.Status -ne "Valid") {
+        throw "Authenticode signing failed for $Path: $($Signed.Status) $($Signed.StatusMessage)"
+    }
+    $Verified = Get-AuthenticodeSignature -FilePath $Path
+    if ($Verified.Status -ne "Valid") {
+        throw "Authenticode verification failed for $Path: $($Verified.Status) $($Verified.StatusMessage)"
     }
 }
 
@@ -53,8 +82,21 @@ $GuardSource = Join-Path $Root "runtime\neverruntime\target\release\neverguard.e
 if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Desktop artifact missing: $DesktopSource" }
 if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "NeverGuard artifact missing: $GuardSource" }
 
-Copy-Item $DesktopSource (Join-Path $PackageDir $DesktopArtifact)
-Copy-Item $GuardSource (Join-Path $PackageDir $GuardArtifact)
+$DesktopPath = Join-Path $PackageDir $DesktopArtifact
+$GuardPath = Join-Path $PackageDir $GuardArtifact
+Copy-Item $DesktopSource $DesktopPath
+Copy-Item $GuardSource $GuardPath
+
+$SigningCertificate = Get-CodeSigningCertificate $CodeSigningCertificateThumbprint
+$AuthenticodeRequired = $null -ne $SigningCertificate
+$SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)
+if ($SigningRequired -and -not $AuthenticodeRequired) {
+    throw "Production Windows package requires Authenticode signing. Pass -CodeSigningCertificateThumbprint. Use -AllowUnsignedDevelopmentPackage only for CI/development artifacts."
+}
+if ($AuthenticodeRequired) {
+    Set-And-VerifyAuthenticode $DesktopPath $SigningCertificate
+    Set-And-VerifyAuthenticode $GuardPath $SigningCertificate
+}
 
 $Artifacts = @($DesktopArtifact, $GuardArtifact) | ForEach-Object {
     $Path = Join-Path $PackageDir $_
@@ -70,9 +112,14 @@ $Manifest = [ordered]@{
     schemaVersion = "1.0"
     productVersion = $Version
     platform = "windows-amd64"
-    neverGuardProtocolVersion = 3
+    neverGuardProtocolVersion = 4
     processBoundary = "separate-neverguard-executable"
-    authenticatedIpc = "windows-named-pipe+hmac-sha256-v3"
+    authenticatedIpc = "windows-named-pipe+current-user-system-acl+hmac-sha256-v4"
+    windowsProductionHardeningVersion = 1
+    securePipeAcl = "LocalSystem+current-user"
+    launcherLifetimeBoundary = "job-object-kill-on-close"
+    packageVerification = "sha256-before-neverguard-spawn"
+    authenticodeRequired = $AuthenticodeRequired
     requiredAdjacentArtifacts = @($GuardArtifact)
     artifacts = $Artifacts
 }
@@ -84,7 +131,7 @@ $GuardReleaseAllowlist = [ordered]@{}
 $GuardReleaseAllowlist[$Version] = [ordered]@{
     guardSha256 = @($GuardHash)
     launcherSha256 = @($DesktopHash)
-    requireAuthenticode = $false
+    requireAuthenticode = $AuthenticodeRequired
 }
 $GuardReleaseAllowlist | ConvertTo-Json -Depth 8 -Compress | Set-Content -Encoding UTF8 (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json")
 
