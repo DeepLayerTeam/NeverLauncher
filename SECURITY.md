@@ -1,5 +1,11 @@
 # Политика безопасности NeverLauncher
 
+## Fabric ServerBridge boundary — 0.14.6
+
+Fabric Server Bridge является server-only модом и не доверяет клиентскому Fabric-коду. Login authorization удерживается `ServerLoginNetworking.LoginSynchronizer` до завершения signed backend validation; backend I/O выполняется bounded executor вне server tick. При saturation/backend failure режим по умолчанию fail-closed.
+
+Fabric node имеет отдельную Ed25519 identity и отдельный `fabricSha256` namespace. Backend проверяет server type, release hash, identity epoch, request nonce и one-time join ticket; hash другого ServerBridge artifact не принимается как Fabric measurement. Artifact self-hash не является host attestation: компрометация JVM/host или private node key требует revoke/rotation и внешнего host hardening.
+
 ## ServerBridge Bukkit-family boundary — 0.14.4
 
 `0.14.4` расширяет production ServerBridge на Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia через общий `bukkit-family-common` runtime. Каждый platform artifact имеет собственный runtime discriminator и собственный SHA-256 allowlist namespace; запуск JAR на несовпадающей server platform отключается fail-closed. Для release policy `0.14.4+` Backend требует полный набор hashes для Velocity и всех пяти Bukkit-family artifacts.

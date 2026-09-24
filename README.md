@@ -4,9 +4,13 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Bukkit family / 0.14.4**: ServerBridge Protocol v2, Ed25519 node identities, PostgreSQL source of truth и one-time join tickets теперь доступны отдельными production bridge artifacts для Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia; Folia работает без legacy Bukkit scheduler для сетевого I/O.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Fabric Server Bridge / 0.14.6**: к ServerBridge Protocol v2 добавлен server-only Fabric 1.21.1 мод с Ed25519 node identity, PostgreSQL source of truth, release-hash integrity и one-time join tickets; клиентский Fabric-мод для допуска игрока не требуется.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+
+## Fabric Server Bridge — 0.14.6
+
+Fabric 1.21.1 работает как отдельный `kind=fabric` ServerBridge node. Мод подключается только на сервере, использует Fabric API login synchronizer для fail-closed асинхронной проверки login, хранит private Ed25519 key локально и передаёт Backend только signed Protocol v2 requests. Release `0.14.6+` требует отдельный `fabricSha256`; Fabric JAR не взаимозаменяем с Bukkit/proxy artifacts.
 
 ## ServerBridge 0.14.5 Proxy family
 

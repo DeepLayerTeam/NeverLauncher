@@ -53,6 +53,7 @@ dynamic_version_expectations = {
     "plugins/paper-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/purpur-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/folia-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/fabric-bridge/build.gradle.kts": "version = rootProject.file(\"VERSION\").readText().trim()",
     "e2e/scripts/run-minecraft-e2e.sh": '< "$ROOT/VERSION"',
     "e2e/scripts/run-federation-postgres-e2e.sh": '< "$ROOT/VERSION"',
     "scripts/compatibility/matrix.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
@@ -74,6 +75,7 @@ for rel in (
     "plugins/paper-bridge/src/main/resources/plugin.yml",
     "plugins/purpur-bridge/src/main/resources/plugin.yml",
     "plugins/folia-bridge/src/main/resources/plugin.yml",
+    "plugins/fabric-bridge/src/main/resources/fabric.mod.json",
 ):
     if "${version}" not in read(rel):
         fail(f"{rel}: plugin descriptor должен получать version из Gradle")

@@ -24,6 +24,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0023_one_time_join_tickets_0143",
 		"0024_bukkit_family_0144",
 		"0025_proxy_family_0145",
+		"0026_fabric_server_bridge_0146",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

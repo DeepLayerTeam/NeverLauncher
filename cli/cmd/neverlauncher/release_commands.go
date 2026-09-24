@@ -596,6 +596,7 @@ func releaseArtifacts(ver string) []string {
 		"neverlauncher-paper-bridge-" + ver + ".jar",
 		"neverlauncher-purpur-bridge-" + ver + ".jar",
 		"neverlauncher-folia-bridge-" + ver + ".jar",
+		"neverlauncher-fabric-bridge-" + ver + ".jar",
 		"BRIDGE_RELEASE_ALLOWLIST.json",
 		"BRIDGE_PLUGIN_MANIFEST.json",
 		"SBOM.spdx.json",

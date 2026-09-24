@@ -56,6 +56,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py
           python3 scripts/smoke/offline/serverbridge-bukkit-family-0144.py
           python3 scripts/smoke/offline/serverbridge-proxy-family-0145.py
+          python3 scripts/smoke/offline/serverbridge-fabric-0146.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -492,6 +493,7 @@ jobs:
           test -s "${DIR}/neverlauncher-paper-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-purpur-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-folia-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-fabric-bridge-${VERSION}.jar"
           test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
           test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
@@ -538,6 +540,8 @@ jobs:
         run: bash e2e/scripts/run-bukkit-family-migration-e2e.sh
       - name: ServerBridge 0.14.4 to 0.14.5 Proxy family migration E2E
         run: bash e2e/scripts/run-proxy-family-migration-e2e.sh
+      - name: ServerBridge 0.14.5 to 0.14.6 Fabric migration E2E
+        run: bash e2e/scripts/run-fabric-server-bridge-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64

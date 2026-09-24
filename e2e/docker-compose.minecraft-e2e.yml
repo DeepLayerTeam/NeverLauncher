@@ -326,6 +326,46 @@ services:
       - ./runtime/node-identities/folia:/neverlauncher-identity
       - folia-data:/data
 
+  fabric:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: FABRIC
+      VERSION: "1.21.1"
+      FABRIC_LOADER_VERSION: "0.16.14"
+      MODRINTH_PROJECTS: fabric-api
+      MODRINTH_DOWNLOAD_DEPENDENCIES: required
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: fabric-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 90s
+    ports:
+      - "25577:25565"
+    volumes:
+      - ./runtime/plugins/fabric:/mods:ro
+      - ./runtime/node-identities/fabric:/neverlauncher-identity
+      - fabric-data:/data
+
 volumes:
   e2e-postgres: {}
   e2e-storage: {}
@@ -337,3 +377,4 @@ volumes:
   paper-data: {}
   purpur-data: {}
   folia-data: {}
+  fabric-data: {}

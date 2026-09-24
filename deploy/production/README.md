@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.5 → 0.14.6
+
+Остановите 0.14.5 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0026_fabric_server_bridge_0146` до запуска 0.14.6 Backend. Migration только расширяет ServerBridge kind constraint и сохраняет существующие node identities/tickets.
+
+Соберите `scripts/build/bridge-plugins.sh`, установите `neverlauncher-fabric-bridge-0.14.6.jar` в `/mods` Fabric 1.21.1 server вместе с Fabric API и добавьте `fabricSha256` из `BRIDGE_RELEASE_ALLOWLIST.json` в production policy. Зарегистрируйте `kind=fabric`, enroll public Ed25519 key и проверьте heartbeat плюс allow → replay deny → revoke → deny. Клиентский NeverLauncher/Fabric мод для этого bridge не требуется.
+
 ### Upgrade 0.14.4 → 0.14.5
 
 Остановите 0.14.4 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0025_proxy_family_0145`. Обновите release allowlist точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите platform-matched proxy JAR и дождитесь signed heartbeat каждого node. BungeeCord/Waterfall используют отдельные node identities; private Ed25519 keys остаются только на соответствующем proxy.

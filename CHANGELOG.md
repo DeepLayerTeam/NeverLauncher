@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.6 — Fabric Server Bridge
+
+`0.14.6` добавляет server-only ServerBridge для Fabric 1.21.1 без обязательного клиентского мода. Мод использует Fabric login synchronizer как login gate, выполняет backend validation в bounded worker pool и сохраняет Ed25519 node identity, Protocol v2, PostgreSQL source of truth, release-hash integrity и one-time join tickets.
+
+- Новый Loom-мод `neverlauncher-fabric-bridge` с `fabric.mod.json`, required Mixin accessor и server-only environment.
+- Login validation запускается вне server tick; `ServerLoginNetworking.LoginSynchronizer.waitFor` не пропускает login до завершения backend decision. Deny применяется на Minecraft server executor.
+- Artifact сам измеряет SHA-256, подписывает heartbeat/validate через локальную Ed25519 node identity и fail-closed работает при недоступности backend/integrity policy.
+- Migration `0026_fabric_server_bridge_0146` расширяет `server_bridge_nodes_v2.kind` значением `fabric` без переписывания существующих identities/tickets.
+- Release policy `0.14.6+` требует отдельный `fabricSha256`; Fabric JAR добавлен в release manifest/provenance и production verification.
+- Full Minecraft E2E запускает реальный Fabric 1.21.1 server с Fabric API и проверяет heartbeat, allow, one-time replay deny, revoke и deny.
+- Добавлены exact migration rehearsal `0.14.5 → 0.14.6`, backend kind/integrity regressions и обязательный offline release gate.
+
+Migration: остановите 0.14.5 API instances, примените и проверьте `0026_fabric_server_bridge_0146`, обновите `BRIDGE_RELEASE_ALLOWLIST.json`, зарегистрируйте node с `kind=fabric`, установите `neverlauncher-fabric-bridge-0.14.6.jar` вместе с Fabric API на server и enroll public Ed25519 identity. Private key остаётся только на Fabric server.
+
 ## 0.14.5 — Proxy family: Velocity / BungeeCord / Waterfall
 
 `0.14.5` объединяет proxy ServerBridge в production runtime для Velocity, BungeeCord и Waterfall без дублирования cryptographic/auth logic. Все три proxy используют Protocol v2, Ed25519 node identities, PostgreSQL source of truth, release-hash integrity enforcement и one-time join tickets.

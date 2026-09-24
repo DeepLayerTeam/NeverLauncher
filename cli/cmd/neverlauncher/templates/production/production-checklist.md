@@ -22,6 +22,7 @@
 - [ ] Официальный 0.13.0 bundle содержит `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json` для exact source commit и проходит `nl release publish-check`.
 - [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
 - [ ] При upgrade с 0.13.9 старые API instance остановлены; `nl db migrate apply`/`verify` успешно довели schema до sealed `0020_guard_migration_compatibility_stabilization_01310`, а partial Guard snapshots отсутствуют.
+- [ ] Для 0.14.6 `nl db migrate verify` подтверждает sealed `0026_fabric_server_bridge_0146`; Fabric 1.21.1 server использует server-only `neverlauncher-fabric-bridge-0.14.6.jar` + Fabric API, зарегистрирован как `kind=fabric`, а release allowlist содержит отдельный `fabricSha256`.
 - [ ] Для 0.14.5 `nl db migrate verify` подтверждает sealed `0025_proxy_family_0145`; Velocity/BungeeCord/Waterfall используют отдельные platform-matched JAR/node identities, а release allowlist содержит отдельные SHA-256 всех proxy и Bukkit-family artifacts.
 - [ ] Для 0.14.4 `nl db migrate verify` подтверждает sealed `0024_bukkit_family_0144`; установлены platform-matched Bukkit/Spigot/Paper/Purpur/Folia JAR, Folia descriptor содержит `folia-supported: true`, а release allowlist содержит отдельные SHA-256 всех family artifacts.
 - [ ] Для 0.14.3 `nl db migrate verify` подтверждает sealed `0023_one_time_join_tickets_0143`; legacy active joins сброшены, новый ServerBridge join имеет `ticketVersion=2` и identity binding, первый signed redemption создаёт persisted proof и replay отклоняется; Yggdrasil `/hasJoined` consume-once.
@@ -36,7 +37,7 @@
 - [ ] Исторические `/api/v2`–`/api/v5` не доступны.
 - [ ] Admin login создаёт серверную сессию и Bearer access token.
 - [ ] Client package publish/consume pipeline проходит smoke-test.
-- [ ] ServerBridge Velocity/BungeeCord/Waterfall/Spigot/Paper/Purpur/Folia проходит healthcheck; Bukkit artifact проходит build/API compatibility gate и fail-closed platform detection.
+- [ ] ServerBridge Velocity/BungeeCord/Waterfall/Spigot/Paper/Purpur/Folia/Fabric проходит healthcheck; Bukkit artifact проходит build/API compatibility gate и fail-closed platform detection.
 
 ## Перед release bundle
 

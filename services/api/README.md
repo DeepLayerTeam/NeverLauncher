@@ -2,6 +2,10 @@
 
 Backend предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
 
+### Upgrade 0.14.5 → 0.14.6
+
+Остановите 0.14.5 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0026_fabric_server_bridge_0146`. Обновите release allowlist отдельным `fabricSha256`, зарегистрируйте Fabric node с `kind=fabric`, установите server-only Fabric bridge и Fabric API, затем enroll public Ed25519 key и дождитесь signed heartbeat. Private key не передаётся Backend.
+
 ### Upgrade 0.14.4 → 0.14.5
 
 Остановите 0.14.4 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0025_proxy_family_0145`. Обновите release allowlist точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите platform-matched proxy JAR и дождитесь signed heartbeat каждого node. BungeeCord/Waterfall используют отдельные node identities; private Ed25519 keys остаются только на соответствующем proxy.
@@ -300,7 +304,7 @@ Stable registry создаётся через `httpapi.NewFederationCore(...)`; 
 
 Minecraft session теперь сохраняет verified Guard snapshot (`attestation/evidence/guard/launcher SHA-256`, release version и verification time). `/api/v1/session/join` связывает ServerBridge join с конкретным `minecraftAccessToken`; для Windows Guard-enforced device отсутствие такой связи возвращает `412`. Minecraft/Yggdrasil/ServerBridge validation заново проверяет snapshot по текущему Guard release allowlist, поэтому удаление hash отзывает уже активные игровые credentials.
 
-ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/Bukkit/Spigot/Paper/Purpur/Folia JAR.
+ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/BungeeCord/Waterfall/Bukkit/Spigot/Paper/Purpur/Folia/Fabric JAR.
 
 ### Guard Attestation backend gate (0.13.4)
 

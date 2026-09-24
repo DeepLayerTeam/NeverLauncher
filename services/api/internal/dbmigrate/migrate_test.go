@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0025_proxy_family_0145" {
+	if st.Current != "0026_fabric_server_bridge_0146" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0025_proxy_family_0145" {
+		if k != "0026_fabric_server_bridge_0146" {
 			pending[k] = v
 		}
 	}
@@ -221,6 +221,24 @@ func TestProxyFamilyMigration0145(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.5 proxy family migration missing %q", required)
+		}
+	}
+}
+
+func TestFabricServerBridgeMigration0146(t *testing.T) {
+	b, err := os.ReadFile("sql/0026_fabric_server_bridge_0146.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"server_bridge_nodes_v2_kind_check",
+		"'fabric'",
+		"'velocity'",
+		"'folia'",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.6 Fabric Server Bridge migration missing %q", required)
 		}
 	}
 }
