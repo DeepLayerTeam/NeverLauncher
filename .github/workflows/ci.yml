@@ -61,6 +61,9 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py
           python3 scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py
           python3 scripts/smoke/offline/serverbridge-migration-stabilization-01410.py
+          python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
+          python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
+          python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -191,6 +194,68 @@ jobs:
           name: guard-ci-linux-amd64-${{ github.sha }}
           path: guard-ci-result/linux/guard-ci-result.json
           if-no-files-found: error
+
+  linux-production:
+    name: Linux production ${{ matrix.arch }}
+    needs: [go-contracts, web]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Build native Linux production package
+        run: bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --expected-arch "${{ matrix.arch }}"
+      - name: Verify package locally
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          test -s "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}"
+          test -s "${DIR}/neverlauncher-api-linux-${{ matrix.arch }}"
+          test -s "${DIR}/neverlauncher-desktop-linux-${{ matrix.arch }}"
+          test -s "${DIR}/neverguard-linux-${{ matrix.arch }}"
+          test -s "${DIR}/neverruntime-linux-${{ matrix.arch }}"
+          test -s "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
+          python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
+      - name: Upload native Linux production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-linux-production-${{ matrix.arch }}-${{ github.sha }}
+          path: |
+            dist/release-*/neverlauncher-cli-linux-${{ matrix.arch }}
+            dist/release-*/neverlauncher-api-linux-${{ matrix.arch }}
+            dist/release-*/neverlauncher-desktop-linux-${{ matrix.arch }}
+            dist/release-*/neverguard-linux-${{ matrix.arch }}
+            dist/release-*/neverruntime-linux-${{ matrix.arch }}
+            dist/release-*/neverlauncher-linux-${{ matrix.arch }}-*.tar.gz
+            dist/release-*/LINUX_PACKAGE_MANIFEST_*.json
+          if-no-files-found: error
+          retention-days: 14
 
   neverguard-windows:
     name: NeverGuard Windows x64 + ARM64 delivery boundary
@@ -424,7 +489,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -434,6 +499,12 @@ jobs:
         with:
           name: neverlauncher-linux-neverguard-${{ github.sha }}
           path: guard-platform-artifacts/linux
+      - name: Download native Linux x64 + ARM64 production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: neverlauncher-linux-production-*-${{ github.sha }}
+          path: linux-production-artifacts
+          merge-multiple: true
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -486,6 +557,7 @@ jobs:
           NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
           NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
+          NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
@@ -497,6 +569,22 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
           test -s "${DIR}/neverguard-linux-amd64"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
+          test -s "${DIR}/neverlauncher-cli-linux-x64"
+          test -s "${DIR}/neverlauncher-cli-linux-arm64"
+          test -s "${DIR}/neverlauncher-api-linux-x64"
+          test -s "${DIR}/neverlauncher-api-linux-arm64"
+          test -s "${DIR}/neverlauncher-desktop-linux-x64"
+          test -s "${DIR}/neverlauncher-desktop-linux-arm64"
+          test -s "${DIR}/neverguard-linux-x64"
+          test -s "${DIR}/neverguard-linux-arm64"
+          test -s "${DIR}/neverruntime-linux-x64"
+          test -s "${DIR}/neverruntime-linux-arm64"
+          test -s "${DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/LINUX_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/LINUX_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/LINUX_PRODUCTION_EVIDENCE.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
           test -s "${DIR}/neverguard-windows-amd64.exe"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
@@ -519,7 +607,6 @@ jobs:
           test -s "${DIR}/GUARD_CI_MATRIX.json"
           test -s "${DIR}/GUARD_CI_CERTIFICATION.json"
           test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
-          test -s "${DIR}/neverruntime-linux-amd64"
           test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-bungeecord-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-waterfall-bridge-${VERSION}.jar"

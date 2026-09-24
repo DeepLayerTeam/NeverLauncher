@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -53,12 +54,38 @@ def scan_zip(path: Path) -> list[str]:
     return issues
 
 
+
+
+def scan_tar(path: Path) -> list[str]:
+    issues: list[str] = []
+    with tarfile.open(path, mode="r:*") as tf:
+        for member in tf.getmembers():
+            if member.isdir():
+                continue
+            name = member.name
+            if member.issym() or member.islnk() or not member.isfile():
+                issues.append(f"{name}: links/special files запрещены в release archive")
+                continue
+            if suspicious_path(name):
+                issues.append(f"{name}: secret-like path запрещён в release archive")
+            if member.size <= 2 * 1024 * 1024:
+                extracted = tf.extractfile(member)
+                if extracted is not None:
+                    issues.extend(scan_content(name, extracted.read()))
+    return issues
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("archive")
     ns = ap.parse_args()
     path = Path(ns.archive)
-    issues = scan_zip(path)
+    lower = path.name.lower()
+    if lower.endswith(".zip"):
+        issues = scan_zip(path)
+    elif lower.endswith(".tar.gz") or lower.endswith(".tgz") or lower.endswith(".tar"):
+        issues = scan_tar(path)
+    else:
+        raise SystemExit(f"secret-scan: unsupported archive format: {path}")
     if issues:
         print("secret-scan: FAILED")
         for issue in issues:

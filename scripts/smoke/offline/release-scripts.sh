@@ -6,7 +6,7 @@ cd "${ROOT_DIR}"
 # Source ZIPs do not reliably preserve Unix executable bits. Release gates invoke
 # shell scripts explicitly via bash, so validate presence + syntax rather than a
 # filesystem mode bit that is unrelated to script correctness.
-for script in scripts/release/preflight.sh scripts/test/run-release-smoke.sh scripts/build/bridge-plugins.sh scripts/release/build-release.sh scripts/smoke/release-required/release-bundle.sh; do
+for script in scripts/release/preflight.sh scripts/test/run-release-smoke.sh scripts/build/bridge-plugins.sh scripts/release/build-release.sh scripts/release/build-linux-production.sh scripts/smoke/release-required/release-bundle.sh; do
   test -f "$script"
   bash -n "$script"
 done
@@ -21,7 +21,9 @@ python3 -m py_compile \
   scripts/release/source-package.py \
   scripts/release/secret-scan.py \
   scripts/release/zip-dir.py \
+  scripts/release/linux-package.py \
   scripts/guard_ci/matrix.py \
   scripts/guard_ci/stage_release.py \
   scripts/guard_ci/test_matrix.py \
-  scripts/smoke/offline/guard-ci-release-certification-0139.py
+  scripts/smoke/offline/guard-ci-release-certification-0139.py \
+  scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py

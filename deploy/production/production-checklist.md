@@ -52,6 +52,7 @@
 - [ ] CLI не содержит исторических `schemaVersion` 4.x–8.x.
 - [ ] `CHANGELOG.md` обновлён.
 - [ ] Для 0.15.2+ Windows production delivery содержит x64 и ARM64 CLI/Desktop/NeverGuard, `WINDOWS_SIGNING_EVIDENCE.json`, `WINDOWS_PACKAGE_MANIFEST_X64.json`, `WINDOWS_PACKAGE_MANIFEST_ARM64.json` и `GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json`; `nl delivery verify-windows --production` проходит с реальным Authenticode + RFC3161 timestamp.
+- [ ] Для 0.15.3+ Linux production delivery содержит native x64 и ARM64 CLI/API/Desktop/NeverGuard/NeverRuntime, `LINUX_PACKAGE_MANIFEST_X64.json`, `LINUX_PACKAGE_MANIFEST_ARM64.json`, `LINUX_PRODUCTION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json`; `nl delivery verify-linux` проходит и оба tar.gz связаны с `DELIVERY_MANIFEST.json`.
 - [ ] Private Ed25519 release key хранится вне репозитория; trusted public key распространяется отдельным доверенным каналом.
 - [ ] `scripts/release/build-release.sh` собрал реальные CLI/API/Admin/Desktop/NeverRuntime/Velocity/BungeeCord/Waterfall/Bukkit/Spigot/Paper/Purpur/Folia artifacts и source archive прошёл secret scan.
 - [ ] Подготовлены `RELEASE_MANIFEST.json`, `SHA256SUMS`, `SHA256SUMS.sig`, `SBOM.spdx.json` и `PROVENANCE.json`.

@@ -20,6 +20,7 @@ GUARD_CI_MATRIX="${NEVERLAUNCHER_GUARD_CI_MATRIX_FILE:-}"
 GUARD_CI_TARGETS="${NEVERLAUNCHER_GUARD_CI_TARGETS_FILE:-${ROOT_DIR}/guard-ci/targets.json}"
 GUARD_PLATFORM_ARTIFACTS_DIR="${NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
 WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
+LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
@@ -67,6 +68,22 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,2) else '0')
 PYVER
 )"
+LINUX_DUAL_ARCH_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,3) else '0')
+PYVER
+)"
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
+    echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
+    exit 1
+  }
+fi
 if [[ "${GUARD_CERT_REQUIRED}" == "1" ]]; then
   [[ -n "${GUARD_CI_MATRIX}" && -n "${GUARD_CI_TARGETS}" && -n "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_GUARD_CI_MATRIX_FILE, NEVERLAUNCHER_GUARD_CI_TARGETS_FILE и NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
@@ -95,12 +112,14 @@ if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD
   fi
 fi
 
-log "Сборка CLI linux/amd64"
-(
-  cd "${ROOT_DIR}/cli"
-  GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-linux-amd64" ./cmd/neverlauncher
-)
-chmod +x "${OUT_DIR}/neverlauncher-cli-linux-amd64"
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
+  log "Сборка legacy CLI linux/amd64"
+  (
+    cd "${ROOT_DIR}/cli"
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-linux-amd64" ./cmd/neverlauncher
+  )
+  chmod +x "${OUT_DIR}/neverlauncher-cli-linux-amd64"
+fi
 
 if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy CLI windows/amd64"
@@ -110,12 +129,14 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   )
 fi
 
-log "Сборка Backend API linux/amd64 (production pgx, fail-closed)"
-(
-  cd "${ROOT_DIR}/services/api"
-  GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-api-linux-amd64" ./cmd/neverlauncher-api
-)
-chmod +x "${OUT_DIR}/neverlauncher-api-linux-amd64"
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
+  log "Сборка legacy Backend API linux/amd64 (production pgx, fail-closed)"
+  (
+    cd "${ROOT_DIR}/services/api"
+    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-api-linux-amd64" ./cmd/neverlauncher-api
+  )
+  chmod +x "${OUT_DIR}/neverlauncher-api-linux-amd64"
+fi
 printf 'apiBuildMode=pgx-production\n' > "${OUT_DIR}/BUILD_NOTES.txt"
 
 log "Сборка Admin Web"
@@ -159,6 +180,28 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       "WINDOWS_SIGNING_EVIDENCE.json"; do
       require_file "${windows_delivery_source}/${artifact}"
       cp "${windows_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
+    done
+  fi
+  if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+    log "Импорт native Linux x64/ARM64 production artifacts из ${LINUX_PRODUCTION_ARTIFACTS_DIR}"
+    for arch in x64 arm64; do
+      for artifact in \
+        "neverlauncher-cli-linux-${arch}" \
+        "neverlauncher-api-linux-${arch}" \
+        "neverlauncher-desktop-linux-${arch}" \
+        "neverguard-linux-${arch}" \
+        "neverruntime-linux-${arch}" \
+        "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
+        "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
+        require_file "${LINUX_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
+        cp "${LINUX_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+      done
+      chmod 0755 \
+        "${OUT_DIR}/neverlauncher-cli-linux-${arch}" \
+        "${OUT_DIR}/neverlauncher-api-linux-${arch}" \
+        "${OUT_DIR}/neverlauncher-desktop-linux-${arch}" \
+        "${OUT_DIR}/neverguard-linux-${arch}" \
+        "${OUT_DIR}/neverruntime-linux-${arch}"
     done
   fi
 else
@@ -207,16 +250,40 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   done
 fi
 
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  for arch in x64 arm64; do
+    for required_linux_delivery in \
+      "neverlauncher-cli-linux-${arch}" \
+      "neverlauncher-api-linux-${arch}" \
+      "neverlauncher-desktop-linux-${arch}" \
+      "neverguard-linux-${arch}" \
+      "neverruntime-linux-${arch}" \
+      "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
+      "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
+      require_file "${OUT_DIR}/${required_linux_delivery}"
+    done
+  done
+fi
+
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-x64"
+else
+  RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-amd64"
+fi
+require_file "${RELEASE_CLI}"
+
 log "Формирование и проверка реального Desktop package"
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" desktop verify "${WORK_DIR}/desktop-package"
+"${RELEASE_CLI}" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux
+"${RELEASE_CLI}" desktop verify "${WORK_DIR}/desktop-package"
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${WORK_DIR}/desktop-package" "${OUT_DIR}/neverlauncher-desktop-package-${VERSION}.zip" --prefix desktop-package
 
-log "Сборка NeverRuntime"
-cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml"
-require_file "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime"
-cp "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime" "${OUT_DIR}/neverruntime-linux-amd64"
-chmod +x "${OUT_DIR}/neverruntime-linux-amd64"
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
+  log "Сборка legacy NeverRuntime linux/amd64"
+  cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml"
+  require_file "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime"
+  cp "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime" "${OUT_DIR}/neverruntime-linux-amd64"
+  chmod +x "${OUT_DIR}/neverruntime-linux-amd64"
+fi
 
 log "Сборка ServerBridge JAR"
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
@@ -242,6 +309,10 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
 fi
+if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}")
@@ -260,16 +331,16 @@ fi
 if [[ -n "${SOURCE_COMMIT}" ]]; then
   release_build_args+=(--source-commit "${SOURCE_COMMIT}")
 fi
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" "${release_build_args[@]}"
+"${RELEASE_CLI}" "${release_build_args[@]}"
 
 log "Ed25519 release signing"
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
+"${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
-"${OUT_DIR}/neverlauncher-cli-linux-amd64" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+"${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then
   log "Publish-check Minecraft Compatibility + Device Trust Release + cross-platform Guard CI certification"
-  "${OUT_DIR}/neverlauncher-cli-linux-amd64" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+  "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
 elif [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD_CI_MATRIX}" ]]; then
   log "Передан неполный certification set: официальный publish-check ${VERSION} требует Compatibility, Device Trust и Guard CI evidence"
 else

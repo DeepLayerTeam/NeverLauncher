@@ -4,7 +4,15 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.2**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows delivery теперь выпускается как две реальные native-сборки x64 и ARM64, а production publish boundary требует Authenticode SHA-256 + RFC3161 timestamp для CLI, Desktop и NeverGuard.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.3**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, а Linux теперь выпускается как два нативно собранных production package для x64 и ARM64.
+
+## Linux x64 + ARM64 production packages — 0.15.3
+
+`0.15.3` убирает `linux-amd64` из publishable delivery и вводит канонические `linux-x64`/`linux-arm64` артефакты для CLI, Backend API, Desktop, NeverGuard и NeverRuntime. `scripts/release/build-linux-production.sh` запускается на нативном runner соответствующей архитектуры, а `scripts/release/linux-package.py` проверяет ELF64 `e_machine` (`EM_X86_64`/`EM_AARCH64`) и создаёт детерминированный `neverlauncher-linux-<arch>-<version>.tar.gz` со встроенным `LINUX_PACKAGE_MANIFEST.json`.
+
+`LINUX_PRODUCTION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json` агрегируют обе архитектуры. `nl delivery verify-linux` и `nl release publish-check` повторно проверяют ELF architecture, SHA-256/size, executable modes, содержимое tar.gz, embedded manifest и привязку каждого файла к `DELIVERY_MANIFEST.json`. Исторический `linux-amd64` остаётся только в Guard CI certification и исключается из publishable delivery inventory для `0.15.3+`.
+
+Main CI использует отдельные native jobs на `ubuntu-24.04` и `ubuntu-24.04-arm`; aggregate release принимает их exact outputs через `NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR`, не пересобирая ARM64 на x64 runner.
 
 ## Signed Windows x64 + ARM64 — 0.15.2
 

@@ -248,6 +248,11 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			// but they are not publishable delivery artifacts. Canonical signed delivery uses windows-x64.
 			continue
 		}
+		if linuxProductionRequired0153(ver) && strings.Contains(strings.ToLower(name), "linux-amd64") {
+			// 0.15.3 keeps the historical x64 Guard CI alias only as certification evidence.
+			// Publishable Linux delivery uses canonical linux-x64/linux-arm64 names.
+			continue
+		}
 		switch name {
 		case deliveryManifestFile0151, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
 			continue
@@ -433,7 +438,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, resolve")
+		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, resolve")
 	}
 	switch args[0] {
 	case "target":
@@ -489,6 +494,29 @@ func handleDelivery(args []string) error {
 			return err
 		}
 		return verifyWindowsSigningEvidence0152(dir, ver, flagBool(args, "--production", false))
+	case "prepare-linux":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery prepare-linux requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		return writeLinuxProductionEvidence0153(dir, ver)
+	case "verify-linux":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery verify-linux requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
+			return err
+		}
+		return verifyLinuxProductionEvidence0153(dir, ver, true)
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {

@@ -89,7 +89,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Windows x64/ARM64 Authenticode signing: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + compatibility certifications + ServerBridge 2 + signed Windows x64/ARM64 delivery")
+			if linuxProductionRequired0153(manifestVersion) {
+				if err := verifyLinuxProductionEvidence0153(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Linux x64/ARM64 production packages: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows x64/ARM64 signing + Linux x64/ARM64 production packages")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -169,6 +174,9 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
 		"scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py",
 		"scripts/smoke/offline/signed-windows-x64-arm64-0152.py",
+		"scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py",
+		"scripts/release/build-linux-production.sh",
+		"scripts/release/linux-package.py",
 		"scripts/release/merge-guard-release-policy.py",
 		"e2e/scripts/run-guard-migration-e2e.sh",
 	}
@@ -394,6 +402,11 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := os.WriteFile(filepath.Join(out, "RELEASE_NOTES.txt"), []byte(releaseDescription(ver)), 0o644); err != nil {
 		return err
 	}
+	if linuxProductionRequired0153(ver) {
+		if err := writeLinuxProductionEvidence0153(out, ver); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
 	if deliveryManifestRequired0151(ver) {
 		if err := writeDeliveryManifest0151(out, ver); err != nil {
 			return fmt.Errorf("delivery manifest: %w", err)
@@ -407,6 +420,11 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
 		}
 	}
+	if linuxProductionRequired0153(ver) {
+		if err := verifyLinuxProductionEvidence0153(out, ver, true); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
 
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
@@ -418,6 +436,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if windowsSigningRequired0152(ver) {
 		requiredFiles = append(requiredFiles, windowsSigningEvidenceFile0152)
 		checks = append(checks, "windows-x64-arm64-authenticode-evidence")
+	}
+	if linuxProductionRequired0153(ver) {
+		requiredFiles = append(requiredFiles, linuxProductionEvidenceFile0153, linuxDeliveryAllowlistFile0153, "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json")
+		checks = append(checks, "linux-x64-arm64-production-packages")
 	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
@@ -563,6 +585,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
 		}
 	}
+	if linuxProductionRequired0153(manifest.Version) {
+		if err := verifyLinuxProductionEvidence0153(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
 	for _, name := range manifest.RequiredFiles {
 		if st, err := os.Stat(filepath.Join(dir, filepath.Clean(name))); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
@@ -625,13 +652,9 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 func releaseArtifacts(ver string) []string {
 	artifacts := []string{
 		"neverlauncher-source-" + ver + ".zip",
-		"neverlauncher-cli-linux-amd64",
-		"neverlauncher-api-linux-amd64",
 		"neverlauncher-admin-web-" + ver + ".zip",
 		"neverlauncher-desktop-web-" + ver + ".zip",
-		"neverlauncher-desktop-linux-amd64",
 		"neverlauncher-desktop-package-" + ver + ".zip",
-		"neverruntime-linux-amd64",
 		"neverlauncher-velocity-bridge-" + ver + ".jar",
 		"neverlauncher-bungeecord-bridge-" + ver + ".jar",
 		"neverlauncher-waterfall-bridge-" + ver + ".jar",
@@ -649,6 +672,16 @@ func releaseArtifacts(ver string) []string {
 		"SBOM.spdx.json",
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
+	}
+	if linuxProductionRequired0153(ver) {
+		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)
+	} else {
+		artifacts = append(artifacts,
+			"neverlauncher-cli-linux-amd64",
+			"neverlauncher-api-linux-amd64",
+			"neverlauncher-desktop-linux-amd64",
+			"neverruntime-linux-amd64",
+		)
 	}
 	if !windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts, "neverlauncher-cli-windows-amd64.exe")
@@ -729,6 +762,9 @@ func releaseDescription(ver string) string {
 	}
 	if windowsSigningRequired0152(ver) {
 		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/NeverGuard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
+	}
+	if linuxProductionRequired0153(ver) {
+		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/NeverGuard/NeverRuntime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

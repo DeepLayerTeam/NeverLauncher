@@ -65,8 +65,9 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
         cwd=ROOT / "cli",
         check=True,
     )
+    linux_cli_name = "neverlauncher-cli-linux-x64" if parts >= (0, 15, 3) else "neverlauncher-cli-linux-amd64"
     payloads = {
-        "neverlauncher-cli-linux-amd64": b"linux-x64-cli\n",
+        linux_cli_name: b"linux-x64-cli\n",
         f"neverlauncher-desktop-{VERSION}-windows-arm64.exe": b"windows-arm64-desktop\n",
         "neverlauncher-desktop-macos-universal": b"macos-universal-desktop\n",
         f"neverlauncher-paper-bridge-{VERSION}.jar": b"platform-neutral-jar\n",
@@ -99,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
     if len(artifacts) != 1 or artifacts[0].get("name") != f"neverlauncher-desktop-{VERSION}-windows-arm64.exe":
         raise SystemExit(f"delivery resolver selected unexpected artifacts: {artifacts}")
 
-    (bundle / "neverlauncher-cli-linux-amd64").write_bytes(b"tampered\n")
+    (bundle / linux_cli_name).write_bytes(b"tampered\n")
     tampered = subprocess.run(
         [str(binary), "delivery", "verify", "--bundle", str(bundle), "--version", VERSION],
         stdout=subprocess.PIPE,

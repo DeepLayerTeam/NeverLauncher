@@ -1085,6 +1085,51 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if not (ROOT / "cli/cmd/neverlauncher/delivery_manifest_test.go").is_file():
         fail("0.15.1 delivery regression tests are missing")
 
+
+# 0.15.3 Linux production delivery is a native dual-architecture package boundary.
+# x64 and ARM64 artifacts are built on native Linux runners, checked as ELF64,
+# packed deterministically, and rebound to DELIVERY_MANIFEST.json before publish.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 3):
+    linux_delivery_0153 = read("cli/cmd/neverlauncher/linux_delivery.go")
+    linux_builder_0153 = read("scripts/release/build-linux-production.sh")
+    linux_packager_0153 = read("scripts/release/linux-package.py")
+    linux_release_0153 = read("scripts/release/build-release.sh")
+    linux_gate_0153 = read("scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py")
+    release_bundle_0153 = read("scripts/smoke/release-required/release-bundle.sh")
+    for required in [
+        "LINUX_PRODUCTION_EVIDENCE.json", "GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json",
+        "inspectLinuxELFBytes0153", "EM_X86_64", "EM_AARCH64",
+        "verifyLinuxPackageArchive0153", "verifyLinuxProductionEvidence0153",
+    ]:
+        if required not in linux_delivery_0153:
+            fail(f"0.15.3 Linux delivery verifier incomplete: {required}")
+    for required in [
+        'ARCH="x64"', 'ARCH="arm64"', "neverlauncher-cli-linux-${ARCH}",
+        "neverlauncher-api-linux-${ARCH}", "neverlauncher-desktop-linux-${ARCH}",
+        "neverguard-linux-${ARCH}", "neverruntime-linux-${ARCH}", "linux-package.py",
+    ]:
+        if required not in linux_builder_0153:
+            fail(f"0.15.3 native Linux builder incomplete: {required}")
+    for required in ["gzip.GzipFile", "mtime=0", "LINUX_PACKAGE_MANIFEST_", "production package requires ELF64 little-endian"]:
+        if required not in linux_packager_0153:
+            fail(f"0.15.3 deterministic Linux packager incomplete: {required}")
+    for required in ["NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR", "LINUX_DUAL_ARCH_REQUIRED", "neverlauncher-linux-${arch}-${VERSION}.tar.gz"]:
+        if required not in linux_release_0153:
+            fail(f"0.15.3 release staging incomplete: {required}")
+    for required in ["linux-production:", "ubuntu-24.04-arm", "build-linux-production.sh", "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR"]:
+        if required not in ci:
+            fail(f"0.15.3 Linux native CI matrix incomplete: {required}")
+    for required in ["LINUX_PRODUCTION_EVIDENCE.json", "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json"]:
+        if required not in release_bundle_0153:
+            fail(f"0.15.3 release bundle gate incomplete: {required}")
+    if "linux-x64-arm64-production-packages-0153.py" not in preflight or "linux-x64-arm64-production-packages-0153.py" not in ci:
+        fail("0.15.3 Linux dual-arch package gate is not wired into preflight/CI")
+    if "Linux x64 + ARM64 production packages gate: OK" not in linux_gate_0153:
+        fail("0.15.3 mandatory Linux production package gate is incomplete")
+    if not (ROOT / "cli/cmd/neverlauncher/linux_delivery_test.go").is_file():
+        fail("0.15.3 Linux delivery regression tests are missing")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

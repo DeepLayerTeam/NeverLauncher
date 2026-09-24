@@ -1,3 +1,15 @@
+## 0.15.3 — Linux x64 + ARM64 production packages
+
+`0.15.3` переводит Linux delivery в нативный dual-architecture production-контур. x64 и ARM64 собираются на соответствующих Linux runners, получают отдельные CLI/API/Desktop/NeverGuard/NeverRuntime binaries и deterministic tar.gz package. DB migration не требуется.
+
+- Добавлен `scripts/release/build-linux-production.sh`: нативная сборка x64/ARM64 с fail-closed проверкой runner architecture.
+- Добавлен `scripts/release/linux-package.py`: проверка ELF64 `e_machine`, реальные SHA-256/size и детерминированный tar.gz со встроенным package manifest.
+- Добавлены `LINUX_PACKAGE_MANIFEST_X64.json`, `LINUX_PACKAGE_MANIFEST_ARM64.json`, `LINUX_PRODUCTION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json`.
+- `nl delivery prepare-linux|verify-linux` и `nl release build/verify/publish-check` проверяют обе архитектуры, package payload, executable modes и binding к `DELIVERY_MANIFEST.json`.
+- Publishable Linux naming теперь канонический `linux-x64`/`linux-arm64`; legacy `linux-amd64` сохранён только для Guard CI certification и исключается из delivery manifest 0.15.3+.
+- Main CI собирает Linux x64 на `ubuntu-24.04`, ARM64 на `ubuntu-24.04-arm`, затем aggregate release импортирует exact outputs через `NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR`.
+- `secret-scan.py` теперь проверяет не только ZIP, но и tar/tar.gz release packages.
+
 ## 0.15.2 — Signed Windows x64 + ARM64
 
 `0.15.2` делает Windows delivery реальным dual-architecture production-контуром: x64 и ARM64 собираются отдельными native targets, подписываются Authenticode и не могут быть опубликованы без проверяемого RFC3161 timestamp evidence. DB migration не требуется.

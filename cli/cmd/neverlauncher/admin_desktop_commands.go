@@ -179,15 +179,28 @@ func desktopFirstRunConnect(args []string) error {
 }
 
 func desktopPackagePlatforms(ver string) []DesktopPackagePlatform {
-	return []DesktopPackagePlatform{
-		{OS: "linux", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-linux-amd64", Status: "supported"},
-		{OS: "linux", Arch: "x64", Format: "AppImage", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.AppImage", Status: "supported-if-built"},
-		{OS: "linux", Arch: "x64", Format: "deb", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.deb", Status: "supported-if-built"},
-		{OS: "windows", Arch: "x64", Format: "exe", Artifact: "neverlauncher-desktop-windows-x64.exe", Status: "supported"},
-		{OS: "windows", Arch: "x64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-x64.zip", Status: "supported"},
-		{OS: "windows", Arch: "arm64", Format: "exe", Artifact: "neverlauncher-desktop-windows-arm64.exe", Status: "supported"},
-		{OS: "windows", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-arm64.zip", Status: "supported"},
+	items := []DesktopPackagePlatform{}
+	if linuxProductionRequired0153(ver) {
+		items = append(items,
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-linux-x64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "tar.gz", Artifact: "neverlauncher-linux-x64-" + ver + ".tar.gz", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "binary", Artifact: "neverlauncher-desktop-linux-arm64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "tar.gz", Artifact: "neverlauncher-linux-arm64-" + ver + ".tar.gz", Status: "supported"},
+		)
+	} else {
+		items = append(items,
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-linux-amd64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "AppImage", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.AppImage", Status: "supported-if-built"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "deb", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.deb", Status: "supported-if-built"},
+		)
 	}
+	items = append(items,
+		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "exe", Artifact: "neverlauncher-desktop-windows-x64.exe", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-x64.zip", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "exe", Artifact: "neverlauncher-desktop-windows-arm64.exe", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-arm64.zip", Status: "supported"},
+	)
+	return items
 }
 
 func filterDesktopPlatforms(items []DesktopPackagePlatform, platform string) []DesktopPackagePlatform {

@@ -52,7 +52,7 @@ Desktop / package / release:
   client ...
   pipeline ...
   release doctor|plan|build|package|verify|sign|publish-plan|publish-check
-  delivery target|manifest|verify|resolve
+  delivery target|manifest|verify|verify-windows|prepare-linux|verify-linux|resolve
   packaging prepare|verify|sign
 
 Для Backend-команд укажите --backend <url>. Для защищённых маршрутов используйте --token или NEVERLAUNCHER_TOKEN.

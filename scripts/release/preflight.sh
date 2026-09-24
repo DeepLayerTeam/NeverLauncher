@@ -71,6 +71,7 @@ run_step serverbridge-migration-stabilization-01410 python3 "${ROOT_DIR}/scripts
 run_step serverbridge-release-0150 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-release-0150.py"
 run_step delivery-manifest-platform-architecture-0151 python3 "${ROOT_DIR}/scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
 run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offline/signed-windows-x64-arm64-0152.py"
+run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
