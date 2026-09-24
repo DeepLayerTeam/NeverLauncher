@@ -193,14 +193,18 @@ jobs:
           if-no-files-found: error
 
   neverguard-windows:
-    name: NeverGuard Windows hardened production boundary
+    name: NeverGuard Windows x64 + ARM64 delivery boundary
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -209,6 +213,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - name: NeverGuard Windows integration test
         run: |
           python scripts/smoke/offline/windows-production-hardening-0136.py
@@ -220,7 +225,7 @@ jobs:
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
-      - name: Build side-by-side Desktop + NeverGuard package
+      - name: Build unsigned CI x64 + ARM64 delivery candidates
         shell: pwsh
         run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
       - name: Emit Windows Guard CI evidence
@@ -239,6 +244,18 @@ jobs:
             dist/release-*/neverguard-windows-amd64.exe
             dist/release-*/WINDOWS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json
+            dist/release-*/neverlauncher-cli-windows-x64.exe
+            dist/release-*/neverlauncher-cli-windows-arm64.exe
+            dist/release-*/neverlauncher-desktop-windows-x64.exe
+            dist/release-*/neverlauncher-desktop-windows-arm64.exe
+            dist/release-*/neverguard-windows-x64.exe
+            dist/release-*/neverguard-windows-arm64.exe
+            dist/release-*/neverlauncher-desktop-*-windows-x64.zip
+            dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
+            dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json
+            dist/release-*/WINDOWS_PACKAGE_MANIFEST_ARM64.json
+            dist/release-*/WINDOWS_SIGNING_EVIDENCE.json
           if-no-files-found: error
       - name: Upload Windows Guard CI result
         uses: actions/upload-artifact@v4
@@ -483,6 +500,18 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
           test -s "${DIR}/neverguard-windows-amd64.exe"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/neverlauncher-cli-windows-x64.exe"
+          test -s "${DIR}/neverlauncher-cli-windows-arm64.exe"
+          test -s "${DIR}/neverlauncher-desktop-windows-x64.exe"
+          test -s "${DIR}/neverlauncher-desktop-windows-arm64.exe"
+          test -s "${DIR}/neverguard-windows-x64.exe"
+          test -s "${DIR}/neverguard-windows-arm64.exe"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json"
+          test -s "${DIR}/WINDOWS_SIGNING_EVIDENCE.json"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
           test -s "${DIR}/neverguard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
@@ -558,6 +587,8 @@ jobs:
         run: python3 scripts/smoke/offline/serverbridge-release-0150.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
+      - name: Signed Windows x64 + ARM64 0.15.2 gate
+        run: python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
       - name: ServerBridge 0.14.9 to 0.14.10 migration + stabilization E2E
         run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E

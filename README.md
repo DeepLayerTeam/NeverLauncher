@@ -4,7 +4,17 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.1**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; новый release boundary добавляет подписанный `DELIVERY_MANIFEST.json` с фактическими SHA-256/size и канонической platform/architecture моделью для Windows, Linux и macOS.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.2**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows delivery теперь выпускается как две реальные native-сборки x64 и ARM64, а production publish boundary требует Authenticode SHA-256 + RFC3161 timestamp для CLI, Desktop и NeverGuard.
+
+## Signed Windows x64 + ARM64 — 0.15.2
+
+`0.15.2` переводит Windows delivery из single-architecture candidate в dual-architecture production boundary. `scripts/release/build-windows-desktop.ps1` собирает отдельные `x86_64-pc-windows-msvc` и `aarch64-pc-windows-msvc` Desktop/NeverGuard binaries и отдельные Go CLI `amd64`/`arm64`, проверяет PE Machine до и после подписи и выпускает канонические `windows-x64`/`windows-arm64` artifacts.
+
+Production-подпись выполняется Windows SDK `signtool`: SHA-256 file digest, RFC3161 `/tr` timestamp и SHA-256 timestamp digest. После каждого sign выполняются `signtool verify /pa /all` и `Get-AuthenticodeSignature`; отсутствие валидной подписи, timestamp certificate, требуемой архитектуры или совпадающего signer thumbprint блокирует сборку. PFX можно передать только извне через secret/file; импортированный сертификат удаляется из `CurrentUser\My` в `finally`.
+
+`WINDOWS_SIGNING_EVIDENCE.json` связывает signer, timestamp server, x64/ARM64 PE metadata, реальные hashes/sizes и package manifests с `DELIVERY_MANIFEST.json`. `nl delivery verify-windows --production` и `nl release publish-check` для `0.15.2+` fail-closed требуют обе архитектуры и проверяют package ZIP, embedded manifest, signed Desktop/NeverGuard bytes и `GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json`. Обычный CI может создать только `unsigned-development` candidate для тестов, но такой bundle не проходит production publish-check.
+
+Отдельный workflow `.github/workflows/windows-production-delivery.yml` предназначен для реальной signing job на Windows runner с `WINDOWS_CODESIGN_PFX_BASE64`/`WINDOWS_CODESIGN_PFX_PASSWORD`. Aggregate release принимает результат через `NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR`; исторические `windows-amd64` aliases остаются только для Guard CI compatibility и не попадают в delivery manifest 0.15.2.
 
 ## Production Delivery — 0.15.1
 

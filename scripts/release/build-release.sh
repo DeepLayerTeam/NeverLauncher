@@ -19,6 +19,7 @@ DEVICE_TRUST_TARGETS="${NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE:-${ROOT_DIR}/dev
 GUARD_CI_MATRIX="${NEVERLAUNCHER_GUARD_CI_MATRIX_FILE:-}"
 GUARD_CI_TARGETS="${NEVERLAUNCHER_GUARD_CI_TARGETS_FILE:-${ROOT_DIR}/guard-ci/targets.json}"
 GUARD_PLATFORM_ARTIFACTS_DIR="${NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
+WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
@@ -56,6 +57,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,13,9) else '0')
 PYVER
 )"
+WINDOWS_DUAL_ARCH_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,2) else '0')
+PYVER
+)"
 if [[ "${GUARD_CERT_REQUIRED}" == "1" ]]; then
   [[ -n "${GUARD_CI_MATRIX}" && -n "${GUARD_CI_TARGETS}" && -n "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_GUARD_CI_MATRIX_FILE, NEVERLAUNCHER_GUARD_CI_TARGETS_FILE и NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
@@ -91,11 +102,13 @@ log "Сборка CLI linux/amd64"
 )
 chmod +x "${OUT_DIR}/neverlauncher-cli-linux-amd64"
 
-log "Сборка CLI windows/amd64"
-(
-  cd "${ROOT_DIR}/cli"
-  GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-windows-amd64.exe" ./cmd/neverlauncher
-)
+if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
+  log "Сборка legacy CLI windows/amd64"
+  (
+    cd "${ROOT_DIR}/cli"
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-windows-amd64.exe" ./cmd/neverlauncher
+  )
+fi
 
 log "Сборка Backend API linux/amd64 (production pgx, fail-closed)"
 (
@@ -127,6 +140,27 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     --artifacts-root "${GUARD_PLATFORM_ARTIFACTS_DIR}" \
     --out "${OUT_DIR}" \
     --expected-commit "${SOURCE_COMMIT}"
+  if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+    windows_delivery_source="${WINDOWS_SIGNED_ARTIFACTS_DIR:-${GUARD_PLATFORM_ARTIFACTS_DIR}/windows}"
+    [[ -d "${windows_delivery_source}" ]] || { echo "Ошибка: Windows x64/ARM64 artifact directory отсутствует: ${windows_delivery_source}" >&2; exit 1; }
+    log "Импорт Windows x64/ARM64 delivery artifacts из ${windows_delivery_source}"
+    for artifact in \
+      "neverlauncher-cli-windows-x64.exe" \
+      "neverlauncher-cli-windows-arm64.exe" \
+      "neverlauncher-desktop-windows-x64.exe" \
+      "neverlauncher-desktop-windows-arm64.exe" \
+      "neverguard-windows-x64.exe" \
+      "neverguard-windows-arm64.exe" \
+      "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
+      "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
+      "WINDOWS_PACKAGE_MANIFEST_X64.json" \
+      "WINDOWS_PACKAGE_MANIFEST_ARM64.json" \
+      "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
+      "WINDOWS_SIGNING_EVIDENCE.json"; do
+      require_file "${windows_delivery_source}/${artifact}"
+      cp "${windows_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
+    done
+  fi
 else
   log "Сборка Linux Desktop + NeverGuard production package"
   bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
@@ -152,6 +186,24 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     "GUARD_RELEASE_ALLOWLIST_MACOS.json" \
     "neverlauncher-desktop-${VERSION}-macos-universal.zip"; do
     require_file "${OUT_DIR}/${required_guard_artifact}"
+  done
+fi
+
+if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  for required_windows_delivery in \
+    "neverlauncher-cli-windows-x64.exe" \
+    "neverlauncher-cli-windows-arm64.exe" \
+    "neverlauncher-desktop-windows-x64.exe" \
+    "neverlauncher-desktop-windows-arm64.exe" \
+    "neverguard-windows-x64.exe" \
+    "neverguard-windows-arm64.exe" \
+    "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
+    "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
+    "WINDOWS_PACKAGE_MANIFEST_X64.json" \
+    "WINDOWS_PACKAGE_MANIFEST_ARM64.json" \
+    "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
+    "WINDOWS_SIGNING_EVIDENCE.json"; do
+    require_file "${OUT_DIR}/${required_windows_delivery}"
   done
 fi
 
@@ -186,6 +238,10 @@ python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-s
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-admin-web-${VERSION}.zip"
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-web-${VERSION}.zip"
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-package-${VERSION}.zip"
+if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
+fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}")

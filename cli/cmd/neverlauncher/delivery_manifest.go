@@ -243,6 +243,11 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			continue
 		}
 		name := item.Name()
+		if windowsSigningRequired0152(ver) && strings.Contains(strings.ToLower(name), "windows-amd64") {
+			// 0.15.2 keeps pre-signing x64 Guard CI aliases in the bundle for certification evidence,
+			// but they are not publishable delivery artifacts. Canonical signed delivery uses windows-x64.
+			continue
+		}
 		switch name {
 		case deliveryManifestFile0151, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
 			continue
@@ -428,7 +433,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, resolve")
+		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, resolve")
 	}
 	switch args[0] {
 	case "target":
@@ -471,6 +476,19 @@ func handleDelivery(args []string) error {
 			return errors.New("delivery verify requires --bundle <dir>")
 		}
 		return verifyDeliveryManifest0151(dir, flagValue(args, "--version", ""))
+	case "verify-windows":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery verify-windows requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
+			return err
+		}
+		return verifyWindowsSigningEvidence0152(dir, ver, flagBool(args, "--production", false))
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {

@@ -56,7 +56,11 @@ require("services/api/internal/httpapi/guard_attestation_0134_test.go", [
 ])
 
 require("scripts/release/build-linux-desktop.sh", ['"schemaVersion":"2.0"', '"signingMode":"integrity-only"'])
-require("scripts/release/build-windows-desktop.ps1", ['schemaVersion = "2.0"', 'signingMode = $(if ($AuthenticodeRequired) { "authenticode" } else { "unsigned-development" })'])
+require("scripts/release/build-windows-desktop.ps1", [
+    'schemaVersion = "2.0"',
+    'signingMode = $(if ($SignedProduction) { "authenticode" } else { "unsigned-development" })',
+    'signtool verify',
+])
 require("scripts/release/build-macos-desktop.sh", ['"schemaVersion":"2.0"', 'SIGNING_MODE="developer-id-notarized"'])
 require("scripts/release/merge-guard-release-policy.py", [
     '"windows": ("authenticode", True)',

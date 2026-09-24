@@ -1,0 +1,81 @@
+name: Windows production delivery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sign-windows:
+    name: Authenticode Windows x64 + ARM64
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+      - name: Materialize code-signing certificate
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
+          $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\neverlauncher-codesign.pfx", $bytes)
+      - name: Build and Authenticode-sign both architectures
+        shell: pwsh
+        env:
+          NEVERLAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          NEVERLAUNCHER_WINDOWS_TIMESTAMP_URL: http://timestamp.digicert.com
+        run: |
+          ./scripts/release/build-windows-desktop.ps1 `
+            -RequireCodeSigning `
+            -CodeSigningCertificatePath "$env:RUNNER_TEMP\neverlauncher-codesign.pfx"
+      - name: Generate delivery manifest and verify production signing evidence
+        shell: pwsh
+        run: |
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          Push-Location cli
+          try {
+            go build -trimpath -ldflags "-s -w -X main.version=$Version" -o "$env:RUNNER_TEMP\nl.exe" .\cmd\neverlauncher
+          } finally {
+            Pop-Location
+          }
+          & "$env:RUNNER_TEMP\nl.exe" delivery manifest --bundle $Dir --version $Version
+          & "$env:RUNNER_TEMP\nl.exe" delivery verify-windows --bundle $Dir --version $Version --production
+      - name: Remove signing credential file
+        if: always()
+        shell: pwsh
+        run: Remove-Item "$env:RUNNER_TEMP\neverlauncher-codesign.pfx" -Force -ErrorAction SilentlyContinue
+      - name: Upload signed Windows delivery artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-windows-production-${{ github.sha }}
+          path: |
+            dist/release-*/neverlauncher-cli-windows-x64.exe
+            dist/release-*/neverlauncher-cli-windows-arm64.exe
+            dist/release-*/neverlauncher-desktop-windows-x64.exe
+            dist/release-*/neverlauncher-desktop-windows-arm64.exe
+            dist/release-*/neverguard-windows-x64.exe
+            dist/release-*/neverguard-windows-arm64.exe
+            dist/release-*/neverlauncher-desktop-*-windows-x64.zip
+            dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
+            dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json
+            dist/release-*/WINDOWS_PACKAGE_MANIFEST_ARM64.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json
+            dist/release-*/WINDOWS_SIGNING_EVIDENCE.json
+            dist/release-*/DELIVERY_MANIFEST.json
+          if-no-files-found: error
+          retention-days: 14

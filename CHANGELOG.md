@@ -1,3 +1,16 @@
+## 0.15.2 — Signed Windows x64 + ARM64
+
+`0.15.2` делает Windows delivery реальным dual-architecture production-контуром: x64 и ARM64 собираются отдельными native targets, подписываются Authenticode и не могут быть опубликованы без проверяемого RFC3161 timestamp evidence. DB migration не требуется.
+
+- `build-windows-desktop.ps1` теперь собирает CLI, Desktop и NeverGuard отдельно для x64 (`x86_64-pc-windows-msvc`, PE `0x8664`) и ARM64 (`aarch64-pc-windows-msvc`, PE `0xAA64`), проверяя фактический PE Machine до и после signing.
+- Production signing использует Windows SDK `signtool` с SHA-256 digest и RFC3161 `/tr` timestamp; каждый EXE после подписи проходит `signtool verify /pa /all` и `Get-AuthenticodeSignature`, включая exact signer и наличие timestamp certificate.
+- Поддержаны внешний certificate-store thumbprint и ephemeral PFX import. PFX/private key не включаются в release artifacts; импортированный PFX certificate удаляется из `CurrentUser\My` даже при ошибке сборки.
+- Добавлены канонические `neverlauncher-{cli,desktop}-windows-{x64,arm64}.exe`, `neverguard-windows-{x64,arm64}.exe`, отдельные ZIP/package manifests и `WINDOWS_SIGNING_EVIDENCE.json` с реальными hashes/sizes/signing metadata.
+- `nl delivery verify-windows --production` проверяет x64+ARM64 evidence, PE architecture, Authenticode certificate table, package contents, package manifests, hashes/sizes, Guard delivery allowlist и exact binding к `DELIVERY_MANIFEST.json`.
+- `nl release build/verify` проверяют structural Windows evidence для candidate; `nl release publish-check` для `0.15.2+` дополнительно требует production Authenticode evidence и fail-closed отклоняет `unsigned-development`.
+- Aggregate release может импортировать отдельный post-signing Windows job через `NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR`. Legacy `windows-amd64` artifacts сохранены только как Guard CI certification aliases и исключены из публикуемого `DELIVERY_MANIFEST.json`.
+- Добавлены Windows production GitHub Actions workflow, unit/regression tests и обязательный `signed-windows-x64-arm64-0152` smoke gate в CI/preflight/release doctor.
+
 ## 0.15.1 — Delivery Manifest + platform/architecture model
 
 `0.15.1` начинает Production Delivery без декларативного каталога будущих сборок: release pipeline формирует `DELIVERY_MANIFEST.json` только из реально присутствующих файлов bundle и включает его в подписанный `SHA256SUMS`/Ed25519 boundary. DB migration не требуется.

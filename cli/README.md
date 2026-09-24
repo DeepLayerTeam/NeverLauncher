@@ -65,9 +65,13 @@ nl release build --out "dist/release-${VERSION}" \
 nl release sign dist/release-${VERSION} --private-key /secure/release-private.pem
 nl release verify dist/release-${VERSION} --public-key /etc/neverlauncher/release-public.pem
 nl release publish-check dist/release-${VERSION} --public-key /etc/neverlauncher/release-public.pem
+nl delivery verify-windows --bundle dist/release-${VERSION} --version "${VERSION}" --production
 nl packaging prepare
 nl packaging verify
 ```
+
+
+Для `0.15.2+` Windows publication дополнительно требует две канонические архитектуры (`windows-x64`, `windows-arm64`) и production `WINDOWS_SIGNING_EVIDENCE.json`. `release publish-check` повторно связывает подписанные PE/ZIP/package manifests с `DELIVERY_MANIFEST.json`; unsigned CI candidate публикацией не считается.
 
 Для `0.13.9+` publishable bundle требует exact-commit Guard CI evidence для Linux/Windows/macOS. `scripts/release/build-release.sh` получает пути через `NEVERLAUNCHER_GUARD_CI_MATRIX_FILE`, `NEVERLAUNCHER_GUARD_CI_TARGETS_FILE` и `NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR`; CLI повторно проверяет exact platform artifact hashes при `release build` и `release publish-check`.
 

@@ -84,7 +84,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("ServerBridge 2 certification: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility + Device Trust + cross-platform Guard CI + ServerBridge 2 certification")
+			if windowsSigningRequired0152(manifestVersion) {
+				if err := verifyWindowsSigningEvidence0152(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Windows x64/ARM64 Authenticode signing: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + compatibility certifications + ServerBridge 2 + signed Windows x64/ARM64 delivery")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -163,6 +168,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/neverguard-release-0140.py",
 		"scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
 		"scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py",
+		"scripts/smoke/offline/signed-windows-x64-arm64-0152.py",
 		"scripts/release/merge-guard-release-policy.py",
 		"e2e/scripts/run-guard-migration-e2e.sh",
 	}
@@ -207,6 +213,7 @@ func releaseDoctor() error {
 		"neverguard-release":    {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
 		"serverbridge-identity": {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
 		"delivery-manifest":     {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
+		"windows-dual-signing":  {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -395,6 +402,11 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("delivery manifest self-check: %w", err)
 		}
 	}
+	if windowsSigningRequired0152(ver) {
+		if err := verifyWindowsSigningEvidence0152(out, ver, false); err != nil {
+			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
+		}
+	}
 
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
@@ -402,6 +414,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if deliveryManifestRequired0151(ver) {
 		requiredFiles = append(requiredFiles, deliveryManifestFile0151)
 		checks = append(checks, "delivery-manifest-platform-architecture")
+	}
+	if windowsSigningRequired0152(ver) {
+		requiredFiles = append(requiredFiles, windowsSigningEvidenceFile0152)
+		checks = append(checks, "windows-x64-arm64-authenticode-evidence")
 	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
@@ -542,6 +558,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 			return fmt.Errorf("delivery manifest: %w", err)
 		}
 	}
+	if windowsSigningRequired0152(manifest.Version) {
+		if err := verifyWindowsSigningEvidence0152(dir, manifest.Version, false); err != nil {
+			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
+		}
+	}
 	for _, name := range manifest.RequiredFiles {
 		if st, err := os.Stat(filepath.Join(dir, filepath.Clean(name))); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
@@ -605,7 +626,6 @@ func releaseArtifacts(ver string) []string {
 	artifacts := []string{
 		"neverlauncher-source-" + ver + ".zip",
 		"neverlauncher-cli-linux-amd64",
-		"neverlauncher-cli-windows-amd64.exe",
 		"neverlauncher-api-linux-amd64",
 		"neverlauncher-admin-web-" + ver + ".zip",
 		"neverlauncher-desktop-web-" + ver + ".zip",
@@ -630,8 +650,27 @@ func releaseArtifacts(ver string) []string {
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
 	}
+	if !windowsSigningRequired0152(ver) {
+		artifacts = append(artifacts, "neverlauncher-cli-windows-amd64.exe")
+	}
 	if deliveryManifestRequired0151(ver) {
 		artifacts = append(artifacts, deliveryManifestFile0151)
+	}
+	if windowsSigningRequired0152(ver) {
+		artifacts = append(artifacts,
+			"neverlauncher-cli-windows-x64.exe",
+			"neverlauncher-cli-windows-arm64.exe",
+			"neverlauncher-desktop-windows-x64.exe",
+			"neverlauncher-desktop-windows-arm64.exe",
+			"neverguard-windows-x64.exe",
+			"neverguard-windows-arm64.exe",
+			"neverlauncher-desktop-"+ver+"-windows-x64.zip",
+			"neverlauncher-desktop-"+ver+"-windows-arm64.zip",
+			"WINDOWS_PACKAGE_MANIFEST_X64.json",
+			"WINDOWS_PACKAGE_MANIFEST_ARM64.json",
+			windowsDeliveryAllowlistFile0152,
+			windowsSigningEvidenceFile0152,
+		)
 	}
 	if guardCICertificationRequired(ver) {
 		for _, osName := range []string{"linux", "windows", "macos"} {
@@ -687,6 +726,9 @@ func releaseDescription(ver string) string {
 	}
 	if deliveryManifestRequired0151(ver) {
 		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"
+	}
+	if windowsSigningRequired0152(ver) {
+		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/NeverGuard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
