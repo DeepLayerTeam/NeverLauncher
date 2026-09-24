@@ -17,6 +17,12 @@ for required in \
   "${BUNDLE_DIR}/LINUX_PACKAGE_MANIFEST_ARM64.json" \
   "${BUNDLE_DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz" \
   "${BUNDLE_DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz" \
+  "${BUNDLE_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" \
+  "${BUNDLE_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" \
+  "${BUNDLE_DIR}/MACOS_PACKAGE_MANIFEST_X64.json" \
+  "${BUNDLE_DIR}/MACOS_PACKAGE_MANIFEST_ARM64.json" \
+  "${BUNDLE_DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip" \
+  "${BUNDLE_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip" \
   "${BUNDLE_DIR}/SERVERBRIDGE2_CERTIFICATION.json" \
   "${BUNDLE_DIR}/BRIDGE_RELEASE_ALLOWLIST.json" \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \

@@ -1130,6 +1130,51 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.3 Linux delivery regression tests are missing")
 
 
+# 0.15.4 macOS production delivery is a thin dual-architecture Developer ID +
+# Apple notarization boundary. Ad-hoc signing is CI-only; publish must prove
+# accepted notarization, stapling and Gatekeeper validation for x64 and ARM64.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 4):
+    macos_delivery_0154 = read("cli/cmd/neverlauncher/macos_delivery.go")
+    macos_builder_0154 = read("scripts/release/build-macos-production.sh")
+    macos_packager_0154 = read("scripts/release/macos-package.py")
+    macos_release_0154 = read("scripts/release/build-release.sh")
+    macos_gate_0154 = read("scripts/smoke/offline/notarized-macos-x64-arm64-0154.py")
+    macos_workflow_0154 = read(".github/workflows/macos-production-delivery.yml")
+    release_bundle_0154 = read("scripts/smoke/release-required/release-bundle.sh")
+    for required in [
+        "MACOS_NOTARIZATION_EVIDENCE.json", "GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json",
+        "CPU_TYPE_X86_64", "CPU_TYPE_ARM64", "LC_CODE_SIGNATURE",
+        "verifyMacOSPackageArchive0154", "verifyMacOSNotarizationEvidence0154",
+        "Developer ID + Apple notarization", "stapler", "Gatekeeper",
+    ]:
+        if required not in macos_delivery_0154:
+            fail(f"0.15.4 macOS delivery verifier incomplete: {required}")
+    for required in [
+        "x86_64-apple-darwin", "aarch64-apple-darwin", "Developer ID Application",
+        "--options runtime", "notarytool submit", "stapler staple", "stapler validate", "spctl --assess",
+    ]:
+        if required not in macos_builder_0154:
+            fail(f"0.15.4 macOS production builder incomplete: {required}")
+    for required in ["MACOS_PACKAGE_MANIFEST_", "MACOS_NOTARIZATION_EVIDENCE.json", "GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json", "Accepted"]:
+        if required not in macos_packager_0154:
+            fail(f"0.15.4 macOS packager/evidence generator incomplete: {required}")
+    for required in ["NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR", "MACOS_DUAL_ARCH_REQUIRED", "MACOS_NOTARIZATION_EVIDENCE.json"]:
+        if required not in macos_release_0154:
+            fail(f"0.15.4 release staging incomplete: {required}")
+    for required in ["MACOS_DEVELOPER_ID_P12_BASE64", "APPLE_NOTARY_PRIVATE_KEY_BASE64", "notarytool store-credentials", "verify-macos --bundle", "--production"]:
+        if required not in macos_workflow_0154:
+            fail(f"0.15.4 production notarization workflow incomplete: {required}")
+    for required in ["MACOS_NOTARIZATION_EVIDENCE.json", "MACOS_PACKAGE_MANIFEST_X64.json", "MACOS_PACKAGE_MANIFEST_ARM64.json", "macos-x64.zip", "macos-arm64.zip"]:
+        if required not in release_bundle_0154:
+            fail(f"0.15.4 release bundle gate incomplete: {required}")
+    if "notarized-macos-x64-arm64-0154.py" not in preflight or "notarized-macos-x64-arm64-0154.py" not in ci:
+        fail("0.15.4 macOS notarization gate is not wired into preflight/CI")
+    if "notarized macOS x64 + ARM64 gate: OK" not in macos_gate_0154:
+        fail("0.15.4 mandatory macOS notarization gate is incomplete")
+    if not (ROOT / "cli/cmd/neverlauncher/macos_delivery_test.go").is_file():
+        fail("0.15.4 macOS delivery regression tests are missing")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

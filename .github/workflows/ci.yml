@@ -64,6 +64,7 @@ jobs:
           python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
           python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
           python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
+          python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -407,6 +408,62 @@ jobs:
           path: guard-ci-result/macos/guard-ci-result.json
           if-no-files-found: error
 
+  macos-production:
+    name: macOS x64 + ARM64 delivery boundary
+    needs: [go-contracts, web]
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Build ad-hoc thin x64 + ARM64 delivery candidates
+        shell: bash
+        run: bash scripts/release/build-macos-production.sh --allow-ad-hoc
+      - name: Verify macOS candidate metadata and architectures
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
+          /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
+      - name: Upload macOS x64 + ARM64 delivery candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-macos-production-${{ github.sha }}
+          path: |
+            dist/release-*/neverlauncher-cli-macos-x64
+            dist/release-*/neverlauncher-cli-macos-arm64
+            dist/release-*/neverlauncher-desktop-macos-x64
+            dist/release-*/neverlauncher-desktop-macos-arm64
+            dist/release-*/neverguard-macos-x64
+            dist/release-*/neverguard-macos-arm64
+            dist/release-*/neverruntime-macos-x64
+            dist/release-*/neverruntime-macos-arm64
+            dist/release-*/neverlauncher-desktop-*-macos-x64.zip
+            dist/release-*/neverlauncher-desktop-*-macos-arm64.zip
+            dist/release-*/MACOS_PACKAGE_MANIFEST_X64.json
+            dist/release-*/MACOS_PACKAGE_MANIFEST_ARM64.json
+            dist/release-*/MACOS_NOTARIZATION_EVIDENCE.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json
+          if-no-files-found: error
+          retention-days: 14
+
   guard-certification:
     name: Cross-platform Guard CI matrix certification
     needs: [rust-desktop, neverguard-windows, neverguard-macos]
@@ -489,7 +546,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -505,6 +562,11 @@ jobs:
           pattern: neverlauncher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
+      - name: Download macOS x64 + ARM64 delivery candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-macos-production-${{ github.sha }}
+          path: macos-production-artifacts
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -558,6 +620,7 @@ jobs:
           NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
           NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
+          NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
@@ -603,6 +666,20 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
           test -s "${DIR}/neverguard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/neverlauncher-cli-macos-x64"
+          test -s "${DIR}/neverlauncher-cli-macos-arm64"
+          test -s "${DIR}/neverlauncher-desktop-macos-x64"
+          test -s "${DIR}/neverlauncher-desktop-macos-arm64"
+          test -s "${DIR}/neverguard-macos-x64"
+          test -s "${DIR}/neverguard-macos-arm64"
+          test -s "${DIR}/neverruntime-macos-x64"
+          test -s "${DIR}/neverruntime-macos-arm64"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/MACOS_NOTARIZATION_EVIDENCE.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json"
           test -s "${DIR}/GUARD_CI_TARGETS.json"
           test -s "${DIR}/GUARD_CI_MATRIX.json"
           test -s "${DIR}/GUARD_CI_CERTIFICATION.json"

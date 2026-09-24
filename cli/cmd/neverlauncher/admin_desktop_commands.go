@@ -200,6 +200,16 @@ func desktopPackagePlatforms(ver string) []DesktopPackagePlatform {
 		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "exe", Artifact: "neverlauncher-desktop-windows-arm64.exe", Status: "supported"},
 		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-arm64.zip", Status: "supported"},
 	)
+	if macOSProductionRequired0154(ver) {
+		items = append(items,
+			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-macos-x64", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-x64.zip", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "binary", Artifact: "neverlauncher-desktop-macos-arm64", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-arm64.zip", Status: "supported"},
+		)
+	} else {
+		items = append(items, DesktopPackagePlatform{OS: "macos", Arch: "universal", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-universal.zip", Status: "supported-if-built"})
+	}
 	return items
 }
 

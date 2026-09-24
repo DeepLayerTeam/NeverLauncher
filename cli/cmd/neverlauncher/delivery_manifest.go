@@ -253,6 +253,11 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			// Publishable Linux delivery uses canonical linux-x64/linux-arm64 names.
 			continue
 		}
+		if macOSProductionRequired0154(ver) && strings.Contains(strings.ToLower(name), "macos-universal") {
+			// 0.15.4 keeps the historical universal Guard CI package only as certification evidence.
+			// Publishable macOS delivery uses separately notarized macos-x64/macos-arm64 packages.
+			continue
+		}
 		switch name {
 		case deliveryManifestFile0151, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
 			continue
@@ -438,7 +443,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, resolve")
+		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, resolve")
 	}
 	switch args[0] {
 	case "target":
@@ -517,6 +522,19 @@ func handleDelivery(args []string) error {
 			return err
 		}
 		return verifyLinuxProductionEvidence0153(dir, ver, true)
+	case "verify-macos":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery verify-macos requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
+			return err
+		}
+		return verifyMacOSNotarizationEvidence0154(dir, ver, flagBool(args, "--production", false))
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {

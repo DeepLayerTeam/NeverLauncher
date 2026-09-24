@@ -21,6 +21,7 @@ GUARD_CI_TARGETS="${NEVERLAUNCHER_GUARD_CI_TARGETS_FILE:-${ROOT_DIR}/guard-ci/ta
 GUARD_PLATFORM_ARTIFACTS_DIR="${NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
 WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
 LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
+MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
@@ -78,9 +79,25 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,3) else '0')
 PYVER
 )"
+MACOS_DUAL_ARCH_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,4) else '0')
+PYVER
+)"
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
+    exit 1
+  }
+fi
+if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  [[ -n "${MACOS_PRODUCTION_ARTIFACTS_DIR}" && -d "${MACOS_PRODUCTION_ARTIFACTS_DIR}" ]] || {
+    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
     exit 1
   }
 fi
@@ -204,6 +221,30 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "${OUT_DIR}/neverruntime-linux-${arch}"
     done
   fi
+  if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+    log "Импорт macOS x64/ARM64 delivery artifacts из ${MACOS_PRODUCTION_ARTIFACTS_DIR}"
+    for arch in x64 arm64; do
+      for artifact in \
+        "neverlauncher-cli-macos-${arch}" \
+        "neverlauncher-desktop-macos-${arch}" \
+        "neverguard-macos-${arch}" \
+        "neverruntime-macos-${arch}" \
+        "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
+        "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
+        require_file "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
+        cp "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+      done
+      chmod 0755 \
+        "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
+        "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
+        "${OUT_DIR}/neverguard-macos-${arch}" \
+        "${OUT_DIR}/neverruntime-macos-${arch}"
+    done
+    for artifact in MACOS_NOTARIZATION_EVIDENCE.json GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json; do
+      require_file "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
+      cp "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+    done
+  fi
 else
   log "Сборка Linux Desktop + NeverGuard production package"
   bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
@@ -264,6 +305,21 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     done
   done
 fi
+if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  for arch in x64 arm64; do
+    for required_macos_delivery in \
+      "neverlauncher-cli-macos-${arch}" \
+      "neverlauncher-desktop-macos-${arch}" \
+      "neverguard-macos-${arch}" \
+      "neverruntime-macos-${arch}" \
+      "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
+      "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
+      require_file "${OUT_DIR}/${required_macos_delivery}"
+    done
+  done
+  require_file "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json"
+  require_file "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json"
+fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-x64"
@@ -312,6 +368,10 @@ fi
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+fi
+if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
 fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"

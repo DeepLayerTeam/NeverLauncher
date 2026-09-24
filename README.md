@@ -4,7 +4,15 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.3**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, а Linux теперь выпускается как два нативно собранных production package для x64 и ARM64.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.4**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Notarized macOS x64 + ARM64 — 0.15.4
+
+`0.15.4` переводит macOS delivery с legacy `macos-universal` Guard certification на два канонических thin Mach-O target: `macos-x64` и `macos-arm64`. `scripts/release/build-macos-production.sh` собирает CLI, Desktop, NeverGuard и NeverRuntime отдельно для `x86_64-apple-darwin` и `aarch64-apple-darwin`, проверяет фактический Mach-O `cputype`, подписывает вложенные binaries и `.app` через Developer ID Application с Hardened Runtime и timestamp.
+
+Production pipeline отправляет каждую architecture-specific `.app` в Apple notary service через `xcrun notarytool submit --wait`, требует `Accepted`, затем выполняет `stapler staple`, `stapler validate`, `spctl --assess` и `codesign --verify --deep --strict`. После stapling создаются финальные `neverlauncher-desktop-0.15.4-macos-{x64,arm64}.zip`; `MACOS_NOTARIZATION_EVIDENCE.json`, per-arch package manifests и `GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json` связывают exact bytes с `DELIVERY_MANIFEST.json`.
+
+`nl delivery verify-macos --production` и `nl release publish-check` fail-closed требуют обе архитектуры, `LC_CODE_SIGNATURE`, Developer ID Team ID, Hardened Runtime, Accepted notarization, stapled ticket и Gatekeeper evidence. Обычный CI может создавать только `adhoc-development` candidate для regression tests; он не проходит production publish-check. Legacy `macos-universal` остаётся только Guard CI certification input и исключается из publishable delivery для `0.15.4+`.
 
 ## Linux x64 + ARM64 production packages — 0.15.3
 

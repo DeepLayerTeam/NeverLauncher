@@ -1,3 +1,15 @@
+## 0.15.4 — Notarized macOS x64 + ARM64
+
+`0.15.4` переводит macOS delivery в dual-architecture Developer ID + Apple notarization production-контур. x64 и ARM64 собираются как отдельные thin Mach-O artifacts и не могут быть опубликованы без accepted notarization/stapled Gatekeeper-verifiable app. DB migration не требуется.
+
+- Добавлен `scripts/release/build-macos-production.sh`: отдельные `x86_64-apple-darwin` и `aarch64-apple-darwin` CLI/Desktop/NeverGuard/NeverRuntime builds, Mach-O architecture checks, Hardened Runtime codesign и production Developer ID signing.
+- Production signing использует `Developer ID Application` и secure timestamp; каждая architecture-specific `.app` проходит `xcrun notarytool submit --wait`, требует `Accepted`, затем `stapler staple`, `stapler validate`, `spctl --assess` и `codesign --verify --deep --strict`.
+- Добавлены `MACOS_PACKAGE_MANIFEST_X64.json`, `MACOS_PACKAGE_MANIFEST_ARM64.json`, `MACOS_NOTARIZATION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json` с реальными SHA-256/size, CPU type, Team ID и notarization evidence.
+- `nl delivery verify-macos --production` повторно проверяет thin Mach-O `CPU_TYPE_X86_64`/`CPU_TYPE_ARM64`, `LC_CODE_SIGNATURE`, package ZIP payload, embedded manifest, evidence и exact binding к `DELIVERY_MANIFEST.json`; на macOS дополнительно выполняются native codesign/stapler/Gatekeeper checks.
+- `nl release build/verify` принимает ad-hoc candidate только для CI/regression, а `nl release publish-check` для `0.15.4+` fail-closed требует `developer-id-notarized` evidence для обеих архитектур.
+- Добавлен отдельный `.github/workflows/macos-production-delivery.yml` с ephemeral keychain, внешним Developer ID P12 и App Store Connect API-key profile; signing credentials/private keys не включаются в release artifacts.
+- Legacy `macos-universal` сохранён только как Guard CI certification input и исключён из publishable `DELIVERY_MANIFEST.json` для `0.15.4+`.
+
 ## 0.15.3 — Linux x64 + ARM64 production packages
 
 `0.15.3` переводит Linux delivery в нативный dual-architecture production-контур. x64 и ARM64 собираются на соответствующих Linux runners, получают отдельные CLI/API/Desktop/NeverGuard/NeverRuntime binaries и deterministic tar.gz package. DB migration не требуется.
