@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[52,)"
+license="MIT"
+
+[[mods]]
+modId="neverlauncher_serverbridge"
+version="${version}"
+displayName="NeverLauncher Forge Server Bridge"
+authors="NeverLauncher"
+displayTest="IGNORE_SERVER_VERSION"
+description="Server-only NeverLauncher ServerBridge for Forge 1.21.1."
+displayURL="https://launcher.nevermine.ru/"
+
+[[dependencies.neverlauncher_serverbridge]]
+modId="forge"
+mandatory=true
+versionRange="[52.1.0,53)"
+ordering="NONE"
+side="SERVER"
+
+[[dependencies.neverlauncher_serverbridge]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="SERVER"

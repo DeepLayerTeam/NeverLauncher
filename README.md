@@ -4,9 +4,13 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Fabric Server Bridge / 0.14.6**: к ServerBridge Protocol v2 добавлен server-only Fabric 1.21.1 мод с Ed25519 node identity, PostgreSQL source of truth, release-hash integrity и one-time join tickets; клиентский Fabric-мод для допуска игрока не требуется.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Forge + NeoForge Server Bridge / 0.14.7**: ServerBridge Protocol v2 теперь имеет отдельные server-only Forge и NeoForge 1.21.1 модули с Ed25519 node identity, PostgreSQL source of truth, release-hash integrity и one-time join tickets; клиентский bridge-мод для допуска игрока не требуется.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+
+## Forge + NeoForge Server Bridge — 0.14.7
+
+Forge и NeoForge 1.21.1 работают как независимые `kind=forge` и `kind=neoforge` ServerBridge nodes. Оба мода используют штатный pre-world `PlayerNegotiationEvent` как async login gate, общий bounded network runtime и локальную Ed25519 identity. Release `0.14.7+` требует отдельные `forgeSha256` и `neoforgeSha256`; artifacts и identities платформ не взаимозаменяемы.
 
 ## Fabric Server Bridge — 0.14.6
 

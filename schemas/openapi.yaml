@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -8064,7 +8064,9 @@
               "paper",
               "purpur",
               "folia",
-              "fabric"
+              "fabric",
+              "forge",
+              "neoforge"
             ]
           },
           "projectId": {
@@ -8472,7 +8474,9 @@
               "paper",
               "purpur",
               "folia",
-              "fabric"
+              "fabric",
+              "forge",
+              "neoforge"
             ]
           },
           "pluginVersion": {

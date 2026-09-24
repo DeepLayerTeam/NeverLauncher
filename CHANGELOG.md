@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.7 — Forge + NeoForge Server Bridge
+
+`0.14.7` добавляет отдельные server-only ServerBridge-моды для Forge и NeoForge 1.21.1. Оба используют общий `modloader-family-common`, Ed25519 node identity, signed Protocol v2, PostgreSQL source of truth, release-hash integrity и one-time join tickets. Login блокируется до backend decision штатным `PlayerNegotiationEvent`, без post-login kick и без обязательного клиентского мода.
+
+- Добавлены `neverlauncher-forge-bridge` и `neverlauncher-neoforge-bridge` с отдельными Gradle/platform metadata и отдельными integrity namespaces.
+- Общий `modloader-family-common` выполняет self-measurement SHA-256, heartbeat, локальный Ed25519 key lifecycle и bounded async join validation.
+- Forge/NeoForge login gate использует `PlayerNegotiationEvent.enqueueWork(Future)` и не блокирует server thread сетевым I/O.
+- Migration `0027_forge_neoforge_server_bridge_0147` расширяет canonical `server_bridge_nodes_v2.kind` значениями `forge` и `neoforge`, сохраняя существующие identities/tickets.
+- Production policy `0.14.7+` требует независимые `forgeSha256` и `neoforgeSha256`; hash одной платформы не авторизует другую.
+- Full Minecraft E2E запускает Forge и NeoForge 1.21.1 и проверяет heartbeat, allow, replay deny, revoke и deny.
+- Добавлены exact migration rehearsal `0.14.6 → 0.14.7`, backend regressions и обязательный offline release gate.
+
+Migration: остановите 0.14.6 API instances, примените и проверьте `0027_forge_neoforge_server_bridge_0147`, обновите `BRIDGE_RELEASE_ALLOWLIST.json`, зарегистрируйте node как `kind=forge` или `kind=neoforge`, установите соответствующий JAR в `/mods` и enroll public Ed25519 identity. Private key остаётся только на сервере.
 ## 0.14.6 — Fabric Server Bridge
 
 `0.14.6` добавляет server-only ServerBridge для Fabric 1.21.1 без обязательного клиентского мода. Мод использует Fabric login synchronizer как login gate, выполняет backend validation в bounded worker pool и сохраняет Ed25519 node identity, Protocol v2, PostgreSQL source of truth, release-hash integrity и one-time join tickets.

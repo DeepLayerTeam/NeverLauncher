@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0026_fabric_server_bridge_0146" {
+	if st.Current != "0027_forge_neoforge_server_bridge_0147" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0026_fabric_server_bridge_0146" {
+		if k != "0027_forge_neoforge_server_bridge_0147" {
 			pending[k] = v
 		}
 	}
@@ -239,6 +239,24 @@ func TestFabricServerBridgeMigration0146(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.6 Fabric Server Bridge migration missing %q", required)
+		}
+	}
+}
+
+func TestForgeNeoForgeServerBridgeMigration0147(t *testing.T) {
+	b, err := os.ReadFile("sql/0027_forge_neoforge_server_bridge_0147.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"server_bridge_nodes_v2_kind_check",
+		"'forge'",
+		"'neoforge'",
+		"'fabric'",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.7 Forge/NeoForge Server Bridge migration missing %q", required)
 		}
 	}
 }

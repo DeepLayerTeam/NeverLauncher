@@ -13,7 +13,7 @@ func TestServerBridgeBukkitFamilyKinds0144(t *testing.T) {
 			t.Fatalf("Bukkit-family kind %q rejected", kind)
 		}
 	}
-	for _, kind := range []string{"", "forge", "neoforge", "paper-folia", "unknown"} {
+	for _, kind := range []string{"", "paper-folia", "unknown"} {
 		if validBridgeServerKindV2(kind) {
 			t.Fatalf("unsupported ServerBridge kind %q accepted", kind)
 		}

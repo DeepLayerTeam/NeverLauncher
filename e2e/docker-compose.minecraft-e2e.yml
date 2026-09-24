@@ -366,6 +366,82 @@ services:
       - ./runtime/node-identities/fabric:/neverlauncher-identity
       - fabric-data:/data
 
+  forge:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: FORGE
+      VERSION: "1.21.1"
+      FORGE_VERSION: "52.1.16"
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: forge-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+    ports:
+      - "25578:25565"
+    volumes:
+      - ./runtime/plugins/forge:/mods:ro
+      - ./runtime/node-identities/forge:/neverlauncher-identity
+      - forge-data:/data
+
+  neoforge:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: NEOFORGE
+      VERSION: "1.21.1"
+      NEOFORGE_VERSION: "21.1.251"
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: neoforge-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+    ports:
+      - "25579:25565"
+    volumes:
+      - ./runtime/plugins/neoforge:/mods:ro
+      - ./runtime/node-identities/neoforge:/neverlauncher-identity
+      - neoforge-data:/data
+
 volumes:
   e2e-postgres: {}
   e2e-storage: {}
@@ -378,3 +454,5 @@ volumes:
   purpur-data: {}
   folia-data: {}
   fabric-data: {}
+  forge-data: {}
+  neoforge-data: {}

@@ -57,6 +57,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-bukkit-family-0144.py
           python3 scripts/smoke/offline/serverbridge-proxy-family-0145.py
           python3 scripts/smoke/offline/serverbridge-fabric-0146.py
+          python3 scripts/smoke/offline/serverbridge-forge-neoforge-0147.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -542,6 +543,8 @@ jobs:
         run: bash e2e/scripts/run-proxy-family-migration-e2e.sh
       - name: ServerBridge 0.14.5 to 0.14.6 Fabric migration E2E
         run: bash e2e/scripts/run-fabric-server-bridge-migration-e2e.sh
+      - name: ServerBridge 0.14.6 to 0.14.7 Forge + NeoForge migration E2E
+        run: bash e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -552,8 +555,8 @@ jobs:
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence
         run: |
-          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy"' e2e/runtime/result.json >/dev/null
-          for service in velocity bungeecord waterfall spigot paper purpur folia; do
+          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy" and .health.fabric == "healthy" and .health.forge == "healthy" and .health.neoforge == "healthy"' e2e/runtime/result.json >/dev/null
+          for service in velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
       - name: Upload E2E evidence
@@ -578,6 +581,14 @@ jobs:
             e2e/runtime/probe-*.txt
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload Forge + NeoForge migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-forge-neoforge-migration-e2e-evidence
+          path: e2e/forge-neoforge-migration-result/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload Device Trust protocol evidence
         if: always()
         uses: actions/upload-artifact@v4

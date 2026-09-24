@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.6 → 0.14.7
+
+Остановите 0.14.6 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0027_forge_neoforge_server_bridge_0147` до запуска 0.14.7 Backend. Migration расширяет только canonical ServerBridge kind constraint и сохраняет существующие identities/tickets.
+
+Соберите `scripts/build/bridge-plugins.sh`, установите `neverlauncher-forge-bridge-0.14.7.jar` или `neverlauncher-neoforge-bridge-0.14.7.jar` строго на соответствующую платформу, добавьте `forgeSha256`/`neoforgeSha256` из `BRIDGE_RELEASE_ALLOWLIST.json`, зарегистрируйте canonical kind и enroll public Ed25519 key. Затем проверьте heartbeat и `allow → replay deny → revoke → deny`.
+
 ### Upgrade 0.14.5 → 0.14.6
 
 Остановите 0.14.5 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0026_fabric_server_bridge_0146` до запуска 0.14.6 Backend. Migration только расширяет ServerBridge kind constraint и сохраняет существующие node identities/tickets.
@@ -118,4 +124,4 @@ bash scripts/release/build-release.sh
 NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ```
 
-`.github/workflows/ci.yml` — обязательный CI: repository policy, Go race/vet/build, Admin/Desktop, Rust fmt/clippy/test/build, Tauri, реальные ServerBridge, production-контейнеры и PostgreSQL/Redis/Velocity/Spigot/Paper/Purpur/Folia E2E должны пройти успешно.
+`.github/workflows/ci.yml` — обязательный CI: repository policy, Go race/vet/build, Admin/Desktop, Rust fmt/clippy/test/build, Tauri, реальные ServerBridge, production-контейнеры и PostgreSQL/Redis/Velocity/Spigot/Paper/Purpur/Folia/Fabric/Forge/NeoForge E2E должны пройти успешно.

@@ -1,9 +1,11 @@
-pluginManagement { repositories { maven("https://maven.fabricmc.net/"); mavenCentral(); gradlePluginPortal() } }
+pluginManagement { repositories { maven("https://maven.fabricmc.net/"); maven("https://maven.minecraftforge.net/"); maven("https://maven.neoforged.net/releases/"); mavenCentral(); gradlePluginPortal() } }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
         maven("https://maven.fabricmc.net/")
+        maven("https://maven.minecraftforge.net/")
+        maven("https://maven.neoforged.net/releases/")
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     }
@@ -23,3 +25,6 @@ include("plugins:bukkit-bridge")
 include("plugins:spigot-bridge")
 include("plugins:folia-bridge")
 include("plugins:fabric-bridge")
+include("plugins:modloader-family-common")
+include("plugins:forge-bridge")
+include("plugins:neoforge-bridge")

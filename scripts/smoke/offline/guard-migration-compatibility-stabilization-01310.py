@@ -89,11 +89,11 @@ if "neverguard-macos:\n    name: NeverGuard macOS production implementation\n   
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
 require(migration_tests, [
-    'st.Current != "0026_fabric_server_bridge_0146"',
+    'st.Current != "0027_forge_neoforge_server_bridge_0147"',
     "TestGuardMigrationCompatibilityStabilization01310",
 ], "Backend migration catalog tests")
 cli_migration_tests = read("cli/internal/dbmigrate/migrate_test.go")
-require(cli_migration_tests, ["0020_guard_migration_compatibility_stabilization_01310", "0021_serverbridge_protocol_v2_0141", "0022_serverbridge_crypto_node_identities_0142", "0023_one_time_join_tickets_0143", "0024_bukkit_family_0144", "0025_proxy_family_0145", "0026_fabric_server_bridge_0146"], "CLI migration catalog tests")
+require(cli_migration_tests, ["0020_guard_migration_compatibility_stabilization_01310", "0021_serverbridge_protocol_v2_0141", "0022_serverbridge_crypto_node_identities_0142", "0023_one_time_join_tickets_0143", "0024_bukkit_family_0144", "0025_proxy_family_0145", "0026_fabric_server_bridge_0146", "0027_forge_neoforge_server_bridge_0147"], "CLI migration catalog tests")
 
 # Version manager must have propagated 0.13.10 to Guard policy metadata.
 targets = json.loads(read("guard-ci/targets.json"))

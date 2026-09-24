@@ -103,7 +103,7 @@ config = read("services/api/internal/config/config.go")
 require(config, ["bridgeReleaseRequiresProxyFamily0145", "BungeeCordSHA256", "WaterfallSHA256", "для 0.14.5+"], "production configuration validation")
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric"]'], "OpenAPI proxy-family enum")
+require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","forge","neoforge"]'], "OpenAPI proxy-family enum")
 
 tests = read("services/api/internal/httpapi/serverbridge_proxy_family_0145_test.go")
 require(tests, [

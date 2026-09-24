@@ -64,6 +64,7 @@ run_step serverbridge-one-time-join-tickets-0143 python3 "${ROOT_DIR}/scripts/sm
 run_step serverbridge-bukkit-family-0144 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-bukkit-family-0144.py"
 run_step serverbridge-proxy-family-0145 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-proxy-family-0145.py"
 run_step serverbridge-fabric-0146 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-fabric-0146.py"
+run_step serverbridge-forge-neoforge-0147 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-forge-neoforge-0147.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
@@ -118,6 +119,7 @@ if is_true "${RUN_DEVICE_TRUST_E2E}"; then
   run_step bukkit-family-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-bukkit-family-migration-e2e.sh"
   run_step proxy-family-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-proxy-family-migration-e2e.sh"
   run_step fabric-server-bridge-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-fabric-server-bridge-migration-e2e.sh"
+  run_step forge-neoforge-server-bridge-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh"
 fi
 
 if [[ -d "${RELEASE_DIR}" ]]; then

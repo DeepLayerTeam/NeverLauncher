@@ -98,7 +98,7 @@ config = read("services/api/internal/config/config.go")
 require(config, ["bridgeReleaseRequiresBukkitFamily0144", "BukkitSHA256", "SpigotSHA256", "FoliaSHA256", "для 0.14.4+"], "production configuration validation")
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric"]'], "OpenAPI Bukkit-family enum")
+require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","forge","neoforge"]'], "OpenAPI Bukkit-family enum")
 
 tests = read("services/api/internal/httpapi/serverbridge_bukkit_family_0144_test.go")
 require(tests, [
