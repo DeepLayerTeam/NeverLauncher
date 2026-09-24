@@ -18,6 +18,12 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Upgrade 0.13.9 → 0.13.10
+
+Остановите 0.13.9 API instances, проверьте backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"` до запуска 0.13.10 Backend. Migration `0020_guard_migration_compatibility_stabilization_01310` намеренно fail-closed отклоняет partial/ambiguous persisted Guard snapshots; не удаляйте constraints и не подменяйте checksum. Исправьте конкретные legacy rows на копии БД, повторите rehearsal `e2e/scripts/run-guard-migration-e2e.sh`, затем повторите production upgrade.
+
+После upgrade `GET /ready` должен подтверждать current migration `0020_guard_migration_compatibility_stabilization_01310`. Для Guard release certification per-platform result обязан быть связан с тем же repository/commit/run, что aggregate matrix.
+
 ### Device Trust Release 0.13.0
 
 `0.13.0` не добавляет новую DB migration: перед запуском API `nl db migrate verify` должен подтверждать `0018_device_trust_stabilization_01210`. Для официальной публикации release bundle задайте `NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE`, `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE` и `NEVERLAUNCHER_SOURCE_COMMIT`; `nl release publish-check` fail-closed проверит обе certification для exact commit. Bundle без public matrices является release candidate, а не publishable Device Trust Release.

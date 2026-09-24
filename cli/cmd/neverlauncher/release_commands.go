@@ -154,6 +154,8 @@ func releaseDoctor() error {
 		"guard-ci/targets.json",
 		"scripts/guard_ci/matrix.py",
 		"scripts/guard_ci/stage_release.py",
+		"scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py",
+		"e2e/scripts/run-guard-migration-e2e.sh",
 	}
 	failed := false
 	for _, path := range required {
@@ -190,6 +192,9 @@ func releaseDoctor() error {
 		"version-alignment":     {"bash", "scripts/smoke/offline/version-alignment.sh"},
 		"openapi-validator":     {"python3", "scripts/contracts/validate-openapi.py"},
 		"compatibility-targets": {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
+		"device-trust-targets":  {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
+		"guard-ci-targets":      {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
+		"guard-stabilization":   {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()

@@ -186,12 +186,12 @@ def verify_package_metadata(target: dict[str, Any], artifacts: dict[str, dict[st
     return {"packagePlatform": package_platform, "guardProtocolVersion": 4}
 
 
-def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str, run_id: str) -> list[str]:
+def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str, run_id: str, repository: str) -> list[str]:
     errors: list[str] = []
     expected = {
         "schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targetId": target["id"],
         "runner": target["runner"], "os": target["os"], "arch": target["arch"],
-        "commit": commit, "runId": run_id,
+        "commit": commit, "runId": run_id, "repository": repository,
     }
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
@@ -278,7 +278,7 @@ def command_result(args: argparse.Namespace) -> int:
     result = {
         "schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targetId": target["id"],
         "runner": target["runner"], "os": target["os"], "arch": target["arch"],
-        "runtimeArch": platform.machine().lower() or "unknown", "commit": args.commit, "runId": args.run_id,
+        "runtimeArch": platform.machine().lower() or "unknown", "repository": args.repository, "commit": args.commit, "runId": args.run_id,
         "status": "passed", "exitCode": 0, "checks": checks, "artifacts": artifacts,
         "claims": {
             "guardProtocolVersion": meta["guardProtocolVersion"], "releaseCertification": PRODUCT_VERSION,
@@ -288,7 +288,7 @@ def command_result(args: argparse.Namespace) -> int:
         },
         "limitations": [GENERIC_LIMITATION],
     }
-    errors = verify_result(target, result, commit=args.commit, run_id=args.run_id)
+    errors = verify_result(target, result, commit=args.commit, run_id=args.run_id, repository=args.repository)
     if errors:
         die("generated Guard CI result failed self-validation: " + "; ".join(errors))
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -350,7 +350,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
             records[target["id"]] = {"targetId": target["id"], "status": "missing", "checks": {}}
             continue
         path, result = found
-        result_errors = verify_result(target, result, commit=args.commit, run_id=args.run_id)
+        result_errors = verify_result(target, result, commit=args.commit, run_id=args.run_id, repository=args.repository)
         record = dict(result)
         record["evidenceSha256"] = sha256_file(path)
         if isinstance(result.get("artifacts"), dict):

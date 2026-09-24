@@ -2,6 +2,12 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## NeverGuard stabilization 0.13.10
+
+`0.13.10` делает persisted Guard snapshot частью database-enforced authorization boundary. Migration `0020_guard_migration_compatibility_stabilization_01310` не преобразует неоднозначные partial snapshots автоматически: такие данные блокируют upgrade до явного operator remediation. Verified Minecraft session обязана иметь trusted-device binding, полный набор Guard/Desktop/attestation/evidence SHA-256, launcher version и timestamp в допустимом ticket freshness window.
+
+macOS включён в тот же Minecraft/ServerBridge Guard enforcement, что Windows/Linux. Cross-platform CI evidence дополнительно связан с repository identity, поэтому PASS result из другого fork не принимается только из-за совпадения commit/run metadata.
+
 ## Сертификация Cross-platform Guard release — 0.13.9
 
 `0.13.9` делает CI evidence частью release trust boundary. Для Linux, Windows и macOS требуется отдельный result, привязанный к одному exact source commit и Actions run ID. Result содержит обязательный check-set и SHA-256/size platform package, Desktop, NeverGuard, package manifest и release allowlist; aggregate отклоняет missing/duplicate target, mismatch commit/run, ослабленный checks или collision имени артефакта.

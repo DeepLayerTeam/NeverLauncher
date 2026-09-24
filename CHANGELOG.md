@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.13.10 — Migration, compatibility, stabilization
+
+`0.13.10` закрывает upgrade/stability-контур NeverGuard после cross-platform certification 0.13.9. Релиз не добавляет новый Guard protocol: Windows/Linux/macOS остаются на authenticated IPC v4 и прежних attestation schemas, но persisted security state и release evidence получают fail-closed инварианты.
+
+### Migration
+
+- Добавлена синхронная API/CLI migration `0020_guard_migration_compatibility_stabilization_01310.sql`. Она не «чинит» неоднозначные security rows молча: upgrade останавливается, если `integrity_verified=true` имеет неполный/stale Guard snapshot либо `integrity_verified=false` содержит частичные Guard hashes/version/timestamp.
+- После проверки migration закрепляет atomic shape/freshness constraints для `minecraft_sessions`: verified snapshot требует trusted device, четыре SHA-256, launcher version и timestamp в том же 90s ticket + 15s skew окне, которое проверяет runtime.
+- `e2e/scripts/run-guard-migration-e2e.sh` материализует exact schema 0.13.9 (`0001..0019`), доказывает fail-closed отказ на partial snapshot, затем выполняет реальный `nl db migrate apply/verify` до sealed `0020` и проверяет DB constraints.
+
+### Compatibility
+
+- Исправлен platform parity bug: macOS trusted device теперь требует persisted Guard integrity не только на `guard-attest`/Minecraft session issuance, но и при последующей Minecraft/ServerBridge live reevaluation, как Windows и Linux.
+- Guard protocol и platform attestation schemas не менялись, поэтому совместимые 0.13.9 runtime semantics сохранены; production allowlist по-прежнему является source of truth для разрешённых release hashes.
+
+### Stabilization
+
+- Per-platform `guard-ci-result.json` теперь криптографически/логически привязан не только к commit/run, но и к repository; aggregator и `nl release publish-check` отклоняют evidence, перенесённый из другого repository/fork.
+- `nl release doctor` проверяет Compatibility, Device Trust и Guard target policies, а также новый 0.13.10 stabilization gate.
+- Исправлен дублированный `steps:` в macOS GitHub Actions job, который делал workflow неоднозначным для YAML parsers.
+- Добавлены regression tests для repository mismatch, macOS gameplay enforcement и migration catalog latest=`0020`.
+
+### Проверено
+
+- `python3 scripts/guard_ci/test_matrix.py`.
+- `go test ./...` для CLI.
+- `python3 scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py`.
+- `python3 scripts/smoke/offline/repository-policy.py`, version alignment и canonical OpenAPI validation.
+- Backend full `go test ./...` в текущей offline-среде требует уже закэшированные `pgx/mysql/x/crypto` modules; CI остаётся обязательным полным gate.
+
 ## 0.13.9 — Cross-platform Guard CI Matrix + release certification
 
 `0.13.9` связывает уже реализованные Windows/Linux/macOS NeverGuard production-контуры с единым machine-verifiable release gate. PASS больше не выводится из наличия platform jobs или вручную записанного поля: каждая ОС публикует отдельный `guard-ci-result.json` для exact commit/run, aggregator повторно проверяет обязательные checks и SHA-256 артефактов, а `nl release publish-check` заново сверяет те же platform artifacts внутри финального release bundle.

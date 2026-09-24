@@ -47,7 +47,7 @@ func guardAttestationRequiredForDevice0135(s Server, userID, deviceID string) (b
 	if err != nil {
 		return false, err
 	}
-	return isWindowsDevicePlatform0134(device.Platform) || isLinuxDevicePlatform0137(device.Platform), nil
+	return isWindowsDevicePlatform0134(device.Platform) || isLinuxDevicePlatform0137(device.Platform) || isMacOSDevicePlatform0138(device.Platform), nil
 }
 
 func minecraftIntegrityDeny0135(required bool, reason string, session model.MinecraftSession) minecraftIntegrityDecision0135 {

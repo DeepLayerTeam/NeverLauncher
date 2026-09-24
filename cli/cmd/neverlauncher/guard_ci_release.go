@@ -56,6 +56,7 @@ type releaseGuardCIResult struct {
 	OS             string                            `json:"os"`
 	Arch           string                            `json:"arch"`
 	RuntimeArch    string                            `json:"runtimeArch"`
+	Repository     string                            `json:"repository"`
 	Commit         string                            `json:"commit"`
 	RunID          string                            `json:"runId"`
 	Status         string                            `json:"status"`
@@ -283,7 +284,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не имеет валидный PASS/exitCode=0", id)
 		}
-		if result.Runner != target.Runner || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" || result.Commit != matrix.Commit || result.RunID != matrix.RunID {
+		if result.Runner != target.Runner || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" || result.Repository != matrix.Repository || result.Commit != matrix.Commit || result.RunID != matrix.RunID {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s identity/commit/runId mismatch", id)
 		}
 		for _, check := range target.RequiredChecks {

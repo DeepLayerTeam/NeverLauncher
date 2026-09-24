@@ -55,7 +55,8 @@ SQL
 
 for migration in "$ROOT"/services/api/internal/dbmigrate/sql/*.sql; do
   base="$(basename "$migration")"
-  [[ "$base" == 0018_* ]] && continue
+  ordinal="${base%%_*}"
+  (( 10#$ordinal > 17 )) && continue
   version="${base%.sql}"
   checksum="$(sha256sum "$migration" | awk '{print $1}')"
   psql "$DB_DSN" -X -v ON_ERROR_STOP=1 -f "$migration" >/dev/null

@@ -21,6 +21,7 @@
 - [ ] Для 0.13.0 `nl db migrate verify` подтверждает sealed `0018_device_trust_stabilization_01210`; пустая `0019` отсутствует.
 - [ ] Официальный 0.13.0 bundle содержит `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json` для exact source commit и проходит `nl release publish-check`.
 - [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
+- [ ] При upgrade с 0.13.9 старые API instance остановлены; `nl db migrate apply`/`verify` успешно довели schema до sealed `0020_guard_migration_compatibility_stabilization_01310`, а partial Guard snapshots отсутствуют.
 - [ ] `api-volume-init` завершился успешно; named volumes storage/backups принадлежат UID/GID `10001:10001`.
 
 ## После запуска
@@ -45,5 +46,6 @@
 - [ ] Подготовлены `RELEASE_MANIFEST.json`, `SHA256SUMS`, `SHA256SUMS.sig`, `SBOM.spdx.json` и `PROVENANCE.json`.
 - [ ] Для Minecraft Compatibility Release и новее в bundle присутствуют `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json`, `COMPATIBILITY_CERTIFICATION.json`, привязанные к exact source commit.
 - [ ] Для 0.13.9+ в bundle присутствуют `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json`; matrix содержит PASS Linux/Windows/macOS для exact commit/run, а bundle содержит именно сертифицированные platform artifacts.
+- [ ] Для 0.13.10+ каждый Guard target result дополнительно совпадает с aggregate matrix по `repository`; evidence из другого fork не принимается.
 - [ ] `nl release verify <release-dir> --public-key <trusted-public-key>` проходит успешно и все `required=true` artifacts имеют `status=present`.
 - [ ] `nl release publish-check <release-dir> --public-key <trusted-public-key>` проходит Compatibility + Device Trust + Cross-platform Guard certification gates.

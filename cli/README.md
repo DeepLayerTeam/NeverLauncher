@@ -71,6 +71,8 @@ nl packaging verify
 
 Для `0.13.9+` publishable bundle требует exact-commit Guard CI evidence для Linux/Windows/macOS. `scripts/release/build-release.sh` получает пути через `NEVERLAUNCHER_GUARD_CI_MATRIX_FILE`, `NEVERLAUNCHER_GUARD_CI_TARGETS_FILE` и `NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR`; CLI повторно проверяет exact platform artifact hashes при `release build` и `release publish-check`.
 
+В `0.13.10` каждый Guard target result также обязан совпадать по `repository`; evidence из другого fork отклоняется даже при совпавших commit/run. Перед production rollout с 0.13.9 выполните `nl db migrate apply` и `nl db migrate verify`: latest migration должна быть `0020_guard_migration_compatibility_stabilization_01310`.
+
 Для обращений к Backend используйте `--backend`, а для защищённых маршрутов `/api/v1` — `--token` или `NEVERLAUNCHER_TOKEN`.
 
 ## Production-операции без status-only заглушек

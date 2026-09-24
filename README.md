@@ -250,6 +250,12 @@ bash e2e/scripts/run-minecraft-e2e.sh
 
 Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
 
+## NeverGuard migration, compatibility & stabilization — 0.13.10
+
+`0.13.10` завершает стабилизацию 0.13.x после cross-platform Guard certification. Новая PostgreSQL migration `0020_guard_migration_compatibility_stabilization_01310` проверяет persisted `minecraft_sessions` Guard snapshot и fail-closed останавливает upgrade на частичных/противоречивых security rows; после этого DB сама гарантирует atomic snapshot и freshness window, совпадающее с runtime ticket policy.
+
+Исправлена cross-platform совместимость gameplay enforcement: macOS trusted device теперь проходит ту же обязательную live reevaluation Guard integrity в Minecraft/ServerBridge, что Windows/Linux. Guard CI target result дополнительно содержит `repository`, а aggregate/release certification отклоняет перенос PASS-evidence между fork/repository даже при совпавших commit/run strings. Для реального upgrade rehearsal используется `e2e/scripts/run-guard-migration-e2e.sh`.
+
 ## Windows production hardening — 0.13.6
 
 `0.13.6` усиливает уже рабочий NeverGuard boundary без hooks/injection. Desktop и `neverguard.exe` до основной runtime-инициализации fail-closed включают heap termination-on-corruption и ограничивают default DLL search каталогом приложения и `System32`. NeverGuard IPC поднят до protocol v4: Named Pipe остаётся local-only, но теперь создаётся с protected current-user/System ACL; hardening version/state и наличие secure ACL входят в authenticated `ready` proof.

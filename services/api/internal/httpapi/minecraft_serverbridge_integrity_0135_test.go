@@ -182,3 +182,22 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 		t.Fatalf("ServerBridge failed live Guard release revocation: %+v", decision)
 	}
 }
+
+func TestGuardIntegrityRequirementIncludesMacOS01310(t *testing.T) {
+	repo := repository.NewMemoryRepository("http://example.test")
+	_, err := repo.SaveTrustedDevice(context.Background(), model.TrustedDevice{
+		ID: "mac-device-01310", UserID: "user-01310", Name: "macOS device", Platform: "darwin-arm64",
+		PublicKey: "test-public-key", KeyFingerprint: strings.Repeat("a", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := Server{Version: "0.13.10", Config: config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{}`}, Repo: repo}
+	required, err := guardAttestationRequiredForDevice0135(s, "user-01310", "mac-device-01310")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !required {
+		t.Fatal("macOS trusted device must require persisted Guard integrity for Minecraft/ServerBridge")
+	}
+}

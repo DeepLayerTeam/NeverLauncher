@@ -49,6 +49,7 @@ jobs:
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
+          python3 scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -512,6 +513,8 @@ jobs:
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
       - name: Device Trust 0.12.9 to 0.12.10 migration E2E
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
+      - name: NeverGuard 0.13.9 to 0.13.10 migration E2E
+        run: bash e2e/scripts/run-guard-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -556,5 +559,13 @@ jobs:
           path: |
             e2e/device-trust-result/
             e2e/device-trust-migration-result/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload NeverGuard migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-guard-migration-e2e-evidence
+          path: e2e/guard-migration-result/
           if-no-files-found: ignore
           retention-days: 14

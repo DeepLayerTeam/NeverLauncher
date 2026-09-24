@@ -129,6 +129,11 @@ def main() -> int:
 
         bad = root / "guard-windows-amd64" / "guard-ci-result.json"
         payload = json.loads(bad.read_text())
+        payload["repository"] = "fork/NeverLauncher"
+        bad.write_text(json.dumps(payload), encoding="utf-8")
+        run("aggregate", "--targets", str(TARGETS), "--results-root", str(root), "--output-dir", str(root / "aggregate-bad-repository"), "--commit", COMMIT, "--run-id", RUN_ID, "--repository", REPOSITORY, ok=False)
+
+        payload["repository"] = REPOSITORY
         payload["checks"]["guardIntegrationTest"] = False
         bad.write_text(json.dumps(payload), encoding="utf-8")
         run("aggregate", "--targets", str(TARGETS), "--results-root", str(root), "--output-dir", str(root / "aggregate-bad"), "--commit", COMMIT, "--run-id", RUN_ID, "--repository", REPOSITORY, ok=False)

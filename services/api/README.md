@@ -215,6 +215,12 @@ go vet -tags neverlauncher_nopgx ./...
 
 Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
 
+### Guard migration / compatibility stabilization 0.13.10
+
+Migration `0020_guard_migration_compatibility_stabilization_01310.sql` закрепляет persisted Minecraft Guard snapshot как atomic DB state. Перед добавлением constraints она fail-closed проверяет существующие 0.13.9 rows: verified session должна иметь trusted device, четыре canonical SHA-256, launcher version и допустимый attestation timestamp; non-verified session не может содержать частичный Guard snapshot. После migration те же инварианты enforced PostgreSQL-ом, а `/ready`/migration tooling требуют sealed `0020`.
+
+Runtime compatibility fix включает macOS в `guardAttestationRequiredForDevice` для последующей Minecraft/ServerBridge reevaluation; это устраняет расхождение с уже существующим macOS `guard-attest` issuance path.
+
 ### Migration stabilization 0.12.10
 
 Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL constraint для replacement challenge purposes (`key-rotate`, `key-recover`), переводит optional replacement/Minecraft device references на SQL `NULL` и закрепляет ownership между trusted device, auth session, replacement chain, Minecraft session и profile через composite foreign keys. Перед установкой constraints migration fail-closed проверяет существующие данные и нормализует только однозначно безопасные legacy revoked/challenge states.

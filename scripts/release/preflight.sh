@@ -56,6 +56,7 @@ run_step windows-production-hardening-0136 python3 "${ROOT_DIR}/scripts/smoke/of
 run_step linux-production-implementation-0137 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-production-implementation-0137.py"
 run_step macos-production-implementation-0138 python3 "${ROOT_DIR}/scripts/smoke/offline/macos-production-implementation-0138.py"
 run_step guard-ci-release-certification-0139 python3 "${ROOT_DIR}/scripts/smoke/offline/guard-ci-release-certification-0139.py"
+run_step guard-migration-compatibility-stabilization-01310 python3 "${ROOT_DIR}/scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
@@ -103,6 +104,7 @@ fi
 if is_true "${RUN_DEVICE_TRUST_E2E}"; then
   run_step device-trust-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-migration-e2e.sh"
   run_step device-trust-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-e2e.sh"
+  run_step guard-migration-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-guard-migration-e2e.sh"
 fi
 
 if [[ -d "${RELEASE_DIR}" ]]; then

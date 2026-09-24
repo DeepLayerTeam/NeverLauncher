@@ -62,7 +62,7 @@ func writeGuardCIEvidenceFixture(t *testing.T, dir, out, ver, commit string) (st
 		results = append(results, releaseGuardCIResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: target.ID, Runner: target.Runner,
 			OS: target.OS, Arch: target.Arch, RuntimeArch: map[string]string{"linux": "x86_64", "windows": "x86_64", "macos": "arm64"}[target.OS],
-			Commit: commit, RunID: "13900", Status: "passed", ExitCode: 0, Checks: mkChecks(target.RequiredChecks), Artifacts: artifacts,
+			Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "13900", Status: "passed", ExitCode: 0, Checks: mkChecks(target.RequiredChecks), Artifacts: artifacts,
 			Claims:      map[string]any{"guardProtocolVersion": 4, "releaseCertification": ver, "packagePlatform": map[string]string{"linux": "linux-amd64", "windows": "windows-amd64", "macos": "macos-universal"}[target.OS], "ciSigningMode": target.CISigningMode, "vendorSigningProvenance": "not-certified-by-ci", "packageManifestBound": true, "artifactSetComplete": true},
 			Limitations: []string{guardCILimitation0139}, EvidenceSHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		})
@@ -175,5 +175,28 @@ func TestReleasePublishCheckRequiresGuardCertification0139(t *testing.T) {
 	}
 	if err := run([]string{"release", "publish-check", out, "--public-key", publicPath}); err == nil {
 		t.Fatal("0.13.9 publish-check must require Guard CI certification")
+	}
+}
+
+func TestGuardCICertificationRejectsRepositoryMismatch01310(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	matrixPath, targetsPath := writeGuardCIEvidenceFixture(t, dir, out, "0.13.10", "abc1310")
+	matrixRaw, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var matrix releaseGuardCIMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	matrix.Targets[0].Repository = "fork/neverlauncher"
+	matrixRaw, _ = json.Marshal(matrix)
+	targetsRaw, _ := os.ReadFile(targetsPath)
+	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.13.10", "abc1310"); err == nil {
+		t.Fatal("Guard certification must reject a per-target repository mismatch")
 	}
 }

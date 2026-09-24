@@ -30,7 +30,7 @@ for row in rows:
             raise SystemExit(f"{row.get('id')}: missing {required}")
 
 matrix = read("scripts/guard_ci/matrix.py")
-require(matrix, ["guard-ci-result.json", "artifact filename collision across platforms", "vendorSigningProvenance", "not-certified-by-ci", "packageManifestBound", "Guard CI matrix PASS"], "Guard CI matrix")
+require(matrix, ["guard-ci-result.json", "artifact filename collision across platforms", "vendorSigningProvenance", "not-certified-by-ci", "packageManifestBound", "repository=args.repository", "Guard CI matrix PASS"], "Guard CI matrix")
 stage = read("scripts/guard_ci/stage_release.py")
 require(stage, ["Staged", "exact Guard CI-certified artifacts", "certified artifact mismatch", "duplicate staged source"], "Guard artifact staging")
 release_go = read("cli/cmd/neverlauncher/guard_ci_release.go")
@@ -46,4 +46,4 @@ require(preflight, ["guard-ci-release-certification-0139.py", "scripts/guard_ci/
 
 subprocess.run([sys.executable, str(root / "scripts/guard_ci/matrix.py"), "validate", "--targets", str(root / "guard-ci/targets.json")], cwd=root, check=True)
 subprocess.run([sys.executable, str(root / "scripts/guard_ci/test_matrix.py")], cwd=root, check=True)
-print("NeverLauncher 0.13.9 cross-platform Guard CI matrix + release certification gate: OK")
+print("NeverLauncher 0.13.9+ cross-platform Guard CI matrix + release certification gate: OK")
