@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6310,11 +6310,24 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           }
         },
         "security": [
           {
-            "ServerToken": []
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
           }
         ],
         "requestBody": {
@@ -6517,6 +6530,15 @@
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "426": {
             "$ref": "#/components/responses/UpgradeRequired"
           }
@@ -6534,7 +6556,11 @@
         ],
         "security": [
           {
-            "ServerToken": []
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
           }
         ],
         "requestBody": {
@@ -6549,13 +6575,13 @@
         }
       }
     },
-    "/api/v1/server-bridge/servers/{serverId}/rotate-token": {
+    "/api/v1/server-bridge/servers/{serverId}/rotate-identity": {
       "post": {
-        "operationId": "post_server_bridge_servers_by_serverId_rotate_token",
+        "operationId": "post_server_bridge_servers_by_serverId_rotate_identity",
         "tags": [
           "bridge"
         ],
-        "summary": "POST /api/v1/server-bridge/servers/{serverId}/rotate-token",
+        "summary": "POST /api/v1/server-bridge/servers/{serverId}/rotate-identity",
         "responses": {
           "200": {
             "description": "Success",
@@ -6590,7 +6616,17 @@
           {
             "BearerAuth": []
           }
-        ]
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateNodeIdentityRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/server-bridge/validate-join": {
@@ -6618,13 +6654,26 @@
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
           "426": {
             "$ref": "#/components/responses/UpgradeRequired"
           }
         },
         "security": [
           {
-            "ServerToken": []
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
           }
         ],
         "requestBody": {
@@ -6660,6 +6709,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         },
         "parameters": [
@@ -6682,7 +6737,11 @@
         ],
         "security": [
           {
-            "ServerToken": []
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
           }
         ]
       },
@@ -6709,6 +6768,15 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           }
         },
         "parameters": [
@@ -6731,7 +6799,11 @@
         ],
         "security": [
           {
-            "ServerToken": []
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
           }
         ],
         "requestBody": {
@@ -7368,10 +7440,35 @@
         "type": "http",
         "scheme": "bearer"
       },
-      "ServerToken": {
+      "NodeId": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Server-Token"
+        "name": "X-NeverLauncher-Node-Id",
+        "description": "ServerBridge node id included in the Ed25519 canonical request."
+      },
+      "NodeKeyFingerprint": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-NeverLauncher-Node-Key-Fingerprint",
+        "description": "Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key."
+      },
+      "NodeTimestamp": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-NeverLauncher-Node-Timestamp",
+        "description": "Unix timestamp in seconds; must be within the ServerBridge signing window."
+      },
+      "NodeNonce": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-NeverLauncher-Node-Nonce",
+        "description": "Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection."
+      },
+      "NodeSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-NeverLauncher-Node-Signature",
+        "description": "Unpadded base64url Ed25519 signature over NeverLauncher-ServerBridge-Node-v1 canonical request."
       },
       "BootstrapToken": {
         "type": "apiKey",
@@ -7387,9 +7484,23 @@
         ],
         "properties": {
           "error": {
-            "type": "string"
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
-        }
+        },
+        "additionalProperties": false
       },
       "ServiceStatus": {
         "type": "object",
@@ -7928,11 +8039,14 @@
         "required": [
           "id",
           "kind",
-          "projectId"
+          "projectId",
+          "keyAlgorithm",
+          "publicKey"
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "name": {
             "type": "string"
@@ -7946,15 +8060,45 @@
             ]
           },
           "projectId": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "profileId": {
             "type": "string"
           },
           "fingerprint": {
             "type": "string"
+          },
+          "keyAlgorithm": {
+            "type": "string",
+            "const": "ed25519"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "description": "Raw 32-byte Ed25519 public key encoded as unpadded base64url. The private key never leaves the ServerBridge node."
           }
-        }
+        },
+        "additionalProperties": false
+      },
+      "RotateNodeIdentityRequest": {
+        "type": "object",
+        "required": [
+          "keyAlgorithm",
+          "publicKey"
+        ],
+        "properties": {
+          "keyAlgorithm": {
+            "type": "string",
+            "const": "ed25519"
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "description": "Replacement raw Ed25519 public key encoded as unpadded base64url."
+          }
+        },
+        "additionalProperties": false
       },
       "JoinRequest": {
         "type": "object",
@@ -8651,7 +8795,37 @@
         }
       },
       "Unauthorized": {
-        "description": "Authentication required or invalid",
+        "description": "Authentication required, node signature invalid, or signed request outside the accepted timestamp window",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The signed node request nonce has already been consumed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "The signed request body exceeds the ServerBridge authentication limit",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Required ServerBridge persistence or nonce replay protection is unavailable",
         "content": {
           "application/json": {
             "schema": {

@@ -59,6 +59,7 @@ run_step guard-ci-release-certification-0139 python3 "${ROOT_DIR}/scripts/smoke/
 run_step guard-migration-compatibility-stabilization-01310 python3 "${ROOT_DIR}/scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"
 run_step neverguard-release-0140 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-release-0140.py"
 run_step serverbridge-protocol-v2-0141 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-protocol-v2-0141.py"
+run_step serverbridge-crypto-node-identities-0142 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
@@ -107,6 +108,8 @@ if is_true "${RUN_DEVICE_TRUST_E2E}"; then
   run_step device-trust-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-migration-e2e.sh"
   run_step device-trust-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-device-trust-e2e.sh"
   run_step guard-migration-postgres-e2e bash "${ROOT_DIR}/e2e/scripts/run-guard-migration-e2e.sh"
+  run_step serverbridge-v2-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-serverbridge-v2-migration-e2e.sh"
+  run_step serverbridge-crypto-migration-e2e bash "${ROOT_DIR}/e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh"
 fi
 
 if [[ -d "${RELEASE_DIR}" ]]; then

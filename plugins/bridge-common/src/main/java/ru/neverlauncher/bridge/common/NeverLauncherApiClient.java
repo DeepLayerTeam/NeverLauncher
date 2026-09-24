@@ -5,21 +5,27 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.HexFormat;
 
 public final class NeverLauncherApiClient {
+    private static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-Node-v1";
+
     private final BridgeConfig config;
+    private final NodeIdentity identity;
     private final HttpClient client;
     private final String serverType;
     private final String pluginVersion;
     private final String pluginSha256;
 
-    public NeverLauncherApiClient(BridgeConfig config) {
-        this(config, "", "", "");
-    }
-
-    public NeverLauncherApiClient(BridgeConfig config, String serverType, String pluginVersion, String pluginSha256) {
+    public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
         this.config = config;
+        this.identity = identity;
         this.serverType = normalized(serverType);
         this.pluginVersion = normalized(pluginVersion);
         this.pluginSha256 = normalized(pluginSha256).toLowerCase();
@@ -36,12 +42,7 @@ public final class NeverLauncherApiClient {
             ",\"pluginVersion\":" + quote(actualVersion) +
             ",\"pluginSha256\":" + quote(pluginSha256) + "}";
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(config.heartbeatUrl()))
-                .timeout(Duration.ofMillis(config.timeoutMs))
-                .header("Content-Type", "application/json")
-                .header("X-NeverLauncher-Server-Token", config.serverToken)
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+            HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
         } catch (Exception ignored) {
@@ -50,8 +51,8 @@ public final class NeverLauncherApiClient {
     }
 
     public JoinValidationResult validateJoin(String username, String uuid, String ip) {
-        if (config.serverToken == null || config.serverToken.isBlank()) {
-            return new JoinValidationResult(!config.requireLauncherSession && "open".equals(config.failMode), "server_token_missing", "{}");
+        if (identity == null) {
+            return new JoinValidationResult(false, "node_identity_missing", "{}");
         }
         if (config.requireIntegrity && (!BridgeIntegrity.isSha256(pluginSha256) || pluginVersion.isBlank() || serverType.isBlank())) {
             return new JoinValidationResult(false, "bridge_integrity_unavailable", "{}");
@@ -72,12 +73,9 @@ public final class NeverLauncherApiClient {
         InterruptedException lastInterrupted = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(config.validateJoinUrl()))
-                    .timeout(Duration.ofMillis(config.timeoutMs))
-                    .header("Content-Type", "application/json")
-                    .header("X-NeverLauncher-Server-Token", config.serverToken)
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
+                // A retry is a new authenticated request with a fresh nonce. Reusing
+                // a signed request would correctly be rejected as a replay.
+                HttpRequest request = signedRequest("POST", URI.create(config.validateJoinUrl()), body);
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 String raw = response.body() == null ? "" : response.body();
                 boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
@@ -89,11 +87,46 @@ public final class NeverLauncherApiClient {
                 Thread.currentThread().interrupt();
                 lastInterrupted = e;
                 break;
+            } catch (GeneralSecurityException e) {
+                return new JoinValidationResult(false, "node_identity_signing_failed", "{}");
             }
         }
         String reason = lastInterrupted != null ? "backend_interrupted" : (lastIo != null ? "backend_unavailable" : "backend_denied");
         boolean failOpen = "open".equalsIgnoreCase(config.failMode) && !config.requireLauncherSession && !config.requireIntegrity;
         return new JoinValidationResult(failOpen, reason, "{}");
+    }
+
+    private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
+        String timestamp = Long.toString(Instant.now().getEpochSecond());
+        String nonce = identity.newNonce();
+        String canonical = canonicalRequest(method, uri, body, timestamp, nonce);
+        String signature = Base64.getUrlEncoder().withoutPadding().encodeToString(identity.sign(canonical));
+        return HttpRequest.newBuilder(uri)
+            .timeout(Duration.ofMillis(config.timeoutMs))
+            .header("Content-Type", "application/json")
+            .header("X-NeverLauncher-Node-Id", config.serverId)
+            .header("X-NeverLauncher-Node-Key-Fingerprint", identity.fingerprint())
+            .header("X-NeverLauncher-Node-Timestamp", timestamp)
+            .header("X-NeverLauncher-Node-Nonce", nonce)
+            .header("X-NeverLauncher-Node-Signature", signature)
+            .method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+            .build();
+    }
+
+    private String canonicalRequest(String method, URI uri, String body, String timestamp, String nonce) throws GeneralSecurityException {
+        String target = uri.getRawPath();
+        if (target == null || target.isEmpty()) target = "/";
+        if (uri.getRawQuery() != null && !uri.getRawQuery().isEmpty()) target += "?" + uri.getRawQuery();
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8));
+        return String.join("\n",
+            SIGNATURE_SCHEME,
+            config.serverId.trim(),
+            method.toUpperCase(),
+            target,
+            timestamp,
+            nonce,
+            HexFormat.of().formatHex(digest)
+        );
     }
 
     private static String quote(String value) {
@@ -102,12 +135,20 @@ public final class NeverLauncherApiClient {
     }
 
     private static String extractReason(String raw) {
-        int idx = raw.indexOf("\"reason\":");
-        if (idx < 0) return "session_denied";
-        int start = raw.indexOf('"', idx + 9);
+        String reason = extractJsonString(raw, "reason");
+        if (!reason.isBlank()) return reason;
+        String message = extractJsonString(raw, "message");
+        return message.isBlank() ? "session_denied" : message;
+    }
+
+    private static String extractJsonString(String raw, String field) {
+        String marker = "\"" + field + "\":";
+        int idx = raw.indexOf(marker);
+        if (idx < 0) return "";
+        int start = raw.indexOf('"', idx + marker.length());
         int end = start >= 0 ? raw.indexOf('"', start + 1) : -1;
         if (start >= 0 && end > start) return raw.substring(start + 1, end);
-        return "session_denied";
+        return "";
     }
 
     private static String normalized(String value) {

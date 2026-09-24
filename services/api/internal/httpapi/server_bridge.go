@@ -3,7 +3,6 @@ package httpapi
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -29,7 +28,12 @@ type bridgeServerRecord struct {
 	ProfileID           string    `json:"profileId,omitempty"`
 	Fingerprint         string    `json:"fingerprint,omitempty"`
 	TokenHash           string    `json:"-"`
-	TokenPrefix         string    `json:"tokenPrefix"`
+	TokenPrefix         string    `json:"-"`
+	KeyAlgorithm        string    `json:"keyAlgorithm"`
+	PublicKey           string    `json:"-"`
+	KeyFingerprint      string    `json:"keyFingerprint"`
+	IdentityEpoch       int64     `json:"identityEpoch"`
+	IdentityRotatedAt   time.Time `json:"identityRotatedAt,omitempty"`
 	Status              string    `json:"status"`
 	PluginVersion       string    `json:"pluginVersion,omitempty"`
 	PluginSHA256        string    `json:"pluginSha256,omitempty"`
@@ -72,20 +76,28 @@ type bridgeTextureRecord struct {
 }
 
 type serverBridgeStore struct {
-	mu       sync.Mutex
-	servers  map[string]bridgeServerRecord
-	joins    map[string]bridgeJoinRecord
-	textures map[string]bridgeTextureRecord
-	backend  repository.ServerBridgeRepository
+	mu         sync.Mutex
+	servers    map[string]bridgeServerRecord
+	joins      map[string]bridgeJoinRecord
+	textures   map[string]bridgeTextureRecord
+	nodeNonces map[string]time.Time
+	backend    repository.ServerBridgeRepository
 }
 
 type registerBridgeServerRequest struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Kind        string `json:"kind"`
-	ProjectID   string `json:"projectId"`
-	ProfileID   string `json:"profileId"`
-	Fingerprint string `json:"fingerprint"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Kind         string `json:"kind"`
+	ProjectID    string `json:"projectId"`
+	ProfileID    string `json:"profileId"`
+	Fingerprint  string `json:"fingerprint"`
+	KeyAlgorithm string `json:"keyAlgorithm"`
+	PublicKey    string `json:"publicKey"`
+}
+
+type rotateBridgeIdentityRequest struct {
+	KeyAlgorithm string `json:"keyAlgorithm"`
+	PublicKey    string `json:"publicKey"`
 }
 
 type bridgeJoinRequest struct {
@@ -141,31 +153,44 @@ func (s Server) serverBridgeRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	server, token, err := s.State.ServerBridge.registerServer(req)
+	server, err := s.State.ServerBridge.registerServer(req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	_ = s.flushPersistenceState950("server-bridge-register")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("server-register"), Actor: claims.Email, Action: "serverbridge:server:register", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "registered", "server": server, "serverToken": token, "serverTokenShownOnce": true, "usage": map[string]any{"header": "X-NeverLauncher-Server-Token", "hasJoined": "GET /api/v1/session/has-joined?username=<name>&serverId=<server>"}}})
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{
+		"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "registered", "server": server,
+		"nodeIdentity": map[string]any{"keyAlgorithm": server.KeyAlgorithm, "keyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch},
+		"usage":        map[string]any{"authentication": "Ed25519 signed request headers", "privateKey": "remains on the ServerBridge node and is never sent to Backend"},
+	}})
 }
 
-func (s Server) serverBridgeRotateToken(w http.ResponseWriter, r *http.Request) {
+func (s Server) serverBridgeRotateIdentity(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.adminClaims(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
 	serverID := strings.TrimSpace(r.PathValue("serverId"))
-	server, token, err := s.State.ServerBridge.rotateToken(serverID)
-	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+	var req rotateBridgeIdentityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	_ = s.flushPersistenceState950("server-bridge-token-rotate")
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("server-token-rotate"), Actor: claims.Email, Action: "serverbridge:server:token-rotate", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "rotated", "server": server, "serverToken": token, "serverTokenShownOnce": true}})
+	server, err := s.State.ServerBridge.rotateIdentity(serverID, req)
+	if err != nil {
+		if isBridgeNotFoundV2(err) {
+			writeError(w, http.StatusNotFound, err.Error())
+		} else {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+	_ = s.flushPersistenceState950("server-bridge-identity-rotate")
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("server-identity-rotate"), Actor: claims.Email, Action: "serverbridge:server:identity-rotate", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "identity-rotated", "server": server, "nodeIdentity": map[string]any{"keyAlgorithm": server.KeyAlgorithm, "keyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch}}})
 }
 
 func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
@@ -218,10 +243,16 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server calls /api/v1/session/has-joined with X-NeverLauncher-Server-Token", "server allows player only when has-joined returns status joined"}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server calls /api/v1/session/has-joined with its Ed25519 node identity", "server allows player only when has-joined returns status joined"}}})
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
+	server, authErr := s.authenticateBridgeNodeRequest0142(r)
+	if authErr != nil {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-denied-identity"), Actor: "server", Action: "serverbridge:has-joined:identity-denied", Target: strings.TrimSpace(r.URL.Query().Get("serverId")), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeBridgeNodeAuthError0142(w, authErr)
+		return
+	}
 	username := strings.TrimSpace(r.URL.Query().Get("username"))
 	serverID := strings.TrimSpace(r.URL.Query().Get("serverId"))
 	if r.Method == http.MethodPost {
@@ -235,10 +266,8 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "username и serverId обязательны")
 		return
 	}
-	server, ok := s.State.ServerBridge.verifyServerToken(serverID, bridgeServerTokenFromRequest910(r))
-	if !ok {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-denied"), Actor: "server", Action: "serverbridge:has-joined:denied", Target: serverID + "/" + username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusUnauthorized, "server token недействителен")
+	if server.ID != serverID {
+		writeError(w, http.StatusForbidden, "serverbridge_node_server_id_mismatch")
 		return
 	}
 	bridgeIntegrity := s.evaluateRegisteredBridgeIntegrity0135(server)
@@ -281,7 +310,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	}
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": serverBridgeProtocolV2, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": serverBridgeProtocolV2, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -363,14 +392,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion": serverBridgeSchema910,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.14.1 ServerBridge Protocol v2",
+		"release":       "NeverLauncher 0.14.2 Cryptographic Node Identities",
 		"mode":          "serverbridge-protocol-v2",
 		"parentMode":    "launcherops-ecosystem-platform",
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"summary":       s.State.ServerBridge.summary(),
 		"endpoints": []string{
 			"POST /api/v1/server-bridge/servers/register",
-			"POST /api/v1/server-bridge/servers/{serverId}/rotate-token",
+			"POST /api/v1/server-bridge/servers/{serverId}/rotate-identity",
 			"POST /api/v1/session/join",
 			"GET /api/v1/session/has-joined",
 			"POST /api/v1/session/invalidate",
@@ -383,101 +412,142 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "one-time atomic join tickets", "server token registration and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
-		base["productFlow"] = []string{"admin registers Velocity/Paper/Purpur Protocol v2 server in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin calls validate-join/has-joined with server token", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
+		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
 	return base
 }
 
-func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bridgeServerRecord, string, error) {
+func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bridgeServerRecord, error) {
 	now := time.Now().UTC()
 	req.ID = strings.TrimSpace(req.ID)
 	if req.ID == "" {
 		req.ID = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(req.Name), " ", "-"))
 	}
-	if req.ID == "" || strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.ProjectID) == "" {
-		return bridgeServerRecord{}, "", fmt.Errorf("id/name/projectId сервера обязательны")
+	if req.ID == "" || strings.TrimSpace(req.ProjectID) == "" {
+		return bridgeServerRecord{}, fmt.Errorf("id и projectId сервера обязательны")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		req.Name = req.ID
 	}
 	if req.Kind == "" {
 		req.Kind = "velocity"
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	if !validBridgeServerKindV2(kind) {
-		return bridgeServerRecord{}, "", fmt.Errorf("kind должен быть velocity, paper или purpur")
+		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, paper или purpur")
 	}
-	token, err := randomBridgeToken910("nlsrv")
+	algorithm, publicKey, keyFingerprint, err := validateBridgeNodeIdentity0142(req.KeyAlgorithm, req.PublicKey)
 	if err != nil {
-		return bridgeServerRecord{}, "", err
+		return bridgeServerRecord{}, err
 	}
-	server := bridgeServerRecord{ID: req.ID, Name: strings.TrimSpace(req.Name), Kind: kind, ProjectID: strings.TrimSpace(req.ProjectID), ProfileID: strings.TrimSpace(req.ProfileID), Fingerprint: strings.TrimSpace(req.Fingerprint), TokenHash: tokenHash910(token), TokenPrefix: tokenPrefix910(token), Status: "active", ProtocolVersion: serverBridgeProtocolV2, CreatedAt: now}
+	server := bridgeServerRecord{
+		ID: req.ID, Name: strings.TrimSpace(req.Name), Kind: kind, ProjectID: strings.TrimSpace(req.ProjectID), ProfileID: strings.TrimSpace(req.ProfileID),
+		Fingerprint: strings.TrimSpace(req.Fingerprint), KeyAlgorithm: algorithm, PublicKey: publicKey, KeyFingerprint: keyFingerprint,
+		IdentityEpoch: 1, IdentityRotatedAt: now, Status: "active", ProtocolVersion: serverBridgeProtocolV2, CreatedAt: now,
+	}
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
-		if existing, err := backend.GetServerBridgeNode(ctx, server.ID); err == nil {
-			server.CreatedAt = existing.CreatedAt
-			server.RotatedAt = now
+		if _, err := backend.GetServerBridgeNode(ctx, server.ID); err == nil {
+			return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
+		} else if !isBridgeNotFoundV2(err) {
+			return bridgeServerRecord{}, err
 		}
 		stored, err := backend.SaveServerBridgeNode(ctx, bridgeServerToModelV2(server))
 		if err != nil {
-			return bridgeServerRecord{}, "", err
+			return bridgeServerRecord{}, err
 		}
-		return bridgeServerFromModelV2(stored), token, nil
+		return bridgeServerFromModelV2(stored), nil
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if existing, ok := b.servers[server.ID]; ok {
-		server.CreatedAt = existing.CreatedAt
-		server.RotatedAt = now
+	if _, ok := b.servers[server.ID]; ok {
+		return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
+	}
+	for _, existing := range b.servers {
+		if existing.KeyFingerprint == server.KeyFingerprint {
+			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
+		}
 	}
 	b.servers[server.ID] = server
-	return server, token, nil
+	return server, nil
 }
 
-func (b *serverBridgeStore) rotateToken(serverID string) (bridgeServerRecord, string, error) {
-	token, err := randomBridgeToken910("nlsrv")
+func (b *serverBridgeStore) rotateIdentity(serverID string, req rotateBridgeIdentityRequest) (bridgeServerRecord, error) {
+	algorithm, publicKey, fingerprint, err := validateBridgeNodeIdentity0142(req.KeyAlgorithm, req.PublicKey)
 	if err != nil {
-		return bridgeServerRecord{}, "", err
+		return bridgeServerRecord{}, err
 	}
 	now := time.Now().UTC()
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
-		server, err := backend.RotateServerBridgeNodeCredential(ctx, strings.TrimSpace(serverID), tokenHash910(token), tokenPrefix910(token), now)
+		current, err := backend.GetServerBridgeNode(ctx, strings.TrimSpace(serverID))
 		if err != nil {
-			return bridgeServerRecord{}, "", err
+			return bridgeServerRecord{}, err
 		}
-		return bridgeServerFromModelV2(server), token, nil
+		if current.KeyFingerprint != "" && current.KeyFingerprint == fingerprint {
+			return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
+		}
+		server, err := backend.RotateServerBridgeNodeIdentity(ctx, strings.TrimSpace(serverID), algorithm, publicKey, fingerprint, now)
+		if err != nil {
+			return bridgeServerRecord{}, err
+		}
+		return bridgeServerFromModelV2(server), nil
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return bridgeServerRecord{}, "", fmt.Errorf("server bridge record not found")
+		return bridgeServerRecord{}, repository.ErrNotFound
 	}
-	server.TokenHash = tokenHash910(token)
-	server.TokenPrefix = tokenPrefix910(token)
-	server.RotatedAt = now
+	if server.KeyFingerprint != "" && server.KeyFingerprint == fingerprint {
+		return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
+	}
+	for id, existing := range b.servers {
+		if id != serverID && existing.KeyFingerprint == fingerprint {
+			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
+		}
+	}
+	server.TokenHash = ""
+	server.TokenPrefix = ""
+	server.KeyAlgorithm = algorithm
+	server.PublicKey = publicKey
+	server.KeyFingerprint = fingerprint
+	server.IdentityEpoch++
+	if server.IdentityEpoch < 1 {
+		server.IdentityEpoch = 1
+	}
+	server.IdentityRotatedAt = now
+	server.Status = "active"
 	server.ProtocolVersion = serverBridgeProtocolV2
 	server.PluginVersion = ""
 	server.PluginSHA256 = ""
 	server.IntegrityStatus = ""
 	server.IntegrityVerifiedAt = time.Time{}
+	server.LastHeartbeatAt = time.Time{}
 	b.servers[server.ID] = server
+	for key := range b.nodeNonces {
+		if strings.HasPrefix(key, server.ID+":") {
+			delete(b.nodeNonces, key)
+		}
+	}
 	for key, join := range b.joins {
 		if join.ServerID == server.ID && join.Status == "active" {
 			join.Status = "invalidated"
 			b.joins[key] = join
 		}
 	}
-	return server, token, nil
+	return server, nil
 }
 
 func (b *serverBridgeStore) listServers() []bridgeServerRecord {
@@ -502,28 +572,6 @@ func (b *serverBridgeStore) listServers() []bridgeServerRecord {
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	return items
-}
-
-func (b *serverBridgeStore) verifyServerToken(serverID, token string) (bridgeServerRecord, bool) {
-	if token == "" {
-		return bridgeServerRecord{}, false
-	}
-	if backend := b.backendV2(); backend != nil {
-		ctx, cancel := bridgeContextV2()
-		defer cancel()
-		node, err := backend.GetServerBridgeNode(ctx, strings.TrimSpace(serverID))
-		if err != nil || node.Status != "active" || node.TokenHash == "" {
-			return bridgeServerRecord{}, false
-		}
-		return bridgeServerFromModelV2(node), subtle.ConstantTimeCompare([]byte(node.TokenHash), []byte(tokenHash910(token))) == 1
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	server, ok := b.servers[serverID]
-	if !ok || server.Status != "active" {
-		return bridgeServerRecord{}, false
-	}
-	return server, subtle.ConstantTimeCompare([]byte(server.TokenHash), []byte(tokenHash910(token))) == 1
 }
 
 func validMinecraftUsername910(value string) bool {
@@ -776,7 +824,7 @@ func (b *serverBridgeStore) summary() map[string]any {
 			activeJoins++
 		}
 	}
-	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "serverToken": "required-for-validation", "protocolVersion": 2, "sourceOfTruth": "memory-dev-test"}
+	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "memory-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "memory-dev-test"}
 }
 
 func (b *serverBridgeStore) joinKey(username, serverID string) string {
@@ -785,17 +833,6 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
 	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "minecraftSessionId": join.MinecraftSessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "protocolVersion": join.ProtocolVersion, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
-}
-
-func bridgeServerTokenFromRequest910(r *http.Request) string {
-	if token := strings.TrimSpace(r.Header.Get("X-NeverLauncher-Server-Token")); token != "" {
-		return token
-	}
-	header := strings.TrimSpace(r.Header.Get("Authorization"))
-	if strings.HasPrefix(header, "Bearer ") {
-		return strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
-	}
-	return ""
 }
 
 func playerUUID910(seed string) string {
@@ -821,14 +858,6 @@ func textureProfile910(texture bridgeTextureRecord) map[string]any {
 	return map[string]any{"schemaVersion": serverBridgeSchema910, "timestamp": time.Now().UTC().UnixMilli(), "profileId": texture.UUID, "profileName": texture.Username, "textures": textures}
 }
 
-func randomBridgeToken910(prefix string) (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("secure ServerBridge token generation failed: %w", err)
-	}
-	return prefix + "_" + base64.RawURLEncoding.EncodeToString(buf), nil
-}
-
 func validBridgeServerKindV2(kind string) bool {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "velocity", "paper", "purpur":
@@ -849,13 +878,6 @@ func randomSuffix910(n int) string {
 func tokenHash910(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-func tokenPrefix910(token string) string {
-	if len(token) <= 12 {
-		return token
-	}
-	return token[:12]
 }
 
 func bridgeAuditID910(kind string) string {

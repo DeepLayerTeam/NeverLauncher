@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,27 +25,16 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 		}
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/register", strings.NewReader(`{"id":"velocity-940","name":"Velocity 940","kind":"velocity","projectId":"demo-project","profileId":"vanilla"}`))
-	req.Header.Set("Authorization", "Bearer "+adminToken)
-	req.Header.Set("Content-Type", "application/json")
-	res := httptest.NewRecorder()
-	handler.ServeHTTP(res, req)
+	identity := newTestBridgeNodeIdentity0142(t)
+	res := registerTestBridgeNode0142(t, handler, adminToken, "velocity-940", "Velocity 940", "velocity", "demo-project", "vanilla", identity)
 	if res.Code != http.StatusCreated {
 		t.Fatalf("register => %d %s", res.Code, res.Body.String())
 	}
-	var registered struct {
-		Data struct {
-			ServerToken string `json:"serverToken"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(res.Body.Bytes(), &registered); err != nil || registered.Data.ServerToken == "" {
-		t.Fatalf("server token missing: %v %s", err, res.Body.String())
-	}
 
 	// Protocol v2 is negotiated on the wire, not only advertised by metadata.
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.11.0"}`))
-	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.11.0"}`))
 	req.Header.Set("Content-Type", "application/json")
+	signBridgeNodeRequest0142(t, req, "velocity-940", identity)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusUpgradeRequired || !strings.Contains(res.Body.String(), "serverbridge_protocol_unsupported") {
@@ -54,8 +42,8 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"protocolVersion":2,"serverType":"velocity","pluginVersion":"0.11.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
-	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 	req.Header.Set("Content-Type", "application/json")
+	signBridgeNodeRequest0142(t, req, "velocity-940", identity)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "heartbeat-accepted") {

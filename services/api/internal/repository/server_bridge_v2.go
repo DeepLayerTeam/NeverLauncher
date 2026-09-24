@@ -18,7 +18,8 @@ type ServerBridgeRepository interface {
 	SaveServerBridgeNode(context.Context, model.ServerBridgeNode) (model.ServerBridgeNode, error)
 	GetServerBridgeNode(context.Context, string) (model.ServerBridgeNode, error)
 	ListServerBridgeNodes(context.Context) ([]model.ServerBridgeNode, error)
-	RotateServerBridgeNodeCredential(context.Context, string, string, string, time.Time) (model.ServerBridgeNode, error)
+	RotateServerBridgeNodeIdentity(context.Context, string, string, string, string, time.Time) (model.ServerBridgeNode, error)
+	ConsumeServerBridgeNodeNonce(context.Context, string, string, int64, time.Time, time.Time) (bool, error)
 	SetServerBridgeNodeIntegrity(context.Context, string, string, string, string, time.Time) error
 	TouchServerBridgeNodeHeartbeat(context.Context, string, string, string, time.Time) error
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
@@ -34,10 +35,13 @@ type ServerBridgeRepository interface {
 
 func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBridgeNode, error) {
 	var n model.ServerBridgeNode
-	var verifiedAt, heartbeatAt, rotatedAt sql.NullTime
-	err := row.Scan(&n.ID, &n.Name, &n.Kind, &n.ProjectID, &n.ProfileID, &n.Fingerprint, &n.TokenHash, &n.TokenPrefix, &n.Status, &n.ProtocolVersion, &n.PluginVersion, &n.PluginSHA256, &n.IntegrityStatus, &verifiedAt, &heartbeatAt, &n.CreatedAt, &rotatedAt)
+	var verifiedAt, heartbeatAt, rotatedAt, identityRotatedAt sql.NullTime
+	err := row.Scan(&n.ID, &n.Name, &n.Kind, &n.ProjectID, &n.ProfileID, &n.Fingerprint, &n.TokenHash, &n.TokenPrefix, &n.KeyAlgorithm, &n.PublicKey, &n.KeyFingerprint, &n.IdentityEpoch, &identityRotatedAt, &n.Status, &n.ProtocolVersion, &n.PluginVersion, &n.PluginSHA256, &n.IntegrityStatus, &verifiedAt, &heartbeatAt, &n.CreatedAt, &rotatedAt)
 	if err != nil {
 		return model.ServerBridgeNode{}, err
+	}
+	if identityRotatedAt.Valid {
+		n.IdentityRotatedAt = identityRotatedAt.Time
 	}
 	if verifiedAt.Valid {
 		n.IntegrityVerifiedAt = verifiedAt.Time
@@ -51,7 +55,7 @@ func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBrid
 	return n, nil
 }
 
-const bridgeNodeSelectV2 = `SELECT id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at FROM server_bridge_nodes_v2`
+const bridgeNodeSelectV2 = `SELECT id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at FROM server_bridge_nodes_v2`
 
 func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.ServerBridgeNode) (model.ServerBridgeNode, error) {
 	if err := r.check(); err != nil {
@@ -63,6 +67,8 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if n.CreatedAt.IsZero() {
 		n.CreatedAt = time.Now().UTC()
 	}
+	n.TokenHash = ""
+	n.TokenPrefix = ""
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.ServerBridgeNode{}, err
@@ -71,22 +77,36 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, n.ID); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	var previousHash string
-	err = tx.QueryRowContext(ctx, `SELECT token_hash FROM server_bridge_nodes_v2 WHERE id=$1 FOR UPDATE`, n.ID).Scan(&previousHash)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	// Registration is intentionally create-only. The node-id advisory lock closes
+	// the GET-before-INSERT race between concurrent admin requests; changing an
+	// existing identity is allowed only through RotateServerBridgeNodeIdentity,
+	// whose HTTP route requires a fresh phishing-resistant admin step-up.
+	var existingID string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 LIMIT 1`, n.ID).Scan(&existingID)
+	if err == nil {
+		return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node %s already exists", ErrConflict, n.ID)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeNode{}, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,kind=EXCLUDED.kind,project_id=EXCLUDED.project_id,profile_id=EXCLUDED.profile_id,fingerprint=EXCLUDED.fingerprint,token_hash=EXCLUDED.token_hash,token_prefix=EXCLUDED.token_prefix,status=EXCLUDED.status,protocol_version=2,plugin_version=EXCLUDED.plugin_version,plugin_sha256=EXCLUDED.plugin_sha256,integrity_status=EXCLUDED.integrity_status,integrity_verified_at=EXCLUDED.integrity_verified_at,last_heartbeat_at=EXCLUDED.last_heartbeat_at,rotated_at=EXCLUDED.rotated_at`,
-		n.ID, n.Name, n.Kind, n.ProjectID, n.ProfileID, n.Fingerprint, n.TokenHash, n.TokenPrefix, n.Status, n.ProtocolVersion, n.PluginVersion, n.PluginSHA256, n.IntegrityStatus, timeArg(n.IntegrityVerifiedAt), timeArg(n.LastHeartbeatAt), n.CreatedAt, timeArg(n.RotatedAt))
-	if err != nil {
-		return model.ServerBridgeNode{}, err
-	}
-	if previousHash != "" && previousHash != n.TokenHash {
-		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE server_id=$1 AND status='active'`, n.ID, time.Now().UTC()); err != nil {
+	if n.KeyFingerprint != "" {
+		if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1403, hashtext($1))`, n.KeyFingerprint); err != nil {
 			return model.ServerBridgeNode{}, err
 		}
+		var duplicateID string
+		err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE key_fingerprint=$1 LIMIT 1`, n.KeyFingerprint).Scan(&duplicateID)
+		if err == nil {
+			return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node public key is already registered by %s", ErrConflict, duplicateID)
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeNode{}, err
+		}
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at)
+VALUES($1,$2,$3,$4,$5,$6,'','',$7,$8,$9,$10,$11,$12,2,$13,$14,$15,$16,$17,$18,$19)`,
+		n.ID, n.Name, n.Kind, n.ProjectID, n.ProfileID, n.Fingerprint, n.KeyAlgorithm, n.PublicKey, n.KeyFingerprint, n.IdentityEpoch, timeArg(n.IdentityRotatedAt), n.Status, n.PluginVersion, n.PluginSHA256, n.IntegrityStatus, timeArg(n.IntegrityVerifiedAt), timeArg(n.LastHeartbeatAt), n.CreatedAt, timeArg(n.RotatedAt))
+	if err != nil {
+		return model.ServerBridgeNode{}, err
 	}
 	if err = tx.Commit(); err != nil {
 		return model.ServerBridgeNode{}, err
@@ -132,7 +152,7 @@ func (r *SQLRepository) ListServerBridgeNodes(ctx context.Context) ([]model.Serv
 	return out, rows.Err()
 }
 
-func (r *SQLRepository) RotateServerBridgeNodeCredential(ctx context.Context, id, tokenHash, tokenPrefix string, now time.Time) (model.ServerBridgeNode, error) {
+func (r *SQLRepository) RotateServerBridgeNodeIdentity(ctx context.Context, id, algorithm, publicKey, fingerprint string, now time.Time) (model.ServerBridgeNode, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
@@ -144,21 +164,59 @@ func (r *SQLRepository) RotateServerBridgeNodeCredential(ctx context.Context, id
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, id); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash=$2,token_prefix=$3,rotated_at=$4,protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL WHERE id=$1`, id, tokenHash, tokenPrefix, now.UTC())
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1403, hashtext($1))`, fingerprint); err != nil {
+		return model.ServerBridgeNode{}, err
+	}
+	var duplicateID string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE key_fingerprint=$1 AND id<>$2 LIMIT 1`, fingerprint, id).Scan(&duplicateID)
+	if err == nil {
+		return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node public key is already registered by %s", ErrConflict, duplicateID)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeNode{}, err
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash='',token_prefix='',key_algorithm=$2,public_key=$3,key_fingerprint=$4,identity_epoch=GREATEST(identity_epoch,0)+1,identity_rotated_at=$5,status='active',protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL WHERE id=$1`, id, algorithm, publicKey, fingerprint, now.UTC())
 	if err != nil {
 		return model.ServerBridgeNode{}, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return model.ServerBridgeNode{}, ErrNotFound
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE server_id=$1 AND status='active'`, id, now.UTC())
-	if err != nil {
+	if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 WHERE node_id=$1`, id); err != nil {
+		return model.ServerBridgeNode{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE server_id=$1 AND status='active'`, id, now.UTC()); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
 	return r.GetServerBridgeNode(ctx, id)
+}
+
+func (r *SQLRepository) ConsumeServerBridgeNodeNonce(ctx context.Context, nodeID, nonceHash string, identityEpoch int64, consumedAt, expiresAt time.Time) (bool, error) {
+	if err := r.check(); err != nil {
+		return false, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1`, consumedAt.UTC()); err != nil {
+		return false, err
+	}
+	res, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_node_nonces_v2(node_id,nonce_hash,identity_epoch,consumed_at,expires_at)
+SELECT id,$2,$3,$4,$5 FROM server_bridge_nodes_v2 WHERE id=$1 AND status='active' AND identity_epoch=$3
+ON CONFLICT(node_id,nonce_hash) DO NOTHING`, nodeID, nonceHash, identityEpoch, consumedAt.UTC(), expiresAt.UTC())
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return n == 1, nil
 }
 
 func (r *SQLRepository) SetServerBridgeNodeIntegrity(ctx context.Context, id, version, hash, status string, verifiedAt time.Time) error {
@@ -184,7 +242,7 @@ func (r *SQLRepository) TouchServerBridgeNodeHeartbeat(ctx context.Context, id, 
 	if err := r.check(); err != nil {
 		return err
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET kind=CASE WHEN btrim($2)='' THEN kind ELSE lower(btrim($2)) END,status='active',fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,last_heartbeat_at=$4 WHERE id=$1`, id, kind, pluginVersion, now.UTC())
+	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,last_heartbeat_at=$4 WHERE id=$1 AND status='active' AND kind=lower(btrim($2))`, id, kind, pluginVersion, now.UTC())
 	if err != nil {
 		return err
 	}
@@ -356,5 +414,5 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textures); err != nil {
 		return nil, err
 	}
-	return map[string]any{"servers": nodes, "activeJoins": joins, "textures": textures, "joinTtlSeconds": 120, "serverToken": "required-for-validation", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
+	return map[string]any{"servers": nodes, "activeJoins": joins, "textures": textures, "joinTtlSeconds": 120, "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
 }

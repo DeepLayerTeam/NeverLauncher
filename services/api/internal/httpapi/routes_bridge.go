@@ -19,7 +19,7 @@ func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/profiles/minecraft/{username}", s.yggdrasilProfileByName119)
 	mux.Handle("GET /api/v1/server-bridge/servers", s.requirePermission("project:read", s.serverBridgeServersList))
 	mux.Handle("POST /api/v1/server-bridge/servers/register", s.requirePermission("settings:manage", s.serverBridgeRegister))
-	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/rotate-token", s.requireFreshAuth117("settings:manage", "phishing-resistant", 5*time.Minute, s.serverBridgeRotateToken))
+	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/rotate-identity", s.requireFreshAuth117("settings:manage", "phishing-resistant", 5*time.Minute, s.serverBridgeRotateIdentity))
 	mux.HandleFunc("POST /api/v1/server-bridge/servers/{serverId}/heartbeat", s.serverBridgeHeartbeat)
 	mux.HandleFunc("POST /api/v1/server-bridge/validate-join", s.serverBridgeValidateJoin)
 	mux.HandleFunc("POST /api/v1/server-bridge/audit-event", s.serverBridgeAuditEvent)

@@ -982,6 +982,41 @@ if not (ROOT / "cli/cmd/neverlauncher/guard_ci_release_test.go").is_file():
 
 
 
+
+# 0.14.2 Cryptographic Node Identities. Privileged ServerBridge traffic must be
+# signed by a node-local Ed25519 private key; Backend stores only public identity
+# material and PostgreSQL-enforced single-use nonces.
+if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
+    crypto_migration_0142 = read("services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
+    crypto_identity_0142 = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
+    crypto_repo_0142 = read("services/api/internal/repository/server_bridge_v2.go")
+    crypto_java_identity_0142 = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NodeIdentity.java")
+    crypto_java_client_0142 = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
+    crypto_gate_0142 = read("scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py")
+    for required in ["server_bridge_node_nonces_v2", "identity-enrollment-required", "key_fingerprint", "identity_epoch"]:
+        if required not in crypto_migration_0142:
+            fail(f"0.14.2 cryptographic node identity migration incomplete: {required}")
+    for required in ["ed25519.Verify", "serverbridge_node_nonce_replayed", "ConsumeServerBridgeNodeNonce", "subtle.ConstantTimeCompare"]:
+        if required not in crypto_identity_0142:
+            fail(f"0.14.2 signed node authentication incomplete: {required}")
+    for required in ["RotateServerBridgeNodeIdentity", "server_bridge_node_nonces_v2", '"replayProtection": "postgresql-single-use-nonce"']:
+        if required not in crypto_repo_0142:
+            fail(f"0.14.2 PostgreSQL node identity repository incomplete: {required}")
+    for required in ["KeyPairGenerator.getInstance(\"Ed25519\")", "privateKeyPkcs8", "rw-------"]:
+        if required not in crypto_java_identity_0142:
+            fail(f"0.14.2 plugin node private-key lifecycle incomplete: {required}")
+    for required in ["NeverLauncher-ServerBridge-Node-v1", "X-NeverLauncher-Node-Signature", "identity.sign(canonical)"]:
+        if required not in crypto_java_client_0142:
+            fail(f"0.14.2 plugin request signing incomplete: {required}")
+    if "X-NeverLauncher-Server-Token" in crypto_java_client_0142:
+        fail("0.14.2 plugin still contains shared ServerBridge bearer authentication")
+    if "serverbridge-crypto-node-identities-0142.py" not in preflight or "serverbridge-crypto-node-identities-0142.py" not in ci:
+        fail("0.14.2 cryptographic node identity gate is not wired into preflight/CI")
+    if "run-serverbridge-crypto-identity-migration-e2e.sh" not in preflight or "run-serverbridge-crypto-identity-migration-e2e.sh" not in ci:
+        fail("0.14.2 exact 0.14.1 -> 0.14.2 migration E2E is not wired into preflight/CI")
+    if "Cryptographic Node Identities gate" not in crypto_gate_0142:
+        fail("0.14.2 mandatory cryptographic identity release gate is incomplete")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

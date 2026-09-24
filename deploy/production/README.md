@@ -18,6 +18,12 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Upgrade 0.14.1 → 0.14.2
+
+Остановите 0.14.1 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0022_serverbridge_crypto_node_identities_0142` до запуска 0.14.2 Backend.
+
+Migration fail-closed выводит прежние active ServerBridge nodes из эксплуатации: bearer hashes очищаются, статус становится `identity-enrollment-required`, незавершённые join tickets инвалидируются. Установите bridge plugin 0.14.2 на каждом Velocity/Paper/Purpur node; при первом старте он локально создаст Ed25519 `node-identity.properties` и выведет только public key/fingerprint. Передавайте Backend только public key и выполните административный `POST /api/v1/server-bridge/servers/{serverId}/rotate-identity` с `{"keyAlgorithm":"ed25519","publicKey":"..."}`. Private key не копируется в Backend/env и должен оставаться на node. После enrollment проверьте heartbeat, integrity measurement и signed validate-join.
+
 ### Upgrade 0.14.0 → 0.14.1
 
 Остановите 0.14.0 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0021_serverbridge_protocol_v2_0141` до запуска 0.14.1 Backend.

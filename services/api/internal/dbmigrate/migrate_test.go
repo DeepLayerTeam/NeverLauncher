@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0021_serverbridge_protocol_v2_0141" {
+	if st.Current != "0022_serverbridge_crypto_node_identities_0142" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0021_serverbridge_protocol_v2_0141" {
+		if k != "0022_serverbridge_crypto_node_identities_0142" {
 			pending[k] = v
 		}
 	}
@@ -134,6 +134,30 @@ func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.1 ServerBridge v2 migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeCryptoNodeIdentitiesMigration0142(t *testing.T) {
+	b, err := os.ReadFile("sql/0022_serverbridge_crypto_node_identities_0142.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"server_bridge_node_nonces_v2",
+		"identity-enrollment-required",
+		"key_algorithm",
+		"public_key",
+		"key_fingerprint",
+		"identity_epoch",
+		"ed25519",
+		"token_hash=''",
+		"uq_server_bridge_nodes_v2_key_fingerprint",
+		"status='invalidated'",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.2 cryptographic node identity migration missing %q", required)
 		}
 	}
 }

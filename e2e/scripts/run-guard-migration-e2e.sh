@@ -126,10 +126,11 @@ psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET guard_sha256
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0021_serverbridge_protocol_v2_0141" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
+[[ "$latest_after" == "0022_serverbridge_crypto_node_identities_0142" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'")"
 [[ "$sealed" == "true" ]]
 serverbridge_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"
+identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0022_serverbridge_crypto_node_identities_0142'")"
 [[ "$serverbridge_sealed" == "true" ]]
 serverbridge_table_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('server_bridge_nodes_v2','server_bridge_join_tickets_v2','server_bridge_textures_v2')")"
 [[ "$serverbridge_table_count" == "3" ]]

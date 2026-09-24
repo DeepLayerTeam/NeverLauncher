@@ -380,7 +380,9 @@ type MinecraftJoin struct {
 }
 
 // ServerBridgeNode is the authoritative Protocol v2 identity of a game/proxy node.
-// TokenHash is persisted, while the plaintext credential is shown only once.
+// Since 0.14.2 node requests are authenticated by an Ed25519 public key; private
+// key material never crosses the node/backend boundary. Legacy token fields remain
+// internal only so the 0.14.1 schema can be migrated safely.
 type ServerBridgeNode struct {
 	ID                  string    `json:"id"`
 	Name                string    `json:"name"`
@@ -388,8 +390,13 @@ type ServerBridgeNode struct {
 	ProjectID           string    `json:"projectId"`
 	ProfileID           string    `json:"profileId,omitempty"`
 	Fingerprint         string    `json:"fingerprint,omitempty"`
-	TokenHash           string    `json:"-"`
-	TokenPrefix         string    `json:"tokenPrefix"`
+	TokenHash           string    `json:"-"` // legacy 0.14.1 credential, never used by 0.14.2 auth
+	TokenPrefix         string    `json:"-"`
+	KeyAlgorithm        string    `json:"keyAlgorithm"`
+	PublicKey           string    `json:"-"`
+	KeyFingerprint      string    `json:"keyFingerprint"`
+	IdentityEpoch       int64     `json:"identityEpoch"`
+	IdentityRotatedAt   time.Time `json:"identityRotatedAt,omitempty"`
 	Status              string    `json:"status"`
 	ProtocolVersion     int       `json:"protocolVersion"`
 	PluginVersion       string    `json:"pluginVersion,omitempty"`

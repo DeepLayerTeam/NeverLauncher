@@ -13,6 +13,7 @@ import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
+import ru.neverlauncher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 
@@ -29,7 +30,15 @@ public final class NeverLauncherPurpurBridge extends JavaPlugin implements Liste
             getLogger().warning("Не удалось прочитать config.yml, используется env/default config: " + e.getMessage());
         }
         String pluginSha256 = BridgeIntegrity.artifactSha256(NeverLauncherPurpurBridge.class);
-        api = new NeverLauncherApiClient(config, "purpur", BridgeDefaults.VERSION, pluginSha256);
+        try {
+            NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
+            api = new NeverLauncherApiClient(config, identity, "purpur", BridgeDefaults.VERSION, pluginSha256);
+            getLogger().info("NeverLauncher node identity: fingerprint=" + identity.fingerprint() + "; publicKey=" + identity.publicKeyBase64Url() + "; privateKeyFile=" + config.identityFile);
+        } catch (Exception e) {
+            getLogger().severe("NeverLauncher node identity initialization failed: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         Bukkit.getPluginManager().registerEvents(this, this);
         if (getCommand("nlbridge") != null) getCommand("nlbridge").setExecutor(this);
         boolean ok = api.heartbeat("purpur", BridgeDefaults.VERSION);

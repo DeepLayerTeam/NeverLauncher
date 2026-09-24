@@ -87,9 +87,11 @@ services:
       TYPE: VELOCITY
       VELOCITY_VERSION: "3.4.0"
       MEMORY: 384m
+      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: velocity-e2e-p3
-      NEVERLAUNCHER_SERVER_TOKEN: ${VELOCITY_SERVER_TOKEN:-token-not-initialized}
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -109,6 +111,7 @@ services:
       - "25570:25565"
     volumes:
       - ./runtime/plugins/velocity:/plugins:ro
+      - ./runtime/node-identities/velocity:/neverlauncher-identity
       - velocity-data:/server
 
   paper:
@@ -121,9 +124,11 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: paper-e2e-p3
-      NEVERLAUNCHER_SERVER_TOKEN: ${PAPER_SERVER_TOKEN:-token-not-initialized}
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -143,6 +148,7 @@ services:
       - "25571:25565"
     volumes:
       - ./runtime/plugins/paper:/plugins:ro
+      - ./runtime/node-identities/paper:/neverlauncher-identity
       - paper-data:/data
 
   purpur:
@@ -155,9 +161,11 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: purpur-e2e-p3
-      NEVERLAUNCHER_SERVER_TOKEN: ${PURPUR_SERVER_TOKEN:-token-not-initialized}
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -177,6 +185,7 @@ services:
       - "25572:25565"
     volumes:
       - ./runtime/plugins/purpur:/plugins:ro
+      - ./runtime/node-identities/purpur:/neverlauncher-identity
       - purpur-data:/data
 
 volumes:

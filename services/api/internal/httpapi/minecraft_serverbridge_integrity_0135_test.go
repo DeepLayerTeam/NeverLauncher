@@ -50,28 +50,17 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	admin := loginAdmin(t, h)
 	admin, _ = registerTestPasskey117(t, h, admin)
 
-	register := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/register", strings.NewReader(`{"id":"paper-0135","name":"Paper 0135","kind":"paper","projectId":"demo-project","profileId":"vanilla"}`))
-	register.Header.Set("Authorization", "Bearer "+admin)
-	register.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, register)
+	identity := newTestBridgeNodeIdentity0142(t)
+	rr := registerTestBridgeNode0142(t, h, admin, "paper-0135", "Paper 0135", "paper", "demo-project", "vanilla", identity)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("register=%d %s", rr.Code, rr.Body.String())
-	}
-	var registered struct {
-		Data struct {
-			ServerToken string `json:"serverToken"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(rr.Body.Bytes(), &registered); err != nil || registered.Data.ServerToken == "" {
-		t.Fatalf("server token missing: %v %s", err, rr.Body.String())
 	}
 
 	heartbeat := func(hash string) *httptest.ResponseRecorder {
 		body := `{"protocolVersion":2,"serverType":"paper","pluginVersion":"0.13.5","pluginSha256":"` + hash + `"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0135/heartbeat", strings.NewReader(body))
-		req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 		req.Header.Set("Content-Type", "application/json")
+		signBridgeNodeRequest0142(t, req, "paper-0135", identity)
 		out := httptest.NewRecorder()
 		h.ServeHTTP(out, req)
 		return out
@@ -102,8 +91,8 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 		}
 		body += `}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(body))
-		req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 		req.Header.Set("Content-Type", "application/json")
+		signBridgeNodeRequest0142(t, req, "paper-0135", identity)
 		out := httptest.NewRecorder()
 		h.ServeHTTP(out, req)
 		return out
@@ -115,27 +104,25 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 		t.Fatalf("integrity-bound validate-join rejected: %d %s", valid.Code, valid.Body.String())
 	}
 
-	rotate := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0135/rotate-token", nil)
+	rotatedIdentity := newTestBridgeNodeIdentity0142(t)
+	rotateBody, err := json.Marshal(map[string]any{"keyAlgorithm": "ed25519", "publicKey": rotatedIdentity.Encoded})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotate := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0135/rotate-identity", strings.NewReader(string(rotateBody)))
 	rotate.Header.Set("Authorization", "Bearer "+admin)
+	rotate.Header.Set("Content-Type", "application/json")
 	rv := httptest.NewRecorder()
 	h.ServeHTTP(rv, rotate)
 	if rv.Code != http.StatusOK {
 		t.Fatalf("rotate=%d %s", rv.Code, rv.Body.String())
 	}
-	var rotated struct {
-		Data struct {
-			ServerToken string `json:"serverToken"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(rv.Body.Bytes(), &rotated); err != nil || rotated.Data.ServerToken == "" {
-		t.Fatalf("rotated token missing: %v %s", err, rv.Body.String())
-	}
 	hasJoined := httptest.NewRequest(http.MethodGet, "/api/v1/session/has-joined?username=HashPlayer&serverId=paper-0135", nil)
-	hasJoined.Header.Set("X-NeverLauncher-Server-Token", rotated.Data.ServerToken)
+	signBridgeNodeRequest0142(t, hasJoined, "paper-0135", rotatedIdentity)
 	hv := httptest.NewRecorder()
 	h.ServeHTTP(hv, hasJoined)
 	if hv.Code != http.StatusPreconditionFailed || !strings.Contains(hv.Body.String(), "bridge_integrity_heartbeat_required") {
-		t.Fatalf("token rotation failed to invalidate bridge measurement: %d %s", hv.Code, hv.Body.String())
+		t.Fatalf("identity rotation failed to invalidate bridge measurement: %d %s", hv.Code, hv.Body.String())
 	}
 }
 

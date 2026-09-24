@@ -4,15 +4,15 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **ServerBridge Protocol v2 / 0.14.1**: ServerBridge node/join/texture state перенесён в PostgreSQL source of truth, join tickets стали одноразовыми и атомарно consume-ятся, а Velocity/Paper/Purpur bridge-клиенты явно согласуют wire protocol v2.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Cryptographic Node Identities / 0.14.2**: ServerBridge Protocol v2 сохраняет PostgreSQL source of truth и одноразовые join tickets, но privileged node traffic больше не использует shared bearer secret — Velocity/Paper/Purpur подписывают каждый heartbeat/validate/has-joined Ed25519 node identity.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 
-## ServerBridge Protocol v2 — 0.14.1
+## Cryptographic Node Identities — 0.14.2
 
-`0.14.1` добавляет PostgreSQL-backed ServerBridge v2. Таблицы `server_bridge_nodes_v2`, `server_bridge_join_tickets_v2` и `server_bridge_textures_v2` являются production source of truth; JSON snapshot используется только memory dev/test path. Join ticket выдаётся на 120 секунд, существует в единственном active экземпляре для `serverId + username` и после успешной server validation атомарно становится `consumed`, поэтому replay не проходит.
+`0.14.2` заменяет ServerBridge shared bearer credentials на Ed25519 node identity. Приватный ключ создаётся и хранится локально bridge-плагином в `node-identity.properties`; Backend получает только raw public key/fingerprint и `identityEpoch`. Каждый privileged request подписывает canonical method/path/body hash вместе с Unix timestamp и 192-bit nonce. PostgreSQL атомарно consume-ит nonce, поэтому повтор корректно подписанного запроса отклоняется.
 
-ServerBridge plugins отправляют `protocolVersion: 2` на heartbeat/validate. Backend fail-closed отклоняет старый protocol (`426`, `serverbridge_protocol_unsupported`). Credential rotation инвалидирует незавершённые join tickets. При upgrade с 0.14.0 migration `0021_serverbridge_protocol_v2_0141` переносит только безопасно восстанавливаемые legacy metadata/textures; nodes из старого snapshot требуют одноразовой административной ротации server token.
+Migration `0022_serverbridge_crypto_node_identities_0142` удаляет legacy token hashes, переводит существующие 0.14.1 nodes в `identity-enrollment-required` и инвалидирует активные join tickets. Для upgrade установите bridge 0.14.2, получите его `publicKey`/fingerprint из startup log и административно вызовите `/api/v1/server-bridge/servers/{serverId}/rotate-identity`; после этого node получает новый `identityEpoch` и становится `active`. Protocol v2, PostgreSQL source of truth и atomic one-time join semantics из 0.14.1 сохраняются.
 
 ## NeverGuard Release — 0.14.0
 
@@ -284,7 +284,7 @@ Unsigned development package намеренно не проходит release-ru
 
 `0.13.5` закрывает gameplay bypass между Guard Attestation и ServerBridge. Guard-verified metadata теперь сохраняется в самой Minecraft session и live-проверяется при validate/join/hasJoined. Для Windows Guard-enforced device Desktop передаёт новый Minecraft access token в `/api/v1/session/join`; Backend сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный join, не связанный с тем credential, который получил одноразовый Guard launch ticket.
 
-Velocity/Paper/Purpur дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation server token. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
+Velocity/Paper/Purpur дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation node identity. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
 
 Удаление Guard/Desktop или ServerBridge hash из соответствующего allowlist действует как live revoke: уже созданная Minecraft/ServerBridge session перестаёт проходить Backend validation. ServerBridge JAR self-hash является application-level release enforcement и не выдаётся за TPM/kernel attestation удалённого Minecraft host.
 

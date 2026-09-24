@@ -20,6 +20,9 @@ ADMIN_EMAIL="device-trust-e2e@neverlauncher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("DT-E2E-" + secrets.token_urlsafe(24))')"
 CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
+SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
+# shellcheck source=serverbridge-node-crypto.sh
+source "$SERVERBRIDGE_CRYPTO"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[device-trust-e2e] required command missing: $1" >&2; exit 1; }; }
 for cmd in docker curl jq go psql python3 openssl sha256sum; do need "$cmd"; done
@@ -127,6 +130,10 @@ openssl genpkey -algorithm Ed25519 -out "$KEY1" >/dev/null 2>&1
 openssl genpkey -algorithm Ed25519 -out "$KEY2" >/dev/null 2>&1
 PUB1="$(python3 "$CRYPTO" public --algorithm ed25519 --key "$KEY1")"
 PUB2="$(python3 "$CRYPTO" public --algorithm ed25519 --key "$KEY2")"
+SERVER_NODE_KEY="$RUNTIME_DIR/keys/serverbridge-node-ed25519.pem"
+SERVER_NODE_IDENTITY="$RUNTIME_DIR/keys/serverbridge-node-identity.properties"
+serverbridge_node_generate "$SERVER_NODE_KEY" "$SERVER_NODE_IDENTITY"
+SERVER_NODE_PUBLIC="$(serverbridge_node_public "$SERVER_NODE_KEY")"
 BEGIN1="$(json_post "$API/api/v1/auth/devices/register/begin" "$ACCESS_PRE" "$(jq -cn --arg v "$VERSION" '{name:"Device Trust E2E primary",platform:"linux",clientVersion:$v,keyAlgorithm:"ed25519",keyBinding:"software"}')")"
 SIG1="$(sign_payload ed25519 "$KEY1" "$(jq -er '.data.signingPayload' <<<"$BEGIN1")")"
 COMPLETE_BODY1="$(jq -cn --arg challengeId "$(jq -er '.data.challengeId' <<<"$BEGIN1")" --arg deviceId "$(jq -er '.data.deviceId' <<<"$BEGIN1")" --arg challenge "$(jq -er '.data.challenge' <<<"$BEGIN1")" --arg publicKey "$PUB1" --arg signature "$SIG1" '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
@@ -153,10 +160,12 @@ REFRESH2="$(jq -er '.data.tokens.refreshToken' <<<"$REFRESH_OK1")"
 
 printf '[device-trust-e2e] ServerBridge join is live-bound to device identity and epoch\n'
 json_post "$API/api/v1/install/first-project" "$ACCESS1R" '{"projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable","version":"0.0.1-device-trust","actor":"device-trust-e2e"}' > "$RUNTIME_DIR/first-project.json"
-SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R" '{"id":"dt-e2e-paper","name":"Device Trust E2E Paper","kind":"paper","projectId":"dt-e2e-project","profileId":"vanilla"}')"
-SERVER_TOKEN="$(jq -er '.data.serverToken' <<<"$SERVER_REG")"
+SERVER_REG_BODY="$(jq -cn --arg publicKey "$SERVER_NODE_PUBLIC" '{id:"dt-e2e-paper",name:"Device Trust E2E Paper",kind:"paper",projectId:"dt-e2e-project",profileId:"vanilla",keyAlgorithm:"ed25519",publicKey:$publicKey}')"
+SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R" "$SERVER_REG_BODY")"
+jq -e '.data.status=="registered" and .data.nodeIdentity.keyAlgorithm=="ed25519" and .data.nodeIdentity.identityEpoch==1' <<<"$SERVER_REG" >/dev/null
 json_post "$API/api/v1/session/join" "$ACCESS1R" '{"username":"DeviceTrustE2E","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' > "$RUNTIME_DIR/join-before-rotation.json"
-code="$(curl -sS -o "$RESULT_DIR/bridge-before-rotation.json" -w '%{http_code}' -H 'Content-Type: application/json' -H "X-NeverLauncher-Server-Token: $SERVER_TOKEN" -d '{"serverId":"dt-e2e-paper","username":"DeviceTrustE2E","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$API/api/v1/server-bridge/validate-join")"
+BRIDGE_VALIDATE_BODY='{"protocolVersion":2,"serverId":"dt-e2e-paper","username":"DeviceTrustE2E","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}'
+code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-before-rotation.json")"
 expect_code 200 "$code" 'trusted ServerBridge validate before rotation'
 jq -e '.data.allowed==true' "$RESULT_DIR/bridge-before-rotation.json" >/dev/null
 
@@ -185,7 +194,7 @@ EPOCH2="$(jq -er '.data.session.bindingEpoch' <<<"$ROT_OK")"
 jq -e '.data.oldFingerprintPermanentTombstone==true and .data.mode=="rotate"' <<<"$ROT_OK" >/dev/null
 printf '%s' "$ROT_OK" | sanitize_rotation > "$RESULT_DIR/rotation.json"
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS1R" '' "$RUNTIME_DIR/pre-rotation-access.json")"; expect_code 401 "$code" 'pre-rotation access survived binding epoch change'
-code="$(curl -sS -o "$RESULT_DIR/bridge-after-rotation.json" -w '%{http_code}' -H 'Content-Type: application/json' -H "X-NeverLauncher-Server-Token: $SERVER_TOKEN" -d '{"serverId":"dt-e2e-paper","username":"DeviceTrustE2E","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$API/api/v1/server-bridge/validate-join")"
+code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-after-rotation.json")"
 expect_code 403 "$code" 'old ServerBridge join survived rotation'
 jq -e '.data.allowed==false and (.data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed")' "$RESULT_DIR/bridge-after-rotation.json" >/dev/null
 

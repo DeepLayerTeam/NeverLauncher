@@ -9,7 +9,7 @@ import java.util.Map;
 public final class BridgeConfig {
     public final String backendUrl;
     public final String serverId;
-    public final String serverToken;
+    public final Path identityFile;
     public final String projectId;
     public final String profileId;
     public final String channel;
@@ -19,10 +19,15 @@ public final class BridgeConfig {
     public final int timeoutMs;
     public final int retries;
 
-    private BridgeConfig(Map<String, String> values) {
+    private BridgeConfig(Map<String, String> values, Path configPath) {
         this.backendUrl = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
         this.serverId = first(values, "server.id", "NEVERLAUNCHER_SERVER_ID", "velocity-main");
-        this.serverToken = first(values, "server.token", "NEVERLAUNCHER_SERVER_TOKEN", "");
+        String identity = first(values, "identity.file", "NEVERLAUNCHER_NODE_IDENTITY_FILE", "node-identity.properties");
+        Path configuredIdentity = Path.of(identity);
+        if (!configuredIdentity.isAbsolute() && configPath != null && configPath.toAbsolutePath().getParent() != null) {
+            configuredIdentity = configPath.toAbsolutePath().getParent().resolve(configuredIdentity);
+        }
+        this.identityFile = configuredIdentity.normalize();
         this.projectId = first(values, "profile.projectId", "NEVERLAUNCHER_PROJECT_ID", "default");
         this.profileId = first(values, "profile.profileId", "NEVERLAUNCHER_PROFILE_ID", "vanilla");
         this.channel = first(values, "profile.channel", "NEVERLAUNCHER_CHANNEL", "stable");
@@ -52,11 +57,11 @@ public final class BridgeConfig {
                 values.put(section.isEmpty() ? key : section + "." + key, value);
             }
         }
-        return new BridgeConfig(values);
+        return new BridgeConfig(values, configPath);
     }
 
     public static BridgeConfig fromEnv() {
-        return new BridgeConfig(Map.of());
+        return new BridgeConfig(Map.of(), null);
     }
 
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }

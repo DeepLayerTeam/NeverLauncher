@@ -15,7 +15,10 @@ public final class JoinValidationResult {
         return switch (reason) {
             case "backend_unavailable", "backend_interrupted" -> "Сервис авторизации NeverLauncher временно недоступен.";
             case "serverbridge_protocol_unsupported" -> "ServerBridge требует Protocol v2. Обновите серверный bridge до текущего релиза NeverLauncher.";
-            case "server_token_missing", "server_token_invalid" -> "ServerBridge не настроен или его server token недействителен.";
+            case "node_identity_missing", "node_identity_signing_failed", "serverbridge_node_signature_required", "serverbridge_node_identity_invalid", "serverbridge_node_fingerprint_mismatch" -> "Криптографическая identity ServerBridge не зарегистрирована или недействительна.";
+            case "serverbridge_node_timestamp_invalid", "serverbridge_node_timestamp_out_of_window" -> "Время ServerBridge node не синхронизировано с Backend.";
+            case "serverbridge_node_nonce_invalid", "serverbridge_node_nonce_replayed" -> "Backend отклонил повторный или некорректный ServerBridge-запрос.";
+            case "serverbridge_node_nonce_store_unavailable" -> "Хранилище replay-защиты ServerBridge временно недоступно.";
             case "trusted_device_required", "trusted_device_unverified", "trusted_device_missing", "trusted_device_revoked" -> "Для входа требуется активное доверенное устройство NeverLauncher.";
             case "credential_trust_snapshot_missing", "session_binding_changed", "session_device_changed" -> "Сессия устройства устарела. Перезапустите игру из NeverLauncher.";
             case "device_reattest_required" -> "Требуется повторная проверка устройства в NeverLauncher.";

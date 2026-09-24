@@ -22,6 +22,9 @@ LOADER="$(printf '%s' "${NEVERLAUNCHER_E2E_LOADER:-vanilla}" | tr '[:upper:]' '[
 LOADER_VERSION_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-}"
 PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
 BRIDGE_ALLOWLIST_JSON="{}"
+SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
+# shellcheck source=serverbridge-node-crypto.sh
+source "$SERVERBRIDGE_CRYPTO"
 
 case "$MODE" in full|compatibility) ;; *) echo "[e2e] unsupported mode: $MODE" >&2; exit 2 ;; esac
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[e2e] unsupported loader: $LOADER" >&2; exit 2 ;; esac
@@ -42,7 +45,9 @@ for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl psql; do
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
-mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
+mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" \
+  "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-keys" \
+  "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
 write_env_file() {
   cat > "$ENV_FILE" <<ENV
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
@@ -51,9 +56,8 @@ NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
 NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
 NEVERLAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
 NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
-VELOCITY_SERVER_TOKEN=${VELOCITY_TOKEN:-token-not-initialized}
-PAPER_SERVER_TOKEN=${PAPER_TOKEN:-token-not-initialized}
-PURPUR_SERVER_TOKEN=${PURPUR_TOKEN:-token-not-initialized}
+NEVERLAUNCHER_E2E_HOST_UID=$(id -u)
+NEVERLAUNCHER_E2E_HOST_GID=$(id -g)
 ENV
 }
 write_env_file
@@ -168,16 +172,32 @@ ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_
 
 json_post "$API/api/v1/install/first-project" "$ACCESS_TOKEN" "{\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\",\"version\":\"0.0.1-bootstrap\",\"actor\":\"github-actions\"}" > "$RUNTIME_DIR/first-project.json"
 
-register_server() {
-  local id="$1" kind="$2"
-  json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS_TOKEN" "{\"id\":\"$id\",\"name\":\"$id\",\"kind\":\"$kind\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\"}" | jq -er '.data.serverToken'
-}
-PAPER_TOKEN="$(register_server paper-e2e-p3 paper)"
+PAPER_NODE_KEY="$RUNTIME_DIR/node-keys/paper.pem"
+VELOCITY_NODE_KEY="$RUNTIME_DIR/node-keys/velocity.pem"
+PURPUR_NODE_KEY="$RUNTIME_DIR/node-keys/purpur.pem"
+serverbridge_node_generate "$PAPER_NODE_KEY" "$RUNTIME_DIR/node-identities/paper/node-identity.properties"
 if [[ "$MODE" == "full" ]]; then
-  VELOCITY_TOKEN="$(register_server velocity-e2e-p3 velocity)"
-  PURPUR_TOKEN="$(register_server purpur-e2e-p3 purpur)"
+  serverbridge_node_generate "$VELOCITY_NODE_KEY" "$RUNTIME_DIR/node-identities/velocity/node-identity.properties"
+  serverbridge_node_generate "$PURPUR_NODE_KEY" "$RUNTIME_DIR/node-identities/purpur/node-identity.properties"
 fi
-write_env_file
+PAPER_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
+VELOCITY_BRIDGE_SHA=""
+PURPUR_BRIDGE_SHA=""
+if [[ "$MODE" == "full" ]]; then
+  VELOCITY_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+  PURPUR_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
+fi
+register_server() {
+  local id="$1" kind="$2" key="$3" public_key body
+  public_key="$(serverbridge_node_public "$key")"
+  body="$(jq -cn --arg id "$id" --arg kind "$kind" --arg project "e2e-project" --arg profile "$PROFILE_ID" --arg publicKey "$public_key" '{id:$id,name:$id,kind:$kind,projectId:$project,profileId:$profile,keyAlgorithm:"ed25519",publicKey:$publicKey}')"
+  json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS_TOKEN" "$body" | jq -e '.data.status == "registered" and .data.nodeIdentity.keyAlgorithm == "ed25519" and .data.nodeIdentity.identityEpoch == 1' >/dev/null
+}
+register_server paper-e2e-p3 paper "$PAPER_NODE_KEY"
+if [[ "$MODE" == "full" ]]; then
+  register_server velocity-e2e-p3 velocity "$VELOCITY_NODE_KEY"
+  register_server purpur-e2e-p3 purpur "$PURPUR_NODE_KEY"
+fi
 
 if [[ "$MODE" == "full" ]]; then
   printf '[e2e] start real Velocity 3.4.0, Paper 1.21.1 and Purpur 1.21.1\n'
@@ -268,18 +288,18 @@ jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 a
 printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client.json"
 validate_join() {
-  local id="$1" token="$2" expect="$3" out="$RUNTIME_DIR/validate-$id-$expect.json" code
-  code="$(curl -sS -o "$out" -w '%{http_code}' -H 'Content-Type: application/json' -H "X-NeverLauncher-Server-Token: $token" \
-    -d "{\"protocolVersion\":2,\"serverId\":\"$id\",\"username\":\"$PLAYER_USERNAME\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" \
-    "$API/api/v1/server-bridge/validate-join")"
+  local id="$1" key="$2" plugin_sha="$3" expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json" code body
+  body="$(jq -cn --arg id "$id" --arg username "$PLAYER_USERNAME" --arg project "e2e-project" --arg profile "$PROFILE_ID" --arg version "$VERSION" --arg sha "$plugin_sha" '{protocolVersion:2,serverId:$id,username:$username,projectId:$project,profileId:$profile,channel:"stable",pluginVersion:$version,pluginSha256:$sha}')"
+  code="$(serverbridge_node_signed_request "$key" "$id" POST "$API/api/v1/server-bridge/validate-join" "$body" "$out")"
   if [[ "$expect" == allow ]]; then
-    [[ "$code" == 200 ]] && jq -e '.data.allowed == true' "$out" >/dev/null
+    [[ "$code" == 200 ]] && jq -e '.data.allowed == true and (.data.nodeKeyFingerprint|length)==64 and .data.identityEpoch >= 1' "$out" >/dev/null
   else
     [[ "$code" == 403 ]] && jq -e '.data.allowed == false and .data.reason == "launcher_session_missing_or_expired"' "$out" >/dev/null
   fi
 }
-validate_join paper-e2e-p3 "$PAPER_TOKEN" allow
-validate_join paper-e2e-p3 "$PAPER_TOKEN" deny
+validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
+validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
+
 consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"
 (( consumed_count >= 1 )) || { echo "[e2e] ServerBridge Protocol v2 ticket was not persisted as consumed" >&2; exit 1; }
 # The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
@@ -307,27 +327,29 @@ wait_log paper "$PLAYER_USERNAME joined the game"
 
 printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
 json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
-validate_join paper-e2e-p3 "$PAPER_TOKEN" deny
+validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
 wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
 
 if [[ "$MODE" == "full" ]]; then
   printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and Purpur bridges\n'
   flow_for_server() {
-    local id="$1" token="$2" service="$3" port="$4"
-    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"$id\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-$id.json"
-    validate_join "$id" "$token" allow
-    validate_join "$id" "$token" deny
-    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"$id\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-$id-fresh.json"
+    local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
+    join_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg id "$id" --arg profile "$PROFILE_ID" '{username:$username,serverId:$id,projectId:"e2e-project",profileId:$profile,channel:"stable"}')"
+    revoke_body="$(jq -cn --arg id "$id" '{serverId:$id,reason:"e2e-revoke"}')"
+    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id.json"
+    validate_join "$id" "$key" "$plugin_sha" allow
+    validate_join "$id" "$key" "$plugin_sha" deny
+    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id-fresh.json"
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-allow.txt"
     wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
-    json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "{\"serverId\":\"$id\",\"reason\":\"e2e-revoke\"}" > "$RUNTIME_DIR/revoke-$id.json"
-    validate_join "$id" "$token" deny
+    json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "$revoke_body" > "$RUNTIME_DIR/revoke-$id.json"
+    validate_join "$id" "$key" "$plugin_sha" deny
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
-  flow_for_server velocity-e2e-p3 "$VELOCITY_TOKEN" velocity 25570
-  flow_for_server purpur-e2e-p3 "$PURPUR_TOKEN" purpur 25572
+  flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
+  flow_for_server purpur-e2e-p3 "$PURPUR_NODE_KEY" "$PURPUR_BRIDGE_SHA" purpur 25572
 fi
 
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"

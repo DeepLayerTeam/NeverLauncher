@@ -73,11 +73,24 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 }
 
 func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
+	server, authErr := s.authenticateBridgeNodeRequest0142(r)
+	if authErr != nil {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat-identity-denied"), Actor: "server", Action: "serverbridge:plugin:heartbeat-identity-denied", Target: strings.TrimSpace(r.PathValue("serverId")), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeBridgeNodeAuthError0142(w, authErr)
+		return
+	}
 	var req bridgePluginHeartbeatRequest940
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "некорректный JSON")
+		return
+	}
 	serverID := firstNonEmpty(strings.TrimSpace(r.PathValue("serverId")), strings.TrimSpace(req.ServerID))
 	if serverID == "" {
 		writeError(w, http.StatusBadRequest, "serverId обязателен")
+		return
+	}
+	if server.ID != serverID {
+		writeError(w, http.StatusForbidden, "serverbridge_node_server_id_mismatch")
 		return
 	}
 	if req.ProtocolVersion != serverBridgeProtocolV2 {
@@ -89,12 +102,6 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	req.PluginSHA256 = strings.ToLower(strings.TrimSpace(req.PluginSHA256))
 	if !validBridgeServerKindV2(req.ServerType) || req.PluginVersion == "" || !isSHA256Hex0134(req.PluginSHA256) {
 		writeError(w, http.StatusBadRequest, "serverType, pluginVersion и валидный pluginSha256 обязательны для Protocol v2")
-		return
-	}
-	server, ok := s.State.ServerBridge.verifyServerToken(serverID, bridgeServerTokenFromRequest910(r))
-	if !ok {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat-denied"), Actor: "server", Action: "serverbridge:plugin:heartbeat-denied", Target: serverID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusUnauthorized, "server token недействителен")
 		return
 	}
 	if req.ServerType != strings.ToLower(strings.TrimSpace(server.Kind)) {
@@ -118,10 +125,15 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-accepted", "serverId": server.ID, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request) {
+	server, authErr := s.authenticateBridgeNodeRequest0142(r)
+	if authErr != nil {
+		writeBridgeNodeAuthError0142(w, authErr)
+		return
+	}
 	var req bridgeValidateJoinRequest940
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
@@ -137,10 +149,8 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusUpgradeRequired, bridgeValidateResponse940(s.Version, false, "serverbridge_protocol_unsupported", req, bridgeJoinRecord{}))
 		return
 	}
-	server, ok := s.State.ServerBridge.verifyServerToken(req.ServerID, bridgeServerTokenFromRequest910(r))
-	if !ok {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-denied-token"), Actor: "server", Action: "serverbridge:validate-join:denied", Target: req.ServerID + "/" + req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeJSON(w, http.StatusUnauthorized, bridgeValidateResponse940(s.Version, false, "server_token_invalid", req, bridgeJoinRecord{}))
+	if server.ID != req.ServerID {
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "serverbridge_node_server_id_mismatch", req, bridgeJoinRecord{}))
 		return
 	}
 	bridgeIntegrity := s.evaluateRegisteredBridgeIntegrity0135(server)
@@ -216,10 +226,17 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	payload["data"].(map[string]any)["trust"] = trust
 	payload["data"].(map[string]any)["integrity"] = minecraftIntegrity
 	payload["data"].(map[string]any)["bridgeIntegrity"] = bridgeIntegrity
+	payload["data"].(map[string]any)["nodeKeyFingerprint"] = server.KeyFingerprint
+	payload["data"].(map[string]any)["identityEpoch"] = server.IdentityEpoch
 	writeJSON(w, http.StatusOK, payload)
 }
 
 func (s Server) serverBridgeAuditEvent(w http.ResponseWriter, r *http.Request) {
+	server, authErr := s.authenticateBridgeNodeRequest0142(r)
+	if authErr != nil {
+		writeBridgeNodeAuthError0142(w, authErr)
+		return
+	}
 	var req bridgeAuditEventRequest940
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
@@ -229,14 +246,13 @@ func (s Server) serverBridgeAuditEvent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "serverId и event обязательны")
 		return
 	}
-	server, ok := s.State.ServerBridge.verifyServerToken(req.ServerID, bridgeServerTokenFromRequest910(r))
-	if !ok {
-		writeError(w, http.StatusUnauthorized, "server token недействителен")
+	if server.ID != strings.TrimSpace(req.ServerID) {
+		writeError(w, http.StatusForbidden, "serverbridge_node_server_id_mismatch")
 		return
 	}
 	action := "serverbridge:plugin:" + strings.TrimSpace(req.Event)
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-audit"), Actor: server.ID, Action: action, Target: firstNonEmpty(req.Player, req.UUID, req.ServerID), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "status": "accepted", "action": action}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "status": "accepted", "action": action, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch}})
 }
 
 func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +267,8 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 			{"id": "plugin-manifest", "status": "implemented"},
 			{"id": "protocol-v2-negotiation", "status": "implemented"},
 			{"id": "postgresql-source-of-truth", "status": "implemented"},
+			{"id": "ed25519-node-authentication", "status": "implemented"},
+			{"id": "single-use-node-nonce", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
 			{"id": "gameplay-trust-enforcement", "status": "implemented"},
 			{"id": "minecraft-integrity-enforcement", "status": "implemented"},
@@ -286,11 +304,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.14.1 ServerBridge Protocol v2 Plugins",
+		"release":         "NeverLauncher 0.14.2 Cryptographic Node Identities",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v2",
 		"protocolVersion": serverBridgeProtocolV2,
-		"implemented":     []string{"Protocol v2 wire negotiation", "Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}
@@ -326,10 +344,9 @@ func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion
 	if !ok {
 		return fmt.Errorf("server bridge node not found")
 	}
-	if serverType != "" {
-		server.Kind = strings.ToLower(strings.TrimSpace(serverType))
+	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) {
+		return fmt.Errorf("server bridge node identity/type is not active")
 	}
-	server.Status = "active"
 	server.ProtocolVersion = serverBridgeProtocolV2
 	server.LastHeartbeatAt = time.Now().UTC()
 	server.Fingerprint = firstNonEmpty(server.Fingerprint, "plugin:"+pluginVersion)

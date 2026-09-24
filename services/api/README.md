@@ -18,6 +18,12 @@ POST /api/v1/install/bootstrap-admin
 POST /api/v1/install/first-project
 ```
 
+## ServerBridge Cryptographic Node Identities — 0.14.2
+
+ServerBridge Protocol v2 использует PostgreSQL source of truth из 0.14.1, но node authentication в 0.14.2 полностью переведён с shared bearer secret на Ed25519. При регистрации/enrollment Backend принимает только raw public key, вычисляет SHA-256 fingerprint и хранит его вместе с `identity_epoch`; private key остаётся в локальном `node-identity.properties` Velocity/Paper/Purpur bridge.
+
+Heartbeat, validate-join, has-joined и plugin audit подписываются canonical payload `NeverLauncher-ServerBridge-Node-v1` с method, escaped path/query, exact body SHA-256, timestamp и random nonce. Backend проверяет bounded clock skew, Ed25519 signature/fingerprint и атомарно consume-ит nonce в `server_bridge_node_nonces_v2`; replay возвращает `409`. Migration `0022_serverbridge_crypto_node_identities_0142` retire-ит legacy token hashes и требует explicit `rotate-identity` enrollment для существующих 0.14.1 nodes.
+
 ## Авторизация и администрирование
 
 Канонический API реализует login/refresh/logout, отзыв сессий, роли, password/TOTP/recovery-сценарии, CRUD проектов/профилей/каналов, пользователей, аудит, проверку хранилища, публикацию версий и операции с пакетами в `/api/v1/auth/*` и `/api/v1/admin/*`.

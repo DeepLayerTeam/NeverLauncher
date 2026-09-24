@@ -22,7 +22,8 @@ public_prefixes = (
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
 public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
-server_token_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/audit-event"}
+node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/audit-event", "/api/v1/session/has-joined"}
+node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
 def is_public(method, path):
     if path.startswith("/authserver/") or path.startswith("/sessionserver/session/minecraft/") or path.startswith("/api/profiles/minecraft/"): return True
@@ -34,7 +35,7 @@ def is_public(method, path):
 def security_for(method, path):
     if path == "/api/v1/install/bootstrap-admin": return [{"BootstrapToken": []}]
     if is_public(method,path): return []
-    if path.endswith("/heartbeat") or path in server_token_paths or path == "/api/v1/session/has-joined": return [{"ServerToken": []}]
+    if path.endswith("/heartbeat") or path in node_signed_paths: return [node_signature_security]
     return [{"BearerAuth": []}]
 
 def tags_for(path):
@@ -108,7 +109,7 @@ def body_schema(path):
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
-      "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
+      "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest",
       "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
       "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
@@ -139,7 +140,7 @@ def request_body_required(method,path):
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
     }
-    if path.endswith("/rotate-token") or path.endswith("/disable") or path.endswith("/enable"):
+    if path.endswith("/disable") or path.endswith("/enable"):
         return False
     if path.endswith("/versions/{versionId}/publish"):
         return False
@@ -152,7 +153,7 @@ def request_body_allowed(method,path):
       "/api/v1/auth/sessions/revoke-others","/api/v1/auth/providers/{providerId}/logout",
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
     }
-    if path in no_body or path.endswith("/rotate-token") or path.endswith("/disable") or path.endswith("/enable") or path.endswith("/versions/{versionId}/publish"):
+    if path in no_body or path.endswith("/disable") or path.endswith("/enable") or path.endswith("/versions/{versionId}/publish"):
         return False
     return True
 
@@ -197,12 +198,18 @@ for method,path in routes:
         op["responses"]["401"]={"$ref":"#/components/responses/Unauthorized"}
     if method in ("post","put","patch"):
         op["responses"]["400"]={"$ref":"#/components/responses/BadRequest"}
+    node_signed = path.endswith("/heartbeat") or path in node_signed_paths
+    if node_signed:
+        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
+        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
+        if method != "get":
+            op["responses"]["413"]={"$ref":"#/components/responses/PayloadTooLarge"}
     if path == "/api/v1/server-bridge/validate-join" or path.endswith("/heartbeat"):
         op["responses"]["426"]={"$ref":"#/components/responses/UpgradeRequired"}
     paths.setdefault(path,{})[method]=op
 
 schemas={
-"Error":{"type":"object","required":["error"],"properties":{"error":{"type":"string"}}},
+"Error":{"type":"object","required":["error"],"properties":{"error":{"type":"object","required":["code","message"],"properties":{"code":{"type":"integer"},"message":{"type":"string"}},"additionalProperties":False}},"additionalProperties":False},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
@@ -222,7 +229,8 @@ schemas={
 "CreateVersionRequest":{"type":"object","required":["version"],"properties":{"profileId":{"type":"string","default":"vanilla"},"channel":{"type":"string","default":"dev"},"version":{"type":"string","minLength":1}}},
 "PublishRequest":{"type":"object","properties":{"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"}}},
 "ManifestRuntimeUpdateRequest":{"type":"object","required":["minecraft","runtime"],"properties":{"minecraft":{"type":"object","additionalProperties":True},"runtime":{"type":"object","additionalProperties":True},"directories":{"type":"object","additionalProperties":True}}},
-"ServerRegisterRequest":{"type":"object","required":["id","kind","projectId"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"kind":{"type":"string","enum":["velocity","paper","purpur"]},"projectId":{"type":"string"},"profileId":{"type":"string"},"fingerprint":{"type":"string"}}},
+"ServerRegisterRequest":{"type":"object","required":["id","kind","projectId","keyAlgorithm","publicKey"],"properties":{"id":{"type":"string","minLength":1},"name":{"type":"string"},"kind":{"type":"string","enum":["velocity","paper","purpur"]},"projectId":{"type":"string","minLength":1},"profileId":{"type":"string"},"fingerprint":{"type":"string"},"keyAlgorithm":{"type":"string","const":"ed25519"},"publicKey":{"type":"string","pattern":"^[A-Za-z0-9_-]{43}$","description":"Raw 32-byte Ed25519 public key encoded as unpadded base64url. The private key never leaves the ServerBridge node."}},"additionalProperties":False},
+"RotateNodeIdentityRequest":{"type":"object","required":["keyAlgorithm","publicKey"],"properties":{"keyAlgorithm":{"type":"string","const":"ed25519"},"publicKey":{"type":"string","pattern":"^[A-Za-z0-9_-]{43}$","description":"Replacement raw Ed25519 public key encoded as unpadded base64url."}},"additionalProperties":False},
 "JoinRequest":{"type":"object","required":["username","serverId","projectId","profileId"],"properties":{"username":{"type":"string","minLength":3,"maxLength":16,"pattern":"^[A-Za-z0-9_]+$"},"serverId":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string","default":"stable"},"minecraftAccessToken":{"type":"string","description":"Minecraft access token whose integrity-verified session is bound to this ServerBridge join when Guard enforcement applies"}}},
 "InvalidateRequest":{"type":"object","properties":{"serverId":{"type":"string"},"reason":{"type":"string"}}},
 "RevokeSessionsRequest":{"type":"object","properties":{"allExceptCurrent":{"type":"boolean"}}},
@@ -261,7 +269,7 @@ spec={
  "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
  "tags":[{"name":x} for x in ["auth","minecraft-auth","install","projects","packages","admin","runtime","bridge","operations"]],
  "paths":paths,
- "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"ServerToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Server-Token"},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required or invalid","content":{"application/json":{"schema":ref("Error")}}},"UpgradeRequired":{"description":"ServerBridge Protocol v2 is required","content":{"application/json":{"schema":ref("Error")}}}}}
+ "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"NodeId":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Id","description":"ServerBridge node id included in the Ed25519 canonical request."},"NodeKeyFingerprint":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Key-Fingerprint","description":"Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key."},"NodeTimestamp":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Timestamp","description":"Unix timestamp in seconds; must be within the ServerBridge signing window."},"NodeNonce":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Nonce","description":"Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection."},"NodeSignature":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Signature","description":"Unpadded base64url Ed25519 signature over NeverLauncher-ServerBridge-Node-v1 canonical request."},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required, node signature invalid, or signed request outside the accepted timestamp window","content":{"application/json":{"schema":ref("Error")}}},"Conflict":{"description":"The signed node request nonce has already been consumed","content":{"application/json":{"schema":ref("Error")}}},"PayloadTooLarge":{"description":"The signed request body exceeds the ServerBridge authentication limit","content":{"application/json":{"schema":ref("Error")}}},"ServiceUnavailable":{"description":"Required ServerBridge persistence or nonce replay protection is unavailable","content":{"application/json":{"schema":ref("Error")}}},"UpgradeRequired":{"description":"ServerBridge Protocol v2 is required","content":{"application/json":{"schema":ref("Error")}}}}}
 }
 OUT.write_text(json.dumps(spec,ensure_ascii=False,indent=2)+"\n")
 print(f"generated {OUT}: {len(routes)} operations")

@@ -49,8 +49,6 @@ bridge = read("services/api/internal/httpapi/server_bridge.go") + read("services
 require(bridge, [
     "serverBridgeProtocolV2 = 2",
     "ConsumeServerBridgeJoinTicket",
-    "subtle.ConstantTimeCompare",
-    "secure ServerBridge token generation failed",
     "validBridgeServerKindV2",
     "one-time atomic join tickets",
     '"sourceOfTruth": "memory-dev-test"',
@@ -77,7 +75,7 @@ require(tests, [
 
 e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 require(e2e, [
-    r'\"protocolVersion\":2',
+    "protocolVersion:2",
     "server_bridge_join_tickets_v2",
     "status='consumed'",
     'sourceOfTruth == "postgresql"',

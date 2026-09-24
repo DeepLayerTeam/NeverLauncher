@@ -20,6 +20,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0019_minecraft_serverbridge_integrity_0135",
 		"0020_guard_migration_compatibility_stabilization_01310",
 		"0021_serverbridge_protocol_v2_0141",
+		"0022_serverbridge_crypto_node_identities_0142",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

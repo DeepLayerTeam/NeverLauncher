@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.2 — Cryptographic Node Identities
+
+`0.14.2` убирает shared ServerBridge bearer credential из production node-auth boundary. Velocity/Paper/Purpur создают локальную Ed25519 identity, Backend хранит только public key/fingerprint/epoch в PostgreSQL, а heartbeat/validate/has-joined/audit requests подписываются по canonical method/path/body SHA-256 с timestamp и single-use nonce.
+
+- Добавлена синхронная API/CLI migration `0022_serverbridge_crypto_node_identities_0142.sql`: public identity material, `identity_epoch`, unique key fingerprint и PostgreSQL nonce replay store. Legacy 0.14.1 token hashes очищаются, active nodes становятся `identity-enrollment-required`, active join tickets инвалидируются.
+- Node-auth headers: `X-NeverLauncher-Node-Id`, `X-NeverLauncher-Node-Key-Fingerprint`, `X-NeverLauncher-Node-Timestamp`, `X-NeverLauncher-Node-Nonce`, `X-NeverLauncher-Node-Signature`; подпись Ed25519 проверяется до разбора payload, timestamp допускает только bounded clock skew, nonce consume выполняется атомарно.
+- `POST /api/v1/server-bridge/servers/{serverId}/rotate-identity` выполняет enrollment/rotation public key, увеличивает identity epoch, сбрасывает heartbeat/integrity state и инвалидирует незавершённые join tickets. Старый `/rotate-token` и `ServerToken` удалены из runtime/OpenAPI.
+- Bridge plugins сохраняют private key только в локальном `node-identity.properties`, проверяют keypair/fingerprint при загрузке и подписывают каждый retry новым nonce.
+- E2E переведён на реальное Ed25519 enrollment/signing; добавлен exact migration rehearsal `0.14.1 → 0.14.2` и mandatory offline release gate.
+
+Migration: перед запуском 0.14.2 примените/проверьте `0022_serverbridge_crypto_node_identities_0142`. После upgrade установите bridge 0.14.2 и enroll его public key через `rotate-identity`; private key Backend не получает.
+
 ## 0.14.1 — ServerBridge Protocol v2 + PostgreSQL source of truth
 
 `0.14.1` переводит ServerBridge из process-local/snapshot state в отдельный production persistence boundary. В PostgreSQL теперь хранятся node identity и server credential hash, plugin integrity/heartbeat state, short-lived join tickets и texture profiles; runtime JSON snapshot больше не является источником истины для ServerBridge при SQL repository.

@@ -116,21 +116,10 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	h := testServer(t)
 	admin := loginAdmin(t, h)
 
-	register := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/register", strings.NewReader(`{"id":"trust-0127","name":"Trust 0127","kind":"paper","projectId":"demo-project","profileId":"vanilla"}`))
-	register.Header.Set("Authorization", "Bearer "+admin)
-	register.Header.Set("Content-Type", "application/json")
-	rv := httptest.NewRecorder()
-	h.ServeHTTP(rv, register)
+	identity := newTestBridgeNodeIdentity0142(t)
+	rv := registerTestBridgeNode0142(t, h, admin, "trust-0127", "Trust 0127", "paper", "demo-project", "vanilla", identity)
 	if rv.Code != http.StatusCreated {
 		t.Fatalf("register server=%d %s", rv.Code, rv.Body.String())
-	}
-	var serverPayload struct {
-		Data struct {
-			ServerToken string `json:"serverToken"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(rv.Body.Bytes(), &serverPayload); err != nil || serverPayload.Data.ServerToken == "" {
-		t.Fatalf("server token missing: %v %s", err, rv.Body.String())
 	}
 
 	access, _ := deviceTrustLogin0121(t, h, "bridge-trust-0127")
@@ -152,7 +141,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	validateJoin := func() *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"stable"}`))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-NeverLauncher-Server-Token", serverPayload.Data.ServerToken)
+		signBridgeNodeRequest0142(t, req, "trust-0127", identity)
 		out := httptest.NewRecorder()
 		h.ServeHTTP(out, req)
 		return out
@@ -165,7 +154,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	issueJoin()
 	channelMismatch := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"beta"}`))
 	channelMismatch.Header.Set("Content-Type", "application/json")
-	channelMismatch.Header.Set("X-NeverLauncher-Server-Token", serverPayload.Data.ServerToken)
+	signBridgeNodeRequest0142(t, channelMismatch, "trust-0127", identity)
 	cm := httptest.NewRecorder()
 	h.ServeHTTP(cm, channelMismatch)
 	if cm.Code != http.StatusForbidden || !strings.Contains(cm.Body.String(), "channel_mismatch") {
