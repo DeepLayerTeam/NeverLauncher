@@ -547,6 +547,12 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	if _, err := repo.ConsumeMinecraftJoin(username, serverID, join.MinecraftSessionID, time.Now().UTC()); err != nil {
+		// One-Time Join Tickets: only the first concurrent /hasJoined for this
+		// exact session may authorize the connection. Lost/replayed checks fail closed.
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	writeJSON(w, http.StatusOK, minecraftProfileJSON119(profile, s.minecraftTexture119(profile)))
 }
 

@@ -375,8 +375,11 @@ type MinecraftJoin struct {
 	MinecraftSessionID string    `json:"minecraftSessionId"`
 	ServerID           string    `json:"serverId"`
 	IP                 string    `json:"ip,omitempty"`
+	TicketVersion      int       `json:"ticketVersion"`
+	Status             string    `json:"status"`
 	CreatedAt          time.Time `json:"createdAt"`
 	ExpiresAt          time.Time `json:"expiresAt"`
+	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
 // ServerBridgeNode is the authoritative Protocol v2 identity of a game/proxy node.
@@ -411,25 +414,43 @@ type ServerBridgeNode struct {
 // ServerBridgeJoinTicket is a short-lived one-time Protocol v2 authorization.
 // A successful server-side validation atomically consumes it, preventing replay.
 type ServerBridgeJoinTicket struct {
-	ID                 string    `json:"id"`
-	Username           string    `json:"username"`
-	UsernameNormalized string    `json:"-"`
-	UUID               string    `json:"uuid"`
-	UserID             string    `json:"userId"`
-	SessionID          string    `json:"sessionId"`
-	ServerID           string    `json:"serverId"`
-	ProjectID          string    `json:"projectId"`
-	ProfileID          string    `json:"profileId"`
-	Channel            string    `json:"channel"`
-	AccessTokenHash    string    `json:"-"`
-	TrustedDeviceID    string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch       int64     `json:"bindingEpoch"`
-	MinecraftSessionID string    `json:"minecraftSessionId,omitempty"`
-	ProtocolVersion    int       `json:"protocolVersion"`
-	Status             string    `json:"status"`
-	CreatedAt          time.Time `json:"createdAt"`
-	ExpiresAt          time.Time `json:"expiresAt"`
-	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
+	ID                     string    `json:"id"`
+	TicketVersion          int       `json:"ticketVersion"`
+	Username               string    `json:"username"`
+	UsernameNormalized     string    `json:"-"`
+	UUID                   string    `json:"uuid"`
+	UserID                 string    `json:"userId"`
+	SessionID              string    `json:"sessionId"`
+	ServerID               string    `json:"serverId"`
+	ProjectID              string    `json:"projectId"`
+	ProfileID              string    `json:"profileId"`
+	Channel                string    `json:"channel"`
+	AccessTokenHash        string    `json:"-"`
+	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch           int64     `json:"bindingEpoch"`
+	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	ProtocolVersion        int       `json:"protocolVersion"`
+	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
+	IssuedKeyFingerprint   string    `json:"issuedKeyFingerprint"`
+	Status                 string    `json:"status"`
+	CreatedAt              time.Time `json:"createdAt"`
+	ExpiresAt              time.Time `json:"expiresAt"`
+	ConsumedAt             time.Time `json:"consumedAt,omitempty"`
+	RedeemedIdentityEpoch  int64     `json:"redeemedIdentityEpoch,omitempty"`
+	RedeemedKeyFingerprint string    `json:"redeemedKeyFingerprint,omitempty"`
+	RedeemedNonceHash      string    `json:"redeemedNonceHash,omitempty"`
+	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
+}
+
+// ServerBridgeJoinRedemption is the authenticated node proof persisted when a
+// one-time join ticket is consumed. The request nonce has already passed the
+// Protocol v2 replay store before this proof reaches the repository.
+type ServerBridgeJoinRedemption struct {
+	NodeID         string
+	IdentityEpoch  int64
+	KeyFingerprint string
+	NonceHash      string
+	RemoteIP       string
 }
 
 // ServerBridgeTexture is the persistent texture profile used by Protocol v2.

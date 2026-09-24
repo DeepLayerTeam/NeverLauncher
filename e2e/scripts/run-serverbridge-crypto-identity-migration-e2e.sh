@@ -100,7 +100,9 @@ SQL
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0022_serverbridge_crypto_node_identities_0142" ]]
+[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
+identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0022_serverbridge_crypto_node_identities_0142'")"
+[[ "$identity_sealed" == "t" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
 
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,plugin_version,plugin_sha256,integrity_status,(integrity_verified_at IS NULL)::text,(last_heartbeat_at IS NULL)::text FROM server_bridge_nodes_v2 WHERE id='paper-0141'")"
 # psql renders empty text columns as adjacent delimiters.
@@ -117,4 +119,4 @@ identity_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_nod
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyBearerRetired:true,nodeStatus:"identity-enrollment-required",activeJoinInvalidated:true,nonceReplayStoreCreated:true}' \
   > "$RESULT_DIR/serverbridge-crypto-identity-migration.json"
-printf '[serverbridge-crypto-migration] PASS 0.14.1 -> 0.14.2 bearer retirement + identity enrollment semantics\n'
+printf '[serverbridge-crypto-migration] PASS 0.14.1 -> 0.14.3 bearer retirement + identity enrollment + one-time ticket semantics\n'

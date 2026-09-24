@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0022_serverbridge_crypto_node_identities_0142" {
+	if st.Current != "0023_one_time_join_tickets_0143" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0022_serverbridge_crypto_node_identities_0142" {
+		if k != "0023_one_time_join_tickets_0143" {
 			pending[k] = v
 		}
 	}
@@ -158,6 +158,29 @@ func TestServerBridgeCryptoNodeIdentitiesMigration0142(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.2 cryptographic node identity migration missing %q", required)
+		}
+	}
+}
+
+func TestOneTimeJoinTicketsMigration0143(t *testing.T) {
+	b, err := os.ReadFile("sql/0023_one_time_join_tickets_0143.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"ticket_version",
+		"issued_identity_epoch",
+		"issued_key_fingerprint",
+		"redeemed_identity_epoch",
+		"redeemed_nonce_hash",
+		"uq_server_bridge_join_v2_redemption_nonce_0143",
+		"DELETE FROM minecraft_joins",
+		"status IN ('active','consumed')",
+		"consumed_at",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.3 one-time join ticket migration missing %q", required)
 		}
 	}
 }

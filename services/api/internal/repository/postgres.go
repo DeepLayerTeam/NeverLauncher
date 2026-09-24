@@ -1549,8 +1549,10 @@ func (r *SQLRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	if item.ExpiresAt.IsZero() {
 		item.ExpiresAt = now.Add(2 * time.Minute)
 	}
-	_, err := r.db.Exec(`INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT (username_normalized,server_id) DO UPDATE SET username=EXCLUDED.username,profile_uuid=EXCLUDED.profile_uuid,user_id=EXCLUDED.user_id,minecraft_session_id=EXCLUDED.minecraft_session_id,ip=EXCLUDED.ip,created_at=EXCLUDED.created_at,expires_at=EXCLUDED.expires_at`, item.Username, item.UsernameNormalized, item.ProfileUUID, item.UserID, item.MinecraftSessionID, item.ServerID, item.IP, item.CreatedAt, item.ExpiresAt)
+	item.TicketVersion = 2
+	item.Status = "active"
+	_, err := r.db.Exec(`INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,consumed_at) VALUES($1,$2,$3,$4,$5,$6,$7,2,'active',$8,$9,NULL)
+ON CONFLICT (username_normalized,server_id) DO UPDATE SET username=EXCLUDED.username,profile_uuid=EXCLUDED.profile_uuid,user_id=EXCLUDED.user_id,minecraft_session_id=EXCLUDED.minecraft_session_id,ip=EXCLUDED.ip,ticket_version=2,status='active',created_at=EXCLUDED.created_at,expires_at=EXCLUDED.expires_at,consumed_at=NULL`, item.Username, item.UsernameNormalized, item.ProfileUUID, item.UserID, item.MinecraftSessionID, item.ServerID, item.IP, item.CreatedAt, item.ExpiresAt)
 	return err
 }
 func (r *SQLRepository) GetMinecraftJoin(username, serverID string) (model.MinecraftJoin, error) {
@@ -1558,9 +1560,28 @@ func (r *SQLRepository) GetMinecraftJoin(username, serverID string) (model.Minec
 		return model.MinecraftJoin{}, err
 	}
 	var item model.MinecraftJoin
-	err := r.db.QueryRow(`SELECT username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,created_at,expires_at FROM minecraft_joins WHERE username_normalized=lower($1) AND server_id=$2 AND expires_at>now()`, strings.TrimSpace(username), strings.TrimSpace(serverID)).Scan(&item.Username, &item.UsernameNormalized, &item.ProfileUUID, &item.UserID, &item.MinecraftSessionID, &item.ServerID, &item.IP, &item.CreatedAt, &item.ExpiresAt)
+	var consumed sql.NullTime
+	err := r.db.QueryRow(`SELECT username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,consumed_at FROM minecraft_joins WHERE username_normalized=lower($1) AND server_id=$2 AND ticket_version=2 AND status='active' AND expires_at>now()`, strings.TrimSpace(username), strings.TrimSpace(serverID)).Scan(&item.Username, &item.UsernameNormalized, &item.ProfileUUID, &item.UserID, &item.MinecraftSessionID, &item.ServerID, &item.IP, &item.TicketVersion, &item.Status, &item.CreatedAt, &item.ExpiresAt, &consumed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftJoin{}, ErrNotFound
+	}
+	if err == nil && consumed.Valid {
+		item.ConsumedAt = consumed.Time
+	}
+	return item, err
+}
+func (r *SQLRepository) ConsumeMinecraftJoin(username, serverID, expectedSessionID string, now time.Time) (model.MinecraftJoin, error) {
+	if err := r.check(); err != nil {
+		return model.MinecraftJoin{}, err
+	}
+	var item model.MinecraftJoin
+	var consumed sql.NullTime
+	err := r.db.QueryRow(`UPDATE minecraft_joins SET status='consumed',consumed_at=$4 WHERE username_normalized=lower($1) AND server_id=$2 AND minecraft_session_id=$3 AND ticket_version=2 AND status='active' AND expires_at>$4 RETURNING username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,consumed_at`, strings.TrimSpace(username), strings.TrimSpace(serverID), strings.TrimSpace(expectedSessionID), now.UTC()).Scan(&item.Username, &item.UsernameNormalized, &item.ProfileUUID, &item.UserID, &item.MinecraftSessionID, &item.ServerID, &item.IP, &item.TicketVersion, &item.Status, &item.CreatedAt, &item.ExpiresAt, &consumed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.MinecraftJoin{}, ErrConflict
+	}
+	if err == nil && consumed.Valid {
+		item.ConsumedAt = consumed.Time
 	}
 	return item, err
 }

@@ -126,7 +126,7 @@ psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET guard_sha256
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0022_serverbridge_crypto_node_identities_0142" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
+[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'")"
 [[ "$sealed" == "true" ]]
 serverbridge_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"

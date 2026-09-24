@@ -287,6 +287,7 @@ jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 a
 
 printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client.json"
+jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_")) and .data.join.issuedIdentityEpoch >= 1 and (.data.join.issuedKeyFingerprint | length) == 64' "$RUNTIME_DIR/join-paper-real-client.json" >/dev/null
 validate_join() {
   local id="$1" key="$2" plugin_sha="$3" expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json" code body
   body="$(jq -cn --arg id "$id" --arg username "$PLAYER_USERNAME" --arg project "e2e-project" --arg profile "$PROFILE_ID" --arg version "$VERSION" --arg sha "$plugin_sha" '{protocolVersion:2,serverId:$id,username:$username,projectId:$project,profileId:$profile,channel:"stable",pluginVersion:$version,pluginSha256:$sha}')"
@@ -302,9 +303,13 @@ validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 
 consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"
 (( consumed_count >= 1 )) || { echo "[e2e] ServerBridge Protocol v2 ticket was not persisted as consumed" >&2; exit 1; }
+redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
+IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
+[[ "$redemption_version" == "2" && "$fingerprint_match" == "t" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "t" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
 # The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
 # the actual Minecraft connection; the server plugin must be the only consumer.
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
+jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_"))' "$RUNTIME_DIR/join-paper-real-client-fresh.json" >/dev/null
 
 (
   cd "$ROOT"

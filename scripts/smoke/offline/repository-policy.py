@@ -1017,6 +1017,33 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
         fail("0.14.2 mandatory cryptographic identity release gate is incomplete")
 
+# 0.14.3 One-Time Join Tickets. A join authorization is identity-bound,
+# atomically consumed once, and carries a persisted redemption proof.
+if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
+    ticket_migration_0143 = read("services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql")
+    ticket_helper_0143 = read("services/api/internal/httpapi/server_bridge_join_tickets_0143.go")
+    ticket_repo_0143 = read("services/api/internal/repository/server_bridge_v2.go")
+    minecraft_repo_0143 = read("services/api/internal/repository/postgres.go")
+    ticket_gate_0143 = read("scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py")
+    for required in ["issued_identity_epoch", "issued_key_fingerprint", "redeemed_nonce_hash", "DELETE FROM minecraft_joins", "minecraft_joins_0143_terminal_check"]:
+        if required not in ticket_migration_0143:
+            fail(f"0.14.3 one-time join migration incomplete: {required}")
+    for required in ["make([]byte, 24)", "rand.Read(buf)", '"jt_" + base64.RawURLEncoding.EncodeToString(buf)']:
+        if required not in ticket_helper_0143:
+            fail(f"0.14.3 CSPRNG ticket generation incomplete: {required}")
+    for required in ["ConsumeServerBridgeJoinTicket", "j.ticket_version=2", "j.issued_identity_epoch=$3", "redeemed_nonce_hash"]:
+        if required not in ticket_repo_0143:
+            fail(f"0.14.3 atomic ServerBridge redemption incomplete: {required}")
+    for required in ["ConsumeMinecraftJoin", "status='consumed'", "status='active'"]:
+        if required not in minecraft_repo_0143:
+            fail(f"0.14.3 Yggdrasil consume-once repository incomplete: {required}")
+    if "serverbridge-one-time-join-tickets-0143.py" not in preflight or "serverbridge-one-time-join-tickets-0143.py" not in ci:
+        fail("0.14.3 one-time join ticket gate is not wired into preflight/CI")
+    if "run-one-time-join-ticket-migration-e2e.sh" not in preflight or "run-one-time-join-ticket-migration-e2e.sh" not in ci:
+        fail("0.14.3 exact 0.14.2 -> 0.14.3 migration E2E is not wired into preflight/CI")
+    if "One-Time Join Tickets gate" not in ticket_gate_0143:
+        fail("0.14.3 mandatory one-time join ticket release gate is incomplete")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

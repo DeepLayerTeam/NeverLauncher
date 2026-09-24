@@ -98,7 +98,7 @@ SQL
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0022_serverbridge_crypto_node_identities_0142" ]]
+[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT protocol_version,status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,project_id,profile_id FROM server_bridge_nodes_v2 WHERE id='legacy-paper'")"
 [[ "$node_state" == "2|identity-enrollment-required||||||0|legacy-project|vanilla" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
 texture_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT username,model,skin_url FROM server_bridge_textures_v2 WHERE player_uuid='00000000-0000-0000-0000-000000000141'")"
@@ -109,4 +109,4 @@ join_count="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_join_tick
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyNode:{status:"identity-enrollment-required",protocolVersion:2,bearerCredentialRetired:true,identityEnrollmentRequired:true},legacyTexturesImported:true,legacyActiveJoinsImported:false}' \
   > "$RESULT_DIR/serverbridge-v2-migration.json"
-printf '[serverbridge-v2-migration] PASS 0.14.0 -> 0.14.2 snapshot + cryptographic identity migration semantics\n'
+printf '[serverbridge-v2-migration] PASS 0.14.0 -> 0.14.3 snapshot + cryptographic identity + one-time ticket migration semantics\n'

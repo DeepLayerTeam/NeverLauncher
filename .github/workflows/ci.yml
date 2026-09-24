@@ -53,6 +53,7 @@ jobs:
           python3 scripts/smoke/offline/neverguard-release-0140.py
           python3 scripts/smoke/offline/serverbridge-protocol-v2-0141.py
           python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
+          python3 scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -522,6 +523,8 @@ jobs:
         run: bash e2e/scripts/run-serverbridge-v2-migration-e2e.sh
       - name: ServerBridge 0.14.1 to 0.14.2 cryptographic identity migration E2E
         run: bash e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh
+      - name: ServerBridge 0.14.2 to 0.14.3 one-time join ticket migration E2E
+        run: bash e2e/scripts/run-one-time-join-ticket-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -590,5 +593,13 @@ jobs:
         with:
           name: neverlauncher-serverbridge-crypto-identity-migration-e2e-evidence
           path: e2e/serverbridge-crypto-migration-result/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload one-time join ticket migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-one-time-join-ticket-migration-e2e-evidence
+          path: e2e/one-time-join-migration-result/
           if-no-files-found: ignore
           retention-days: 14

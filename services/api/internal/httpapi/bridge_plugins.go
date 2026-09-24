@@ -214,7 +214,12 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, payload)
 		return
 	}
-	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join)
+	redemption, redemptionErr := bridgeJoinRedemption0143(r, server)
+	if redemptionErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_join_redemption_proof_unavailable")
+		return
+	}
+	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
 	if !consumedOK {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-replay"), Actor: server.ID, Action: "serverbridge:validate-join:replay-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "join_ticket_already_consumed", req, bridgeJoinRecord{}))
@@ -269,6 +274,7 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 			{"id": "postgresql-source-of-truth", "status": "implemented"},
 			{"id": "ed25519-node-authentication", "status": "implemented"},
 			{"id": "single-use-node-nonce", "status": "implemented"},
+			{"id": "identity-bound-one-time-join-ticket", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
 			{"id": "gameplay-trust-enforcement", "status": "implemented"},
 			{"id": "minecraft-integrity-enforcement", "status": "implemented"},
@@ -304,11 +310,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.14.2 Cryptographic Node Identities",
+		"release":         "NeverLauncher 0.14.3 One-Time Join Tickets",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v2",
 		"protocolVersion": serverBridgeProtocolV2,
-		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}

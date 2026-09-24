@@ -46,24 +46,31 @@ type bridgeServerRecord struct {
 }
 
 type bridgeJoinRecord struct {
-	ID                 string    `json:"id"`
-	Username           string    `json:"username"`
-	UUID               string    `json:"uuid"`
-	UserID             string    `json:"userId"`
-	SessionID          string    `json:"sessionId"`
-	ServerID           string    `json:"serverId"`
-	ProjectID          string    `json:"projectId"`
-	ProfileID          string    `json:"profileId"`
-	Channel            string    `json:"channel"`
-	AccessTokenHash    string    `json:"-"`
-	TrustedDeviceID    string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch       int64     `json:"bindingEpoch"`
-	MinecraftSessionID string    `json:"minecraftSessionId,omitempty"`
-	ProtocolVersion    int       `json:"protocolVersion"`
-	Status             string    `json:"status"`
-	CreatedAt          time.Time `json:"createdAt"`
-	ExpiresAt          time.Time `json:"expiresAt"`
-	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
+	ID                     string    `json:"id"`
+	TicketVersion          int       `json:"ticketVersion"`
+	Username               string    `json:"username"`
+	UUID                   string    `json:"uuid"`
+	UserID                 string    `json:"userId"`
+	SessionID              string    `json:"sessionId"`
+	ServerID               string    `json:"serverId"`
+	ProjectID              string    `json:"projectId"`
+	ProfileID              string    `json:"profileId"`
+	Channel                string    `json:"channel"`
+	AccessTokenHash        string    `json:"-"`
+	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch           int64     `json:"bindingEpoch"`
+	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	ProtocolVersion        int       `json:"protocolVersion"`
+	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
+	IssuedKeyFingerprint   string    `json:"issuedKeyFingerprint"`
+	Status                 string    `json:"status"`
+	CreatedAt              time.Time `json:"createdAt"`
+	ExpiresAt              time.Time `json:"expiresAt"`
+	ConsumedAt             time.Time `json:"consumedAt,omitempty"`
+	RedeemedIdentityEpoch  int64     `json:"redeemedIdentityEpoch,omitempty"`
+	RedeemedKeyFingerprint string    `json:"redeemedKeyFingerprint,omitempty"`
+	RedeemedNonceHash      string    `json:"redeemedNonceHash,omitempty"`
+	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
 }
 
 type bridgeTextureRecord struct {
@@ -243,7 +250,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server calls /api/v1/session/has-joined with its Ed25519 node identity", "server allows player only when has-joined returns status joined"}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed Protocol v2 request", "a replay, expired ticket, or rotated node identity is denied"}}})
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
@@ -302,7 +309,12 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "integrity policy denied join: "+integrity.Reason)
 		return
 	}
-	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join)
+	redemption, redemptionErr := bridgeJoinRedemption0143(r, server)
+	if redemptionErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_join_redemption_proof_unavailable")
+		return
+	}
+	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
 	if !consumedOK {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-replay"), Actor: server.ID, Action: "serverbridge:has-joined:replay-denied", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusConflict, "join ticket уже использован")
@@ -392,7 +404,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion": serverBridgeSchema910,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.14.2 Cryptographic Node Identities",
+		"release":       "NeverLauncher 0.14.3 One-Time Join Tickets",
 		"mode":          "serverbridge-protocol-v2",
 		"parentMode":    "launcherops-ecosystem-platform",
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
@@ -412,14 +424,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
@@ -655,7 +667,14 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	if bindingEpoch < 1 {
 		bindingEpoch = 1
 	}
-	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: serverBridgeProtocolV2, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	if server.IdentityEpoch < 1 || len(server.KeyFingerprint) != 64 {
+		return bridgeJoinRecord{}, fmt.Errorf("server bridge node cryptographic identity is not enrolled")
+	}
+	ticketID, err := newServerBridgeJoinTicketID0143()
+	if err != nil {
+		return bridgeJoinRecord{}, err
+	}
+	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: serverBridgeProtocolV2, IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
@@ -667,6 +686,14 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	// Keep the in-memory dev/test path aligned with PostgreSQL: identity rotation
+	// between the initial lookup and ticket insertion must fail closed rather than
+	// minting a ticket bound to a retired key epoch.
+	current := b.servers[req.ServerID]
+	if current.ID == "" || current.Status != "active" || current.IdentityEpoch != server.IdentityEpoch ||
+		!strings.EqualFold(current.KeyFingerprint, server.KeyFingerprint) {
+		return bridgeJoinRecord{}, fmt.Errorf("server bridge node identity changed while issuing join ticket")
+	}
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)
 	return join, nil
@@ -832,7 +859,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "minecraftSessionId": join.MinecraftSessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "protocolVersion": join.ProtocolVersion, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 func playerUUID910(seed string) string {

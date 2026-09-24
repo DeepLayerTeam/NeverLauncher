@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6920,6 +6920,7 @@
             "$ref": "#/components/responses/BadRequest"
           }
         },
+        "description": "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity.",
         "security": [
           {
             "BearerAuth": []
@@ -7332,6 +7333,7 @@
             }
           }
         },
+        "description": "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join.",
         "parameters": [
           {
             "name": "username",
@@ -8805,7 +8807,7 @@
         }
       },
       "Conflict": {
-        "description": "The signed node request nonce has already been consumed",
+        "description": "The signed node request nonce or one-time join ticket has already been consumed",
         "content": {
           "application/json": {
             "schema": {

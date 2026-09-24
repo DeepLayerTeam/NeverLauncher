@@ -24,7 +24,7 @@ type ServerBridgeRepository interface {
 	TouchServerBridgeNodeHeartbeat(context.Context, string, string, string, time.Time) error
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
-	ConsumeServerBridgeJoinTicket(context.Context, string, time.Time) (model.ServerBridgeJoinTicket, error)
+	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
 	InvalidateServerBridgeJoinTicket(context.Context, string, time.Time) (bool, error)
 	InvalidateServerBridgeSession(context.Context, string, string, time.Time) (int, error)
 	InvalidateServerBridgeUser(context.Context, string, time.Time) (int, error)
@@ -256,7 +256,7 @@ func (r *SQLRepository) TouchServerBridgeNodeHeartbeat(ctx context.Context, id, 
 func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoinTicket, error) {
 	var j model.ServerBridgeJoinTicket
 	var consumed sql.NullTime
-	err := row.Scan(&j.ID, &j.Username, &j.UsernameNormalized, &j.UUID, &j.UserID, &j.SessionID, &j.ServerID, &j.ProjectID, &j.ProfileID, &j.Channel, &j.AccessTokenHash, &j.TrustedDeviceID, &j.BindingEpoch, &j.MinecraftSessionID, &j.ProtocolVersion, &j.Status, &j.CreatedAt, &j.ExpiresAt, &consumed)
+	err := row.Scan(&j.ID, &j.TicketVersion, &j.Username, &j.UsernameNormalized, &j.UUID, &j.UserID, &j.SessionID, &j.ServerID, &j.ProjectID, &j.ProfileID, &j.Channel, &j.AccessTokenHash, &j.TrustedDeviceID, &j.BindingEpoch, &j.MinecraftSessionID, &j.ProtocolVersion, &j.IssuedIdentityEpoch, &j.IssuedKeyFingerprint, &j.Status, &j.CreatedAt, &j.ExpiresAt, &consumed, &j.RedeemedIdentityEpoch, &j.RedeemedKeyFingerprint, &j.RedeemedNonceHash, &j.RedeemedByIP)
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
@@ -266,7 +266,7 @@ func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoin
 	return j, nil
 }
 
-const bridgeJoinSelectV2 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,status,created_at,expires_at,consumed_at FROM server_bridge_join_tickets_v2`
+const bridgeJoinSelectV2 = `SELECT id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_join_tickets_v2`
 
 func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error) {
 	if err := r.check(); err != nil {
@@ -277,6 +277,7 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 	j.ServerID = strings.TrimSpace(j.ServerID)
 	j.ProjectID = strings.TrimSpace(j.ProjectID)
 	j.ProfileID = strings.TrimSpace(j.ProfileID)
+	j.TicketVersion = 2
 	if j.ProtocolVersion == 0 {
 		j.ProtocolVersion = 2
 	}
@@ -292,16 +293,17 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1402, hashtext($1))`, joinLockKey); err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
-	var status, projectID, profileID string
-	err = tx.QueryRowContext(ctx, `SELECT status,project_id,profile_id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, j.ServerID).Scan(&status, &projectID, &profileID)
+	var status, projectID, profileID, keyFingerprint string
+	var identityEpoch int64
+	err = tx.QueryRowContext(ctx, `SELECT status,project_id,profile_id,identity_epoch,key_fingerprint FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, j.ServerID).Scan(&status, &projectID, &profileID, &identityEpoch, &keyFingerprint)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeJoinTicket{}, ErrNotFound
 	}
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
-	if status != "active" {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server bridge node is not active")
+	if status != "active" || identityEpoch < 1 || len(keyFingerprint) != 64 {
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server bridge node identity is not active")
 	}
 	if projectID != "" && projectID != j.ProjectID {
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server project binding mismatch")
@@ -309,11 +311,13 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 	if profileID != "" && profileID != j.ProfileID {
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server profile binding mismatch")
 	}
+	j.IssuedIdentityEpoch = identityEpoch
+	j.IssuedKeyFingerprint = keyFingerprint
 	_, err = tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='replaced',invalidated_at=$3 WHERE server_id=$1 AND username_normalized=$2 AND status='active'`, j.ServerID, j.UsernameNormalized, j.CreatedAt)
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_join_tickets_v2(id,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,trusted_device_id,binding_epoch,minecraft_session_id,protocol_version,status,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,''),$13,NULLIF($14,''),2,'active',$15,$16)`, j.ID, j.Username, j.UsernameNormalized, j.UUID, j.UserID, j.SessionID, j.ServerID, j.ProjectID, j.ProfileID, j.Channel, j.AccessTokenHash, j.TrustedDeviceID, j.BindingEpoch, j.MinecraftSessionID, j.CreatedAt.UTC(), j.ExpiresAt.UTC())
+	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_join_tickets_v2(id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,trusted_device_id,binding_epoch,minecraft_session_id,protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at) VALUES($1,2,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,''),$13,NULLIF($14,''),2,$15,$16,'active',$17,$18)`, j.ID, j.Username, j.UsernameNormalized, j.UUID, j.UserID, j.SessionID, j.ServerID, j.ProjectID, j.ProfileID, j.Channel, j.AccessTokenHash, j.TrustedDeviceID, j.BindingEpoch, j.MinecraftSessionID, j.IssuedIdentityEpoch, j.IssuedKeyFingerprint, j.CreatedAt.UTC(), j.ExpiresAt.UTC())
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
@@ -336,11 +340,25 @@ func (r *SQLRepository) GetActiveServerBridgeJoinTicket(ctx context.Context, use
 	return j, err
 }
 
-func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id string, now time.Time) (model.ServerBridgeJoinTicket, error) {
+func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id string, redemption model.ServerBridgeJoinRedemption, now time.Time) (model.ServerBridgeJoinTicket, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
-	j, err := scanBridgeJoin(r.db.QueryRowContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='consumed',consumed_at=$2 WHERE id=$1 AND status='active' AND expires_at>$2 RETURNING id,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,status,created_at,expires_at,consumed_at`, id, now.UTC()))
+	id = strings.TrimSpace(id)
+	redemption.NodeID = strings.TrimSpace(redemption.NodeID)
+	redemption.KeyFingerprint = strings.ToLower(strings.TrimSpace(redemption.KeyFingerprint))
+	redemption.NonceHash = strings.ToLower(strings.TrimSpace(redemption.NonceHash))
+	redemption.RemoteIP = strings.TrimSpace(redemption.RemoteIP)
+	if id == "" || redemption.NodeID == "" || redemption.IdentityEpoch < 1 || len(redemption.KeyFingerprint) != 64 || len(redemption.NonceHash) != 64 {
+		return model.ServerBridgeJoinTicket{}, ErrConflict
+	}
+	q := `UPDATE server_bridge_join_tickets_v2 AS j
+SET status='consumed',consumed_at=$6,redeemed_identity_epoch=$3,redeemed_key_fingerprint=$4,redeemed_nonce_hash=$5,redeemed_by_ip=$7
+WHERE j.id=$1 AND j.server_id=$2 AND j.ticket_version=2 AND j.status='active' AND j.expires_at>$6
+  AND j.issued_identity_epoch=$3 AND j.issued_key_fingerprint=$4
+  AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=j.server_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$4)
+RETURNING id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip`
+	j, err := scanBridgeJoin(r.db.QueryRowContext(ctx, q, id, redemption.NodeID, redemption.IdentityEpoch, redemption.KeyFingerprint, redemption.NonceHash, now.UTC(), redemption.RemoteIP))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeJoinTicket{}, ErrConflict
 	}

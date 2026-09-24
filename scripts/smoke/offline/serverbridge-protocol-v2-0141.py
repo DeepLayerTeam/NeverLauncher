@@ -59,7 +59,7 @@ require(plugins, [
     "http.StatusUpgradeRequired",
     "serverbridge_protocol_unsupported",
     "валидный pluginSha256 обязательны для Protocol v2",
-    "consumeJoinV2(join)",
+    "consumeJoinV2(join, redemption)",
 ], "ServerBridge v2 endpoint enforcement")
 java = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
 defaults = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java")

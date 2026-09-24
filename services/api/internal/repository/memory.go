@@ -77,6 +77,7 @@ type Repository interface {
 
 type MemoryRepository struct {
 	deviceMu            sync.Mutex
+	minecraftMu         sync.Mutex
 	projects            []model.Project
 	profiles            []model.Profile
 	channels            []model.ReleaseChannel
@@ -1131,6 +1132,11 @@ func (r *MemoryRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	if item.ExpiresAt.IsZero() {
 		item.ExpiresAt = now.Add(2 * time.Minute)
 	}
+	item.TicketVersion = 2
+	item.Status = "active"
+	item.ConsumedAt = time.Time{}
+	r.minecraftMu.Lock()
+	defer r.minecraftMu.Unlock()
 	for i, existing := range r.minecraftJoins {
 		if existing.UsernameNormalized == item.UsernameNormalized && existing.ServerID == item.ServerID {
 			r.minecraftJoins[i] = item
@@ -1145,10 +1151,30 @@ func (r *MemoryRepository) GetMinecraftJoin(username, serverID string) (model.Mi
 	name := strings.ToLower(strings.TrimSpace(username))
 	sid := strings.TrimSpace(serverID)
 	now := time.Now().UTC()
+	r.minecraftMu.Lock()
+	defer r.minecraftMu.Unlock()
 	for _, item := range r.minecraftJoins {
-		if item.UsernameNormalized == name && item.ServerID == sid && item.ExpiresAt.After(now) {
+		if item.UsernameNormalized == name && item.ServerID == sid && item.TicketVersion == 2 && item.Status == "active" && item.ExpiresAt.After(now) {
 			return item, nil
 		}
 	}
 	return model.MinecraftJoin{}, ErrNotFound
+}
+
+func (r *MemoryRepository) ConsumeMinecraftJoin(username, serverID, expectedSessionID string, now time.Time) (model.MinecraftJoin, error) {
+	name := strings.ToLower(strings.TrimSpace(username))
+	sid := strings.TrimSpace(serverID)
+	expectedSessionID = strings.TrimSpace(expectedSessionID)
+	r.minecraftMu.Lock()
+	defer r.minecraftMu.Unlock()
+	for i, item := range r.minecraftJoins {
+		if item.UsernameNormalized != name || item.ServerID != sid || item.MinecraftSessionID != expectedSessionID || item.TicketVersion != 2 || item.Status != "active" || !item.ExpiresAt.After(now) {
+			continue
+		}
+		item.Status = "consumed"
+		item.ConsumedAt = now.UTC()
+		r.minecraftJoins[i] = item
+		return item, nil
+	}
+	return model.MinecraftJoin{}, ErrConflict
 }

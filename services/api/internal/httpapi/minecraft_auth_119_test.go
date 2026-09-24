@@ -70,6 +70,12 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	if hv.Code != http.StatusOK || !strings.Contains(hv.Body.String(), uuid) {
 		t.Fatalf("hasJoined=%d %s", hv.Code, hv.Body.String())
 	}
+	replay := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
+	replayV := httptest.NewRecorder()
+	handler.ServeHTTP(replayV, replay)
+	if replayV.Code != http.StatusNoContent {
+		t.Fatalf("one-time Yggdrasil join replay must be denied: %d %s", replayV.Code, replayV.Body.String())
+	}
 
 	logout := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
 	logout.Header.Set("Authorization", "Bearer "+neverToken)

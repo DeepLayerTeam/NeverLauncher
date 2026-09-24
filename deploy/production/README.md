@@ -18,6 +18,12 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Upgrade 0.14.2 → 0.14.3
+
+Остановите 0.14.2 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0023_one_time_join_tickets_0143` до запуска 0.14.3 Backend.
+
+Migration намеренно fail-closed инвалидирует оставшиеся active ServerBridge tickets 0.14.2 и очищает ephemeral `minecraft_joins`: старые записи не содержат identity binding/redemption proof и не могут считаться доказанно одноразовыми. После запуска выдайте свежий join и проверьте, что он имеет `ticketVersion=2`, привязан к текущему Ed25519 `identity_epoch/key_fingerprint`, первый signed validate переводит ticket в `consumed`, а replay отклоняется. Для Yggdrasil совместимости первый валидный `/hasJoined` также должен consume-ить authorization, повторный — возвращать отсутствие join.
+
 ### Upgrade 0.14.1 → 0.14.2
 
 Остановите 0.14.1 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0022_serverbridge_crypto_node_identities_0142` до запуска 0.14.2 Backend.

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.3 — One-Time Join Tickets
+
+`0.14.3` закрывает join authorization как самостоятельную одноразовую security boundary. ServerBridge ticket теперь генерируется из 192-bit CSPRNG, привязывается в PostgreSQL к exact Ed25519 `identity_epoch/key_fingerprint` узла и может быть атомарно погашен только один раз той же активной node identity.
+
+- Migration `0023_one_time_join_tickets_0143.sql` добавляет versioned identity binding и persisted redemption proof (`redeemed_identity_epoch`, key fingerprint, SHA-256 signed-request nonce, IP). Active tickets 0.14.2 fail-closed инвалидируются при upgrade.
+- `CreateServerBridgeJoinTicket` получает фактическую текущую identity под transaction/advisory lock; rotation между предварительной проверкой и issuance не позволяет выпустить ticket на retired key.
+- Redemption выполняется одним conditional PostgreSQL `UPDATE ... WHERE status='active'` с проверкой ticket version, TTL, server id, issuance identity и текущей active node identity. Параллельный/replay validate получает отказ.
+- Standard Minecraft/Yggdrasil `/join → /hasJoined` также переведён на consume-once: проверки IP/trust/integrity выполняются до погашения, затем первый валидный `/hasJoined` атомарно меняет `active → consumed`; повторный не авторизует игрока. Legacy ephemeral rows 0.14.2 очищаются на migration boundary.
+- API возвращает `oneTime=true`, `ticketId`, `ticketVersion=2` и публичный issuance identity binding; внутренние access/session/device hashes в join response не раскрываются.
+- Добавлены concurrency/replay regressions, exact migration rehearsal `0.14.2 → 0.14.3`, PostgreSQL redemption-proof E2E и обязательный offline release gate.
+
+Migration: перед запуском 0.14.3 остановите 0.14.2 API instances, примените/проверьте `0023_one_time_join_tickets_0143`, затем выдавайте только свежие joins. Старые active authorizations намеренно не сохраняются через security boundary.
+
 ## 0.14.2 — Cryptographic Node Identities
 
 `0.14.2` убирает shared ServerBridge bearer credential из production node-auth boundary. Velocity/Paper/Purpur создают локальную Ed25519 identity, Backend хранит только public key/fingerprint/epoch в PostgreSQL, а heartbeat/validate/has-joined/audit requests подписываются по canonical method/path/body SHA-256 с timestamp и single-use nonce.

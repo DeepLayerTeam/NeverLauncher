@@ -18,6 +18,12 @@ POST /api/v1/install/bootstrap-admin
 POST /api/v1/install/first-project
 ```
 
+## One-Time Join Tickets — 0.14.3
+
+ServerBridge join authorization в 0.14.3 является реальным одноразовым credential, а не только короткоживущей session row. Backend генерирует 192-bit CSPRNG `jt_...` ticket, в PostgreSQL привязывает его к текущим `identity_epoch` и Ed25519 key fingerprint node и при первом успешном signed validate/has-joined атомарно переводит row из `active` в `consumed`. В consumed state сохраняются identity epoch/fingerprint, SHA-256 уже проверенного single-use node nonce и IP redemption; повторный или параллельный redemption не может пройти тот же conditional `UPDATE`. Rotation node identity также делает старый ticket непригодным.
+
+Yggdrasil-compatible `/sessionserver/session/minecraft/join` → `/hasJoined` теперь имеет ту же consume-once семантику: IP/trust/integrity проверки выполняются до consumption, а первый валидный `/hasJoined` атомарно погашает authorization. Migration `0023_one_time_join_tickets_0143` fail-closed инвалидирует старые active ServerBridge tickets и удаляет ephemeral `minecraft_joins` 0.14.2, потому что для них нельзя доказать, что `/hasJoined` ранее не воспроизводился.
+
 ## ServerBridge Cryptographic Node Identities — 0.14.2
 
 ServerBridge Protocol v2 использует PostgreSQL source of truth из 0.14.1, но node authentication в 0.14.2 полностью переведён с shared bearer secret на Ed25519. При регистрации/enrollment Backend принимает только raw public key, вычисляет SHA-256 fingerprint и хранит его вместе с `identity_epoch`; private key остаётся в локальном `node-identity.properties` Velocity/Paper/Purpur bridge.

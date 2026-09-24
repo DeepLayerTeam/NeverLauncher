@@ -1,6 +1,10 @@
 package repository
 
-import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+import (
+	"time"
+
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+)
 
 // MinecraftRepository keeps the Minecraft compatibility identity/session layer
 // separate from the canonical auth repository contract. Production PostgreSQL and
@@ -19,4 +23,5 @@ type MinecraftRepository interface {
 	RevokeMinecraftSessionsByUser(userID, reason string) int
 	SaveMinecraftJoin(join model.MinecraftJoin) error
 	GetMinecraftJoin(username, serverID string) (model.MinecraftJoin, error)
+	ConsumeMinecraftJoin(username, serverID, expectedSessionID string, now time.Time) (model.MinecraftJoin, error)
 }
