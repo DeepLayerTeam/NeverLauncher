@@ -43,6 +43,8 @@ cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" <<EOF
 {"${VERSION}":{"guardSha256":["${GUARD_HASH}"],"launcherSha256":["${DESKTOP_HASH}"],"requireAuthenticode":false}}
 EOF
 chmod 0600 "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
+cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"
+chmod 0644 "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"
 
 cp "${PACKAGE_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
 cp "${PACKAGE_DIR}/neverguard" "${OUT_DIR}/neverguard-linux-amd64"

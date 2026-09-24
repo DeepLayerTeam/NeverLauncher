@@ -8,6 +8,12 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 
+## Сертификация Cross-platform Guard release — 0.13.9
+
+`0.13.9` вводит единый certification boundary поверх production NeverGuard реализаций Windows, Linux и macOS. Каждый platform CI job обязан завершить native Guard tests, integration test, clippy/release build, platform production gate и package verification, после чего создаёт `guard-ci-result.json` для exact commit/run с SHA-256 package, Desktop, Guard, package manifest и release allowlist. Aggregate job принимает релиз только при PASS всех трёх обязательных targets.
+
+Финальный release не пересобирает сертифицированные platform artifacts: `scripts/guard_ci/stage_release.py` переносит именно outputs прошедшего CI и повторно сверяет их хэши. Для `0.13.9+` `nl release publish-check` требует `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json` и заново хэширует каждый сертифицированный Windows/Linux/macOS artifact уже внутри подписанного bundle. CI evidence не заменяет production Authenticode/Developer ID/notarization и явно не утверждает владение vendor signing credentials.
+
 ## NeverGuard macOS production — 0.13.8
 
 macOS использует отдельный native NeverGuard boundary: authenticated Unix-domain socket protocol v4, kernel peer PID/UID validation, `PT_DENY_ATTACH`, `RLIMIT_CORE=0`, parent-exit kqueue watch и отдельную Minecraft process group. Integrity Evidence/Guard Attestation имеют собственные macOS schemas и включают SHA-256 Mach-O, process boundary, code signature, Hardened Runtime и library validation; Backend проверяет их независимо от Windows/Linux policy.

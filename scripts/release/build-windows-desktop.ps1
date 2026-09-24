@@ -135,6 +135,13 @@ $GuardReleaseAllowlist[$Version] = [ordered]@{
 }
 $GuardReleaseAllowlist | ConvertTo-Json -Depth 8 -Compress | Set-Content -Encoding UTF8 (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json")
 
+# Canonical cross-platform certification artifacts. These names are stable across
+# patch versions and are hashed into the Guard CI matrix.
+Copy-Item $DesktopPath (Join-Path $OutDir "neverlauncher-desktop-windows-amd64.exe") -Force
+Copy-Item $GuardPath (Join-Path $OutDir "neverguard-windows-amd64.exe") -Force
+Copy-Item (Join-Path $PackageDir "WINDOWS_PACKAGE_MANIFEST.json") (Join-Path $OutDir "WINDOWS_PACKAGE_MANIFEST.json") -Force
+Copy-Item (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json") (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS.json") -Force
+
 $ZipPath = Join-Path $OutDir $ZipArtifact
 if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
 Compress-Archive -Path (Join-Path $PackageDir "*") -DestinationPath $ZipPath -CompressionLevel Optimal

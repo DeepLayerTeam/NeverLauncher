@@ -48,6 +48,9 @@ jobs:
           python3 scripts/smoke/offline/windows-production-hardening-0136.py
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
+          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
+          python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
+          python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
       - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
@@ -101,6 +104,9 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -121,6 +127,8 @@ jobs:
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
       - name: NeverRuntime + NeverGuard Linux test and clippy
         run: |
+          python3 scripts/smoke/offline/linux-production-implementation-0137.py
+          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo test --manifest-path runtime/neverruntime/Cargo.toml
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_linux -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
@@ -135,11 +143,39 @@ jobs:
           cargo build --release --manifest-path src-tauri/Cargo.toml
       - name: Build Linux Desktop + NeverGuard production package
         run: bash scripts/release/build-linux-desktop.sh
+      - name: Emit Linux Guard CI evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          python3 scripts/guard_ci/matrix.py result \
+            --targets guard-ci/targets.json \
+            --target-id guard-linux-amd64 \
+            --package "${DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip" \
+            --launcher "${DIR}/neverlauncher-desktop-linux-amd64" \
+            --guard "${DIR}/neverguard-linux-amd64" \
+            --manifest "${DIR}/LINUX_PACKAGE_MANIFEST.json" \
+            --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" \
+            --signing-mode none-linux-integrity \
+            --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
+            --output guard-ci-result/linux/guard-ci-result.json
       - name: Upload Linux NeverGuard package
         uses: actions/upload-artifact@v4
         with:
           name: neverlauncher-linux-neverguard-${{ github.sha }}
-          path: dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
+          path: |
+            dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
+            dist/release-*/neverlauncher-desktop-linux-amd64
+            dist/release-*/neverguard-linux-amd64
+            dist/release-*/LINUX_PACKAGE_MANIFEST.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_LINUX.json
+          if-no-files-found: error
+      - name: Upload Linux Guard CI result
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-ci-linux-amd64-${{ github.sha }}
+          path: guard-ci-result/linux/guard-ci-result.json
           if-no-files-found: error
 
   neverguard-windows:
@@ -148,6 +184,9 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -158,7 +197,10 @@ jobs:
           components: rustfmt,clippy
       - name: NeverGuard Windows integration test
         run: |
+          python scripts/smoke/offline/windows-production-hardening-0136.py
+          python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
@@ -167,11 +209,28 @@ jobs:
       - name: Build side-by-side Desktop + NeverGuard package
         shell: pwsh
         run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
+      - name: Emit Windows Guard CI evidence
+        shell: pwsh
+        run: |
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/neverlauncher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/neverlauncher-desktop-windows-amd64.exe" --guard "$Dir/neverguard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
           name: neverlauncher-windows-neverguard-${{ github.sha }}
-          path: dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
+          path: |
+            dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
+            dist/release-*/neverlauncher-desktop-windows-amd64.exe
+            dist/release-*/neverguard-windows-amd64.exe
+            dist/release-*/WINDOWS_PACKAGE_MANIFEST.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS.json
+          if-no-files-found: error
+      - name: Upload Windows Guard CI result
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-ci-windows-amd64-${{ github.sha }}
+          path: guard-ci-result/windows/guard-ci-result.json
           if-no-files-found: error
 
   neverguard-macos:
@@ -180,6 +239,9 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -193,7 +255,9 @@ jobs:
         shell: bash
         run: |
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
+          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml -- --check
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
@@ -212,12 +276,80 @@ jobs:
       - name: Build ad-hoc universal macOS package
         shell: bash
         run: bash scripts/release/build-macos-desktop.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --allow-ad-hoc
+      - name: Emit macOS Guard CI evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          python3 scripts/guard_ci/matrix.py result \
+            --targets guard-ci/targets.json \
+            --target-id guard-macos-universal \
+            --package "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip" \
+            --launcher "${DIR}/neverlauncher-desktop-macos-universal" \
+            --guard "${DIR}/neverguard-macos-universal" \
+            --manifest "${DIR}/MACOS_PACKAGE_MANIFEST.json" \
+            --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" \
+            --signing-mode adhoc-ci \
+            --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
+            --output guard-ci-result/macos/guard-ci-result.json
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
           name: neverlauncher-macos-neverguard-${{ github.sha }}
-          path: dist/release-*/neverlauncher-desktop-*-macos-universal.zip
+          path: |
+            dist/release-*/neverlauncher-desktop-*-macos-universal.zip
+            dist/release-*/neverlauncher-desktop-macos-universal
+            dist/release-*/neverguard-macos-universal
+            dist/release-*/MACOS_PACKAGE_MANIFEST.json
+            dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS.json
           if-no-files-found: error
+      - name: Upload macOS Guard CI result
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-ci-macos-universal-${{ github.sha }}
+          path: guard-ci-result/macos/guard-ci-result.json
+          if-no-files-found: error
+
+  guard-certification:
+    name: Cross-platform Guard CI matrix certification
+    needs: [rust-desktop, neverguard-windows, neverguard-macos]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Guard target evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: guard-ci-*-${{ github.sha }}
+          path: guard-ci-results
+      - name: Aggregate exact-commit Guard matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p guard-ci-public
+          python3 scripts/guard_ci/matrix.py aggregate \
+            --targets guard-ci/targets.json \
+            --results-root guard-ci-results \
+            --output-dir guard-ci-public \
+            --commit "${GITHUB_SHA}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --repository "${GITHUB_REPOSITORY}"
+          cp guard-ci/targets.json guard-ci-public/targets.json
+          cat guard-ci-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Guard certification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
+          path: |
+            guard-ci-public/matrix.json
+            guard-ci-public/matrix.md
+            guard-ci-public/targets.json
+          if-no-files-found: error
+          retention-days: 30
 
   bridge:
     name: ServerBridge plugins
@@ -261,11 +393,31 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, neverguard-windows, neverguard-macos, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Download certified Linux Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-linux-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/linux
+      - name: Download certified Windows Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-windows-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/windows
+      - name: Download certified macOS Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-macos-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/macos
+      - name: Download Guard CI matrix
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
+          path: guard-certification
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
@@ -300,6 +452,10 @@ jobs:
         env:
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
           NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-public.pem
+          NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
+          NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
+          NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
+          NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
         run: |
@@ -310,6 +466,15 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
           test -s "${DIR}/neverguard-linux-amd64"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
+          test -s "${DIR}/neverguard-windows-amd64.exe"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
+          test -s "${DIR}/neverguard-macos-universal"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/GUARD_CI_TARGETS.json"
+          test -s "${DIR}/GUARD_CI_MATRIX.json"
+          test -s "${DIR}/GUARD_CI_CERTIFICATION.json"
           test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
           test -s "${DIR}/neverruntime-linux-amd64"
           test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"

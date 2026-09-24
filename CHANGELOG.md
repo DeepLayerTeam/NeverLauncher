@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.13.9 — Cross-platform Guard CI Matrix + release certification
+
+`0.13.9` связывает уже реализованные Windows/Linux/macOS NeverGuard production-контуры с единым machine-verifiable release gate. PASS больше не выводится из наличия platform jobs или вручную записанного поля: каждая ОС публикует отдельный `guard-ci-result.json` для exact commit/run, aggregator повторно проверяет обязательные checks и SHA-256 артефактов, а `nl release publish-check` заново сверяет те же platform artifacts внутри финального release bundle.
+
+### Cross-platform Guard CI matrix
+
+- `guard-ci/targets.json` фиксирует три обязательных target: `guard-linux-amd64`, `guard-windows-amd64`, `guard-macos-universal`, runner/platform/arch и полный required check-set. Version manager синхронизирует `productVersion` этого policy-файла с корневым `VERSION`.
+- Linux/Windows/macOS CI jobs после native tests и platform production gate создают `guard-ci-result.json` с exact source commit, Actions run ID, signing mode и SHA-256/size пяти объектов: platform package, Desktop, NeverGuard, package manifest и Guard release allowlist.
+- Aggregate job fail-closed отклоняет missing/duplicate target, mismatched commit/run, ослабленный check-set, duplicate artifact filename или изменённый result evidence. Итоговые `GUARD_CI_TARGETS.json` и `GUARD_CI_MATRIX.json` являются CI evidence, а не вручную выставляемым статусом.
+- CI certification намеренно не заявляет possession production vendor-signing credentials: Windows CI использует unsigned development package, macOS — ad-hoc CI signing, Linux — integrity-only mode. Production Authenticode/Developer ID/notarization остаются отдельными platform release requirements.
+
+### Release certification
+
+- `scripts/guard_ci/stage_release.py` переносит в release directory именно сертифицированные CI artifacts и перед копированием заново проверяет их size/SHA-256. Rebuild после matrix PASS не считается тем же evidence.
+- `nl release build` для `0.13.9+` требует Guard matrix/targets и создаёт `GUARD_CI_CERTIFICATION.json`, который фиксирует policy, matrix digests и exact список certified platform artifacts.
+- `RELEASE_MANIFEST.json` помечает `guardCICertified`, а все Guard evidence и Windows/Linux/macOS binaries/packages/manifests/allowlists входят в общий `SHA256SUMS`/Ed25519/provenance boundary.
+- `nl release publish-check` повторно валидирует target policy, matrix, certification и хэширует каждый сертифицированный platform artifact из bundle. Post-CI replacement/tampering, даже при сохранённом JSON PASS, блокирует публикацию.
+- Release builder для `0.13.9+` требует одновременно Compatibility, Device Trust и Guard certification evidence для publishable bundle; неполный набор остаётся только непубликуемым candidate.
+
 ## 0.13.8 — macOS production implementation
 
 `0.13.8` добавляет отдельный production NeverGuard boundary для macOS вместо Linux-compatible fallback. Desktop запускает соседний universal Mach-O `neverguard`, взаимно аутентифицирует его по Unix-domain socket/HMAC protocol v4 и проверяет PID/UID peer credentials до выдачи integrity/attestation данных.

@@ -249,6 +249,10 @@ func securityReleasePolicyModel() map[string]any {
 		required = append(required, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
 		checks = append(checks, "device-trust-certification")
 	}
+	if guardCICertificationRequired(version) {
+		required = append(required, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		checks = append(checks, "cross-platform-guard-ci-certification")
+	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": required, "checks": checks, "failureMode": "fail-closed"}
 }
 

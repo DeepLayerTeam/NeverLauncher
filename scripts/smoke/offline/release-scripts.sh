@@ -20,4 +20,8 @@ python3 -m py_compile \
   scripts/smoke/offline/repository-policy.py \
   scripts/release/source-package.py \
   scripts/release/secret-scan.py \
-  scripts/release/zip-dir.py
+  scripts/release/zip-dir.py \
+  scripts/guard_ci/matrix.py \
+  scripts/guard_ci/stage_release.py \
+  scripts/guard_ci/test_matrix.py \
+  scripts/smoke/offline/guard-ci-release-certification-0139.py

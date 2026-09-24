@@ -741,7 +741,7 @@ for required in [
         fail(f"release CLI is not compatibility-certified: {required}")
 for required in [
     "NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE", "NEVERLAUNCHER_SOURCE_COMMIT",
-    "release publish-check", "CI release candidate",
+    "release publish-check", "Certification evidence не передан",
 ]:
     if required not in build_release:
         fail(f"build-release compatibility certification incomplete: {required}")
@@ -924,6 +924,62 @@ if "neverguard-process-policy-0133.py" not in preflight or "neverguard-process-p
     fail("0.13.3 process policy gate is not wired into preflight/CI")
 if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
     fail("0.13.3 mandatory process policy release gate is incomplete")
+
+
+# 0.13.9 Cross-platform Guard CI matrix + release certification. Certification
+# must come from exact-commit CI artifacts for Linux, Windows, and macOS and
+# publish-check must re-hash those exact artifacts from the release bundle.
+guard_targets_0139 = read("guard-ci/targets.json")
+guard_matrix_0139 = read("scripts/guard_ci/matrix.py")
+guard_stage_0139 = read("scripts/guard_ci/stage_release.py")
+guard_release_0139 = read("cli/cmd/neverlauncher/guard_ci_release.go")
+guard_gate_0139 = read("scripts/smoke/offline/guard-ci-release-certification-0139.py")
+build_release_0139 = read("scripts/release/build-release.sh")
+for required in [
+    '"productVersion": "' + VERSION + '"',
+    '"id": "guard-linux-amd64"', '"id": "guard-windows-amd64"',
+    '"id": "guard-macos-universal"', '"required": true',
+    '"guardRelease0139"', '"artifactHashesVerified"',
+]:
+    if required not in guard_targets_0139:
+        fail(f"0.13.9 Guard CI targets incomplete: {required}")
+for required in [
+    '"commit"', '"runId"', "evidenceSha256", "artifactHashesVerified",
+    "vendorSigningProvenance", "not-certified-by-ci", "command_aggregate",
+]:
+    if required not in guard_matrix_0139:
+        fail(f"0.13.9 Guard CI matrix verifier incomplete: {required}")
+for required in ["copy_verified", "os.replace", "sha256_file", "exact Guard CI-certified artifacts", "missing certified platform artifacts"]:
+    if required not in guard_stage_0139:
+        fail(f"0.13.9 exact-artifact staging incomplete: {required}")
+for required in [
+    "GUARD_CI_TARGETS.json", "GUARD_CI_MATRIX.json", "GUARD_CI_CERTIFICATION.json",
+    "verifyGuardCICertificationInBundle", "verifyGuardCIArtifactsInDir",
+    "all-required-cross-platform-guard-targets-pass-exact-commit-and-release-artifact-hashes",
+]:
+    if required not in guard_release_0139:
+        fail(f"0.13.9 release certification enforcement incomplete: {required}")
+for required in [
+    "NEVERLAUNCHER_GUARD_CI_MATRIX_FILE", "NEVERLAUNCHER_GUARD_CI_TARGETS_FILE",
+    "NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR", "scripts/guard_ci/stage_release.py",
+]:
+    if required not in build_release_0139:
+        fail(f"0.13.9 build-release Guard certification incomplete: {required}")
+for required in [
+    "guard-ci-release-certification-0139.py", "Guard CI matrix",
+    "guard-ci-linux-amd64", "guard-ci-windows-amd64", "guard-ci-macos-universal",
+]:
+    if required not in ci and required != "Guard CI matrix":
+        fail(f"0.13.9 CI matrix wiring missing: {required}")
+if "guard-certification:" not in ci:
+    fail("0.13.9 aggregate Guard certification CI job is missing")
+if "guard-ci-release-certification-0139.py" not in preflight or "guard-ci-release-certification-0139.py" not in ci:
+    fail("0.13.9 Guard release certification gate is not wired into preflight/CI")
+if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
+    fail("0.13.9 mandatory Guard release gate is incomplete")
+if not (ROOT / "cli/cmd/neverlauncher/guard_ci_release_test.go").is_file():
+    fail("0.13.9 Guard release certification regression tests are missing")
+
 
 
 if errors:

@@ -120,6 +120,7 @@ cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" <<EOF_ALLOW
 EOF_ALLOW
 cp "${MACOS_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-macos-universal"
 cp "${MACOS_DIR}/neverguard" "${OUT_DIR}/neverguard-macos-universal"
+cp "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${OUT_DIR}/MACOS_PACKAGE_MANIFEST.json"
 FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
 rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"

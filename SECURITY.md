@@ -2,6 +2,14 @@
 
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
+## Сертификация Cross-platform Guard release — 0.13.9
+
+`0.13.9` делает CI evidence частью release trust boundary. Для Linux, Windows и macOS требуется отдельный result, привязанный к одному exact source commit и Actions run ID. Result содержит обязательный check-set и SHA-256/size platform package, Desktop, NeverGuard, package manifest и release allowlist; aggregate отклоняет missing/duplicate target, mismatch commit/run, ослабленный checks или collision имени артефакта.
+
+Release staging не доверяет уже записанному PASS: exact CI artifacts повторно хэшируются при переносе в bundle. `GUARD_CI_CERTIFICATION.json` фиксирует digests targets/matrix и полный набор platform artifacts, после чего `nl release publish-check` ещё раз сверяет каждый файл внутри финального bundle. Поэтому замена бинарника после CI, пересборка «того же» package или редактирование matrix без соответствующих signed checksums блокируют публикацию.
+
+CI certification ограничена воспроизводимыми build/test/integrity фактами и явно содержит `vendorSigningProvenance=not-certified-by-ci`. Она не считается доказательством доступа CI к production Authenticode certificate, Developer ID key или notarization credentials; эти свойства по-прежнему проверяются отдельными Windows/macOS production release paths.
+
 ## macOS production implementation — 0.13.8
 
 `0.13.8` добавляет отдельную macOS user-mode boundary. Desktop/NeverGuard используют authenticated Unix socket `0600`, проверяют kernel peer PID/UID, запрещают debugger attach через `PT_DENY_ATTACH`, отключают core dumps, очищают dynamic-loader environment и fail-closed контролируют parent/runtime lifecycle. Minecraft запускается в отдельной process group, а Guard отслеживает смерть Desktop через kqueue.

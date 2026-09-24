@@ -40,6 +40,8 @@ func handleRelease(args []string) error {
 			flagValue(args, "--compatibility-targets", "compatibility/targets.json"),
 			flagValue(args, "--device-trust-matrix", ""),
 			flagValue(args, "--device-trust-targets", "device-trust/targets.json"),
+			flagValue(args, "--guard-ci-matrix", ""),
+			flagValue(args, "--guard-ci-targets", "guard-ci/targets.json"),
 			flagValue(args, "--source-commit", ""),
 		); err != nil {
 			return err
@@ -72,7 +74,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Device Trust certification: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility certification + Device Trust certification")
+			if guardCICertificationRequired(manifestVersion) {
+				if err := verifyGuardCICertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility + Device Trust + cross-platform Guard CI certification")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -95,6 +102,9 @@ func handleRelease(args []string) error {
 		}
 		if deviceTrustCertificationRequired(ver) {
 			artifacts = append(artifacts, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+		}
+		if guardCICertificationRequired(ver) {
+			artifacts = append(artifacts, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
 		}
 		plan := map[string]any{
 			"schemaVersion": "1.0",
@@ -141,6 +151,9 @@ func releaseDoctor() error {
 		"compatibility/targets.json",
 		"scripts/compatibility/matrix.py",
 		".github/workflows/compatibility.yml",
+		"guard-ci/targets.json",
+		"scripts/guard_ci/matrix.py",
+		"scripts/guard_ci/stage_release.py",
 	}
 	failed := false
 	for _, path := range required {
@@ -312,7 +325,7 @@ func productionTables() []string {
 	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "registry_entries", "desktop_packages"}
 }
 
-func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, expectedCommit string) error {
+func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, guardCIMatrixPath, guardCITargetsPath, expectedCommit string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
@@ -330,6 +343,14 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		if err := embedDeviceTrustCertification(out, deviceTrustMatrixPath, deviceTrustTargetsPath, ver, expectedCommit); err != nil {
 			return fmt.Errorf("Device Trust certification: %w", err)
+		}
+	}
+	if strings.TrimSpace(guardCIMatrixPath) != "" {
+		if !filepath.IsAbs(guardCITargetsPath) {
+			guardCITargetsPath = filepath.Join(sourceRoot, guardCITargetsPath)
+		}
+		if err := embedGuardCICertification(out, guardCIMatrixPath, guardCITargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
 		}
 	}
 	sbom, err := dependencySBOM(sourceRoot, ver)
@@ -365,6 +386,12 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		checks = append(checks, "device-trust-certification")
 		deviceTrustCertified = true
 	}
+	guardCICertified := false
+	if _, err := os.Stat(filepath.Join(out, guardCICertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		checks = append(checks, "cross-platform-guard-ci-certification")
+		guardCICertified = true
+	}
 	manifest := map[string]any{
 		"schemaVersion":          cliSchemaVersion,
 		"name":                   "NeverLauncher",
@@ -376,6 +403,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"requiredFiles":          requiredFiles,
 		"compatibilityCertified": compatibilityCertified,
 		"deviceTrustCertified":   deviceTrustCertified,
+		"guardCICertified":       guardCICertified,
 	}
 	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
@@ -400,6 +428,10 @@ func releaseBundleEntries(ver, out string) []map[string]any {
 	}
 	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
 		requiredNames = append(requiredNames, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+	}
+	if _, err := os.Stat(filepath.Join(out, guardCICertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		requiredNames = append(requiredNames, guardCIArtifactNamesFromBundle(out)...)
 	}
 	for _, name := range requiredNames {
 		known[name] = true
@@ -553,6 +585,24 @@ func releaseArtifacts(ver string) []string {
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
 	}
+	if guardCICertificationRequired(ver) {
+		for _, osName := range []string{"linux", "windows", "macos"} {
+			names := expectedGuardArtifactNames0139(osName, ver)
+			for _, role := range []string{"package", "launcher", "guard", "manifest", "allowlist"} {
+				name := names[role]
+				found := false
+				for _, existing := range artifacts {
+					if existing == name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					artifacts = append(artifacts, name)
+				}
+			}
+		}
+	}
 	return artifacts
 }
 
@@ -580,6 +630,9 @@ func releaseDescription(ver string) string {
 	}
 	if deviceTrustCertificationRequired(ver) {
 		extra += "\n- начиная с 0.13.0 официальный publish-check также требует DEVICE_TRUST_TARGETS/MATRIX/CERTIFICATION для того же product version и source commit;"
+	}
+	if guardCICertificationRequired(ver) {
+		extra += "\n- начиная с 0.13.9 publish-check требует cross-platform GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет exact Windows/Linux/macOS Guard artifacts по SHA-256;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
