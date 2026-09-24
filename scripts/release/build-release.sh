@@ -175,8 +175,10 @@ for bridge in velocity bungeecord waterfall bukkit spigot paper purpur folia fab
 done
 require_file "${ROOT_DIR}/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json"
 require_file "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json"
+require_file "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE2_CERTIFICATION.json"
 cp "${ROOT_DIR}/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json" "${OUT_DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
 cp "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json" "${OUT_DIR}/BRIDGE_PLUGIN_MANIFEST.json"
+cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE2_CERTIFICATION.json" "${OUT_DIR}/SERVERBRIDGE2_CERTIFICATION.json"
 
 log "Source archive только из git-tracked/allowlisted файлов"
 python3 "${ROOT_DIR}/scripts/release/source-package.py" "${ROOT_DIR}" "${OUT_DIR}/neverlauncher-source-${VERSION}.zip" --list-file "${WORK_DIR}/source-files.txt"

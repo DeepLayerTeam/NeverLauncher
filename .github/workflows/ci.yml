@@ -554,6 +554,8 @@ jobs:
         run: bash e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh
       - name: ServerBridge 0.14.8 to 0.14.9 Public Matrix + HA hardening migration/multi-instance E2E
         run: bash e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh
+      - name: ServerBridge 2 0.15.0 release gate
+        run: python3 scripts/smoke/offline/serverbridge-release-0150.py
       - name: ServerBridge 0.14.9 to 0.14.10 migration + stabilization E2E
         run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E

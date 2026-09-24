@@ -4,7 +4,11 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Forge + NeoForge Server Bridge / 0.14.7**: ServerBridge Protocol v2 теперь имеет отдельные server-only Forge и NeoForge 1.21.1 модули с Ed25519 node identity, PostgreSQL source of truth, release-hash integrity и one-time join tickets; клиентский bridge-мод для допуска игрока не требуется.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **ServerBridge 2 / 0.15.0**: единый production-контур для Velocity, BungeeCord, Waterfall, Bukkit, Spigot, Paper, Purpur, Folia, Fabric, Forge и NeoForge 1.21.1 с Protocol v2, Ed25519 node identities, PostgreSQL source of truth, one-time join/handoff, zero-patch topology, artifact integrity и HA-safe maintenance.
+
+## ServerBridge 2 Release — 0.15.0
+
+`0.15.0` закрепляет ServerBridge 2 как production release без новой DB migration поверх `0030`. `scripts/build/bridge-plugins.sh` обязан собрать все 11 platform-matched JAR и завершиться `SERVERBRIDGE2_CERTIFICATION.json`; certification сверяет public matrix, manifest, фактические JAR, SHA256SUMS и exact-version `BRIDGE_RELEASE_ALLOWLIST.json`. Production release bundle и `nl release publish-check` fail-closed требуют эту certification и повторно хэшируют каждый bridge artifact.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 

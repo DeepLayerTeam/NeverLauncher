@@ -79,7 +79,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility + Device Trust + cross-platform Guard CI certification")
+			if serverBridge2CertificationRequired0150(manifestVersion) {
+				if err := verifyServerBridge2CertificationInBundle0150(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("ServerBridge 2 certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + Minecraft compatibility + Device Trust + cross-platform Guard CI + ServerBridge 2 certification")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -601,6 +606,7 @@ func releaseArtifacts(ver string) []string {
 		"neverlauncher-neoforge-bridge-" + ver + ".jar",
 		"BRIDGE_RELEASE_ALLOWLIST.json",
 		"BRIDGE_PLUGIN_MANIFEST.json",
+		serverBridge2CertificationReleaseFile,
 		"SBOM.spdx.json",
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
@@ -653,6 +659,9 @@ func releaseDescription(ver string) string {
 	}
 	if guardCICertificationRequired(ver) {
 		extra += "\n- начиная с 0.13.9 publish-check требует cross-platform GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет exact Windows/Linux/macOS Guard artifacts по SHA-256;"
+	}
+	if serverBridge2CertificationRequired0150(ver) {
+		extra += "\n- начиная с 0.15.0 publish-check требует SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

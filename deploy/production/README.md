@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.10 → 0.15.0
+
+`0.15.0` не добавляет новую DB migration: перед rollout `nl db migrate verify` должен подтверждать sealed `0030_serverbridge_migration_stabilization_01410`. Соберите все 11 bridge JAR через `scripts/build/bridge-plugins.sh`; сборка должна создать `SERVERBRIDGE2_CERTIFICATION.json`, который связывает exact `0.15.0` matrix, manifest, SHA256SUMS и `BRIDGE_RELEASE_ALLOWLIST.json`.
+
+В production установите platform-matched `0.15.0` JAR и exact hashes из release allowlist. Финальный bundle обязан содержать `SERVERBRIDGE2_CERTIFICATION.json`; `nl release publish-check` повторно сверяет hashes/sizes всех 11 JAR и отклоняет неполный или смешанный release cohort.
+
 ### Upgrade 0.14.9 → 0.14.10
 
 Остановите 0.14.9 API replicas, создайте проверенный backup и примените `0030_serverbridge_migration_stabilization_01410` через `nl db migrate apply`, затем выполните `nl db migrate verify`. Current migration должна быть `0030_serverbridge_migration_stabilization_01410` до запуска 0.14.10 Backend.

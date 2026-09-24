@@ -169,4 +169,5 @@ cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
   ]
 }
 JSON
-printf 'Production bridge plugin artifacts and integrity allowlist built in %s\n' "$OUT"
+python3 "$ROOT/serverbridge/certify_release.py" --artifacts "$OUT"
+printf 'Production ServerBridge 2 artifacts, integrity allowlist and certification built in %s\n' "$OUT"

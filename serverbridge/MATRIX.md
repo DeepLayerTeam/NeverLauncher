@@ -1,4 +1,4 @@
-# NeverLauncher 0.14.10 — Public ServerBridge Matrix
+# NeverLauncher 0.15.0 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.
 

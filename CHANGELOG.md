@@ -1,3 +1,15 @@
+## 0.15.0 — ServerBridge 2 Release
+
+`0.15.0` фиксирует ServerBridge 2 как production-релиз после протокола v2, Ed25519 node identities, одноразовых join tickets, Bukkit/proxy/Fabric/Forge/NeoForge runtimes, zero-patch topology/handoff, HA hardening и migration stabilization. Runtime-протокол остаётся v2; schema migration поверх `0030` не требуется.
+
+- Production bridge build теперь завершается обязательной certification всех 11 platform-matched JAR: Velocity, BungeeCord, Waterfall, Bukkit, Spigot, Paper, Purpur, Folia, Fabric, Forge и NeoForge.
+- Certification сверяет public matrix, `PLUGIN_MANIFEST.json`, фактические имена/содержимое JAR, `SHA256SUMS` и exact-version `BRIDGE_RELEASE_ALLOWLIST.json`; несовпадение или одинаковый artifact для разных платформ fail-closed.
+- Folia и Fabric дополнительно проходят release-time descriptor checks (`folia-supported: true`, server-only/no-client-mod), а family runtimes проверяются по class entries внутри собранных JAR.
+- `SERVERBRIDGE2_CERTIFICATION.json` включается в production bundle и обязателен для release-bundle/publish gate вместе с manifest и hash allowlist.
+- Public ServerBridge matrix и все product metadata синхронизированы на `0.15.0`; API diagnostics публикуют релиз как `ServerBridge 2 Release`.
+
+Migration: с `0.14.10` примените обычный release rollout без новой DB migration; перед publish соберите bridge artifacts production Gradle-сборкой и не публикуйте bundle без успешного `SERVERBRIDGE2_CERTIFICATION.json`.
+
 ## 0.14.10 — Migration + stabilization
 
 `0.14.10` завершает линию ServerBridge 2 перед следующим feature-релизом: схема и runtime-поведение 0.14.1–0.14.9 сохранены, а migration/maintenance path стабилизирован для долгоживущих active/active инсталляций.

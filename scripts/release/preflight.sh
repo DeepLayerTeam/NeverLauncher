@@ -68,6 +68,7 @@ run_step serverbridge-forge-neoforge-0147 python3 "${ROOT_DIR}/scripts/smoke/off
 run_step serverbridge-zero-patch-topology-handoff-0148 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py"
 run_step serverbridge-public-matrix-ha-hardening-0149 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py"
 run_step serverbridge-migration-stabilization-01410 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-migration-stabilization-01410.py"
+run_step serverbridge-release-0150 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-release-0150.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
