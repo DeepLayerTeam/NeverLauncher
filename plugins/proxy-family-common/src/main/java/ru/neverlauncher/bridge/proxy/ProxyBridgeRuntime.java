@@ -92,6 +92,26 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         return current.api.validateJoin(username, uuid, ip);
     }
 
+    public JoinValidationResult createHandoff(String username, String targetServer) {
+        RuntimeState current = state;
+        if (current == null || stopping.get()) {
+            return new JoinValidationResult(false, "bridge_runtime_unavailable", "{}");
+        }
+        return current.api.createHandoff(username, targetServer);
+    }
+
+    public CompletableFuture<JoinValidationResult> createHandoffAsync(String username, String targetServer) {
+        if (stopping.get() || validationExecutor.isShutdown()) {
+            return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_runtime_unavailable", "{}"));
+        }
+        try {
+            return CompletableFuture.supplyAsync(() -> createHandoff(username, targetServer), validationExecutor);
+        } catch (RejectedExecutionException e) {
+            logger.warning("NeverLauncher " + displayName + " Bridge handoff queue saturated; failing closed");
+            return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
+        }
+    }
+
     public CompletableFuture<JoinValidationResult> validateJoinAsync(String username, String uuid, String ip) {
         if (stopping.get() || validationExecutor.isShutdown()) {
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_runtime_unavailable", "{}"));

@@ -453,6 +453,52 @@ type ServerBridgeJoinRedemption struct {
 	RemoteIP       string
 }
 
+// ServerBridgeHandoff is a short-lived one-time proxy-to-backend credential.
+// It is minted only after a proxy has consumed the launcher join ticket and is
+// cryptographically bound to both current node identities. Backend validation
+// atomically consumes it, so the original launcher ticket is never replayed.
+type ServerBridgeHandoff struct {
+	ID                   string    `json:"id"`
+	Username             string    `json:"username"`
+	UsernameNormalized   string    `json:"-"`
+	UUID                 string    `json:"uuid"`
+	UserID               string    `json:"userId"`
+	SessionID            string    `json:"sessionId"`
+	SourceNodeID         string    `json:"sourceNodeId"`
+	TargetNodeID         string    `json:"targetNodeId"`
+	BackendName          string    `json:"backendName,omitempty"`
+	ProjectID            string    `json:"projectId"`
+	ProfileID            string    `json:"profileId"`
+	Channel              string    `json:"channel"`
+	TrustedDeviceID      string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch         int64     `json:"bindingEpoch"`
+	MinecraftSessionID   string    `json:"minecraftSessionId,omitempty"`
+	SourceIdentityEpoch  int64     `json:"sourceIdentityEpoch"`
+	SourceKeyFingerprint string    `json:"sourceKeyFingerprint"`
+	TargetIdentityEpoch  int64     `json:"targetIdentityEpoch"`
+	TargetKeyFingerprint string    `json:"targetKeyFingerprint"`
+	Status               string    `json:"status"`
+	CreatedAt            time.Time `json:"createdAt"`
+	ExpiresAt            time.Time `json:"expiresAt"`
+	ConsumedAt           time.Time `json:"consumedAt,omitempty"`
+	RedeemedNonceHash    string    `json:"redeemedNonceHash,omitempty"`
+	RedeemedByIP         string    `json:"redeemedByIp,omitempty"`
+}
+
+// ServerBridgeTopologyEdge records an observed proxy -> backend route. Edges are
+// learned from authenticated handoffs; operators do not patch proxy/server
+// configuration to maintain a parallel routing graph in NeverLauncher.
+type ServerBridgeTopologyEdge struct {
+	SourceNodeID string    `json:"sourceNodeId"`
+	TargetNodeID string    `json:"targetNodeId"`
+	BackendName  string    `json:"backendName"`
+	ProjectID    string    `json:"projectId"`
+	ProfileID    string    `json:"profileId"`
+	Status       string    `json:"status"`
+	LastSeenAt   time.Time `json:"lastSeenAt"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
 // ServerBridgeTexture is the persistent texture profile used by Protocol v2.
 type ServerBridgeTexture struct {
 	UUID      string    `json:"uuid"`

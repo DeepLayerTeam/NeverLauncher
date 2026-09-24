@@ -58,6 +58,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-proxy-family-0145.py
           python3 scripts/smoke/offline/serverbridge-fabric-0146.py
           python3 scripts/smoke/offline/serverbridge-forge-neoforge-0147.py
+          python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -545,6 +546,8 @@ jobs:
         run: bash e2e/scripts/run-fabric-server-bridge-migration-e2e.sh
       - name: ServerBridge 0.14.6 to 0.14.7 Forge + NeoForge migration E2E
         run: bash e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh
+      - name: ServerBridge 0.14.7 to 0.14.8 zero-patch topology + handoff migration E2E
+        run: bash e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -587,6 +590,13 @@ jobs:
         with:
           name: neverlauncher-forge-neoforge-migration-e2e-evidence
           path: e2e/forge-neoforge-migration-result/
+          if-no-files-found: ignore
+      - name: Upload topology + handoff migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-topology-handoff-migration-e2e-evidence
+          path: e2e/topology-handoff-migration-result/
           if-no-files-found: ignore
           retention-days: 14
       - name: Upload Device Trust protocol evidence

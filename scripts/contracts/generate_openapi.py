@@ -22,7 +22,7 @@ public_prefixes = (
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
 public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
-node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/audit-event", "/api/v1/session/has-joined"}
+node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/session/has-joined"}
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
 def is_public(method, path):
@@ -110,7 +110,7 @@ def body_schema(path):
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
-      "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest",
+      "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest",
       "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
       "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
       "/api/v1/minecraft/session":"MinecraftSessionRequest",
@@ -208,7 +208,7 @@ for method,path in routes:
         op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
         if method != "get":
             op["responses"]["413"]={"$ref":"#/components/responses/PayloadTooLarge"}
-    if path == "/api/v1/server-bridge/validate-join" or path.endswith("/heartbeat"):
+    if path in ("/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff") or path.endswith("/heartbeat"):
         op["responses"]["426"]={"$ref":"#/components/responses/UpgradeRequired"}
     paths.setdefault(path,{})[method]=op
 
@@ -251,6 +251,7 @@ schemas={
 "UserWriteRequest":{"type":"object","properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"roleId":{"type":"string"},"password":{"type":"string"},"projectRoles":{"type":"object","additionalProperties":{"type":"string"}}}},
 "DiagnosticsReportRequest":{"type":"object","required":["schemaVersion","generatedAt","launcherVersion"],"properties":{"schemaVersion":{"type":"string"},"generatedAt":{"type":"string"},"launcherVersion":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"},"backendUrl":{"type":"string"},"status":{"type":"string"},"checks":{"type":"object","additionalProperties":{"type":"string"}}}},
 "HeartbeatRequest":{"type":"object","required":["protocolVersion","serverId","serverType","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":2},"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","forge","neoforge"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"}},"additionalProperties":False},
+"BridgeHandoffRequest":{"type":"object","required":["protocolVersion","username","targetServer"],"properties":{"protocolVersion":{"type":"integer","const":2},"username":{"type":"string","minLength":1},"targetServer":{"type":"string","minLength":1,"description":"Existing proxy backend name or canonical ServerBridge target node id."}},"additionalProperties":False},
 "BridgeAuditEventRequest":{"type":"object","required":["serverId","event"],"properties":{"serverId":{"type":"string"},"event":{"type":"string"},"player":{"type":"string"},"uuid":{"type":"string"},"details":{"type":"object","additionalProperties":True}}},
 "HasJoinedRequest":{"type":"object","properties":{"username":{"type":"string"},"serverId":{"type":"string"}}},
 "TelemetryRequest":{"type":"object","required":["projectId","event"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"event":{"type":"string"},"status":{"type":"string"}}},

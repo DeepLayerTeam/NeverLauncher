@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0027_forge_neoforge_server_bridge_0147" {
+	if st.Current != "0028_zero_patch_topology_handoff_0148" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0027_forge_neoforge_server_bridge_0147" {
+		if k != "0028_zero_patch_topology_handoff_0148" {
 			pending[k] = v
 		}
 	}
@@ -257,6 +257,26 @@ func TestForgeNeoForgeServerBridgeMigration0147(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.7 Forge/NeoForge Server Bridge migration missing %q", required)
+		}
+	}
+}
+
+func TestZeroPatchTopologyHandoffMigration0148(t *testing.T) {
+	b, err := os.ReadFile("sql/0028_zero_patch_topology_handoff_0148.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"server_bridge_topology_edges_v2",
+		"server_bridge_handoffs_v2",
+		"source_identity_epoch",
+		"target_identity_epoch",
+		"server_bridge_handoffs_active_target_player_uq",
+		"runtime-learned ServerBridge topology",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.8 zero-patch topology/handoff migration missing %q", required)
 		}
 	}
 }

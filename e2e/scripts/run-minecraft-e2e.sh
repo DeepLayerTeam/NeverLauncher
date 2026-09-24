@@ -345,7 +345,7 @@ validate_join() {
   if [[ "$expect" == allow ]]; then
     [[ "$code" == 200 ]] && jq -e '.data.allowed == true and (.data.nodeKeyFingerprint|length)==64 and .data.identityEpoch >= 1' "$out" >/dev/null
   else
-    [[ "$code" == 403 ]] && jq -e '.data.allowed == false and .data.reason == "launcher_session_missing_or_expired"' "$out" >/dev/null
+    [[ "$code" == 403 ]] && jq -e '.data.allowed == false and (.data.reason == "launcher_session_or_handoff_missing_or_expired" or .data.reason == "launcher_session_missing_or_expired")' "$out" >/dev/null
   fi
 }
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
@@ -387,7 +387,23 @@ python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$P
 wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and Purpur bridges\n'
+  printf '[e2e] verify zero-patch proxy -> backend one-time handoff and runtime-learned topology\n'
+  json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"velocity-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-velocity-handoff-source.json"
+  validate_join velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" allow
+  handoff_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg target "paper-e2e-p3" '{protocolVersion:2,username:$username,targetServer:$target}')"
+  handoff_code="$(serverbridge_node_signed_request "$VELOCITY_NODE_KEY" velocity-e2e-p3 POST "$API/api/v1/server-bridge/handoff" "$handoff_body" "$RUNTIME_DIR/handoff-velocity-paper.json")"
+  [[ "$handoff_code" == 201 ]] || { echo "[e2e] expected handoff HTTP 201, got $handoff_code" >&2; cat "$RUNTIME_DIR/handoff-velocity-paper.json" >&2; exit 1; }
+  jq -e '.data.status == "handoff-created" and .data.oneTime == true and (.data.handoffId | startswith("ho_")) and .data.sourceNodeId == "velocity-e2e-p3" and .data.targetNodeId == "paper-e2e-p3"' "$RUNTIME_DIR/handoff-velocity-paper.json" >/dev/null
+  validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
+  validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
+  handoff_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,(source_node_id='velocity-e2e-p3')::text,(target_node_id='paper-e2e-p3')::text,length(redeemed_nonce_hash),(consumed_at IS NOT NULL)::text FROM server_bridge_handoffs_v2 WHERE username_normalized=lower('$PLAYER_USERNAME') ORDER BY created_at DESC LIMIT 1")"
+  [[ "$handoff_state" == consumed\|t\|t\|64\|t ]] || { echo "[e2e] invalid consumed handoff state: $handoff_state" >&2; exit 1; }
+  topology_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE source_node_id='velocity-e2e-p3' AND target_node_id='paper-e2e-p3' AND status='active'")"
+  [[ "$topology_count" == "1" ]] || { echo "[e2e] runtime topology edge was not persisted" >&2; exit 1; }
+  curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
+  jq -e '.data.sourceOfTruth == "postgresql" and .data.mode == "runtime-learned-zero-patch" and ([.data.items[] | select(.sourceNodeId == "velocity-e2e-p3" and .targetNodeId == "paper-e2e-p3")] | length) == 1' "$RUNTIME_DIR/serverbridge-topology.json" >/dev/null
+
+  printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
     join_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg id "$id" --arg profile "$PROFILE_ID" '{username:$username,serverId:$id,projectId:"e2e-project",profileId:$profile,channel:"stable"}')"

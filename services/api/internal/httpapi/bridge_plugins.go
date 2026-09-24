@@ -72,7 +72,7 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 			{"id": "forge", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-forge-bridge-" + s.Version + ".jar", "threading": "PlayerNegotiationEvent future + bounded validation executor", "clientModRequired": false},
 			{"id": "neoforge", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-neoforge-bridge-" + s.Version + ".jar", "threading": "PlayerNegotiationEvent future + bounded validation executor", "clientModRequired": false},
 		},
-		"requiredBackendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
+		"requiredBackendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
 		"trustPolicy":              gameplayTrustPolicy0127,
 		"trustEnforcement":         "required",
 		"integrityPolicy":          serverBridgeIntegrityPolicy0135,
@@ -178,9 +178,19 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	join, ok := s.State.ServerBridge.hasJoined(req.Username, req.ServerID)
+	var handoff model.ServerBridgeHandoff
+	fromHandoff := false
+	if !ok {
+		if h, handoffOK := s.State.ServerBridge.activeHandoff0148(req.Username, req.ServerID); handoffOK {
+			handoff = h
+			join = bridgeJoinFromHandoff0148(h)
+			ok = true
+			fromHandoff = true
+		}
+	}
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-miss"), Actor: server.ID, Action: "serverbridge:validate-join:denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_missing_or_expired", req, bridgeJoinRecord{}))
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_or_handoff_missing_or_expired", req, bridgeJoinRecord{}))
 		return
 	}
 	if req.ProjectID != "" && req.ProjectID != join.ProjectID {
@@ -198,8 +208,12 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	_, trust := s.evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
-			s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
-			_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
+			if fromHandoff {
+				s.State.ServerBridge.invalidateHandoff0148(handoff.ID)
+			} else {
+				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
+				_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
+			}
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-trust-denied"), Actor: server.ID, Action: "serverbridge:validate-join:trust-denied", Target: req.Username + ":" + trust.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		payload := bridgeValidateResponse940(s.Version, false, trust.Reason, req, join)
@@ -211,8 +225,12 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	_, minecraftIntegrity := s.evaluateServerBridgeJoinIntegrity0135(join)
 	if !minecraftIntegrity.Allowed {
 		if minecraftIntegrityPermanentFailure0135(minecraftIntegrity.Reason) || minecraftIntegrity.Reason == "minecraft_integrity_session_required" || minecraftIntegrity.Reason == "minecraft_integrity_binding_mismatch" {
-			s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
-			_ = s.flushPersistenceState950("server-bridge-integrity-invalidate")
+			if fromHandoff {
+				s.State.ServerBridge.invalidateHandoff0148(handoff.ID)
+			} else {
+				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
+				_ = s.flushPersistenceState950("server-bridge-integrity-invalidate")
+			}
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-minecraft-integrity-denied"), Actor: server.ID, Action: "serverbridge:validate-join:minecraft-integrity-denied", Target: req.Username + ":" + minecraftIntegrity.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		payload := bridgeValidateResponse940(s.Version, false, minecraftIntegrity.Reason, req, join)
@@ -227,13 +245,23 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_join_redemption_proof_unavailable")
 		return
 	}
-	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
-	if !consumedOK {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-replay"), Actor: server.ID, Action: "serverbridge:validate-join:replay-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "join_ticket_already_consumed", req, bridgeJoinRecord{}))
-		return
+	if fromHandoff {
+		consumedHandoff, consumedOK := s.State.ServerBridge.consumeHandoff0148(handoff.ID, redemption)
+		if !consumedOK {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-handoff-replay"), Actor: server.ID, Action: "serverbridge:handoff:replay-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+			writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "handoff_already_consumed_or_identity_changed", req, bridgeJoinRecord{}))
+			return
+		}
+		join = bridgeJoinFromHandoff0148(consumedHandoff)
+	} else {
+		consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
+		if !consumedOK {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-replay"), Actor: server.ID, Action: "serverbridge:validate-join:replay-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+			writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "join_ticket_already_consumed", req, bridgeJoinRecord{}))
+			return
+		}
+		join = consumed
 	}
-	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-allowed"), Actor: server.ID, Action: "serverbridge:validate-join:allowed", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	payload := bridgeValidateResponse940(s.Version, true, "session_valid", req, join)
 	payload["data"].(map[string]any)["trust"] = trust
@@ -241,6 +269,11 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	payload["data"].(map[string]any)["bridgeIntegrity"] = bridgeIntegrity
 	payload["data"].(map[string]any)["nodeKeyFingerprint"] = server.KeyFingerprint
 	payload["data"].(map[string]any)["identityEpoch"] = server.IdentityEpoch
+	payload["data"].(map[string]any)["authorization"] = map[bool]string{true: "proxy-handoff", false: "direct-ticket"}[fromHandoff]
+	if fromHandoff {
+		payload["data"].(map[string]any)["sourceNodeId"] = handoff.SourceNodeID
+		payload["data"].(map[string]any)["handoffId"] = handoff.ID
+	}
 	writeJSON(w, http.StatusOK, payload)
 }
 
@@ -283,6 +316,9 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 			{"id": "ed25519-node-authentication", "status": "implemented"},
 			{"id": "single-use-node-nonce", "status": "implemented"},
 			{"id": "identity-bound-one-time-join-ticket", "status": "implemented"},
+			{"id": "proxy-backend-one-time-handoff", "status": "implemented"},
+			{"id": "runtime-learned-topology", "status": "implemented"},
+			{"id": "zero-patch-plugin-bootstrap", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
 			{"id": "gameplay-trust-enforcement", "status": "implemented"},
 			{"id": "minecraft-integrity-enforcement", "status": "implemented"},
@@ -318,11 +354,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.14.7 Forge + NeoForge Server Bridge",
+		"release":         "NeverLauncher 0.14.8 Zero-patch installation + topology/handoff",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v2",
 		"protocolVersion": serverBridgeProtocolV2,
-		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}
@@ -350,7 +386,7 @@ func bridgePluginsManifest940(version string) map[string]any {
 		"configExamples":   []string{"plugins/velocity-bridge/config.example.yml", "plugins/bungeecord-bridge/config.example.yml", "plugins/waterfall-bridge/config.example.yml", "plugins/bukkit-bridge/config.example.yml", "plugins/spigot-bridge/config.example.yml", "plugins/paper-bridge/config.example.yml", "plugins/purpur-bridge/config.example.yml", "plugins/folia-bridge/config.example.yml", "plugins/fabric-bridge/config.example.yml", "plugins/forge-bridge/config.example.yml", "plugins/neoforge-bridge/config.example.yml"},
 		"releaseAllowlist": "artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json",
 		"integrityPolicy":  serverBridgeIntegrityPolicy0135,
-		"backendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
+		"backendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
 	}
 }
 

@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.7 → 0.14.8
+
+Остановите 0.14.7 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0028_zero_patch_topology_handoff_0148` до запуска 0.14.8 Backend. Migration сохраняет существующие ServerBridge nodes/tickets и добавляет PostgreSQL source-of-truth для runtime topology и proxy→backend handoff.
+
+Обновите bridge artifacts до 0.14.8 и сохраните обычную конфигурацию платформы: NeverLauncher не патчит `server.properties`, Bukkit/Paper/Folia configs, Fabric/Forge/NeoForge configs или Velocity/BungeeCord/Waterfall routing. Proxy после успешного launcher login выпускает signed one-time handoff только при фактическом выборе backend; backend повторно проверяет trust/integrity и атомарно consume-ит handoff. Ed25519 node enrollment и exact release SHA-256 allowlist по-прежнему обязательны. После rollout проверьте `GET /api/v1/server-bridge/topology`, затем proxy→backend allow и повторный replay deny.
+
 ### Upgrade 0.14.6 → 0.14.7
 
 Остановите 0.14.6 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0027_forge_neoforge_server_bridge_0147` до запуска 0.14.7 Backend. Migration расширяет только canonical ServerBridge kind constraint и сохраняет существующие identities/tickets.

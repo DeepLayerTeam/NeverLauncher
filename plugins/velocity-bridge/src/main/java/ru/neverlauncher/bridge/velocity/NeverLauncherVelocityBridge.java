@@ -3,6 +3,7 @@ package ru.neverlauncher.bridge.velocity;
 import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
+import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
@@ -56,6 +57,26 @@ public final class NeverLauncherVelocityBridge {
                 return;
             }
             logger.info("neverlauncher.join.allowed username=" + username + " serverId=" + current.serverId() + " platform=velocity");
+        });
+    }
+
+    @Subscribe
+    public EventTask onServerPreConnect(ServerPreConnectEvent event) {
+        return EventTask.async(() -> {
+            ProxyBridgeRuntime current = runtime;
+            if (current == null) {
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                return;
+            }
+            String username = event.getPlayer().getUsername();
+            String target = event.getOriginalServer().getServerInfo().getName();
+            JoinValidationResult result = current.createHandoff(username, target);
+            if (!result.allowed) {
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                logger.info("neverlauncher.handoff.denied username=" + username + " target=" + target + " reason=" + result.reason + " platform=velocity");
+                return;
+            }
+            logger.info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=velocity");
         });
     }
 

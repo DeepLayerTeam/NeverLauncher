@@ -46,6 +46,7 @@ public final class BridgeConfig {
 
     public static BridgeConfig load(Path configPath, String defaultServerId) throws IOException {
         Map<String, String> values = new LinkedHashMap<>();
+        ensureZeroPatchConfig(configPath, normalizedDefaultServerId(defaultServerId));
         if (Files.exists(configPath)) {
             String section = "";
             for (String raw : Files.readAllLines(configPath)) {
@@ -75,8 +76,31 @@ public final class BridgeConfig {
     }
 
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
+    public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
     public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
     public String statusUrl() { return backendUrl + "/api/v1/status"; }
+
+    private static void ensureZeroPatchConfig(Path configPath, String defaultServerId) {
+        if (configPath == null || Files.exists(configPath)) return;
+        try {
+            Path absolute = configPath.toAbsolutePath().normalize();
+            Path parent = absolute.getParent();
+            if (parent != null) Files.createDirectories(parent);
+            // Deliberately write comments only. Runtime values continue to come from
+            // environment variables/defaults, so installing the JAR/mod never patches
+            // Paper/Velocity/Bungee/Fabric/Forge configuration and never freezes env.
+            String template = "# NeverLauncher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
+                "# No Minecraft/proxy configuration is modified by this plugin.\n" +
+                "# Defaults: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
+                "# Override with NEVERLAUNCHER_BACKEND_URL / NEVERLAUNCHER_SERVER_ID and related env vars,\n" +
+                "# or add explicit keys here when file-based configuration is preferred.\n";
+            Files.writeString(absolute, template, java.nio.charset.StandardCharsets.UTF_8,
+                java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
+        } catch (IOException | SecurityException ignored) {
+            // Read-only plugin/mod directories are valid zero-patch deployments;
+            // environment/default configuration remains authoritative.
+        }
+    }
 
     private static String first(Map<String, String> values, String key, String env, String fallback) {
         String value = values.get(key);

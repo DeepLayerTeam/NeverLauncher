@@ -25,6 +25,11 @@ type ServerBridgeRepository interface {
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
 	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
+	CreateServerBridgeHandoff(context.Context, model.ServerBridgeHandoff, time.Time) (model.ServerBridgeHandoff, error)
+	GetActiveServerBridgeHandoff(context.Context, string, string, time.Time) (model.ServerBridgeHandoff, error)
+	ConsumeServerBridgeHandoff(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeHandoff, error)
+	InvalidateServerBridgeHandoff(context.Context, string, time.Time) (bool, error)
+	ListServerBridgeTopology(context.Context) ([]model.ServerBridgeTopologyEdge, error)
 	InvalidateServerBridgeJoinTicket(context.Context, string, time.Time) (bool, error)
 	InvalidateServerBridgeSession(context.Context, string, string, time.Time) (int, error)
 	InvalidateServerBridgeUser(context.Context, string, time.Time) (int, error)
@@ -186,6 +191,9 @@ func (r *SQLRepository) RotateServerBridgeNodeIdentity(ctx context.Context, id, 
 		return model.ServerBridgeNode{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE server_id=$1 AND status='active'`, id, now.UTC()); err != nil {
+		return model.ServerBridgeNode{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE (source_node_id=$1 OR target_node_id=$1) AND status='active'`, id, now.UTC()); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -386,7 +394,12 @@ func (r *SQLRepository) InvalidateServerBridgeSession(ctx context.Context, sessi
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
-	return int(n), nil
+	hRes, err := r.db.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$3 WHERE session_id=$1 AND ($2='' OR target_node_id=$2 OR source_node_id=$2) AND status='active'`, sessionID, serverID, now.UTC())
+	if err != nil {
+		return int(n), err
+	}
+	hn, _ := hRes.RowsAffected()
+	return int(n + hn), nil
 }
 func (r *SQLRepository) InvalidateServerBridgeUser(ctx context.Context, userID string, now time.Time) (int, error) {
 	if err := r.check(); err != nil {
@@ -397,7 +410,12 @@ func (r *SQLRepository) InvalidateServerBridgeUser(ctx context.Context, userID s
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
-	return int(n), nil
+	hRes, err := r.db.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE user_id=$1 AND status='active'`, userID, now.UTC())
+	if err != nil {
+		return int(n), err
+	}
+	hn, _ := hRes.RowsAffected()
+	return int(n + hn), nil
 }
 
 func (r *SQLRepository) SaveServerBridgeTexture(ctx context.Context, t model.ServerBridgeTexture) (model.ServerBridgeTexture, error) {
@@ -422,15 +440,247 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	var nodes, joins, textures int
+	var nodes, joins, handoffs, topology, textures int
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_nodes_v2`).Scan(&nodes); err != nil {
 		return nil, err
 	}
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1`, now.UTC()).Scan(&joins); err != nil {
 		return nil, err
 	}
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1`, now.UTC()).Scan(&handoffs); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE status='active'`).Scan(&topology); err != nil {
+		return nil, err
+	}
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textures); err != nil {
 		return nil, err
 	}
-	return map[string]any{"servers": nodes, "activeJoins": joins, "textures": textures, "joinTtlSeconds": 120, "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
+	return map[string]any{"servers": nodes, "activeJoins": joins, "activeHandoffs": handoffs, "topologyEdges": topology, "textures": textures, "joinTtlSeconds": 120, "handoffTtlSeconds": 30, "topologyMode": "runtime-learned-zero-patch", "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
+}
+
+func isProxyBridgeKind0148(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "velocity", "bungeecord", "waterfall":
+		return true
+	default:
+		return false
+	}
+}
+
+func isBackendBridgeKind0148(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge":
+		return true
+	default:
+		return false
+	}
+}
+
+func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerBridgeHandoff, error) {
+	var h model.ServerBridgeHandoff
+	var consumed sql.NullTime
+	err := row.Scan(&h.ID, &h.Username, &h.UsernameNormalized, &h.UUID, &h.UserID, &h.SessionID,
+		&h.SourceNodeID, &h.TargetNodeID, &h.BackendName, &h.ProjectID, &h.ProfileID, &h.Channel,
+		&h.TrustedDeviceID, &h.BindingEpoch, &h.MinecraftSessionID,
+		&h.SourceIdentityEpoch, &h.SourceKeyFingerprint, &h.TargetIdentityEpoch, &h.TargetKeyFingerprint,
+		&h.Status, &h.CreatedAt, &h.ExpiresAt, &consumed, &h.RedeemedNonceHash, &h.RedeemedByIP)
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if consumed.Valid {
+		h.ConsumedAt = consumed.Time
+	}
+	return h, nil
+}
+
+const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_handoffs_v2`
+
+// CreateServerBridgeHandoff mints a target-specific credential only from a very
+// recent join ticket already redeemed by the authenticated proxy. The target is
+// resolved by canonical node id first, then by unique node name. This is what
+// allows zero-patch installs to use the proxy's existing backend name directly.
+func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.ServerBridgeHandoff, now time.Time) (model.ServerBridgeHandoff, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	h.SourceNodeID = strings.TrimSpace(h.SourceNodeID)
+	targetRef := strings.TrimSpace(h.TargetNodeID)
+	h.Username = strings.TrimSpace(h.Username)
+	h.UsernameNormalized = strings.ToLower(h.Username)
+	if h.ID == "" || h.SourceNodeID == "" || targetRef == "" || h.UsernameNormalized == "" {
+		return model.ServerBridgeHandoff{}, ErrConflict
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	defer tx.Rollback()
+	lockKey := h.SourceNodeID + ":" + h.UsernameNormalized + ":" + strings.ToLower(targetRef)
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1408, hashtext($1))`, lockKey); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+
+	var sourceKind, sourceStatus, sourceFingerprint string
+	var sourceEpoch int64
+	if err = tx.QueryRowContext(ctx, `SELECT kind,status,identity_epoch,key_fingerprint FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, h.SourceNodeID).
+		Scan(&sourceKind, &sourceStatus, &sourceEpoch, &sourceFingerprint); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeHandoff{}, ErrNotFound
+		}
+		return model.ServerBridgeHandoff{}, err
+	}
+	if sourceStatus != "active" || !isProxyBridgeKind0148(sourceKind) || sourceEpoch < 1 || len(sourceFingerprint) != 64 {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("source node is not an active proxy")
+	}
+
+	var targetID, targetName, targetKind, targetStatus, targetProject, targetProfile, targetFingerprint string
+	var targetEpoch int64
+	rows, err := tx.QueryContext(ctx, `SELECT id,name,kind,status,project_id,profile_id,identity_epoch,key_fingerprint FROM server_bridge_nodes_v2 WHERE id=$1 OR lower(name)=lower($1) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END,id LIMIT 2 FOR SHARE`, targetRef)
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	defer rows.Close()
+	matches := 0
+	for rows.Next() {
+		matches++
+		if matches == 1 {
+			if err = rows.Scan(&targetID, &targetName, &targetKind, &targetStatus, &targetProject, &targetProfile, &targetEpoch, &targetFingerprint); err != nil {
+				return model.ServerBridgeHandoff{}, err
+			}
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if err = rows.Close(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if matches == 0 {
+		return model.ServerBridgeHandoff{}, ErrNotFound
+	}
+	if targetID != targetRef && matches > 1 {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: backend name %s is ambiguous", ErrConflict, targetRef)
+	}
+	if targetStatus != "active" || !isBackendBridgeKind0148(targetKind) || targetEpoch < 1 || len(targetFingerprint) != 64 {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("target node is not an active backend")
+	}
+
+	// The source proof is the latest successfully consumed launcher ticket for an
+	// auth session that is still active and on the same binding epoch. This keeps
+	// later proxy server switches working without replaying the launcher ticket.
+	var sourceJoin model.ServerBridgeJoinTicket
+	var consumedAt sql.NullTime
+	err = tx.QueryRowContext(ctx, bridgeJoinSelectV2+` WHERE server_id=$1 AND username_normalized=$2 AND status='consumed' AND EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=server_bridge_join_tickets_v2.session_id AND a.user_id=server_bridge_join_tickets_v2.user_id AND a.status='active' AND a.expires_at>$3 AND a.binding_epoch=server_bridge_join_tickets_v2.binding_epoch) ORDER BY consumed_at DESC LIMIT 1`, h.SourceNodeID, h.UsernameNormalized, now.UTC()).
+		Scan(&sourceJoin.ID, &sourceJoin.TicketVersion, &sourceJoin.Username, &sourceJoin.UsernameNormalized, &sourceJoin.UUID, &sourceJoin.UserID, &sourceJoin.SessionID, &sourceJoin.ServerID, &sourceJoin.ProjectID, &sourceJoin.ProfileID, &sourceJoin.Channel, &sourceJoin.AccessTokenHash, &sourceJoin.TrustedDeviceID, &sourceJoin.BindingEpoch, &sourceJoin.MinecraftSessionID, &sourceJoin.ProtocolVersion, &sourceJoin.IssuedIdentityEpoch, &sourceJoin.IssuedKeyFingerprint, &sourceJoin.Status, &sourceJoin.CreatedAt, &sourceJoin.ExpiresAt, &consumedAt, &sourceJoin.RedeemedIdentityEpoch, &sourceJoin.RedeemedKeyFingerprint, &sourceJoin.RedeemedNonceHash, &sourceJoin.RedeemedByIP)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeHandoff{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if !consumedAt.Valid || sourceJoin.RedeemedIdentityEpoch != sourceEpoch || !strings.EqualFold(sourceJoin.RedeemedKeyFingerprint, sourceFingerprint) {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("source join was not redeemed by current proxy identity")
+	}
+	if targetProject != "" && targetProject != sourceJoin.ProjectID {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("target project binding mismatch")
+	}
+	if targetProfile != "" && targetProfile != sourceJoin.ProfileID {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("target profile binding mismatch")
+	}
+
+	h.Username = sourceJoin.Username
+	h.UsernameNormalized = sourceJoin.UsernameNormalized
+	h.UUID = sourceJoin.UUID
+	h.UserID = sourceJoin.UserID
+	h.SessionID = sourceJoin.SessionID
+	h.TargetNodeID = targetID
+	h.BackendName = targetName
+	h.ProjectID = sourceJoin.ProjectID
+	h.ProfileID = sourceJoin.ProfileID
+	h.Channel = sourceJoin.Channel
+	h.TrustedDeviceID = sourceJoin.TrustedDeviceID
+	h.BindingEpoch = sourceJoin.BindingEpoch
+	h.MinecraftSessionID = sourceJoin.MinecraftSessionID
+	h.SourceIdentityEpoch = sourceEpoch
+	h.SourceKeyFingerprint = strings.ToLower(sourceFingerprint)
+	h.TargetIdentityEpoch = targetEpoch
+	h.TargetKeyFingerprint = strings.ToLower(targetFingerprint)
+	h.Status = "active"
+	h.CreatedAt = now.UTC()
+	if h.ExpiresAt.IsZero() || h.ExpiresAt.After(now.UTC().Add(30*time.Second)) {
+		h.ExpiresAt = now.UTC().Add(30 * time.Second)
+	}
+
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='replaced',invalidated_at=$3 WHERE target_node_id=$1 AND username_normalized=$2 AND status='active'`, h.TargetNodeID, h.UsernameNormalized, now.UTC()); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_handoffs_v2(id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,trusted_device_id,binding_epoch,minecraft_session_id,source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,status,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14,NULLIF($15,''),$16,$17,$18,$19,'active',$20,$21)`, h.ID, h.Username, h.UsernameNormalized, h.UUID, h.UserID, h.SessionID, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, h.Channel, h.TrustedDeviceID, h.BindingEpoch, h.MinecraftSessionID, h.SourceIdentityEpoch, h.SourceKeyFingerprint, h.TargetIdentityEpoch, h.TargetKeyFingerprint, h.CreatedAt, h.ExpiresAt); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_topology_edges_v2(source_node_id,target_node_id,backend_name,project_id,profile_id,status,created_at,last_seen_at) VALUES($1,$2,$3,$4,$5,'active',$6,$6) ON CONFLICT(source_node_id,target_node_id) DO UPDATE SET backend_name=EXCLUDED.backend_name,project_id=EXCLUDED.project_id,profile_id=EXCLUDED.profile_id,status='active',last_seen_at=EXCLUDED.last_seen_at`, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, now.UTC()); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	return h, nil
+}
+
+func (r *SQLRepository) GetActiveServerBridgeHandoff(ctx context.Context, username, targetNodeID string, now time.Time) (model.ServerBridgeHandoff, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	h, err := scanServerBridgeHandoff(r.db.QueryRowContext(ctx, bridgeHandoffSelect0148+` WHERE target_node_id=$1 AND username_normalized=$2 AND status='active' AND expires_at>$3 ORDER BY created_at DESC LIMIT 1`, strings.TrimSpace(targetNodeID), strings.ToLower(strings.TrimSpace(username)), now.UTC()))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeHandoff{}, ErrNotFound
+	}
+	return h, err
+}
+
+func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id string, redemption model.ServerBridgeJoinRedemption, now time.Time) (model.ServerBridgeHandoff, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	redemption.NodeID = strings.TrimSpace(redemption.NodeID)
+	redemption.KeyFingerprint = strings.ToLower(strings.TrimSpace(redemption.KeyFingerprint))
+	redemption.NonceHash = strings.ToLower(strings.TrimSpace(redemption.NonceHash))
+	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip`
+	h, err := scanServerBridgeHandoff(r.db.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeHandoff{}, ErrConflict
+	}
+	return h, err
+}
+
+func (r *SQLRepository) InvalidateServerBridgeHandoff(ctx context.Context, id string, now time.Time) (bool, error) {
+	if err := r.check(); err != nil {
+		return false, err
+	}
+	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE id=$1 AND status='active'`, strings.TrimSpace(id), now.UTC())
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.ServerBridgeTopologyEdge, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT source_node_id,target_node_id,backend_name,project_id,profile_id,status,last_seen_at,created_at FROM server_bridge_topology_edges_v2 ORDER BY source_node_id,backend_name,target_node_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.ServerBridgeTopologyEdge{}
+	for rows.Next() {
+		var e model.ServerBridgeTopologyEdge
+		if err := rows.Scan(&e.SourceNodeID, &e.TargetNodeID, &e.BackendName, &e.ProjectID, &e.ProfileID, &e.Status, &e.LastSeenAt, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }

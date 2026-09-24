@@ -4,6 +4,7 @@ import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
@@ -17,10 +18,13 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /** Shared Bungee API adapter used by the BungeeCord and Waterfall artifacts. */
 public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listener {
     private final BungeeFamilyPlatform expectedPlatform;
+    private final ConcurrentHashMap<String, Long> preparedHandoffs = new ConcurrentHashMap<>();
     private volatile ProxyBridgeRuntime runtime;
 
     protected BungeeFamilyBridgePlugin(BungeeFamilyPlatform expectedPlatform) {
@@ -51,6 +55,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         ProxyBridgeRuntime current = runtime;
         runtime = null;
         if (current != null) current.close();
+        preparedHandoffs.clear();
         getProxy().getPluginManager().unregisterListeners(this);
         getProxy().getPluginManager().unregisterCommands(this);
     }
@@ -82,6 +87,38 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
             } finally {
                 event.completeIntent(this);
             }
+        });
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public final void onServerConnect(ServerConnectEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        if (current == null || event.isCancelled() || event.getTarget() == null) return;
+        String username = event.getPlayer().getName();
+        String target = event.getTarget().getName();
+        String key = username.toLowerCase(Locale.ROOT) + "\u0000" + target.toLowerCase(Locale.ROOT);
+        long now = System.currentTimeMillis();
+        Long preparedUntil = preparedHandoffs.remove(key);
+        if (preparedUntil != null && preparedUntil >= now) return;
+
+        event.setCancelled(true);
+        ServerConnectEvent.Reason reason = event.getReason();
+        current.createHandoffAsync(username, target).whenComplete((result, error) -> {
+            JoinValidationResult finalResult = error == null && result != null
+                ? result
+                : new JoinValidationResult(false, "backend_unavailable", "{}");
+            if (!finalResult.allowed) {
+                getLogger().info("neverlauncher.handoff.denied username=" + username + " target=" + target + " reason=" + finalResult.reason + " platform=" + expectedPlatform.id());
+                event.getPlayer().disconnect(TextComponent.fromLegacyText("NeverLauncher handoff denied: " + finalResult.reason));
+                return;
+            }
+            preparedHandoffs.put(key, System.currentTimeMillis() + 10_000L);
+            getLogger().info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=" + expectedPlatform.id());
+            getProxy().getScheduler().schedule(this,
+                () -> event.getPlayer().connect(event.getTarget(), (success, throwable) -> {
+                    if (!success) preparedHandoffs.remove(key);
+                }, reason),
+                0L, TimeUnit.MILLISECONDS);
         });
     }
 

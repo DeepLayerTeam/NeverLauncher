@@ -96,6 +96,35 @@ public final class NeverLauncherApiClient {
         return new JoinValidationResult(failOpen, reason, "{}");
     }
 
+    public JoinValidationResult createHandoff(String username, String targetServer) {
+        if (identity == null) return new JoinValidationResult(false, "node_identity_missing", "{}");
+        String body = "{" +
+            "\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION + "," +
+            "\"username\":" + quote(username) + "," +
+            "\"targetServer\":" + quote(targetServer) +
+            "}";
+        IOException lastIo = null;
+        for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
+            try {
+                HttpRequest request = signedRequest("POST", URI.create(config.handoffUrl()), body);
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                String raw = response.body() == null ? "" : response.body();
+                if (response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"status\":\"handoff-created\"")) {
+                    return new JoinValidationResult(true, "handoff_created", raw);
+                }
+                return new JoinValidationResult(false, extractReason(raw), raw);
+            } catch (IOException e) {
+                lastIo = e;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return new JoinValidationResult(false, "backend_interrupted", "{}");
+            } catch (GeneralSecurityException e) {
+                return new JoinValidationResult(false, "node_identity_signing_failed", "{}");
+            }
+        }
+        return new JoinValidationResult(false, lastIo == null ? "backend_denied" : "backend_unavailable", "{}");
+    }
+
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
         String timestamp = Long.toString(Instant.now().getEpochSecond());
         String nonce = identity.newNonce();

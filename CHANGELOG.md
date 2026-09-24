@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.8 — Zero-patch installation + topology/handoff
+
+`0.14.8` завершает ServerBridge 2 как drop-in integration: bridge artifacts не патчат `server.properties`, Paper/Spigot/Purpur/Folia/Fabric/Forge/NeoForge configs или proxy routing configs. Proxy-to-backend переход больше не пытается повторно использовать уже погашенный launcher ticket: Velocity/BungeeCord/Waterfall выпускают отдельный короткоживущий one-time handoff, а PostgreSQL хранит runtime-learned topology как source of truth.
+
+- Migration `0028_zero_patch_topology_handoff_0148` добавляет PostgreSQL topology edges и one-time handoff credentials без переписывания существующих node identities/tickets.
+- Handoff выпускается только активным proxy-kind после ранее успешно погашенного launcher ticket, пока исходная auth session остаётся активной и binding epoch совпадает.
+- Target разрешается по canonical node ID или уникальному runtime backend name и должен быть backend-kind; handoff привязан к source/target Ed25519 identity epoch/fingerprint, project/profile/device/session и живёт не более 30 секунд.
+- Target backend атомарно погашает handoff один раз; replay, target identity rotation, session/user revoke и permanent trust/integrity failure инвалидируют credential fail-closed.
+- Создание handoff требует текущего разрешённого ServerBridge artifact integrity source proxy, а backend повторно применяет Device Trust, Minecraft integrity и собственный artifact integrity перед consume.
+- Velocity создаёт handoff на `ServerPreConnectEvent`; BungeeCord/Waterfall используют cancel → async handoff → single reconnect, не блокируя proxy event loop.
+- Zero-patch bootstrap создаёт только NeverLauncher-local comment/config scaffold при доступном writable plugin directory; read-only deployments продолжают работать через env/defaults и никогда не модифицируют Minecraft/proxy configuration.
+- Добавлены runtime topology API, exact migration rehearsal `0.14.7 → 0.14.8`, PostgreSQL handoff E2E и обязательный offline release gate.
+
+Migration: остановите 0.14.7 API instances, создайте backup, примените `0028_zero_patch_topology_handoff_0148` и убедитесь через `nl db migrate verify`, что она current. Обновите bridge artifacts до 0.14.8. Не включайте proxy forwarding/plugins patching специально для NeverLauncher: routing остаётся штатным для вашей платформы; ServerBridge изучает source→target edges при реальных handoff. Ed25519 enrollment и release-hash allowlist остаются обязательными security boundaries.
+
 ## 0.14.7 — Forge + NeoForge Server Bridge
 
 `0.14.7` добавляет отдельные server-only ServerBridge-моды для Forge и NeoForge 1.21.1. Оба используют общий `modloader-family-common`, Ed25519 node identity, signed Protocol v2, PostgreSQL source of truth, release-hash integrity и one-time join tickets. Login блокируется до backend decision штатным `PlayerNegotiationEvent`, без post-login kick и без обязательного клиентского мода.

@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+from pathlib import Path
+root=Path(__file__).resolve().parents[3]
+version=(root/'VERSION').read_text().strip()
+if tuple(int(x) for x in version.split('.')[:3]) < (0,14,8): raise SystemExit('VERSION is older than 0.14.8')
+def read(p): return (root/p).read_text(encoding='utf-8')
+def require(text, needles, label):
+    missing=[n for n in needles if n not in text]
+    if missing: raise SystemExit(f'{label}: missing {missing}')
+api=read('services/api/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql')
+cli=read('cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql')
+if api != cli: raise SystemExit('0.14.8 API/CLI migrations differ')
+require(api,['server_bridge_topology_edges_v2','server_bridge_handoffs_v2','source_identity_epoch','target_identity_epoch','server_bridge_handoffs_active_target_player_uq'],'0.14.8 PostgreSQL migration')
+repo=read('services/api/internal/repository/server_bridge_v2.go')
+require(repo,['CreateServerBridgeHandoff','GetActiveServerBridgeHandoff','ConsumeServerBridgeHandoff','ListServerBridgeTopology','pg_advisory_xact_lock(1408','a.status=\'active\'','a.expires_at>$3','a.binding_epoch=server_bridge_join_tickets_v2.binding_epoch','target_identity_epoch=$3','server_bridge_topology_edges_v2'],'PostgreSQL handoff repository')
+http=read('services/api/internal/httpapi/server_bridge_topology_handoff_0148.go')+read('services/api/internal/httpapi/bridge_plugins.go')+read('services/api/internal/httpapi/routes_bridge.go')
+require(http,['serverBridgeCreateHandoff0148','serverBridgeTopology0148','serverBridgeHandoffTTL0148 = 30 * time.Second','activeHandoff0148','consumeHandoff0148','authorization','proxy-handoff'],'HTTP topology/handoff runtime')
+config=read('plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeConfig.java')
+client=read('plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java')
+require(config,['ensureZeroPatchConfig','No Minecraft/proxy configuration is modified','handoffUrl()'],'zero-patch config bootstrap')
+require(client,['createHandoff','config.handoffUrl()','signedRequest("POST"'],'signed handoff client')
+proxy=read('plugins/proxy-family-common/src/main/java/ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.java')
+velocity=read('plugins/velocity-bridge/src/main/java/ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.java')
+bungee=read('plugins/bungee-family-common/src/main/java/ru/neverlauncher/bridge/bungee/BungeeFamilyBridgePlugin.java')
+require(proxy,['createHandoffAsync','current.api.createHandoff'],'proxy shared handoff runtime')
+require(velocity,['ServerPreConnectEvent','createHandoff','ServerResult.denied'],'Velocity handoff gate')
+require(bungee,['ServerConnectEvent','preparedHandoffs','createHandoffAsync','event.setCancelled(true)','event.getPlayer().connect'],'Bungee/Waterfall handoff gate')
+openapi=read('scripts/contracts/generate_openapi.py')
+require(openapi,['/api/v1/server-bridge/handoff','BridgeHandoffRequest'],'OpenAPI handoff contract')
+require(read('services/api/internal/httpapi/routes_bridge.go'),['/api/v1/server-bridge/topology'],'topology route')
+migration=read('e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh')
+require(migration,['0027_forge_neoforge_server_bridge_0147','0028_zero_patch_topology_handoff_0148','server_bridge_topology_edges_v2','server_bridge_handoffs_v2'],'0.14.7 -> 0.14.8 migration E2E')
+print(f'NeverLauncher 0.14.8 zero-patch topology + handoff gate: OK ({version})')

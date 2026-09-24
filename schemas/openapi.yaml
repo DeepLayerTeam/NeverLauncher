@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.8. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6372,6 +6372,65 @@
         ]
       }
     },
+    "/api/v1/server-bridge/handoff": {
+      "post": {
+        "operationId": "post_server_bridge_handoff",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "POST /api/v1/server-bridge/handoff",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "426": {
+            "$ref": "#/components/responses/UpgradeRequired"
+          }
+        },
+        "security": [
+          {
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BridgeHandoffRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/server-bridge/plugin-compatibility": {
       "get": {
         "operationId": "get_server_bridge_plugin_compatibility",
@@ -6627,6 +6686,36 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/server-bridge/topology": {
+      "get": {
+        "operationId": "get_server_bridge_topology",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/topology",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/server-bridge/validate-join": {
@@ -8486,6 +8575,30 @@
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$",
             "description": "SHA-256 of the running ServerBridge JAR"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BridgeHandoffRequest": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "username",
+          "targetServer"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 2
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetServer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing proxy backend name or canonical ServerBridge target node id."
           }
         },
         "additionalProperties": false
