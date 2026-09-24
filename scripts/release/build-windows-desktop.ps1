@@ -127,13 +127,25 @@ $Manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $Pac
 
 $DesktopHash = ($Artifacts | Where-Object { $_.name -eq $DesktopArtifact }).sha256
 $GuardHash = ($Artifacts | Where-Object { $_.name -eq $GuardArtifact }).sha256
-$GuardReleaseAllowlist = [ordered]@{}
-$GuardReleaseAllowlist[$Version] = [ordered]@{
-    guardSha256 = @($GuardHash)
-    launcherSha256 = @($DesktopHash)
-    requireAuthenticode = $AuthenticodeRequired
+$GuardReleaseAllowlist = [ordered]@{
+    schemaVersion = "2.0"
+    releases = [ordered]@{
+        $Version = [ordered]@{
+            protocolVersion = 4
+            platforms = [ordered]@{
+                windows = [ordered]@{
+                    signingMode = $(if ($AuthenticodeRequired) { "authenticode" } else { "unsigned-development" })
+                    artifacts = @([ordered]@{
+                        guardSha256 = $GuardHash
+                        launcherSha256 = $DesktopHash
+                        requireAuthenticode = $AuthenticodeRequired
+                    })
+                }
+            }
+        }
+    }
 }
-$GuardReleaseAllowlist | ConvertTo-Json -Depth 8 -Compress | Set-Content -Encoding UTF8 (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json")
+$GuardReleaseAllowlist | ConvertTo-Json -Depth 10 -Compress | Set-Content -Encoding UTF8 (Join-Path $PackageDir "GUARD_RELEASE_ALLOWLIST.json")
 
 # Canonical cross-platform certification artifacts. These names are stable across
 # patch versions and are hashed into the Guard CI matrix.

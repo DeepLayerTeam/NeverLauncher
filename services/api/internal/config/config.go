@@ -201,27 +201,53 @@ func ValidateProduction(cfg Config) error {
 	if guardAllowlistRaw == "" {
 		problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в production")
 	} else {
-		var guardAllowlist map[string]struct {
-			GuardSHA256    []string `json:"guardSha256"`
-			LauncherSHA256 []string `json:"launcherSha256"`
+		type guardArtifactPair struct {
+			GuardSHA256         string `json:"guardSha256"`
+			LauncherSHA256      string `json:"launcherSha256"`
+			RequireAuthenticode bool   `json:"requireAuthenticode,omitempty"`
 		}
-		if err := json.Unmarshal([]byte(guardAllowlistRaw), &guardAllowlist); err != nil || len(guardAllowlist) == 0 {
-			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->hash allowlists")
+		type guardPlatform struct {
+			SigningMode string              `json:"signingMode"`
+			Artifacts   []guardArtifactPair `json:"artifacts"`
+		}
+		type guardRelease struct {
+			ProtocolVersion uint32                   `json:"protocolVersion"`
+			Platforms       map[string]guardPlatform `json:"platforms"`
+		}
+		var document struct {
+			SchemaVersion string                  `json:"schemaVersion"`
+			Releases      map[string]guardRelease `json:"releases"`
+		}
+		if err := json.Unmarshal([]byte(guardAllowlistRaw), &document); err != nil || document.SchemaVersion != "2.0" || len(document.Releases) == 0 {
+			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть NeverGuard release policy schemaVersion=2.0")
 		} else {
-			for version, entry := range guardAllowlist {
-				if strings.TrimSpace(version) == "" || len(entry.GuardSHA256) == 0 || len(entry.LauncherSHA256) == 0 {
-					problems = append(problems, fmt.Sprintf("Guard release policy %q должна содержать guardSha256 и launcherSha256", version))
+			for version, release := range document.Releases {
+				if strings.TrimSpace(version) == "" || release.ProtocolVersion != 4 || len(release.Platforms) == 0 {
+					problems = append(problems, fmt.Sprintf("Guard release policy %q должна содержать protocolVersion=4 и platforms", version))
 					continue
 				}
-				for _, value := range append(append([]string(nil), entry.GuardSHA256...), entry.LauncherSHA256...) {
-					value = strings.TrimSpace(value)
-					if len(value) != 64 {
-						problems = append(problems, fmt.Sprintf("Guard release policy %q содержит SHA-256 неверной длины", version))
-						break
+				for platform, platformPolicy := range release.Platforms {
+					platform = strings.ToLower(strings.TrimSpace(platform))
+					expectedSigning := map[string]string{"windows": "authenticode", "linux": "integrity-only", "macos": "developer-id-notarized"}[platform]
+					if expectedSigning == "" || platformPolicy.SigningMode != expectedSigning || len(platformPolicy.Artifacts) == 0 {
+						problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q имеет недопустимый production signingMode/artifact set", version, platform))
+						continue
 					}
-					if _, err := hex.DecodeString(value); err != nil {
-						problems = append(problems, fmt.Sprintf("Guard release policy %q содержит невалидный SHA-256", version))
-						break
+					for _, pair := range platformPolicy.Artifacts {
+						for _, value := range []string{pair.GuardSHA256, pair.LauncherSHA256} {
+							value = strings.TrimSpace(value)
+							if len(value) != 64 {
+								problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q содержит SHA-256 неверной длины", version, platform))
+								break
+							}
+							if _, err := hex.DecodeString(value); err != nil {
+								problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q содержит невалидный SHA-256", version, platform))
+								break
+							}
+						}
+						if platform == "windows" && !pair.RequireAuthenticode {
+							problems = append(problems, fmt.Sprintf("Guard release policy %q Windows production artifact pair должна требовать Authenticode", version))
+						}
 					}
 				}
 			}

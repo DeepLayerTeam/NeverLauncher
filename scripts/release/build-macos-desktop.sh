@@ -115,8 +115,10 @@ if [[ "${MODE}" == "production" ]]; then
   ditto -c -k --sequesterRsrc --keepParent "${APP}" "${TMP_ZIP}"
 fi
 
+SIGNING_MODE="adhoc-development"
+[[ "${MODE}" == "production" ]] && SIGNING_MODE="developer-id-notarized"
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" <<EOF_ALLOW
-{"${VERSION}":{"guardSha256":["${GUARD_HASH}"],"launcherSha256":["${DESKTOP_HASH}"],"requireAuthenticode":false}}
+{"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"macos":{"signingMode":"${SIGNING_MODE}","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF_ALLOW
 cp "${MACOS_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-macos-universal"
 cp "${MACOS_DIR}/neverguard" "${OUT_DIR}/neverguard-macos-universal"

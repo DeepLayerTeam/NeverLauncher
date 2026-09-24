@@ -1,6 +1,6 @@
 [package]
 name = "neverlauncher-desktop"
-version = "0.13.10"
+version = "0.14.0"
 description = "Desktop-клиент NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

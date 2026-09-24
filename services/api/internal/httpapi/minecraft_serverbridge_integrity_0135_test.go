@@ -201,3 +201,44 @@ func TestGuardIntegrityRequirementIncludesMacOS01310(t *testing.T) {
 		t.Fatal("macOS trusted device must require persisted Guard integrity for Minecraft/ServerBridge")
 	}
 }
+
+func TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140(t *testing.T) {
+	repo := repository.NewMemoryRepository("http://example.test")
+	_, err := repo.SaveTrustedDevice(context.Background(), model.TrustedDevice{
+		ID: "win-device-0140", UserID: "user-0140", Name: "Windows device", Platform: "windows-amd64",
+		PublicKey: "test-public-key", KeyFingerprint: strings.Repeat("1", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	guardA := strings.Repeat("a", 64)
+	launcherA := strings.Repeat("b", 64)
+	guardB := strings.Repeat("c", 64)
+	launcherB := strings.Repeat("d", 64)
+	cfg := config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{
+		"schemaVersion":"2.0",
+		"releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{
+			"signingMode":"unsigned-development",
+			"artifacts":[
+				{"guardSha256":"` + guardA + `","launcherSha256":"` + launcherA + `","requireAuthenticode":false},
+				{"guardSha256":"` + guardB + `","launcherSha256":"` + launcherB + `","requireAuthenticode":false}
+			]
+		}}}}
+	}`}
+	s := Server{Version: "0.14.0", Config: cfg, Repo: repo}
+	now := time.Now().UTC()
+	session := model.MinecraftSession{
+		ID: "mc-0140", UserID: "user-0140", NeverSessionID: "never-session-0140", ProfileUUID: "00000000-0000-0000-0000-000000000140",
+		TrustedDeviceID: "win-device-0140", BindingEpoch: 1, AccessTokenHash: strings.Repeat("2", 64), Status: "active",
+		IntegrityVerified: true, GuardAttestationSHA256: strings.Repeat("3", 64), GuardEvidenceSHA256: strings.Repeat("4", 64),
+		GuardSHA256: guardA, LauncherSHA256: launcherA, LauncherVersion: "0.14.0", IntegrityVerifiedAt: now.Add(-time.Second),
+		CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(time.Hour),
+	}
+	if decision := s.evaluateMinecraftIntegrity0135(session); !decision.Allowed {
+		t.Fatalf("exact v2 artifact pair rejected: %+v", decision)
+	}
+	session.LauncherSHA256 = launcherB
+	if decision := s.evaluateMinecraftIntegrity0135(session); decision.Allowed || decision.Reason != "integrity_release_revoked" {
+		t.Fatalf("cross-product v2 artifact pair remained valid: %+v", decision)
+	}
+}

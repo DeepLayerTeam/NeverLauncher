@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.13.10",
+  "productVersion": "0.14.0",
   "targets": [
     {
       "id": "guard-linux-amd64",
@@ -21,7 +21,8 @@
         "runtimePolicyEnforced",
         "releasePackageBuilt",
         "linuxProductionGate",
-        "guardRelease0139"
+        "guardRelease0139",
+        "neverGuardRelease0140"
       ]
     },
     {
@@ -43,7 +44,8 @@
         "runtimePolicyEnforced",
         "releasePackageBuilt",
         "windowsProductionGate",
-        "guardRelease0139"
+        "guardRelease0139",
+        "neverGuardRelease0140"
       ]
     },
     {
@@ -65,7 +67,8 @@
         "runtimePolicyEnforced",
         "releasePackageBuilt",
         "macosProductionGate",
-        "guardRelease0139"
+        "guardRelease0139",
+        "neverGuardRelease0140"
       ]
     }
   ]

@@ -4,9 +4,17 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Minecraft Compatibility Release**: Compatibility Engine, Managed Java, Vanilla/Fabric/Quilt/Forge/NeoForge materialization, настоящий Minecraft Client E2E и публичная CI Compatibility Matrix сведены в один release-grade контур.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeverGuard Release 0.14.0**: production NeverGuard для Windows/Linux/macOS, authenticated IPC v4, server-verifiable Guard Attestation, live Minecraft/ServerBridge integrity enforcement и platform-bound release policy сведены в единый release-grade контур.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+
+## NeverGuard Release — 0.14.0
+
+`0.14.0` переводит NeverGuard из набора platform implementations в единый production release boundary. Windows, Linux и macOS продолжают использовать authenticated IPC v4; после handshake Desktop обязательно получает authenticated `status` от реально запущенного Guard и сверяет `productVersion`, platform identity и protocol version до дальнейших команд.
+
+Backend для `0.14+` принимает только `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` schema 2.0. Policy хранит **точные пары** SHA-256 Desktop+NeverGuard отдельно для `windows`, `linux`, `macos`, поэтому hash одного разрешённого Guard больше нельзя комбинировать с Desktop из другой разрешённой сборки. Release identity (`schema/protocol/platform`) также сохраняется в one-time challenge/ticket binding и повторно учитывается live Minecraft/ServerBridge integrity policy.
+
+Каждый platform builder создаёт собственный v2 fragment. После финальной vendor signing используйте `scripts/release/merge-guard-release-policy.py --windows ... --linux ... --macos ... --output GUARD_RELEASE_POLICY.json`: production merger требует Authenticode Windows, Developer ID + notarization macOS и полный набор трёх платформ. Полученный JSON целиком задаётся в `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`.
 
 ## Сертификация Cross-platform Guard release — 0.13.9
 

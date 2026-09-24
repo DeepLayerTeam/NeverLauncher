@@ -21,7 +21,7 @@ ARTIFACT_ROLES = ("package", "launcher", "guard", "manifest", "allowlist")
 COMMON_CHECKS = {
     "rustFormat", "guardUnitTests", "guardIntegrationTest", "clippy", "releaseBuild",
     "packageManifestVerified", "artifactHashesVerified", "authenticatedIpcV4",
-    "runtimePolicyEnforced", "releasePackageBuilt", "guardRelease0139",
+    "runtimePolicyEnforced", "releasePackageBuilt", "guardRelease0139", "neverGuardRelease0140",
 }
 OS_CHECK = {"linux": "linuxProductionGate", "windows": "windowsProductionGate", "macos": "macosProductionGate"}
 EXPECTED_PLATFORM = {"linux": "linux-amd64", "windows": "windows-amd64", "macos": "macos-universal"}
@@ -173,17 +173,33 @@ def verify_package_metadata(target: dict[str, Any], artifacts: dict[str, dict[st
     if desktop_hash != artifacts["launcher"]["sha256"] or guard_hash != artifacts["guard"]["sha256"]:
         die("package manifest SHA-256 does not match emitted Desktop/NeverGuard artifacts")
     allowlist = load_json(allowlist_path)
-    if not isinstance(allowlist, dict) or not isinstance(allowlist.get(PRODUCT_VERSION), dict):
+    expected_policy_platform = {"linux": "linux", "windows": "windows", "macos": "macos"}[target["os"]]
+    signing_mode = ""
+    if isinstance(allowlist, dict) and allowlist.get("schemaVersion") == "2.0":
+        release = allowlist.get("releases", {}).get(PRODUCT_VERSION, {})
+        if not isinstance(release, dict) or release.get("protocolVersion") != 4:
+            die("Guard release policy v2 does not contain current productVersion/protocolVersion")
+        platform_policy = release.get("platforms", {}).get(expected_policy_platform, {})
+        if not isinstance(platform_policy, dict):
+            die("Guard release policy v2 does not contain expected platform")
+        signing_mode = str(platform_policy.get("signingMode", ""))
+        pairs = platform_policy.get("artifacts", [])
+        exact_pair = any(isinstance(row, dict) and str(row.get("guardSha256", "")).lower() == guard_hash and str(row.get("launcherSha256", "")).lower() == desktop_hash for row in pairs)
+        if not exact_pair:
+            die("Guard release policy v2 is not bound to emitted Desktop/NeverGuard artifact pair")
+    elif isinstance(allowlist, dict) and isinstance(allowlist.get(PRODUCT_VERSION), dict):
+        row = allowlist[PRODUCT_VERSION]
+        guard_values = [str(v).lower() for v in row.get("guardSha256", [])]
+        launcher_values = [str(v).lower() for v in row.get("launcherSha256", [])]
+        if guard_hash not in guard_values or desktop_hash not in launcher_values:
+            die("Guard release allowlist is not bound to emitted Desktop/NeverGuard hashes")
+        signing_mode = "legacy"
+    else:
         die("Guard release allowlist does not contain current productVersion")
-    row = allowlist[PRODUCT_VERSION]
-    guard_values = [str(v).lower() for v in row.get("guardSha256", [])]
-    launcher_values = [str(v).lower() for v in row.get("launcherSha256", [])]
-    if guard_hash not in guard_values or desktop_hash not in launcher_values:
-        die("Guard release allowlist is not bound to emitted Desktop/NeverGuard hashes")
     for digest in (desktop_hash, guard_hash):
         if not SHA256_RE.fullmatch(digest):
             die("invalid SHA-256 in package metadata")
-    return {"packagePlatform": package_platform, "guardProtocolVersion": 4}
+    return {"packagePlatform": package_platform, "guardProtocolVersion": 4, "releasePolicySchema": "2.0" if allowlist.get("schemaVersion") == "2.0" else "1.0", "releaseSigningMode": signing_mode}
 
 
 def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str, run_id: str, repository: str) -> list[str]:
@@ -229,7 +245,7 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     if not isinstance(claims, dict):
         errors.append("claims are missing")
     else:
-        if claims.get("guardProtocolVersion") != 4 or claims.get("releaseCertification") != PRODUCT_VERSION:
+        if claims.get("guardProtocolVersion") != 4 or claims.get("releaseCertification") != PRODUCT_VERSION or claims.get("releasePolicySchema") != "2.0":
             errors.append("Guard protocol/release certification claim mismatch")
         if claims.get("packagePlatform") != EXPECTED_PLATFORM[target["os"]]:
             errors.append("packagePlatform claim mismatch")
@@ -282,6 +298,8 @@ def command_result(args: argparse.Namespace) -> int:
         "status": "passed", "exitCode": 0, "checks": checks, "artifacts": artifacts,
         "claims": {
             "guardProtocolVersion": meta["guardProtocolVersion"], "releaseCertification": PRODUCT_VERSION,
+            "releasePolicySchema": meta["releasePolicySchema"], "releaseSigningMode": meta["releaseSigningMode"],
+            "releaseIdentityAuthenticated": True,
             "packagePlatform": meta["packagePlatform"], "ciSigningMode": args.signing_mode,
             "vendorSigningProvenance": "not-certified-by-ci", "packageManifestBound": True,
             "artifactSetComplete": True,

@@ -282,3 +282,7 @@ ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` перед�
 ### Guard Attestation backend gate (0.13.4)
 
 `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` реализуют challenge-response verification Windows NeverGuard. Backend хранит challenge и launch ticket в том же persistent DeviceChallenge repository с atomic consume semantics. Complete требует свежую hardware P-256 device attestation, проверяет device signature, evidence/attestation digests, process boundary/policy и release SHA-256 allowlist. При включённой Guard policy `POST /api/v1/minecraft/session` требует одноразовый `guardAttestationTicket` для Windows trusted device; Linux/macOS не притворяются поддерживающими Windows Guard. В production `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен.
+
+### NeverGuard release policy 0.14.0
+
+Backend `0.14+` принимает Guard policy только в `schemaVersion=2.0`: `releases.<version>.protocolVersion=4`, platform namespaces `windows|linux|macos`, `signingMode` и exact `artifacts[]` pairs (`guardSha256` + `launcherSha256`). Production Windows требует `authenticode`/`requireAuthenticode=true`, macOS — `developer-id-notarized`, Linux — `integrity-only`. Legacy independent hash lists остаются только для запуска 0.13.x Backend и не принимаются 0.14+.

@@ -140,7 +140,12 @@ func (s Server) evaluateMinecraftIntegrity0135(session model.MinecraftSession) m
 	if !ok {
 		return minecraftIntegrityDeny0135(true, "integrity_release_revoked", session)
 	}
-	if !containsHash0134(policy.GuardSHA256, session.GuardSHA256) || !containsHash0134(policy.LauncherSHA256, session.LauncherSHA256) {
+	device, err := s.Repo.GetTrustedDevice(session.UserID, session.TrustedDeviceID)
+	if err != nil {
+		return minecraftIntegrityDeny0135(true, "integrity_device_unavailable", session)
+	}
+	allowed, _, err := policy.allowsArtifactPair0140(device.Platform, session.GuardSHA256, session.LauncherSHA256)
+	if err != nil || !allowed {
 		return minecraftIntegrityDeny0135(true, "integrity_release_revoked", session)
 	}
 	return minecraftIntegrityAllow0135(true, "integrity_verified", session)

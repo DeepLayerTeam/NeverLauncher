@@ -40,7 +40,7 @@ cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
 EOF
 chmod 0600 "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" <<EOF
-{"${VERSION}":{"guardSha256":["${GUARD_HASH}"],"launcherSha256":["${DESKTOP_HASH}"],"requireAuthenticode":false}}
+{"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF
 chmod 0600 "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
 cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"

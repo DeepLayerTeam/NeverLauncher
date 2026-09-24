@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-const testGuardAllowlist0134 = `{"0.13.4":{"guardSha256":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"launcherSha256":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],"requireAuthenticode":false}}`
+const testGuardAllowlist0134 = `{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}`
 const testBridgeAllowlist0135 = `{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}`
 
 func TestValidateProductionRejectsUnsafeDefaults(t *testing.T) {

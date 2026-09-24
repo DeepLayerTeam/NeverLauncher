@@ -1,5 +1,14 @@
 # Политика безопасности NeverLauncher
 
+## NeverGuard Release boundary 0.14.0
+
+NeverGuard 0.14.0 использует release policy schema 2.0 с platform-bound exact artifact pairs. Backend больше не трактует списки Guard и Desktop hashes независимо: разрешение действует только для конкретной пары внутри конкретной OS namespace. Guard Attestation challenge и launch ticket дополнительно привязаны к policy schema, IPC protocol и trusted-device platform, а live Minecraft/ServerBridge reevaluation использует ту же pair policy.
+
+Production configuration fail-closed требует Authenticode Windows artifacts и Developer ID + notarization macOS artifacts. CI unsigned/ad-hoc binaries могут участвовать в cross-platform regression certification, но `merge-guard-release-policy.py` не позволит превратить такие fragments в production policy. Desktop также проверяет release identity непосредственно через MAC-authenticated IPC `status`, поэтому side-by-side Guard другой версии/платформы отклоняется до gameplay authorization.
+
+Граница по-прежнему user-mode: локальный administrator/root/kernel attacker, компрометация vendor signing keys и firmware/boot-chain атаки не объявляются покрытыми этой моделью. Server-side device attestation, exact release allowlist и live revocation остаются независимыми слоями.
+
+
 NeverLauncher использует модель безопасности, в которой критичные решения принимаются на стороне Backend API и ServerBridge, а Desktop Launcher не считается доверенной границей.
 
 ## NeverGuard stabilization 0.13.10

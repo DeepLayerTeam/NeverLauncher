@@ -155,6 +155,8 @@ func releaseDoctor() error {
 		"scripts/guard_ci/matrix.py",
 		"scripts/guard_ci/stage_release.py",
 		"scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py",
+		"scripts/smoke/offline/neverguard-release-0140.py",
+		"scripts/release/merge-guard-release-policy.py",
 		"e2e/scripts/run-guard-migration-e2e.sh",
 	}
 	failed := false
@@ -195,6 +197,7 @@ func releaseDoctor() error {
 		"device-trust-targets":  {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
 		"guard-ci-targets":      {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
 		"guard-stabilization":   {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
+		"neverguard-release":    {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()

@@ -75,7 +75,15 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
             "desktopSha256": lh, "desktopSize": launcher.stat().st_size, "guardSha256": gh, "guardSize": guard.stat().st_size,
         }
     manifest.write_text(json.dumps(manifest_payload), encoding="utf-8")
-    allowlist.write_text(json.dumps({VERSION: {"guardSha256": [gh], "launcherSha256": [lh], "requireAuthenticode": False}}), encoding="utf-8")
+    policy_platform = {"linux": "linux", "windows": "windows", "macos": "macos"}[os_name]
+    signing_mode = {"linux": "integrity-only", "windows": "unsigned-development", "macos": "adhoc-development"}[os_name]
+    pair = {"guardSha256": gh, "launcherSha256": lh}
+    if os_name == "windows":
+        pair["requireAuthenticode"] = False
+    allowlist.write_text(json.dumps({
+        "schemaVersion": "2.0",
+        "releases": {VERSION: {"protocolVersion": 4, "platforms": {policy_platform: {"signingMode": signing_mode, "artifacts": [pair]}}}},
+    }), encoding="utf-8")
     result = d / "guard-ci-result.json"
     run("result", "--targets", str(TARGETS), "--target-id", target, "--package", str(package), "--launcher", str(launcher), "--guard", str(guard), "--manifest", str(manifest), "--allowlist", str(allowlist), "--signing-mode", signing, "--commit", COMMIT, "--run-id", RUN_ID, "--repository", REPOSITORY, "--output", str(result))
     return result

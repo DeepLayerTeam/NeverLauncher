@@ -101,6 +101,8 @@ struct WindowsPackageArtifact {
 #[serde(rename_all = "camelCase")]
 pub struct NeverGuardStatus {
     pub state: String,
+    pub product_version: String,
+    pub platform: String,
     pub pid: u32,
     pub parent_pid: u32,
     pub protocol_version: u32,
@@ -341,7 +343,7 @@ impl NeverGuardSupervisor {
                 return Err(err);
             }
         };
-        let (pipe, session_key, status) = match timeout(
+        let (pipe, session_key, _handshake_status) = match timeout(
             Duration::from_secs(IPC_HANDSHAKE_TIMEOUT_SECS),
             client_authenticate(pipe, &endpoint, parent_pid, &bootstrap_secret),
         )
@@ -361,17 +363,20 @@ impl NeverGuardSupervisor {
         };
         bootstrap_secret.zeroize();
 
-        let mut status = status;
-        status.lifetime_job_enforced = true;
-        status.package_manifest_verified = package_manifest_verified;
-        *state = Some(GuardHandle {
+        let mut handle = GuardHandle {
             child,
             pipe,
             session_key,
             next_sequence: 1,
             _lifetime_job: lifetime_job,
             package_manifest_verified,
-        });
+        };
+        let status_value = send_command(&mut handle, "status").await
+            .map_err(|err| format!("NeverGuard release identity query failed: {err}"))?;
+        let mut status = parse_status(status_value)?;
+        status.lifetime_job_enforced = true;
+        status.package_manifest_verified = package_manifest_verified;
+        *state = Some(handle);
         Ok(status)
     }
 
@@ -766,6 +771,8 @@ async fn client_authenticate(
 
     let status = NeverGuardStatus {
         state: "ready".to_string(),
+        product_version: env!("CARGO_PKG_VERSION").to_string(),
+        platform: "windows-amd64".to_string(),
         pid: challenge.guard_pid,
         parent_pid: client_pid,
         protocol_version: NEVERGUARD_PROTOCOL_VERSION,
@@ -865,7 +872,34 @@ async fn send_command_inner(
 
 #[cfg(windows)]
 fn parse_status(value: Value) -> Result<NeverGuardStatus, String> {
-    serde_json::from_value(value).map_err(|err| format!("NeverGuard status payload повреждён: {err}"))
+    let status: NeverGuardStatus = serde_json::from_value(value)
+        .map_err(|err| format!("NeverGuard status payload повреждён: {err}"))?;
+    validate_release_identity(&status, "windows-amd64")?;
+    Ok(status)
+}
+
+fn validate_release_identity(status: &NeverGuardStatus, expected_platform: &str) -> Result<(), String> {
+    if status.product_version != env!("CARGO_PKG_VERSION") {
+        return Err(format!(
+            "NeverGuard release version mismatch: Desktop={} Guard={}",
+            env!("CARGO_PKG_VERSION"),
+            status.product_version
+        ));
+    }
+    if status.platform != expected_platform {
+        return Err(format!(
+            "NeverGuard platform mismatch: expected {expected_platform}, got {}",
+            status.platform
+        ));
+    }
+    if status.protocol_version != NEVERGUARD_PROTOCOL_VERSION {
+        return Err(format!(
+            "NeverGuard protocol mismatch: Desktop={} Guard={}",
+            NEVERGUARD_PROTOCOL_VERSION,
+            status.protocol_version
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -1342,6 +1376,8 @@ async fn serve_authenticated_session(
                 true,
                 serde_json::to_value(NeverGuardStatus {
                     state: "ready".to_string(),
+                    product_version: env!("CARGO_PKG_VERSION").to_string(),
+                    platform: "windows-amd64".to_string(),
                     pid: guard_pid,
                     parent_pid,
                     protocol_version: NEVERGUARD_PROTOCOL_VERSION,

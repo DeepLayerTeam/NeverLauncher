@@ -312,3 +312,62 @@ func TestMacOSGuardAttestationValidation0138(t *testing.T) {
 		t.Fatal("macOS Guard Attestation without library validation was accepted")
 	}
 }
+
+func TestGuardReleasePolicyV2ExactPlatformPair0140(t *testing.T) {
+	guardA := strings.Repeat("a", 64)
+	launcherA := strings.Repeat("b", 64)
+	guardB := strings.Repeat("c", 64)
+	launcherB := strings.Repeat("d", 64)
+	cfg := config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{
+		"schemaVersion":"2.0",
+		"releases":{"0.14.0":{"protocolVersion":4,"platforms":{
+			"windows":{"signingMode":"unsigned-development","artifacts":[
+				{"guardSha256":"` + guardA + `","launcherSha256":"` + launcherA + `","requireAuthenticode":false},
+				{"guardSha256":"` + guardB + `","launcherSha256":"` + launcherB + `","requireAuthenticode":false}
+			]},
+			"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"` + guardA + `","launcherSha256":"` + launcherA + `"}]},
+			"macos":{"signingMode":"adhoc-development","artifacts":[{"guardSha256":"` + guardB + `","launcherSha256":"` + launcherB + `"}]}
+		}}}
+	}`}
+	s := Server{Version: "0.14.0", Config: cfg}
+	policies, err := s.guardReleasePolicies0134()
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy := policies["0.14.0"]
+	allowed, _, err := policy.allowsArtifactPair0140("windows-amd64", guardA, launcherA)
+	if err != nil || !allowed {
+		t.Fatalf("exact Windows artifact pair was rejected: allowed=%v err=%v", allowed, err)
+	}
+	allowed, _, err = policy.allowsArtifactPair0140("windows-amd64", guardA, launcherB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if allowed {
+		t.Fatal("cross-product artifact pair must not be accepted")
+	}
+	allowed, _, err = policy.allowsArtifactPair0140("macos-arm64", guardA, launcherA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if allowed {
+		t.Fatal("Windows/Linux artifact pair must not cross the macOS platform namespace")
+	}
+}
+
+func TestGuardReleasePolicyLegacyRejectedFrom0140(t *testing.T) {
+	s := Server{Version: "0.14.0", Config: config.Config{Environment: "test", GuardReleaseAllowlistJSON: `{"0.14.0":{"guardSha256":["` + strings.Repeat("a", 64) + `"],"launcherSha256":["` + strings.Repeat("b", 64) + `"]}}`}}
+	if _, err := s.guardReleasePolicies0134(); err == nil {
+		t.Fatal("0.14.0 Backend accepted legacy Guard release policy")
+	}
+}
+
+func TestGuardReleasePolicyProductionSigningRequirements0140(t *testing.T) {
+	guardHash := strings.Repeat("a", 64)
+	launcherHash := strings.Repeat("b", 64)
+	policy := `{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"unsigned-development","artifacts":[{"guardSha256":"` + guardHash + `","launcherSha256":"` + launcherHash + `","requireAuthenticode":false}]}}}}}`
+	s := Server{Version: "0.14.0", Config: config.Config{Environment: "production", GuardReleaseAllowlistJSON: policy}}
+	if _, err := s.guardReleasePolicies0134(); err == nil {
+		t.Fatal("production Backend accepted unsigned Windows NeverGuard policy")
+	}
+}

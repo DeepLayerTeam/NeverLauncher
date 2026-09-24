@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.0 — NeverGuard Release
+
+`0.14.0` закрывает NeverGuard как production release boundary поверх уже реализованных Windows/Linux/macOS Guard, authenticated IPC v4, Integrity Evidence и server-verifiable Guard Attestation. Wire protocol не меняется: совместимость 0.13.x сохраняется на IPC v4, но Desktop теперь после authenticated handshake обязательно запрашивает MAC-protected `status` и fail-closed сверяет фактические `productVersion`, platform identity и protocol version Guard до допуска runtime.
+
+- Backend использует Guard release policy **schema 2.0**: exact `NeverGuard SHA-256 + Desktop SHA-256` pair хранится внутри platform namespace (`windows`/`linux`/`macos`). Это устраняет декартово смешивание hashes из разных сертифицированных сборок и cross-platform reuse.
+- Для Backend `0.14+` legacy flat allowlist отклоняется. Challenge и single-use launch ticket криптографически/сессионно связываются с release-policy schema, Guard protocol и trusted-device platform; live Minecraft/ServerBridge reevaluation применяет ту же exact-pair policy.
+- Production policy требует `authenticode` для Windows и `developer-id-notarized` для macOS; Linux фиксируется как `integrity-only`. Windows artifact pairs дополнительно требуют `requireAuthenticode=true`.
+- Platform package builders генерируют v2 fragments из фактических финальных binaries. `scripts/release/merge-guard-release-policy.py` объединяет только полный Windows+Linux+macOS production set и fail-closed отклоняет unsigned/ad-hoc fragments.
+- Cross-platform Guard CI получает обязательный `neverGuardRelease0140`, проверяет v2 exact-pair metadata и фиксирует `releasePolicySchema=2.0` + authenticated release identity в certification evidence.
+- Новый `neverguard-release-0140` gate включён в CI, strict preflight и `nl release doctor`.
+
+Migration: database schema остаётся на sealed `0020`; 0.14.0 меняет release-policy/configuration boundary, а не persisted DB shape. Перед production rollout необходимо заменить `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` на объединённый policy v2 для 0.14.0.
+
 ## 0.13.10 — Migration, compatibility, stabilization
 
 `0.13.10` закрывает upgrade/stability-контур NeverGuard после cross-platform certification 0.13.9. Релиз не добавляет новый Guard protocol: Windows/Linux/macOS остаются на authenticated IPC v4 и прежних attestation schemas, но persisted security state и release evidence получают fail-closed инварианты.

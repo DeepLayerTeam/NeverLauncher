@@ -128,6 +128,19 @@ func guardCICertificationRequired(ver string) bool {
 	return patch >= 9
 }
 
+func neverGuardReleasePolicyV2Required0140(ver string) bool {
+	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
+	if len(parts) < 2 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	return major > 0 || (major == 0 && minor >= 14)
+}
+
 func embedGuardCICertification(out, matrixPath, targetsPath, ver, expectedCommit string) error {
 	if strings.TrimSpace(matrixPath) == "" || strings.TrimSpace(targetsPath) == "" {
 		return errors.New("Guard CI matrix/targets path пуст")
@@ -218,6 +231,9 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		"authenticatedIpcV4": true, "runtimePolicyEnforced": true, "releasePackageBuilt": true,
 		"guardRelease0139": true,
 	}
+	if neverGuardReleasePolicyV2Required0140(ver) {
+		commonChecks["neverGuardRelease0140"] = true
+	}
 	osCheck := map[string]string{"linux": "linuxProductionGate", "windows": "windowsProductionGate", "macos": "macosProductionGate"}
 	expectedArch := map[string]string{"linux": "x86_64", "windows": "x86_64", "macos": "universal"}
 	expectedSigning := map[string]string{"linux": "none-linux-integrity", "windows": "unsigned-development-ci", "macos": "adhoc-ci"}
@@ -297,6 +313,9 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		}
 		if fmt.Sprint(result.Claims["guardProtocolVersion"]) != "4" || fmt.Sprint(result.Claims["releaseCertification"]) != ver || fmt.Sprint(result.Claims["ciSigningMode"]) != target.CISigningMode || fmt.Sprint(result.Claims["vendorSigningProvenance"]) != "not-certified-by-ci" {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s содержит неверные release/security claims", id)
+		}
+		if neverGuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает NeverGuard 0.14 release identity", id)
 		}
 		if result.Claims["packageManifestBound"] != true || result.Claims["artifactSetComplete"] != true {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает package manifest/artifact set", id)

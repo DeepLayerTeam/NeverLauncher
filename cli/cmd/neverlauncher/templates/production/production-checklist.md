@@ -4,7 +4,7 @@
 
 - [ ] Заполнен production `.env`; значения `CHANGE_ME` отсутствуют.
 - [ ] Установлен сильный `NEVERLAUNCHER_AUTH_TOKEN_SECRET`.
-- [ ] `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` заполнен SHA-256 финальных `neverguard.exe` и Desktop из `GUARD_RELEASE_ALLOWLIST.json`; при `requireAuthenticode=true` hashes вычислены после подписи binaries.
+- [ ] `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` содержит merged NeverGuard policy schema 2.0 для текущей версии: exact Desktop+Guard pairs всех платформ; Windows fragment получен после Authenticode, macOS — после Developer ID signing + notarization.
 - [ ] `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON` заполнен точными SHA-256 release JAR из `BRIDGE_RELEASE_ALLOWLIST.json`; после публикации старый hash удаляется из allowlist только вместе с осознанным отзывом соответствующего ServerBridge release.
 - [ ] Задан одноразовый `NEVERLAUNCHER_BOOTSTRAP_TOKEN` для новой установки и предусмотрено его удаление после bootstrap.
 - [ ] Задан `NEVERLAUNCHER_REPOSITORY_DRIVER=postgres`.
