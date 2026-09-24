@@ -1059,6 +1059,32 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
     if "One-Time Join Tickets gate" not in ticket_gate_0143:
         fail("0.14.3 mandatory one-time join ticket release gate is incomplete")
 
+
+# 0.15.1 Production Delivery starts with an inventory that is generated from
+# actual bundle bytes. Platform/architecture aliases are canonicalized in code,
+# and release verify must re-hash every delivery artifact fail-closed.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 1):
+    delivery_0151 = read("cli/cmd/neverlauncher/delivery_manifest.go")
+    release_0151 = read("cli/cmd/neverlauncher/release_commands.go")
+    delivery_gate_0151 = read("scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py")
+    for required in [
+        'DELIVERY_MANIFEST.json', "normalizeDeliveryPlatform", "normalizeDeliveryArchitecture",
+        "verifyDeliveryManifest0151", "resolveDeliveryArtifacts0151", "checksum/size mismatch",
+    ]:
+        if required not in delivery_0151:
+            fail(f"0.15.1 delivery implementation incomplete: {required}")
+    for required in ["writeDeliveryManifest0151(out, ver)", "verifyDeliveryManifest0151(out, ver)", "delivery-manifest-platform-architecture"]:
+        if required not in release_0151:
+            fail(f"0.15.1 release integration incomplete: {required}")
+    if "DELIVERY_MANIFEST.json" not in read("scripts/smoke/release-required/release-bundle.sh"):
+        fail("0.15.1 publish gate does not require DELIVERY_MANIFEST.json")
+    if "delivery-manifest-platform-architecture-0151.py" not in preflight or "delivery-manifest-platform-architecture-0151.py" not in ci:
+        fail("0.15.1 delivery gate is not wired into preflight/CI")
+    if "Delivery Manifest + platform/architecture gate: OK" not in delivery_gate_0151:
+        fail("0.15.1 mandatory delivery gate is incomplete")
+    if not (ROOT / "cli/cmd/neverlauncher/delivery_manifest_test.go").is_file():
+        fail("0.15.1 delivery regression tests are missing")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

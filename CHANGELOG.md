@@ -1,3 +1,14 @@
+## 0.15.1 — Delivery Manifest + platform/architecture model
+
+`0.15.1` начинает Production Delivery без декларативного каталога будущих сборок: release pipeline формирует `DELIVERY_MANIFEST.json` только из реально присутствующих файлов bundle и включает его в подписанный `SHA256SUMS`/Ed25519 boundary. DB migration не требуется.
+
+- Добавлена каноническая delivery-модель `windows` / `linux` / `macos` и `x64` / `arm64` / `universal`; aliases `win32`, `darwin`, `amd64`, `x86_64`, `aarch64`, `universal2` нормализуются в одном runtime-коде. 32-bit/неизвестные targets отклоняются fail-closed.
+- Каждый фактический delivery artifact получает component, format, canonical platform/architecture, SHA-256 и size. `publishedTargets` вычисляется из артефактов, а не задаётся вручную.
+- `nl release build` для `0.15.1+` создаёт и сразу перепроверяет `DELIVERY_MANIFEST.json`; `nl release verify` повторно хэширует все записи и отклоняет missing/tampered artifact, path traversal, duplicate entries, non-canonical targets и рассинхрон `publishedTargets`.
+- Добавлены рабочие команды `nl delivery target`, `nl delivery manifest`, `nl delivery verify` и `nl delivery resolve`. Resolver понимает macOS universal как совместимый с x64/ARM64 и не подменяет exact target нейтральным platform artifact при сортировке результатов.
+- `DESKTOP_PACKAGE_MANIFEST.json` использует каноническое имя архитектуры `x64` вместо Go-специфичного `amd64`; имена существующих release-файлов остаются совместимыми.
+- Production preflight, CI, `release doctor` и release-bundle publish gate требуют новый delivery gate; regression smoke собирает настоящий CLI, создаёт bundle, разрешает Windows ARM64 artifact и проверяет fail-closed tamper detection.
+
 ## 0.15.0 — ServerBridge 2 Release
 
 `0.15.0` фиксирует ServerBridge 2 как production-релиз после протокола v2, Ed25519 node identities, одноразовых join tickets, Bukkit/proxy/Fabric/Forge/NeoForge runtimes, zero-patch topology/handoff, HA hardening и migration stabilization. Runtime-протокол остаётся v2; schema migration поверх `0030` не требуется.

@@ -52,6 +52,7 @@ Desktop / package / release:
   client ...
   pipeline ...
   release doctor|plan|build|package|verify|sign|publish-plan|publish-check
+  delivery target|manifest|verify|resolve
   packaging prepare|verify|sign
 
 Для Backend-команд укажите --backend <url>. Для защищённых маршрутов используйте --token или NEVERLAUNCHER_TOKEN.
@@ -344,6 +345,8 @@ func run(args []string) error {
 		return handlePipeline(args[1:])
 	case "release":
 		return handleRelease(args[1:])
+	case "delivery":
+		return handleDelivery(args[1:])
 	case "packaging", "package-release":
 		return handlePackaging(args[1:])
 	default:

@@ -162,6 +162,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py",
 		"scripts/smoke/offline/neverguard-release-0140.py",
 		"scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
+		"scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py",
 		"scripts/release/merge-guard-release-policy.py",
 		"e2e/scripts/run-guard-migration-e2e.sh",
 	}
@@ -205,6 +206,7 @@ func releaseDoctor() error {
 		"guard-stabilization":   {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
 		"neverguard-release":    {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
 		"serverbridge-identity": {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
+		"delivery-manifest":     {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -385,10 +387,22 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := os.WriteFile(filepath.Join(out, "RELEASE_NOTES.txt"), []byte(releaseDescription(ver)), 0o644); err != nil {
 		return err
 	}
+	if deliveryManifestRequired0151(ver) {
+		if err := writeDeliveryManifest0151(out, ver); err != nil {
+			return fmt.Errorf("delivery manifest: %w", err)
+		}
+		if err := verifyDeliveryManifest0151(out, ver); err != nil {
+			return fmt.Errorf("delivery manifest self-check: %w", err)
+		}
+	}
 
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
 	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	if deliveryManifestRequired0151(ver) {
+		requiredFiles = append(requiredFiles, deliveryManifestFile0151)
+		checks = append(checks, "delivery-manifest-platform-architecture")
+	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
@@ -523,6 +537,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 	if strings.TrimSpace(manifest.Version) == "" {
 		return errors.New("RELEASE_MANIFEST.json не содержит version")
 	}
+	if deliveryManifestRequired0151(manifest.Version) {
+		if err := verifyDeliveryManifest0151(dir, manifest.Version); err != nil {
+			return fmt.Errorf("delivery manifest: %w", err)
+		}
+	}
 	for _, name := range manifest.RequiredFiles {
 		if st, err := os.Stat(filepath.Join(dir, filepath.Clean(name))); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
@@ -611,6 +630,9 @@ func releaseArtifacts(ver string) []string {
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
 	}
+	if deliveryManifestRequired0151(ver) {
+		artifacts = append(artifacts, deliveryManifestFile0151)
+	}
 	if guardCICertificationRequired(ver) {
 		for _, osName := range []string{"linux", "windows", "macos"} {
 			names := expectedGuardArtifactNames0139(osName, ver)
@@ -662,6 +684,9 @@ func releaseDescription(ver string) string {
 	}
 	if serverBridge2CertificationRequired0150(ver) {
 		extra += "\n- начиная с 0.15.0 publish-check требует SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+	}
+	if deliveryManifestRequired0151(ver) {
+		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

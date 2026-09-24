@@ -8,6 +8,7 @@ VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 test -d "${BUNDLE_DIR}"
 for required in \
   "${BUNDLE_DIR}/PROVENANCE.json.sig" \
+  "${BUNDLE_DIR}/DELIVERY_MANIFEST.json" \
   "${BUNDLE_DIR}/SERVERBRIDGE2_CERTIFICATION.json" \
   "${BUNDLE_DIR}/BRIDGE_RELEASE_ALLOWLIST.json" \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \

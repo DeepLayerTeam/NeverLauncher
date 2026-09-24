@@ -4,7 +4,13 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **ServerBridge 2 / 0.15.0**: единый production-контур для Velocity, BungeeCord, Waterfall, Bukkit, Spigot, Paper, Purpur, Folia, Fabric, Forge и NeoForge 1.21.1 с Protocol v2, Ed25519 node identities, PostgreSQL source of truth, one-time join/handoff, zero-patch topology, artifact integrity и HA-safe maintenance.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.1**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; новый release boundary добавляет подписанный `DELIVERY_MANIFEST.json` с фактическими SHA-256/size и канонической platform/architecture моделью для Windows, Linux и macOS.
+
+## Production Delivery — 0.15.1
+
+`0.15.1` вводит первый рабочий слой Production Delivery. `nl release build` формирует `DELIVERY_MANIFEST.json` по реальным байтам release bundle, нормализует OS/CPU (`windows|linux|macos`, `x64|arm64|universal`) и помещает manifest в общий signed checksum boundary. `nl release verify` заново проверяет каждый перечисленный artifact, поэтому ручная правка manifest, замена файла после сборки или path traversal блокируют публикацию.
+
+Для диагностики и интеграции доступны `nl delivery target`, `nl delivery verify` и `nl delivery resolve`. Resolver принимает aliases вроде `amd64`/`x86_64` и `aarch64`; macOS universal artifact совместим с обеими native архитектурами. Manifest не заявляет отсутствующие ARM64/x64 сборки: `publishedTargets` выводится только из фактически находящихся в bundle platform artifacts.
 
 ## ServerBridge 2 Release — 0.15.0
 
