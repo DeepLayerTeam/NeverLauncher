@@ -2,6 +2,11 @@
 
 Backend предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
 
+### Upgrade 0.14.4 → 0.14.5
+
+Остановите 0.14.4 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0025_proxy_family_0145`. Обновите release allowlist точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите platform-matched proxy JAR и дождитесь signed heartbeat каждого node. BungeeCord/Waterfall используют отдельные node identities; private Ed25519 keys остаются только на соответствующем proxy.
+
+
 ## Публичные маршруты и установка
 
 ```text

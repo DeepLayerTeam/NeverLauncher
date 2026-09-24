@@ -1,0 +1,17 @@
+backend:
+  url: "https://launcher.example.com"
+  timeoutMs: 5000
+  retries: 2
+  heartbeatIntervalSeconds: 30
+server:
+  id: "bungeecord-main"
+identity:
+  file: "node-identity.properties"
+security:
+  failMode: "closed"
+  requireLauncherSession: true
+  requireIntegrity: true
+profile:
+  projectId: "default"
+  profileId: "vanilla"
+  channel: "stable"

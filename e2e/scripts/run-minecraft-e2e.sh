@@ -45,8 +45,8 @@ for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl psql; do
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
-mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" \
-  "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/spigot" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-identities/folia" "$RUNTIME_DIR/node-keys" \
+mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/bungeecord" "$RUNTIME_DIR/plugins/waterfall" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" \
+  "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/bungeecord" "$RUNTIME_DIR/node-identities/waterfall" "$RUNTIME_DIR/node-identities/spigot" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-identities/folia" "$RUNTIME_DIR/node-keys" \
   "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
 write_env_file() {
   cat > "$ENV_FILE" <<ENV
@@ -140,6 +140,8 @@ write_env_file
 cp "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/paper/neverlauncher-paper-bridge.jar"
 if [[ "$MODE" == "full" ]]; then
   cp "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/velocity/neverlauncher-velocity-bridge.jar"
+  cp "$ROOT/artifacts/plugins/neverlauncher-bungeecord-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/bungeecord/neverlauncher-bungeecord-bridge.jar"
+  cp "$ROOT/artifacts/plugins/neverlauncher-waterfall-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/waterfall/neverlauncher-waterfall-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/spigot/neverlauncher-spigot-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/purpur/neverlauncher-purpur-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/folia/neverlauncher-folia-bridge.jar"
@@ -188,23 +190,31 @@ json_post "$API/api/v1/install/first-project" "$ACCESS_TOKEN" "{\"projectId\":\"
 
 PAPER_NODE_KEY="$RUNTIME_DIR/node-keys/paper.pem"
 VELOCITY_NODE_KEY="$RUNTIME_DIR/node-keys/velocity.pem"
+BUNGEECORD_NODE_KEY="$RUNTIME_DIR/node-keys/bungeecord.pem"
+WATERFALL_NODE_KEY="$RUNTIME_DIR/node-keys/waterfall.pem"
 SPIGOT_NODE_KEY="$RUNTIME_DIR/node-keys/spigot.pem"
 PURPUR_NODE_KEY="$RUNTIME_DIR/node-keys/purpur.pem"
 FOLIA_NODE_KEY="$RUNTIME_DIR/node-keys/folia.pem"
 serverbridge_node_generate "$PAPER_NODE_KEY" "$RUNTIME_DIR/node-identities/paper/node-identity.properties"
 if [[ "$MODE" == "full" ]]; then
   serverbridge_node_generate "$VELOCITY_NODE_KEY" "$RUNTIME_DIR/node-identities/velocity/node-identity.properties"
+  serverbridge_node_generate "$BUNGEECORD_NODE_KEY" "$RUNTIME_DIR/node-identities/bungeecord/node-identity.properties"
+  serverbridge_node_generate "$WATERFALL_NODE_KEY" "$RUNTIME_DIR/node-identities/waterfall/node-identity.properties"
   serverbridge_node_generate "$SPIGOT_NODE_KEY" "$RUNTIME_DIR/node-identities/spigot/node-identity.properties"
   serverbridge_node_generate "$PURPUR_NODE_KEY" "$RUNTIME_DIR/node-identities/purpur/node-identity.properties"
   serverbridge_node_generate "$FOLIA_NODE_KEY" "$RUNTIME_DIR/node-identities/folia/node-identity.properties"
 fi
 PAPER_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
 VELOCITY_BRIDGE_SHA=""
+BUNGEECORD_BRIDGE_SHA=""
+WATERFALL_BRIDGE_SHA=""
 SPIGOT_BRIDGE_SHA=""
 PURPUR_BRIDGE_SHA=""
 FOLIA_BRIDGE_SHA=""
 if [[ "$MODE" == "full" ]]; then
   VELOCITY_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+  BUNGEECORD_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-bungeecord-bridge-${VERSION}.jar" | awk '{print $1}')"
+  WATERFALL_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-waterfall-bridge-${VERSION}.jar" | awk '{print $1}')"
   SPIGOT_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
   PURPUR_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
   FOLIA_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
@@ -218,15 +228,17 @@ register_server() {
 register_server paper-e2e-p3 paper "$PAPER_NODE_KEY"
 if [[ "$MODE" == "full" ]]; then
   register_server velocity-e2e-p3 velocity "$VELOCITY_NODE_KEY"
+  register_server bungeecord-e2e-p3 bungeecord "$BUNGEECORD_NODE_KEY"
+  register_server waterfall-e2e-p3 waterfall "$WATERFALL_NODE_KEY"
   register_server spigot-e2e-p3 spigot "$SPIGOT_NODE_KEY"
   register_server purpur-e2e-p3 purpur "$PURPUR_NODE_KEY"
   register_server folia-e2e-p3 folia "$FOLIA_NODE_KEY"
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] start real Velocity 3.4.0 plus Spigot/Paper/Purpur/Folia 1.21.1\n'
-  compose up -d velocity spigot paper purpur folia
-  SERVICES=(velocity spigot paper purpur folia)
+  printf '[e2e] start real Velocity/BungeeCord/Waterfall plus Spigot/Paper/Purpur/Folia 1.21.1\n'
+  compose up -d velocity bungeecord waterfall spigot paper purpur folia
+  SERVICES=(velocity bungeecord waterfall spigot paper purpur folia)
 else
   printf '[e2e] compatibility mode: start real Paper 1.21.1 only\n'
   compose up -d paper
@@ -374,6 +386,8 @@ if [[ "$MODE" == "full" ]]; then
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
+  flow_for_server bungeecord-e2e-p3 "$BUNGEECORD_NODE_KEY" "$BUNGEECORD_BRIDGE_SHA" bungeecord 25575
+  flow_for_server waterfall-e2e-p3 "$WATERFALL_NODE_KEY" "$WATERFALL_BRIDGE_SHA" waterfall 25576
   flow_for_server spigot-e2e-p3 "$SPIGOT_NODE_KEY" "$SPIGOT_BRIDGE_SHA" spigot 25573
   flow_for_server purpur-e2e-p3 "$PURPUR_NODE_KEY" "$PURPUR_BRIDGE_SHA" purpur 25572
   flow_for_server folia-e2e-p3 "$FOLIA_NODE_KEY" "$FOLIA_BRIDGE_SHA" folia 25574
@@ -383,13 +397,15 @@ curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/di
 jq -e '.data.protocolVersion == 2 and .data.summary.protocolVersion == 2 and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
 required_nodes=1
-[[ "$MODE" == "full" ]] && required_nodes=5
+[[ "$MODE" == "full" ]] && required_nodes=7
 (( serverbridge_nodes >= required_nodes )) || { echo "[e2e] expected PostgreSQL ServerBridge nodes" >&2; exit 1; }
 VELOCITY_HEALTH="skipped"
+BUNGEECORD_HEALTH="skipped"
+WATERFALL_HEALTH="skipped"
 SPIGOT_HEALTH="skipped"
 PURPUR_HEALTH="skipped"
 FOLIA_HEALTH="skipped"
-if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; SPIGOT_HEALTH="healthy"; PURPUR_HEALTH="healthy"; FOLIA_HEALTH="healthy"; fi
+if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; BUNGEECORD_HEALTH="healthy"; WATERFALL_HEALTH="healthy"; SPIGOT_HEALTH="healthy"; PURPUR_HEALTH="healthy"; FOLIA_HEALTH="healthy"; fi
 jq -n \
   --arg version "$VERSION" \
   --arg mode "$MODE" \
@@ -399,9 +415,11 @@ jq -n \
   --arg resolvedLoaderVersion "$RESOLVED_LOADER_VERSION" \
   --arg profile "$PROFILE_ID" \
   --arg velocity "$VELOCITY_HEALTH" \
+  --arg bungeecord "$BUNGEECORD_HEALTH" \
+  --arg waterfall "$WATERFALL_HEALTH" \
   --arg spigot "$SPIGOT_HEALTH" \
   --arg purpur "$PURPUR_HEALTH" \
   --arg folia "$FOLIA_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,sessionRevokeDeny:true},evidence:["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-spigot.json","health-folia.json","bridge-diagnostics.json"]}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,sessionRevokeDeny:true},evidence:["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

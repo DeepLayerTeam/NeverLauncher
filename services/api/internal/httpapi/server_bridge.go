@@ -455,7 +455,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	if !validBridgeServerKindV2(kind) {
-		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, bukkit, spigot, paper, purpur или folia")
+		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, bungeecord, waterfall, bukkit, spigot, paper, purpur или folia")
 	}
 	algorithm, publicKey, keyFingerprint, err := validateBridgeNodeIdentity0142(req.KeyAlgorithm, req.PublicKey)
 	if err != nil {
@@ -887,7 +887,7 @@ func textureProfile910(texture bridgeTextureRecord) map[string]any {
 
 func validBridgeServerKindV2(kind string) bool {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
-	case "velocity", "bukkit", "spigot", "paper", "purpur", "folia":
+	case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia":
 		return true
 	default:
 		return false

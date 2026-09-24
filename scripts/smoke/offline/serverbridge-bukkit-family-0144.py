@@ -81,7 +81,7 @@ if "folia-supported: true" not in read("plugins/folia-bridge/src/main/resources/
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
-require(backend, ['case "velocity", "bukkit", "spigot", "paper", "purpur", "folia"'], "Backend server kind enforcement")
+require(backend, ['case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia"'], "Backend server kind enforcement")
 require(integrity, ["BukkitSHA256", "SpigotSHA256", "FoliaSHA256", 'case "bukkit":', 'case "spigot":', 'case "folia":'], "Backend artifact integrity policy")
 for kind in ("bukkit", "spigot", "paper", "purpur", "folia"):
     require(manifest, [f'{{"id": "{kind}"', f'neverlauncher-{kind}-bridge-', f'"serverType": "{kind}"'], f"{kind} manifest/compatibility")
@@ -98,7 +98,7 @@ config = read("services/api/internal/config/config.go")
 require(config, ["bridgeReleaseRequiresBukkitFamily0144", "BukkitSHA256", "SpigotSHA256", "FoliaSHA256", "для 0.14.4+"], "production configuration validation")
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['enum":["velocity","bukkit","spigot","paper","purpur","folia"]'], "OpenAPI Bukkit-family enum")
+require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia"]'], "OpenAPI Bukkit-family enum")
 
 tests = read("services/api/internal/httpapi/serverbridge_bukkit_family_0144_test.go")
 require(tests, [
@@ -110,7 +110,7 @@ require(tests, [
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 compose_e2e = read("e2e/docker-compose.minecraft-e2e.yml")
 require(runtime_e2e, [
-    "compose up -d velocity spigot paper purpur folia",
+    "compose up -d velocity bungeecord waterfall spigot paper purpur folia",
     "flow_for_server spigot-e2e-p3",
     "flow_for_server folia-e2e-p3",
     "neverlauncher-spigot-bridge.jar",

@@ -22,6 +22,7 @@
 - [ ] Официальный 0.13.0 bundle содержит `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json` для exact source commit и проходит `nl release publish-check`.
 - [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
 - [ ] При upgrade с 0.13.9 старые API instance остановлены; `nl db migrate apply`/`verify` успешно довели schema до sealed `0020_guard_migration_compatibility_stabilization_01310`, а partial Guard snapshots отсутствуют.
+- [ ] Для 0.14.5 `nl db migrate verify` подтверждает sealed `0025_proxy_family_0145`; Velocity/BungeeCord/Waterfall используют отдельные platform-matched JAR/node identities, а release allowlist содержит отдельные SHA-256 всех proxy и Bukkit-family artifacts.
 - [ ] Для 0.14.4 `nl db migrate verify` подтверждает sealed `0024_bukkit_family_0144`; установлены platform-matched Bukkit/Spigot/Paper/Purpur/Folia JAR, Folia descriptor содержит `folia-supported: true`, а release allowlist содержит отдельные SHA-256 всех family artifacts.
 - [ ] Для 0.14.3 `nl db migrate verify` подтверждает sealed `0023_one_time_join_tickets_0143`; legacy active joins сброшены, новый ServerBridge join имеет `ticketVersion=2` и identity binding, первый signed redemption создаёт persisted proof и replay отклоняется; Yggdrasil `/hasJoined` consume-once.
 - [ ] Для 0.14.2 `nl db migrate verify` подтверждает sealed `0022_serverbridge_crypto_node_identities_0142`; 0.14.1 ServerBridge nodes прошли Ed25519 `rotate-identity` enrollment, private keys остаются только на nodes, heartbeat/validate работают с signed request headers и nonce replay protection.
@@ -35,7 +36,7 @@
 - [ ] Исторические `/api/v2`–`/api/v5` не доступны.
 - [ ] Admin login создаёт серверную сессию и Bearer access token.
 - [ ] Client package publish/consume pipeline проходит smoke-test.
-- [ ] ServerBridge Velocity/Spigot/Paper/Purpur/Folia проходит healthcheck; Bukkit artifact проходит build/API compatibility gate и fail-closed platform detection.
+- [ ] ServerBridge Velocity/BungeeCord/Waterfall/Spigot/Paper/Purpur/Folia проходит healthcheck; Bukkit artifact проходит build/API compatibility gate и fail-closed platform detection.
 
 ## Перед release bundle
 
@@ -45,7 +46,7 @@
 - [ ] CLI не содержит исторических `schemaVersion` 4.x–8.x.
 - [ ] `CHANGELOG.md` обновлён.
 - [ ] Private Ed25519 release key хранится вне репозитория; trusted public key распространяется отдельным доверенным каналом.
-- [ ] `scripts/release/build-release.sh` собрал реальные CLI/API/Admin/Desktop/NeverRuntime/Velocity/Bukkit/Spigot/Paper/Purpur/Folia artifacts и source archive прошёл secret scan.
+- [ ] `scripts/release/build-release.sh` собрал реальные CLI/API/Admin/Desktop/NeverRuntime/Velocity/BungeeCord/Waterfall/Bukkit/Spigot/Paper/Purpur/Folia artifacts и source archive прошёл secret scan.
 - [ ] Подготовлены `RELEASE_MANIFEST.json`, `SHA256SUMS`, `SHA256SUMS.sig`, `SBOM.spdx.json` и `PROVENANCE.json`.
 - [ ] Для Minecraft Compatibility Release и новее в bundle присутствуют `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json`, `COMPATIBILITY_CERTIFICATION.json`, привязанные к exact source commit.
 - [ ] Для 0.13.9+ в bundle присутствуют `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json`; matrix содержит PASS Linux/Windows/macOS для exact commit/run, а bundle содержит именно сертифицированные platform artifacts.

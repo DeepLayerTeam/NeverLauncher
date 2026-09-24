@@ -15,6 +15,8 @@ mkdir -p "$OUT"
   cd "$ROOT"
   gradle --no-daemon --console=plain \
     :plugins:velocity-bridge:clean :plugins:velocity-bridge:jar \
+    :plugins:bungeecord-bridge:clean :plugins:bungeecord-bridge:jar \
+    :plugins:waterfall-bridge:clean :plugins:waterfall-bridge:jar \
     :plugins:bukkit-bridge:clean :plugins:bukkit-bridge:jar \
     :plugins:spigot-bridge:clean :plugins:spigot-bridge:jar \
     :plugins:paper-bridge:clean :plugins:paper-bridge:jar \
@@ -29,6 +31,8 @@ copy_artifact() {
   cp "$src" "$OUT/$expected"
 }
 copy_artifact velocity-bridge "neverlauncher-velocity-bridge-${VERSION}.jar"
+copy_artifact bungeecord-bridge "neverlauncher-bungeecord-bridge-${VERSION}.jar"
+copy_artifact waterfall-bridge "neverlauncher-waterfall-bridge-${VERSION}.jar"
 copy_artifact bukkit-bridge "neverlauncher-bukkit-bridge-${VERSION}.jar"
 copy_artifact spigot-bridge "neverlauncher-spigot-bridge-${VERSION}.jar"
 copy_artifact paper-bridge "neverlauncher-paper-bridge-${VERSION}.jar"
@@ -41,6 +45,25 @@ for artifact in "$OUT"/neverlauncher-*-bridge-"${VERSION}".jar; do
     exit 1
   }
 done
+for platform in velocity bungeecord waterfall; do
+  artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"
+  jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class$' || {
+    echo "[NeverLauncher] proxy-family runtime classes missing from $(basename "$artifact")" >&2
+    exit 1
+  }
+done
+for platform in bungeecord waterfall; do
+  artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"
+  jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/bungee/BungeeFamilyBridgePlugin.class$' || {
+    echo "[NeverLauncher] Bungee-family runtime classes missing from $(basename "$artifact")" >&2
+    exit 1
+  }
+  jar tf "$artifact" | grep -q '^bungee.yml$' || {
+    echo "[NeverLauncher] bungee.yml missing from $(basename "$artifact")" >&2
+    exit 1
+  }
+done
+
 for platform in bukkit spigot paper purpur folia; do
   artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.class$' || {
@@ -62,13 +85,15 @@ unzip -p "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" plugin.yml | grep -q '
   sha256sum neverlauncher-*-bridge-"${VERSION}".jar | sort > SHA256SUMS
 )
 VELOCITY_SHA256="$(sha256sum "$OUT/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+BUNGEECORD_SHA256="$(sha256sum "$OUT/neverlauncher-bungeecord-bridge-${VERSION}.jar" | awk '{print $1}')"
+WATERFALL_SHA256="$(sha256sum "$OUT/neverlauncher-waterfall-bridge-${VERSION}.jar" | awk '{print $1}')"
 BUKKIT_SHA256="$(sha256sum "$OUT/neverlauncher-bukkit-bridge-${VERSION}.jar" | awk '{print $1}')"
 SPIGOT_SHA256="$(sha256sum "$OUT/neverlauncher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
 PAPER_SHA256="$(sha256sum "$OUT/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
 PURPUR_SHA256="$(sha256sum "$OUT/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
 FOLIA_SHA256="$(sha256sum "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
 cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
-{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"]}}
+{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"]}}
 JSON
 cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 {
@@ -80,6 +105,8 @@ cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
   "releaseAllowlist": "BRIDGE_RELEASE_ALLOWLIST.json",
   "artifacts": [
     {"id":"velocity","file":"neverlauncher-velocity-bridge-${VERSION}.jar","platform":"velocity","descriptor":"velocity-plugin.json","sha256":"${VELOCITY_SHA256}"},
+    {"id":"bungeecord","file":"neverlauncher-bungeecord-bridge-${VERSION}.jar","platform":"bungeecord","descriptor":"bungee.yml","sha256":"${BUNGEECORD_SHA256}"},
+    {"id":"waterfall","file":"neverlauncher-waterfall-bridge-${VERSION}.jar","platform":"waterfall","descriptor":"bungee.yml","sha256":"${WATERFALL_SHA256}"},
     {"id":"bukkit","file":"neverlauncher-bukkit-bridge-${VERSION}.jar","platform":"bukkit","descriptor":"plugin.yml","sha256":"${BUKKIT_SHA256}"},
     {"id":"spigot","file":"neverlauncher-spigot-bridge-${VERSION}.jar","platform":"spigot","descriptor":"plugin.yml","sha256":"${SPIGOT_SHA256}"},
     {"id":"paper","file":"neverlauncher-paper-bridge-${VERSION}.jar","platform":"paper","descriptor":"plugin.yml","sha256":"${PAPER_SHA256}"},

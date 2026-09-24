@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.5 — Proxy family: Velocity / BungeeCord / Waterfall
+
+`0.14.5` объединяет proxy ServerBridge в production runtime для Velocity, BungeeCord и Waterfall без дублирования cryptographic/auth logic. Все три proxy используют Protocol v2, Ed25519 node identities, PostgreSQL source of truth, release-hash integrity enforcement и one-time join tickets.
+
+- Добавлены `proxy-family-common` и `bungee-family-common`; Velocity переведён на общий runtime, BungeeCord/Waterfall получают отдельные platform-matched JAR.
+- Proxy login validation выполняется вне event loop: Velocity через async `EventTask`, BungeeCord/Waterfall через `PreLoginEvent.registerIntent/completeIntent` и общий dedicated executor.
+- BungeeCord/Waterfall runtime проверяет фактическую platform identity и fail-closed отклоняет неправильный JAR.
+- PostgreSQL migration `0025_proxy_family_0145` расширяет `server_bridge_nodes_v2.kind` на `bungeecord` и `waterfall` без изменения существующих node identities/tickets.
+- Release policy `0.14.5+` требует отдельные SHA-256 для Velocity, BungeeCord, Waterfall и всей Bukkit-family; release bundle содержит все восемь bridge JAR.
+- Full Minecraft E2E запускает Velocity+BungeeCord+Waterfall+Spigot+Paper+Purpur+Folia и проверяет heartbeat, allow, one-time replay deny, revoke и deny.
+- Добавлены exact migration rehearsal `0.14.4 → 0.14.5`, backend kind/integrity regressions и обязательный offline release gate.
+
+Migration: остановите 0.14.4 API instances, примените и проверьте `0025_proxy_family_0145`, обновите `BRIDGE_RELEASE_ALLOWLIST.json`, затем установите строго platform-matched proxy JAR и зарегистрируйте node kind `velocity`, `bungeecord` или `waterfall`.
+
 ## 0.14.4 — Bukkit family: Bukkit / Spigot / Paper / Purpur / Folia
 
 `0.14.4` переводит Bukkit-family ServerBridge из двух дублирующихся Paper/Purpur реализаций в один production runtime, собираемый отдельными platform artifacts для CraftBukkit/Bukkit, Spigot, Paper, Purpur и Folia. Все варианты используют ServerBridge Protocol v2, Ed25519 node identity, PostgreSQL source of truth, release-hash integrity enforcement и одноразовые join tickets из 0.14.1–0.14.3.

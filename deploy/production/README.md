@@ -2,6 +2,11 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.4 → 0.14.5
+
+Остановите 0.14.4 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0025_proxy_family_0145`. Обновите release allowlist точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите platform-matched proxy JAR и дождитесь signed heartbeat каждого node. BungeeCord/Waterfall используют отдельные node identities; private Ed25519 keys остаются только на соответствующем proxy.
+
+
 ## Запуск
 
 ```bash

@@ -347,3 +347,8 @@ Backend API может читать устаревшие compatibility aliases �
 - `NEVERLAUNCHER_AUTH_TOKEN_SECRET` вместо `NEVERLAUNCHER_TOKEN_SECRET` или `NEVERLAUNCHER_JWT_SECRET`;
 - `NEVERLAUNCHER_STORAGE_LOCAL_PATH` вместо `NEVERLAUNCHER_STORAGE_LOCAL_ROOT`;
 - `NEVERLAUNCHER_REDIS_ADDR` вместо `NEVERLAUNCHER_REDIS_URL`.
+
+## ServerBridge Proxy family 0.14.5
+
+Velocity/BungeeCord/Waterfall не разделяют private node credentials: каждый proxy имеет собственную Ed25519 identity. Signed heartbeat/join validation, nonce replay protection, artifact SHA-256 allowlist и one-time ticket semantics остаются обязательными. BungeeCord/Waterfall adapter fail-closed проверяет фактическую platform identity, а backend принимает только канонические kinds `velocity`, `bungeecord`, `waterfall`.
+

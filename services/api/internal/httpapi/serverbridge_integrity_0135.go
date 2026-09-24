@@ -15,12 +15,14 @@ import (
 const serverBridgeIntegrityPolicy0135 = "serverbridge-artifact-sha256-v1"
 
 type bridgeReleasePolicy0135 struct {
-	VelocitySHA256 []string `json:"velocitySha256"`
-	BukkitSHA256   []string `json:"bukkitSha256"`
-	SpigotSHA256   []string `json:"spigotSha256"`
-	PaperSHA256    []string `json:"paperSha256"`
-	PurpurSHA256   []string `json:"purpurSha256"`
-	FoliaSHA256    []string `json:"foliaSha256"`
+	VelocitySHA256   []string `json:"velocitySha256"`
+	BungeeCordSHA256 []string `json:"bungeeCordSha256"`
+	WaterfallSHA256  []string `json:"waterfallSha256"`
+	BukkitSHA256     []string `json:"bukkitSha256"`
+	SpigotSHA256     []string `json:"spigotSha256"`
+	PaperSHA256      []string `json:"paperSha256"`
+	PurpurSHA256     []string `json:"purpurSha256"`
+	FoliaSHA256      []string `json:"foliaSha256"`
 }
 
 type bridgePluginIntegrityDecision0135 struct {
@@ -60,6 +62,14 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		if err != nil {
 			return nil, fmt.Errorf("ServerBridge velocity release %s: %w", version, err)
 		}
+		bungeecord, err := normalizeOptionalBridgeHashes0144(policy.BungeeCordSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge bungeecord release %s: %w", version, err)
+		}
+		waterfall, err := normalizeOptionalBridgeHashes0144(policy.WaterfallSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge waterfall release %s: %w", version, err)
+		}
 		paper, err := normalizeHashList0134(policy.PaperSHA256)
 		if err != nil {
 			return nil, fmt.Errorf("ServerBridge paper release %s: %w", version, err)
@@ -81,6 +91,8 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 			return nil, fmt.Errorf("ServerBridge folia release %s: %w", version, err)
 		}
 		policy.VelocitySHA256 = velocity
+		policy.BungeeCordSHA256 = bungeecord
+		policy.WaterfallSHA256 = waterfall
 		policy.BukkitSHA256 = bukkit
 		policy.SpigotSHA256 = spigot
 		policy.PaperSHA256 = paper
@@ -102,6 +114,10 @@ func bridgeHashesForKind0135(policy bridgeReleasePolicy0135, kind string) []stri
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "velocity":
 		return policy.VelocitySHA256
+	case "bungeecord":
+		return policy.BungeeCordSHA256
+	case "waterfall":
+		return policy.WaterfallSHA256
 	case "bukkit":
 		return policy.BukkitSHA256
 	case "spigot":

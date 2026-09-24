@@ -8,6 +8,11 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
 
+## ServerBridge 0.14.5 Proxy family
+
+Velocity, BungeeCord и Waterfall используют общий production proxy runtime с Ed25519 node identity, signed Protocol v2 requests, artifact SHA-256 enforcement и one-time join tickets. Для BungeeCord/Waterfall выпускаются отдельные JAR; platform mismatch fail-closed. Production release 0.14.5 требует hashes всех proxy и Bukkit-family artifacts.
+
+
 ## Bukkit family — 0.14.4
 
 `0.14.4` переводит Bukkit-совместимые ServerBridge-плагины на один production runtime `bukkit-family-common` и пять platform-matched artifacts: Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia. Общий runtime выполняет Ed25519 node authentication, SHA-256 self-measurement, heartbeat, one-time join validation, fail-closed login enforcement и diagnostics; платформенные JAR содержат только явный runtime discriminator и descriptor. JAR от другой платформы не запускается молча: mismatch приводит к отключению plugin.

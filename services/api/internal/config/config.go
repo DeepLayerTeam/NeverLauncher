@@ -82,6 +82,20 @@ func bridgeReleaseRequiresBukkitFamily0144(version string) bool {
 	return patch >= 4
 }
 
+func bridgeReleaseRequiresProxyFamily0145(version string) bool {
+	var major, minor, patch int
+	if _, err := fmt.Sscanf(strings.TrimSpace(strings.SplitN(version, "-", 2)[0]), "%d.%d.%d", &major, &minor, &patch); err != nil {
+		return false
+	}
+	if major != 0 {
+		return major > 0
+	}
+	if minor != 14 {
+		return minor > 14
+	}
+	return patch >= 5
+}
+
 // Load читает конфигурацию из переменных окружения.
 func Load() Config {
 	environment := env("NEVERLAUNCHER_ENV", "dev")
@@ -273,12 +287,14 @@ func ValidateProduction(cfg Config) error {
 		problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
 	} else {
 		var bridgeAllowlist map[string]struct {
-			VelocitySHA256 []string `json:"velocitySha256"`
-			BukkitSHA256   []string `json:"bukkitSha256"`
-			SpigotSHA256   []string `json:"spigotSha256"`
-			PaperSHA256    []string `json:"paperSha256"`
-			PurpurSHA256   []string `json:"purpurSha256"`
-			FoliaSHA256    []string `json:"foliaSha256"`
+			VelocitySHA256   []string `json:"velocitySha256"`
+			BungeeCordSHA256 []string `json:"bungeeCordSha256"`
+			WaterfallSHA256  []string `json:"waterfallSha256"`
+			BukkitSHA256     []string `json:"bukkitSha256"`
+			SpigotSHA256     []string `json:"spigotSha256"`
+			PaperSHA256      []string `json:"paperSha256"`
+			PurpurSHA256     []string `json:"purpurSha256"`
+			FoliaSHA256      []string `json:"foliaSha256"`
 		}
 		if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil || len(bridgeAllowlist) == 0 {
 			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->ServerBridge hash allowlists")
@@ -292,8 +308,14 @@ func ValidateProduction(cfg Config) error {
 					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.4+ должна содержать bukkitSha256, spigotSha256 и foliaSha256", version))
 					continue
 				}
-				values := make([]string, 0, len(entry.VelocitySHA256)+len(entry.BukkitSHA256)+len(entry.SpigotSHA256)+len(entry.PaperSHA256)+len(entry.PurpurSHA256)+len(entry.FoliaSHA256))
+				if bridgeReleaseRequiresProxyFamily0145(version) && (len(entry.BungeeCordSHA256) == 0 || len(entry.WaterfallSHA256) == 0) {
+					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.5+ должна содержать bungeeCordSha256 и waterfallSha256", version))
+					continue
+				}
+				values := make([]string, 0, len(entry.VelocitySHA256)+len(entry.BungeeCordSHA256)+len(entry.WaterfallSHA256)+len(entry.BukkitSHA256)+len(entry.SpigotSHA256)+len(entry.PaperSHA256)+len(entry.PurpurSHA256)+len(entry.FoliaSHA256))
 				values = append(values, entry.VelocitySHA256...)
+				values = append(values, entry.BungeeCordSHA256...)
+				values = append(values, entry.WaterfallSHA256...)
 				values = append(values, entry.BukkitSHA256...)
 				values = append(values, entry.SpigotSHA256...)
 				values = append(values, entry.PaperSHA256...)

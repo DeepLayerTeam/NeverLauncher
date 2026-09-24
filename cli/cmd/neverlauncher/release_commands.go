@@ -589,6 +589,8 @@ func releaseArtifacts(ver string) []string {
 		"neverlauncher-desktop-package-" + ver + ".zip",
 		"neverruntime-linux-amd64",
 		"neverlauncher-velocity-bridge-" + ver + ".jar",
+		"neverlauncher-bungeecord-bridge-" + ver + ".jar",
+		"neverlauncher-waterfall-bridge-" + ver + ".jar",
 		"neverlauncher-bukkit-bridge-" + ver + ".jar",
 		"neverlauncher-spigot-bridge-" + ver + ".jar",
 		"neverlauncher-paper-bridge-" + ver + ".jar",

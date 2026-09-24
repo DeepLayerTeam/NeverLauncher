@@ -114,6 +114,70 @@ services:
       - ./runtime/node-identities/velocity:/neverlauncher-identity
       - velocity-data:/server
 
+  bungeecord:
+    image: itzg/mc-proxy:java21
+    environment:
+      TYPE: BUNGEECORD
+      MEMORY: 384m
+      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: bungeecord-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/health.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    ports:
+      - "25575:25577"
+    volumes:
+      - ./runtime/plugins/bungeecord:/plugins:ro
+      - ./runtime/node-identities/bungeecord:/neverlauncher-identity
+      - bungeecord-data:/server
+
+  waterfall:
+    image: itzg/mc-proxy:java21
+    environment:
+      TYPE: WATERFALL
+      MEMORY: 384m
+      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: waterfall-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/health.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+    ports:
+      - "25576:25577"
+    volumes:
+      - ./runtime/plugins/waterfall:/plugins:ro
+      - ./runtime/node-identities/waterfall:/neverlauncher-identity
+      - waterfall-data:/server
+
   spigot:
     image: itzg/minecraft-server:java21
     environment:
@@ -267,6 +331,8 @@ volumes:
   e2e-storage: {}
   e2e-backups: {}
   velocity-data: {}
+  bungeecord-data: {}
+  waterfall-data: {}
   spigot-data: {}
   paper-data: {}
   purpur-data: {}

@@ -1,0 +1,5 @@
+name: NeverLauncherWaterfallBridge
+main: ru.neverlauncher.bridge.waterfall.NeverLauncherWaterfallBridge
+version: "${version}"
+author: SkiF4er
+description: NeverLauncher ServerBridge Protocol v2 integration for Waterfall.

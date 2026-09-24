@@ -327,8 +327,8 @@ func slsaProvenance(sourceRoot, artifactDir, ver string) (map[string]any, error)
 		"apps/admin/package-lock.json", "apps/desktop/package-lock.json",
 		"apps/desktop/src-tauri/Cargo.toml", "runtime/neverruntime/Cargo.toml",
 		"settings.gradle.kts",
-		"plugins/bridge-common/build.gradle.kts", "plugins/bukkit-family-common/build.gradle.kts", "plugins/velocity-bridge/build.gradle.kts",
-		"plugins/bukkit-bridge/build.gradle.kts", "plugins/spigot-bridge/build.gradle.kts", "plugins/paper-bridge/build.gradle.kts",
+		"plugins/bridge-common/build.gradle.kts", "plugins/proxy-family-common/build.gradle.kts", "plugins/bungee-family-common/build.gradle.kts", "plugins/bukkit-family-common/build.gradle.kts", "plugins/velocity-bridge/build.gradle.kts",
+		"plugins/bungeecord-bridge/build.gradle.kts", "plugins/waterfall-bridge/build.gradle.kts", "plugins/bukkit-bridge/build.gradle.kts", "plugins/spigot-bridge/build.gradle.kts", "plugins/paper-bridge/build.gradle.kts",
 		"plugins/purpur-bridge/build.gradle.kts", "plugins/folia-bridge/build.gradle.kts",
 	}
 	for _, rel := range []string{"cli/go.sum", "services/api/go.sum", "apps/desktop/src-tauri/Cargo.lock", "runtime/neverruntime/Cargo.lock"} {

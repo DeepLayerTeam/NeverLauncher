@@ -42,8 +42,12 @@ dynamic_version_expectations = {
     "apps/desktop/vite.config.ts": "../../VERSION",
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
     "plugins/bridge-common/build.gradle.kts": "generated/sources/version/java",
+    "plugins/proxy-family-common/build.gradle.kts": "version = rootProject.file(\"VERSION\").readText().trim()",
+    "plugins/bungee-family-common/build.gradle.kts": "version = rootProject.file(\"VERSION\").readText().trim()",
     "plugins/bukkit-family-common/build.gradle.kts": "version = rootProject.file(\"VERSION\").readText().trim()",
     "plugins/velocity-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/bungeecord-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/waterfall-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/bukkit-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/spigot-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/paper-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
@@ -63,6 +67,8 @@ for rel, expected in dynamic_version_expectations.items():
 
 for rel in (
     "plugins/velocity-bridge/src/main/resources/velocity-plugin.json",
+    "plugins/bungeecord-bridge/src/main/resources/bungee.yml",
+    "plugins/waterfall-bridge/src/main/resources/bungee.yml",
     "plugins/bukkit-bridge/src/main/resources/plugin.yml",
     "plugins/spigot-bridge/src/main/resources/plugin.yml",
     "plugins/paper-bridge/src/main/resources/plugin.yml",

@@ -9,7 +9,11 @@ dependencyResolutionManagement {
 }
 rootProject.name = "NeverLauncher"
 include("plugins:bridge-common")
+include("plugins:proxy-family-common")
+include("plugins:bungee-family-common")
 include("plugins:velocity-bridge")
+include("plugins:bungeecord-bridge")
+include("plugins:waterfall-bridge")
 include("plugins:paper-bridge")
 include("plugins:purpur-bridge")
 

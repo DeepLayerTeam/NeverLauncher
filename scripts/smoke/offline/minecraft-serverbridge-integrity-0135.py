@@ -64,8 +64,8 @@ java_integrity = read("plugins/bridge-common/src/main/java/ru/neverlauncher/brid
 require(java_integrity, ["artifactSha256", "getProtectionDomain", "Files.isRegularFile", "MessageDigest.getInstance(\"SHA-256\")"], "ServerBridge JAR self-measurement")
 java_client = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
 require(java_client, ["pluginSha256", "requireIntegrity", "bridge_integrity_unavailable", "pluginVersion"], "ServerBridge fail-closed client")
-velocity_source = read("plugins/velocity-bridge/src/main/java/ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.java")
-require(velocity_source, ["BridgeIntegrity.artifactSha256", "NeverLauncherApiClient(config"], "velocity runtime self-measurement")
+proxy_family_source = read("plugins/proxy-family-common/src/main/java/ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.java")
+require(proxy_family_source, ["BridgeIntegrity.artifactSha256", "new NeverLauncherApiClient(config"], "proxy-family runtime self-measurement")
 bukkit_family_source = read("plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.java")
 require(bukkit_family_source, ["BridgeIntegrity.artifactSha256", "NeverLauncherApiClient(config"], "Bukkit-family runtime self-measurement")
 for platform, cls, expected in [("bukkit", "NeverLauncherBukkitBridge", "BUKKIT"), ("spigot", "NeverLauncherSpigotBridge", "SPIGOT"), ("paper", "NeverLauncherPaperBridge", "PAPER"), ("purpur", "NeverLauncherPurpurBridge", "PURPUR"), ("folia", "NeverLauncherFoliaBridge", "FOLIA")]:

@@ -1,0 +1,5 @@
+name: NeverLauncherBungeeBridge
+main: ru.neverlauncher.bridge.bungeecord.NeverLauncherBungeeCordBridge
+version: "${version}"
+author: SkiF4er
+description: NeverLauncher ServerBridge Protocol v2 integration for BungeeCord.
