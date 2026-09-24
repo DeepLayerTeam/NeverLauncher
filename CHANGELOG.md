@@ -1,3 +1,16 @@
+## 0.14.9 — Public ServerBridge Matrix + HA/hardening
+
+`0.14.9` переводит ServerBridge 2 из single-instance-friendly режима в явно active/active-safe эксплуатацию и публикует каноническую матрицу всех 11 поддерживаемых bridge targets. Hot-path replay protection больше не выполняет глобальную очистку expired nonces; bounded cleanup выполняется отдельным maintenance pass под PostgreSQL advisory lock.
+
+- Public `GET /api/v1/server-bridge/matrix` и `serverbridge/targets.json` используют один канонический capability set для Velocity/BungeeCord/Waterfall, Bukkit/Spigot/Paper/Purpur/Folia, Fabric, Forge и NeoForge.
+- Topology status freshness-aware: edge активен только при свежем route observation и heartbeat обоих узлов.
+- Добавлены PostgreSQL HA status, readiness/Prometheus gauges и диагностический maintenance snapshot.
+- ServerBridge traffic получил отдельный Redis rate-limit budget, 64 KiB signed-body ceiling, header length validation, request deadline и no-store policy.
+- Migration `0029_serverbridge_public_matrix_ha_hardening_0149` добавляет partial/freshness indexes без переписывания existing node identities/tickets/handoffs.
+- Exact `0.14.8 → 0.14.9` migration rehearsal запускает реальный multi-instance PostgreSQL test: два repository handles соревнуются за один signed nonce, и принимается ровно один.
+
+Migration: backup → `nl db migrate apply` → `nl db migrate verify`; затем запускайте 0.14.9 replicas с общими PostgreSQL/Redis и fail-closed rate limiting.
+
 # Changelog
 
 ## 0.14.8 — Zero-patch installation + topology/handoff

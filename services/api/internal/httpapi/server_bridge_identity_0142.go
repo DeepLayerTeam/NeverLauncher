@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 
 const (
 	serverBridgeNodeSignatureScheme0142 = "NeverLauncher-ServerBridge-Node-v1"
-	serverBridgeNodeMaxBody0142         = 1 << 20
+	serverBridgeNodeMaxBody0142         = 64 << 10
 	serverBridgeNodeClockSkew0142       = 90 * time.Second
 	serverBridgeNodeNonceTTL0142        = 3 * time.Minute
 )
@@ -83,6 +84,10 @@ func readAndRestoreNodeRequestBody0142(r *http.Request) ([]byte, error) {
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, serverBridgeNodeMaxBody0142+1))
 	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return nil, &bridgeNodeAuthError0142{Status: http.StatusRequestEntityTooLarge, Reason: "serverbridge_node_request_too_large"}
+		}
 		return nil, err
 	}
 	if len(body) > serverBridgeNodeMaxBody0142 {
@@ -151,6 +156,9 @@ func (s Server) authenticateBridgeNodeRequest0142(r *http.Request) (bridgeServer
 	signatureRaw := strings.TrimSpace(r.Header.Get(nodeSignatureHeader0142))
 	if nodeID == "" || fingerprint == "" || timestampRaw == "" || nonceRaw == "" || signatureRaw == "" {
 		return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_node_signature_required"}
+	}
+	if len(nodeID) > 128 || len(fingerprint) != 64 || len(timestampRaw) > 20 || len(nonceRaw) > 96 || len(signatureRaw) > 128 {
+		return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_node_headers_invalid"}
 	}
 	ts, err := strconv.ParseInt(timestampRaw, 10, 64)
 	if err != nil {

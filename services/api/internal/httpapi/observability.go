@@ -45,6 +45,16 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
+		ha, err := s.State.ServerBridge.haStatus0149()
+		if err != nil {
+			checks["serverBridgeHA"] = err.Error()
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge PostgreSQL HA status unavailable"})
+			return
+		}
+		checks["serverBridgeHA"] = fmt.Sprintf("fresh_nodes=%d/%d fresh_topology=%d active_handoffs=%d nonce_backlog=%d", ha.NodesFresh, ha.NodesActive, ha.TopologyFresh, ha.ActiveHandoffs, ha.ExpiredNonceBacklog)
+	}
+
 	if s.Federation != nil {
 		health := s.Federation.Health(ctx)
 		healthy := 0
@@ -112,6 +122,15 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_crash_reports_total gauge\nneverlauncher_crash_reports_total %d\n", crashReports)
 	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_backups_total Количество созданных backup archives\n")
 	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_backups_total gauge\nneverlauncher_backups_total %d\n", backups)
+	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
+		if ha, err := s.State.ServerBridge.haStatus0149(); err == nil {
+			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_nodes_active Active ServerBridge nodes\n# TYPE neverlauncher_serverbridge_nodes_active gauge\nneverlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)
+			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_nodes_fresh Fresh ServerBridge nodes\n# TYPE neverlauncher_serverbridge_nodes_fresh gauge\nneverlauncher_serverbridge_nodes_fresh %d\n", ha.NodesFresh)
+			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_topology_fresh Fresh runtime-learned topology edges\n# TYPE neverlauncher_serverbridge_topology_fresh gauge\nneverlauncher_serverbridge_topology_fresh %d\n", ha.TopologyFresh)
+			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_handoffs_active Active one-time handoffs\n# TYPE neverlauncher_serverbridge_handoffs_active gauge\nneverlauncher_serverbridge_handoffs_active %d\n", ha.ActiveHandoffs)
+			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_expired_nonce_backlog Expired replay nonces waiting for HA maintenance\n# TYPE neverlauncher_serverbridge_expired_nonce_backlog gauge\nneverlauncher_serverbridge_expired_nonce_backlog %d\n", ha.ExpiredNonceBacklog)
+		}
+	}
 }
 
 func (s Server) adminObservability(w http.ResponseWriter, r *http.Request) {

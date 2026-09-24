@@ -21,7 +21,7 @@ public_prefixes = (
     "/health", "/ready", "/metrics", "/api/v1/status", "/api/v1/diagnostics/", "/api/v1/runtime/", "/api/v1/loaders",
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
-public_exact = {"/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
+public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
 node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/session/has-joined"}
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 

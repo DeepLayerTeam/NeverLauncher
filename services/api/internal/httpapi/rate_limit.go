@@ -21,6 +21,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	s.RateLimitEnabled = cfg.RateLimitEnabled
 	s.RateLimitGlobalPerMinute = cfg.RateLimitGlobalPerMinute
 	s.RateLimitAuthPerMinute = cfg.RateLimitAuthPerMinute
+	s.RateLimitServerBridgePerMinute = cfg.RateLimitServerBridgePerMinute
 	s.RateLimitFailClosed = cfg.RateLimitFailClosed
 	if !cfg.RateLimitEnabled {
 		s.RateLimiter = ratelimit.NewMemory()
@@ -52,7 +53,10 @@ func (s Server) withRateLimit(next http.Handler) http.Handler {
 		}
 		limit := s.State.RateLimitGlobalPerMinute
 		category := "global"
-		if isSensitiveAuthRoute(r) {
+		if isServerBridgeTraffic0149(r) {
+			limit = s.State.RateLimitServerBridgePerMinute
+			category = "serverbridge"
+		} else if isSensitiveAuthRoute(r) {
 			limit = s.State.RateLimitAuthPerMinute
 			category = "auth"
 		}
@@ -74,6 +78,7 @@ func (s Server) withRateLimit(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		w.Header().Set("X-RateLimit-Scope", category)
 		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(decision.Limit))
 		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(decision.Remaining))
 		resetSeconds := int(decision.ResetAfter.Round(time.Second).Seconds())

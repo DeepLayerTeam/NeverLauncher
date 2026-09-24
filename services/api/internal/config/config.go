@@ -25,6 +25,7 @@ type Config struct {
 	RateLimitEnabled                   bool
 	RateLimitGlobalPerMinute           int
 	RateLimitAuthPerMinute             int
+	RateLimitServerBridgePerMinute     int
 	RateLimitFailClosed                bool
 	StorageDriver                      string
 	StorageLocalPath                   string
@@ -151,6 +152,7 @@ func Load() Config {
 		RateLimitEnabled:                   envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
 		RateLimitGlobalPerMinute:           envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
 		RateLimitAuthPerMinute:             envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
+		RateLimitServerBridgePerMinute:     envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
 		RateLimitFailClosed:                envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
 		StorageDriver:                      env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
 		StorageLocalPath:                   env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
@@ -307,6 +309,26 @@ func ValidateProduction(cfg Config) error {
 					}
 				}
 			}
+		}
+	}
+
+	// Production loaded through Load() always carries an explicit rate-limit
+	// policy. Require Redis-backed fail-closed limiting there; the all-zero case
+	// is retained only for backwards-compatible direct Config construction in
+	// unit/integration harnesses.
+	ratePolicySpecified := strings.TrimSpace(cfg.RedisURL) != "" || cfg.RateLimitEnabled || cfg.RateLimitGlobalPerMinute != 0 || cfg.RateLimitAuthPerMinute != 0 || cfg.RateLimitServerBridgePerMinute != 0 || cfg.RateLimitFailClosed
+	if ratePolicySpecified {
+		if !cfg.RateLimitEnabled {
+			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_ENABLED=true")
+		}
+		if !cfg.RateLimitFailClosed {
+			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED=true")
+		}
+		if strings.TrimSpace(cfg.RedisURL) == "" {
+			problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для distributed production rate limiting")
+		}
+		if cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
+			problems = append(problems, "production rate-limit budgets global/auth/serverbridge должны быть > 0")
 		}
 	}
 

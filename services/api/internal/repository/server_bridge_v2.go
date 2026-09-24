@@ -30,6 +30,8 @@ type ServerBridgeRepository interface {
 	ConsumeServerBridgeHandoff(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeHandoff, error)
 	InvalidateServerBridgeHandoff(context.Context, string, time.Time) (bool, error)
 	ListServerBridgeTopology(context.Context) ([]model.ServerBridgeTopologyEdge, error)
+	MaintainServerBridge(context.Context, time.Time) (model.ServerBridgeMaintenanceResult, error)
+	ServerBridgeHAStatus(context.Context, time.Time) (model.ServerBridgeHAStatus, error)
 	InvalidateServerBridgeJoinTicket(context.Context, string, time.Time) (bool, error)
 	InvalidateServerBridgeSession(context.Context, string, string, time.Time) (int, error)
 	InvalidateServerBridgeUser(context.Context, string, time.Time) (int, error)
@@ -211,9 +213,9 @@ func (r *SQLRepository) ConsumeServerBridgeNodeNonce(ctx context.Context, nodeID
 		return false, err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1`, consumedAt.UTC()); err != nil {
-		return false, err
-	}
+	// Expired-nonce cleanup is deliberately not performed on this hot path.
+	// 0.14.9 moves cleanup behind a cross-instance PostgreSQL advisory lock so
+	// concurrent API replicas do not serialize every signed request on a table-wide DELETE.
 	res, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_node_nonces_v2(node_id,nonce_hash,identity_epoch,consumed_at,expires_at)
 SELECT id,$2,$3,$4,$5 FROM server_bridge_nodes_v2 WHERE id=$1 AND status='active' AND identity_epoch=$3
 ON CONFLICT(node_id,nonce_hash) DO NOTHING`, nodeID, nonceHash, identityEpoch, consumedAt.UTC(), expiresAt.UTC())
@@ -440,7 +442,7 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	var nodes, joins, handoffs, topology, textures int
+	var nodes, joins, handoffs, textures int
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_nodes_v2`).Scan(&nodes); err != nil {
 		return nil, err
 	}
@@ -450,13 +452,14 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1`, now.UTC()).Scan(&handoffs); err != nil {
 		return nil, err
 	}
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE status='active'`).Scan(&topology); err != nil {
-		return nil, err
-	}
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textures); err != nil {
 		return nil, err
 	}
-	return map[string]any{"servers": nodes, "activeJoins": joins, "activeHandoffs": handoffs, "topologyEdges": topology, "textures": textures, "joinTtlSeconds": 120, "handoffTtlSeconds": 30, "topologyMode": "runtime-learned-zero-patch", "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
+	ha, err := r.ServerBridgeHAStatus(ctx, now)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"servers": nodes, "activeJoins": joins, "activeHandoffs": handoffs, "topologyEdges": ha.TopologyFresh, "topologyEdgesStoredActive": ha.TopologyActive, "staleTopologyEdges": ha.TopologyStale, "freshNodes": ha.NodesFresh, "staleNodes": ha.NodesStale, "textures": textures, "joinTtlSeconds": 120, "handoffTtlSeconds": 30, "topologyFreshnessSeconds": ha.FreshnessSeconds, "topologyMode": "runtime-learned-zero-patch", "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "postgresql"}, nil
 }
 
 func isProxyBridgeKind0148(kind string) bool {
@@ -665,11 +668,25 @@ func (r *SQLRepository) InvalidateServerBridgeHandoff(ctx context.Context, id st
 	return n > 0, nil
 }
 
+const serverBridgeFreshness0149 = 2 * time.Minute
+
 func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.ServerBridgeTopologyEdge, error) {
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT source_node_id,target_node_id,backend_name,project_id,profile_id,status,last_seen_at,created_at FROM server_bridge_topology_edges_v2 ORDER BY source_node_id,backend_name,target_node_id`)
+	// Report an effective status instead of presenting a historical edge as live
+	// forever. Both endpoint identities and the edge itself must have been seen
+	// recently. Stored disabled edges remain disabled.
+	rows, err := r.db.QueryContext(ctx, `SELECT e.source_node_id,e.target_node_id,e.backend_name,e.project_id,e.profile_id,
+CASE WHEN e.status='active' AND e.last_seen_at > CURRENT_TIMESTAMP - interval '2 minutes'
+ AND s.status='active' AND s.last_heartbeat_at > CURRENT_TIMESTAMP - interval '2 minutes'
+ AND t.status='active' AND t.last_heartbeat_at > CURRENT_TIMESTAMP - interval '2 minutes'
+ THEN 'active' WHEN e.status='disabled' THEN 'disabled' ELSE 'stale' END AS effective_status,
+e.last_seen_at,e.created_at
+FROM server_bridge_topology_edges_v2 e
+JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id
+JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id
+ORDER BY e.source_node_id,e.backend_name,e.target_node_id`)
 	if err != nil {
 		return nil, err
 	}
@@ -683,4 +700,75 @@ func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.S
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time) (model.ServerBridgeMaintenanceResult, error) {
+	result := model.ServerBridgeMaintenanceResult{CompletedAt: now.UTC()}
+	if err := r.check(); err != nil {
+		return result, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return result, err
+	}
+	defer tx.Rollback()
+	var locked bool
+	if err = tx.QueryRowContext(ctx, `SELECT pg_try_advisory_xact_lock(1409,149)`).Scan(&locked); err != nil {
+		return result, err
+	}
+	if !locked {
+		if err = tx.Commit(); err != nil {
+			return result, err
+		}
+		return result, nil
+	}
+	result.LeaseAcquired = true
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 WHERE ctid IN (SELECT ctid FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.ExpiredNoncesDeleted, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$1 WHERE ctid IN (SELECT ctid FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.JoinTicketsInvalidated, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='expired',invalidated_at=$1 WHERE ctid IN (SELECT ctid FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.HandoffsExpired, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 SET status='disabled' WHERE ctid IN (SELECT ctid FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1 - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000)`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.TopologyEdgesDisabled, _ = res.RowsAffected()
+	}
+	if err = tx.Commit(); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (r *SQLRepository) ServerBridgeHAStatus(ctx context.Context, now time.Time) (model.ServerBridgeHAStatus, error) {
+	status := model.ServerBridgeHAStatus{ObservedAt: now.UTC(), FreshnessSeconds: int(serverBridgeFreshness0149 / time.Second)}
+	if err := r.check(); err != nil {
+		return status, err
+	}
+	row := r.db.QueryRowContext(ctx, `SELECT
+ (SELECT count(*) FROM server_bridge_nodes_v2),
+ (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active'),
+ (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND last_heartbeat_at > $1 - interval '2 minutes'),
+ (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND (last_heartbeat_at IS NULL OR last_heartbeat_at <= $1 - interval '2 minutes')),
+ (SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE status='active'),
+ (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND e.last_seen_at > $1 - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1 - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1 - interval '2 minutes'),
+ (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND NOT COALESCE((e.last_seen_at > $1 - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1 - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1 - interval '2 minutes'),FALSE)),
+ (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1),
+ (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at<=$1),
+ (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1),
+ (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at<=$1),
+ (SELECT count(*) FROM server_bridge_node_nonces_v2 WHERE expires_at<=$1)`, now.UTC())
+	if err := row.Scan(&status.NodesTotal, &status.NodesActive, &status.NodesFresh, &status.NodesStale, &status.TopologyActive, &status.TopologyFresh, &status.TopologyStale, &status.ActiveJoinTickets, &status.ExpiredJoinBacklog, &status.ActiveHandoffs, &status.ExpiredHandoffBacklog, &status.ExpiredNonceBacklog); err != nil {
+		return status, err
+	}
+	return status, nil
 }

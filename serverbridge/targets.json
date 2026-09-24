@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0",
+  "productVersion": "0.14.9",
+  "protocolVersion": 2,
+  "targets": [
+    {
+      "id": "velocity",
+      "family": "proxy",
+      "role": "proxy",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "bungeecord",
+      "family": "proxy",
+      "role": "proxy",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "waterfall",
+      "family": "proxy",
+      "role": "proxy",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "bukkit",
+      "family": "bukkit",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "build-compatibility",
+      "required": true
+    },
+    {
+      "id": "spigot",
+      "family": "bukkit",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "paper",
+      "family": "bukkit",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "purpur",
+      "family": "bukkit",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "folia",
+      "family": "bukkit",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "fabric",
+      "family": "fabric",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "forge",
+      "family": "modloader",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "neoforge",
+      "family": "modloader",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "runtime-e2e",
+      "required": true
+    }
+  ]
+}

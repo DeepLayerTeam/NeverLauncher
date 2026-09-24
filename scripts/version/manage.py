@@ -78,6 +78,9 @@ def desired_files(version: str) -> dict[Path, str]:
     guard_ci_targets = ROOT / "guard-ci/targets.json"
     result[guard_ci_targets] = render_product_version_json(guard_ci_targets, version)
 
+    serverbridge_targets = ROOT / "serverbridge/targets.json"
+    result[serverbridge_targets] = render_product_version_json(serverbridge_targets, version)
+
     for rel in ("deploy/production/env.production.example", "cli/cmd/neverlauncher/templates/production/env.production.example"):
         path = ROOT / rel
         result[path] = replace_env_image_tag(path.read_text(encoding="utf-8"), version, path)

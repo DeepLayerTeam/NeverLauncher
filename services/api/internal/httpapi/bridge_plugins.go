@@ -55,23 +55,11 @@ func (s Server) serverBridgePluginManifest(w http.ResponseWriter, r *http.Reques
 
 func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion":   bridgePluginsSchema940,
-		"toolVersion":     s.Version,
-		"protocolVersion": serverBridgeProtocolV2,
-		"status":          "compatible",
-		"platforms": []map[string]any{
-			{"id": "velocity", "minVersion": "3.3.0", "java": []int{21}, "artifact": "neverlauncher-velocity-bridge-" + s.Version + ".jar", "threading": "async EventTask + dedicated heartbeat executor"},
-			{"id": "bungeecord", "minVersion": "1.21-R0.1", "java": []int{21}, "artifact": "neverlauncher-bungeecord-bridge-" + s.Version + ".jar", "threading": "PreLogin intent + dedicated network executor"},
-			{"id": "waterfall", "minVersion": "1.21", "java": []int{21}, "artifact": "neverlauncher-waterfall-bridge-" + s.Version + ".jar", "threading": "PreLogin intent + dedicated network executor"},
-			{"id": "bukkit", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-bukkit-bridge-" + s.Version + ".jar"},
-			{"id": "spigot", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-spigot-bridge-" + s.Version + ".jar"},
-			{"id": "paper", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-paper-bridge-" + s.Version + ".jar"},
-			{"id": "purpur", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-purpur-bridge-" + s.Version + ".jar"},
-			{"id": "folia", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-folia-bridge-" + s.Version + ".jar", "threading": "folia-safe dedicated network executor"},
-			{"id": "fabric", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-fabric-bridge-" + s.Version + ".jar", "threading": "Fabric login synchronizer + bounded validation executor", "clientModRequired": false},
-			{"id": "forge", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-forge-bridge-" + s.Version + ".jar", "threading": "PlayerNegotiationEvent future + bounded validation executor", "clientModRequired": false},
-			{"id": "neoforge", "minMinecraft": "1.21.1", "java": []int{21}, "artifact": "neverlauncher-neoforge-bridge-" + s.Version + ".jar", "threading": "PlayerNegotiationEvent future + bounded validation executor", "clientModRequired": false},
-		},
+		"schemaVersion":            bridgePluginsSchema940,
+		"toolVersion":              s.Version,
+		"protocolVersion":          serverBridgeProtocolV2,
+		"status":                   "compatible",
+		"platforms":                serverBridgeMatrixPlatforms0149(s.Version),
 		"requiredBackendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
 		"trustPolicy":              gameplayTrustPolicy0127,
 		"trustEnforcement":         "required",
@@ -131,6 +119,9 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL heartbeat не сохранён")
 		return
 	}
+	// Maintenance is opportunistic and never makes an otherwise valid heartbeat fail.
+	// PostgreSQL serializes the actual cleanup across active/active API replicas.
+	s.State.ServerBridge.maybeMaintain0149()
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
@@ -302,12 +293,20 @@ func (s Server) serverBridgeAuditEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) {
+	ha, haErr := s.State.ServerBridge.haStatus0149()
+	maintenance, maintenanceErr := s.State.ServerBridge.maintenanceSnapshot0149()
+	haPayload := any(ha)
+	if haErr != nil {
+		haPayload = map[string]any{"status": "unavailable", "error": haErr.Error()}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     s.Version,
 		"status":          "diagnostics-ready",
 		"protocolVersion": serverBridgeProtocolV2,
 		"summary":         s.State.ServerBridge.summary(),
+		"ha":              haPayload,
+		"maintenance":     map[string]any{"last": maintenance, "lastError": maintenanceErr, "coordination": "postgresql-advisory-lock"},
 		"plugins":         bridgePluginsManifest940(s.Version)["artifacts"],
 		"checks": []map[string]string{
 			{"id": "plugin-manifest", "status": "implemented"},
@@ -318,6 +317,9 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 			{"id": "identity-bound-one-time-join-ticket", "status": "implemented"},
 			{"id": "proxy-backend-one-time-handoff", "status": "implemented"},
 			{"id": "runtime-learned-topology", "status": "implemented"},
+			{"id": "ha-advisory-lock-maintenance", "status": "implemented"},
+			{"id": "freshness-aware-topology", "status": "implemented"},
+			{"id": "distributed-serverbridge-rate-limit", "status": "implemented"},
 			{"id": "zero-patch-plugin-bootstrap", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
 			{"id": "gameplay-trust-enforcement", "status": "implemented"},
@@ -354,11 +356,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.14.8 Zero-patch installation + topology/handoff",
+		"release":         "NeverLauncher 0.14.9 Public ServerBridge Matrix + HA/hardening",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v2",
 		"protocolVersion": serverBridgeProtocolV2,
-		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}

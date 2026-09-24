@@ -59,6 +59,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-fabric-0146.py
           python3 scripts/smoke/offline/serverbridge-forge-neoforge-0147.py
           python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py
+          python3 scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -70,6 +71,8 @@ jobs:
           python3 scripts/compatibility/test_matrix.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
+          python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
+          python3 scripts/serverbridge/test_matrix.py
           python3 e2e/scripts/test_publish_client_package.py
       - name: CLI test, race, vet and build
         working-directory: cli
@@ -548,6 +551,8 @@ jobs:
         run: bash e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh
       - name: ServerBridge 0.14.7 to 0.14.8 zero-patch topology + handoff migration E2E
         run: bash e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh
+      - name: ServerBridge 0.14.8 to 0.14.9 Public Matrix + HA hardening migration/multi-instance E2E
+        run: bash e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -591,6 +596,14 @@ jobs:
           name: neverlauncher-forge-neoforge-migration-e2e-evidence
           path: e2e/forge-neoforge-migration-result/
           if-no-files-found: ignore
+      - name: Upload ServerBridge HA hardening migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-serverbridge-ha-hardening-e2e-evidence
+          path: e2e/serverbridge-ha-migration-result/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload topology + handoff migration evidence
         if: always()
         uses: actions/upload-artifact@v4

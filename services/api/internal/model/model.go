@@ -499,6 +499,37 @@ type ServerBridgeTopologyEdge struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
+// ServerBridgeMaintenanceResult is the result of one HA-safe maintenance pass.
+// LeaseAcquired is false when another API instance owns the PostgreSQL advisory
+// transaction lock, which is expected in active/active deployments.
+type ServerBridgeMaintenanceResult struct {
+	LeaseAcquired          bool      `json:"leaseAcquired"`
+	ExpiredNoncesDeleted   int64     `json:"expiredNoncesDeleted"`
+	JoinTicketsInvalidated int64     `json:"joinTicketsInvalidated"`
+	HandoffsExpired        int64     `json:"handoffsExpired"`
+	TopologyEdgesDisabled  int64     `json:"topologyEdgesDisabled"`
+	CompletedAt            time.Time `json:"completedAt"`
+}
+
+// ServerBridgeHAStatus is a database-derived health snapshot shared by every
+// API replica. It intentionally contains aggregate operational state only.
+type ServerBridgeHAStatus struct {
+	ObservedAt            time.Time `json:"observedAt"`
+	FreshnessSeconds      int       `json:"freshnessSeconds"`
+	NodesTotal            int64     `json:"nodesTotal"`
+	NodesActive           int64     `json:"nodesActive"`
+	NodesFresh            int64     `json:"nodesFresh"`
+	NodesStale            int64     `json:"nodesStale"`
+	TopologyActive        int64     `json:"topologyActive"`
+	TopologyFresh         int64     `json:"topologyFresh"`
+	TopologyStale         int64     `json:"topologyStale"`
+	ActiveJoinTickets     int64     `json:"activeJoinTickets"`
+	ExpiredJoinBacklog    int64     `json:"expiredJoinBacklog"`
+	ActiveHandoffs        int64     `json:"activeHandoffs"`
+	ExpiredHandoffBacklog int64     `json:"expiredHandoffBacklog"`
+	ExpiredNonceBacklog   int64     `json:"expiredNonceBacklog"`
+}
+
 // ServerBridgeTexture is the persistent texture profile used by Protocol v2.
 type ServerBridgeTexture struct {
 	UUID      string    `json:"uuid"`

@@ -83,12 +83,15 @@ type bridgeTextureRecord struct {
 }
 
 type serverBridgeStore struct {
-	mu         sync.Mutex
-	servers    map[string]bridgeServerRecord
-	joins      map[string]bridgeJoinRecord
-	textures   map[string]bridgeTextureRecord
-	nodeNonces map[string]time.Time
-	backend    repository.ServerBridgeRepository
+	mu                 sync.Mutex
+	servers            map[string]bridgeServerRecord
+	joins              map[string]bridgeJoinRecord
+	textures           map[string]bridgeTextureRecord
+	nodeNonces         map[string]time.Time
+	backend            repository.ServerBridgeRepository
+	nextMaintenanceAt  time.Time
+	lastMaintenance    model.ServerBridgeMaintenanceResult
+	lastMaintenanceErr string
 }
 
 type registerBridgeServerRequest struct {

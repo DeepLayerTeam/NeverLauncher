@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0028_zero_patch_topology_handoff_0148" {
+	if st.Current != "0029_serverbridge_public_matrix_ha_hardening_0149" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0028_zero_patch_topology_handoff_0148" {
+		if k != "0029_serverbridge_public_matrix_ha_hardening_0149" {
 			pending[k] = v
 		}
 	}
@@ -290,6 +290,24 @@ func TestApplyUsesSessionAdvisoryLock(t *testing.T) {
 	for _, required := range []string{"pg_advisory_lock(718033100100)", "pg_advisory_unlock(718033100100)", "validateExistingBeforeApply"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("migration apply missing serialized gate %q", required)
+		}
+	}
+}
+
+func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
+	b, err := os.ReadFile("sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"idx_server_bridge_nodes_active_heartbeat_0149",
+		"idx_server_bridge_topology_active_freshness_0149",
+		"idx_server_bridge_handoffs_active_expiry_0149",
+		"idx_server_bridge_join_active_expiry_0149",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.14.9 migration missing %q", required)
 		}
 	}
 }

@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.8 → 0.14.9
+
+Перед rollout остановите старые 0.14.8 API instances, создайте проверенный backup и примените `0029_serverbridge_public_matrix_ha_hardening_0149`, затем выполните `nl db migrate verify`. Migration сохраняет node identities, join tickets, handoffs и topology, добавляя индексы для freshness/HA maintenance.
+
+В production оставьте `NEVERLAUNCHER_RATE_LIMIT_ENABLED=true`, `NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED=true` и доступный `NEVERLAUNCHER_REDIS_URL`; ServerBridge получает отдельный distributed budget `NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE` (по умолчанию 6000/min). После запуска проверьте `/ready`, ServerBridge metrics, `GET /api/v1/server-bridge/matrix` и internal diagnostics. Topology edge считается `active` только при свежем edge и heartbeat обоих узлов; stale state больше не выдаётся как live. Expired nonces/tickets/handoffs очищаются HA-safe maintenance под PostgreSQL advisory lock, а nonce hot path не выполняет table-wide cleanup.
+
 ### Upgrade 0.14.7 → 0.14.8
 
 Остановите 0.14.7 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0028_zero_patch_topology_handoff_0148` до запуска 0.14.8 Backend. Migration сохраняет существующие ServerBridge nodes/tickets и добавляет PostgreSQL source-of-truth для runtime topology и proxy→backend handoff.

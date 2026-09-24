@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.14.8",
+  "productVersion": "0.14.9",
   "targets": [
     {
       "id": "guard-linux-amd64",
