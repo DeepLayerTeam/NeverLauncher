@@ -1,3 +1,17 @@
+## 0.14.10 — Migration + stabilization
+
+`0.14.10` завершает линию ServerBridge 2 перед следующим feature-релизом: схема и runtime-поведение 0.14.1–0.14.9 сохранены, а migration/maintenance path стабилизирован для долгоживущих active/active инсталляций.
+
+- Migration `0030_serverbridge_migration_stabilization_01410` безопасно seal-ит уже истёкшие active join tickets/handoffs, stale topology и expired signed nonces после остановленного/прерванного 0.14.9 maintenance pass.
+- Maintenance больше не использует `ctid`-batch без row locks: bounded batches выбираются через `FOR UPDATE SKIP LOCKED`, поэтому housekeeping не ждёт обычные ticket/handoff write-транзакции и не создаёт лишнюю конкуренцию между API traffic и cleanup.
+- Добавлена bounded retention-очистка terminal join tickets и handoffs. Consumed join сохраняется, пока связанная auth session активна, потому что он остаётся source proof для последующих proxy→backend handoff.
+- Добавлены PostgreSQL indexes для consumed source-proof lookup, case-insensitive runtime backend-name resolution и terminal-row retention scans.
+- Maintenance diagnostics теперь отдельно показывают количество удалённых terminal join tickets и handoffs.
+- Exact `0.14.9 → 0.14.10` migration rehearsal проверяет сохранение Ed25519 identity epoch/status, cleanup expired nonce, sealing stale topology, наличие новых indexes и sealed migration checksum.
+- Offline release gate и CI теперь включают `serverbridge-migration-stabilization-01410.py`; strict migration E2E включает полный 0.14.8 → 0.14.9 → 0.14.10 контур.
+
+Migration: backup → остановить 0.14.9 API replicas → `nl db migrate apply` → `nl db migrate verify` (current: `0030_serverbridge_migration_stabilization_01410`) → запустить 0.14.10 replicas. Node identities, release hashes и действительные tickets/handoffs миграция не переписывает.
+
 ## 0.14.9 — Public ServerBridge Matrix + HA/hardening
 
 `0.14.9` переводит ServerBridge 2 из single-instance-friendly режима в явно active/active-safe эксплуатацию и публикует каноническую матрицу всех 11 поддерживаемых bridge targets. Hot-path replay protection больше не выполняет глобальную очистку expired nonces; bounded cleanup выполняется отдельным maintenance pass под PostgreSQL advisory lock.

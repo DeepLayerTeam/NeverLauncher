@@ -60,6 +60,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-forge-neoforge-0147.py
           python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py
           python3 scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py
+          python3 scripts/smoke/offline/serverbridge-migration-stabilization-01410.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -553,6 +554,8 @@ jobs:
         run: bash e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh
       - name: ServerBridge 0.14.8 to 0.14.9 Public Matrix + HA hardening migration/multi-instance E2E
         run: bash e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh
+      - name: ServerBridge 0.14.9 to 0.14.10 migration + stabilization E2E
+        run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64

@@ -503,12 +503,14 @@ type ServerBridgeTopologyEdge struct {
 // LeaseAcquired is false when another API instance owns the PostgreSQL advisory
 // transaction lock, which is expected in active/active deployments.
 type ServerBridgeMaintenanceResult struct {
-	LeaseAcquired          bool      `json:"leaseAcquired"`
-	ExpiredNoncesDeleted   int64     `json:"expiredNoncesDeleted"`
-	JoinTicketsInvalidated int64     `json:"joinTicketsInvalidated"`
-	HandoffsExpired        int64     `json:"handoffsExpired"`
-	TopologyEdgesDisabled  int64     `json:"topologyEdgesDisabled"`
-	CompletedAt            time.Time `json:"completedAt"`
+	LeaseAcquired             bool      `json:"leaseAcquired"`
+	ExpiredNoncesDeleted      int64     `json:"expiredNoncesDeleted"`
+	JoinTicketsInvalidated    int64     `json:"joinTicketsInvalidated"`
+	HandoffsExpired           int64     `json:"handoffsExpired"`
+	TopologyEdgesDisabled     int64     `json:"topologyEdgesDisabled"`
+	TerminalJoinTicketsPurged int64     `json:"terminalJoinTicketsPurged"`
+	TerminalHandoffsPurged    int64     `json:"terminalHandoffsPurged"`
+	CompletedAt               time.Time `json:"completedAt"`
 }
 
 // ServerBridgeHAStatus is a database-derived health snapshot shared by every

@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.14.9 → 0.14.10
+
+Остановите 0.14.9 API replicas, создайте проверенный backup и примените `0030_serverbridge_migration_stabilization_01410` через `nl db migrate apply`, затем выполните `nl db migrate verify`. Current migration должна быть `0030_serverbridge_migration_stabilization_01410` до запуска 0.14.10 Backend.
+
+Migration не меняет ServerBridge Protocol v2 и не переписывает node Ed25519 identities, release-integrity state или ещё действующие tickets/handoffs. Она seal-ит только уже expired/stale transient rows и добавляет индексы под runtime lookup/retention. После rollout maintenance выполняет bounded row batches через `FOR UPDATE SKIP LOCKED`; terminal history очищается ограниченно, при этом consumed join сохраняется пока его auth session активна, чтобы proxy→backend handoff не терял source proof. Проверьте `/ready`, ServerBridge diagnostics и exact 0.14.9→0.14.10 migration E2E.
+
 ### Upgrade 0.14.8 → 0.14.9
 
 Перед rollout остановите старые 0.14.8 API instances, создайте проверенный backup и примените `0029_serverbridge_public_matrix_ha_hardening_0149`, затем выполните `nl db migrate verify`. Migration сохраняет node identities, join tickets, handoffs и topology, добавляя индексы для freshness/HA maintenance.

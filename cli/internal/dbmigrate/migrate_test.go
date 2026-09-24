@@ -28,6 +28,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0027_forge_neoforge_server_bridge_0147",
 		"0028_zero_patch_topology_handoff_0148",
 		"0029_serverbridge_public_matrix_ha_hardening_0149",
+		"0030_serverbridge_migration_stabilization_01410",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

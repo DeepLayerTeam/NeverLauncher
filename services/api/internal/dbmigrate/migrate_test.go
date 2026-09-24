@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0029_serverbridge_public_matrix_ha_hardening_0149" {
+	if st.Current != "0030_serverbridge_migration_stabilization_01410" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0029_serverbridge_public_matrix_ha_hardening_0149" {
+		if k != "0030_serverbridge_migration_stabilization_01410" {
 			pending[k] = v
 		}
 	}
@@ -308,6 +308,27 @@ func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.14.9 migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeMigrationStabilization01410(t *testing.T) {
+	b, err := os.ReadFile("sql/0030_serverbridge_migration_stabilization_01410.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"idx_server_bridge_join_consumed_source_01410",
+		"idx_server_bridge_nodes_name_folded_01410",
+		"idx_server_bridge_join_terminal_retention_01410",
+		"idx_server_bridge_handoff_terminal_retention_01410",
+		"status='invalidated'",
+		"status='expired'",
+		"DELETE FROM server_bridge_node_nonces_v2",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.14.10 migration missing %q", required)
 		}
 	}
 }

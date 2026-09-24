@@ -9,6 +9,7 @@ import (
 
 const (
 	serverBridgeMaintenanceInterval0149 = 30 * time.Second
+	serverBridgeMaintenanceTimeout01410 = 5 * time.Second
 	serverBridgeRequestTimeout0149      = 8 * time.Second
 )
 
@@ -33,7 +34,7 @@ func (b *serverBridgeStore) maybeMaintain0149() {
 	b.mu.Unlock()
 
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), serverBridgeMaintenanceTimeout01410)
 		defer cancel()
 		result, err := backend.MaintainServerBridge(ctx, now)
 		b.mu.Lock()

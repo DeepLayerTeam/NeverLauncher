@@ -723,25 +723,42 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, nil
 	}
 	result.LeaseAcquired = true
-	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 WHERE ctid IN (SELECT ctid FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+	// Every maintenance batch locks only the rows it will mutate. The advisory
+	// lock prevents duplicate NeverLauncher maintenance work across replicas;
+	// SKIP LOCKED additionally avoids waiting behind normal ticket/handoff writes.
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 n USING (SELECT node_id,nonce_hash FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE n.node_id=q.node_id AND n.nonce_hash=q.nonce_hash`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.ExpiredNoncesDeleted, _ = res.RowsAffected()
 	}
-	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$1 WHERE ctid IN (SELECT ctid FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 j SET status='invalidated',invalidated_at=$1 FROM (SELECT id FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.JoinTicketsInvalidated, _ = res.RowsAffected()
 	}
-	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='expired',invalidated_at=$1 WHERE ctid IN (SELECT ctid FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000)`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 h SET status='expired',invalidated_at=$1 FROM (SELECT id FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE h.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
-	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 SET status='disabled' WHERE ctid IN (SELECT ctid FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1 - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000)`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 e SET status='disabled' FROM (SELECT source_node_id,target_node_id FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1 - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.source_node_id=q.source_node_id AND e.target_node_id=q.target_node_id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.TopologyEdgesDisabled, _ = res.RowsAffected()
+	}
+	// Terminal transient rows are operational evidence, not permanent audit
+	// records. Keep recent rows for diagnostics, but cap unbounded growth. A
+	// consumed join remains available while its auth session is active because it
+	// is the source proof for later proxy -> backend handoffs.
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_join_tickets_v2 j USING (SELECT j2.id FROM server_bridge_join_tickets_v2 j2 LEFT JOIN auth_sessions a ON a.id=j2.session_id WHERE ((j2.status='consumed' AND COALESCE(j2.consumed_at,j2.expires_at) <= $1 - interval '1 hour' AND (a.id IS NULL OR a.status<>'active' OR a.expires_at <= $1)) OR (j2.status IN ('invalidated','replaced') AND COALESCE(j2.invalidated_at,j2.expires_at) <= $1 - interval '1 hour')) ORDER BY COALESCE(j2.consumed_at,j2.invalidated_at,j2.expires_at) LIMIT 5000 FOR UPDATE OF j2 SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.TerminalJoinTicketsPurged, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_handoffs_v2 h USING (SELECT id FROM server_bridge_handoffs_v2 WHERE status IN ('consumed','replaced','invalidated','expired') AND COALESCE(consumed_at,invalidated_at,expires_at) <= $1 - interval '1 hour' ORDER BY COALESCE(consumed_at,invalidated_at,expires_at) LIMIT 5000 FOR UPDATE SKIP LOCKED) q WHERE h.id=q.id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.TerminalHandoffsPurged, _ = res.RowsAffected()
 	}
 	if err = tx.Commit(); err != nil {
 		return result, err
