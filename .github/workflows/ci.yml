@@ -54,6 +54,7 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-protocol-v2-0141.py
           python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
           python3 scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py
+          python3 scripts/smoke/offline/serverbridge-bukkit-family-0144.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -369,7 +370,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Build real Velocity/Paper/Purpur bridges
+      - name: Build real Velocity + Bukkit family bridges
         run: bash scripts/build/bridge-plugins.sh
 
   containers:
@@ -483,8 +484,13 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
           test -s "${DIR}/neverruntime-linux-amd64"
           test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-bukkit-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-spigot-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-paper-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-purpur-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-folia-bridge-${VERSION}.jar"
+          test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
+          test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
   production-e2e:
     name: PostgreSQL + Redis + actual Minecraft Client E2E
@@ -525,6 +531,8 @@ jobs:
         run: bash e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh
       - name: ServerBridge 0.14.2 to 0.14.3 one-time join ticket migration E2E
         run: bash e2e/scripts/run-one-time-join-ticket-migration-e2e.sh
+      - name: ServerBridge 0.14.3 to 0.14.4 Bukkit family migration E2E
+        run: bash e2e/scripts/run-bukkit-family-migration-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
@@ -535,8 +543,8 @@ jobs:
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence
         run: |
-          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .health.velocity == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy"' e2e/runtime/result.json >/dev/null
-          for service in velocity paper purpur; do
+          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .health.velocity == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy"' e2e/runtime/result.json >/dev/null
+          for service in velocity spigot paper purpur folia; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
       - name: Upload E2E evidence

@@ -22,6 +22,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0021_serverbridge_protocol_v2_0141",
 		"0022_serverbridge_crypto_node_identities_0142",
 		"0023_one_time_join_tickets_0143",
+		"0024_bukkit_family_0144",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

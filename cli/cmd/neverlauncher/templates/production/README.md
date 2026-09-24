@@ -18,6 +18,12 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Upgrade 0.14.3 → 0.14.4
+
+Остановите 0.14.3 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0024_bukkit_family_0144` до запуска 0.14.4 Backend. Migration сохраняет существующие Velocity/Paper/Purpur nodes и расширяет допустимый `kind` на Bukkit/Spigot/Folia.
+
+Соберите `scripts/build/bridge-plugins.sh` и установите JAR, соответствующий фактической платформе node: `bukkit`, `spigot`, `paper`, `purpur` или `folia`. Обновите `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON` из нового `BRIDGE_RELEASE_ALLOWLIST.json`: для 0.14.4 production policy обязательны отдельные hashes Bukkit/Spigot/Paper/Purpur/Folia и Velocity. Folia node должен использовать Folia JAR с `folia-supported: true`; platform mismatch отключается fail-closed. После rollout проверьте heartbeat и signed allow/revoke/deny login flow каждого типа.
+
 ### Upgrade 0.14.2 → 0.14.3
 
 Остановите 0.14.2 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0023_one_time_join_tickets_0143` до запуска 0.14.3 Backend.
@@ -101,4 +107,4 @@ bash scripts/release/build-release.sh
 NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ```
 
-`.github/workflows/ci.yml` — обязательный CI: repository policy, Go race/vet/build, Admin/Desktop, Rust fmt/clippy/test/build, Tauri, реальные ServerBridge, production-контейнеры и PostgreSQL/Redis/Velocity/Paper/Purpur E2E должны пройти успешно.
+`.github/workflows/ci.yml` — обязательный CI: repository policy, Go race/vet/build, Admin/Desktop, Rust fmt/clippy/test/build, Tauri, реальные ServerBridge, production-контейнеры и PostgreSQL/Redis/Velocity/Spigot/Paper/Purpur/Folia E2E должны пройти успешно.

@@ -2,8 +2,8 @@ plugins { java }
 version = rootProject.file("VERSION").readText().trim()
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 dependencies {
-    implementation(project(":plugins:bridge-common"))
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
+    implementation(project(":plugins:bukkit-family-common"))
+    compileOnly("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
 }
 tasks.jar {
     archiveBaseName.set("neverlauncher-purpur-bridge")
@@ -11,11 +11,9 @@ tasks.jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }
-
-
 tasks.processResources {
     inputs.property("neverLauncherVersion", project.version.toString())
-    filesMatching(listOf("plugin.yml", "velocity-plugin.json")) {
+    filesMatching("plugin.yml") {
         expand("version" to project.version.toString())
     }
 }

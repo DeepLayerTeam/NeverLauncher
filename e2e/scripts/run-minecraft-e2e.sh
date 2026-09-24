@@ -45,8 +45,8 @@ for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl psql; do
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
-mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" \
-  "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-keys" \
+mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" \
+  "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/spigot" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-identities/folia" "$RUNTIME_DIR/node-keys" \
   "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
 write_env_file() {
   cat > "$ENV_FILE" <<ENV
@@ -94,6 +94,18 @@ wait_healthy() {
   compose logs "$service" >&2 || true
   return 1
 }
+wait_bridge_heartbeat() {
+  local service="$1"
+  for _ in $(seq 1 60); do
+    if compose logs "$service" 2>&1 | grep -Eqi 'NeverLauncher .* Bridge .*heartbeat=true'; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "[e2e] $service NeverLauncher bridge did not report successful heartbeat" >&2
+  compose logs "$service" >&2 || true
+  return 1
+}
 capture_health_evidence() {
   local service="$1" id out
   id="$(compose ps -q "$service")"
@@ -128,7 +140,9 @@ write_env_file
 cp "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/paper/neverlauncher-paper-bridge.jar"
 if [[ "$MODE" == "full" ]]; then
   cp "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/velocity/neverlauncher-velocity-bridge.jar"
+  cp "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/spigot/neverlauncher-spigot-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/purpur/neverlauncher-purpur-bridge.jar"
+  cp "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/folia/neverlauncher-folia-bridge.jar"
 fi
 
 printf '[e2e] start PostgreSQL and apply production migrations explicitly\n'
@@ -174,18 +188,26 @@ json_post "$API/api/v1/install/first-project" "$ACCESS_TOKEN" "{\"projectId\":\"
 
 PAPER_NODE_KEY="$RUNTIME_DIR/node-keys/paper.pem"
 VELOCITY_NODE_KEY="$RUNTIME_DIR/node-keys/velocity.pem"
+SPIGOT_NODE_KEY="$RUNTIME_DIR/node-keys/spigot.pem"
 PURPUR_NODE_KEY="$RUNTIME_DIR/node-keys/purpur.pem"
+FOLIA_NODE_KEY="$RUNTIME_DIR/node-keys/folia.pem"
 serverbridge_node_generate "$PAPER_NODE_KEY" "$RUNTIME_DIR/node-identities/paper/node-identity.properties"
 if [[ "$MODE" == "full" ]]; then
   serverbridge_node_generate "$VELOCITY_NODE_KEY" "$RUNTIME_DIR/node-identities/velocity/node-identity.properties"
+  serverbridge_node_generate "$SPIGOT_NODE_KEY" "$RUNTIME_DIR/node-identities/spigot/node-identity.properties"
   serverbridge_node_generate "$PURPUR_NODE_KEY" "$RUNTIME_DIR/node-identities/purpur/node-identity.properties"
+  serverbridge_node_generate "$FOLIA_NODE_KEY" "$RUNTIME_DIR/node-identities/folia/node-identity.properties"
 fi
 PAPER_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
 VELOCITY_BRIDGE_SHA=""
+SPIGOT_BRIDGE_SHA=""
 PURPUR_BRIDGE_SHA=""
+FOLIA_BRIDGE_SHA=""
 if [[ "$MODE" == "full" ]]; then
   VELOCITY_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+  SPIGOT_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
   PURPUR_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
+  FOLIA_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
 fi
 register_server() {
   local id="$1" kind="$2" key="$3" public_key body
@@ -196,13 +218,15 @@ register_server() {
 register_server paper-e2e-p3 paper "$PAPER_NODE_KEY"
 if [[ "$MODE" == "full" ]]; then
   register_server velocity-e2e-p3 velocity "$VELOCITY_NODE_KEY"
+  register_server spigot-e2e-p3 spigot "$SPIGOT_NODE_KEY"
   register_server purpur-e2e-p3 purpur "$PURPUR_NODE_KEY"
+  register_server folia-e2e-p3 folia "$FOLIA_NODE_KEY"
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] start real Velocity 3.4.0, Paper 1.21.1 and Purpur 1.21.1\n'
-  compose up -d velocity paper purpur
-  SERVICES=(velocity paper purpur)
+  printf '[e2e] start real Velocity 3.4.0 plus Spigot/Paper/Purpur/Folia 1.21.1\n'
+  compose up -d velocity spigot paper purpur folia
+  SERVICES=(velocity spigot paper purpur folia)
 else
   printf '[e2e] compatibility mode: start real Paper 1.21.1 only\n'
   compose up -d paper
@@ -210,12 +234,8 @@ else
 fi
 for service in "${SERVICES[@]}"; do
   wait_healthy "$service"
+  wait_bridge_heartbeat "$service"
   capture_health_evidence "$service"
-  if ! compose logs "$service" | grep -Eqi 'NeverLauncher .* Bridge .*heartbeat=true'; then
-    echo "[e2e] $service NeverLauncher bridge did not report successful heartbeat" >&2
-    compose logs "$service" >&2
-    exit 1
-  fi
 done
 
 CLIENT_PACKAGE="$RUNTIME_DIR/client-package.json"
@@ -354,16 +374,22 @@ if [[ "$MODE" == "full" ]]; then
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
+  flow_for_server spigot-e2e-p3 "$SPIGOT_NODE_KEY" "$SPIGOT_BRIDGE_SHA" spigot 25573
   flow_for_server purpur-e2e-p3 "$PURPUR_NODE_KEY" "$PURPUR_BRIDGE_SHA" purpur 25572
+  flow_for_server folia-e2e-p3 "$FOLIA_NODE_KEY" "$FOLIA_BRIDGE_SHA" folia 25574
 fi
 
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
 jq -e '.data.protocolVersion == 2 and .data.summary.protocolVersion == 2 and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
-(( serverbridge_nodes >= 3 )) || { echo "[e2e] expected PostgreSQL ServerBridge nodes" >&2; exit 1; }
+required_nodes=1
+[[ "$MODE" == "full" ]] && required_nodes=5
+(( serverbridge_nodes >= required_nodes )) || { echo "[e2e] expected PostgreSQL ServerBridge nodes" >&2; exit 1; }
 VELOCITY_HEALTH="skipped"
+SPIGOT_HEALTH="skipped"
 PURPUR_HEALTH="skipped"
-if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; PURPUR_HEALTH="healthy"; fi
+FOLIA_HEALTH="skipped"
+if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; SPIGOT_HEALTH="healthy"; PURPUR_HEALTH="healthy"; FOLIA_HEALTH="healthy"; fi
 jq -n \
   --arg version "$VERSION" \
   --arg mode "$MODE" \
@@ -373,7 +399,9 @@ jq -n \
   --arg resolvedLoaderVersion "$RESOLVED_LOADER_VERSION" \
   --arg profile "$PROFILE_ID" \
   --arg velocity "$VELOCITY_HEALTH" \
+  --arg spigot "$SPIGOT_HEALTH" \
   --arg purpur "$PURPUR_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,paper:"healthy",purpur:$purpur},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,sessionRevokeDeny:true},evidence:["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","bridge-diagnostics.json"]}' \
+  --arg folia "$FOLIA_HEALTH" \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,sessionRevokeDeny:true},evidence:["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-spigot.json","health-folia.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

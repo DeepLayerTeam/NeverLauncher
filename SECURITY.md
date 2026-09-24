@@ -1,5 +1,13 @@
 # Политика безопасности NeverLauncher
 
+## ServerBridge Bukkit-family boundary — 0.14.4
+
+`0.14.4` расширяет production ServerBridge на Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia через общий `bukkit-family-common` runtime. Каждый platform artifact имеет собственный runtime discriminator и собственный SHA-256 allowlist namespace; запуск JAR на несовпадающей server platform отключается fail-closed. Для release policy `0.14.4+` Backend требует полный набор hashes для Velocity и всех пяти Bukkit-family artifacts.
+
+Folia path не использует legacy Bukkit scheduler для сетевого I/O: heartbeat и reload выполняются выделенным daemon executor, а authorization остаётся в async pre-login boundary. Это не меняет более сильные границы предыдущих релизов: каждый request по-прежнему аутентифицируется Ed25519 node identity, nonce consume-ится PostgreSQL, а join ticket погашается один раз и связан с identity epoch/fingerprint.
+
+Artifact self-hash и platform detection являются application-level integrity controls, а не remote host attestation. Компрометация JVM/server host с правами, достаточными для изменения выполняемого кода или извлечения node private key, остаётся вне этой trust boundary и должна обрабатываться rotation/revocation и внешним host hardening.
+
 ## NeverGuard Release boundary 0.14.0
 
 NeverGuard 0.14.0 использует release policy schema 2.0 с platform-bound exact artifact pairs. Backend больше не трактует списки Guard и Desktop hashes независимо: разрешение действует только для конкретной пары внутри конкретной OS namespace. Guard Attestation challenge и launch ticket дополнительно привязаны к policy schema, IPC protocol и trusted-device platform, а live Minecraft/ServerBridge reevaluation использует ту же pair policy.

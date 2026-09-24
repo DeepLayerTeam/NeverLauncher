@@ -4,9 +4,15 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Cryptographic Node Identities / 0.14.2**: ServerBridge Protocol v2 сохраняет PostgreSQL source of truth и одноразовые join tickets, но privileged node traffic больше не использует shared bearer secret — Velocity/Paper/Purpur подписывают каждый heartbeat/validate/has-joined Ed25519 node identity.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Bukkit family / 0.14.4**: ServerBridge Protocol v2, Ed25519 node identities, PostgreSQL source of truth и one-time join tickets теперь доступны отдельными production bridge artifacts для Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia; Folia работает без legacy Bukkit scheduler для сетевого I/O.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+
+## Bukkit family — 0.14.4
+
+`0.14.4` переводит Bukkit-совместимые ServerBridge-плагины на один production runtime `bukkit-family-common` и пять platform-matched artifacts: Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia. Общий runtime выполняет Ed25519 node authentication, SHA-256 self-measurement, heartbeat, one-time join validation, fail-closed login enforcement и diagnostics; платформенные JAR содержат только явный runtime discriminator и descriptor. JAR от другой платформы не запускается молча: mismatch приводит к отключению plugin.
+
+Folia не использует Bukkit scheduler для backend I/O: heartbeat/reload выполняются собственным bounded daemon executor, а async pre-login остаётся сетевой границей авторизации. Release policy `0.14.4+` требует отдельный SHA-256 allowlist для `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Migration `0024_bukkit_family_0144` расширяет PostgreSQL kind constraint без изменения существующих node identities/tickets; production E2E запускает реальные Spigot/Paper/Purpur/Folia server artifacts и проверяет allow → replay deny → revoke → deny.
 
 ## Cryptographic Node Identities — 0.14.2
 
@@ -173,7 +179,7 @@ neverruntime compatibility --root .neverlauncher/client --version <profile-id>
 - **NeverRuntime** — Rust runtime/CLI для Ed25519-проверки, потоковой загрузки и SHA-256, восстановления клиента, определения Java, построения плана запуска и запуска процесса.
 - **Desktop** — Tauri-адаптер поверх NeverRuntime с системным защищённым хранилищем учётных данных и контролируемыми JVM-процессами.
 - **Admin** — Vite-приложение в неизменяемом production-образе Nginx с CSP.
-- **ServerBridge** — реальные плагины Velocity/Paper/Purpur, собираемые против API соответствующих платформ.
+- **ServerBridge** — реальные плагины Velocity и Bukkit-family (Bukkit/Spigot/Paper/Purpur/Folia), собираемые против платформенного API и общего security runtime.
 - **Развёртывание** — PostgreSQL, Redis с паролем, Backend, Admin и Nginx с fail-closed rate limiting и явным списком доверенных proxy CIDR.
 
 ## Канонический API
@@ -284,7 +290,7 @@ Unsigned development package намеренно не проходит release-ru
 
 `0.13.5` закрывает gameplay bypass между Guard Attestation и ServerBridge. Guard-verified metadata теперь сохраняется в самой Minecraft session и live-проверяется при validate/join/hasJoined. Для Windows Guard-enforced device Desktop передаёт новый Minecraft access token в `/api/v1/session/join`; Backend сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный join, не связанный с тем credential, который получил одноразовый Guard launch ticket.
 
-Velocity/Paper/Purpur дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation node identity. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
+Velocity и Bukkit/Spigot/Paper/Purpur/Folia дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation node identity. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
 
 Удаление Guard/Desktop или ServerBridge hash из соответствующего allowlist действует как live revoke: уже созданная Minecraft/ServerBridge session перестаёт проходить Backend validation. ServerBridge JAR self-hash является application-level release enforcement и не выдаётся за TPM/kernel attestation удалённого Minecraft host.
 
@@ -382,7 +388,7 @@ Desktop/Tauri выполняет замену двухфазно (`stage → ser
 
 При `validate`, Minecraft `join/hasJoined` и ServerBridge `validate-join/has-joined` Backend заново сверяет текущую parent session, device state, binding epoch и risk action. Re-bind или permanent revoke инвалидирует старый credential; `reattest` и `step-up` временно блокируют игровой вход до восстановления trust. Server-side plugin requests не изменяют IP/User-Agent risk игрока — они только применяют уже рассчитанное состояние. Legacy Yggdrasil authenticate остаётся совместимым, но фактический Minecraft `/join` без trusted device fail-closed, поэтому старый auth path не является bypass.
 
-Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет persisted trust snapshot для `minecraft_sessions`. ServerBridge дополнительно проверяет `channel` наряду с project/profile. Velocity/Paper/Purpur показывают конкретную причину trust deny и не имеют локального флага, отключающего Backend policy.
+Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет persisted trust snapshot для `minecraft_sessions`. ServerBridge дополнительно проверяет `channel` наряду с project/profile. Velocity и Bukkit/Spigot/Paper/Purpur/Folia показывают конкретную причину trust deny и не имеют локального флага, отключающего Backend policy.
 
 ## Привязка сессии к устройству и интеграция риска 0.12.6
 

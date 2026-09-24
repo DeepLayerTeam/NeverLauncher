@@ -4,14 +4,15 @@ version: ${version}
 api-version: '1.21'
 author: SkiF4er
 description: NeverLauncher ServerBridge/AuthBridge integration for Paper servers.
+
 commands:
   nlbridge:
     description: NeverLauncher bridge diagnostics and control command
-    usage: /nlbridge <status|test|diagnostics>
+    usage: /nlbridge <status|test|reload|diagnostics>
     permission: neverlauncher.bridge.status
 permissions:
   neverlauncher.bridge.admin:
-    description: Full NeverLauncher bridge administration
+    description: Trigger NeverLauncher bridge network diagnostics
     default: op
   neverlauncher.bridge.status:
     description: Read NeverLauncher bridge status
@@ -20,5 +21,5 @@ permissions:
     description: Reload NeverLauncher bridge configuration
     default: op
   neverlauncher.bridge.diagnostics:
-    description: Export NeverLauncher bridge diagnostics
+    description: Read NeverLauncher bridge diagnostics
     default: op

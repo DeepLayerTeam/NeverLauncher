@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.4 — Bukkit family: Bukkit / Spigot / Paper / Purpur / Folia
+
+`0.14.4` переводит Bukkit-family ServerBridge из двух дублирующихся Paper/Purpur реализаций в один production runtime, собираемый отдельными platform artifacts для CraftBukkit/Bukkit, Spigot, Paper, Purpur и Folia. Все варианты используют ServerBridge Protocol v2, Ed25519 node identity, PostgreSQL source of truth, release-hash integrity enforcement и одноразовые join tickets из 0.14.1–0.14.3.
+
+- Добавлен `bukkit-family-common`: единая login validation/heartbeat/config/identity/integrity реализация без копирования security logic между платформами.
+- Добавлены реальные `neverlauncher-bukkit-bridge`, `neverlauncher-spigot-bridge` и `neverlauncher-folia-bridge`; Paper/Purpur переведены на тот же shared runtime.
+- Runtime определяет фактическую платформу и fail-closed отключает JAR при mismatch, чтобы platform identity в Backend нельзя было подменить неправильным artifact.
+- Folia artifact содержит `folia-supported: true`; heartbeat/network I/O выполняются отдельным daemon executor и не используют legacy Bukkit scheduler. Login enforcement остаётся в `AsyncPlayerPreLoginEvent`, где решение Backend должно быть получено до допуска игрока.
+- PostgreSQL migration `0024_bukkit_family_0144` расширяет sealed `server_bridge_nodes_v2.kind` на `bukkit/spigot/paper/purpur/folia` без потери существующих node records.
+- Release allowlist теперь содержит отдельные SHA-256 для всех шести bridge artifacts (Velocity + пять Bukkit-family JAR). Production config для release `0.14.4+` fail-closed требует `bukkitSha256`, `spigotSha256` и `foliaSha256` наряду с прежними hashes.
+- Реальный Minecraft E2E в full mode запускает Velocity + Spigot + Paper + Purpur + Folia; Spigot/Folia проходят heartbeat и allow→revoke→deny login flow, а Paper сохраняет actual-client join coverage.
+- Добавлены backend integrity/kind/manifest regressions, exact migration rehearsal `0.14.3 → 0.14.4` и обязательный offline release gate.
+
+Migration: остановите 0.14.3 API instances, примените/проверьте `0024_bukkit_family_0144`, обновите `BRIDGE_RELEASE_ALLOWLIST.json`, затем установите artifact, соответствующий фактической платформе каждого node. На Folia используйте только `neverlauncher-folia-bridge-0.14.4.jar`.
+
 ## 0.14.3 — One-Time Join Tickets
 
 `0.14.3` закрывает join authorization как самостоятельную одноразовую security boundary. ServerBridge ticket теперь генерируется из 192-bit CSPRNG, привязывается в PostgreSQL к exact Ed25519 `identity_epoch/key_fingerprint` узла и может быть атомарно погашен только один раз той же активной node identity.

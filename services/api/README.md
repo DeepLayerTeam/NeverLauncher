@@ -18,6 +18,12 @@ POST /api/v1/install/bootstrap-admin
 POST /api/v1/install/first-project
 ```
 
+## Bukkit family ServerBridge — 0.14.4
+
+Backend 0.14.4 принимает Protocol v2 nodes типов `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Для каждого типа release allowlist хранится отдельно, поэтому SHA-256 JAR одной платформы нельзя использовать как integrity measurement другой. Начиная с policy version `0.14.4`, production startup fail-closed требует все шесть непустых allowlist-массивов.
+
+Migration `0024_bukkit_family_0144` атомарно расширяет PostgreSQL `server_bridge_nodes_v2.kind` constraint и сохраняет существующие node identities, nonces и one-time tickets. `/api/v1/server-bridge/plugins` публикует отдельные artifacts/configs для всей Bukkit family и указывает Folia-safe runtime. Runtime platform mismatch блокируется самим plugin до heartbeat; Backend по-прежнему повторно проверяет Ed25519 identity, artifact measurement и ticket binding при каждом join.
+
 ## One-Time Join Tickets — 0.14.3
 
 ServerBridge join authorization в 0.14.3 является реальным одноразовым credential, а не только короткоживущей session row. Backend генерирует 192-bit CSPRNG `jt_...` ticket, в PostgreSQL привязывает его к текущим `identity_epoch` и Ed25519 key fingerprint node и при первом успешном signed validate/has-joined атомарно переводит row из `active` в `consumed`. В consumed state сохраняются identity epoch/fingerprint, SHA-256 уже проверенного single-use node nonce и IP redemption; повторный или параллельный redemption не может пройти тот же conditional `UPDATE`. Rotation node identity также делает старый ticket непригодным.
@@ -26,7 +32,7 @@ Yggdrasil-compatible `/sessionserver/session/minecraft/join` → `/hasJoined` т
 
 ## ServerBridge Cryptographic Node Identities — 0.14.2
 
-ServerBridge Protocol v2 использует PostgreSQL source of truth из 0.14.1, но node authentication в 0.14.2 полностью переведён с shared bearer secret на Ed25519. При регистрации/enrollment Backend принимает только raw public key, вычисляет SHA-256 fingerprint и хранит его вместе с `identity_epoch`; private key остаётся в локальном `node-identity.properties` Velocity/Paper/Purpur bridge.
+ServerBridge Protocol v2 использует PostgreSQL source of truth из 0.14.1, но node authentication в 0.14.2 полностью переведён с shared bearer secret на Ed25519. При регистрации/enrollment Backend принимает только raw public key, вычисляет SHA-256 fingerprint и хранит его вместе с `identity_epoch`; private key остаётся в локальном `node-identity.properties` Velocity или Bukkit/Spigot/Paper/Purpur/Folia bridge.
 
 Heartbeat, validate-join, has-joined и plugin audit подписываются canonical payload `NeverLauncher-ServerBridge-Node-v1` с method, escaped path/query, exact body SHA-256, timestamp и random nonce. Backend проверяет bounded clock skew, Ed25519 signature/fingerprint и атомарно consume-ит nonce в `server_bridge_node_nonces_v2`; replay возвращает `409`. Migration `0022_serverbridge_crypto_node_identities_0142` retire-ит legacy token hashes и требует explicit `rotate-identity` enrollment для существующих 0.14.1 nodes.
 
@@ -186,7 +192,7 @@ Root `/` отдаёт authlib-injector metadata. Для стандартного
 
 ## ServerBridge
 
-Velocity/Paper/Purpur используют `/api/v1/server-bridge/*`, `/api/v1/session/*` и `/api/v1/textures/*` для регистрации, heartbeat, проверки входа, инвалидирования сессий и получения текстур.
+Velocity и Bukkit/Spigot/Paper/Purpur/Folia используют `/api/v1/server-bridge/*`, `/api/v1/session/*` и `/api/v1/textures/*` для регистрации, heartbeat, проверки входа, инвалидирования сессий и получения текстур.
 
 ## Операции
 
@@ -289,7 +295,7 @@ Stable registry создаётся через `httpapi.NewFederationCore(...)`; 
 
 Minecraft session теперь сохраняет verified Guard snapshot (`attestation/evidence/guard/launcher SHA-256`, release version и verification time). `/api/v1/session/join` связывает ServerBridge join с конкретным `minecraftAccessToken`; для Windows Guard-enforced device отсутствие такой связи возвращает `412`. Minecraft/Yggdrasil/ServerBridge validation заново проверяет snapshot по текущему Guard release allowlist, поэтому удаление hash отзывает уже активные игровые credentials.
 
-ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/Paper/Purpur JAR.
+ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/Bukkit/Spigot/Paper/Purpur/Folia JAR.
 
 ### Guard Attestation backend gate (0.13.4)
 

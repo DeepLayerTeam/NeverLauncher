@@ -1,0 +1,25 @@
+name: NeverLauncherBukkitBridge
+main: ru.neverlauncher.bridge.bukkit.NeverLauncherBukkitBridge
+version: ${version}
+api-version: '1.21'
+author: SkiF4er
+description: NeverLauncher ServerBridge/AuthBridge integration for Bukkit servers.
+
+commands:
+  nlbridge:
+    description: NeverLauncher bridge diagnostics and control command
+    usage: /nlbridge <status|test|reload|diagnostics>
+    permission: neverlauncher.bridge.status
+permissions:
+  neverlauncher.bridge.admin:
+    description: Trigger NeverLauncher bridge network diagnostics
+    default: op
+  neverlauncher.bridge.status:
+    description: Read NeverLauncher bridge status
+    default: op
+  neverlauncher.bridge.reload:
+    description: Reload NeverLauncher bridge configuration
+    default: op
+  neverlauncher.bridge.diagnostics:
+    description: Read NeverLauncher bridge diagnostics
+    default: op

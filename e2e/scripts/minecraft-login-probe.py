@@ -2,7 +2,7 @@
 """Minimal Minecraft Java login probe used for bridge revoke/deny coverage.
 
 The primary release gate launches the actual Mojang client. This probe is
-kept only for fast protocol-level Velocity/Paper/Purpur checks after session
+kept only for fast protocol-level Velocity/Bukkit-family checks after session
 revocation; it is not accepted as evidence of Minecraft client compatibility.
 """
 from __future__ import annotations

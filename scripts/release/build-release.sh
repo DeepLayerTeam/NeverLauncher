@@ -168,7 +168,7 @@ chmod +x "${OUT_DIR}/neverruntime-linux-amd64"
 
 log "Сборка ServerBridge JAR"
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
-for bridge in velocity paper purpur; do
+for bridge in velocity bukkit spigot paper purpur folia; do
   src="${ROOT_DIR}/artifacts/plugins/neverlauncher-${bridge}-bridge-${VERSION}.jar"
   require_file "${src}"
   cp "${src}" "${OUT_DIR}/neverlauncher-${bridge}-bridge-${VERSION}.jar"

@@ -114,6 +114,43 @@ services:
       - ./runtime/node-identities/velocity:/neverlauncher-identity
       - velocity-data:/server
 
+  spigot:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: SPIGOT
+      VERSION: "1.21.1"
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: spigot-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 90s
+    ports:
+      - "25573:25565"
+    volumes:
+      - ./runtime/plugins/spigot:/plugins:ro
+      - ./runtime/node-identities/spigot:/neverlauncher-identity
+      - spigot-data:/data
+
   paper:
     image: itzg/minecraft-server:java21
     environment:
@@ -188,10 +225,49 @@ services:
       - ./runtime/node-identities/purpur:/neverlauncher-identity
       - purpur-data:/data
 
+  folia:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: FOLIA
+      VERSION: "1.21.1"
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_SERVER_ID: folia-e2e-p3
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_PROJECT_ID: e2e-project
+      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
+      NEVERLAUNCHER_CHANNEL: stable
+      NEVERLAUNCHER_FAIL_MODE: closed
+      NEVERLAUNCHER_REQUIRE_SESSION: "true"
+      NEVERLAUNCHER_TIMEOUT_MS: "5000"
+      NEVERLAUNCHER_RETRIES: "2"
+    depends_on:
+      - neverlauncher-api
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 90s
+    ports:
+      - "25574:25565"
+    volumes:
+      - ./runtime/plugins/folia:/plugins:ro
+      - ./runtime/node-identities/folia:/neverlauncher-identity
+      - folia-data:/data
+
 volumes:
   e2e-postgres: {}
   e2e-storage: {}
   e2e-backups: {}
   velocity-data: {}
+  spigot-data: {}
   paper-data: {}
   purpur-data: {}
+  folia-data: {}

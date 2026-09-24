@@ -16,8 +16,11 @@ const serverBridgeIntegrityPolicy0135 = "serverbridge-artifact-sha256-v1"
 
 type bridgeReleasePolicy0135 struct {
 	VelocitySHA256 []string `json:"velocitySha256"`
+	BukkitSHA256   []string `json:"bukkitSha256"`
+	SpigotSHA256   []string `json:"spigotSha256"`
 	PaperSHA256    []string `json:"paperSha256"`
 	PurpurSHA256   []string `json:"purpurSha256"`
+	FoliaSHA256    []string `json:"foliaSha256"`
 }
 
 type bridgePluginIntegrityDecision0135 struct {
@@ -65,22 +68,50 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		if err != nil {
 			return nil, fmt.Errorf("ServerBridge purpur release %s: %w", version, err)
 		}
+		bukkit, err := normalizeOptionalBridgeHashes0144(policy.BukkitSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge bukkit release %s: %w", version, err)
+		}
+		spigot, err := normalizeOptionalBridgeHashes0144(policy.SpigotSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge spigot release %s: %w", version, err)
+		}
+		folia, err := normalizeOptionalBridgeHashes0144(policy.FoliaSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge folia release %s: %w", version, err)
+		}
 		policy.VelocitySHA256 = velocity
+		policy.BukkitSHA256 = bukkit
+		policy.SpigotSHA256 = spigot
 		policy.PaperSHA256 = paper
 		policy.PurpurSHA256 = purpur
+		policy.FoliaSHA256 = folia
 		out[version] = policy
 	}
 	return out, nil
+}
+
+func normalizeOptionalBridgeHashes0144(values []string) ([]string, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	return normalizeHashList0134(values)
 }
 
 func bridgeHashesForKind0135(policy bridgeReleasePolicy0135, kind string) []string {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "velocity":
 		return policy.VelocitySHA256
+	case "bukkit":
+		return policy.BukkitSHA256
+	case "spigot":
+		return policy.SpigotSHA256
 	case "paper":
 		return policy.PaperSHA256
 	case "purpur":
 		return policy.PurpurSHA256
+	case "folia":
+		return policy.FoliaSHA256
 	default:
 		return nil
 	}

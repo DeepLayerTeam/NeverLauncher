@@ -64,9 +64,14 @@ java_integrity = read("plugins/bridge-common/src/main/java/ru/neverlauncher/brid
 require(java_integrity, ["artifactSha256", "getProtectionDomain", "Files.isRegularFile", "MessageDigest.getInstance(\"SHA-256\")"], "ServerBridge JAR self-measurement")
 java_client = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
 require(java_client, ["pluginSha256", "requireIntegrity", "bridge_integrity_unavailable", "pluginVersion"], "ServerBridge fail-closed client")
-for platform, cls in [("velocity", "NeverLauncherVelocityBridge"), ("paper", "NeverLauncherPaperBridge"), ("purpur", "NeverLauncherPurpurBridge")]:
-    source = read(f"plugins/{platform}-bridge/src/main/java/ru/neverlauncher/bridge/{platform}/{cls}.java")
-    require(source, ["BridgeIntegrity.artifactSha256", "NeverLauncherApiClient(config"], f"{platform} runtime self-measurement")
+velocity_source = read("plugins/velocity-bridge/src/main/java/ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.java")
+require(velocity_source, ["BridgeIntegrity.artifactSha256", "NeverLauncherApiClient(config"], "velocity runtime self-measurement")
+bukkit_family_source = read("plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.java")
+require(bukkit_family_source, ["BridgeIntegrity.artifactSha256", "NeverLauncherApiClient(config"], "Bukkit-family runtime self-measurement")
+for platform, cls, expected in [("bukkit", "NeverLauncherBukkitBridge", "BUKKIT"), ("spigot", "NeverLauncherSpigotBridge", "SPIGOT"), ("paper", "NeverLauncherPaperBridge", "PAPER"), ("purpur", "NeverLauncherPurpurBridge", "PURPUR"), ("folia", "NeverLauncherFoliaBridge", "FOLIA")]:
+    package = "bukkit" if platform == "bukkit" else platform
+    source = read(f"plugins/{platform}-bridge/src/main/java/ru/neverlauncher/bridge/{package}/{cls}.java")
+    require(source, ["extends BukkitFamilyBridgePlugin", f"BukkitFamilyPlatform.{expected}"], f"{platform} Bukkit-family adapter")
 
 frontend = read("apps/desktop/src/main.tsx")
 require(frontend, ["createServerJoinBeforeLaunch(username: string, minecraftAccessToken: string)", "minecraftAccessToken", "minecraftCredentials.accessToken"], "Desktop Minecraft→ServerBridge binding")

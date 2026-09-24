@@ -42,9 +42,13 @@ dynamic_version_expectations = {
     "apps/desktop/vite.config.ts": "../../VERSION",
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
     "plugins/bridge-common/build.gradle.kts": "generated/sources/version/java",
+    "plugins/bukkit-family-common/build.gradle.kts": "version = rootProject.file(\"VERSION\").readText().trim()",
     "plugins/velocity-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/bukkit-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/spigot-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/paper-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "plugins/purpur-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
+    "plugins/folia-bridge/build.gradle.kts": "archiveVersion.set(project.version.toString())",
     "e2e/scripts/run-minecraft-e2e.sh": '< "$ROOT/VERSION"',
     "e2e/scripts/run-federation-postgres-e2e.sh": '< "$ROOT/VERSION"',
     "scripts/compatibility/matrix.py": 'PRODUCT_VERSION = (ROOT / "VERSION")',
@@ -59,8 +63,11 @@ for rel, expected in dynamic_version_expectations.items():
 
 for rel in (
     "plugins/velocity-bridge/src/main/resources/velocity-plugin.json",
+    "plugins/bukkit-bridge/src/main/resources/plugin.yml",
+    "plugins/spigot-bridge/src/main/resources/plugin.yml",
     "plugins/paper-bridge/src/main/resources/plugin.yml",
     "plugins/purpur-bridge/src/main/resources/plugin.yml",
+    "plugins/folia-bridge/src/main/resources/plugin.yml",
 ):
     if "${version}" not in read(rel):
         fail(f"{rel}: plugin descriptor должен получать version из Gradle")

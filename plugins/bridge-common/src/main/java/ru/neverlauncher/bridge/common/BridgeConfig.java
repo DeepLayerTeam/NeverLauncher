@@ -18,10 +18,11 @@ public final class BridgeConfig {
     public final boolean requireIntegrity;
     public final int timeoutMs;
     public final int retries;
+    public final int heartbeatIntervalSeconds;
 
-    private BridgeConfig(Map<String, String> values, Path configPath) {
+    private BridgeConfig(Map<String, String> values, Path configPath, String defaultServerId) {
         this.backendUrl = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
-        this.serverId = first(values, "server.id", "NEVERLAUNCHER_SERVER_ID", "velocity-main");
+        this.serverId = first(values, "server.id", "NEVERLAUNCHER_SERVER_ID", defaultServerId);
         String identity = first(values, "identity.file", "NEVERLAUNCHER_NODE_IDENTITY_FILE", "node-identity.properties");
         Path configuredIdentity = Path.of(identity);
         if (!configuredIdentity.isAbsolute() && configPath != null && configPath.toAbsolutePath().getParent() != null) {
@@ -35,10 +36,15 @@ public final class BridgeConfig {
         this.requireLauncherSession = Boolean.parseBoolean(first(values, "security.requireLauncherSession", "NEVERLAUNCHER_REQUIRE_SESSION", "true"));
         this.requireIntegrity = Boolean.parseBoolean(first(values, "security.requireIntegrity", "NEVERLAUNCHER_REQUIRE_BRIDGE_INTEGRITY", "true"));
         this.timeoutMs = parseInt(first(values, "backend.timeoutMs", "NEVERLAUNCHER_TIMEOUT_MS", "5000"), 5000);
-        this.retries = parseInt(first(values, "backend.retries", "NEVERLAUNCHER_RETRIES", "2"), 2);
+        this.retries = boundedInt(first(values, "backend.retries", "NEVERLAUNCHER_RETRIES", "2"), 2, 0, 5);
+        this.heartbeatIntervalSeconds = boundedInt(first(values, "backend.heartbeatIntervalSeconds", "NEVERLAUNCHER_HEARTBEAT_INTERVAL_SECONDS", "30"), 30, 10, 300);
     }
 
     public static BridgeConfig load(Path configPath) throws IOException {
+        return load(configPath, "velocity-main");
+    }
+
+    public static BridgeConfig load(Path configPath, String defaultServerId) throws IOException {
         Map<String, String> values = new LinkedHashMap<>();
         if (Files.exists(configPath)) {
             String section = "";
@@ -57,11 +63,15 @@ public final class BridgeConfig {
                 values.put(section.isEmpty() ? key : section + "." + key, value);
             }
         }
-        return new BridgeConfig(values, configPath);
+        return new BridgeConfig(values, configPath, normalizedDefaultServerId(defaultServerId));
     }
 
     public static BridgeConfig fromEnv() {
-        return new BridgeConfig(Map.of(), null);
+        return fromEnv("velocity-main");
+    }
+
+    public static BridgeConfig fromEnv(String defaultServerId) {
+        return new BridgeConfig(Map.of(), null, normalizedDefaultServerId(defaultServerId));
     }
 
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
@@ -78,6 +88,16 @@ public final class BridgeConfig {
 
     private static int parseInt(String value, int fallback) {
         try { return Integer.parseInt(value); } catch (Exception ignored) { return fallback; }
+    }
+
+    private static int boundedInt(String value, int fallback, int min, int max) {
+        int parsed = parseInt(value, fallback);
+        return Math.max(min, Math.min(max, parsed));
+    }
+
+    private static String normalizedDefaultServerId(String value) {
+        if (value == null || value.isBlank()) return "server-main";
+        return value.trim();
     }
 
     private static String strip(String value) {

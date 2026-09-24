@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -8057,8 +8057,11 @@
             "type": "string",
             "enum": [
               "velocity",
+              "bukkit",
+              "spigot",
               "paper",
-              "purpur"
+              "purpur",
+              "folia"
             ]
           },
           "projectId": {
@@ -8459,8 +8462,11 @@
             "type": "string",
             "enum": [
               "velocity",
+              "bukkit",
+              "spigot",
               "paper",
-              "purpur"
+              "purpur",
+              "folia"
             ]
           },
           "pluginVersion": {

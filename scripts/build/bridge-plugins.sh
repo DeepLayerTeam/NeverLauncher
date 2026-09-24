@@ -15,8 +15,11 @@ mkdir -p "$OUT"
   cd "$ROOT"
   gradle --no-daemon --console=plain \
     :plugins:velocity-bridge:clean :plugins:velocity-bridge:jar \
+    :plugins:bukkit-bridge:clean :plugins:bukkit-bridge:jar \
+    :plugins:spigot-bridge:clean :plugins:spigot-bridge:jar \
     :plugins:paper-bridge:clean :plugins:paper-bridge:jar \
-    :plugins:purpur-bridge:clean :plugins:purpur-bridge:jar
+    :plugins:purpur-bridge:clean :plugins:purpur-bridge:jar \
+    :plugins:folia-bridge:clean :plugins:folia-bridge:jar
 )
 
 copy_artifact() {
@@ -26,8 +29,11 @@ copy_artifact() {
   cp "$src" "$OUT/$expected"
 }
 copy_artifact velocity-bridge "neverlauncher-velocity-bridge-${VERSION}.jar"
+copy_artifact bukkit-bridge "neverlauncher-bukkit-bridge-${VERSION}.jar"
+copy_artifact spigot-bridge "neverlauncher-spigot-bridge-${VERSION}.jar"
 copy_artifact paper-bridge "neverlauncher-paper-bridge-${VERSION}.jar"
 copy_artifact purpur-bridge "neverlauncher-purpur-bridge-${VERSION}.jar"
+copy_artifact folia-bridge "neverlauncher-folia-bridge-${VERSION}.jar"
 
 for artifact in "$OUT"/neverlauncher-*-bridge-"${VERSION}".jar; do
   jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/common/NeverLauncherApiClient.class$' || {
@@ -35,20 +41,38 @@ for artifact in "$OUT"/neverlauncher-*-bridge-"${VERSION}".jar; do
     exit 1
   }
 done
+for platform in bukkit spigot paper purpur folia; do
+  artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"
+  jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.class$' || {
+    echo "[NeverLauncher] Bukkit-family runtime classes missing from $(basename "$artifact")" >&2
+    exit 1
+  }
+done
+jar tf "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" | grep -q '^plugin.yml$' || {
+  echo "[NeverLauncher] Folia descriptor is missing" >&2
+  exit 1
+}
+unzip -p "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" plugin.yml | grep -q '^folia-supported: true$' || {
+  echo "[NeverLauncher] Folia artifact is not explicitly marked folia-supported" >&2
+  exit 1
+}
 
 (
   cd "$OUT"
   sha256sum neverlauncher-*-bridge-"${VERSION}".jar | sort > SHA256SUMS
 )
 VELOCITY_SHA256="$(sha256sum "$OUT/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+BUKKIT_SHA256="$(sha256sum "$OUT/neverlauncher-bukkit-bridge-${VERSION}.jar" | awk '{print $1}')"
+SPIGOT_SHA256="$(sha256sum "$OUT/neverlauncher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
 PAPER_SHA256="$(sha256sum "$OUT/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
 PURPUR_SHA256="$(sha256sum "$OUT/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
+FOLIA_SHA256="$(sha256sum "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
 cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
-{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"]}}
+{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"]}}
 JSON
 cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "toolVersion": "$VERSION",
   "status": "built",
   "compiler": "gradle-real-platform-api",
@@ -56,8 +80,11 @@ cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
   "releaseAllowlist": "BRIDGE_RELEASE_ALLOWLIST.json",
   "artifacts": [
     {"id":"velocity","file":"neverlauncher-velocity-bridge-${VERSION}.jar","platform":"velocity","descriptor":"velocity-plugin.json","sha256":"${VELOCITY_SHA256}"},
+    {"id":"bukkit","file":"neverlauncher-bukkit-bridge-${VERSION}.jar","platform":"bukkit","descriptor":"plugin.yml","sha256":"${BUKKIT_SHA256}"},
+    {"id":"spigot","file":"neverlauncher-spigot-bridge-${VERSION}.jar","platform":"spigot","descriptor":"plugin.yml","sha256":"${SPIGOT_SHA256}"},
     {"id":"paper","file":"neverlauncher-paper-bridge-${VERSION}.jar","platform":"paper","descriptor":"plugin.yml","sha256":"${PAPER_SHA256}"},
-    {"id":"purpur","file":"neverlauncher-purpur-bridge-${VERSION}.jar","platform":"purpur","descriptor":"plugin.yml","sha256":"${PURPUR_SHA256}"}
+    {"id":"purpur","file":"neverlauncher-purpur-bridge-${VERSION}.jar","platform":"purpur","descriptor":"plugin.yml","sha256":"${PURPUR_SHA256}"},
+    {"id":"folia","file":"neverlauncher-folia-bridge-${VERSION}.jar","platform":"folia","descriptor":"plugin.yml","sha256":"${FOLIA_SHA256}","foliaSupported":true}
   ]
 }
 JSON
