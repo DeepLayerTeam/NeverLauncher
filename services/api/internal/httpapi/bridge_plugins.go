@@ -13,25 +13,27 @@ import (
 const bridgePluginsSchema940 = apiContractVersion
 
 type bridgePluginHeartbeatRequest940 struct {
-	ServerID      string `json:"serverId"`
-	ServerType    string `json:"serverType"`
-	PluginVersion string `json:"pluginVersion"`
-	PluginSHA256  string `json:"pluginSha256"`
-	Hostname      string `json:"hostname,omitempty"`
-	PlayersOnline int    `json:"playersOnline,omitempty"`
+	ProtocolVersion int    `json:"protocolVersion"`
+	ServerID        string `json:"serverId"`
+	ServerType      string `json:"serverType"`
+	PluginVersion   string `json:"pluginVersion"`
+	PluginSHA256    string `json:"pluginSha256"`
+	Hostname        string `json:"hostname,omitempty"`
+	PlayersOnline   int    `json:"playersOnline,omitempty"`
 }
 
 type bridgeValidateJoinRequest940 struct {
-	ServerID      string `json:"serverId"`
-	Username      string `json:"username"`
-	UUID          string `json:"uuid,omitempty"`
-	ServerHash    string `json:"serverHash,omitempty"`
-	IP            string `json:"ip,omitempty"`
-	ProjectID     string `json:"projectId"`
-	ProfileID     string `json:"profileId"`
-	Channel       string `json:"channel"`
-	PluginVersion string `json:"pluginVersion"`
-	PluginSHA256  string `json:"pluginSha256"`
+	ProtocolVersion int    `json:"protocolVersion"`
+	ServerID        string `json:"serverId"`
+	Username        string `json:"username"`
+	UUID            string `json:"uuid,omitempty"`
+	ServerHash      string `json:"serverHash,omitempty"`
+	IP              string `json:"ip,omitempty"`
+	ProjectID       string `json:"projectId"`
+	ProfileID       string `json:"profileId"`
+	Channel         string `json:"channel"`
+	PluginVersion   string `json:"pluginVersion"`
+	PluginSHA256    string `json:"pluginSha256"`
 }
 
 type bridgeAuditEventRequest940 struct {
@@ -53,9 +55,10 @@ func (s Server) serverBridgePluginManifest(w http.ResponseWriter, r *http.Reques
 
 func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion": bridgePluginsSchema940,
-		"toolVersion":   s.Version,
-		"status":        "compatible",
+		"schemaVersion":   bridgePluginsSchema940,
+		"toolVersion":     s.Version,
+		"protocolVersion": serverBridgeProtocolV2,
+		"status":          "compatible",
 		"platforms": []map[string]any{
 			{"id": "velocity", "minVersion": "3.3.0", "java": []int{17, 21}, "artifact": "neverlauncher-velocity-bridge-" + s.Version + ".jar"},
 			{"id": "paper", "minMinecraft": "1.20.1", "recommendedMinecraft": "1.21.x", "java": []int{17, 21}, "artifact": "neverlauncher-paper-bridge-" + s.Version + ".jar"},
@@ -77,24 +80,45 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "serverId обязателен")
 		return
 	}
+	if req.ProtocolVersion != serverBridgeProtocolV2 {
+		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-rejected", "reason": "serverbridge_protocol_unsupported"}})
+		return
+	}
+	req.ServerType = strings.ToLower(strings.TrimSpace(req.ServerType))
+	req.PluginVersion = strings.TrimSpace(req.PluginVersion)
+	req.PluginSHA256 = strings.ToLower(strings.TrimSpace(req.PluginSHA256))
+	if !validBridgeServerKindV2(req.ServerType) || req.PluginVersion == "" || !isSHA256Hex0134(req.PluginSHA256) {
+		writeError(w, http.StatusBadRequest, "serverType, pluginVersion и валидный pluginSha256 обязательны для Protocol v2")
+		return
+	}
 	server, ok := s.State.ServerBridge.verifyServerToken(serverID, bridgeServerTokenFromRequest910(r))
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat-denied"), Actor: "server", Action: "serverbridge:plugin:heartbeat-denied", Target: serverID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusUnauthorized, "server token недействителен")
 		return
 	}
+	if req.ServerType != strings.ToLower(strings.TrimSpace(server.Kind)) {
+		writeError(w, http.StatusConflict, "serverType не совпадает с зарегистрированным типом ServerBridge node")
+		return
+	}
 	decision := s.validateBridgePluginMeasurement0135(server, req.ServerType, req.PluginVersion, req.PluginSHA256)
-	s.State.ServerBridge.setIntegrityMeasurement0135(serverID, decision)
+	if err := s.State.ServerBridge.setIntegrityMeasurement0135(serverID, decision); err != nil {
+		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL state недоступен")
+		return
+	}
 	if !decision.Allowed {
 		_ = s.flushPersistenceState950("server-bridge-plugin-integrity-rejected")
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-integrity-denied"), Actor: server.ID, Action: "serverbridge:plugin:integrity-denied", Target: server.ID + ":" + decision.Reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeJSON(w, http.StatusPreconditionFailed, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "status": "heartbeat-rejected", "serverId": server.ID, "integrity": decision}})
 		return
 	}
-	s.State.ServerBridge.markHeartbeat940(serverID, req.ServerType, req.PluginVersion)
+	if err := s.State.ServerBridge.markHeartbeat940(serverID, req.ServerType, req.PluginVersion); err != nil {
+		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL heartbeat не сохранён")
+		return
+	}
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "status": "heartbeat-accepted", "serverId": server.ID, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-accepted", "serverId": server.ID, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +131,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	req.Username = strings.TrimSpace(req.Username)
 	if req.ServerID == "" || req.Username == "" {
 		writeError(w, http.StatusBadRequest, "serverId и username обязательны")
+		return
+	}
+	if req.ProtocolVersion != serverBridgeProtocolV2 {
+		writeJSON(w, http.StatusUpgradeRequired, bridgeValidateResponse940(s.Version, false, "serverbridge_protocol_unsupported", req, bridgeJoinRecord{}))
 		return
 	}
 	server, ok := s.State.ServerBridge.verifyServerToken(req.ServerID, bridgeServerTokenFromRequest910(r))
@@ -176,6 +204,13 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, payload)
 		return
 	}
+	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join)
+	if !consumedOK {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-replay"), Actor: server.ID, Action: "serverbridge:validate-join:replay-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "join_ticket_already_consumed", req, bridgeJoinRecord{}))
+		return
+	}
+	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-allowed"), Actor: server.ID, Action: "serverbridge:validate-join:allowed", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	payload := bridgeValidateResponse940(s.Version, true, "session_valid", req, join)
 	payload["data"].(map[string]any)["trust"] = trust
@@ -206,13 +241,16 @@ func (s Server) serverBridgeAuditEvent(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion": bridgePluginsSchema940,
-		"toolVersion":   s.Version,
-		"status":        "diagnostics-ready",
-		"summary":       s.State.ServerBridge.summary(),
-		"plugins":       bridgePluginsManifest940(s.Version)["artifacts"],
+		"schemaVersion":   bridgePluginsSchema940,
+		"toolVersion":     s.Version,
+		"status":          "diagnostics-ready",
+		"protocolVersion": serverBridgeProtocolV2,
+		"summary":         s.State.ServerBridge.summary(),
+		"plugins":         bridgePluginsManifest940(s.Version)["artifacts"],
 		"checks": []map[string]string{
 			{"id": "plugin-manifest", "status": "implemented"},
+			{"id": "protocol-v2-negotiation", "status": "implemented"},
+			{"id": "postgresql-source-of-truth", "status": "implemented"},
 			{"id": "validate-join", "status": "implemented"},
 			{"id": "gameplay-trust-enforcement", "status": "implemented"},
 			{"id": "minecraft-integrity-enforcement", "status": "implemented"},
@@ -225,16 +263,17 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 
 func bridgeValidateResponse940(version string, allowed bool, reason string, req bridgeValidateJoinRequest940, join bridgeJoinRecord) map[string]any {
 	payload := map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion": bridgePluginsSchema940,
-		"toolVersion":   version,
-		"allowed":       allowed,
-		"reason":        reason,
-		"serverId":      req.ServerID,
-		"username":      req.Username,
-		"projectId":     firstNonEmpty(req.ProjectID, join.ProjectID),
-		"profileId":     firstNonEmpty(req.ProfileID, join.ProfileID),
-		"channel":       firstNonEmpty(req.Channel, join.Channel, "stable"),
-		"checkedAt":     time.Now().UTC().Format(time.RFC3339),
+		"schemaVersion":   bridgePluginsSchema940,
+		"toolVersion":     version,
+		"protocolVersion": serverBridgeProtocolV2,
+		"allowed":         allowed,
+		"reason":          reason,
+		"serverId":        req.ServerID,
+		"username":        req.Username,
+		"projectId":       firstNonEmpty(req.ProjectID, join.ProjectID),
+		"profileId":       firstNonEmpty(req.ProfileID, join.ProfileID),
+		"channel":         firstNonEmpty(req.Channel, join.Channel, "stable"),
+		"checkedAt":       time.Now().UTC().Format(time.RFC3339),
 	}}
 	if allowed {
 		payload["data"].(map[string]any)["player"] = map[string]any{"uuid": firstNonEmpty(req.UUID, join.UUID), "username": req.Username}
@@ -245,22 +284,24 @@ func bridgeValidateResponse940(version string, allowed bool, reason string, req 
 
 func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
-		"schemaVersion": bridgePluginsSchema940,
-		"toolVersion":   version,
-		"release":       "NeverLauncher 0.13.5 Integrity-Enforced Bridge Plugins",
-		"status":        "bridge-plugins-ready",
-		"mode":          "velocity-paper-purpur-server-integration",
-		"implemented":   []string{"Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
-		"commands":      []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
-		"artifacts":     bridgePluginsManifest940(version)["artifacts"],
+		"schemaVersion":   bridgePluginsSchema940,
+		"toolVersion":     version,
+		"release":         "NeverLauncher 0.14.1 ServerBridge Protocol v2 Plugins",
+		"status":          "bridge-plugins-ready",
+		"mode":            "serverbridge-protocol-v2",
+		"protocolVersion": serverBridgeProtocolV2,
+		"implemented":     []string{"Protocol v2 wire negotiation", "Velocity plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "real Velocity/Paper platform APIs", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
+		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}
 }
 
 func bridgePluginsManifest940(version string) map[string]any {
 	return map[string]any{
-		"schemaVersion": bridgePluginsSchema940,
-		"toolVersion":   version,
-		"status":        "published",
+		"schemaVersion":   bridgePluginsSchema940,
+		"toolVersion":     version,
+		"status":          "published",
+		"protocolVersion": serverBridgeProtocolV2,
 		"artifacts": []map[string]any{
 			{"id": "velocity", "name": "NeverLauncher Velocity Bridge", "file": fmt.Sprintf("neverlauncher-velocity-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-velocity-bridge-%s.jar", version), "serverType": "velocity", "descriptor": "velocity-plugin.json", "mainClass": "ru.neverlauncher.bridge.velocity.NeverLauncherVelocityBridge"},
 			{"id": "paper", "name": "NeverLauncher Paper Bridge", "file": fmt.Sprintf("neverlauncher-paper-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-paper-bridge-%s.jar", version), "serverType": "paper", "descriptor": "plugin.yml", "mainClass": "ru.neverlauncher.bridge.paper.NeverLauncherPaperBridge"},
@@ -273,17 +314,25 @@ func bridgePluginsManifest940(version string) map[string]any {
 	}
 }
 
-func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion string) {
+func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion string) error {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		return backend.TouchServerBridgeNodeHeartbeat(ctx, serverID, serverType, pluginVersion, time.Now().UTC())
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return
+		return fmt.Errorf("server bridge node not found")
 	}
 	if serverType != "" {
 		server.Kind = strings.ToLower(strings.TrimSpace(serverType))
 	}
 	server.Status = "active"
+	server.ProtocolVersion = serverBridgeProtocolV2
+	server.LastHeartbeatAt = time.Now().UTC()
 	server.Fingerprint = firstNonEmpty(server.Fingerprint, "plugin:"+pluginVersion)
 	b.servers[serverID] = server
+	return nil
 }

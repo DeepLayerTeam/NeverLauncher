@@ -73,6 +73,16 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 		t.Fatalf("uuid отсутствует: err=%v body=%s", err, res.Body.String())
 	}
 
+	// Protocol v2 join tickets are one-time. A replay of the same server-side
+	// validation must not authorize the player again after the successful consume.
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/session/has-joined?username=AdminPlayer&serverId=velocity-main", nil)
+	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("replayed has-joined must be denied => %d %s", res.Code, res.Body.String())
+	}
+
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/textures/"+joined.ID, nil)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)

@@ -3,6 +3,7 @@ package httpapi
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -14,9 +15,11 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
 const serverBridgeSchema910 = apiContractVersion
+const serverBridgeProtocolV2 = 2
 
 type bridgeServerRecord struct {
 	ID                  string    `json:"id"`
@@ -32,6 +35,8 @@ type bridgeServerRecord struct {
 	PluginSHA256        string    `json:"pluginSha256,omitempty"`
 	IntegrityStatus     string    `json:"integrityStatus,omitempty"`
 	IntegrityVerifiedAt time.Time `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt     time.Time `json:"lastHeartbeatAt,omitempty"`
+	ProtocolVersion     int       `json:"protocolVersion"`
 	CreatedAt           time.Time `json:"createdAt"`
 	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
 }
@@ -50,9 +55,11 @@ type bridgeJoinRecord struct {
 	TrustedDeviceID    string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch       int64     `json:"bindingEpoch"`
 	MinecraftSessionID string    `json:"minecraftSessionId,omitempty"`
+	ProtocolVersion    int       `json:"protocolVersion"`
 	Status             string    `json:"status"`
 	CreatedAt          time.Time `json:"createdAt"`
 	ExpiresAt          time.Time `json:"expiresAt"`
+	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
 type bridgeTextureRecord struct {
@@ -69,6 +76,7 @@ type serverBridgeStore struct {
 	servers  map[string]bridgeServerRecord
 	joins    map[string]bridgeJoinRecord
 	textures map[string]bridgeTextureRecord
+	backend  repository.ServerBridgeRepository
 }
 
 type registerBridgeServerRequest struct {
@@ -265,8 +273,15 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "integrity policy denied join: "+integrity.Reason)
 		return
 	}
+	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join)
+	if !consumedOK {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-replay"), Actor: server.ID, Action: "serverbridge:has-joined:replay-denied", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusConflict, "join ticket уже использован")
+		return
+	}
+	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": serverBridgeProtocolV2, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -321,7 +336,11 @@ func (s Server) textureSkinUpdate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	texture := s.State.ServerBridge.updateTexture(playerUUID910(user.ID), user.Email, req)
+	texture, err := s.State.ServerBridge.updateTexture(playerUUID910(user.ID), user.Email, req)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "ServerBridge texture state не сохранён")
+		return
+	}
 	_ = s.flushPersistenceState950("server-bridge-texture-update")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-update"), Actor: user.Email, Action: "serverbridge:texture:update", Target: texture.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": textureProfile910(texture)})
@@ -344,8 +363,8 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion": serverBridgeSchema910,
 		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.13.5 Minecraft/ServerBridge Integrity Enforcement",
-		"mode":          "minecraft-session-bridge",
+		"release":       "NeverLauncher 0.14.1 ServerBridge Protocol v2",
+		"mode":          "serverbridge-protocol-v2",
 		"parentMode":    "launcherops-ecosystem-platform",
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"summary":       s.State.ServerBridge.summary(),
@@ -364,14 +383,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"server token registration and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "one-time atomic join tickets", "server token registration and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
-		base["productFlow"] = []string{"admin registers Velocity/Paper/Purpur server", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin calls validate-join/has-joined with server token", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
+		base["productFlow"] = []string{"admin registers Velocity/Paper/Purpur Protocol v2 server in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin calls validate-join/has-joined with server token", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
@@ -379,8 +398,6 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 }
 
 func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bridgeServerRecord, string, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	now := time.Now().UTC()
 	req.ID = strings.TrimSpace(req.ID)
 	if req.ID == "" {
@@ -392,8 +409,30 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	if req.Kind == "" {
 		req.Kind = "velocity"
 	}
-	token := randomBridgeToken910("nlsrv")
-	server := bridgeServerRecord{ID: req.ID, Name: strings.TrimSpace(req.Name), Kind: strings.ToLower(strings.TrimSpace(req.Kind)), ProjectID: strings.TrimSpace(req.ProjectID), ProfileID: strings.TrimSpace(req.ProfileID), Fingerprint: strings.TrimSpace(req.Fingerprint), TokenHash: tokenHash910(token), TokenPrefix: tokenPrefix910(token), Status: "active", CreatedAt: now}
+	kind := strings.ToLower(strings.TrimSpace(req.Kind))
+	if !validBridgeServerKindV2(kind) {
+		return bridgeServerRecord{}, "", fmt.Errorf("kind должен быть velocity, paper или purpur")
+	}
+	token, err := randomBridgeToken910("nlsrv")
+	if err != nil {
+		return bridgeServerRecord{}, "", err
+	}
+	server := bridgeServerRecord{ID: req.ID, Name: strings.TrimSpace(req.Name), Kind: kind, ProjectID: strings.TrimSpace(req.ProjectID), ProfileID: strings.TrimSpace(req.ProfileID), Fingerprint: strings.TrimSpace(req.Fingerprint), TokenHash: tokenHash910(token), TokenPrefix: tokenPrefix910(token), Status: "active", ProtocolVersion: serverBridgeProtocolV2, CreatedAt: now}
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		if existing, err := backend.GetServerBridgeNode(ctx, server.ID); err == nil {
+			server.CreatedAt = existing.CreatedAt
+			server.RotatedAt = now
+		}
+		stored, err := backend.SaveServerBridgeNode(ctx, bridgeServerToModelV2(server))
+		if err != nil {
+			return bridgeServerRecord{}, "", err
+		}
+		return bridgeServerFromModelV2(stored), token, nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	if existing, ok := b.servers[server.ID]; ok {
 		server.CreatedAt = existing.CreatedAt
 		server.RotatedAt = now
@@ -403,27 +442,58 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 }
 
 func (b *serverBridgeStore) rotateToken(serverID string) (bridgeServerRecord, string, error) {
+	token, err := randomBridgeToken910("nlsrv")
+	if err != nil {
+		return bridgeServerRecord{}, "", err
+	}
+	now := time.Now().UTC()
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		server, err := backend.RotateServerBridgeNodeCredential(ctx, strings.TrimSpace(serverID), tokenHash910(token), tokenPrefix910(token), now)
+		if err != nil {
+			return bridgeServerRecord{}, "", err
+		}
+		return bridgeServerFromModelV2(server), token, nil
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
 		return bridgeServerRecord{}, "", fmt.Errorf("server bridge record not found")
 	}
-	token := randomBridgeToken910("nlsrv")
 	server.TokenHash = tokenHash910(token)
 	server.TokenPrefix = tokenPrefix910(token)
-	server.RotatedAt = time.Now().UTC()
-	// A rotated credential establishes a new bridge trust boundary. Require the
-	// plugin to prove its artifact hash again before accepting player joins.
+	server.RotatedAt = now
+	server.ProtocolVersion = serverBridgeProtocolV2
 	server.PluginVersion = ""
 	server.PluginSHA256 = ""
 	server.IntegrityStatus = ""
 	server.IntegrityVerifiedAt = time.Time{}
 	b.servers[server.ID] = server
+	for key, join := range b.joins {
+		if join.ServerID == server.ID && join.Status == "active" {
+			join.Status = "invalidated"
+			b.joins[key] = join
+		}
+	}
 	return server, token, nil
 }
 
 func (b *serverBridgeStore) listServers() []bridgeServerRecord {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		items, err := backend.ListServerBridgeNodes(ctx)
+		if err != nil {
+			return nil
+		}
+		out := make([]bridgeServerRecord, 0, len(items))
+		for _, v := range items {
+			out = append(out, bridgeServerFromModelV2(v))
+		}
+		return out
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	items := make([]bridgeServerRecord, 0, len(b.servers))
@@ -435,13 +505,25 @@ func (b *serverBridgeStore) listServers() []bridgeServerRecord {
 }
 
 func (b *serverBridgeStore) verifyServerToken(serverID, token string) (bridgeServerRecord, bool) {
+	if token == "" {
+		return bridgeServerRecord{}, false
+	}
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		node, err := backend.GetServerBridgeNode(ctx, strings.TrimSpace(serverID))
+		if err != nil || node.Status != "active" || node.TokenHash == "" {
+			return bridgeServerRecord{}, false
+		}
+		return bridgeServerFromModelV2(node), subtle.ConstantTimeCompare([]byte(node.TokenHash), []byte(tokenHash910(token))) == 1
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
-	if !ok || server.Status != "active" || token == "" {
+	if !ok || server.Status != "active" {
 		return bridgeServerRecord{}, false
 	}
-	return server, server.TokenHash == tokenHash910(token)
+	return server, subtle.ConstantTimeCompare([]byte(server.TokenHash), []byte(tokenHash910(token))) == 1
 }
 
 func validMinecraftUsername910(value string) bool {
@@ -487,13 +569,24 @@ func minecraftUsernameFromAccount910(email, userID string) string {
 }
 
 func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, minecraftSessionID string, req bridgeJoinRequest) (bridgeJoinRecord, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	if strings.TrimSpace(req.ServerID) == "" || strings.TrimSpace(req.ProjectID) == "" || strings.TrimSpace(req.ProfileID) == "" {
 		return bridgeJoinRecord{}, fmt.Errorf("serverId, projectId и profileId обязательны")
 	}
-	server, ok := b.servers[req.ServerID]
-	if !ok || server.Status != "active" {
+	var server bridgeServerRecord
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		node, err := backend.GetServerBridgeNode(ctx, req.ServerID)
+		if err != nil {
+			return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
+		}
+		server = bridgeServerFromModelV2(node)
+	} else {
+		b.mu.Lock()
+		server = b.servers[req.ServerID]
+		b.mu.Unlock()
+	}
+	if server.ID == "" || server.Status != "active" {
 		return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
 	}
 	if server.ProjectID != "" && server.ProjectID != req.ProjectID {
@@ -514,13 +607,33 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	if bindingEpoch < 1 {
 		bindingEpoch = 1
 	}
-	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	join := bridgeJoinRecord{ID: "join-" + randomSuffix910(8), Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: serverBridgeProtocolV2, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		stored, err := backend.CreateServerBridgeJoinTicket(ctx, bridgeJoinToModelV2(join))
+		if err != nil {
+			return bridgeJoinRecord{}, err
+		}
+		return bridgeJoinFromModelV2(stored), nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)
 	return join, nil
 }
 
 func (b *serverBridgeStore) hasJoined(username, serverID string) (bridgeJoinRecord, bool) {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		j, err := backend.GetActiveServerBridgeJoinTicket(ctx, username, serverID, time.Now().UTC())
+		if err != nil {
+			return bridgeJoinRecord{}, false
+		}
+		return bridgeJoinFromModelV2(j), true
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	join, ok := b.joins[b.joinKey(username, serverID)]
@@ -531,6 +644,16 @@ func (b *serverBridgeStore) hasJoined(username, serverID string) (bridgeJoinReco
 }
 
 func (b *serverBridgeStore) invalidateJoin(username, serverID string) bool {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		j, err := backend.GetActiveServerBridgeJoinTicket(ctx, username, serverID, time.Now().UTC())
+		if err != nil {
+			return false
+		}
+		ok, err := backend.InvalidateServerBridgeJoinTicket(ctx, j.ID, time.Now().UTC())
+		return err == nil && ok
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	key := b.joinKey(username, serverID)
@@ -544,6 +667,15 @@ func (b *serverBridgeStore) invalidateJoin(username, serverID string) bool {
 }
 
 func (b *serverBridgeStore) invalidateSession(sessionID, serverID string) int {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		n, err := backend.InvalidateServerBridgeSession(ctx, sessionID, serverID, time.Now().UTC())
+		if err != nil {
+			return 0
+		}
+		return n
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	count := 0
@@ -558,6 +690,15 @@ func (b *serverBridgeStore) invalidateSession(sessionID, serverID string) int {
 }
 
 func (b *serverBridgeStore) invalidateUser(userID string) int {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		n, err := backend.InvalidateServerBridgeUser(ctx, userID, time.Now().UTC())
+		if err != nil {
+			return 0
+		}
+		return n
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	count := 0
@@ -571,19 +712,40 @@ func (b *serverBridgeStore) invalidateUser(userID string) int {
 	return count
 }
 
-func (b *serverBridgeStore) updateTexture(uuid, username string, req textureUpdateRequest) bridgeTextureRecord {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (b *serverBridgeStore) updateTexture(uuid, username string, req textureUpdateRequest) (bridgeTextureRecord, error) {
 	modelName := strings.TrimSpace(req.Model)
 	if modelName == "" {
 		modelName = "classic"
 	}
+	if modelName != "classic" && modelName != "slim" {
+		modelName = "classic"
+	}
 	texture := bridgeTextureRecord{UUID: uuid, Username: username, SkinURL: strings.TrimSpace(req.SkinURL), CapeURL: strings.TrimSpace(req.CapeURL), Model: modelName, UpdatedAt: time.Now().UTC()}
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		stored, err := backend.SaveServerBridgeTexture(ctx, bridgeTextureToModelV2(texture))
+		if err != nil {
+			return bridgeTextureRecord{}, err
+		}
+		return bridgeTextureFromModelV2(stored), nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.textures[uuid] = texture
-	return texture
+	return texture, nil
 }
 
 func (b *serverBridgeStore) textureFor(uuid, username string) bridgeTextureRecord {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		t, err := backend.GetServerBridgeTexture(ctx, uuid)
+		if err == nil {
+			return bridgeTextureFromModelV2(t)
+		}
+		return bridgeTextureRecord{UUID: uuid, Username: username, Model: "classic", UpdatedAt: time.Now().UTC()}
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.textureForLocked(uuid, username)
@@ -597,6 +759,15 @@ func (b *serverBridgeStore) textureForLocked(uuid, username string) bridgeTextur
 }
 
 func (b *serverBridgeStore) summary() map[string]any {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		summary, err := backend.ServerBridgeSummary(ctx, time.Now().UTC())
+		if err == nil {
+			return summary
+		}
+		return map[string]any{"protocolVersion": 2, "sourceOfTruth": "postgresql", "status": "unavailable"}
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	activeJoins := 0
@@ -605,7 +776,7 @@ func (b *serverBridgeStore) summary() map[string]any {
 			activeJoins++
 		}
 	}
-	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "serverToken": "required-for-has-joined"}
+	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "serverToken": "required-for-validation", "protocolVersion": 2, "sourceOfTruth": "memory-dev-test"}
 }
 
 func (b *serverBridgeStore) joinKey(username, serverID string) string {
@@ -613,7 +784,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "minecraftSessionId": join.MinecraftSessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "username": join.Username, "uuid": join.UUID, "userId": join.UserID, "sessionId": join.SessionID, "minecraftSessionId": join.MinecraftSessionID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "trustedDeviceId": join.TrustedDeviceID, "bindingEpoch": join.BindingEpoch, "protocolVersion": join.ProtocolVersion, "status": join.Status, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 func bridgeServerTokenFromRequest910(r *http.Request) string {
@@ -650,12 +821,21 @@ func textureProfile910(texture bridgeTextureRecord) map[string]any {
 	return map[string]any{"schemaVersion": serverBridgeSchema910, "timestamp": time.Now().UTC().UnixMilli(), "profileId": texture.UUID, "profileName": texture.Username, "textures": textures}
 }
 
-func randomBridgeToken910(prefix string) string {
+func randomBridgeToken910(prefix string) (string, error) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
-		return prefix + "_" + time.Now().UTC().Format("20060102150405") + randomSuffix910(8)
+		return "", fmt.Errorf("secure ServerBridge token generation failed: %w", err)
 	}
-	return prefix + "_" + base64.RawURLEncoding.EncodeToString(buf)
+	return prefix + "_" + base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func validBridgeServerKindV2(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "velocity", "paper", "purpur":
+		return true
+	default:
+		return false
+	}
 }
 
 func randomSuffix910(n int) string {

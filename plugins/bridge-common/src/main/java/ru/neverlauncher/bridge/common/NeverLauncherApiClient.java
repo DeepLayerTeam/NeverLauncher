@@ -30,7 +30,8 @@ public final class NeverLauncherApiClient {
         String actualType = first(serverType, this.serverType);
         String actualVersion = first(pluginVersion, this.pluginVersion);
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) return false;
-        String json = "{\"serverId\":" + quote(config.serverId) +
+        String json = "{\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION +
+            ",\"serverId\":" + quote(config.serverId) +
             ",\"serverType\":" + quote(actualType) +
             ",\"pluginVersion\":" + quote(actualVersion) +
             ",\"pluginSha256\":" + quote(pluginSha256) + "}";
@@ -56,6 +57,7 @@ public final class NeverLauncherApiClient {
             return new JoinValidationResult(false, "bridge_integrity_unavailable", "{}");
         }
         String body = "{" +
+            "\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION + "," +
             "\"serverId\":" + quote(config.serverId) + "," +
             "\"username\":" + quote(username) + "," +
             "\"uuid\":" + quote(uuid) + "," +

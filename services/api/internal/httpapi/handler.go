@@ -11,6 +11,9 @@ func (s Server) Handler() http.Handler {
 		// Test/development servers created directly in unit tests use the safe
 		// in-memory limiter and do not trust forwarded headers by default.
 	}
+	if s.State.ServerBridge != nil && s.Repo != nil {
+		s.State.ServerBridge.configureRepositoryV2(s.Repo)
+	}
 	if s.Federation == nil {
 		core, err := NewFederationCore(context.Background(), s.Repo, s.Config)
 		if err != nil {

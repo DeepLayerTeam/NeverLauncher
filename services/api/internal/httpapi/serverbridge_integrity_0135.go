@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
 const serverBridgeIntegrityPolicy0135 = "serverbridge-artifact-sha256-v1"
@@ -148,26 +149,42 @@ func validateBridgeRequestMeasurement0135(server bridgeServerRecord, req bridgeV
 	return hmac.Equal([]byte(strings.TrimSpace(server.PluginVersion)), []byte(version)) && hmac.Equal([]byte(strings.ToLower(strings.TrimSpace(server.PluginSHA256))), []byte(hash))
 }
 
-func (b *serverBridgeStore) setIntegrityMeasurement0135(serverID string, decision bridgePluginIntegrityDecision0135) {
+func (b *serverBridgeStore) setIntegrityMeasurement0135(serverID string, decision bridgePluginIntegrityDecision0135) error {
+	status := "rejected:" + strings.TrimSpace(decision.Reason)
+	verifiedAt := time.Time{}
+	if decision.Allowed {
+		status = "verified"
+		verifiedAt = decision.VerifiedAt.UTC()
+	}
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		return backend.SetServerBridgeNodeIntegrity(ctx, serverID, strings.TrimSpace(decision.PluginVersion), strings.ToLower(strings.TrimSpace(decision.PluginSHA256)), status, verifiedAt)
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return
+		return repository.ErrNotFound
 	}
 	server.PluginVersion = strings.TrimSpace(decision.PluginVersion)
 	server.PluginSHA256 = strings.ToLower(strings.TrimSpace(decision.PluginSHA256))
-	if decision.Allowed {
-		server.IntegrityStatus = "verified"
-		server.IntegrityVerifiedAt = decision.VerifiedAt.UTC()
-	} else {
-		server.IntegrityStatus = "rejected:" + strings.TrimSpace(decision.Reason)
-		server.IntegrityVerifiedAt = time.Time{}
-	}
+	server.IntegrityStatus = status
+	server.IntegrityVerifiedAt = verifiedAt
 	b.servers[serverID] = server
+	return nil
 }
 
 func (b *serverBridgeStore) serverRecord0135(serverID string) (bridgeServerRecord, bool) {
+	if backend := b.backendV2(); backend != nil {
+		ctx, cancel := bridgeContextV2()
+		defer cancel()
+		server, err := backend.GetServerBridgeNode(ctx, strings.TrimSpace(serverID))
+		if err != nil {
+			return bridgeServerRecord{}, false
+		}
+		return bridgeServerFromModelV2(server), true
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	server, ok := b.servers[strings.TrimSpace(serverID)]

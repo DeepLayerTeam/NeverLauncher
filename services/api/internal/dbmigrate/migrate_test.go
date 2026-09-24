@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0020_guard_migration_compatibility_stabilization_01310" {
+	if st.Current != "0021_serverbridge_protocol_v2_0141" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0020_guard_migration_compatibility_stabilization_01310" {
+		if k != "0021_serverbridge_protocol_v2_0141" {
 			pending[k] = v
 		}
 	}
@@ -112,6 +112,28 @@ func TestGuardMigrationCompatibilityStabilization01310(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.13.10 Guard stabilization migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
+	b, err := os.ReadFile("sql/0021_serverbridge_protocol_v2_0141.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"server_bridge_nodes_v2",
+		"server_bridge_join_tickets_v2",
+		"server_bridge_textures_v2",
+		"protocol_version = 2",
+		"uq_server_bridge_join_v2_active_player",
+		"status='consumed'",
+		"credential-rotation-required",
+		"neverlauncher_persistence_snapshots_950",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.14.1 ServerBridge v2 migration missing %q", required)
 		}
 	}
 }

@@ -119,16 +119,20 @@ if psql "$DB_DSN" -Atqc "SELECT count(*) FROM schema_migrations WHERE version='0
   exit 1
 fi
 
-printf '[guard-migration-e2e] repair ambiguous legacy row explicitly, then apply and verify 0020\n'
+printf '[guard-migration-e2e] repair ambiguous legacy row explicitly, then apply and verify through current migration\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET guard_sha256='' WHERE id='gmig-partial'" >/dev/null
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.log"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0020_guard_migration_compatibility_stabilization_01310" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
+[[ "$latest_after" == "0021_serverbridge_protocol_v2_0141" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'")"
 [[ "$sealed" == "true" ]]
+serverbridge_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"
+[[ "$serverbridge_sealed" == "true" ]]
+serverbridge_table_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('server_bridge_nodes_v2','server_bridge_join_tickets_v2','server_bridge_textures_v2')")"
+[[ "$serverbridge_table_count" == "3" ]]
 
 printf '[guard-migration-e2e] prove snapshot shape/freshness constraints are live\n'
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET integrity_verified=FALSE WHERE id='gmig-valid'" >/dev/null 2>&1; then
@@ -147,7 +151,7 @@ jq -n \
   --arg before "$latest_before" \
   --arg after "$latest_after" \
   --argjson constraints "$constraint_count" \
-  '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true},failClosedPartialSnapshot:true,guardSnapshotConstraints:$constraints}' \
+  '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true},failClosedPartialSnapshot:true,guardSnapshotConstraints:$constraints,serverBridgeV2Tables:3}' \
   > "$RESULT_DIR/migration-compatibility-stabilization.json"
 
-printf '[guard-migration-e2e] PASS 0.13.9 -> 0.13.10 Guard migration + stabilization\n'
+printf '[guard-migration-e2e] PASS 0.13.9 -> current Guard migration + ServerBridge v2 schema\n'

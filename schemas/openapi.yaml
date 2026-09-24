@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.14.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.14.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6516,6 +6516,9 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "426": {
+            "$ref": "#/components/responses/UpgradeRequired"
           }
         },
         "parameters": [
@@ -6535,7 +6538,7 @@
           }
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -6614,6 +6617,9 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "426": {
+            "$ref": "#/components/responses/UpgradeRequired"
           }
         },
         "security": [
@@ -8289,12 +8295,17 @@
       "HeartbeatRequest": {
         "type": "object",
         "required": [
+          "protocolVersion",
           "serverId",
           "serverType",
           "pluginVersion",
           "pluginSha256"
         ],
         "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 2
+          },
           "serverId": {
             "type": "string"
           },
@@ -8314,7 +8325,8 @@
             "pattern": "^[0-9a-fA-F]{64}$",
             "description": "SHA-256 of the running ServerBridge JAR"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "BridgeAuditEventRequest": {
         "type": "object",
@@ -8580,12 +8592,17 @@
       "ValidateJoinRequest": {
         "type": "object",
         "required": [
+          "protocolVersion",
           "serverId",
           "username",
           "pluginVersion",
           "pluginSha256"
         ],
         "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 2
+          },
           "serverId": {
             "type": "string"
           },
@@ -8618,7 +8635,8 @@
             "pattern": "^[0-9a-fA-F]{64}$",
             "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "responses": {
@@ -8634,6 +8652,16 @@
       },
       "Unauthorized": {
         "description": "Authentication required or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UpgradeRequired": {
+        "description": "ServerBridge Protocol v2 is required",
         "content": {
           "application/json": {
             "schema": {

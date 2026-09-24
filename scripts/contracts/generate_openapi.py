@@ -139,7 +139,7 @@ def request_body_required(method,path):
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
     }
-    if path.endswith("/rotate-token") or path.endswith("/heartbeat") or path.endswith("/disable") or path.endswith("/enable"):
+    if path.endswith("/rotate-token") or path.endswith("/disable") or path.endswith("/enable"):
         return False
     if path.endswith("/versions/{versionId}/publish"):
         return False
@@ -197,6 +197,8 @@ for method,path in routes:
         op["responses"]["401"]={"$ref":"#/components/responses/Unauthorized"}
     if method in ("post","put","patch"):
         op["responses"]["400"]={"$ref":"#/components/responses/BadRequest"}
+    if path == "/api/v1/server-bridge/validate-join" or path.endswith("/heartbeat"):
+        op["responses"]["426"]={"$ref":"#/components/responses/UpgradeRequired"}
     paths.setdefault(path,{})[method]=op
 
 schemas={
@@ -236,7 +238,7 @@ schemas={
 "ChannelWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"protected":{"type":"boolean"}}},
 "UserWriteRequest":{"type":"object","properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"roleId":{"type":"string"},"password":{"type":"string"},"projectRoles":{"type":"object","additionalProperties":{"type":"string"}}}},
 "DiagnosticsReportRequest":{"type":"object","required":["schemaVersion","generatedAt","launcherVersion"],"properties":{"schemaVersion":{"type":"string"},"generatedAt":{"type":"string"},"launcherVersion":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"},"backendUrl":{"type":"string"},"status":{"type":"string"},"checks":{"type":"object","additionalProperties":{"type":"string"}}}},
-"HeartbeatRequest":{"type":"object","required":["serverId","serverType","pluginVersion","pluginSha256"],"properties":{"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","paper","purpur"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"}}},
+"HeartbeatRequest":{"type":"object","required":["protocolVersion","serverId","serverType","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":2},"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","paper","purpur"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"}},"additionalProperties":False},
 "BridgeAuditEventRequest":{"type":"object","required":["serverId","event"],"properties":{"serverId":{"type":"string"},"event":{"type":"string"},"player":{"type":"string"},"uuid":{"type":"string"},"details":{"type":"object","additionalProperties":True}}},
 "HasJoinedRequest":{"type":"object","properties":{"username":{"type":"string"},"serverId":{"type":"string"}}},
 "TelemetryRequest":{"type":"object","required":["projectId","event"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"event":{"type":"string"},"status":{"type":"string"}}},
@@ -250,7 +252,7 @@ schemas={
 "YggdrasilSignoutRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"providerId":{"type":"string"}}},
 "YggdrasilJoinRequest":{"type":"object","required":["accessToken","selectedProfile","serverId"],"properties":{"accessToken":{"type":"string"},"selectedProfile":{"type":"string"},"serverId":{"type":"string"}}},
 "FreeFormObject":{"type":"object","additionalProperties":True},
-"ValidateJoinRequest":{"type":"object","required":["serverId","username","pluginVersion","pluginSha256"],"properties":{"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"}}}
+"ValidateJoinRequest":{"type":"object","required":["protocolVersion","serverId","username","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":2},"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"}},"additionalProperties":False}
 }
 
 spec={
@@ -259,7 +261,7 @@ spec={
  "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
  "tags":[{"name":x} for x in ["auth","minecraft-auth","install","projects","packages","admin","runtime","bridge","operations"]],
  "paths":paths,
- "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"ServerToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Server-Token"},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required or invalid","content":{"application/json":{"schema":ref("Error")}}}}}
+ "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"ServerToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Server-Token"},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required or invalid","content":{"application/json":{"schema":ref("Error")}}},"UpgradeRequired":{"description":"ServerBridge Protocol v2 is required","content":{"application/json":{"schema":ref("Error")}}}}}
 }
 OUT.write_text(json.dumps(spec,ensure_ascii=False,indent=2)+"\n")
 print(f"generated {OUT}: {len(routes)} operations")

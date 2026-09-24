@@ -68,7 +68,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	}
 
 	heartbeat := func(hash string) *httptest.ResponseRecorder {
-		body := `{"serverType":"paper","pluginVersion":"0.13.5","pluginSha256":"` + hash + `"}`
+		body := `{"protocolVersion":2,"serverType":"paper","pluginVersion":"0.13.5","pluginSha256":"` + hash + `"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0135/heartbeat", strings.NewReader(body))
 		req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 		req.Header.Set("Content-Type", "application/json")
@@ -96,7 +96,7 @@ func TestServerBridgeArtifactIntegrity0135RejectsUnmeasuredAndRevokedBoundary(t 
 	}
 
 	validate := func(includeMeasurement bool) *httptest.ResponseRecorder {
-		body := `{"serverId":"paper-0135","username":"HashPlayer","projectId":"demo-project","profileId":"vanilla","channel":"stable"`
+		body := `{"protocolVersion":2,"serverId":"paper-0135","username":"HashPlayer","projectId":"demo-project","profileId":"vanilla","channel":"stable"`
 		if includeMeasurement {
 			body += `,"pluginVersion":"0.13.5","pluginSha256":"` + bridgePaperHash0135 + `"`
 		}

@@ -14,6 +14,7 @@ public final class JoinValidationResult {
     public String userMessage() {
         return switch (reason) {
             case "backend_unavailable", "backend_interrupted" -> "Сервис авторизации NeverLauncher временно недоступен.";
+            case "serverbridge_protocol_unsupported" -> "ServerBridge требует Protocol v2. Обновите серверный bridge до текущего релиза NeverLauncher.";
             case "server_token_missing", "server_token_invalid" -> "ServerBridge не настроен или его server token недействителен.";
             case "trusted_device_required", "trusted_device_unverified", "trusted_device_missing", "trusted_device_revoked" -> "Для входа требуется активное доверенное устройство NeverLauncher.";
             case "credential_trust_snapshot_missing", "session_binding_changed", "session_device_changed" -> "Сессия устройства устарела. Перезапустите игру из NeverLauncher.";

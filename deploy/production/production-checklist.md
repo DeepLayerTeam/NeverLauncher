@@ -22,6 +22,7 @@
 - [ ] Официальный 0.13.0 bundle содержит `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json` для exact source commit и проходит `nl release publish-check`.
 - [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
 - [ ] При upgrade с 0.13.9 старые API instance остановлены; `nl db migrate apply`/`verify` успешно довели schema до sealed `0020_guard_migration_compatibility_stabilization_01310`, а partial Guard snapshots отсутствуют.
+- [ ] Для 0.14.1 `nl db migrate verify` подтверждает `0021_serverbridge_protocol_v2_0141`; ServerBridge nodes со статусом `credential-rotation-required` получили новый token, а установленные Velocity/Paper/Purpur bridge используют Protocol v2.
 - [ ] `api-volume-init` завершился успешно; named volumes storage/backups принадлежат UID/GID `10001:10001`.
 
 ## После запуска

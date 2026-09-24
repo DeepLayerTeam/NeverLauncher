@@ -18,6 +18,12 @@ docker compose --env-file deploy/production/.env.production -f deploy/production
 `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` применяет встроенную цепочку production-миграций под PostgreSQL advisory lock. Если auto-migrate отключён, примените миграции явно через `nl db migrate apply`; API откажется запускаться или переходить в readiness при pending-миграциях либо несовпадении checksum.
 
 
+### Upgrade 0.14.0 → 0.14.1
+
+Остановите 0.14.0 API instances, создайте проверенный backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"`. Current migration должна быть `0021_serverbridge_protocol_v2_0141` до запуска 0.14.1 Backend.
+
+Migration переносит legacy ServerBridge metadata/textures из последнего persisted snapshot, но не может восстановить server credential hash и active join bearer hash, которые 0.14.0 намеренно не сериализовал. Такие nodes помечаются `credential-rotation-required`; после запуска 0.14.1 ротируйте server token административным endpoint и обновите token в конфигурации соответствующего Velocity/Paper/Purpur bridge. Bridge plugin должен быть 0.14.1 и отправлять Protocol v2.
+
 ### Upgrade 0.13.9 → 0.13.10
 
 Остановите 0.13.9 API instances, проверьте backup и выполните `nl db migrate apply --dsn "$NEVERLAUNCHER_DATABASE_DSN"`, затем `nl db migrate verify --dsn "$NEVERLAUNCHER_DATABASE_DSN"` до запуска 0.13.10 Backend. Migration `0020_guard_migration_compatibility_stabilization_01310` намеренно fail-closed отклоняет partial/ambiguous persisted Guard snapshots; не удаляйте constraints и не подменяйте checksum. Исправьте конкретные legacy rows на копии БД, повторите rehearsal `e2e/scripts/run-guard-migration-e2e.sh`, затем повторите production upgrade.

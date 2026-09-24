@@ -38,7 +38,7 @@ fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl; do need "$cmd"; done
+for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
 
 rm -rf "$RUNTIME_DIR"
@@ -270,7 +270,7 @@ json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_US
 validate_join() {
   local id="$1" token="$2" expect="$3" out="$RUNTIME_DIR/validate-$id-$expect.json" code
   code="$(curl -sS -o "$out" -w '%{http_code}' -H 'Content-Type: application/json' -H "X-NeverLauncher-Server-Token: $token" \
-    -d "{\"serverId\":\"$id\",\"username\":\"$PLAYER_USERNAME\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" \
+    -d "{\"protocolVersion\":2,\"serverId\":\"$id\",\"username\":\"$PLAYER_USERNAME\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" \
     "$API/api/v1/server-bridge/validate-join")"
   if [[ "$expect" == allow ]]; then
     [[ "$code" == 200 ]] && jq -e '.data.allowed == true' "$out" >/dev/null
@@ -279,6 +279,12 @@ validate_join() {
   fi
 }
 validate_join paper-e2e-p3 "$PAPER_TOKEN" allow
+validate_join paper-e2e-p3 "$PAPER_TOKEN" deny
+consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"
+(( consumed_count >= 1 )) || { echo "[e2e] ServerBridge Protocol v2 ticket was not persisted as consumed" >&2; exit 1; }
+# The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
+# the actual Minecraft connection; the server plugin must be the only consumer.
+json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
 
 (
   cd "$ROOT"
@@ -311,6 +317,8 @@ if [[ "$MODE" == "full" ]]; then
     local id="$1" token="$2" service="$3" port="$4"
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"$id\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-$id.json"
     validate_join "$id" "$token" allow
+    validate_join "$id" "$token" deny
+    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"$id\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-$id-fresh.json"
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-allow.txt"
     wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
     json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "{\"serverId\":\"$id\",\"reason\":\"e2e-revoke\"}" > "$RUNTIME_DIR/revoke-$id.json"
@@ -323,6 +331,9 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
+jq -e '.data.protocolVersion == 2 and .data.summary.protocolVersion == 2 and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
+serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
+(( serverbridge_nodes >= 3 )) || { echo "[e2e] expected PostgreSQL ServerBridge nodes" >&2; exit 1; }
 VELOCITY_HEALTH="skipped"
 PURPUR_HEALTH="skipped"
 if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; PURPUR_HEALTH="healthy"; fi

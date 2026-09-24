@@ -37,9 +37,9 @@ require("services/api/internal/httpapi/minecraft_auth_119.go", [
     '"trust-policy:"+trust.Reason',
 ])
 require("services/api/internal/httpapi/server_bridge.go", [
-    'TrustedDeviceID string',
-    'BindingEpoch    int64',
-    "createJoin(user, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, req)",
+    'TrustedDeviceID',
+    'BindingEpoch',
+    "trust.TrustedDeviceID, trust.BindingEpoch",
     "evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)",
     "invalidateJoin(username, serverID)",
     '"trust": trust',
@@ -52,8 +52,8 @@ require("services/api/internal/httpapi/bridge_plugins.go", [
     'payload["data"].(map[string]any)["trust"] = trust',
 ])
 require("services/api/internal/model/model.go", [
-    'TrustedDeviceID string    `json:"trustedDeviceId,omitempty"`',
-    'BindingEpoch    int64     `json:"bindingEpoch"`',
+    '`json:"trustedDeviceId,omitempty"`',
+    '`json:"bindingEpoch"`',
 ])
 require("services/api/internal/repository/postgres.go", [
     "trusted_device_id,binding_epoch",

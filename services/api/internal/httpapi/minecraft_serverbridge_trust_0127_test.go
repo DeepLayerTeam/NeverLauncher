@@ -135,19 +135,22 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 
 	access, _ := deviceTrustLogin0121(t, h, "bridge-trust-0127")
 	bound := bindAccessToken0127(t, h, access, "Bridge trust device A")
-	join := httptest.NewRequest(http.MethodPost, "/api/v1/session/join", strings.NewReader(`{"serverId":"trust-0127","projectId":"demo-project","profileId":"vanilla","channel":"stable","username":"TrustPlayer"}`))
-	join.Header.Set("Authorization", "Bearer "+bound.Access)
-	join.Header.Set("Content-Type", "application/json")
-	join.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.1")
-	join.RemoteAddr = "203.0.113.10:4242"
-	jv := httptest.NewRecorder()
-	h.ServeHTTP(jv, join)
-	if jv.Code != http.StatusOK {
-		t.Fatalf("trusted bridge join=%d %s", jv.Code, jv.Body.String())
+	issueJoin := func() {
+		join := httptest.NewRequest(http.MethodPost, "/api/v1/session/join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","projectId":"demo-project","profileId":"vanilla","channel":"stable","username":"TrustPlayer"}`))
+		join.Header.Set("Authorization", "Bearer "+bound.Access)
+		join.Header.Set("Content-Type", "application/json")
+		join.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.1")
+		join.RemoteAddr = "203.0.113.10:4242"
+		jv := httptest.NewRecorder()
+		h.ServeHTTP(jv, join)
+		if jv.Code != http.StatusOK {
+			t.Fatalf("trusted bridge join=%d %s", jv.Code, jv.Body.String())
+		}
 	}
+	issueJoin()
 
 	validateJoin := func() *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"stable"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"stable"}`))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-NeverLauncher-Server-Token", serverPayload.Data.ServerToken)
 		out := httptest.NewRecorder()
@@ -159,7 +162,8 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 		t.Fatalf("trusted validate-join=%d %s", first.Code, first.Body.String())
 	}
 
-	channelMismatch := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"beta"}`))
+	issueJoin()
+	channelMismatch := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/validate-join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","username":"TrustPlayer","projectId":"demo-project","profileId":"vanilla","channel":"beta"}`))
 	channelMismatch.Header.Set("Content-Type", "application/json")
 	channelMismatch.Header.Set("X-NeverLauncher-Server-Token", serverPayload.Data.ServerToken)
 	cm := httptest.NewRecorder()

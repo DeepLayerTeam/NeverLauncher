@@ -378,3 +378,59 @@ type MinecraftJoin struct {
 	CreatedAt          time.Time `json:"createdAt"`
 	ExpiresAt          time.Time `json:"expiresAt"`
 }
+
+// ServerBridgeNode is the authoritative Protocol v2 identity of a game/proxy node.
+// TokenHash is persisted, while the plaintext credential is shown only once.
+type ServerBridgeNode struct {
+	ID                  string    `json:"id"`
+	Name                string    `json:"name"`
+	Kind                string    `json:"kind"`
+	ProjectID           string    `json:"projectId"`
+	ProfileID           string    `json:"profileId,omitempty"`
+	Fingerprint         string    `json:"fingerprint,omitempty"`
+	TokenHash           string    `json:"-"`
+	TokenPrefix         string    `json:"tokenPrefix"`
+	Status              string    `json:"status"`
+	ProtocolVersion     int       `json:"protocolVersion"`
+	PluginVersion       string    `json:"pluginVersion,omitempty"`
+	PluginSHA256        string    `json:"pluginSha256,omitempty"`
+	IntegrityStatus     string    `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt time.Time `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt     time.Time `json:"lastHeartbeatAt,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
+	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
+}
+
+// ServerBridgeJoinTicket is a short-lived one-time Protocol v2 authorization.
+// A successful server-side validation atomically consumes it, preventing replay.
+type ServerBridgeJoinTicket struct {
+	ID                 string    `json:"id"`
+	Username           string    `json:"username"`
+	UsernameNormalized string    `json:"-"`
+	UUID               string    `json:"uuid"`
+	UserID             string    `json:"userId"`
+	SessionID          string    `json:"sessionId"`
+	ServerID           string    `json:"serverId"`
+	ProjectID          string    `json:"projectId"`
+	ProfileID          string    `json:"profileId"`
+	Channel            string    `json:"channel"`
+	AccessTokenHash    string    `json:"-"`
+	TrustedDeviceID    string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch       int64     `json:"bindingEpoch"`
+	MinecraftSessionID string    `json:"minecraftSessionId,omitempty"`
+	ProtocolVersion    int       `json:"protocolVersion"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"createdAt"`
+	ExpiresAt          time.Time `json:"expiresAt"`
+	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
+}
+
+// ServerBridgeTexture is the persistent texture profile used by Protocol v2.
+type ServerBridgeTexture struct {
+	UUID      string    `json:"uuid"`
+	Username  string    `json:"username"`
+	SkinURL   string    `json:"skinUrl,omitempty"`
+	CapeURL   string    `json:"capeUrl,omitempty"`
+	Model     string    `json:"model"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}

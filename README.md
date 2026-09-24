@@ -4,9 +4,15 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeverGuard Release 0.14.0**: production NeverGuard для Windows/Linux/macOS, authenticated IPC v4, server-verifiable Guard Attestation, live Minecraft/ServerBridge integrity enforcement и platform-bound release policy сведены в единый release-grade контур.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **ServerBridge Protocol v2 / 0.14.1**: ServerBridge node/join/texture state перенесён в PostgreSQL source of truth, join tickets стали одноразовыми и атомарно consume-ятся, а Velocity/Paper/Purpur bridge-клиенты явно согласуют wire protocol v2.
 
 Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+
+## ServerBridge Protocol v2 — 0.14.1
+
+`0.14.1` добавляет PostgreSQL-backed ServerBridge v2. Таблицы `server_bridge_nodes_v2`, `server_bridge_join_tickets_v2` и `server_bridge_textures_v2` являются production source of truth; JSON snapshot используется только memory dev/test path. Join ticket выдаётся на 120 секунд, существует в единственном active экземпляре для `serverId + username` и после успешной server validation атомарно становится `consumed`, поэтому replay не проходит.
+
+ServerBridge plugins отправляют `protocolVersion: 2` на heartbeat/validate. Backend fail-closed отклоняет старый protocol (`426`, `serverbridge_protocol_unsupported`). Credential rotation инвалидирует незавершённые join tickets. При upgrade с 0.14.0 migration `0021_serverbridge_protocol_v2_0141` переносит только безопасно восстанавливаемые legacy metadata/textures; nodes из старого snapshot требуют одноразовой административной ротации server token.
 
 ## NeverGuard Release — 0.14.0
 

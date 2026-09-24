@@ -43,7 +43,17 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 		t.Fatalf("server token missing: %v %s", err, res.Body.String())
 	}
 
+	// Protocol v2 is negotiated on the wire, not only advertised by metadata.
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.11.0"}`))
+	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
+	req.Header.Set("Content-Type", "application/json")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusUpgradeRequired || !strings.Contains(res.Body.String(), "serverbridge_protocol_unsupported") {
+		t.Fatalf("legacy bridge protocol accepted => %d %s", res.Code, res.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"protocolVersion":2,"serverType":"velocity","pluginVersion":"0.11.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
 	req.Header.Set("X-NeverLauncher-Server-Token", registered.Data.ServerToken)
 	req.Header.Set("Content-Type", "application/json")
 	res = httptest.NewRecorder()

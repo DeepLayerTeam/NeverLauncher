@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.1 — ServerBridge Protocol v2 + PostgreSQL source of truth
+
+`0.14.1` переводит ServerBridge из process-local/snapshot state в отдельный production persistence boundary. В PostgreSQL теперь хранятся node identity и server credential hash, plugin integrity/heartbeat state, short-lived join tickets и texture profiles; runtime JSON snapshot больше не является источником истины для ServerBridge при SQL repository.
+
+- Добавлена синхронная API/CLI migration `0021_serverbridge_protocol_v2_0141.sql`: `server_bridge_nodes_v2`, `server_bridge_join_tickets_v2`, `server_bridge_textures_v2`, индексы и DB-level invariants Protocol v2.
+- Join authorization стал одноразовым: активный ticket живёт 120 секунд и после успешных trust/integrity проверок атомарно переводится PostgreSQL `UPDATE ... WHERE status='active'` в `consumed`. Повторная server validation не авторизует игрока.
+- Register/credential rotation и replace активного ticket сериализованы transaction-scoped advisory locks; rotation инвалидирует незавершённые tickets этого node.
+- Velocity/Paper/Purpur bridge-клиенты отправляют `protocolVersion: 2` на heartbeat/validate. Backend возвращает `426 Upgrade Required` с `serverbridge_protocol_unsupported` для старого wire protocol.
+- Legacy 0.14.0 snapshot импортирует только восстанавливаемые node metadata/textures. Поскольку plaintext credential и token hash намеренно не сериализовались, такой node получает `credential-rotation-required` и не может аутентифицироваться до административной ротации token; legacy active joins не переносятся.
+- PostgreSQL mutation failures для integrity heartbeat и texture state теперь fail-closed, а не маскируются успешным API-ответом.
+
+Migration: перед запуском 0.14.1 примените/проверьте `0021_serverbridge_protocol_v2_0141`. После upgrade зарегистрированные через snapshot nodes с `credential-rotation-required` необходимо один раз ротировать через административный ServerBridge endpoint.
+
 ## 0.14.0 — NeverGuard Release
 
 `0.14.0` закрывает NeverGuard как production release boundary поверх уже реализованных Windows/Linux/macOS Guard, authenticated IPC v4, Integrity Evidence и server-verifiable Guard Attestation. Wire protocol не меняется: совместимость 0.13.x сохраняется на IPC v4, но Desktop теперь после authenticated handshake обязательно запрашивает MAC-protected `status` и fail-closed сверяет фактические `productVersion`, platform identity и protocol version Guard до допуска runtime.

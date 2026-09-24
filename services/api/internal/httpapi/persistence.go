@@ -386,6 +386,9 @@ func (s *securityHardeningStore) import950(state securityState950, secret string
 }
 
 func (b *serverBridgeStore) export950() serverBridgeState950 {
+	if b.backendV2() != nil {
+		return serverBridgeState950{Servers: map[string]bridgeServerRecord{}, Joins: map[string]bridgeJoinRecord{}, Textures: map[string]bridgeTextureRecord{}}
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return serverBridgeState950{Servers: copyMap950(b.servers), Joins: copyMap950(b.joins), Textures: copyMap950(b.textures)}
