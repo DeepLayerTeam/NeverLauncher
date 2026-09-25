@@ -342,6 +342,42 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 	if !bytes.Equal(bytes.TrimSpace(embedded), bytes.TrimSpace(top)) {
 		return fmt.Errorf("macOS %s embedded package manifest mismatch", arch)
 	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		updatePath := "NeverLauncher.app/Contents/Resources/" + componentUpdateManifestFile0157
+		updateRaw, ok := entries[updatePath]
+		if !ok {
+			return fmt.Errorf("macOS %s package missing %s", arch, updatePath)
+		}
+		var update componentUpdateManifest0157
+		if err := json.Unmarshal(updateRaw, &update); err != nil {
+			return fmt.Errorf("macOS %s component update manifest invalid: %w", arch, err)
+		}
+		expectedTrust := "adhoc-development"
+		if evidencePackage.NotaryStatus == "Accepted" && evidencePackage.Stapled && evidencePackage.StaplerValidated && evidencePackage.GatekeeperAccepted {
+			expectedTrust = "developer-id-notarized"
+		}
+		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "macos" || update.Architecture != arch || update.Layout != "macos-app-bundle" || update.BundleName != "NeverLauncher.app" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
+			return fmt.Errorf("macOS %s component update manifest identity mismatch", arch)
+		}
+		byComponent := map[string]MacOSPackageArtifact0154{}
+		for _, row := range manifest.Artifacts {
+			byComponent[row.Component] = row
+		}
+		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
+		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/MacOS/neverguard", "runtime": "Contents/MacOS/neverruntime"}
+		seen := map[string]bool{}
+		for _, row := range update.Components {
+			sourceComponent, known := aliases[row.Component]
+			artifact, exists := byComponent[sourceComponent]
+			if !known || !exists || seen[row.Component] || row.SourcePath != expectedPath[row.Component] || row.TargetPath != row.SourcePath || !row.Executable || row.Size != artifact.Size || !strings.EqualFold(row.SHA256, artifact.SHA256) || artifact.BundlePath != "NeverLauncher.app/"+row.SourcePath {
+				return fmt.Errorf("macOS %s component update binding mismatch for %s", arch, row.Component)
+			}
+			seen[row.Component] = true
+		}
+		if !seen["desktop"] || !seen["guard"] || !seen["runtime"] {
+			return fmt.Errorf("macOS %s component update manifest must bind Desktop/Guard/Runtime", arch)
+		}
+	}
 	return nil
 }
 

@@ -109,6 +109,14 @@ func expectedWindowsSignedArtifacts0152(arch string) map[string]string {
 	}
 }
 
+func expectedWindowsSignedArtifactsForVersion0157(ver, arch string) map[string]string {
+	artifacts := expectedWindowsSignedArtifacts0152(arch)
+	if componentTransactionalUpdateRequired0157(ver) {
+		artifacts["runtime"] = "neverruntime-windows-" + arch + ".exe"
+	}
+	return artifacts
+}
+
 func expectedWindowsPackage0152(ver, arch string) (string, string) {
 	manifest := "WINDOWS_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
 	return "neverlauncher-desktop-" + ver + "-windows-" + arch + ".zip", manifest
@@ -320,7 +328,11 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 			Size   int64
 		}{row.SHA256, row.Size}
 	}
-	for _, component := range []string{"desktop-launcher", "guard"} {
+	packageComponents := []string{"desktop-launcher", "guard"}
+	if componentTransactionalUpdateRequired0157(ver) {
+		packageComponents = []string{"cli", "desktop-launcher", "guard", "runtime"}
+	}
+	for _, component := range packageComponents {
 		evidenceArtifact, ok := artifactByComponent[component]
 		if !ok {
 			return fmt.Errorf("Windows %s evidence missing %s", arch, component)
@@ -367,8 +379,19 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	if !ok || !bytes.Equal(bytes.TrimSpace(zipManifest), bytes.TrimSpace(manifestRaw)) {
 		return fmt.Errorf("Windows %s package embedded manifest differs from release manifest", arch)
 	}
-	desktopEntry := "neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe"
-	for component, entryName := range map[string]string{"desktop-launcher": desktopEntry, "guard": "neverguard.exe"} {
+	packageEntries := map[string]string{
+		"desktop-launcher": "neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe",
+		"guard":            "neverguard.exe",
+	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		packageEntries = map[string]string{
+			"cli":              "neverlauncher-cli.exe",
+			"desktop-launcher": "neverlauncher-desktop.exe",
+			"guard":            "neverguard.exe",
+			"runtime":          "neverruntime.exe",
+		}
+	}
+	for component, entryName := range packageEntries {
 		data, ok := zipFiles[entryName]
 		if !ok {
 			return fmt.Errorf("Windows %s package missing %s", arch, entryName)
@@ -384,6 +407,32 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		}
 		if requireSigned && !pe.HasSignature {
 			return fmt.Errorf("Windows %s package embedded %s lacks Authenticode certificate table", arch, component)
+		}
+	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		updateRaw, ok := zipFiles[componentUpdateManifestFile0157]
+		if !ok {
+			return fmt.Errorf("Windows %s package lacks %s", arch, componentUpdateManifestFile0157)
+		}
+		var update componentUpdateManifest0157
+		if err := json.Unmarshal(updateRaw, &update); err != nil {
+			return fmt.Errorf("Windows %s component update manifest invalid: %w", arch, err)
+		}
+		expectedTrust := "unsigned-development"
+		if requireSigned {
+			expectedTrust = "authenticode-rfc3161"
+		}
+		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
+			return fmt.Errorf("Windows %s component update manifest identity mismatch", arch)
+		}
+		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
+		expectedEntry := map[string]string{"desktop": "neverlauncher-desktop.exe", "guard": "neverguard.exe", "runtime": "neverruntime.exe"}
+		for _, row := range update.Components {
+			component, ok := aliases[row.Component]
+			evidenceArtifact, exists := artifactByComponent[component]
+			if !ok || !exists || row.SourcePath != expectedEntry[row.Component] || row.TargetPath != row.SourcePath || row.Size != evidenceArtifact.Size || !strings.EqualFold(row.SHA256, evidenceArtifact.SHA256) || !row.Executable {
+				return fmt.Errorf("Windows %s component update binding mismatch for %s", arch, row.Component)
+			}
 		}
 	}
 	return nil
@@ -522,9 +571,9 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		if target.RustTarget != rustTarget || !strings.EqualFold(target.PEMachine, expectedMachineText) {
 			return fmt.Errorf("Windows %s target metadata mismatch", arch)
 		}
-		expectedNames := expectedWindowsSignedArtifacts0152(arch)
+		expectedNames := expectedWindowsSignedArtifactsForVersion0157(ver, arch)
 		if len(target.Artifacts) != len(expectedNames) {
-			return fmt.Errorf("Windows %s target must contain CLI/Desktop/NeverGuard artifacts", arch)
+			return fmt.Errorf("Windows %s target has invalid signed artifact set for %s", arch, ver)
 		}
 		artifactByComponent := map[string]WindowsSignedArtifact0152{}
 		for _, artifact := range target.Artifacts {

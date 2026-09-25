@@ -61,6 +61,8 @@ nl update recover --root ./install
 nl update self-test
 ```
 
+Для `0.15.7+` Desktop self-update использует внешний `nl update components` helper: production package обязан иметь pinned SHA-256 и platform component manifest, NeverGuard останавливается до switch, а Desktop/Guard/Runtime применяются одной rollback-boundary; macOS обновляет целый notarized `.app`.
+
 Для `0.15.6+` `client install/update/repair/rollback/package-apply` используют один transactional engine: verified staging на том же filesystem, durable journal, backup только touched paths, atomic replace, post-verify и automatic crash rollback. Control state находится в `.neverlauncher/updater`; payload не может изменять этот каталог, проходить через symlink или выходить за install root.
 
 ## Релизы и пакеты

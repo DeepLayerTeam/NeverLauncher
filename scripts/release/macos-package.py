@@ -119,6 +119,39 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     top = out / f"MACOS_PACKAGE_MANIFEST_{arch.upper()}.json"
     write_json(embedded, payload)
     shutil.copy2(embedded, top)
+
+    by_component = {row["component"]: row for row in artifacts}
+    component_update = {
+        "schemaVersion": "1.0",
+        "product": "NeverLauncher",
+        "productVersion": args.version,
+        "platform": "macos",
+        "architecture": arch,
+        "layout": "macos-app-bundle",
+        "trustMode": args.trust_mode,
+        "bundleName": "NeverLauncher.app",
+        "components": [],
+        "supportFiles": [],
+    }
+    for public_name, source_component, binary_name in (
+        ("desktop", "desktop-launcher", "neverlauncher-desktop"),
+        ("guard", "guard", "neverguard"),
+        ("runtime", "runtime", "neverruntime"),
+    ):
+        row = by_component[source_component]
+        relative = f"Contents/MacOS/{binary_name}"
+        component_update["components"].append(
+            {
+                "component": public_name,
+                "sourcePath": relative,
+                "targetPath": relative,
+                "sha256": row["sha256"],
+                "size": row["size"],
+                "executable": True,
+            }
+        )
+    update_manifest = resources / "COMPONENT_UPDATE_MANIFEST.json"
+    write_json(update_manifest, component_update)
     return 0
 
 
@@ -221,6 +254,7 @@ def main() -> int:
     manifest.add_argument("--version", required=True)
     manifest.add_argument("--arch", choices=sorted(ARCHES), required=True)
     manifest.add_argument("--team-id", required=True)
+    manifest.add_argument("--trust-mode", choices=["developer-id-notarized", "adhoc-development"], required=True)
     manifest.add_argument("--app", required=True)
     manifest.add_argument("--out-dir", required=True)
     evidence = sub.add_parser("evidence")

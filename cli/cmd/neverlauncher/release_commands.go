@@ -113,7 +113,16 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Unified Transactional Updater Core self-test status=%v", report["status"])
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core")
+			if componentTransactionalUpdateRequired0157(manifestVersion) {
+				report, err := runComponentUpdaterSelfTest0157()
+				if err != nil {
+					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test: %w", err)
+				}
+				if fmt.Sprint(report["status"]) != "ok" || fmt.Sprint(report["macosTreeRollback"]) != "ok" {
+					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -197,6 +206,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/notarized-macos-x64-arm64-0154.py",
 		"scripts/smoke/offline/managed-jre-distribution-0155.py",
 		"scripts/smoke/offline/unified-transactional-updater-core-0156.py",
+		"scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
 		"scripts/release/linux-package.py",
@@ -236,20 +246,21 @@ func releaseDoctor() error {
 		failed = true
 	}
 	for id, command := range map[string][]string{
-		"repository-policy":          {"python3", "scripts/smoke/offline/repository-policy.py"},
-		"version-alignment":          {"bash", "scripts/smoke/offline/version-alignment.sh"},
-		"openapi-validator":          {"python3", "scripts/contracts/validate-openapi.py"},
-		"compatibility-targets":      {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
-		"device-trust-targets":       {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
-		"guard-ci-targets":           {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
-		"guard-stabilization":        {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
-		"neverguard-release":         {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
-		"serverbridge-identity":      {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
-		"delivery-manifest":          {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
-		"windows-dual-signing":       {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
-		"macos-dual-notarization":    {"python3", "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"},
-		"managed-jre-distribution":   {"python3", "scripts/smoke/offline/managed-jre-distribution-0155.py"},
-		"transactional-updater-core": {"python3", "scripts/smoke/offline/unified-transactional-updater-core-0156.py"},
+		"repository-policy":              {"python3", "scripts/smoke/offline/repository-policy.py"},
+		"version-alignment":              {"bash", "scripts/smoke/offline/version-alignment.sh"},
+		"openapi-validator":              {"python3", "scripts/contracts/validate-openapi.py"},
+		"compatibility-targets":          {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
+		"device-trust-targets":           {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
+		"guard-ci-targets":               {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
+		"guard-stabilization":            {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
+		"neverguard-release":             {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
+		"serverbridge-identity":          {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
+		"delivery-manifest":              {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
+		"windows-dual-signing":           {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
+		"macos-dual-notarization":        {"python3", "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"},
+		"managed-jre-distribution":       {"python3", "scripts/smoke/offline/managed-jre-distribution-0155.py"},
+		"transactional-updater-core":     {"python3", "scripts/smoke/offline/unified-transactional-updater-core-0156.py"},
+		"component-transactional-update": {"python3", "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -489,6 +500,9 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	}
 	if updaterVersionAtLeast0156(ver) {
 		checks = append(checks, "unified-transactional-updater-core")
+	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		checks = append(checks, "desktop-guard-runtime-transactional-update")
 	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {

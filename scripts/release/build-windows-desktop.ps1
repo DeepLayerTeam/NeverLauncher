@@ -221,19 +221,23 @@ try {
         New-Item -ItemType Directory -Force -Path $PackageDir | Out-Null
 
         Invoke-Checked { rustup target add $Target.RustTarget } "rustup target add $($Target.RustTarget)"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin neverguard } "NeverGuard $Arch release build"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin neverguard --bin neverruntime } "NeverGuard/NeverRuntime $Arch release build"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Desktop $Arch native release build"
 
         $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\neverlauncher-desktop.exe"
         $GuardSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\neverguard.exe"
+        $RuntimeSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\neverruntime.exe"
         if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Desktop $Arch artifact missing: $DesktopSource" }
         if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "NeverGuard $Arch artifact missing: $GuardSource" }
+        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "NeverRuntime $Arch artifact missing: $RuntimeSource" }
 
-        $DesktopPackageName = "neverlauncher-desktop-$Version-windows-$Arch.exe"
+        $DesktopPackageName = "neverlauncher-desktop.exe"
         $DesktopPackagePath = Join-Path $PackageDir $DesktopPackageName
         $GuardPackagePath = Join-Path $PackageDir "neverguard.exe"
+        $RuntimePackagePath = Join-Path $PackageDir "neverruntime.exe"
         Copy-Item $DesktopSource $DesktopPackagePath -Force
         Copy-Item $GuardSource $GuardPackagePath -Force
+        Copy-Item $RuntimeSource $RuntimePackagePath -Force
 
         $CliRootName = "neverlauncher-cli-windows-$Arch.exe"
         $CliRootPath = Join-Path $OutDir $CliRootName
@@ -249,20 +253,28 @@ try {
 
         Assert-PEArchitecture $DesktopPackagePath $Target.Machine $Arch
         Assert-PEArchitecture $GuardPackagePath $Target.Machine $Arch
+        Assert-PEArchitecture $RuntimePackagePath $Target.Machine $Arch
         Assert-PEArchitecture $CliRootPath $Target.Machine $Arch
 
-        $DesktopSignature = $null; $GuardSignature = $null; $CliSignature = $null
+        $DesktopSignature = $null; $GuardSignature = $null; $RuntimeSignature = $null; $CliSignature = $null
         if ($SignedProduction) {
             $DesktopSignature = Sign-And-VerifyAuthenticode $DesktopPackagePath $SigningContext $SignTool
             $GuardSignature = Sign-And-VerifyAuthenticode $GuardPackagePath $SigningContext $SignTool
+            $RuntimeSignature = Sign-And-VerifyAuthenticode $RuntimePackagePath $SigningContext $SignTool
             $CliSignature = Sign-And-VerifyAuthenticode $CliRootPath $SigningContext $SignTool
             Assert-PEArchitecture $DesktopPackagePath $Target.Machine $Arch
             Assert-PEArchitecture $GuardPackagePath $Target.Machine $Arch
+            Assert-PEArchitecture $RuntimePackagePath $Target.Machine $Arch
             Assert-PEArchitecture $CliRootPath $Target.Machine $Arch
         }
 
         $DesktopRecord = Get-ArtifactRecord $DesktopPackagePath $DesktopPackageName "desktop-launcher" $Arch $Target.MachineText $DesktopSignature $SignedProduction
         $GuardRecord = Get-ArtifactRecord $GuardPackagePath "neverguard.exe" "guard" $Arch $Target.MachineText $GuardSignature $SignedProduction
+        $RuntimeRecord = Get-ArtifactRecord $RuntimePackagePath "neverruntime.exe" "runtime" $Arch $Target.MachineText $RuntimeSignature $SignedProduction
+        $CliPackagePath = Join-Path $PackageDir "neverlauncher-cli.exe"
+        Copy-Item $CliRootPath $CliPackagePath -Force
+        $CliPackageSignature = if ($SignedProduction) { Get-AuthenticodeSignature $CliPackagePath } else { $null }
+        $CliPackageRecord = Get-ArtifactRecord $CliPackagePath "neverlauncher-cli.exe" "cli" $Arch $Target.MachineText $CliPackageSignature $SignedProduction
         $Manifest = [ordered]@{
             schemaVersion = "1.1"
             productVersion = $Version
@@ -281,14 +293,35 @@ try {
             signingMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
             signerThumbprint = $(if ($SignedProduction) { $SigningContext.Certificate.Thumbprint.ToLowerInvariant() } else { "" })
             timestampServer = $(if ($SignedProduction) { $TimestampServer } else { "" })
-            requiredAdjacentArtifacts = @("neverguard.exe")
-            artifacts = @($DesktopRecord, $GuardRecord)
+            requiredAdjacentArtifacts = @("neverguard.exe", "neverruntime.exe", "neverlauncher-cli.exe")
+            artifacts = @($DesktopRecord, $GuardRecord, $RuntimeRecord, $CliPackageRecord)
         }
         $PackageManifestPath = Join-Path $PackageDir "WINDOWS_PACKAGE_MANIFEST.json"
         Write-JsonNoBom $PackageManifestPath $Manifest
         $RootManifestName = "WINDOWS_PACKAGE_MANIFEST_$($Arch.ToUpperInvariant()).json"
         $RootManifestPath = Join-Path $OutDir $RootManifestName
         Copy-Item $PackageManifestPath $RootManifestPath -Force
+
+        $PackageManifestItem = Get-Item $PackageManifestPath
+        $PackageManifestHash = (Get-FileHash -Algorithm SHA256 $PackageManifestPath).Hash.ToLowerInvariant()
+        $ComponentUpdateManifest = [ordered]@{
+            schemaVersion = "1.0"
+            product = "NeverLauncher"
+            productVersion = $Version
+            platform = "windows"
+            architecture = $Arch
+            layout = "adjacent-files"
+            trustMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
+            components = @(
+                [ordered]@{ component = "desktop"; sourcePath = "neverlauncher-desktop.exe"; targetPath = "neverlauncher-desktop.exe"; sha256 = $DesktopRecord.sha256; size = $DesktopRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $DesktopRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $DesktopRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "guard"; sourcePath = "neverguard.exe"; targetPath = "neverguard.exe"; sha256 = $GuardRecord.sha256; size = $GuardRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $GuardRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $GuardRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "runtime"; sourcePath = "neverruntime.exe"; targetPath = "neverruntime.exe"; sha256 = $RuntimeRecord.sha256; size = $RuntimeRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.timestampSignerThumbprint } else { "" }) }
+            )
+            supportFiles = @(
+                [ordered]@{ component = "package-manifest"; sourcePath = "WINDOWS_PACKAGE_MANIFEST.json"; targetPath = "WINDOWS_PACKAGE_MANIFEST.json"; sha256 = $PackageManifestHash; size = $PackageManifestItem.Length; executable = $false }
+            )
+        }
+        Write-JsonNoBom (Join-Path $PackageDir "COMPONENT_UPDATE_MANIFEST.json") $ComponentUpdateManifest
 
         $ZipName = "neverlauncher-desktop-$Version-windows-$Arch.zip"
         $ZipPath = Join-Path $OutDir $ZipName
@@ -298,18 +331,23 @@ try {
 
         $DesktopRootName = "neverlauncher-desktop-windows-$Arch.exe"
         $GuardRootName = "neverguard-windows-$Arch.exe"
+        $RuntimeRootName = "neverruntime-windows-$Arch.exe"
         $DesktopRootPath = Join-Path $OutDir $DesktopRootName
         $GuardRootPath = Join-Path $OutDir $GuardRootName
+        $RuntimeRootPath = Join-Path $OutDir $RuntimeRootName
         Copy-Item $DesktopPackagePath $DesktopRootPath -Force
         Copy-Item $GuardPackagePath $GuardRootPath -Force
+        Copy-Item $RuntimePackagePath $RuntimeRootPath -Force
 
         $DesktopRootSignature = if ($SignedProduction) { Get-AuthenticodeSignature $DesktopRootPath } else { $null }
         $GuardRootSignature = if ($SignedProduction) { Get-AuthenticodeSignature $GuardRootPath } else { $null }
+        $RuntimeRootSignature = if ($SignedProduction) { Get-AuthenticodeSignature $RuntimeRootPath } else { $null }
         $CliRootSignature = if ($SignedProduction) { Get-AuthenticodeSignature $CliRootPath } else { $null }
         $EvidenceArtifacts = @(
             (Get-ArtifactRecord $CliRootPath $CliRootName "cli" $Arch $Target.MachineText $CliRootSignature $SignedProduction),
             (Get-ArtifactRecord $DesktopRootPath $DesktopRootName "desktop-launcher" $Arch $Target.MachineText $DesktopRootSignature $SignedProduction),
-            (Get-ArtifactRecord $GuardRootPath $GuardRootName "guard" $Arch $Target.MachineText $GuardRootSignature $SignedProduction)
+            (Get-ArtifactRecord $GuardRootPath $GuardRootName "guard" $Arch $Target.MachineText $GuardRootSignature $SignedProduction),
+            (Get-ArtifactRecord $RuntimeRootPath $RuntimeRootName "runtime" $Arch $Target.MachineText $RuntimeRootSignature $SignedProduction)
         )
         $ZipItem = Get-Item $ZipPath
         $ManifestHash = (Get-FileHash -Algorithm SHA256 $RootManifestPath).Hash.ToLowerInvariant()

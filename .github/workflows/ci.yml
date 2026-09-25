@@ -67,6 +67,7 @@ jobs:
           python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
           python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
+          python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -88,6 +89,7 @@ jobs:
           go vet ./...
           go build -trimpath -o /tmp/nl ./cmd/neverlauncher
           /tmp/nl update self-test
+          /tmp/nl update component-self-test
       - name: Release doctor
         run: /tmp/nl release doctor
       - name: Backend test, race, vet and pgx build
@@ -247,6 +249,7 @@ jobs:
           test -s "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
           python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
           "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update self-test
+          "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update component-self-test
       - name: Upload native Linux production artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -302,6 +305,7 @@ jobs:
           go build -trimpath -o "$env:RUNNER_TEMP\nl-updater-selftest.exe" ./cmd/neverlauncher
           Pop-Location
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update self-test
+          & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update component-self-test
       - name: Build unsigned CI x64 + ARM64 delivery candidates
         shell: pwsh
         run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
@@ -328,6 +332,8 @@ jobs:
             dist/release-*/neverlauncher-desktop-windows-arm64.exe
             dist/release-*/neverguard-windows-x64.exe
             dist/release-*/neverguard-windows-arm64.exe
+            dist/release-*/neverruntime-windows-x64.exe
+            dist/release-*/neverruntime-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-*-windows-x64.zip
             dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json
@@ -452,6 +458,7 @@ jobs:
           DIR="dist/release-${VERSION}"
           (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
           /tmp/nl update self-test
+          /tmp/nl update component-self-test
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
           /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
       - name: Upload macOS x64 + ARM64 delivery candidates

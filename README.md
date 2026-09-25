@@ -4,7 +4,18 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.6**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.7**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Транзакционное обновление Desktop/Guard/Runtime — 0.15.7
+
+`0.15.7` использует 0.15.6 transaction engine для self-update самого NeverLauncher. Desktop принимает production package и pinned SHA-256, останавливает NeverGuard и запускает соседний CLI helper с `update components`; helper ждёт завершения Desktop и только после этого изменяет live installation. Desktop, NeverGuard и NeverRuntime проверяются и переключаются одной транзакцией, поэтому ошибка одного компонента откатывает весь набор.
+
+Windows и Linux используют adjacent-file update с durable journal/backup/post-verify. Windows дополнительно повторно проверяет Authenticode и timestamp identity каждого PE; Linux сверяет ELF architecture и SHA-256. На macOS частичная замена внутренних Mach-O запрещена: staging содержит целый notarized `NeverLauncher.app`, updater atomically меняет app directory, затем повторно выполняет `codesign --verify`, `stapler validate` и Gatekeeper assessment; при любой ошибке старый app bundle восстанавливается.
+
+```bash
+nl update components --package ./neverlauncher-desktop-0.15.7-linux-x64.tar.gz --expected-sha256 <sha256> --current-desktop ./neverlauncher-desktop --wait-pid <pid> --restart
+nl update component-self-test
+```
 
 ## Unified Transactional Updater Core — 0.15.6
 

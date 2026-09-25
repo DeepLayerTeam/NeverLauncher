@@ -11,7 +11,7 @@ use neverruntime::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
+use std::{path::PathBuf, process::Stdio, time::{Duration, SystemTime, UNIX_EPOCH}};
 use tauri::Manager;
 use device_keys::{DeviceKeyInfo, DeviceSignatureResult};
 use tokio::{fs, process::Command};
@@ -429,6 +429,94 @@ async fn neverguard_guard_attestation(
     }
 }
 
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LauncherUpdateScheduleResult {
+    status: String,
+    updater_pid: u32,
+    package_path: String,
+    message: String,
+}
+
+fn launcher_update_helper_name() -> &'static str {
+    if cfg!(target_os = "windows") { "neverlauncher-cli.exe" } else { "neverlauncher-cli" }
+}
+
+fn validate_update_sha256(value: &str) -> Result<String, String> {
+    let value = value.trim().to_ascii_lowercase();
+    if value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("expectedSha256 должен быть SHA-256 в hex (64 символа)".into());
+    }
+    Ok(value)
+}
+
+#[tauri::command]
+async fn install_launcher_update(
+    package_path: String,
+    expected_sha256: String,
+    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    app: tauri::AppHandle,
+) -> Result<LauncherUpdateScheduleResult, String> {
+    let expected_sha256 = validate_update_sha256(&expected_sha256)?;
+    let package = fs::canonicalize(PathBuf::from(package_path.trim()))
+        .await
+        .map_err(|e| format!("update package недоступен: {e}"))?;
+    let package_meta = fs::symlink_metadata(&package).await.map_err(|e| e.to_string())?;
+    if !package_meta.file_type().is_file() || package_meta.file_type().is_symlink() || package_meta.len() == 0 {
+        return Err("update package должен быть непустым обычным файлом, не symlink".into());
+    }
+
+    let current_exe = std::env::current_exe().map_err(|e| format!("не удалось определить Desktop executable: {e}"))?;
+    let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("не удалось canonicalize Desktop executable: {e}"))?;
+    let bin_dir = current_exe.parent().ok_or_else(|| "Desktop executable не имеет родительского каталога".to_string())?;
+    let helper = bin_dir.join(launcher_update_helper_name());
+    let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("transactional updater helper отсутствует {}: {e}", helper.display()))?;
+    if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() || helper_meta.len() == 0 {
+        return Err(format!("transactional updater helper небезопасен: {}", helper.display()));
+    }
+
+    // Guard owns handles/IPC that may keep its executable busy on Windows. Stop it
+    // before the external helper waits for Desktop and enters the transaction.
+    neverguard.shutdown().await.map_err(|e| format!("не удалось остановить NeverGuard перед обновлением: {e}"))?;
+
+    let parent_pid = std::process::id().to_string();
+    let mut command = Command::new(&helper);
+    command
+        .arg("update")
+        .arg("components")
+        .arg("--package")
+        .arg(&package)
+        .arg("--expected-sha256")
+        .arg(&expected_sha256)
+        .arg("--current-desktop")
+        .arg(&current_exe)
+        .arg("--wait-pid")
+        .arg(&parent_pid)
+        .arg("--restart")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let child = command.spawn().map_err(|e| format!("не удалось запустить transactional updater helper: {e}"))?;
+    let updater_pid = child.id().ok_or_else(|| "updater helper запущен без process id".to_string())?;
+    drop(child);
+
+    // Return the schedule result to the UI, then leave this process so the helper can
+    // atomically replace the Desktop binary/app bundle on every supported OS.
+    let exit_handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(150));
+        exit_handle.exit(0);
+    });
+
+    Ok(LauncherUpdateScheduleResult {
+        status: "scheduled".into(),
+        updater_pid,
+        package_path: package.to_string_lossy().to_string(),
+        message: "Desktop/Guard/Runtime update передан внешнему transactional updater; Desktop будет перезапущен после commit".into(),
+    })
+}
+
 #[tauri::command]
 async fn neverguard_status(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<NeverGuardStatus, String> {
     neverguard.status().await
@@ -502,6 +590,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

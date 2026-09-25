@@ -23,7 +23,7 @@ const helpText = `NeverLauncher CLI
 Основные команды:
   version                         показать версию CLI
   manifest build|validate|diff    работа с client manifest
-  update plan|apply|status|recover|self-test transactional updater core
+  update plan|apply|components|status|recover|self-test|component-self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
   runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
@@ -455,6 +455,33 @@ func handleUpdate(args []string) error {
 		out := flagValue(args, "--output", "")
 		if out != "" && out != "-" {
 			return writeJSONFile(out, report)
+		}
+		printJSON(report)
+		return nil
+	case "components":
+		pkg := flagValue(args, "--package", "")
+		waitPID, err := parseWaitPID0157(flagValue(args, "--wait-pid", ""))
+		if err != nil {
+			return err
+		}
+		report, err := applyComponentPackage0157(
+			pkg, flagValue(args, "--expected-sha256", ""), flagValue(args, "--delivery-manifest", ""),
+			flagValue(args, "--root", ""), flagValue(args, "--current-desktop", ""), waitPID,
+			flagBool(args, "--restart", false), flagBool(args, "--allow-unpinned-development", false),
+		)
+		if err != nil {
+			return err
+		}
+		out := flagValue(args, "--output", "")
+		if out != "" && out != "-" {
+			return writeJSONFile(out, report)
+		}
+		printJSON(report)
+		return nil
+	case "component-self-test":
+		report, err := runComponentUpdaterSelfTest0157()
+		if err != nil {
+			return err
 		}
 		printJSON(report)
 		return nil

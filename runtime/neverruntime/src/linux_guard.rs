@@ -45,13 +45,25 @@ struct LinuxPackageManifest {
     schema_version: String,
     product_version: String,
     platform: String,
+    #[serde(default)]
+    architecture: String,
+    #[serde(default)]
     never_guard_protocol_version: u32,
+    #[serde(default)]
     authenticated_ipc: String,
+    #[serde(default)]
     linux_production_hardening_version: u32,
     artifacts: Vec<LinuxPackageArtifact>,
 }
 #[derive(Debug, Deserialize)]
-struct LinuxPackageArtifact { name: String, size: u64, sha256: String }
+#[serde(rename_all = "camelCase")]
+struct LinuxPackageArtifact {
+    name: String,
+    #[serde(default)]
+    package_path: String,
+    size: u64,
+    sha256: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -144,8 +156,18 @@ fn verify_linux_package_manifest(guard:&Path)->Result<(),String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
     let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and NeverGuard must be in same package directory".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?; let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Linux package manifest JSON invalid: {e}"))?;
-    if m.schema_version!="1.0"||m.product_version!=env!("CARGO_PKG_VERSION")||m.platform!="linux-amd64"||m.never_guard_protocol_version!=NEVERGUARD_PROTOCOL_VERSION||m.authenticated_ipc!="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"||m.linux_production_hardening_version!=NEVERGUARD_LINUX_HARDENING_VERSION{return Err("Linux package manifest identity/hardening mismatch".into())}
-    for path in [&desktop,guard]{let name=path.file_name().and_then(|v|v.to_str()).ok_or("artifact name invalid")?;let a=m.artifacts.iter().find(|a|a.name==name).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux package artifact verification failed: {name}"))}}
+    let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
+    let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==NEVERGUARD_LINUX_HARDENING_VERSION;
+    let canonical=m.schema_version=="1.0"&&m.platform=="linux"&&m.architecture==canonical_arch;
+    if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Linux package manifest identity/hardening mismatch".into())}
+    for path in [&desktop,guard]{
+        let name=path.file_name().and_then(|v|v.to_str()).ok_or("artifact name invalid")?;
+        let a=m.artifacts.iter().find(|a|{
+            if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
+        }).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;
+        let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;
+        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux package artifact verification failed: {name}"))}
+    }
     Ok(())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("desktop parent missing")?.join("neverguard"))}

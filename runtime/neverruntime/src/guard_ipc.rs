@@ -83,6 +83,8 @@ struct WindowsPackageManifest {
     schema_version: String,
     product_version: String,
     platform: String,
+    #[serde(default)]
+    architecture: String,
     never_guard_protocol_version: u32,
     #[serde(default)]
     authenticode_required: bool,
@@ -570,10 +572,14 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
     let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
         .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
-    if manifest.schema_version != "1.0"
-        || manifest.product_version != env!("CARGO_PKG_VERSION")
-        || manifest.platform != "windows-amd64"
+    let canonical_arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
+    let legacy_identity = manifest.schema_version == "1.0" && manifest.platform == "windows-amd64";
+    let canonical_identity = manifest.schema_version == "1.1"
+        && manifest.platform == format!("windows-{canonical_arch}")
+        && manifest.architecture == canonical_arch;
+    if manifest.product_version != env!("CARGO_PKG_VERSION")
         || manifest.never_guard_protocol_version != NEVERGUARD_PROTOCOL_VERSION
+        || (!legacy_identity && !canonical_identity)
     {
         return Err("Windows package manifest version/platform/protocol mismatch".to_string());
     }

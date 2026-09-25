@@ -276,7 +276,11 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 	if err != nil {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package read failed: %w", arch, err)
 	}
-	if len(files) != len(manifest.Artifacts)+1 {
+	expectedFileCount := len(manifest.Artifacts) + 1
+	if componentTransactionalUpdateRequired0157(ver) {
+		expectedFileCount++
+	}
+	if len(files) != expectedFileCount {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package contains unexpected file count", arch)
 	}
 	embeddedManifest, ok := files["neverlauncher/LINUX_PACKAGE_MANIFEST.json"]
@@ -289,6 +293,31 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 	}
 	if string(embeddedManifest) != string(topLevelManifest) || modes["neverlauncher/LINUX_PACKAGE_MANIFEST.json"] != 0o644 {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s embedded manifest mismatch/mode", arch)
+	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		updateRaw, ok := files["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"]
+		if !ok || modes["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"] != 0o644 {
+			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package lacks component update manifest", arch)
+		}
+		var update componentUpdateManifest0157
+		if err := json.Unmarshal(updateRaw, &update); err != nil {
+			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest invalid: %w", arch, err)
+		}
+		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "linux" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != "sha256-delivery" || len(update.Components) != 3 {
+			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest identity mismatch", arch)
+		}
+		mainByComponent := map[string]LinuxPackageArtifact0153{}
+		for _, row := range manifest.Artifacts {
+			mainByComponent[row.Component] = row
+		}
+		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
+		for _, row := range update.Components {
+			mainName, ok := aliases[row.Component]
+			main, exists := mainByComponent[mainName]
+			if !ok || !exists || row.SourcePath != strings.TrimPrefix(main.PackagePath, "neverlauncher/") || row.TargetPath != row.SourcePath || row.Size != main.Size || !strings.EqualFold(row.SHA256, main.SHA256) || !row.Executable {
+				return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update binding mismatch for %s", arch, row.Component)
+			}
+		}
 	}
 	for _, artifact := range manifest.Artifacts {
 		data, ok := files[artifact.PackagePath]

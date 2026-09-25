@@ -45,17 +45,42 @@ struct MacOSPackageManifest {
     schema_version: String,
     product_version: String,
     platform: String,
+    #[serde(default)]
+    architecture: String,
+    #[serde(default)]
     never_guard_protocol_version: u32,
+    #[serde(default)]
     authenticated_ipc: String,
+    #[serde(default)]
     macos_production_hardening_version: u32,
     bundle_identifier: String,
+    #[serde(default)]
     signing_team_id: String,
+    #[serde(default)]
     desktop_sha256: String,
+    #[serde(default)]
     desktop_size: u64,
+    #[serde(default)]
     guard_sha256: String,
+    #[serde(default)]
     guard_size: u64,
+    #[serde(default)]
     developer_id_required: bool,
+    #[serde(default)]
     notarization_required: bool,
+    #[serde(default)]
+    artifacts: Vec<MacOSPackageArtifact>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MacOSPackageArtifact {
+    bundle_path: String,
+    component: String,
+    sha256: String,
+    size: u64,
+    #[serde(default)]
+    team_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -196,17 +221,33 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let manifest_path=app.join("Contents/Resources").join(PACKAGE_MANIFEST);
     validate_secure_file(&manifest_path,false)?;
     let manifest:MacOSPackageManifest=serde_json::from_slice(&std::fs::read(&manifest_path).map_err(|e|e.to_string())?).map_err(|e|format!("macOS package manifest JSON invalid: {e}"))?;
-    if manifest.schema_version!="1.0"||manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.platform!="macos-universal"||manifest.never_guard_protocol_version!=NEVERGUARD_PROTOCOL_VERSION||manifest.authenticated_ipc!="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"||manifest.macos_production_hardening_version!=NEVERGUARD_MACOS_HARDENING_VERSION||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||!manifest.developer_id_required||!manifest.notarization_required{return Err("macOS package manifest identity/hardening mismatch".into())}
-    for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
-        let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
-        if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}
-        let actual=sha256_file(path)?;
-        if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS package SHA-256 mismatch for {}",path.display()))}
+    let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
+    let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==NEVERGUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
+    let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
+    if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
+    let mut signing_team=manifest.signing_team_id.clone();
+    if canonical {
+        for (component,path) in [("desktop-launcher",desktop.as_path()),("guard",guard)] {
+            let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
+            let expected_bundle_path=format!("NeverLauncher.app/Contents/MacOS/{}",path.file_name().and_then(|v|v.to_str()).ok_or("macOS artifact filename invalid")?);
+            if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
+            let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
+            if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("macOS package artifact verification failed: {component}"))}
+            if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("macOS package signing team is inconsistent".into())}
+        }
+    } else {
+        for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
+            let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
+            if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}
+            let actual=sha256_file(path)?;
+            if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS package SHA-256 mismatch for {}",path.display()))}
+        }
     }
+    if signing_team.is_empty(){return Err("macOS package signing Team ID is missing".into())}
     for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.neverlauncher"), (guard, "ru.skif4er.neverlauncher.guard")] {
         let sig=verify_macos_code_signature(path)?;
         if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Hardened Runtime verification failed: {}",path.display()))}
-        if sig.team_identifier.as_deref()!=Some(manifest.signing_team_id.as_str()){return Err(format!("macOS signing team mismatch: {}",path.display()))}
+        if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("macOS signing team mismatch: {}",path.display()))}
         if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("macOS code-signing identifier mismatch for {}: expected {expected_identifier}, got {:?}",path.display(),sig.identifier))}
     }
     let app_verify=std::process::Command::new("/usr/bin/codesign").args(["--verify","--deep","--strict","--verbose=2"]).arg(&app).output().map_err(|e|format!("codesign app verify failed: {e}"))?;

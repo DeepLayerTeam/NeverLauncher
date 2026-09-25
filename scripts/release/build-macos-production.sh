@@ -25,6 +25,7 @@ SIGN_IDENTITY="${NEVERLAUNCHER_MACOS_SIGNING_IDENTITY:-}"
 TEAM_ID="${NEVERLAUNCHER_MACOS_TEAM_ID:-}"
 NOTARY_PROFILE="${NEVERLAUNCHER_MACOS_NOTARY_PROFILE:-}"
 SIGNING_MODE="developer-id-notarized"
+UPDATE_TRUST_MODE="developer-id-notarized"
 TIMESTAMP_ARG="--timestamp"
 if [[ "${MODE}" == "production" ]]; then
   command -v xcrun >/dev/null || { echo "xcrun is required for production notarization" >&2; exit 1; }
@@ -39,6 +40,7 @@ else
   SIGN_IDENTITY="-"
   TEAM_ID="ADHOC-CI"
   SIGNING_MODE="adhoc-development"
+  UPDATE_TRUST_MODE="adhoc-development"
   TIMESTAMP_ARG="--timestamp=none"
 fi
 
@@ -124,8 +126,9 @@ EOF_PLIST
 
   python3 "${ROOT_DIR}/scripts/release/macos-package.py" manifest \
     --version "${VERSION}" --arch "${arch}" --team-id "${TEAM_ID}" \
+    --trust-mode "${UPDATE_TRUST_MODE}" \
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
-  chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json"
+  chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
   codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
   codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"

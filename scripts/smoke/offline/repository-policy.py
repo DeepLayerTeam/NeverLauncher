@@ -1265,6 +1265,53 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if ci.count("update self-test") < 4:
         fail("0.15.6 updater native runtime self-tests are missing from CI")
 
+# 0.15.7 Desktop/Guard/Runtime transactional update must wire the 0.15.6 core
+# into the actual self-update path and preserve platform signing/package boundaries.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 7):
+    component_core_0157 = read("cli/cmd/neverlauncher/component_update.go")
+    component_main_0157 = read("cli/cmd/neverlauncher/main.go")
+    component_tests_0157 = read("cli/cmd/neverlauncher/component_update_test.go")
+    desktop_0157 = read("apps/desktop/src-tauri/src/main.rs")
+    windows_0157 = read("scripts/release/build-windows-desktop.ps1")
+    linux_0157 = read("scripts/release/linux-package.py")
+    macos_0157 = read("scripts/release/macos-package.py") + read("scripts/release/build-macos-production.sh")
+    component_gate_0157 = read("scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py")
+    rust_guard_0157 = read("runtime/neverruntime/src/guard_ipc.rs") + read("runtime/neverruntime/src/linux_guard.rs") + read("runtime/neverruntime/src/macos_guard.rs")
+    for required in [
+        "applyComponentPackage0157", "applyAdjacentComponentUpdate0157", "applyComponentTree0157",
+        "recoverComponentTreesLocked0157", "rollbackComponentTreeLocked0157", "hashPackagePin0157",
+        "authenticode-rfc3161", "sha256-delivery", "developer-id-notarized", "macosTreeRollback",
+    ]:
+        if required not in component_core_0157:
+            fail(f"0.15.7 component transactional updater incomplete: {required}")
+    for required in ['case "components":', 'case "component-self-test":', '"--wait-pid"', '"--restart"']:
+        if required not in component_main_0157:
+            fail(f"0.15.7 update CLI integration incomplete: {required}")
+    for required in ["install_launcher_update", "neverguard.shutdown().await", "--current-desktop", "--expected-sha256", "exit_handle.exit(0)"]:
+        if required not in desktop_0157:
+            fail(f"0.15.7 Desktop self-update handoff incomplete: {required}")
+    for required in ["neverruntime.exe", "neverlauncher-cli.exe", "COMPONENT_UPDATE_MANIFEST.json", "authenticode-rfc3161"]:
+        if required not in windows_0157:
+            fail(f"0.15.7 Windows component package incomplete: {required}")
+    for required in ["COMPONENT_UPDATE_MANIFEST.json", "sha256-delivery", "neverruntime"]:
+        if required not in linux_0157:
+            fail(f"0.15.7 Linux component package incomplete: {required}")
+    for required in ["COMPONENT_UPDATE_MANIFEST.json", "macos-app-bundle", "developer-id-notarized", "adhoc-development"]:
+        if required not in macos_0157:
+            fail(f"0.15.7 macOS component package incomplete: {required}")
+    for required in ["canonical_arch", "canonical_identity", "package_path", "MacOSPackageArtifact"]:
+        if required not in rust_guard_0157:
+            fail(f"0.15.7 Guard canonical package verification incomplete: {required}")
+    for required in ["TestComponentUpdateAdjacentCommit0157", "TestComponentTreePostVerifyFailureRollsBack0157", "TestComponentUpdateRequiresPinnedProductionArchive0157"]:
+        if required not in component_tests_0157:
+            fail(f"0.15.7 component updater regression tests missing: {required}")
+    if "Desktop/Guard/Runtime transactional update gate: OK" not in component_gate_0157:
+        fail("0.15.7 component updater mandatory gate incomplete")
+    if "desktop-guard-runtime-transactional-update-0157.py" not in preflight or "desktop-guard-runtime-transactional-update-0157.py" not in ci:
+        fail("0.15.7 component updater gate is not wired into preflight/CI")
+    if ci.count("update component-self-test") < 4:
+        fail("0.15.7 native component updater self-tests are missing from CI")
+
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

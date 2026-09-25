@@ -548,7 +548,11 @@ func (u *transactionalUpdater0156) recover(force bool) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "recovered": recovered, "status": "recovered"}, nil
+	componentRecovered, err := u.recoverComponentTreesLocked0157()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "recovered": recovered, "componentTreesRecovered": componentRecovered, "status": "recovered"}, nil
 }
 
 func (u *transactionalUpdater0156) status() (map[string]any, error) {
@@ -579,7 +583,27 @@ func (u *transactionalUpdater0156) status() (map[string]any, error) {
 			break
 		}
 	}
-	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "transactions": journals, "status": state}, nil
+	componentTrees := []componentTreeJournal0157{}
+	treeRoot := filepath.Join(u.controlDir, "component-trees")
+	if treeEntries, treeErr := os.ReadDir(treeRoot); treeErr == nil {
+		for _, entry := range treeEntries {
+			if !entry.IsDir() {
+				continue
+			}
+			journal, readErr := readComponentTreeJournal0157(u, entry.Name())
+			if readErr != nil {
+				return nil, readErr
+			}
+			componentTrees = append(componentTrees, *journal)
+			if journal.Phase != "committed" && journal.Phase != "rolled-back" {
+				state = "recovery-required"
+			}
+		}
+	} else if !errors.Is(treeErr, os.ErrNotExist) {
+		return nil, treeErr
+	}
+	sort.Slice(componentTrees, func(i, j int) bool { return componentTrees[i].CreatedAt < componentTrees[j].CreatedAt })
+	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "transactions": journals, "componentTreeTransactions": componentTrees, "status": state}, nil
 }
 
 func (u *transactionalUpdater0156) transactionDir(id string) string {

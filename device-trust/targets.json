@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.15.6",
+  "productVersion": "0.15.7",
   "targets": [
     {
       "id": "postgres-protocol-linux-x64",

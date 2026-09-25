@@ -1,3 +1,14 @@
+## 0.15.7 — Desktop/Guard/Runtime transactional update
+
+`0.15.7` переводит self-update пользовательской поставки на Unified Transactional Updater Core: Desktop, NeverGuard и NeverRuntime обновляются как один проверенный transaction boundary. На Windows/Linux применяется adjacent-file transaction, а на macOS целиком переключается подписанный/notarized `.app`, чтобы не разрушать подпись bundle. DB migration не требуется.
+
+- Добавлен production `component_update.go`: pinned package SHA-256, safe ZIP/tar extraction, platform/architecture validation, verified staging, durable journals, crash recovery и automatic rollback.
+- Desktop Tauri передаёт обновление внешнему `neverlauncher-cli update components` helper, останавливает NeverGuard, передаёт PID текущего Desktop и завершает процесс; helper ждёт освобождения executable, выполняет commit и перезапускает Desktop только после успешной проверки.
+- Windows x64/ARM64 package теперь включает подписанные `neverlauncher-desktop.exe`, `neverguard.exe`, `neverruntime.exe` и CLI helper; component manifest хранит Authenticode signer/timestamp binding.
+- Linux x64/ARM64 и macOS x64/ARM64 package получают `COMPONENT_UPDATE_MANIFEST.json`, связанный с фактическими hashes/sizes package manifest; macOS manifest включается до outer bundle signing/notarization.
+- NeverRuntime Guard package verification принимает новые canonical Windows/Linux/macOS production manifests, сохраняя backward compatibility с legacy Guard CI packages.
+- Добавлены `nl update components` и `nl update component-self-test`; publish-check, repository policy, strict preflight и native CI делают 0.15.7 update boundary обязательным.
+
 ## 0.15.6 — Unified Transactional Updater Core
 
 `0.15.6` переводит локальное применение обновлений на единый crash-recoverable transaction engine для Windows/Linux/macOS. Client install/update/package-apply теперь сначала полностью stage+verify новые bytes, фиксируют durable journal и backup touched-файлов, и только затем переключают live tree. DB migration не требуется.

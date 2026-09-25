@@ -104,6 +104,38 @@ def write_package(out: Path, version: str, arch: str) -> None:
     manifest_path.write_bytes(manifest_bytes)
     os.chmod(manifest_path, 0o644)
 
+    by_component = {item["component"]: item for item in artifacts}
+    update_components = []
+    for component, update_name in (("desktop-launcher", "desktop"), ("guard", "guard"), ("runtime", "runtime")):
+        item = by_component[component]
+        update_components.append({
+            "component": update_name,
+            "sourcePath": str(item["packagePath"]).removeprefix("neverlauncher/"),
+            "targetPath": str(item["packagePath"]).removeprefix("neverlauncher/"),
+            "sha256": item["sha256"],
+            "size": item["size"],
+            "executable": True,
+        })
+    update_manifest = {
+        "schemaVersion": "1.0",
+        "product": "NeverLauncher",
+        "productVersion": version,
+        "platform": "linux",
+        "architecture": arch,
+        "layout": "adjacent-files",
+        "trustMode": "sha256-delivery",
+        "components": update_components,
+        "supportFiles": [{
+            "component": "package-manifest",
+            "sourcePath": "LINUX_PACKAGE_MANIFEST.json",
+            "targetPath": "LINUX_PACKAGE_MANIFEST.json",
+            "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "size": len(manifest_bytes),
+            "executable": False,
+        }],
+    }
+    update_manifest_bytes = (json.dumps(update_manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
     package_path = out / package_name
     tmp = package_path.with_suffix(package_path.suffix + ".tmp")
     with tmp.open("wb") as raw:
@@ -113,6 +145,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                     with path.open("rb") as f:
                         tf.addfile(tar_info(package_entry, path.stat().st_size, 0o755), f)
                 tf.addfile(tar_info("neverlauncher/LINUX_PACKAGE_MANIFEST.json", len(manifest_bytes), 0o644), io.BytesIO(manifest_bytes))
+                tf.addfile(tar_info("neverlauncher/COMPONENT_UPDATE_MANIFEST.json", len(update_manifest_bytes), 0o644), io.BytesIO(update_manifest_bytes))
     os.replace(tmp, package_path)
     os.chmod(package_path, 0o644)
     digest, size = sha256_file(package_path)
