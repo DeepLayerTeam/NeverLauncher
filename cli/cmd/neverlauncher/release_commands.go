@@ -17,7 +17,7 @@ import (
 
 func handleRelease(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, publish-plan, publish-check")
+		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, publish-plan, publish-check")
 	}
 	switch args[0] {
 	case "doctor":
@@ -150,10 +150,31 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("0.15.10 migration + stabilization self-test status=%v", report["status"])
 				}
 			}
-			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update + Public Production Delivery Matrix + migration stabilization")
+			if productionReleaseCandidateRequired01511(manifestVersion) {
+				if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("0.15.11 production release candidate certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update + Public Production Delivery Matrix + migration stabilization + Production Release Candidate certification")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
+		return nil
+	case "candidate-verify":
+		if len(args) < 2 {
+			return errors.New("release candidate-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !productionReleaseCandidateRequired01511(manifestVersion) {
+			return fmt.Errorf("production release candidate certification требуется только для 0.15.11+, bundle=%s", manifestVersion)
+		}
+		if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
+			return err
+		}
+		fmt.Println("Production release candidate certification пройдена: exact source commit + full production cohort")
 		return nil
 	case "sign":
 		if len(args) < 2 {
@@ -238,6 +259,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py",
 		"scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py",
 		"scripts/smoke/offline/migration-stabilization-01510.py",
+		"scripts/smoke/offline/production-release-candidate-01511.py",
 		".github/workflows/public-production-delivery.yml",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
@@ -296,6 +318,7 @@ func releaseDoctor() error {
 		"release-verification-v2":        {"python3", "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"},
 		"public-production-delivery":     {"python3", "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"},
 		"migration-stabilization":        {"python3", "scripts/smoke/offline/migration-stabilization-01510.py"},
+		"production-release-candidate":   {"python3", "scripts/smoke/offline/production-release-candidate-01511.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -328,7 +351,7 @@ func releasePlan(ver string) map[string]any {
 		"createdAt":     time.Now().UTC().Format(time.RFC3339),
 		"mode":          "production-release-automation",
 		"artifacts":     releaseArtifacts(ver),
-		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign"},
+		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify"},
 	}
 }
 
@@ -435,6 +458,24 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
+	if productionReleaseCandidateRequired01511(ver) {
+		if _, err := normalizeSourceCommit01511(expectedCommit); err != nil {
+			return err
+		}
+		missing := []string{}
+		if strings.TrimSpace(compatibilityMatrixPath) == "" {
+			missing = append(missing, "compatibility matrix")
+		}
+		if strings.TrimSpace(deviceTrustMatrixPath) == "" {
+			missing = append(missing, "device trust matrix")
+		}
+		if strings.TrimSpace(guardCIMatrixPath) == "" {
+			missing = append(missing, "guard CI matrix")
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("0.15.11+ production release candidate requires complete certification cohort: %s", strings.Join(missing, ", "))
+		}
+	}
 	if strings.TrimSpace(compatibilityMatrixPath) != "" {
 		if !filepath.IsAbs(compatibilityTargetsPath) {
 			compatibilityTargetsPath = filepath.Join(sourceRoot, compatibilityTargetsPath)
@@ -466,7 +507,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := writeJSONFile(filepath.Join(out, "SBOM.spdx.json"), sbom); err != nil {
 		return err
 	}
-	provenance, err := slsaProvenance(sourceRoot, out, ver)
+	provenance, err := slsaProvenance(sourceRoot, out, ver, expectedCommit)
 	if err != nil {
 		return fmt.Errorf("SLSA provenance: %w", err)
 	}
@@ -498,7 +539,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 	}
 	if windowsSigningRequired0152(ver) {
-		if err := verifyWindowsSigningEvidence0152(out, ver, false); err != nil {
+		if err := verifyWindowsSigningEvidence0152(out, ver, productionReleaseCandidateRequired01511(ver)); err != nil {
 			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
 		}
 	}
@@ -508,13 +549,21 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 	}
 	if macOSProductionRequired0154(ver) {
-		if err := verifyMacOSNotarizationEvidence0154(out, ver, false); err != nil {
+		if err := verifyMacOSNotarizationEvidence0154(out, ver, productionReleaseCandidateRequired01511(ver)); err != nil {
 			return fmt.Errorf("macOS x64/ARM64 delivery evidence: %w", err)
 		}
 	}
 	if managedJREDistributionRequired0155(ver) {
 		if err := verifyManagedJREDistribution0155(out, ver, true); err != nil {
 			return fmt.Errorf("Managed JRE Distribution: %w", err)
+		}
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		if err := writeProductionReleaseCandidate01511(out, ver, expectedCommit, true); err != nil {
+			return fmt.Errorf("Production release candidate certification: %w", err)
+		}
+		if err := verifyProductionReleaseCandidate01511(out, ver, true); err != nil {
+			return fmt.Errorf("Production release candidate self-check: %w", err)
 		}
 	}
 
@@ -558,6 +607,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		requiredFiles = append(requiredFiles, publicProductionDeliveryMatrixFile0159)
 		checks = append(checks, "public-production-delivery-matrix-six-target-e2e")
 	}
+	if productionReleaseCandidateRequired01511(ver) {
+		requiredFiles = append(requiredFiles, productionReleaseCandidateFile01511)
+		checks = append(checks, "production-release-candidate-exact-source-cohort")
+	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
@@ -588,6 +641,13 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"compatibilityCertified": compatibilityCertified,
 		"deviceTrustCertified":   deviceTrustCertified,
 		"guardCICertified":       guardCICertified,
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		commit, err := normalizeSourceCommit01511(expectedCommit)
+		if err != nil {
+			return err
+		}
+		manifest["sourceCommit"] = commit
 	}
 	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
@@ -689,8 +749,9 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		return err
 	}
 	var manifest struct {
-		Version   string `json:"version"`
-		Artifacts []struct {
+		Version      string `json:"version"`
+		SourceCommit string `json:"sourceCommit"`
+		Artifacts    []struct {
 			Name     string `json:"name"`
 			Required bool   `json:"required"`
 			Status   string `json:"status"`
@@ -733,6 +794,22 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if publicProductionDeliveryRequired0159(manifest.Version) {
 		if err := verifyPublicProductionDeliveryMatrix0159(dir, manifest.Version); err != nil {
 			return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		}
+	}
+	if productionReleaseCandidateRequired01511(manifest.Version) {
+		manifestCommit, err := normalizeSourceCommit01511(manifest.SourceCommit)
+		if err != nil {
+			return fmt.Errorf("RELEASE_MANIFEST sourceCommit: %w", err)
+		}
+		candidateCommit, err := verifyProductionReleaseCandidateDocument01511(dir, manifest.Version)
+		if err != nil {
+			return fmt.Errorf("Production release candidate document: %w", err)
+		}
+		if !strings.EqualFold(manifestCommit, candidateCommit) {
+			return fmt.Errorf("RELEASE_MANIFEST sourceCommit mismatch: manifest=%s candidate=%s", manifestCommit, candidateCommit)
+		}
+		if err := verifyProductionReleaseCandidate01511(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Production release candidate certification: %w", err)
 		}
 	}
 	for _, name := range manifest.RequiredFiles {
@@ -870,6 +947,9 @@ func releaseArtifacts(ver string) []string {
 	if publicProductionDeliveryRequired0159(ver) {
 		artifacts = append(artifacts, publicProductionDeliveryMatrixFile0159)
 	}
+	if productionReleaseCandidateRequired01511(ver) {
+		artifacts = append(artifacts, productionReleaseCandidateFile01511)
+	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,
 			"neverlauncher-cli-windows-x64.exe",
@@ -972,6 +1052,9 @@ func releaseDescription(ver string) string {
 	}
 	if migrationStabilizationRequired01510(ver) {
 		extra += "\n- начиная с 0.15.10 migration stabilization сериализует Release Verification через persistent trust-state lock, мигрирует state 2.0→2.1 с same-version RELEASE_MANIFEST binding, переносит legacy macOS component state в canonical location и удаляет terminal updater staging/backup payload после durable rollback;"
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		extra += "\n- начиная с 0.15.11 Production Release Candidate требует полный exact-commit certification cohort, реальные vendor-signed/notarized Windows/macOS artifacts и PRODUCTION_RELEASE_CANDIDATE.json; candidate certification хэширует весь pre-sign release cohort и входит в Ed25519 signed SHA256SUMS boundary;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

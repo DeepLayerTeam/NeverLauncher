@@ -1,5 +1,13 @@
 # Политика безопасности NeverLauncher
 
+## Граница доверия Production Release Candidate — 0.15.11
+
+Для `0.15.11+` release считается production candidate только после формирования `PRODUCTION_RELEASE_CANDIDATE.json`. Certificate привязывает candidate к одному exact Git source commit и к полному pre-sign cohort release-файлов через SHA-256/size каждого файла и агрегированный `cohortSha256`; сам certificate затем входит в `SHA256SUMS` и подписывается Release Verification v2. Поэтому корректная подпись одного `RELEASE_MANIFEST.json` не позволяет незаметно подмешать дополнительный release artifact после RC certification.
+
+Source commit должен одновременно совпадать с Compatibility, Device Trust и Guard CI certifications и с SLSA provenance. Production build из Git checkout дополнительно требует clean tracked/staged tree и `NEVERLAUNCHER_SOURCE_COMMIT == HEAD`. Это не доказывает доверенность самого Git hosting/account, но исключает локальный source drift между CI evidence и собираемым RC.
+
+RC verification принимает Windows только с production Authenticode + RFC3161 evidence, а macOS — только с Developer ID Application, Accepted notarization, stapled ticket и Gatekeeper evidence. CI unsigned/ad-hoc artifacts остаются допустимы для platform regression jobs, но не могут войти в 0.15.11 production candidate. Offline root/release-key lifecycle из 0.15.8, persistent anti-rollback state 2.1 из 0.15.10 и post-publish public E2E из 0.15.9 остаются независимыми обязательными слоями.
+
 ## Fabric ServerBridge boundary — 0.14.6
 
 Fabric Server Bridge является server-only модом и не доверяет клиентскому Fabric-коду. Login authorization удерживается `ServerLoginNetworking.LoginSynchronizer` до завершения signed backend validation; backend I/O выполняется bounded executor вне server tick. При saturation/backend failure режим по умолчанию fail-closed.

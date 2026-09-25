@@ -4,7 +4,27 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.10**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Release Candidate / 0.15.11**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Production release candidate — 0.15.11
+
+`0.15.11` является строгим production RC поверх delivery-контура 0.15.1–0.15.10. Обычный structurally valid/unsigned candidate больше не подходит: release build требует один exact Git commit для Compatibility, Device Trust и Guard CI certification, production Authenticode/RFC3161 на Windows, Developer ID + Accepted notarization/stapling/Gatekeeper на macOS, six-target Managed JRE/Public Delivery Matrix и все предыдущие updater/trust gates.
+
+Перед Ed25519 signing создаётся `PRODUCTION_RELEASE_CANDIDATE.json`. Он содержит exact `sourceCommit`, обязательные RC gates и SHA-256/size каждого top-level pre-sign release file; `cohortSha256` вычисляется по отсортированному inventory. После этого RC certificate попадает в `RELEASE_MANIFEST.json`/`SHA256SUMS` и подписывается Release Verification v2. Любая подмена либо добавление файла после certification обнаруживается fail-closed.
+
+```bash
+export NEVERLAUNCHER_SOURCE_COMMIT="$(git rev-parse HEAD)"
+# build-release.sh также требует полный Compatibility/Device Trust/Guard CI evidence set
+./scripts/release/build-release.sh
+
+nl release candidate-verify "dist/release-$(cat VERSION)"
+nl release publish-check "dist/release-$(cat VERSION)" \
+  --public-key /etc/neverlauncher/root-public.pem \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json
+```
+
+Production build выполняется только из Git checkout без tracked/staged drift относительно `HEAD`; `NEVERLAUNCHER_SOURCE_COMMIT` обязан совпадать с этим `HEAD`. Post-publish public E2E из 0.15.9 остаётся финальной проверкой уже опубликованных GitHub Release bytes.
 
 ## Migration + stabilization — 0.15.10
 

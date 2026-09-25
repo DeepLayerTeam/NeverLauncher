@@ -71,6 +71,7 @@ jobs:
           python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py
           python3 scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py
           python3 scripts/smoke/offline/migration-stabilization-01510.py
+          python3 scripts/smoke/offline/production-release-candidate-01511.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh

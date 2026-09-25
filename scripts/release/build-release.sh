@@ -115,6 +115,52 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,9) else '0')
 PYVER
 )"
+PRODUCTION_RC_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,11) else '0')
+PYVER
+)"
+if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
+  require git
+  [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
+    echo "Ошибка: ${VERSION} Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort" >&2
+    exit 1
+  }
+  require_file "${COMPATIBILITY_MATRIX}"
+  require_file "${COMPATIBILITY_TARGETS}"
+  require_file "${DEVICE_TRUST_MATRIX}"
+  require_file "${DEVICE_TRUST_TARGETS}"
+  require_file "${GUARD_CI_MATRIX}"
+  require_file "${GUARD_CI_TARGETS}"
+  git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
+    echo "Ошибка: ${VERSION} Production Release Candidate должен собираться из git checkout" >&2
+    exit 1
+  }
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  if [[ -z "${SOURCE_COMMIT}" ]]; then SOURCE_COMMIT="${HEAD_COMMIT}"; fi
+  [[ "${SOURCE_COMMIT,,}" == "${HEAD_COMMIT,,}" ]] || {
+    echo "Ошибка: NEVERLAUNCHER_SOURCE_COMMIT=${SOURCE_COMMIT} не совпадает с git HEAD=${HEAD_COMMIT}" >&2
+    exit 1
+  }
+  [[ "${SOURCE_COMMIT}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]] || {
+    echo "Ошибка: некорректный exact source commit: ${SOURCE_COMMIT}" >&2
+    exit 1
+  }
+  git -C "${ROOT_DIR}" diff --quiet HEAD -- || {
+    echo "Ошибка: Production Release Candidate запрещает изменения tracked-файлов относительно HEAD" >&2
+    exit 1
+  }
+  git -C "${ROOT_DIR}" diff --cached --quiet || {
+    echo "Ошибка: Production Release Candidate запрещает staged изменения относительно HEAD" >&2
+    exit 1
+  }
+fi
+
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
@@ -454,6 +500,11 @@ fi
 if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json"
   "${RELEASE_CLI}" delivery verify-public-matrix --bundle "${OUT_DIR}" --version "${VERSION}"
+fi
+if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/PRODUCTION_RELEASE_CANDIDATE.json"
+  log "Проверка production release candidate cohort до подписи"
+  "${RELEASE_CLI}" release candidate-verify "${OUT_DIR}"
 fi
 
 log "Ed25519 release signing"

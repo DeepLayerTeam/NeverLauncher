@@ -296,7 +296,7 @@ func parseGradleDependencies(path string) ([][3]string, error) {
 	return out, nil
 }
 
-func slsaProvenance(sourceRoot, artifactDir, ver string) (map[string]any, error) {
+func slsaProvenance(sourceRoot, artifactDir, ver string, sourceCommit ...string) (map[string]any, error) {
 	var rootErr error
 	sourceRoot, rootErr = resolveRepositoryRoot(sourceRoot)
 	if rootErr != nil {
@@ -346,10 +346,14 @@ func slsaProvenance(sourceRoot, artifactDir, ver string) (map[string]any, error)
 		materials = append(materials, map[string]any{"uri": "file://" + filepath.ToSlash(rel), "digest": map[string]string{"sha256": sum}})
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
+	externalParameters := map[string]any{"version": ver}
+	if len(sourceCommit) > 0 && strings.TrimSpace(sourceCommit[0]) != "" {
+		externalParameters["sourceCommit"] = strings.ToLower(strings.TrimSpace(sourceCommit[0]))
+	}
 	return map[string]any{
 		"_type": "https://in-toto.io/Statement/v1", "subject": subjects, "predicateType": "https://slsa.dev/provenance/v1",
 		"predicate": map[string]any{
-			"buildDefinition": map[string]any{"buildType": "https://neverlauncher.local/build-types/production-release/v1", "externalParameters": map[string]any{"version": ver}, "internalParameters": map[string]any{"toolVersion": version, "failClosed": true}, "resolvedDependencies": materials},
+			"buildDefinition": map[string]any{"buildType": "https://neverlauncher.local/build-types/production-release/v1", "externalParameters": externalParameters, "internalParameters": map[string]any{"toolVersion": version, "failClosed": true}, "resolvedDependencies": materials},
 			"runDetails":      map[string]any{"builder": map[string]any{"id": "https://neverlauncher.local/builders/cli-release/" + version}, "metadata": map[string]any{"invocationId": "release-" + ver + "-" + time.Now().UTC().Format("20060102T150405.000000000Z"), "startedOn": now, "finishedOn": now}},
 		},
 	}, nil

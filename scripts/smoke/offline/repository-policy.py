@@ -1446,6 +1446,53 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "migration-stabilization-01510.py" not in preflight or "migration-stabilization-01510.py" not in ci:
         fail("0.15.10 stabilization gate is not wired into preflight/CI")
 
+
+# 0.15.11 Production Release Candidate seals the complete release cohort before
+# Ed25519 signing. It must be built from one exact Git commit with all public
+# certification inputs present and production-only Windows/macOS evidence.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 11):
+    rc_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
+    rc_tests_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511_test.go")
+    release_01511 = read("cli/cmd/neverlauncher/release_commands.go")
+    build_01511 = read("scripts/release/build-release.sh")
+    bundle_gate_01511 = read("scripts/smoke/release-required/release-bundle.sh")
+    gate_01511 = read("scripts/smoke/offline/production-release-candidate-01511.py")
+    for required in [
+        "PRODUCTION_RELEASE_CANDIDATE.json", "production-release-candidate",
+        "exact-source-commit-cohort", "productionReleaseCandidateCohortDigest01511",
+        "verifyProductionReleaseCandidatePrerequisites01511", "PROVENANCE.json sourceCommit mismatch",
+        "verifyWindowsSigningEvidence0152", "verifyMacOSNotarizationEvidence0154",
+        "verifyManagedJREDistribution0155", "verifyPublicProductionDeliveryMatrix0159",
+    ]:
+        if required not in rc_01511:
+            fail(f"0.15.11 Production Release Candidate implementation incomplete: {required}")
+    for required in [
+        'case "candidate-verify":', "writeProductionReleaseCandidate01511",
+        "production-release-candidate-exact-source-cohort", "productionReleaseCandidateRequired01511",
+    ]:
+        if required not in release_01511:
+            fail(f"0.15.11 release integration incomplete: {required}")
+    for required in [
+        "PRODUCTION_RC_REQUIRED", "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
+        'git -C "${ROOT_DIR}" diff --quiet HEAD --', "release candidate-verify", "PRODUCTION_RELEASE_CANDIDATE.json",
+    ]:
+        if required not in build_01511:
+            fail(f"0.15.11 production build fail-closed integration incomplete: {required}")
+    if "PRODUCTION_RELEASE_CANDIDATE.json" not in bundle_gate_01511:
+        fail("0.15.11 release-bundle gate does not require candidate certification")
+    for required in [
+        "TestProductionReleaseCandidate01511BindsExactCohort",
+        "TestProductionReleaseCandidate01511RejectsInjectedFile",
+        "TestSLSAProvenance01511CarriesExactSourceCommit",
+        "TestNormalizeSourceCommit01511RejectsPlaceholders",
+    ]:
+        if required not in rc_tests_01511:
+            fail(f"0.15.11 production candidate regression tests missing: {required}")
+    if "Production release candidate 0.15.11 gate: OK" not in gate_01511:
+        fail("0.15.11 mandatory Production Release Candidate gate incomplete")
+    if "production-release-candidate-01511.py" not in preflight or "production-release-candidate-01511.py" not in ci:
+        fail("0.15.11 Production Release Candidate gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

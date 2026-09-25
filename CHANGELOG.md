@@ -1,3 +1,17 @@
+## 0.15.11 — Production release candidate
+
+`0.15.11` переводит накопленный Production Delivery 0.15.x в единый machine-verifiable release-candidate boundary. RC больше не допускает частично сертифицированный bundle: Compatibility, Device Trust и Guard CI evidence обязаны относиться к одному exact source commit, production Windows/macOS artifacts должны быть реально vendor-signed/notarized, а весь pre-sign cohort фиксируется отдельным сертификатом и затем входит в Ed25519 release signature. DB migration не требуется.
+
+- Добавлен `PRODUCTION_RELEASE_CANDIDATE.json` schema 1.0 со статусом `production-release-candidate`, exact `sourceCommit`, фиксированным набором обязательных gates, полным sorted inventory pre-sign release cohort и агрегированным `cohortSha256`.
+- `release build` для 0.15.11+ требует полный Compatibility + Device Trust + Guard CI certification set; все три certification должны иметь один commit, совпадающий с SLSA `PROVENANCE.json` `sourceCommit`.
+- Windows evidence при RC build проверяется только в production Authenticode/RFC3161 режиме, macOS — только Developer ID + Accepted notarization/stapling/Gatekeeper; unsigned/ad-hoc candidate больше не может стать 0.15.11 release bundle.
+- `scripts/release/build-release.sh` для RC требует Git checkout, exact `NEVERLAUNCHER_SOURCE_COMMIT == HEAD` и отсутствие tracked/staged изменений относительно HEAD до начала сборки.
+- Candidate cohort фиксирует все top-level release bytes до создания `RELEASE_MANIFEST.json`/`SHA256SUMS`; добавление, удаление или изменение любого cohort file после certification ломает `release candidate-verify`. Post-sign `SHA256SUMS.sig`/`PROVENANCE.json.sig` исключены из pre-sign cohort и проверяются собственными cryptographic gates.
+- Добавлена `nl release candidate-verify <bundle>`; `release verify`/`publish-check` для 0.15.11+ повторно проверяют RC certification и production-only delivery evidence. Сам `PRODUCTION_RELEASE_CANDIDATE.json` включён в `RELEASE_MANIFEST.json`, `SHA256SUMS` и Release Verification v2 signature boundary.
+- Добавлены unit/regression gate `production-release-candidate-01511.py`, release doctor/repository policy/preflight/CI integration и обязательное наличие RC certification в release-bundle gate.
+
+Перед публикацией выполняйте `nl release candidate-verify` и затем `nl release publish-check` с внешним root public key/current trust policy/persistent trust state. Production release script выполняет оба шага автоматически.
+
 ## 0.15.10 — Migration + stabilization
 
 `0.15.10` стабилизирует production delivery после six-target E2E и выполняет миграцию локального updater/trust state без новой DB migration. Upgrade 0.15.9 → 0.15.10 сохраняет release trust root, текущий trust epoch, Desktop/Guard/Runtime installation и durable updater journals; старые локальные форматы переводятся автоматически/fail-closed.
