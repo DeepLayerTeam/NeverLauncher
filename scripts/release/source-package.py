@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import zipfile
 from pathlib import Path
@@ -14,9 +13,27 @@ TOP_FILES = {
 }
 TOP_DIRS = {
     ".github", "schemas", "plugins", "scripts", "runtime", "e2e", "tests",
-    "cli", "apps", "services", "deploy",
+    "cli", "apps", "services", "deploy", "compatibility", "device-trust",
+    "guard-ci", "serverbridge",
 }
-EXCLUDED_PARTS = {".git", "node_modules", "target", "dist", ".neverlauncher", "build", ".gradle"}
+EXCLUDED_PARTS = {
+    ".git", "node_modules", "target", "dist", ".neverlauncher", "build", ".gradle",
+    "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".vite", ".npm",
+    ".idea", ".vscode", "coverage", "out",
+}
+EXCLUDED_NAMES = {".DS_Store", "Thumbs.db", ".eslintcache", ".coverage", "coverage.out"}
+EXCLUDED_SUFFIXES = {
+    ".pyc", ".pyo", ".log", ".tmp", ".swp", ".swo", ".bak", ".test", ".prof",
+    ".coverprofile", ".tsbuildinfo", ".pid", ".pid.lock", ".sock",
+}
+EXCLUDED_PREFIXES = {
+    "e2e/runtime/", "e2e/runtime-ci/", "e2e/reports/", "e2e/compatibility-result/",
+    "e2e/device-trust-runtime/", "e2e/device-trust-result/",
+    "deploy/production/certs/", "deploy/production/acme/",
+}
+EXCLUDED_PATHS = {
+    "cli/nl", "cli/nl.exe", "services/api/neverlauncher-api", "services/api/neverlauncher-api.exe",
+}
 SECRET_NAMES = {".env", "id_rsa", "id_ed25519", "credentials", "credentials.json"}
 SECRET_SUFFIXES = {".key", ".p12", ".pfx", ".jks", ".keystore"}
 SECRET_DIRS = {"secret", "secrets", "credential", "credentials"}
@@ -27,12 +44,29 @@ def safe_rel(rel: str) -> bool:
     if not rel or rel.startswith("../") or "/../" in rel:
         return False
     p = Path(rel)
-    parts = set(p.parts)
     lower_parts = {part.lower() for part in p.parts}
-    if parts & EXCLUDED_PARTS or lower_parts & SECRET_DIRS:
+    if rel in EXCLUDED_PATHS or any(rel.startswith(prefix) for prefix in EXCLUDED_PREFIXES):
+        return False
+    for part in p.parts:
+        if part not in EXCLUDED_PARTS:
+            continue
+        # scripts/build contains the canonical ServerBridge production build entrypoint.
+        # Other build directories remain generated output and must stay excluded.
+        if part == "build" and len(p.parts) >= 2 and p.parts[0] == "scripts" and p.parts[1] == "build":
+            continue
+        return False
+    if lower_parts & SECRET_DIRS:
         return False
     name = p.name.lower()
+    if p.name in EXCLUDED_NAMES or name in {item.lower() for item in EXCLUDED_NAMES}:
+        return False
+    if any(name.endswith(suffix) for suffix in EXCLUDED_SUFFIXES) or name.endswith("~"):
+        return False
+    if name.startswith("coverage") and name.endswith(".out"):
+        return False
     if name in SECRET_NAMES and name != ".env.example":
+        return False
+    if name.startswith(".env.") and name != ".env.example":
         return False
     if any(name.endswith(s) for s in SECRET_SUFFIXES):
         return False

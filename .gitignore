@@ -8,6 +8,14 @@ Thumbs.db
 .env
 !.env.example
 
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+
 # Go
 coverage.out
 
