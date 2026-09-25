@@ -26,6 +26,8 @@ LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-
 MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
 MANAGED_JRE_ARTIFACTS_DIR="${NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
+PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}}"
+export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
@@ -101,6 +103,16 @@ try:
 except Exception:
     print('0'); raise SystemExit
 print('1' if (major,minor,patch) >= (0,15,5) else '0')
+PYVER
+)"
+PUBLIC_DELIVERY_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,9) else '0')
 PYVER
 )"
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
@@ -209,6 +221,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       "neverlauncher-desktop-windows-arm64.exe" \
       "neverguard-windows-x64.exe" \
       "neverguard-windows-arm64.exe" \
+      "neverruntime-windows-x64.exe" \
+      "neverruntime-windows-arm64.exe" \
       "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
       "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
       "WINDOWS_PACKAGE_MANIFEST_X64.json" \
@@ -301,6 +315,8 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     "neverlauncher-desktop-windows-arm64.exe" \
     "neverguard-windows-x64.exe" \
     "neverguard-windows-arm64.exe" \
+    "neverruntime-windows-x64.exe" \
+    "neverruntime-windows-arm64.exe" \
     "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
     "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
     "WINDOWS_PACKAGE_MANIFEST_X64.json" \
@@ -418,7 +434,7 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
 fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
-release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}")
+release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
   log "Встраивание machine-verifiable Minecraft Compatibility certification для commit ${SOURCE_COMMIT}"
   release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}")
@@ -435,6 +451,10 @@ if [[ -n "${SOURCE_COMMIT}" ]]; then
   release_build_args+=(--source-commit "${SOURCE_COMMIT}")
 fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
+if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json"
+  "${RELEASE_CLI}" delivery verify-public-matrix --bundle "${OUT_DIR}" --version "${VERSION}"
+fi
 
 log "Ed25519 release signing"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"

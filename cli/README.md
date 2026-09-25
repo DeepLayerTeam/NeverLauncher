@@ -85,6 +85,10 @@ nl release publish-check dist/release-${VERSION} --public-key /etc/neverlauncher
   --trust-state /var/lib/neverlauncher/release-trust-state.json \
   --trust-policy /secure/RELEASE_TRUST_POLICY.json
 nl delivery verify-windows --bundle dist/release-${VERSION} --version "${VERSION}" --production
+nl delivery verify-public-matrix --bundle dist/release-${VERSION} --version "${VERSION}"
+nl delivery public-e2e --matrix-url "https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json" \
+  --public-key /etc/neverlauncher/root-public.pem --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/public-e2e-trust-state.json
 nl packaging prepare
 nl packaging verify
 ```
@@ -113,6 +117,8 @@ nl install verify --backend https://launcher.example --token "$NEVERLAUNCHER_TOK
 ```
 
 `0.15.8+` `release verify` и `security verify-signature` требуют внешний offline-root Ed25519 public key и persistent trust state. Root key из bundle не принимается; release-signing key принимается только через root-signed `RELEASE_TRUST_POLICY.json`.
+
+`0.15.9+` `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` обязан покрывать Windows/Linux/macOS x64+ARM64 и exact package/JRE/component bytes. `delivery public-e2e` предназначен для post-publish проверки реальных публичных URL и повторно запускает Release Verification v2 над скачанным bundle.
 
 ## P3.2v4: реальный client/desktop/key lifecycle
 

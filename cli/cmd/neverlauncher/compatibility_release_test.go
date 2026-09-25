@@ -114,7 +114,7 @@ func TestReleasePublishCheckRequiresCompatibilityCertificationFor011(t *testing.
 		}
 	}
 	matrixPath, targetsPath := writeCompatibilityEvidenceFixture(t, dir, ver, "abc123")
-	if err := buildReleaseBundle(ver, out, ".", matrixPath, targetsPath, "", "device-trust/targets.json", "", "guard-ci/targets.json", "abc123"); err != nil {
+	if err := buildReleaseBundle(ver, out, ".", matrixPath, targetsPath, "", "device-trust/targets.json", "", "guard-ci/targets.json", "abc123", ""); err != nil {
 		t.Fatal(err)
 	}
 

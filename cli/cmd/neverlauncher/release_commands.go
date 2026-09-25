@@ -59,6 +59,7 @@ func handleRelease(args []string) error {
 			flagValue(args, "--guard-ci-matrix", ""),
 			flagValue(args, "--guard-ci-targets", "guard-ci/targets.json"),
 			flagValue(args, "--source-commit", ""),
+			flagValue(args, "--public-base-url", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL"))),
 		); err != nil {
 			return err
 		}
@@ -140,7 +141,7 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
 				}
 			}
-			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update")
+			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update + Public Production Delivery Matrix")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -226,6 +227,8 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/unified-transactional-updater-core-0156.py",
 		"scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py",
 		"scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py",
+		"scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py",
+		".github/workflows/public-production-delivery.yml",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
 		"scripts/release/linux-package.py",
@@ -281,6 +284,7 @@ func releaseDoctor() error {
 		"transactional-updater-core":     {"python3", "scripts/smoke/offline/unified-transactional-updater-core-0156.py"},
 		"component-transactional-update": {"python3", "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"},
 		"release-verification-v2":        {"python3", "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"},
+		"public-production-delivery":     {"python3", "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -416,7 +420,7 @@ func productionTables() []string {
 	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "registry_entries", "desktop_packages"}
 }
 
-func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, guardCIMatrixPath, guardCITargetsPath, expectedCommit string) error {
+func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, guardCIMatrixPath, guardCITargetsPath, expectedCommit, publicBaseURL string) error {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
@@ -472,6 +476,14 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		if err := verifyDeliveryManifest0151(out, ver); err != nil {
 			return fmt.Errorf("delivery manifest self-check: %w", err)
+		}
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		if err := writePublicProductionDeliveryMatrix0159(out, ver, publicBaseURL); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		}
+		if err := verifyPublicProductionDeliveryMatrix0159(out, ver); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix self-check: %w", err)
 		}
 	}
 	if windowsSigningRequired0152(ver) {
@@ -530,6 +542,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		requiredFiles = append(requiredFiles, releaseTrustPolicyFile0158)
 		checks = append(checks, "release-verification-v2-trust-lifecycle-anti-rollback")
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		requiredFiles = append(requiredFiles, publicProductionDeliveryMatrixFile0159)
+		checks = append(checks, "public-production-delivery-matrix-six-target-e2e")
 	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
@@ -690,6 +706,11 @@ func verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, trustPolic
 			return fmt.Errorf("Managed JRE Distribution: %w", err)
 		}
 	}
+	if publicProductionDeliveryRequired0159(manifest.Version) {
+		if err := verifyPublicProductionDeliveryMatrix0159(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		}
+	}
 	for _, name := range manifest.RequiredFiles {
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil {
@@ -822,6 +843,9 @@ func releaseArtifacts(ver string) []string {
 	if releaseVerificationV2Required0158(ver) {
 		artifacts = append(artifacts, releaseTrustPolicyFile0158)
 	}
+	if publicProductionDeliveryRequired0159(ver) {
+		artifacts = append(artifacts, publicProductionDeliveryMatrixFile0159)
+	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,
 			"neverlauncher-cli-windows-x64.exe",
@@ -830,6 +854,11 @@ func releaseArtifacts(ver string) []string {
 			"neverlauncher-desktop-windows-arm64.exe",
 			"neverguard-windows-x64.exe",
 			"neverguard-windows-arm64.exe",
+		)
+		if componentTransactionalUpdateRequired0157(ver) {
+			artifacts = append(artifacts, "neverruntime-windows-x64.exe", "neverruntime-windows-arm64.exe")
+		}
+		artifacts = append(artifacts,
 			"neverlauncher-desktop-"+ver+"-windows-x64.zip",
 			"neverlauncher-desktop-"+ver+"-windows-arm64.zip",
 			"WINDOWS_PACKAGE_MANIFEST_X64.json",
@@ -913,6 +942,9 @@ func releaseDescription(ver string) string {
 	}
 	if updaterVersionAtLeast0156(ver) {
 		extra += "\n- начиная с 0.15.6 client install/update/package-apply используют Unified Transactional Updater Core: verified same-filesystem staging, durable journal, crash recovery, automatic rollback и fail-closed post-verify; publish-check выполняет реальный updater self-test;"
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		extra += "\n- начиная с 0.15.9 PUBLIC_PRODUCTION_DELIVERY_MATRIX.json публикует точный six-target Windows/Linux/macOS x64+ARM64 inventory с HTTPS URL, SHA-256/size и Managed JRE binding; post-publish nl delivery public-e2e скачивает публичные bytes, сверяет matrix/delivery manifest и повторно выполняет Release Verification v2 end-to-end;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

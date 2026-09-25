@@ -146,7 +146,7 @@ func TestReleasePublishCheckAcceptsDeviceTrustCertificationFor013(t *testing.T) 
 	}
 	compatMatrix, compatTargets := writeCompatibilityEvidenceFixture(t, dir, ver, "abc130")
 	dtMatrix, dtTargets := writeDeviceTrustEvidenceFixture(t, dir, ver, "abc130")
-	if err := buildReleaseBundle(ver, out, ".", compatMatrix, compatTargets, dtMatrix, dtTargets, "", "guard-ci/targets.json", "abc130"); err != nil {
+	if err := buildReleaseBundle(ver, out, ".", compatMatrix, compatTargets, dtMatrix, dtTargets, "", "guard-ci/targets.json", "abc130", ""); err != nil {
 		t.Fatal(err)
 	}
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)

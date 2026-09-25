@@ -77,6 +77,7 @@ run_step managed-jre-distribution-0155 python3 "${ROOT_DIR}/scripts/smoke/offlin
 run_step unified-transactional-updater-core-0156 python3 "${ROOT_DIR}/scripts/smoke/offline/unified-transactional-updater-core-0156.py"
 run_step desktop-guard-runtime-transactional-update-0157 python3 "${ROOT_DIR}/scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"
 run_step release-verification-v2-trust-lifecycle-0158 python3 "${ROOT_DIR}/scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"
+run_step public-production-delivery-matrix-e2e-0159 python3 "${ROOT_DIR}/scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"

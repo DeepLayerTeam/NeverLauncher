@@ -69,6 +69,7 @@ jobs:
           python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
           python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py
           python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py
+          python3 scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh

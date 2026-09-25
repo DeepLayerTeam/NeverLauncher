@@ -70,6 +70,8 @@ jobs:
             dist/release-*/neverlauncher-desktop-windows-arm64.exe
             dist/release-*/neverguard-windows-x64.exe
             dist/release-*/neverguard-windows-arm64.exe
+            dist/release-*/neverruntime-windows-x64.exe
+            dist/release-*/neverruntime-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-*-windows-x64.zip
             dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json

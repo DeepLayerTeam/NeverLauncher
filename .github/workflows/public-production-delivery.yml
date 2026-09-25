@@ -1,0 +1,105 @@
+name: Public Production Delivery E2E
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      matrix_url:
+        description: Optional explicit PUBLIC_PRODUCTION_DELIVERY_MATRIX.json URL
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  public-delivery-e2e:
+    name: Public six-target release download + verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
+
+      - name: Resolve public matrix URL and release version
+        shell: bash
+        env:
+          INPUT_MATRIX_URL: ${{ inputs.matrix_url }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          TAG="${RELEASE_TAG:-v${VERSION}}"
+          if [[ "${TAG#v}" != "${VERSION}" ]]; then
+            echo "release tag ${TAG} does not match VERSION=${VERSION}" >&2
+            exit 2
+          fi
+          MATRIX_URL="${INPUT_MATRIX_URL:-https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json}"
+          printf 'PUBLIC_MATRIX_URL=%s\n' "${MATRIX_URL}" >> "$GITHUB_ENV"
+          printf 'PUBLIC_VERSION=%s\n' "${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Materialize external release trust inputs
+        shell: bash
+        env:
+          RELEASE_ROOT_PUBLIC_KEY_BASE64: ${{ secrets.NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64 }}
+          RELEASE_TRUST_POLICY_BASE64: ${{ secrets.NEVERLAUNCHER_RELEASE_TRUST_POLICY_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
+          test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
+          printf '%s' "$RELEASE_ROOT_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/neverlauncher-release-root-public.pem"
+          printf '%s' "$RELEASE_TRUST_POLICY_BASE64" | base64 --decode > "$RUNNER_TEMP/neverlauncher-current-trust-policy.json"
+          printf 'NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-release-root-public.pem" >> "$GITHUB_ENV"
+          printf 'NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-current-trust-policy.json" >> "$GITHUB_ENV"
+          printf 'NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
+
+      - name: Build public E2E verifier
+        working-directory: cli
+        shell: bash
+        run: go build -trimpath -ldflags "-s -w -X main.version=${PUBLIC_VERSION}" -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher
+
+      - name: Download and verify the public production release end-to-end
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/public-release"
+          mkdir -p dist
+          "$RUNNER_TEMP/nl" delivery public-e2e \
+            --matrix-url "$PUBLIC_MATRIX_URL" \
+            --public-key "$NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE" \
+            --trust-policy "$NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE" \
+            --trust-state "$NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE" \
+            --download-dir "$RUNNER_TEMP/public-release" \
+            --report dist/PUBLIC_DELIVERY_E2E_REPORT.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('dist/PUBLIC_DELIVERY_E2E_REPORT.json').read_text())
+          assert report['status'] == 'ok', report
+          targets={(x['platform'],x['architecture']) for x in report['verifiedTargets']}
+          expected={(p,a) for p in ('windows','linux','macos') for a in ('x64','arm64')}
+          assert targets == expected, (targets,expected)
+          assert report['downloadedFiles'] > 0 and report['downloadedBytes'] > 0
+          PY
+
+      - name: Upload public delivery E2E evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-public-delivery-e2e-${{ github.sha }}
+          path: dist/PUBLIC_DELIVERY_E2E_REPORT.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Remove external trust material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/neverlauncher-release-root-public.pem" \
+                "$RUNNER_TEMP/neverlauncher-current-trust-policy.json" \
+                "$RUNNER_TEMP/neverlauncher-public-e2e-trust-state.json"

@@ -1347,6 +1347,46 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.8 verification gate is not wired into preflight/CI")
 
 
+# 0.15.9 Public Production Delivery Matrix must expose the complete six-target
+# public inventory and the post-publish E2E must download the real public bytes
+# before repeating Release Verification v2 with external trust material.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 9):
+    public_delivery_0159 = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
+    delivery_cmd_0159 = read("cli/cmd/neverlauncher/delivery_manifest.go")
+    release_0159 = read("cli/cmd/neverlauncher/release_commands.go")
+    build_release_0159 = read("scripts/release/build-release.sh")
+    workflow_0159 = read(".github/workflows/public-production-delivery.yml")
+    gate_0159 = read("scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py")
+    tests_0159 = read("cli/cmd/neverlauncher/public_delivery_matrix_test.go")
+    for required in [
+        "PUBLIC_PRODUCTION_DELIVERY_MATRIX.json", "buildPublicProductionDeliveryMatrix0159",
+        "validatePublicProductionDeliveryMatrix0159", "runPublicProductionDeliveryE2E0159",
+        "downloadPublicAsset0159", "verifyReleaseBundleWithTrust", "github.com",
+        "release-assets.githubusercontent.com", "public delivery base URL must use HTTPS",
+    ]:
+        if required not in public_delivery_0159:
+            fail(f"0.15.9 public delivery implementation incomplete: {required}")
+    for required in ['case "public-matrix":', 'case "verify-public-matrix":', 'case "public-e2e":']:
+        if required not in delivery_cmd_0159:
+            fail(f"0.15.9 public delivery CLI incomplete: {required}")
+    for required in ["publicProductionDeliveryRequired0159", "public-production-delivery-matrix-six-target-e2e"]:
+        if required not in release_0159:
+            fail(f"0.15.9 release integration incomplete: {required}")
+    for required in ["NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL", "neverruntime-windows-x64.exe", "neverruntime-windows-arm64.exe"]:
+        if required not in build_release_0159:
+            fail(f"0.15.9 aggregate release staging incomplete: {required}")
+    for required in ["types: [published]", "delivery public-e2e", "PUBLIC_DELIVERY_E2E_REPORT.json", "NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE", "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE"]:
+        if required not in workflow_0159:
+            fail(f"0.15.9 post-publish workflow incomplete: {required}")
+    for required in ["TestPublicProductionDeliveryMatrix0159CoversSixTargets", "TestPublicProductionDeliveryMatrix0159RejectsMissingRuntime", "TestFetchPublicMatrix0159LoopbackHTTP"]:
+        if required not in tests_0159:
+            fail(f"0.15.9 public delivery regression tests missing: {required}")
+    if "Public Production Delivery Matrix + E2E gate: OK" not in gate_0159:
+        fail("0.15.9 mandatory public delivery gate incomplete")
+    if "public-production-delivery-matrix-e2e-0159.py" not in preflight or "public-production-delivery-matrix-e2e-0159.py" not in ci:
+        fail("0.15.9 public delivery gate is not wired into preflight/CI")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

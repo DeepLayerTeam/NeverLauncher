@@ -4,7 +4,24 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.8**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.9**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Public Production Delivery Matrix + E2E — 0.15.9
+
+`0.15.9` добавляет `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`, который публикует фактический six-target inventory для Windows/Linux/macOS x64+ARM64. Каждый target содержит exact CLI, Desktop, NeverGuard, NeverRuntime, production package и Managed JRE; Linux дополнительно содержит Backend API. URL, SHA-256 и size берутся из реального `DELIVERY_MANIFEST.json`, а сама matrix входит в signed release boundary через `RELEASE_MANIFEST.json`/`SHA256SUMS`.
+
+После публикации GitHub Release workflow `public-production-delivery.yml` запускает настоящий network E2E: скачивает matrix и все публичные assets по HTTPS, повторно проверяет hash/size, скачивает release controls и выполняет Release Verification v2 с внешними offline-root/current trust policy/trust state.
+
+```bash
+VERSION="$(cat VERSION)"
+nl delivery verify-public-matrix --bundle "dist/release-${VERSION}" --version "${VERSION}"
+nl delivery public-e2e \
+  --matrix-url "https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json" \
+  --public-key /etc/neverlauncher/root-public.pem \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/public-e2e-trust-state.json \
+  --report PUBLIC_DELIVERY_E2E_REPORT.json
+```
 
 ## Проверка релиза v2 и lifecycle доверия/ключей — 0.15.8
 

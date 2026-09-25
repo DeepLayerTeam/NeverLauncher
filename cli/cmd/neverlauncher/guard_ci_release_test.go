@@ -158,7 +158,7 @@ func TestReleasePublishCheckRequiresGuardCertification0139(t *testing.T) {
 	compatMatrix, compatTargets := writeCompatibilityEvidenceFixture(t, dir, ver, "abc139")
 	dtMatrix, dtTargets := writeDeviceTrustEvidenceFixture(t, dir, ver, "abc139")
 	guardMatrix, guardTargets := writeGuardCIEvidenceFixture(t, dir, out, ver, "abc139")
-	if err := buildReleaseBundle(ver, out, ".", compatMatrix, compatTargets, dtMatrix, dtTargets, guardMatrix, guardTargets, "abc139"); err != nil {
+	if err := buildReleaseBundle(ver, out, ".", compatMatrix, compatTargets, dtMatrix, dtTargets, guardMatrix, guardTargets, "abc139", ""); err != nil {
 		t.Fatal(err)
 	}
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)

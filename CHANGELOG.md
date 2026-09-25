@@ -1,3 +1,14 @@
+## 0.15.9 — Public Production Delivery Matrix + E2E
+
+`0.15.9` делает production delivery публично проверяемым после публикации: release bundle содержит точную six-target матрицу Windows/Linux/macOS × x64/ARM64 с реальными URL, SHA-256/size и привязкой к Managed JRE, а post-publish E2E скачивает опубликованные bytes и повторяет Release Verification v2. DB migration не требуется.
+
+- Добавлен `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`: полный inventory фактического `DELIVERY_MANIFEST.json`, HTTPS URL каждого artifact и канонические target-записи CLI/Desktop/Guard/Runtime/package/Managed JRE; Linux дополнительно требует API.
+- Матрица fail-closed требует ровно шесть production target и exact canonical artifacts из Windows/Linux/macOS production packaging; отсутствующий Runtime/package/JRE или рассинхрон SHA-256/size/URL отклоняются.
+- Добавлены `nl delivery public-matrix`, `verify-public-matrix` и `public-e2e`; E2E потоково скачивает публичные assets, проверяет Content-Length/SHA-256, ограничивает redirects доверенными release-hosts и затем запускает полный `verifyReleaseBundleWithTrust`.
+- Public matrix входит в `RELEASE_MANIFEST.json`, `SHA256SUMS` и Release Verification v2 signature boundary, но не включается внутрь `DELIVERY_MANIFEST.json`, исключая circular hash dependency.
+- Добавлен post-publish `.github/workflows/public-production-delivery.yml`, который на событии GitHub Release `published` скачивает публичный релиз, использует внешний offline-root/current trust policy и сохраняет `PUBLIC_DELIVERY_E2E_REPORT.json`.
+- Исправлен Windows aggregate delivery: `neverruntime-windows-{x64,arm64}.exe`, уже собираемый/подписываемый с 0.15.7, теперь обязателен в production staging и загружается Windows delivery workflow.
+
 ## 0.15.8 — Release Verification v2 + trust/key lifecycle
 
 `0.15.8` заменяет single-key release verification на root-anchored trust hierarchy. Offline root подписывает versioned trust policy, а online release keys ротируются/отзываются независимо. Проверка релиза сохраняет monotonic trust state и fail-closed блокирует rollback trust epoch и release version. DB migration не требуется.

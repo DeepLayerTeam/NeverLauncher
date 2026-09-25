@@ -146,6 +146,7 @@ export NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE=/secure/release-private.pe
 export NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=/etc/neverlauncher/root-public.pem
 export NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=/secure/RELEASE_TRUST_POLICY.json
 export NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=/var/lib/neverlauncher/release-trust-state.json
+export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v$(cat VERSION)"
 bash scripts/release/build-release.sh
 NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ```

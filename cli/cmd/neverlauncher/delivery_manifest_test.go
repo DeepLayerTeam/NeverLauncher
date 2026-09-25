@@ -121,7 +121,7 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := buildReleaseBundle("0.15.1", out, root, "", "compatibility/targets.json", "", "device-trust/targets.json", "", "guard-ci/targets.json", ""); err != nil {
+	if err := buildReleaseBundle("0.15.1", out, root, "", "compatibility/targets.json", "", "device-trust/targets.json", "", "guard-ci/targets.json", "", ""); err != nil {
 		t.Fatalf("release build 0.15.1: %v", err)
 	}
 	if err := verifyDeliveryManifest0151(out, "0.15.1"); err != nil {

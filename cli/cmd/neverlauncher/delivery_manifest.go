@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -261,7 +262,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			continue
 		}
 		switch name {
-		case deliveryManifestFile0151, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
+		case deliveryManifestFile0151, publicProductionDeliveryMatrixFile0159, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
 			continue
 		}
 		path := filepath.Join(dir, name)
@@ -359,7 +360,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 	seenNames := map[string]struct{}{}
 	actualTargets := map[string]DeliveryTarget{}
 	for _, artifact := range manifest.Artifacts {
-		if artifact.Name == deliveryManifestFile0151 || artifact.Name == "RELEASE_MANIFEST.json" || artifact.Name == "SHA256SUMS" || artifact.Name == "SHA256SUMS.sig" || artifact.Name == "PROVENANCE.json.sig" {
+		if artifact.Name == deliveryManifestFile0151 || artifact.Name == publicProductionDeliveryMatrixFile0159 || artifact.Name == "RELEASE_MANIFEST.json" || artifact.Name == "SHA256SUMS" || artifact.Name == "SHA256SUMS.sig" || artifact.Name == "PROVENANCE.json.sig" {
 			return fmt.Errorf("delivery manifest contains circular/control artifact %s", artifact.Name)
 		}
 		if _, exists := seenNames[artifact.Name]; exists {
@@ -445,7 +446,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, resolve")
+		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, public-matrix, verify-public-matrix, public-e2e, resolve")
 	}
 	switch args[0] {
 	case "target":
@@ -550,6 +551,69 @@ func handleDelivery(args []string) error {
 			return err
 		}
 		return verifyManagedJREDistribution0155(dir, ver, true)
+	case "public-matrix":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery public-matrix requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		baseURL := flagValue(args, "--base-url", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL")))
+		if baseURL == "" {
+			baseURL = defaultPublicReleaseBaseURL0159(ver)
+		}
+		matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, baseURL, false)
+		if err != nil {
+			return err
+		}
+		if err := writeJSONFile(filepath.Join(dir, publicProductionDeliveryMatrixFile0159), matrix); err != nil {
+			return err
+		}
+		return validatePublicProductionDeliveryMatrix0159(dir, matrix, ver, false)
+	case "verify-public-matrix":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery verify-public-matrix requires --bundle <dir>")
+		}
+		return verifyPublicProductionDeliveryMatrix0159(dir, flagValue(args, "--version", version))
+	case "public-e2e":
+		matrixURL := flagValue(args, "--matrix-url", "")
+		if matrixURL == "" {
+			return errors.New("delivery public-e2e requires --matrix-url <https-url>")
+		}
+		downloadDir := flagValue(args, "--download-dir", "")
+		cleanup := false
+		if downloadDir == "" {
+			tmp, err := os.MkdirTemp("", "neverlauncher-public-delivery-e2e-")
+			if err != nil {
+				return err
+			}
+			downloadDir, cleanup = tmp, true
+		}
+		if cleanup && !flagBool(args, "--keep", false) {
+			defer os.RemoveAll(downloadDir)
+		}
+		report, err := runPublicProductionDeliveryE2E0159(
+			context.Background(), matrixURL,
+			flagValue(args, "--public-key", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE"))),
+			flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE"))),
+			flagValue(args, "--trust-state", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE"))),
+			downloadDir, flagBool(args, "--allow-loopback-http", false),
+		)
+		if err != nil {
+			return err
+		}
+		out := flagValue(args, "--report", "")
+		if out != "" {
+			return writeJSONFile(out, report)
+		}
+		printJSON(report)
+		return nil
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {
