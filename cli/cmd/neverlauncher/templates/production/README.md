@@ -2,6 +2,23 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.15.9 → 0.15.10
+
+DB migration не требуется. Перед rollout сохраните backup install root и persistent release trust state. На каждом installation выполните `nl update migrate-state --root <install>` либо позвольте первому `update recover/components` выполнить migration автоматически: legacy macOS `.neverlauncher/updater/component-update-state.json` будет перенесён в canonical `.neverlauncher/component-update-state.json`, incomplete transaction восстановлены, а terminal staging/backup очищены после durable journal.
+
+Persistent release trust state остаётся внешним по отношению к release bundle. Первый успешный `nl release verify` 0.15.10 под `<trust-state>.lock` мигрирует schema 2.0 → 2.1 и фиксирует SHA-256 принятого `RELEASE_MANIFEST.json`. Не удаляйте `highestReleaseManifestSha256`/`stateRevision` вручную и не размещайте trust state внутри release directory. Если migration сообщает conflict одинаковой component version с разными hashes, остановите rollout и сравните installation с последним проверенным production package.
+
+Проверка перед rollout:
+
+```bash
+nl update migrate-state --root /opt/neverlauncher
+nl update stabilization-self-test
+nl release verify dist/release-0.15.10 \
+  --public-key /etc/neverlauncher/root-public.pem \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json
+```
+
 ### Upgrade 0.14.10 → 0.15.0
 
 `0.15.0` не добавляет новую DB migration: перед rollout `nl db migrate verify` должен подтверждать sealed `0030_serverbridge_migration_stabilization_01410`. Соберите все 11 bridge JAR через `scripts/build/bridge-plugins.sh`; сборка должна создать `SERVERBRIDGE2_CERTIFICATION.json`, который связывает exact `0.15.0` matrix, manifest, SHA256SUMS и `BRIDGE_RELEASE_ALLOWLIST.json`.

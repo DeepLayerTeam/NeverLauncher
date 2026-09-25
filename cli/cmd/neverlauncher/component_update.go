@@ -570,12 +570,13 @@ func componentUpdateInstallRoot0157(currentDesktop, explicitRoot string, manifes
 }
 
 func currentComponentVersion0157(root string) string {
+	_, _ = migrateComponentUpdateState01510(root)
 	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157)))
 	if err != nil {
 		return ""
 	}
 	var state componentUpdateState0157
-	if json.Unmarshal(raw, &state) == nil {
+	if json.Unmarshal(raw, &state) == nil && validateComponentUpdateState01510(state) == nil {
 		return strings.TrimSpace(state.Version)
 	}
 	return ""
@@ -619,6 +620,9 @@ func applyAdjacentComponentUpdate0157(manifest componentUpdateManifest0157, mani
 	updater, err := newTransactionalUpdater0156(root)
 	if err != nil {
 		return nil, err
+	}
+	if _, err := migrateComponentUpdateState01510(root); err != nil {
+		return nil, fmt.Errorf("migrate component update state: %w", err)
 	}
 	files := []updaterFileSpec0156{}
 	for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
@@ -776,7 +780,13 @@ func rollbackComponentTreeLocked0157(u *transactionalUpdater0156, journal *compo
 	}
 	syncDirBestEffort0156(u.root)
 	journal.Phase = "rolled-back"
-	return writeComponentTreeJournal0157(u, journal)
+	if err := writeComponentTreeJournal0157(u, journal); err != nil {
+		return err
+	}
+	if err := removeSafeComponentTreePayload01510(u, journal); err != nil {
+		return fmt.Errorf("cleanup rolled-back component tree payload: %w", err)
+	}
+	return nil
 }
 
 func (u *transactionalUpdater0156) recoverComponentTreesLocked0157() ([]string, error) {
@@ -808,6 +818,9 @@ func (u *transactionalUpdater0156) recoverComponentTreesLocked0157() ([]string, 
 			journal.Phase = "rolled-back"
 			journal.Error = "recovered prepared component tree transaction before live switch"
 			if err := writeComponentTreeJournal0157(u, journal); err != nil {
+				return recovered, err
+			}
+			if err := removeSafeComponentTreePayload01510(u, journal); err != nil {
 				return recovered, err
 			}
 		case "old-moved", "new-moved", "verifying", "rolling-back":
@@ -924,8 +937,9 @@ func applyComponentTree0157(u *transactionalUpdater0156, liveRel, stagePath, fro
 		}
 		return nil, err
 	}
-	_ = os.RemoveAll(journal.BackupPath)
-	_ = os.RemoveAll(journal.FailedPath)
+	if err := removeSafeComponentTreePayload01510(u, journal); err != nil {
+		return nil, fmt.Errorf("cleanup committed component tree payload: %w", err)
+	}
 	return map[string]any{
 		"schemaVersion": componentTreeSchema0157, "toolVersion": version, "engine": "unified-transactional-updater",
 		"transactionId": id, "namespace": "desktop-guard-runtime-app-bundle", "fromVersion": fromVersion, "toVersion": toVersion,
@@ -969,12 +983,19 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 	if err := verifyComponentBinaries0157(manifest, appSource, true, allowDevelopment); err != nil {
 		return nil, fmt.Errorf("staged macOS component verify: %w", err)
 	}
-	fromVersion := ""
-	statePath := filepath.Join(root, liveBundle, "Contents", "Resources", "COMPONENT_UPDATE_STATE.json")
-	if raw, err := os.ReadFile(statePath); err == nil {
-		var state componentUpdateState0157
-		if json.Unmarshal(raw, &state) == nil {
-			fromVersion = state.Version
+	if _, err := migrateComponentUpdateState01510(root); err != nil {
+		return nil, fmt.Errorf("component state migration: %w", err)
+	}
+	fromVersion := currentComponentVersion0157(root)
+	statePath := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
+	if fromVersion == "" {
+		// 0.15.7-0.15.9 development bundles could contain state inside the app.
+		legacyEmbedded := filepath.Join(root, liveBundle, "Contents", "Resources", "COMPONENT_UPDATE_STATE.json")
+		if raw, err := os.ReadFile(legacyEmbedded); err == nil {
+			var state componentUpdateState0157
+			if json.Unmarshal(raw, &state) == nil && validateComponentUpdateState01510(state) == nil {
+				fromVersion = state.Version
+			}
 		}
 	}
 	stateBytes, err := componentStateBytes0157(manifest)
@@ -998,9 +1019,12 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 		return nil, err
 	}
 	if !allowDevelopment || manifest.TrustMode != "development-self-test" {
-		statePath = filepath.Join(updater.controlDir, "component-update-state.json")
-		if err := writeUpdaterBytes0156(statePath, stateBytes, 0o600); err != nil {
+		var state componentUpdateState0157
+		if err := json.Unmarshal(stateBytes, &state); err != nil {
 			return nil, err
+		}
+		if err := writeJSONFileAtomicMode(statePath, state, 0o600); err != nil {
+			return nil, fmt.Errorf("persist canonical component update state: %w", err)
 		}
 	}
 	report["components"] = []string{"desktop", "guard", "runtime"}

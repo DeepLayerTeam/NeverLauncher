@@ -4,7 +4,26 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.9**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.10**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Migration + stabilization — 0.15.10
+
+`0.15.10` не добавляет DB migration: релиз стабилизирует локальный upgrade path 0.15.9 → 0.15.10. Release Verification v2 теперь сериализует весь verify→trust-state commit через внешний `<trust-state>.lock`, а state schema `2.1` дополнительно фиксирует SHA-256 уже принятого `RELEASE_MANIFEST.json`. Поэтому downgrade по версии/epoch и подмена другого bundle под уже принятую ту же версию блокируются fail-closed.
+
+Updater автоматически переносит legacy macOS component state из `.neverlauncher/updater/component-update-state.json` в единый `.neverlauncher/component-update-state.json`. После durable rollback/commit staging/backup payload удаляются, journal остаётся для диагностики. Явная миграция и проверка доступны командами:
+
+```bash
+nl update migrate-state --root /opt/neverlauncher
+nl update status --root /opt/neverlauncher
+nl update stabilization-self-test
+
+nl release verify dist/release-0.15.10 \
+  --public-key /etc/neverlauncher/root-public.pem \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json
+```
+
+Если canonical и legacy component state имеют одну версию, но разные component hashes, migration останавливается и требует ручной проверки; более новый state никогда не заменяется старым. Stale trust-state lock удаляется только если PID владельца уже не существует.
 
 ## Public Production Delivery Matrix + E2E — 0.15.9
 

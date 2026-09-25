@@ -68,13 +68,15 @@ type releaseSignatureEnvelopeV2 struct {
 }
 
 type releaseTrustState0158 struct {
-	SchemaVersion      string `json:"schemaVersion"`
-	TrustDomain        string `json:"trustDomain"`
-	RootFingerprint    string `json:"rootFingerprint"`
-	HighestTrustEpoch  uint64 `json:"highestTrustEpoch"`
-	HighestRelease     string `json:"highestReleaseVersion"`
-	LastKeyFingerprint string `json:"lastKeyFingerprint"`
-	UpdatedAt          string `json:"updatedAt"`
+	SchemaVersion                string `json:"schemaVersion"`
+	TrustDomain                  string `json:"trustDomain"`
+	RootFingerprint              string `json:"rootFingerprint"`
+	HighestTrustEpoch            uint64 `json:"highestTrustEpoch"`
+	HighestRelease               string `json:"highestReleaseVersion"`
+	HighestReleaseManifestSHA256 string `json:"highestReleaseManifestSha256,omitempty"`
+	LastKeyFingerprint           string `json:"lastKeyFingerprint"`
+	StateRevision                uint64 `json:"stateRevision,omitempty"`
+	UpdatedAt                    string `json:"updatedAt"`
 }
 
 type releaseVerificationV2Context struct {
@@ -283,7 +285,7 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 func loadTrustState0158(path string) (releaseTrustState0158, error) {
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return releaseTrustState0158{SchemaVersion: releaseSignatureSchema0158, TrustDomain: releaseTrustDomain0158}, nil
+		return releaseTrustState0158{SchemaVersion: releaseTrustStateSchema01510, TrustDomain: releaseTrustDomain0158}, nil
 	}
 	if err != nil {
 		return releaseTrustState0158{}, err
@@ -292,13 +294,16 @@ func loadTrustState0158(path string) (releaseTrustState0158, error) {
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return s, err
 	}
-	if s.SchemaVersion != releaseSignatureSchema0158 || s.TrustDomain != releaseTrustDomain0158 {
+	if (s.SchemaVersion != releaseSignatureSchema0158 && s.SchemaVersion != releaseTrustStateSchema01510) || s.TrustDomain != releaseTrustDomain0158 {
 		return s, errors.New("release trust state schema/domain invalid")
+	}
+	if s.HighestReleaseManifestSHA256 != "" && !validSHA256Hex0157(s.HighestReleaseManifestSHA256) {
+		return s, errors.New("release trust state contains invalid manifest digest")
 	}
 	return s, nil
 }
 
-func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVersion string) error {
+func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVersion, releaseManifestSHA256 string) error {
 	if strings.TrimSpace(path) == "" {
 		return errors.New("Release Verification v2 требует persistent --trust-state или NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
@@ -318,8 +323,12 @@ func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVers
 		if !ok1 || !ok2 {
 			return errors.New("anti-rollback state содержит некорректную release version")
 		}
-		if compareVersionTriple0158(cur, old) < 0 {
+		cmp := compareVersionTriple0158(cur, old)
+		if cmp < 0 {
 			return fmt.Errorf("release rollback blocked: release=%s accepted=%s", releaseVersion, s.HighestRelease)
+		}
+		if cmp == 0 && s.HighestReleaseManifestSHA256 != "" && !strings.EqualFold(s.HighestReleaseManifestSHA256, releaseManifestSHA256) {
+			return fmt.Errorf("same-version release manifest mismatch: release=%s acceptedSha256=%s candidateSha256=%s", releaseVersion, s.HighestReleaseManifestSHA256, strings.ToLower(releaseManifestSHA256))
 		}
 	}
 	return nil
@@ -330,18 +339,35 @@ func commitTrustState0158(ctx releaseVerificationV2Context) error {
 	if err != nil {
 		return err
 	}
+	if s.RootFingerprint != "" && !strings.EqualFold(s.RootFingerprint, ctx.RootFingerprint) {
+		return errors.New("release trust state привязан к другому root key")
+	}
+	if ctx.Policy.Epoch < s.HighestTrustEpoch {
+		return fmt.Errorf("trust epoch rollback during state commit: policy=%d accepted=%d", ctx.Policy.Epoch, s.HighestTrustEpoch)
+	}
+	if err := precheckTrustState0158(ctx.StatePath, ctx.RootFingerprint, ctx.Policy.Epoch, ctx.Envelope.ReleaseVersion, ctx.Envelope.ReleaseManifestSHA256); err != nil {
+		return err
+	}
 	if ctx.Policy.Epoch > s.HighestTrustEpoch {
 		s.HighestTrustEpoch = ctx.Policy.Epoch
 	}
 	if s.HighestRelease == "" {
 		s.HighestRelease = ctx.Envelope.ReleaseVersion
+		s.HighestReleaseManifestSHA256 = strings.ToLower(ctx.Envelope.ReleaseManifestSHA256)
 	} else if a, ok := parseVersionTriple0158(ctx.Envelope.ReleaseVersion); ok {
-		if b, ok := parseVersionTriple0158(s.HighestRelease); ok && compareVersionTriple0158(a, b) > 0 {
-			s.HighestRelease = ctx.Envelope.ReleaseVersion
+		if b, ok := parseVersionTriple0158(s.HighestRelease); ok {
+			cmp := compareVersionTriple0158(a, b)
+			if cmp > 0 {
+				s.HighestRelease = ctx.Envelope.ReleaseVersion
+				s.HighestReleaseManifestSHA256 = strings.ToLower(ctx.Envelope.ReleaseManifestSHA256)
+			} else if cmp == 0 && s.HighestReleaseManifestSHA256 == "" {
+				s.HighestReleaseManifestSHA256 = strings.ToLower(ctx.Envelope.ReleaseManifestSHA256)
+			}
 		}
 	}
-	s.SchemaVersion, s.TrustDomain, s.RootFingerprint = releaseSignatureSchema0158, releaseTrustDomain0158, ctx.RootFingerprint
+	s.SchemaVersion, s.TrustDomain, s.RootFingerprint = releaseTrustStateSchema01510, releaseTrustDomain0158, ctx.RootFingerprint
 	s.LastKeyFingerprint = ctx.Envelope.KeyFingerprint
+	s.StateRevision++
 	s.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	return writeJSONFileAtomicMode(ctx.StatePath, s, 0o600)
 }
@@ -486,7 +512,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), pub); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Release v2 provenance: %w", err)
 	}
-	if err := precheckTrustState0158(trustStatePath, rootFP, currentPolicy.Epoch, env.ReleaseVersion); err != nil {
+	if err := precheckTrustState0158(trustStatePath, rootFP, currentPolicy.Epoch, env.ReleaseVersion, env.ReleaseManifestSHA256); err != nil {
 		return releaseVerificationV2Context{}, err
 	}
 	return releaseVerificationV2Context{Policy: currentPolicy, Envelope: env, RootFingerprint: rootFP, StatePath: trustStatePath}, nil

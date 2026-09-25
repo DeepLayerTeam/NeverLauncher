@@ -246,6 +246,10 @@ Backup/restore выполняются внутри maintenance-lock: mutating AP
 
 Для `0.15.9+` публичная поставка дополнительно фиксируется `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`. Matrix не является trust anchor: она сама включена в подписанный `SHA256SUMS`, а post-publish `delivery public-e2e` сначала проверяет публичные SHA-256/size и затем выполняет полный Release Verification v2 с внешним root/current trust policy. HTTP запрещён кроме явного loopback test mode; redirects ограничены исходным host и известными GitHub release asset hosts.
 
+Для `0.15.10+` persistent trust state обновляется только внутри serialized verification boundary. Файл `<trust-state>.lock` содержит PID verifier; активный PID блокирует конкурентную проверку, stale lock удаляется только после проверки завершения процесса. Trust state schema `2.1` сохраняет `highestReleaseManifestSha256`: если та же release version уже принята, другой `RELEASE_MANIFEST.json` не может быть принят даже при валидной подписи текущего release key. Это закрывает same-version replacement/equivocation и race между anti-rollback precheck и commit.
+
+Локальный component state также стабилизирован: legacy macOS state из updater control directory мигрирует в canonical `.neverlauncher/component-update-state.json`; конфликт одинаковой версии с различными hashes считается ошибкой, а terminal updater staging/backup удаляются только после durable `committed`/`rolled-back` journal.
+
 Source archive формируется из git-tracked файлов либо строгого allowlist при отсутствии `.git`, исключает symlink/secret paths и до формирования release manifest проходит secret scan. `release verify` fail-closed проверяет наличие, размер и SHA-256 каждого `required=true` artifact, затем SHA256SUMS, Ed25519 signature и detached подпись `PROVENANCE.json.sig`. Provenance имеет формат in-toto Statement / SLSA v1, а SBOM — SPDX 2.3 и строится из dependency manifests/locks.
 
 ### Compatibility certification в release trust boundary

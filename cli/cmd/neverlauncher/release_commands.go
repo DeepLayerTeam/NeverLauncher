@@ -141,7 +141,16 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
 				}
 			}
-			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update + Public Production Delivery Matrix")
+			if migrationStabilizationRequired01510(manifestVersion) {
+				report, err := runMigrationStabilizationSelfTest01510()
+				if err != nil {
+					return fmt.Errorf("0.15.10 migration + stabilization self-test: %w", err)
+				}
+				if fmt.Sprint(report["status"]) != "ok" {
+					return fmt.Errorf("0.15.10 migration + stabilization self-test status=%v", report["status"])
+				}
+			}
+			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update + Public Production Delivery Matrix + migration stabilization")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -228,6 +237,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py",
 		"scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py",
 		"scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py",
+		"scripts/smoke/offline/migration-stabilization-01510.py",
 		".github/workflows/public-production-delivery.yml",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
@@ -285,6 +295,7 @@ func releaseDoctor() error {
 		"component-transactional-update": {"python3", "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"},
 		"release-verification-v2":        {"python3", "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"},
 		"public-production-delivery":     {"python3", "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"},
+		"migration-stabilization":        {"python3", "scripts/smoke/offline/migration-stabilization-01510.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -655,6 +666,19 @@ func releaseChecksums(dir string) ([]string, error) {
 }
 
 func verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
+	manifestVersion, err := releaseBundleVersion(dir)
+	if err != nil {
+		return err
+	}
+	if migrationStabilizationRequired01510(manifestVersion) {
+		return withReleaseTrustStateLock01510(trustStatePath, func() error {
+			return verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+		})
+	}
+	return verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+}
+
+func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
 	for _, name := range []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "RELEASE_NOTES.txt", "SBOM.spdx.json", "PROVENANCE.json", "PROVENANCE.json.sig"} {
 		if st, err := os.Stat(filepath.Join(dir, name)); err != nil || st.IsDir() {
 			return fmt.Errorf("не найден обязательный release file %s", name)
@@ -945,6 +969,9 @@ func releaseDescription(ver string) string {
 	}
 	if publicProductionDeliveryRequired0159(ver) {
 		extra += "\n- начиная с 0.15.9 PUBLIC_PRODUCTION_DELIVERY_MATRIX.json публикует точный six-target Windows/Linux/macOS x64+ARM64 inventory с HTTPS URL, SHA-256/size и Managed JRE binding; post-publish nl delivery public-e2e скачивает публичные bytes, сверяет matrix/delivery manifest и повторно выполняет Release Verification v2 end-to-end;"
+	}
+	if migrationStabilizationRequired01510(ver) {
+		extra += "\n- начиная с 0.15.10 migration stabilization сериализует Release Verification через persistent trust-state lock, мигрирует state 2.0→2.1 с same-version RELEASE_MANIFEST binding, переносит legacy macOS component state в canonical location и удаляет terminal updater staging/backup payload после durable rollback;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+

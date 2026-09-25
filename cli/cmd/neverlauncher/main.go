@@ -23,7 +23,7 @@ const helpText = `NeverLauncher CLI
 Основные команды:
   version                         показать версию CLI
   manifest build|validate|diff    работа с client manifest
-  update plan|apply|components|status|recover|self-test|component-self-test transactional updater core
+  update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
   runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
@@ -418,7 +418,7 @@ func handleManifest(args []string) error {
 
 func handleUpdate(args []string) error {
 	if len(args) < 1 {
-		return errors.New("использование: neverlauncher update plan|apply|status|recover ...")
+		return errors.New("использование: neverlauncher update plan|apply|components|status|recover|migrate-state|self-test|stabilization-self-test ...")
 	}
 	switch args[0] {
 	case "plan":
@@ -504,6 +504,20 @@ func handleUpdate(args []string) error {
 			return err
 		}
 		report, err := updater.recover(flagValue(args, "--force", "false") == "true")
+		if err != nil {
+			return err
+		}
+		printJSON(report)
+		return nil
+	case "migrate-state":
+		report, err := migrateUpdaterState01510(flagValue(args, "--root", "."), flagValue(args, "--force", "false") == "true")
+		if err != nil {
+			return err
+		}
+		printJSON(report)
+		return nil
+	case "stabilization-self-test":
+		report, err := runMigrationStabilizationSelfTest01510()
 		if err != nil {
 			return err
 		}

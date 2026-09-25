@@ -1,3 +1,17 @@
+## 0.15.10 — Migration + stabilization
+
+`0.15.10` стабилизирует production delivery после six-target E2E и выполняет миграцию локального updater/trust state без новой DB migration. Upgrade 0.15.9 → 0.15.10 сохраняет release trust root, текущий trust epoch, Desktop/Guard/Runtime installation и durable updater journals; старые локальные форматы переводятся автоматически/fail-closed.
+
+- Release trust state мигрирует с schema `2.0` на `2.1`: сохраняются monotonic trust epoch/release version, добавляются `highestReleaseManifestSha256` и `stateRevision`. После первого принятия конкретной версии другой `RELEASE_MANIFEST.json` с той же версией отклоняется как same-version equivocation.
+- `nl release verify/publish-check` для 0.15.10+ удерживает внешний `<trust-state>.lock` на весь verify→commit boundary. Параллельный verifier не может пройти anti-rollback precheck со старым snapshot state; stale lock от завершившегося PID восстанавливается автоматически, live PID блокирует второй процесс.
+- Legacy macOS state из `.neverlauncher/updater/component-update-state.json` переносится в общий `.neverlauncher/component-update-state.json`; при наличии двух state выбирается более новая версия, а одинаковая версия с различными component hashes останавливает migration fail-closed.
+- `nl update migrate-state --root <install>` выполняет crash recovery, component-state migration и terminal-payload cleanup. `update recover` теперь делает ту же стабилизацию автоматически.
+- После durable `rolled-back`/`committed` journal staging/backup/failed payload очищаются, но audit journal сохраняется. Cleanup никогда не удаляет component-tree path вне `.neverlauncher/updater`.
+- Исправлен repository-policy runner: итоговый FAILED/OK вычисляется после всех policy blocks, поэтому поздние проверки больше не могут silently добавлять ошибки после уже напечатанного `OK`.
+- Добавлены regression/self-test gate `migration-stabilization-01510.py`, unit tests trust-state migration/lock/component-state migration/rollback cleanup и обязательная интеграция в CI, preflight, release doctor и publish-check.
+
+DB migration не требуется. Перед rollout достаточно сохранить backup локального install/trust state; первый 0.15.10 verify/update мигрирует его атомарно. Для явной проверки используйте `nl update migrate-state --root <install>` и `nl update stabilization-self-test`.
+
 ## 0.15.9 — Public Production Delivery Matrix + E2E
 
 `0.15.9` делает production delivery публично проверяемым после публикации: release bundle содержит точную six-target матрицу Windows/Linux/macOS × x64/ARM64 с реальными URL, SHA-256/size и привязкой к Managed JRE, а post-publish E2E скачивает опубликованные bytes и повторяет Release Verification v2. DB migration не требуется.

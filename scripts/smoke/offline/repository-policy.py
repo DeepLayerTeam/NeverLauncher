@@ -1387,14 +1387,6 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.9 public delivery gate is not wired into preflight/CI")
 
 
-if errors:
-    print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
-    for item in errors:
-        print(f" - {item}", file=sys.stderr)
-    sys.exit(1)
-
-print(f"[NeverLauncher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны")
-
 # 0.13.0 Device Trust Release certification and runtime contract.
 if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     dt_release = read("cli/cmd/neverlauncher/device_trust_release.go")
@@ -1411,3 +1403,54 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         fail("0.13.0 build-release cannot embed Device Trust matrix")
     if "device-trust-release-0130.py" not in preflight or "device-trust-release-0130.py" not in ci:
         fail("0.13.0 Device Trust Release gate is not wired into preflight/CI")
+
+# 0.15.10 Migration + stabilization seals local-state migration and recovery:
+# serialized trust-state verification, state 2.0 -> 2.1, same-version manifest
+# binding, canonical component state and cleanup of terminal updater payloads.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 10):
+    stabilization_01510 = read("cli/cmd/neverlauncher/migration_stabilization_01510.go")
+    stabilization_tests_01510 = read("cli/cmd/neverlauncher/migration_stabilization_01510_test.go")
+    rv2_01510 = read("cli/cmd/neverlauncher/release_verification_v2.go")
+    update_01510 = read("cli/cmd/neverlauncher/transactional_updater.go") + read("cli/cmd/neverlauncher/component_update.go")
+    release_01510 = read("cli/cmd/neverlauncher/release_commands.go")
+    gate_01510 = read("scripts/smoke/offline/migration-stabilization-01510.py")
+    for required in [
+        "withReleaseTrustStateLock01510", "releaseTrustStateSchema01510",
+        "migrateComponentUpdateState01510", "stabilizeTerminalPayloads01510",
+        "same-version release manifest mismatch", "migration-stabilization-0.15.10",
+    ]:
+        if required not in stabilization_01510 and required not in rv2_01510:
+            fail(f"0.15.10 migration stabilization implementation incomplete: {required}")
+    for required in [
+        "HighestReleaseManifestSHA256", "StateRevision", "releaseTrustStateSchema01510",
+        "precheckTrustState0158",
+    ]:
+        if required not in rv2_01510:
+            fail(f"0.15.10 trust-state migration incomplete: {required}")
+    for required in ["removeUpdaterTerminalPayload01510", "removeSafeComponentTreePayload01510", "migrateComponentUpdateState01510"]:
+        if required not in update_01510:
+            fail(f"0.15.10 updater stabilization integration incomplete: {required}")
+    for required in ["migrationStabilizationRequired01510", "runMigrationStabilizationSelfTest01510"]:
+        if required not in release_01510:
+            fail(f"0.15.10 release integration incomplete: {required}")
+    for required in [
+        "TestMigrationStabilization01510MigratesLegacyComponentState",
+        "TestReleaseTrustState01510MigratesAndBindsSameVersionManifest",
+        "TestReleaseTrustStateLock01510RejectsConcurrentVerifier",
+        "TestTransactionalUpdater01510CleansRollbackPayload",
+    ]:
+        if required not in stabilization_tests_01510:
+            fail(f"0.15.10 stabilization regression tests missing: {required}")
+    if "Migration + stabilization 0.15.10 gate: OK" not in gate_01510:
+        fail("0.15.10 mandatory migration stabilization gate incomplete")
+    if "migration-stabilization-01510.py" not in preflight or "migration-stabilization-01510.py" not in ci:
+        fail("0.15.10 stabilization gate is not wired into preflight/CI")
+
+if errors:
+    print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
+    for item in errors:
+        print(f" - {item}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"[NeverLauncher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны")
+

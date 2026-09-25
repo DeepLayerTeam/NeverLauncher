@@ -137,6 +137,9 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 	if err != nil {
 		return nil, fmt.Errorf("automatic updater recovery: %w", err)
 	}
+	if _, err := u.stabilizeTerminalPayloads01510(); err != nil {
+		return nil, fmt.Errorf("automatic updater terminal cleanup: %w", err)
+	}
 	journal, err := u.prepareLocked(req)
 	if err != nil {
 		// prepare never mutates live bytes, but it may already have created a durable
@@ -494,6 +497,9 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 	if err := u.writeJournal(journal); err != nil {
 		return err
 	}
+	if err := removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID)); err != nil {
+		return fmt.Errorf("cleanup rolled-back transaction payload: %w", err)
+	}
 	return nil
 }
 
@@ -552,7 +558,15 @@ func (u *transactionalUpdater0156) recover(force bool) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "recovered": recovered, "componentTreesRecovered": componentRecovered, "status": "recovered"}, nil
+	stateMigration, err := migrateComponentUpdateState01510(u.root)
+	if err != nil {
+		return nil, err
+	}
+	cleaned, err := u.stabilizeTerminalPayloads01510()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "recovered": recovered, "componentTreesRecovered": componentRecovered, "componentStateMigration": stateMigration, "terminalPayloadsCleaned": cleaned, "status": "recovered"}, nil
 }
 
 func (u *transactionalUpdater0156) status() (map[string]any, error) {
