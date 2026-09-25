@@ -1,3 +1,17 @@
+## 0.16.0 — Production Delivery Release
+
+`0.16.0` — GA-релиз production delivery-контура 0.15.1–0.15.11. Он не добавляет DB migration и не ослабляет RC: `PRODUCTION_RELEASE_CANDIDATE.json` остаётся exact-commit pre-sign certification, а новый `PRODUCTION_DELIVERY_RELEASE.json` промотит его в stable six-target release и сам входит в Release Verification v2 signature boundary.
+
+- Добавлен `PRODUCTION_DELIVERY_RELEASE.json` schema 1.0 со статусом `production-delivery-release`, `channel=stable`, exact `sourceCommit`, six canonical targets, hash кандидата/cohort, immutable `publicBaseUrl`, sorted anchor set и агрегированный `boundarySha256`.
+- GA certificate привязывает RC, `DELIVERY_MANIFEST.json`, `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`, Windows/Linux/macOS production evidence, Managed JRE manifest/evidence, root-signed trust policy, Compatibility/Device Trust/Guard/ServerBridge certifications, SBOM и provenance.
+- Production Delivery Release допускает только GA SemVer без prerelease/build suffix и HTTPS public origin с exact version segment (`0.16.0`/`v0.16.0`), чтобы stable release не мог ссылаться на mutable `/latest` origin.
+- `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` для 0.15.11+ теперь публикует `PRODUCTION_RELEASE_CANDIDATE.json` как отдельный control (раньше candidate создавался после Delivery Manifest и public E2E не мог его скачать); для 0.16.0 matrix дополнительно публикует GA certificate. Post-publish `delivery public-e2e` получает оба certification слоя и затем выполняет полный `release verify` по публичным bytes.
+- `RELEASE_MANIFEST.json` фиксирует `channel=stable`, `releaseStatus=production-delivery-release` и `productionDeliveryReleaseSha256`; verifier сверяет эти поля с GA certificate и exact source commit.
+- Добавлена `nl release production-verify <bundle>`; `release verify`, `publish-check`, `build-release.sh`, release-bundle gate, preflight/CI, release doctor и repository policy требуют GA certification для 0.16.0+.
+- Security release policy для 0.16.0 требует Delivery Manifest, Public Matrix, RC certificate и Production Delivery Release certificate как отдельные fail-closed controls.
+
+Перед публикацией выполняются `release candidate-verify`, `release production-verify`, `release sign`, `release verify` и `release publish-check`; после публикации GitHub workflow выполняет public E2E по фактически опубликованным bytes.
+
 ## 0.15.11 — Production release candidate
 
 `0.15.11` переводит накопленный Production Delivery 0.15.x в единый machine-verifiable release-candidate boundary. RC больше не допускает частично сертифицированный bundle: Compatibility, Device Trust и Guard CI evidence обязаны относиться к одному exact source commit, production Windows/macOS artifacts должны быть реально vendor-signed/notarized, а весь pre-sign cohort фиксируется отдельным сертификатом и затем входит в Ed25519 release signature. DB migration не требуется.

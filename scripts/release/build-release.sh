@@ -125,6 +125,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,11) else '0')
 PYVER
 )"
+PRODUCTION_DELIVERY_RELEASE_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,16,0) else '0')
+PYVER
+)"
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require git
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
@@ -159,6 +169,20 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
     echo "Ошибка: Production Release Candidate запрещает staged изменения относительно HEAD" >&2
     exit 1
   }
+fi
+if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
+  [[ "${VERSION}" != *-* && "${VERSION}" != *+* ]] || {
+    echo "Ошибка: Production Delivery Release требует GA SemVer без prerelease/build suffix: ${VERSION}" >&2
+    exit 1
+  }
+  python3 - "${PUBLIC_RELEASE_BASE_URL}" "${VERSION}" <<'PYURL'
+import sys, urllib.parse
+raw, version = sys.argv[1], sys.argv[2]
+u = urllib.parse.urlparse(raw)
+segments = [urllib.parse.unquote(x) for x in u.path.split('/') if x]
+if u.scheme != 'https' or not u.netloc or (version not in segments and ('v'+version) not in segments):
+    raise SystemExit(f"Ошибка: Production Delivery Release требует HTTPS public origin с immutable version segment {version!r} или {'v'+version!r}: {raw}")
+PYURL
 fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
@@ -505,6 +529,11 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_RELEASE_CANDIDATE.json"
   log "Проверка production release candidate cohort до подписи"
   "${RELEASE_CLI}" release candidate-verify "${OUT_DIR}"
+fi
+if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/PRODUCTION_DELIVERY_RELEASE.json"
+  log "Проверка stable Production Delivery Release boundary до подписи"
+  "${RELEASE_CLI}" release production-verify "${OUT_DIR}"
 fi
 
 log "Ed25519 release signing"

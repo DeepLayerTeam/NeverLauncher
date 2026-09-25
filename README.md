@@ -4,7 +4,28 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Release Candidate / 0.15.11**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery Release / 0.16.0**. GA-релиз сохраняет ServerBridge 2 Protocol v2, signed Windows x64/ARM64, native Linux x64/ARM64, notarized macOS x64/ARM64, six-target Managed JRE, transactional updater и Release Verification v2 как единый production boundary.
+
+## Production Delivery Release — 0.16.0
+
+`0.16.0` переводит прошедший 0.15.11 RC-контур в stable GA release. Перед финальным Ed25519 signing создаётся `PRODUCTION_DELIVERY_RELEASE.json`: он связывает exact source commit, `PRODUCTION_RELEASE_CANDIDATE.json`, `DELIVERY_MANIFEST.json`, six-target public matrix, Windows/Linux/macOS production evidence, Managed JRE, current root-signed trust policy, Compatibility/Device Trust/Guard/ServerBridge certifications, SBOM и provenance одним `boundarySha256`.
+
+GA допускается только для чистой SemVer без `-prerelease`/`+build` suffix. Public origin обязан быть HTTPS и содержать immutable version segment `0.16.0` или `v0.16.0`; generic `/latest`/`stable` URL не проходит certification. `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` теперь публикует RC certificate для 0.15.11+ и `PRODUCTION_DELIVERY_RELEASE.json` для 0.16.0 как отдельные controls, поэтому post-publish E2E скачивает оба certification слоя вместе с release signatures и повторно проверяет полный bundle.
+
+```bash
+export NEVERLAUNCHER_SOURCE_COMMIT="$(git rev-parse HEAD)"
+export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v$(cat VERSION)"
+./scripts/release/build-release.sh
+
+nl release candidate-verify "dist/release-$(cat VERSION)"
+nl release production-verify "dist/release-$(cat VERSION)"
+nl release publish-check "dist/release-$(cat VERSION)" \
+  --public-key /etc/neverlauncher/root-public.pem \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json
+```
+
+`RELEASE_MANIFEST.json` для 0.16.0 имеет `channel=stable`, `releaseStatus=production-delivery-release` и SHA-256 GA certificate. Любое изменение candidate/production evidence/public matrix/trust policy после promotion ломает candidate или GA boundary, а любое изменение после signing дополнительно ломает Release Verification v2 signature.
 
 ## Production release candidate — 0.15.11
 

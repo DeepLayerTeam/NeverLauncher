@@ -86,7 +86,14 @@ jobs:
           expected={(p,a) for p in ('windows','linux','macos') for a in ('x64','arm64')}
           assert targets == expected, (targets,expected)
           assert report['downloadedFiles'] > 0 and report['downloadedBytes'] > 0
+          version=tuple(int(x) for x in Path('VERSION').read_text().strip().split('.')[:3])
+          if version >= (0,16,0):
+              assert report.get('productionDeliveryReleaseVerified') is True, report
           PY
+          if [[ "${PUBLIC_VERSION}" == 0.16.* || "${PUBLIC_VERSION%%.*}" -ge 1 ]]; then
+            test -s "$RUNNER_TEMP/public-release/PRODUCTION_DELIVERY_RELEASE.json"
+            "$RUNNER_TEMP/nl" release production-verify "$RUNNER_TEMP/public-release"
+          fi
 
       - name: Upload public delivery E2E evidence
         uses: actions/upload-artifact@v4

@@ -107,3 +107,19 @@ func TestFetchPublicMatrix0159LoopbackHTTP(t *testing.T) {
 		t.Fatalf("unexpected fetched matrix: bytes=%d matrix=%+v", n, got)
 	}
 }
+
+func TestPublicProductionDeliveryMatrix01511PublishesCandidateControl(t *testing.T) {
+	dir := t.TempDir()
+	ver := "0.15.11"
+	createPublicMatrixFixture0159(t, dir, ver)
+	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/neverlauncher/v0.15.11", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, control := range matrix.Controls {
+		if control.Name == productionReleaseCandidateFile01511 && control.Role == "production-release-candidate" {
+			return
+		}
+	}
+	t.Fatal("0.15.11+ public matrix must publish PRODUCTION_RELEASE_CANDIDATE.json as a control")
+}

@@ -1,5 +1,15 @@
 # Политика безопасности NeverLauncher
 
+## Граница доверия Production Delivery Release — 0.16.0
+
+Для `0.16.0+` production release имеет два последовательных уровня certification. `PRODUCTION_RELEASE_CANDIDATE.json` фиксирует exact pre-sign cohort, после чего `PRODUCTION_DELIVERY_RELEASE.json` промотит этот cohort в stable GA и отдельно привязывает candidate hash/cohort, six-target delivery evidence, Managed JRE, current root-signed trust policy, public matrix, Compatibility/Device Trust/Guard/ServerBridge certifications, SBOM и provenance к одному `boundarySha256`.
+
+GA certificate требует immutable versioned HTTPS origin и ровно Windows/Linux/macOS × x64/ARM64. Он не доверяет mutable `latest` URL и не разрешает prerelease/build SemVer. `RELEASE_MANIFEST.json` дополнительно фиксирует SHA-256 GA certificate, `channel=stable` и `releaseStatus=production-delivery-release`; затем весь набор попадает в `SHA256SUMS` и Release Verification v2 Ed25519 signature.
+
+Public E2E не считает локальную certification доказательством публикации: `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` содержит GA certificate как control, поэтому workflow после `release.published` заново скачивает публичные bytes, signature controls и `PRODUCTION_DELIVERY_RELEASE.json`, после чего запускает полный verification с внешним root key/current trust policy/persistent anti-rollback state.
+
+Эта граница не заменяет безопасность signing infrastructure. Компрометация offline root, Developer ID/Authenticode keys, GitHub release account или production host остаётся отдельной угрозой и требует revoke/rotation/audit процедур.
+
 ## Граница доверия Production Release Candidate — 0.15.11
 
 Для `0.15.11+` release считается production candidate только после формирования `PRODUCTION_RELEASE_CANDIDATE.json`. Certificate привязывает candidate к одному exact Git source commit и к полному pre-sign cohort release-файлов через SHA-256/size каждого файла и агрегированный `cohortSha256`; сам certificate затем входит в `SHA256SUMS` и подписывается Release Verification v2. Поэтому корректная подпись одного `RELEASE_MANIFEST.json` не позволяет незаметно подмешать дополнительный release artifact после RC certification.

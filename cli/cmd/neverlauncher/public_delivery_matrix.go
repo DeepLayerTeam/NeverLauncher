@@ -68,17 +68,18 @@ type PublicProductionDeliveryMatrix0159 struct {
 }
 
 type PublicDeliveryE2EReport0159 struct {
-	SchemaVersion   string           `json:"schemaVersion"`
-	Product         string           `json:"product"`
-	Version         string           `json:"version"`
-	MatrixURL       string           `json:"matrixUrl"`
-	BaseURL         string           `json:"baseUrl"`
-	StartedAt       string           `json:"startedAt"`
-	FinishedAt      string           `json:"finishedAt"`
-	Downloaded      int              `json:"downloadedFiles"`
-	DownloadedBytes int64            `json:"downloadedBytes"`
-	Targets         []DeliveryTarget `json:"verifiedTargets"`
-	Status          string           `json:"status"`
+	SchemaVersion                     string           `json:"schemaVersion"`
+	Product                           string           `json:"product"`
+	Version                           string           `json:"version"`
+	MatrixURL                         string           `json:"matrixUrl"`
+	BaseURL                           string           `json:"baseUrl"`
+	StartedAt                         string           `json:"startedAt"`
+	FinishedAt                        string           `json:"finishedAt"`
+	Downloaded                        int              `json:"downloadedFiles"`
+	DownloadedBytes                   int64            `json:"downloadedBytes"`
+	Targets                           []DeliveryTarget `json:"verifiedTargets"`
+	ProductionDeliveryReleaseVerified bool             `json:"productionDeliveryReleaseVerified,omitempty"`
+	Status                            string           `json:"status"`
 }
 
 func publicProductionDeliveryRequired0159(ver string) bool {
@@ -185,14 +186,21 @@ func buildPublicProductionDeliveryMatrix0159(dir, ver, rawBaseURL string, allowH
 		BaseURL:                baseURL,
 		DeliveryManifestSHA256: manifestSHA,
 	}
-	for _, nameRole := range [][2]string{
+	controls := [][2]string{
 		{deliveryManifestFile0151, "delivery-manifest"},
 		{publicProductionDeliveryMatrixFile0159, "public-delivery-matrix"},
 		{"RELEASE_MANIFEST.json", "release-manifest"},
 		{"SHA256SUMS", "checksums"},
 		{"SHA256SUMS.sig", "release-signature"},
 		{"PROVENANCE.json.sig", "provenance-signature"},
-	} {
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		controls = append(controls, [2]string{productionReleaseCandidateFile01511, "production-release-candidate"})
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		controls = append(controls, [2]string{productionDeliveryReleaseFile0160, "production-delivery-release"})
+	}
+	for _, nameRole := range controls {
 		matrix.Controls = append(matrix.Controls, PublicDeliveryControl0159{Name: nameRole[0], Role: nameRole[1], URL: publicAssetURL0159(baseURL, nameRole[0])})
 	}
 	for _, artifact := range manifest.Artifacts {
@@ -303,6 +311,12 @@ func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProduct
 		"SHA256SUMS":                           "checksums",
 		"SHA256SUMS.sig":                       "release-signature",
 		"PROVENANCE.json.sig":                  "provenance-signature",
+	}
+	if productionReleaseCandidateRequired01511(matrix.Version) {
+		expectedControls[productionReleaseCandidateFile01511] = "production-release-candidate"
+	}
+	if productionDeliveryReleaseRequired0160(matrix.Version) {
+		expectedControls[productionDeliveryReleaseFile0160] = "production-delivery-release"
 	}
 	seenControls := map[string]bool{}
 	for _, control := range matrix.Controls {
@@ -563,6 +577,12 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	}
 	if err := verifyReleaseBundleWithTrust(downloadDir, rootPublicKey, trustState, currentTrustPolicy); err != nil {
 		return report, fmt.Errorf("downloaded public release verification: %w", err)
+	}
+	if productionDeliveryReleaseRequired0160(matrix.Version) {
+		if err := verifyProductionDeliveryRelease0160(downloadDir, matrix.Version, true); err != nil {
+			return report, fmt.Errorf("downloaded Production Delivery Release certification: %w", err)
+		}
+		report.ProductionDeliveryReleaseVerified = true
 	}
 	for _, target := range matrix.Targets {
 		report.Targets = append(report.Targets, DeliveryTarget{Platform: target.Platform, Architecture: target.Architecture})

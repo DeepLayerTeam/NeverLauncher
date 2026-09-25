@@ -73,7 +73,7 @@ func normalizeSourceCommit01511(value string) (string, error) {
 
 func releaseCandidateExcludedFile01511(name string) bool {
 	switch name {
-	case productionReleaseCandidateFile01511, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
+	case productionReleaseCandidateFile01511, productionDeliveryReleaseFile0160, "RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "PROVENANCE.json.sig":
 		return true
 	default:
 		return false

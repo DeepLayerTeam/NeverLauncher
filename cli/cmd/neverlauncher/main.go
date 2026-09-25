@@ -51,7 +51,7 @@ Desktop / package / release:
   desktop connect|config|platforms|package|verify
   client ...
   pipeline ...
-  release doctor|plan|build|package|verify|sign|candidate-verify|publish-plan|publish-check
+  release doctor|plan|build|package|verify|sign|candidate-verify|production-verify|publish-plan|publish-check
   delivery target|manifest|verify|verify-windows|prepare-linux|verify-linux|verify-macos|verify-jre|public-matrix|verify-public-matrix|public-e2e|resolve
   packaging prepare|verify|sign
 

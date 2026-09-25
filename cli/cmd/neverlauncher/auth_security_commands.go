@@ -271,6 +271,10 @@ func securityReleasePolicyModel() map[string]any {
 		required = append(required, releaseTrustPolicyFile0158)
 		checks = append(checks, "root-signed-trust-policy", "release-key-lifecycle", "trust-epoch-anti-rollback", "release-version-anti-rollback")
 	}
+	if productionDeliveryReleaseRequired0160(version) {
+		required = append(required, deliveryManifestFile0151, publicProductionDeliveryMatrixFile0159, productionReleaseCandidateFile01511, productionDeliveryReleaseFile0160)
+		checks = append(checks, "stable-six-target-production-delivery", "immutable-versioned-public-origin", "exact-source-commit-ga-boundary")
+	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": required, "checks": checks, "failureMode": "fail-closed"}
 }
 

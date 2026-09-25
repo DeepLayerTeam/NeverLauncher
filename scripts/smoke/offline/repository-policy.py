@@ -1493,6 +1493,60 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "production-release-candidate-01511.py" not in preflight or "production-release-candidate-01511.py" not in ci:
         fail("0.15.11 Production Release Candidate gate is not wired into preflight/CI")
 
+
+# 0.16.0 Production Delivery Release promotes the exact-commit candidate into
+# a stable six-target GA boundary with an immutable versioned public origin.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 0):
+    pdr_0160 = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
+    pdr_tests_0160 = read("cli/cmd/neverlauncher/production_delivery_release_0160_test.go")
+    release_0160 = read("cli/cmd/neverlauncher/release_commands.go")
+    build_0160 = read("scripts/release/build-release.sh")
+    bundle_0160 = read("scripts/smoke/release-required/release-bundle.sh")
+    public_0160 = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
+    public_workflow_0160 = read(".github/workflows/public-production-delivery.yml")
+    gate_0160 = read("scripts/smoke/offline/production-delivery-release-0160.py")
+    for required in [
+        "PRODUCTION_DELIVERY_RELEASE.json", "production-delivery-release",
+        "stable-versioned-public-origin", "productionDeliveryReleaseBoundaryDigest0160",
+        "versionedPublicBaseURL0160", "verifyProductionDeliveryRelease0160",
+        "productionReleaseCandidateFile01511", "publicProductionDeliveryMatrixFile0159",
+        "PostPublishE2E",
+    ]:
+        if required not in pdr_0160:
+            fail(f"0.16.0 Production Delivery Release implementation incomplete: {required}")
+    for required in [
+        'case "production-verify":', "writeProductionDeliveryRelease0160",
+        "production-delivery-release-stable-six-target-ga",
+        "productionDeliveryReleaseSha256", 'manifest["channel"] = productionDeliveryReleaseChannel0160',
+    ]:
+        if required not in release_0160:
+            fail(f"0.16.0 release integration incomplete: {required}")
+    for required in [
+        "PRODUCTION_DELIVERY_RELEASE_REQUIRED", "PRODUCTION_DELIVERY_RELEASE.json",
+        "release production-verify", "immutable version segment",
+    ]:
+        if required not in build_0160:
+            fail(f"0.16.0 production build integration incomplete: {required}")
+    if "PRODUCTION_DELIVERY_RELEASE.json" not in bundle_0160:
+        fail("0.16.0 release-bundle gate does not require Production Delivery Release certification")
+    for required in ["production-delivery-release", "ProductionDeliveryReleaseVerified", "verifyProductionDeliveryRelease0160"]:
+        if required not in public_0160:
+            fail(f"0.16.0 public E2E integration incomplete: {required}")
+    for required in ["PRODUCTION_DELIVERY_RELEASE.json", "release production-verify", "productionDeliveryReleaseVerified"]:
+        if required not in public_workflow_0160:
+            fail(f"0.16.0 post-publish GA verification incomplete: {required}")
+    for required in [
+        "TestProductionDeliveryRelease0160BindsCandidateAndAnchors",
+        "TestProductionDeliveryRelease0160RejectsUnversionedPublicOrigin",
+        "TestProductionDeliveryRelease0160RejectsPrereleaseSemver",
+    ]:
+        if required not in pdr_tests_0160:
+            fail(f"0.16.0 Production Delivery Release regression tests missing: {required}")
+    if "Production Delivery Release 0.16.0 gate: OK" not in gate_0160:
+        fail("0.16.0 mandatory Production Delivery Release gate incomplete")
+    if "production-delivery-release-0160.py" not in preflight or "production-delivery-release-0160.py" not in ci:
+        fail("0.16.0 Production Delivery Release gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

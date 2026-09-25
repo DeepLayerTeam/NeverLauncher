@@ -80,6 +80,7 @@ run_step release-verification-v2-trust-lifecycle-0158 python3 "${ROOT_DIR}/scrip
 run_step public-production-delivery-matrix-e2e-0159 python3 "${ROOT_DIR}/scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"
 run_step migration-stabilization-01510 python3 "${ROOT_DIR}/scripts/smoke/offline/migration-stabilization-01510.py"
 run_step production-release-candidate-01511 python3 "${ROOT_DIR}/scripts/smoke/offline/production-release-candidate-01511.py"
+run_step production-delivery-release-0160 python3 "${ROOT_DIR}/scripts/smoke/offline/production-delivery-release-0160.py"
 run_step guard-ci-matrix-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_matrix.py"
 run_step cli-tests bash "${ROOT_DIR}/scripts/smoke/offline/cli-tests.sh"
 run_step backend-tests bash "${ROOT_DIR}/scripts/smoke/offline/backend-tests.sh"
