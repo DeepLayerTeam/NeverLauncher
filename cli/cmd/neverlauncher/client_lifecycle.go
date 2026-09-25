@@ -51,11 +51,8 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать rollback snapshot: %w", err)
 	}
-	apply, err := clientPackageConsume(packagePath, storageDir, clientDir)
+	apply, err := clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
 	if err != nil {
-		return nil, err
-	}
-	if err := attachRollbackSnapshot(clientDir, snapshotID); err != nil {
 		return nil, err
 	}
 	verify, err := verifyClientInstallation(packagePath, clientDir)
@@ -73,6 +70,7 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 		"version":          manifest.Version,
 		"clientDir":        clientDir,
 		"rollbackSnapshot": snapshotID,
+		"updaterCore":      "unified-transactional-updater/0.15.6",
 		"apply":            apply,
 		"verify":           verify,
 		"status":           "applied-and-verified",
@@ -177,6 +175,7 @@ func repairClientInstallation(packagePath, storageDir, clientDir string, include
 	if err != nil {
 		return nil, err
 	}
+	files := make([]updaterFileSpec0156, 0, len(wanted)+1)
 	repaired := []string{}
 	for _, file := range manifest.Files {
 		rel := filepath.ToSlash(filepath.Clean(filepath.FromSlash(file.Path)))
@@ -184,23 +183,77 @@ func repairClientInstallation(packagePath, storageDir, clientDir string, include
 			continue
 		}
 		src := clientPackageSourcePath(packagePath, storageDir, manifest, file)
-		if err := verifiedCopyClientFile(src, filepath.Join(clientDir, filepath.FromSlash(rel)), file); err != nil {
-			return nil, err
-		}
+		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: file.Size, SHA256: file.SHA256, Executable: file.Executable})
 		repaired = append(repaired, rel)
 	}
-	if err := attachRollbackSnapshot(clientDir, snapshotID); err != nil {
+	if stateSpec, ok, err := clientStateRollbackSpec0156(clientDir, snapshotID); err != nil {
+		return nil, err
+	} else if ok {
+		files = append(files, stateSpec)
+	}
+	updater, err := newTransactionalUpdater0156(clientDir)
+	if err != nil {
+		return nil, err
+	}
+	transaction, err := updater.apply(updaterRequest0156{
+		Root:        clientDir,
+		Namespace:   "client-repair",
+		FromVersion: before.Version,
+		ToVersion:   before.Version,
+		Files:       files,
+		Verify: func() error {
+			after, err := verifyClientInstallation(packagePath, clientDir)
+			if err != nil {
+				return err
+			}
+			if !after.Valid {
+				return fmt.Errorf("repair post-verify failed: missing=%v corrupted=%v", after.Missing, after.Corrupted)
+			}
+			return nil
+		},
+	})
+	if err != nil {
 		return nil, err
 	}
 	after, err := verifyClientInstallation(packagePath, clientDir)
 	if err != nil {
 		return nil, err
 	}
-	if !after.Valid {
-		return nil, fmt.Errorf("repair post-verify failed: missing=%v corrupted=%v", after.Missing, after.Corrupted)
-	}
 	sort.Strings(repaired)
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "repaired-and-verified", "rollbackSnapshot": snapshotID, "repaired": repaired, "verify": after}, nil
+	return map[string]any{
+		"schemaVersion":    cliSchemaVersion,
+		"toolVersion":      version,
+		"status":           "repaired-and-verified",
+		"rollbackSnapshot": snapshotID,
+		"updaterCore":      "unified-transactional-updater/0.15.6",
+		"transaction":      transaction,
+		"repaired":         repaired,
+		"verify":           after,
+	}, nil
+}
+
+func clientStateRollbackSpec0156(clientDir, snapshotID string) (updaterFileSpec0156, bool, error) {
+	path := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return updaterFileSpec0156{}, false, nil
+	}
+	if err != nil {
+		return updaterFileSpec0156{}, false, err
+	}
+	var state map[string]any
+	if err := json.Unmarshal(raw, &state); err != nil {
+		return updaterFileSpec0156{}, false, err
+	}
+	state["rollbackSnapshot"] = snapshotID
+	state["updaterCore"] = "unified-transactional-updater/0.15.6"
+	updated, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return updaterFileSpec0156{}, false, err
+	}
+	updated = append(updated, '\n')
+	size, sum := updaterBytesMetadata0156(updated)
+	return updaterFileSpec0156{Path: ".neverlauncher/client-state.json", Data: updated, Size: size, SHA256: sum}, true, nil
 }
 
 func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, error) {
@@ -246,37 +299,148 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 		return nil, fmt.Errorf("safety snapshot: %w", err)
 	}
 
-	// Remove only managed content and paths recorded in current state; user data stays untouched.
-	for _, root := range managedClientRoots {
-		if err := os.RemoveAll(filepath.Join(clientDir, root)); err != nil {
+	filesRoot := filepath.Join(targetDir, "files")
+	files := make([]updaterFileSpec0156, 0, len(snap.Files)+1)
+	wanted := make(map[string]bool, len(snap.Files)+1)
+	for _, rel := range snap.Files {
+		if err := validateUpdaterPath0156(rel); err != nil {
+			return nil, fmt.Errorf("snapshot %s contains invalid path %s: %w", snap.ID, rel, err)
+		}
+		src := filepath.Join(filesRoot, filepath.FromSlash(rel))
+		sum, size, err := hashFile(src)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot file %s: %w", rel, err)
+		}
+		info, err := os.Lstat(src)
+		if err != nil {
 			return nil, err
 		}
-	}
-	for _, rel := range currentStatePaths(clientDir) {
-		if isManagedClientPath(rel) {
-			continue
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("snapshot file must be regular: %s", rel)
 		}
-		_ = os.Remove(filepath.Join(clientDir, filepath.FromSlash(rel)))
+		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: size, SHA256: sum, Executable: info.Mode().Perm()&0o111 != 0})
+		wanted[rel] = true
 	}
 
-	filesRoot := filepath.Join(targetDir, "files")
-	for _, rel := range snap.Files {
-		src := filepath.Join(filesRoot, filepath.FromSlash(rel))
-		dst := filepath.Join(clientDir, filepath.FromSlash(rel))
-		if err := copyFileAtomic(src, dst); err != nil {
-			return nil, err
-		}
-	}
-	stateDst := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
-	stateSrc := filepath.Join(targetDir, "client-state.json")
+	stateRel := ".neverlauncher/client-state.json"
 	if snap.HadState {
-		if err := copyFileAtomic(stateSrc, stateDst); err != nil {
+		stateSrc := filepath.Join(targetDir, "client-state.json")
+		sum, size, err := hashFile(stateSrc)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot state: %w", err)
+		}
+		files = append(files, updaterFileSpec0156{Path: stateRel, Source: stateSrc, Size: size, SHA256: sum})
+		wanted[stateRel] = true
+	}
+
+	current, err := collectClientRollbackPaths0156(clientDir)
+	if err != nil {
+		return nil, err
+	}
+	remove := make([]string, 0)
+	for _, rel := range current {
+		if wanted[rel] {
+			continue
+		}
+		remove = append(remove, rel)
+	}
+	if !snap.HadState {
+		if _, err := os.Lstat(filepath.Join(clientDir, filepath.FromSlash(stateRel))); err == nil {
+			remove = append(remove, stateRel)
+		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-	} else {
-		_ = os.Remove(stateDst)
 	}
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "rolled-back", "restoredSnapshot": snap.ID, "safetySnapshot": safetyID, "restoredFiles": len(snap.Files)}, nil
+	sort.Strings(remove)
+	remove = uniqueStrings(remove)
+
+	updater, err := newTransactionalUpdater0156(clientDir)
+	if err != nil {
+		return nil, err
+	}
+	fromVersion := clientInstalledVersion0156(clientDir)
+	toVersion := snapshotClientVersion0156(targetDir)
+	transaction, err := updater.apply(updaterRequest0156{
+		Root:        clientDir,
+		Namespace:   "client-rollback",
+		FromVersion: fromVersion,
+		ToVersion:   toVersion,
+		Files:       files,
+		Remove:      remove,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"schemaVersion":    cliSchemaVersion,
+		"toolVersion":      version,
+		"status":           "rolled-back",
+		"updaterCore":      "unified-transactional-updater/0.15.6",
+		"restoredSnapshot": snap.ID,
+		"safetySnapshot":   safetyID,
+		"restoredFiles":    len(snap.Files),
+		"removedFiles":     remove,
+		"transaction":      transaction,
+	}, nil
+}
+
+func collectClientRollbackPaths0156(clientDir string) ([]string, error) {
+	paths := map[string]bool{}
+	for _, rel := range currentStatePaths(clientDir) {
+		if err := validateUpdaterPath0156(rel); err == nil {
+			paths[rel] = true
+		}
+	}
+	for _, root := range managedClientRoots {
+		base := filepath.Join(clientDir, root)
+		err := filepath.WalkDir(base, func(path string, d os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				if errors.Is(walkErr, os.ErrNotExist) {
+					return nil
+				}
+				return walkErr
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if d.Type()&os.ModeSymlink != 0 {
+				return fmt.Errorf("rollback refuses managed symlink: %s", path)
+			}
+			rel, err := filepath.Rel(clientDir, path)
+			if err != nil {
+				return err
+			}
+			rel = filepath.ToSlash(rel)
+			if err := validateUpdaterPath0156(rel); err != nil {
+				return err
+			}
+			paths[rel] = true
+			return nil
+		})
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+	out := make([]string, 0, len(paths))
+	for rel := range paths {
+		out = append(out, rel)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func snapshotClientVersion0156(targetDir string) string {
+	raw, err := os.ReadFile(filepath.Join(targetDir, "client-state.json"))
+	if err != nil {
+		return ""
+	}
+	var state struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal(raw, &state) != nil {
+		return ""
+	}
+	return strings.TrimSpace(state.Version)
 }
 
 func createClientSnapshot(clientDir string) (string, error) {

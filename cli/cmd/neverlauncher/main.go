@@ -23,7 +23,7 @@ const helpText = `NeverLauncher CLI
 Основные команды:
   version                         показать версию CLI
   manifest build|validate|diff    работа с client manifest
-  update plan                     построить план обновления
+  update plan|apply|status|recover|self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
   runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
@@ -417,29 +417,81 @@ func handleManifest(args []string) error {
 }
 
 func handleUpdate(args []string) error {
-	if len(args) < 1 || args[0] != "plan" {
-		return errors.New("использование: neverlauncher update plan --from old.json --to new.json [--output update-plan.json]")
+	if len(args) < 1 {
+		return errors.New("использование: neverlauncher update plan|apply|status|recover ...")
 	}
-	fromPath := flagValue(args, "--from", "")
-	toPath := flagValue(args, "--to", "")
-	out := flagValue(args, "--output", "")
-	if fromPath == "" || toPath == "" {
-		return errors.New("update plan требует --from old.json и --to new.json")
+	switch args[0] {
+	case "plan":
+		fromPath := flagValue(args, "--from", "")
+		toPath := flagValue(args, "--to", "")
+		out := flagValue(args, "--output", "")
+		if fromPath == "" || toPath == "" {
+			return errors.New("update plan требует --from old.json и --to new.json")
+		}
+		oldManifest, err := readManifest(fromPath)
+		if err != nil {
+			return err
+		}
+		newManifest, err := readManifest(toPath)
+		if err != nil {
+			return err
+		}
+		plan := buildUpdatePlan(oldManifest, newManifest)
+		if out != "" {
+			return writeJSONFile(out, plan)
+		}
+		printJSON(plan)
+		return nil
+	case "apply":
+		fromPath := flagValue(args, "--from", "")
+		toPath := flagValue(args, "--to", "")
+		if fromPath == "" || toPath == "" {
+			return errors.New("update apply требует --from old.json --to new.json --source-root <dir> --root <dir>")
+		}
+		report, err := applyManifestUpdate0156(fromPath, toPath, flagValue(args, "--source-root", ""), flagValue(args, "--root", ""))
+		if err != nil {
+			return err
+		}
+		out := flagValue(args, "--output", "")
+		if out != "" && out != "-" {
+			return writeJSONFile(out, report)
+		}
+		printJSON(report)
+		return nil
+	case "status":
+		root := flagValue(args, "--root", ".")
+		updater, err := newTransactionalUpdater0156(root)
+		if err != nil {
+			return err
+		}
+		report, err := updater.status()
+		if err != nil {
+			return err
+		}
+		printJSON(report)
+		return nil
+	case "recover":
+		root := flagValue(args, "--root", ".")
+		updater, err := newTransactionalUpdater0156(root)
+		if err != nil {
+			return err
+		}
+		report, err := updater.recover(flagValue(args, "--force", "false") == "true")
+		if err != nil {
+			return err
+		}
+		printJSON(report)
+		return nil
+	case "self-test":
+		report, err := runUpdaterSelfTest0156()
+		if err != nil {
+			return err
+		}
+		printJSON(report)
+		return nil
+	default:
+		return fmt.Errorf("неизвестная update-подкоманда: %s", args[0])
 	}
-	oldManifest, err := readManifest(fromPath)
-	if err != nil {
-		return err
-	}
-	newManifest, err := readManifest(toPath)
-	if err != nil {
-		return err
-	}
-	plan := buildUpdatePlan(oldManifest, newManifest)
-	if out != "" {
-		return writeJSONFile(out, plan)
-	}
-	printJSON(plan)
-	return nil
 }
 
 func handleHashes(args []string) error {

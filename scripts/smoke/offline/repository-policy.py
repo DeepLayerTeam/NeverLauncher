@@ -1233,6 +1233,39 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.5 Managed JRE regression tests are missing")
 
 
+# 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
+# not a manifest-only declaration. It is used by client install/update/package-apply
+# and is self-tested on native Linux/Windows/macOS CI runners.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 6):
+    updater_core_0156 = read("cli/cmd/neverlauncher/transactional_updater.go")
+    updater_cmd_0156 = read("cli/cmd/neverlauncher/transactional_updater_command.go")
+    updater_client_0156 = read("cli/cmd/neverlauncher/client_lifecycle.go") + read("cli/cmd/neverlauncher/package_commands.go")
+    updater_gate_0156 = read("scripts/smoke/offline/unified-transactional-updater-core-0156.py")
+    updater_tests_0156 = read("cli/cmd/neverlauncher/transactional_updater_test.go")
+    for required in [
+        "prepareLocked", "commitLocked", "rollbackLocked", "recoverIncompleteLocked",
+        "Stage verified bytes before touching the live tree", "replaceFileAtomicPortable", "updaterProcessAlive0156",
+        "updater refuses symlink parent", 'Phase = "committing"', 'Phase = "verifying"',
+    ]:
+        if required not in updater_core_0156:
+            fail(f"0.15.6 transactional updater core incomplete: {required}")
+    for required in ["applyManifestUpdate0156", "runUpdaterSelfTest0156", "automatic-rollback", "durable-journal"]:
+        if required not in updater_cmd_0156:
+            fail(f"0.15.6 updater command path incomplete: {required}")
+    for required in ["clientPackageConsumeTransactional0156", "client-repair", "client-rollback", "unified-transactional-updater/0.15.6", ".neverlauncher/client-state.json"]:
+        if required not in updater_client_0156:
+            fail(f"0.15.6 client updater integration incomplete: {required}")
+    for required in ["TestTransactionalUpdaterCommitAndDelete0156", "TestTransactionalUpdaterPostVerifyFailureRollsBack0156", "TestTransactionalUpdaterCrashRecovery0156"]:
+        if required not in updater_tests_0156:
+            fail(f"0.15.6 updater regression tests missing: {required}")
+    if "Unified Transactional Updater Core gate: OK" not in updater_gate_0156:
+        fail("0.15.6 updater mandatory gate incomplete")
+    if "unified-transactional-updater-core-0156.py" not in preflight or "unified-transactional-updater-core-0156.py" not in ci:
+        fail("0.15.6 updater gate is not wired into preflight/CI")
+    if ci.count("update self-test") < 4:
+        fail("0.15.6 updater native runtime self-tests are missing from CI")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

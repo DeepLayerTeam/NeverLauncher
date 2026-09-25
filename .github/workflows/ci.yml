@@ -66,6 +66,7 @@ jobs:
           python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
           python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+          python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -86,6 +87,7 @@ jobs:
           go test -race ./...
           go vet ./...
           go build -trimpath -o /tmp/nl ./cmd/neverlauncher
+          /tmp/nl update self-test
       - name: Release doctor
         run: /tmp/nl release doctor
       - name: Backend test, race, vet and pgx build
@@ -244,6 +246,7 @@ jobs:
           test -s "${DIR}/neverruntime-linux-${{ matrix.arch }}"
           test -s "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
           python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
+          "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update self-test
       - name: Upload native Linux production artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -292,6 +295,13 @@ jobs:
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
+      - name: Unified transactional updater self-test
+        shell: pwsh
+        run: |
+          Push-Location cli
+          go build -trimpath -o "$env:RUNNER_TEMP\nl-updater-selftest.exe" ./cmd/neverlauncher
+          Pop-Location
+          & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update self-test
       - name: Build unsigned CI x64 + ARM64 delivery candidates
         shell: pwsh
         run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
@@ -441,6 +451,7 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
           (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          /tmp/nl update self-test
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
           /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
       - name: Upload macOS x64 + ARM64 delivery candidates

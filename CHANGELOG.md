@@ -1,3 +1,15 @@
+## 0.15.6 — Unified Transactional Updater Core
+
+`0.15.6` переводит локальное применение обновлений на единый crash-recoverable transaction engine для Windows/Linux/macOS. Client install/update/package-apply теперь сначала полностью stage+verify новые bytes, фиксируют durable journal и backup touched-файлов, и только затем переключают live tree. DB migration не требуется.
+
+- Добавлен production `transactional_updater.go`: exclusive PID lock, same-filesystem staging, SHA-256/size verification, backup touched paths, durable phase journal, atomic file switch и post-apply verification.
+- Ошибка на стадии commit/verifying автоматически восстанавливает все исходные файлы и удаляет newly-created targets; incomplete transaction после crash восстанавливается `update recover` или автоматически перед следующим apply.
+- Source/destination symlink, path traversal, duplicate write/remove paths и изменение `.neverlauncher/updater` payload-ом блокируются fail-closed.
+- `nl update apply|status|recover|self-test` предоставляет generic manifest update path и эксплуатационное восстановление; stale process lock определяется отдельно для Unix и Windows.
+- `client install`, `client update`, `client repair`, `client rollback` и `client package-apply/package-consume` переведены на этот core; `client-state.json`, удаление obsolete managed files и rollback snapshot связаны с одной transaction boundary.
+- Добавлены regression tests commit/delete, post-verify rollback, simulated crash recovery и traversal rejection; Windows amd64/arm64 и Linux arm64 cross-compilation проверяет platform-specific lock implementation.
+- Native CI запускает реальный `update self-test` на Linux x64/ARM64, Windows и macOS. `release doctor`, strict preflight, repository policy и `release publish-check` для `0.15.6+` включают обязательный updater gate/self-test.
+
 ## 0.15.5 — Managed JRE Distribution
 
 `0.15.5` добавляет production distribution Java 21 для Windows/Linux/macOS x64 и ARM64. Release использует точные Eclipse Temurin vendor archives, а NeverRuntime может устанавливать их из first-party local/HTTPS distribution manifest с fail-closed integrity checks. DB migration не требуется.

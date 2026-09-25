@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -696,49 +697,118 @@ func clientConsumePlan(packagePath, clientDir string) (map[string]any, error) {
 }
 
 func clientPackageConsume(packagePath, storageDir, clientDir string) (map[string]any, error) {
+	snapshotID, err := createClientSnapshot(clientDir)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось создать transactional rollback snapshot: %w", err)
+	}
+	return clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
+}
+
+func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID string) (map[string]any, error) {
 	manifest, err := readClientPackageManifest(packagePath)
 	if err != nil {
 		return nil, err
 	}
 	prefix := inferStoragePrefix(packagePath, storageDir, manifest)
-	applied := []map[string]any{}
+	files := make([]updaterFileSpec0156, 0, len(manifest.Files)+1)
+	applied := make([]map[string]any, 0, len(manifest.Files))
+	wanted := make(map[string]bool, len(manifest.Files))
 	var appliedBytes int64
 	for _, file := range manifest.Files {
 		if err := validateClientPackagePath(file.Path); err != nil {
 			return nil, err
 		}
-		src := filepath.Join(storageDir, filepath.FromSlash(prefix), filepath.FromSlash(file.Path))
-		if _, err := os.Stat(src); err != nil {
-			// Fallback: package manifest may be next to the uploaded files.
-			src = filepath.Join(filepath.Dir(packagePath), filepath.FromSlash(file.Path))
-		}
-		sum, size, err := hashFile(src)
-		if err != nil {
-			return nil, fmt.Errorf("%s: storage object unavailable: %w", file.Path, err)
-		}
-		if sum != file.SHA256 || size != file.Size {
-			return nil, fmt.Errorf("%s: storage object checksum/size mismatch", file.Path)
-		}
-		dst := filepath.Join(clientDir, filepath.FromSlash(file.Path))
-		if err := copyFileAtomic(src, dst); err != nil {
-			return nil, err
-		}
-		localSum, localSize, err := hashFile(dst)
-		if err != nil {
-			return nil, err
-		}
-		if localSum != file.SHA256 || localSize != file.Size {
-			return nil, fmt.Errorf("%s: applied file checksum/size mismatch", file.Path)
-		}
+		rel := filepath.ToSlash(filepath.Clean(filepath.FromSlash(file.Path)))
+		src := clientPackageSourcePath(packagePath, storageDir, manifest, file)
+		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: file.Size, SHA256: file.SHA256, Executable: file.Executable})
+		wanted[rel] = true
 		appliedBytes += file.Size
-		applied = append(applied, map[string]any{"path": file.Path, "sha256": file.SHA256, "size": file.Size, "status": "applied"})
+		applied = append(applied, map[string]any{"path": rel, "sha256": file.SHA256, "size": file.Size, "status": "applied"})
 	}
-	state := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "packageId": manifest.PackageID, "projectId": manifest.ProjectID, "profileId": manifest.ProfileID, "channel": manifest.Channel, "version": manifest.Version, "appliedAt": time.Now().UTC().Format(time.RFC3339), "files": applied}
-	statePath := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
-	if err := writeJSONFile(statePath, state); err != nil {
+	remove := []string{}
+	for _, rel := range currentStatePaths(clientDir) {
+		if wanted[rel] || !isManagedClientPath(rel) {
+			continue
+		}
+		remove = append(remove, rel)
+	}
+	sort.Strings(remove)
+	state := map[string]any{
+		"schemaVersion":    cliSchemaVersion,
+		"toolVersion":      version,
+		"packageId":        manifest.PackageID,
+		"projectId":        manifest.ProjectID,
+		"profileId":        manifest.ProfileID,
+		"channel":          manifest.Channel,
+		"version":          manifest.Version,
+		"appliedAt":        time.Now().UTC().Format(time.RFC3339),
+		"files":            applied,
+		"rollbackSnapshot": snapshotID,
+		"updaterCore":      "unified-transactional-updater/0.15.6",
+	}
+	stateRaw, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "packageId": manifest.PackageID, "clientDir": clientDir, "storageDir": storageDir, "storagePrefix": prefix, "appliedFiles": applied, "appliedBytes": appliedBytes, "stateFile": statePath, "status": "applied"}, nil
+	stateRaw = append(stateRaw, '\n')
+	stateSize, stateSHA := updaterBytesMetadata0156(stateRaw)
+	files = append(files, updaterFileSpec0156{Path: ".neverlauncher/client-state.json", Data: stateRaw, Size: stateSize, SHA256: stateSHA})
+
+	updater, err := newTransactionalUpdater0156(clientDir)
+	if err != nil {
+		return nil, err
+	}
+	verifyFn := func() error {
+		verify, err := verifyClientInstallation(packagePath, clientDir)
+		if err != nil {
+			return err
+		}
+		if !verify.Valid {
+			return fmt.Errorf("client post-verify failed: missing=%v corrupted=%v", verify.Missing, verify.Corrupted)
+		}
+		return nil
+	}
+	tx, err := updater.apply(updaterRequest0156{
+		Root:        clientDir,
+		Namespace:   "client-package",
+		FromVersion: clientInstalledVersion0156(clientDir),
+		ToVersion:   manifest.Version,
+		Files:       files,
+		Remove:      remove,
+		Verify:      verifyFn,
+	})
+	if err != nil {
+		return nil, err
+	}
+	statePath := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	return map[string]any{
+		"schemaVersion": cliSchemaVersion,
+		"toolVersion":   version,
+		"packageId":     manifest.PackageID,
+		"clientDir":     clientDir,
+		"storageDir":    storageDir,
+		"storagePrefix": prefix,
+		"appliedFiles":  applied,
+		"removedFiles":  remove,
+		"appliedBytes":  appliedBytes,
+		"stateFile":     statePath,
+		"transaction":   tx,
+		"status":        "transactionally-applied",
+	}, nil
+}
+
+func clientInstalledVersion0156(clientDir string) string {
+	raw, err := os.ReadFile(filepath.Join(clientDir, ".neverlauncher", "client-state.json"))
+	if err != nil {
+		return ""
+	}
+	var state struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal(raw, &state) != nil {
+		return ""
+	}
+	return strings.TrimSpace(state.Version)
 }
 
 func inferStoragePrefix(packagePath, storageDir string, manifest ClientPackageManifest) string {

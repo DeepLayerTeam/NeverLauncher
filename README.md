@@ -4,7 +4,22 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.5**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.6**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Unified Transactional Updater Core — 0.15.6
+
+`0.15.6` заменяет последовательную замену client-файлов единым transactional updater engine. Перед изменением live tree все новые bytes копируются в staging внутри того же install root, проверяются по SHA-256/size, а затрагиваемые текущие файлы сохраняются в transaction backup. Только после durable `prepared` journal начинается switch; каждая замена выполняется через same-filesystem atomic rename/replace, а удаление obsolete-файлов входит в ту же transaction boundary.
+
+Journal хранится в `.neverlauncher/updater/transactions/<id>/journal.json` и проходит состояния `staging → prepared → committing → verifying → committed`. Ошибка source hash, atomic switch или post-verify запускает обратное восстановление всех touched paths; незавершённые `prepared/committing/verifying` transaction автоматически восстанавливаются перед следующим update или явно через `nl update recover --root <dir>`. Lock содержит PID и умеет освобождать stale lock после crash; destination/source symlink и path traversal отклоняются fail-closed.
+
+Рабочий core используется `nl client install`, `nl client update`, `nl client repair`, `nl client rollback` и `nl client package-apply/package-consume`; `client-state.json` записывается внутри той же транзакции. Generic manifest path доступен через `nl update apply --from old.json --to new.json --source-root <dir> --root <install>`, а `nl update status` показывает durable journals. `nl update self-test` реально выполняет commit + obsolete removal + forced verification failure + rollback; CI запускает этот self-test на native Linux x64/ARM64, Windows и macOS runners, а `release publish-check` для `0.15.6+` выполняет его повторно.
+
+```bash
+nl update apply --from old.json --to new.json --source-root ./payload --root ./install
+nl update status --root ./install
+nl update recover --root ./install
+nl update self-test
+```
 
 ## Managed JRE Distribution — 0.15.5
 

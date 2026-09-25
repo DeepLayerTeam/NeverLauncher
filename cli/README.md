@@ -51,6 +51,18 @@ nl install bootstrap-admin \
   --password '...'
 ```
 
+## Unified Transactional Updater Core
+
+```bash
+nl update plan --from old.json --to new.json
+nl update apply --from old.json --to new.json --source-root ./payload --root ./install
+nl update status --root ./install
+nl update recover --root ./install
+nl update self-test
+```
+
+Для `0.15.6+` `client install/update/repair/rollback/package-apply` используют один transactional engine: verified staging на том же filesystem, durable journal, backup только touched paths, atomic replace, post-verify и automatic crash rollback. Control state находится в `.neverlauncher/updater`; payload не может изменять этот каталог, проходить через symlink или выходить за install root.
+
 ## Релизы и пакеты
 
 ```bash
