@@ -4,7 +4,22 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.4**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.5**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Managed JRE Distribution — 0.15.5
+
+`0.15.5` переносит Java 21 runtime из best-effort download в production delivery boundary. `scripts/release/managed-jre-distribution.py` получает шесть точных Eclipse Temurin JRE archive: Windows/Linux/macOS × x64/ARM64, проверяет upstream SHA-256/size и фактическую архитектуру `bin/java`, не перепаковывает vendor bytes и создаёт `MANAGED_JRE_MANIFEST.json` + `MANAGED_JRE_EVIDENCE.json`.
+
+`nl delivery verify-jre` и `nl release publish-check` fail-closed проверяют все шесть target, exact vendor checksums, archive format/content и binding к `DELIVERY_MANIFEST.json`. `NeverRuntime` умеет использовать локальный или HTTPS distribution manifest; для HTTPS обязателен SHA-256 pin manifest. Установка выполняется через hash-addressed download cache, `java -version` verification и atomic runtime directory replacement. Прямой Adoptium API остаётся fallback только когда managed distribution явно не настроена.
+
+```bash
+python3 scripts/release/managed-jre-distribution.py --out dist/managed-jre-0.15.5 --version 0.15.5 --major 21
+nl delivery manifest --bundle dist/managed-jre-0.15.5 --version 0.15.5
+nl delivery verify-jre --bundle dist/managed-jre-0.15.5 --version 0.15.5
+neverruntime java ensure --major 21 --distribution temurin --manifest ./MANAGED_JRE_MANIFEST.json
+```
+
+Для release staging задаётся `NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR`; remote runtime distribution задаётся `NEVERLAUNCHER_MANAGED_JRE_MANIFEST` вместе с `NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256`.
 
 ## Notarized macOS x64 + ARM64 — 0.15.4
 
@@ -146,7 +161,7 @@ nl release publish-check "dist/release-${VERSION}" --public-key /secure/release-
 
 ## Managed Java
 
-NeverRuntime выбирает JVM требуемой major-версии из signed manifest/Mojang metadata и при необходимости устанавливает проверенный Temurin runtime. Поддерживаются Java 8, 17, 21 и 25. Forge/NeoForge processor pipeline принимает `--java` или `NEVERLAUNCHER_JAVA`; если путь не задан, используется подходящая системная Java. Версия installer JVM проверяется до запуска processors.
+NeverRuntime выбирает JVM требуемой major-версии и при необходимости устанавливает проверенный Temurin runtime. Для Java 21 в production используется Managed JRE Distribution 0.15.5; локальный/HTTPS manifest выбирает platform/architecture artifact и проверяется до установки. Поддерживаются Java 8, 17, 21 и 25; без настроенного distribution manifest сохраняется совместимый direct-Adoptium fallback. Forge/NeoForge processor pipeline принимает `--java` или `NEVERLAUNCHER_JAVA`; если путь не задан, используется подходящая системная Java. Версия JVM проверяется до запуска processors.
 
 ```bash
 neverruntime java ensure --major 21 --distribution temurin

@@ -22,6 +22,7 @@ GUARD_PLATFORM_ARTIFACTS_DIR="${NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
 WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
 LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
 MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
+MANAGED_JRE_ARTIFACTS_DIR="${NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
@@ -89,6 +90,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,4) else '0')
 PYVER
 )"
+MANAGED_JRE_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,15,5) else '0')
+PYVER
+)"
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
@@ -98,6 +109,12 @@ fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${MACOS_PRODUCTION_ARTIFACTS_DIR}" && -d "${MACOS_PRODUCTION_ARTIFACTS_DIR}" ]] || {
     echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
+    exit 1
+  }
+fi
+if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
+  [[ -n "${MANAGED_JRE_ARTIFACTS_DIR}" && -d "${MANAGED_JRE_ARTIFACTS_DIR}" ]] || {
+    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Managed JRE Distribution" >&2
     exit 1
   }
 fi
@@ -321,12 +338,35 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json"
 fi
 
+if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
+  log "Импорт Managed JRE Distribution из ${MANAGED_JRE_ARTIFACTS_DIR}"
+  for artifact in MANAGED_JRE_MANIFEST.json MANAGED_JRE_EVIDENCE.json; do
+    require_file "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}"
+    cp "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+  done
+  for platform in windows linux macos; do
+    for arch in x64 arm64; do
+      ext="tar.gz"
+      [[ "${platform}" == "windows" ]] && ext="zip"
+      artifact="neverlauncher-jre-temurin21-${platform}-${arch}-${VERSION}.${ext}"
+      require_file "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}"
+      cp "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+    done
+  done
+fi
+
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-x64"
 else
   RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-amd64"
 fi
 require_file "${RELEASE_CLI}"
+
+if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
+  log "Проверка Managed JRE manifest/evidence и шести native Java targets"
+  # DELIVERY_MANIFEST.json будет сформирован release build ниже; до этого проверяем source artifacts через production Go tests/static gate.
+  python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
+fi
 
 log "Формирование и проверка реального Desktop package"
 "${RELEASE_CLI}" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux

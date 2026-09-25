@@ -1,3 +1,15 @@
+## 0.15.5 — Managed JRE Distribution
+
+`0.15.5` добавляет production distribution Java 21 для Windows/Linux/macOS x64 и ARM64. Release использует точные Eclipse Temurin vendor archives, а NeverRuntime может устанавливать их из first-party local/HTTPS distribution manifest с fail-closed integrity checks. DB migration не требуется.
+
+- Добавлен `scripts/release/managed-jre-distribution.py`: разрешение latest Temurin 21 JRE через Adoptium API, HTTPS-only download, проверка vendor SHA-256/size и реальной PE/ELF/Mach-O архитектуры `bin/java`.
+- Vendor JRE archive не перепаковываются: `sourceSha256 == sha256`, поэтому upstream checksum сохраняется end-to-end.
+- Добавлены `MANAGED_JRE_MANIFEST.json` и `MANAGED_JRE_EVIDENCE.json` для шести target: Windows/Linux/macOS × x64/ARM64.
+- Добавлен `nl delivery verify-jre`; `release build/verify/publish-check` для `0.15.5+` требуют все шесть JRE archive и binding каждого artifact к `DELIVERY_MANIFEST.json`.
+- NeverRuntime поддерживает `--manifest` / `NEVERLAUNCHER_MANAGED_JRE_MANIFEST`, локальный archive cache, exact SHA-256/size, safe archive paths, `javaEntry` и `java -version` verification, затем атомарную установку runtime. Remote manifest требует отдельный SHA-256 pin.
+- Добавлен `.github/workflows/managed-jre-production-delivery.yml`, release staging через `NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR`, offline regression gate и repository-policy checks.
+- Direct Adoptium runtime acquisition сохранён как compatibility fallback, если Managed JRE Distribution не настроена.
+
 ## 0.15.4 — Notarized macOS x64 + ARM64
 
 `0.15.4` переводит macOS delivery в dual-architecture Developer ID + Apple notarization production-контур. x64 и ARM64 собираются как отдельные thin Mach-O artifacts и не могут быть опубликованы без accepted notarization/stapled Gatekeeper-verifiable app. DB migration не требуется.

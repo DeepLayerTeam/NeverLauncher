@@ -13,7 +13,7 @@ pub mod linux_guard;
 pub mod macos_guard;
 pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
-pub use managed_java::{ensure_managed_java, select_java_executable, ManagedJavaResult};
+pub use managed_java::{ensure_managed_java, ensure_managed_java_from_distribution, select_java_executable, ManagedJavaResult};
 pub use integrity::{
     verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, LinuxProcessSecurityEvidence, MacOSProcessSecurityEvidence, ModuleSetEvidence,
     NeverGuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,

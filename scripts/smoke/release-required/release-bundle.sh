@@ -23,6 +23,14 @@ for required in \
   "${BUNDLE_DIR}/MACOS_PACKAGE_MANIFEST_ARM64.json" \
   "${BUNDLE_DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip" \
   "${BUNDLE_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip" \
+  "${BUNDLE_DIR}/MANAGED_JRE_MANIFEST.json" \
+  "${BUNDLE_DIR}/MANAGED_JRE_EVIDENCE.json" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-windows-x64-${VERSION}.zip" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-windows-arm64-${VERSION}.zip" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-linux-x64-${VERSION}.tar.gz" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-linux-arm64-${VERSION}.tar.gz" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-macos-x64-${VERSION}.tar.gz" \
+  "${BUNDLE_DIR}/neverlauncher-jre-temurin21-macos-arm64-${VERSION}.tar.gz" \
   "${BUNDLE_DIR}/SERVERBRIDGE2_CERTIFICATION.json" \
   "${BUNDLE_DIR}/BRIDGE_RELEASE_ALLOWLIST.json" \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \

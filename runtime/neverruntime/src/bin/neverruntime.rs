@@ -1,5 +1,5 @@
 use neverruntime::{
-    build_launch_plan, check_files, download_missing_files, ensure_managed_java, launch_with_timeout, load_manifest,
+    build_launch_plan, check_files, download_missing_files, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
     resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest,
 };
 use serde_json::json;
@@ -137,7 +137,7 @@ async fn command_compatibility(args: &[String]) -> Result<serde_json::Value, Str
 async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
     let subcommand = args.first().map(String::as_str).unwrap_or("");
     if subcommand != "ensure" {
-        return Err("использование: neverruntime java ensure --major <8|17|21|25> [--distribution temurin] [--runtime-root PATH]".to_string());
+        return Err("использование: neverruntime java ensure --major <8|17|21|25> [--distribution temurin] [--runtime-root PATH] [--manifest PATH|HTTPS_URL --manifest-sha256 SHA256]".to_string());
     }
     let rest = &args[1..];
     let major = required_flag(rest, "--major")?
@@ -145,7 +145,19 @@ async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
         .map_err(|_| "--major должен быть числом".to_string())?;
     let distribution = optional_flag(rest, "--distribution").unwrap_or_else(|| "temurin".to_string());
     let runtime_root = optional_flag(rest, "--runtime-root").map(PathBuf::from);
-    let result = ensure_managed_java(major, &distribution, runtime_root.as_deref()).await?;
+    let manifest_sha256 = optional_flag(rest, "--manifest-sha256");
+    let result = if let Some(manifest) = optional_flag(rest, "--manifest") {
+        ensure_managed_java_from_distribution(
+            major,
+            &distribution,
+            runtime_root.as_deref(),
+            &manifest,
+            manifest_sha256.as_deref(),
+        )
+        .await?
+    } else {
+        ensure_managed_java(major, &distribution, runtime_root.as_deref()).await?
+    };
     serde_json::to_value(result).map_err(|err| err.to_string())
 }
 

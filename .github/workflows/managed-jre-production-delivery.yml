@@ -1,0 +1,61 @@
+name: Managed JRE Production Delivery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  temurin21-six-targets:
+    name: Temurin 21 Windows/Linux/macOS x64+ARM64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
+
+      - name: Build exact-vendor Managed JRE Distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          OUT="dist/managed-jre-${VERSION}"
+          python3 scripts/release/managed-jre-distribution.py \
+            --out "${OUT}" \
+            --version "${VERSION}" \
+            --major 21
+
+      - name: Verify six targets and delivery binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          OUT="dist/managed-jre-${VERSION}"
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          /tmp/nl delivery manifest --bundle "${OUT}" --version "${VERSION}"
+          /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
+          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+
+      - name: Upload Managed JRE production assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-managed-jre-${{ github.sha }}
+          path: |
+            dist/managed-jre-*/MANAGED_JRE_MANIFEST.json
+            dist/managed-jre-*/MANAGED_JRE_EVIDENCE.json
+            dist/managed-jre-*/DELIVERY_MANIFEST.json
+            dist/managed-jre-*/neverlauncher-jre-temurin21-windows-x64-*.zip
+            dist/managed-jre-*/neverlauncher-jre-temurin21-windows-arm64-*.zip
+            dist/managed-jre-*/neverlauncher-jre-temurin21-linux-x64-*.tar.gz
+            dist/managed-jre-*/neverlauncher-jre-temurin21-linux-arm64-*.tar.gz
+            dist/managed-jre-*/neverlauncher-jre-temurin21-macos-x64-*.tar.gz
+            dist/managed-jre-*/neverlauncher-jre-temurin21-macos-arm64-*.tar.gz
+          if-no-files-found: error
+          retention-days: 30

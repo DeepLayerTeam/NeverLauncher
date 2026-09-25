@@ -1175,6 +1175,64 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.4 macOS delivery regression tests are missing")
 
 
+# 0.15.5 Managed JRE Distribution is a six-target first-party delivery boundary.
+# Release bytes remain the exact vendor Temurin archives; NeverRuntime verifies the
+# pinned distribution manifest, archive checksum/size and java runtime before use.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 5):
+    jre_delivery_0155 = read("cli/cmd/neverlauncher/managed_jre_delivery.go")
+    jre_builder_0155 = read("scripts/release/managed-jre-distribution.py")
+    jre_runtime_0155 = read("runtime/neverruntime/src/managed_java.rs")
+    jre_release_0155 = read("scripts/release/build-release.sh")
+    jre_gate_0155 = read("scripts/smoke/offline/managed-jre-distribution-0155.py")
+    jre_workflow_0155 = read(".github/workflows/managed-jre-production-delivery.yml")
+    release_bundle_0155 = read("scripts/smoke/release-required/release-bundle.sh")
+    for required in [
+        "MANAGED_JRE_MANIFEST.json", "MANAGED_JRE_EVIDENCE.json",
+        "exact-vendor-archive-sha256", "inspectWindowsPEBytes0152",
+        "inspectLinuxELFBytes0153", "inspectMacOSMachOBytes0154",
+        "verifyManagedJREDistribution0155", "managed-jre",
+    ]:
+        if required not in jre_delivery_0155:
+            fail(f"0.15.5 Managed JRE verifier incomplete: {required}")
+    for required in [
+        "https://api.adoptium.net/v3", '"image_type": "jre"',
+        '"jvm_impl": "hotspot"', '"vendor": "eclipse"',
+        "download_exact", "sourceSha256", "MANAGED_JRE_EVIDENCE.json",
+    ]:
+        if required not in jre_builder_0155:
+            fail(f"0.15.5 Managed JRE builder incomplete: {required}")
+    for required in [
+        "ensure_managed_java_from_distribution", "NEVERLAUNCHER_MANAGED_JRE_MANIFEST",
+        "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256", "exact vendor archive SHA-256",
+        "ensure_local_archive", "Managed JRE javaEntry mismatch",
+    ]:
+        if required not in jre_runtime_0155:
+            fail(f"0.15.5 NeverRuntime Managed JRE consumer incomplete: {required}")
+    for required in [
+        "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR", "MANAGED_JRE_REQUIRED",
+        "MANAGED_JRE_MANIFEST.json", "neverlauncher-jre-temurin21-",
+    ]:
+        if required not in jre_release_0155:
+            fail(f"0.15.5 release JRE staging incomplete: {required}")
+    for required in ["Managed JRE Production Delivery", "managed-jre-distribution.py", "delivery verify-jre"]:
+        if required not in jre_workflow_0155:
+            fail(f"0.15.5 Managed JRE production workflow incomplete: {required}")
+    for required in [
+        "MANAGED_JRE_MANIFEST.json", "MANAGED_JRE_EVIDENCE.json",
+        "neverlauncher-jre-temurin21-windows-x64", "neverlauncher-jre-temurin21-windows-arm64",
+        "neverlauncher-jre-temurin21-linux-x64", "neverlauncher-jre-temurin21-linux-arm64",
+        "neverlauncher-jre-temurin21-macos-x64", "neverlauncher-jre-temurin21-macos-arm64",
+    ]:
+        if required not in release_bundle_0155:
+            fail(f"0.15.5 release bundle JRE gate incomplete: {required}")
+    if "managed-jre-distribution-0155.py" not in preflight or "managed-jre-distribution-0155.py" not in ci:
+        fail("0.15.5 Managed JRE gate is not wired into preflight/CI")
+    if "Managed JRE Distribution gate: OK" not in jre_gate_0155:
+        fail("0.15.5 mandatory Managed JRE Distribution gate is incomplete")
+    if not (ROOT / "cli/cmd/neverlauncher/managed_jre_delivery_test.go").is_file():
+        fail("0.15.5 Managed JRE regression tests are missing")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

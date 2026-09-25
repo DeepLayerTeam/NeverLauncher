@@ -190,6 +190,8 @@ func deliveryArtifactComponent(name string) string {
 		return "api"
 	case strings.HasPrefix(lower, "neverruntime-"):
 		return "runtime"
+	case strings.HasPrefix(lower, "neverlauncher-jre-"):
+		return "managed-jre"
 	case strings.HasPrefix(lower, "neverlauncher-admin-web-"):
 		return "admin-web"
 	case strings.HasPrefix(lower, "neverlauncher-source-"):
@@ -443,7 +445,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, resolve")
+		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, resolve")
 	}
 	switch args[0] {
 	case "target":
@@ -535,6 +537,19 @@ func handleDelivery(args []string) error {
 			return err
 		}
 		return verifyMacOSNotarizationEvidence0154(dir, ver, flagBool(args, "--production", false))
+	case "verify-jre":
+		dir := flagValue(args, "--bundle", "")
+		if dir == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
+			dir = args[1]
+		}
+		if dir == "" {
+			return errors.New("delivery verify-jre requires --bundle <dir>")
+		}
+		ver := flagValue(args, "--version", version)
+		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
+			return err
+		}
+		return verifyManagedJREDistribution0155(dir, ver, true)
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {

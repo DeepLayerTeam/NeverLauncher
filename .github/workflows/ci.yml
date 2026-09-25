@@ -65,6 +65,7 @@ jobs:
           python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
           python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
           python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
+          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh

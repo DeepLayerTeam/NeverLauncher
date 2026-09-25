@@ -99,7 +99,12 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("macOS x64/ARM64 Developer ID notarization: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows x64/ARM64 signing + Linux x64/ARM64 packages + notarized macOS x64/ARM64")
+			if managedJREDistributionRequired0155(manifestVersion) {
+				if err := verifyManagedJREDistribution0155(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Managed JRE Distribution: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -181,6 +186,8 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/signed-windows-x64-arm64-0152.py",
 		"scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py",
 		"scripts/smoke/offline/notarized-macos-x64-arm64-0154.py",
+		"scripts/smoke/offline/managed-jre-distribution-0155.py",
+		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
 		"scripts/release/linux-package.py",
 		"scripts/release/build-macos-production.sh",
@@ -219,18 +226,19 @@ func releaseDoctor() error {
 		failed = true
 	}
 	for id, command := range map[string][]string{
-		"repository-policy":       {"python3", "scripts/smoke/offline/repository-policy.py"},
-		"version-alignment":       {"bash", "scripts/smoke/offline/version-alignment.sh"},
-		"openapi-validator":       {"python3", "scripts/contracts/validate-openapi.py"},
-		"compatibility-targets":   {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
-		"device-trust-targets":    {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
-		"guard-ci-targets":        {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
-		"guard-stabilization":     {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
-		"neverguard-release":      {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
-		"serverbridge-identity":   {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
-		"delivery-manifest":       {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
-		"windows-dual-signing":    {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
-		"macos-dual-notarization": {"python3", "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"},
+		"repository-policy":        {"python3", "scripts/smoke/offline/repository-policy.py"},
+		"version-alignment":        {"bash", "scripts/smoke/offline/version-alignment.sh"},
+		"openapi-validator":        {"python3", "scripts/contracts/validate-openapi.py"},
+		"compatibility-targets":    {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
+		"device-trust-targets":     {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
+		"guard-ci-targets":         {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
+		"guard-stabilization":      {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
+		"neverguard-release":       {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
+		"serverbridge-identity":    {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
+		"delivery-manifest":        {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
+		"windows-dual-signing":     {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
+		"macos-dual-notarization":  {"python3", "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"},
+		"managed-jre-distribution": {"python3", "scripts/smoke/offline/managed-jre-distribution-0155.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -439,6 +447,11 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("macOS x64/ARM64 delivery evidence: %w", err)
 		}
 	}
+	if managedJREDistributionRequired0155(ver) {
+		if err := verifyManagedJREDistribution0155(out, ver, true); err != nil {
+			return fmt.Errorf("Managed JRE Distribution: %w", err)
+		}
+	}
 
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
@@ -458,6 +471,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if macOSProductionRequired0154(ver) {
 		requiredFiles = append(requiredFiles, macOSNotarizationEvidenceFile0154, macOSDeliveryAllowlistFile0154, "MACOS_PACKAGE_MANIFEST_X64.json", "MACOS_PACKAGE_MANIFEST_ARM64.json")
 		checks = append(checks, "macos-x64-arm64-developer-id-notarization")
+	}
+	if managedJREDistributionRequired0155(ver) {
+		requiredFiles = append(requiredFiles, managedJREArtifacts0155(ver)...)
+		checks = append(checks, "managed-jre-temurin21-six-target-distribution")
 	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
@@ -613,6 +630,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 			return fmt.Errorf("macOS x64/ARM64 delivery evidence: %w", err)
 		}
 	}
+	if managedJREDistributionRequired0155(manifest.Version) {
+		if err := verifyManagedJREDistribution0155(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Managed JRE Distribution: %w", err)
+		}
+	}
 	for _, name := range manifest.RequiredFiles {
 		if st, err := os.Stat(filepath.Join(dir, filepath.Clean(name))); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
@@ -731,6 +753,9 @@ func releaseArtifacts(ver string) []string {
 	if macOSProductionRequired0154(ver) {
 		artifacts = append(artifacts, macOSProductionArtifacts0154(ver)...)
 	}
+	if managedJREDistributionRequired0155(ver) {
+		artifacts = append(artifacts, managedJREArtifacts0155(ver)...)
+	}
 	if guardCICertificationRequired(ver) {
 		for _, osName := range []string{"linux", "windows", "macos"} {
 			names := expectedGuardArtifactNames0139(osName, ver)
@@ -794,6 +819,9 @@ func releaseDescription(ver string) string {
 	}
 	if macOSProductionRequired0154(ver) {
 		extra += "\n- начиная с 0.15.4 publish-check требует отдельные macOS x64+ARM64 Mach-O, Developer ID Application + Hardened Runtime, Accepted Apple notarization, stapled ticket, Gatekeeper acceptance и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"
+	}
+	if managedJREDistributionRequired0155(ver) {
+		extra += "\n- начиная с 0.15.5 publish-check требует Managed JRE Distribution: exact Temurin 21 vendor archives для Windows/Linux/macOS x64+ARM64, MANAGED_JRE_MANIFEST/EVIDENCE, проверку SHA-256/size/архитектуры bin/java и binding к DELIVERY_MANIFEST.json;"
 	}
 	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
 		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
