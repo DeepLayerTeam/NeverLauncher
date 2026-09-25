@@ -242,7 +242,7 @@ Backup/restore выполняются внутри maintenance-lock: mutating AP
 
 ## Подпись production-релиза
 
-`SHA256SUMS.sig` — реальная Ed25519-подпись байтов `SHA256SUMS`, а не повторный checksum. Private key передаётся только через `--private-key` или `NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE`; он не включается в release bundle. Проверка требует отдельный доверенный public key через `--public-key` или `NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE`. Public key из самого bundle не принимается как trust anchor.
+Для `0.15.8+` `SHA256SUMS.sig` — Release Verification v2 envelope: Ed25519 signature связывает checksum set, hash/version `RELEASE_MANIFEST.json`, trust epoch и конкретный release key. Online release private key передаётся через `--private-key` / `NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE`; offline root private key используется только для выпуска `RELEASE_TRUST_POLICY.json`. Проверка требует внешний root public key, актуальный root-signed trust policy и persistent trust state; ключи из самого bundle не становятся trust anchor. `active → verify-only → revoked` lifecycle, retirement window, trust-epoch rollback и release-version rollback проверяются fail-closed.
 
 Source archive формируется из git-tracked файлов либо строгого allowlist при отсутствии `.git`, исключает symlink/secret paths и до формирования release manifest проходит secret scan. `release verify` fail-closed проверяет наличие, размер и SHA-256 каждого `required=true` artifact, затем SHA256SUMS, Ed25519 signature и detached подпись `PROVENANCE.json.sig`. Provenance имеет формат in-toto Statement / SLSA v1, а SBOM — SPDX 2.3 и строится из dependency manifests/locks.
 

@@ -71,14 +71,19 @@ nl update self-test
 nl release doctor
 VERSION="$(cat VERSION)"
 nl release build --out "dist/release-${VERSION}" \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json \
   --compatibility-matrix /path/to/matrix.json \
   --compatibility-targets compatibility/targets.json \
   --guard-ci-matrix /path/to/guard-matrix.json \
   --guard-ci-targets guard-ci/targets.json \
   --source-commit "$(git rev-parse HEAD)"
 nl release sign dist/release-${VERSION} --private-key /secure/release-private.pem
-nl release verify dist/release-${VERSION} --public-key /etc/neverlauncher/release-public.pem
-nl release publish-check dist/release-${VERSION} --public-key /etc/neverlauncher/release-public.pem
+nl release verify dist/release-${VERSION} --public-key /etc/neverlauncher/root-public.pem \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json
+nl release publish-check dist/release-${VERSION} --public-key /etc/neverlauncher/root-public.pem \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json
 nl delivery verify-windows --bundle dist/release-${VERSION} --version "${VERSION}" --production
 nl packaging prepare
 nl packaging verify
@@ -107,7 +112,7 @@ nl install storage-check --backend https://launcher.example --token "$NEVERLAUNC
 nl install verify --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
 ```
 
-`release verify` и `security verify-signature` требуют внешний доверенный Ed25519 public key. Ключ, лежащий внутри проверяемого bundle, никогда не используется как trust anchor.
+`0.15.8+` `release verify` и `security verify-signature` требуют внешний offline-root Ed25519 public key и persistent trust state. Root key из bundle не принимается; release-signing key принимается только через root-signed `RELEASE_TRUST_POLICY.json`.
 
 ## P3.2v4: реальный client/desktop/key lifecycle
 

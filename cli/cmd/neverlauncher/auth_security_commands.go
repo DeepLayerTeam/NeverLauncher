@@ -124,7 +124,7 @@ func operationsSupportSummaryModel() map[string]any {
 
 func handleSecurity(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные security-подкоманды: check, hardening, supply-chain, keys, rotate-key, revocation-list, sbom, provenance, attest, verify-signature, manifest-policy, release-policy, desktop-policy")
+		return errors.New("доступные security-подкоманды: check, hardening, supply-chain, keys, rotate-key, revocation-list, trust-policy, trust-verify, sbom, provenance, attest, verify-signature, manifest-policy, release-policy, desktop-policy")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -158,6 +158,18 @@ func handleSecurity(args []string) error {
 			return err
 		}
 		return writeOrPrintJSON(out, payload)
+	case "trust-policy":
+		payload, err := exportReleaseTrustPolicy0158(args)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
+	case "trust-verify":
+		payload, err := verifyTrustPolicyCommand0158(args)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
 	case "sbom":
 		payload, err := dependencySBOM(flagValue(args, "--source-root", "."), flagValue(args, "--version", version))
 		if err != nil {
@@ -184,7 +196,9 @@ func handleSecurity(args []string) error {
 			if path == "" {
 				return errors.New("security verify-signature --artifact release требует --path <release-dir>")
 			}
-			if err := verifyReleaseBundle(path, publicKey); err != nil {
+			trustState := flagValue(args, "--trust-state", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")))
+			trustPolicy := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+			if err := verifyReleaseBundleWithTrust(path, publicKey, trustState, trustPolicy); err != nil {
 				return err
 			}
 			if err := ensurePublicKeyNotRevoked(flagValue(args, "--registry-dir", ""), publicKey); err != nil {
@@ -220,7 +234,7 @@ func supplyChainSecurityModel() map[string]any {
 		"status":           "security-supply-chain-ready",
 		"release":          "NeverLauncher " + version + " security model",
 		"signedArtifacts":  []string{"manifest", "release-bundle", "desktop-package", "extension-package", "client-package"},
-		"requiredControls": []string{"ed25519-signatures", "sha256-every-file", "trusted-keys-registry", "key-rotation", "revocation-list", "sbom", "provenance", "audit-log", "safe-extraction", "download-allowlist"},
+		"requiredControls": []string{"ed25519-signatures", "sha256-every-file", "root-signed-trust-policy", "trusted-keys-registry", "key-rotation", "revocation-list", "trust-epoch-anti-rollback", "release-version-anti-rollback", "sbom", "provenance", "audit-log", "safe-extraction", "download-allowlist"},
 		"checks": []map[string]string{
 			{"id": "signed-manifests", "status": "required", "message": "каждый клиентский manifest подписывается Ed25519 ключом проекта"},
 			{"id": "signed-release-bundles", "status": "required", "message": "release bundle bundle содержит SHA256SUMS, SHA256SUMS.sig и RELEASE_MANIFEST.json"},
@@ -252,6 +266,10 @@ func securityReleasePolicyModel() map[string]any {
 	if guardCICertificationRequired(version) {
 		required = append(required, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
 		checks = append(checks, "cross-platform-guard-ci-certification")
+	}
+	if releaseVerificationV2Required0158(version) {
+		required = append(required, releaseTrustPolicyFile0158)
+		checks = append(checks, "root-signed-trust-policy", "release-key-lifecycle", "trust-epoch-anti-rollback", "release-version-anti-rollback")
 	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "policy": "signed-release-bundle-required", "requiredArtifacts": required, "checks": checks, "failureMode": "fail-closed"}
 }

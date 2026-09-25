@@ -2,12 +2,15 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 BUNDLE_DIR="${1:?Укажите каталог release bundle}"
-PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-${2:-}}"
+PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-${2:-}}}"
+TRUST_STATE="${NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE:-${3:-}}"
+TRUST_POLICY="${NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE:-${4:-}}"
 VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 
 test -d "${BUNDLE_DIR}"
 for required in \
   "${BUNDLE_DIR}/PROVENANCE.json.sig" \
+  "${BUNDLE_DIR}/RELEASE_TRUST_POLICY.json" \
   "${BUNDLE_DIR}/DELIVERY_MANIFEST.json" \
   "${BUNDLE_DIR}/WINDOWS_SIGNING_EVIDENCE.json" \
   "${BUNDLE_DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
@@ -41,11 +44,19 @@ for required in \
   fi
 done
 if [[ -z "${PUBLIC_KEY}" || ! -f "${PUBLIC_KEY}" ]]; then
-  echo "[NeverLauncher] release-bundle gate требует trusted Ed25519 public key через NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE или второй аргумент" >&2
+  echo "[NeverLauncher] release-bundle gate требует внешний root Ed25519 public key" >&2
+  exit 1
+fi
+if [[ -z "${TRUST_STATE}" ]]; then
+  echo "[NeverLauncher] release-bundle gate требует persistent trust state через NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
+  exit 1
+fi
+if [[ -z "${TRUST_POLICY}" || ! -f "${TRUST_POLICY}" ]]; then
+  echo "[NeverLauncher] release-bundle gate требует внешний current trust policy через NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
   exit 1
 fi
 if [ -x "${ROOT_DIR}/dist/preflight/nl" ]; then
-  "${ROOT_DIR}/dist/preflight/nl" release publish-check "${BUNDLE_DIR}" --public-key "${PUBLIC_KEY}"
+  "${ROOT_DIR}/dist/preflight/nl" release publish-check "${BUNDLE_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
 else
-  (cd "${ROOT_DIR}/cli" && go run -ldflags="-X main.version=${VERSION}" ./cmd/neverlauncher release publish-check "${BUNDLE_DIR}" --public-key "${PUBLIC_KEY}")
+  (cd "${ROOT_DIR}/cli" && go run -ldflags="-X main.version=${VERSION}" ./cmd/neverlauncher release publish-check "${BUNDLE_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}")
 fi

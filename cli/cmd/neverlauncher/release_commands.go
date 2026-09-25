@@ -34,6 +34,22 @@ func handleRelease(args []string) error {
 	case "build", "package":
 		ver := flagValue(args, "--version", version)
 		out := flagValue(args, "--out", filepath.Join("dist", "release-"+ver))
+		if releaseVerificationV2Required0158(ver) {
+			policySource := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+			if policySource == "" {
+				return errors.New("0.15.8+ release build требует --trust-policy или NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")
+			}
+			if err := os.MkdirAll(out, 0o755); err != nil {
+				return err
+			}
+			raw, err := os.ReadFile(policySource)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(out, releaseTrustPolicyFile0158), raw, 0o644); err != nil {
+				return err
+			}
+		}
 		if err := buildReleaseBundle(
 			ver, out, flagValue(args, "--source-root", "."),
 			flagValue(args, "--compatibility-matrix", ""),
@@ -53,7 +69,9 @@ func handleRelease(args []string) error {
 			return errors.New("нужно указать каталог релиза")
 		}
 		publicKey := flagValue(args, "--public-key", "")
-		if err := verifyReleaseBundle(args[1], publicKey); err != nil {
+		trustState := flagValue(args, "--trust-state", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")))
+		trustPolicy := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+		if err := verifyReleaseBundleWithTrust(args[1], publicKey, trustState, trustPolicy); err != nil {
 			return err
 		}
 		if err := ensurePublicKeyNotRevoked(flagValue(args, "--registry-dir", ""), publicKey); err != nil {
@@ -122,7 +140,7 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
 				}
 			}
-			fmt.Println("Release publish-check пройден: bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update")
+			fmt.Println("Release publish-check пройден: Release Verification v2 trust/key lifecycle + bundle cryptography + certifications + ServerBridge 2 + Windows/Linux/macOS production delivery + Managed JRE Distribution + Unified Transactional Updater Core + Desktop/Guard/Runtime transactional update")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -134,7 +152,7 @@ func handleRelease(args []string) error {
 		if err := signReleaseBundle(args[1], flagValue(args, "--private-key", "")); err != nil {
 			return err
 		}
-		fmt.Println("SHA256SUMS.sig создан с Ed25519")
+		fmt.Println("SHA256SUMS.sig создан с Ed25519 (Release Verification v2 для 0.15.8+)")
 		return nil
 	case "publish-plan":
 		ver := flagValue(args, "--version", version)
@@ -207,6 +225,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/managed-jre-distribution-0155.py",
 		"scripts/smoke/offline/unified-transactional-updater-core-0156.py",
 		"scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py",
+		"scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
 		"scripts/release/linux-package.py",
@@ -261,6 +280,7 @@ func releaseDoctor() error {
 		"managed-jre-distribution":       {"python3", "scripts/smoke/offline/managed-jre-distribution-0155.py"},
 		"transactional-updater-core":     {"python3", "scripts/smoke/offline/unified-transactional-updater-core-0156.py"},
 		"component-transactional-update": {"python3", "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"},
+		"release-verification-v2":        {"python3", "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -504,6 +524,13 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if componentTransactionalUpdateRequired0157(ver) {
 		checks = append(checks, "desktop-guard-runtime-transactional-update")
 	}
+	if releaseVerificationV2Required0158(ver) {
+		if _, err := loadReleaseTrustPolicy0158(filepath.Join(out, releaseTrustPolicyFile0158)); err != nil {
+			return fmt.Errorf("Release Verification v2 trust policy: %w", err)
+		}
+		requiredFiles = append(requiredFiles, releaseTrustPolicyFile0158)
+		checks = append(checks, "release-verification-v2-trust-lifecycle-anti-rollback")
+	}
 	compatibilityCertified := false
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
@@ -611,7 +638,7 @@ func releaseChecksums(dir string) ([]string, error) {
 	return lines, nil
 }
 
-func verifyReleaseBundle(dir, publicKeyPath string) error {
+func verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
 	for _, name := range []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "RELEASE_NOTES.txt", "SBOM.spdx.json", "PROVENANCE.json", "PROVENANCE.json.sig"} {
 		if st, err := os.Stat(filepath.Join(dir, name)); err != nil || st.IsDir() {
 			return fmt.Errorf("не найден обязательный release file %s", name)
@@ -664,7 +691,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 		}
 	}
 	for _, name := range manifest.RequiredFiles {
-		if st, err := os.Stat(filepath.Join(dir, filepath.Clean(name))); err != nil || st.IsDir() {
+		clean, err := safeReleaseRelativePath0158(name)
+		if err != nil {
+			return fmt.Errorf("requiredFiles path %q invalid: %w", name, err)
+		}
+		if st, err := os.Stat(filepath.Join(dir, clean)); err != nil || st.IsDir() {
 			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
 		}
 	}
@@ -677,7 +708,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 		if artifact.Status != "present" {
 			return fmt.Errorf("required artifact %s имеет status=%s вместо present", artifact.Name, artifact.Status)
 		}
-		path := filepath.Join(dir, filepath.Clean(artifact.Name))
+		cleanArtifact, err := safeReleaseRelativePath0158(artifact.Name)
+		if err != nil {
+			return fmt.Errorf("required artifact path %q invalid: %w", artifact.Name, err)
+		}
+		path := filepath.Join(dir, cleanArtifact)
 		actual, size, err := hashFile(path)
 		if err != nil {
 			return fmt.Errorf("required artifact %s отсутствует или unreadable: %w", artifact.Name, err)
@@ -707,7 +742,11 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 			return fmt.Errorf("некорректная строка SHA256SUMS: %s", line)
 		}
 		expected, name := parts[0], parts[1]
-		actual, _, err := hashFile(filepath.Join(dir, filepath.Clean(name)))
+		cleanName, err := safeReleaseRelativePath0158(name)
+		if err != nil {
+			return fmt.Errorf("SHA256SUMS path %q invalid: %w", name, err)
+		}
+		actual, _, err := hashFile(filepath.Join(dir, cleanName))
 		if err != nil {
 			return fmt.Errorf("не удалось проверить %s: %w", name, err)
 		}
@@ -719,7 +758,25 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 	if verified == 0 {
 		return errors.New("SHA256SUMS не содержит проверяемых файлов")
 	}
+	if releaseVerificationV2Required0158(manifest.Version) {
+		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+		if err != nil {
+			return err
+		}
+		if err := commitTrustState0158(ctx); err != nil {
+			return fmt.Errorf("commit release trust state: %w", err)
+		}
+		return nil
+	}
 	return verifyReleaseSignature(dir, publicKeyPath)
+}
+
+func verifyReleaseBundleWithTrustState(dir, publicKeyPath, trustStatePath string) error {
+	return verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+}
+
+func verifyReleaseBundle(dir, publicKeyPath string) error {
+	return verifyReleaseBundleWithTrust(dir, publicKeyPath, strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")), strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
 }
 
 func releaseArtifacts(ver string) []string {
@@ -761,6 +818,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if deliveryManifestRequired0151(ver) {
 		artifacts = append(artifacts, deliveryManifestFile0151)
+	}
+	if releaseVerificationV2Required0158(ver) {
+		artifacts = append(artifacts, releaseTrustPolicyFile0158)
 	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,

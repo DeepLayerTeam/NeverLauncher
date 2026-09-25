@@ -34,6 +34,7 @@ type securityKeyRegistry struct {
 	SchemaVersion string              `json:"schemaVersion"`
 	ToolVersion   string              `json:"toolVersion"`
 	UpdatedAt     string              `json:"updatedAt"`
+	TrustEpoch    uint64              `json:"trustEpoch,omitempty"`
 	Keys          []securityKeyRecord `json:"keys"`
 }
 
@@ -126,10 +127,13 @@ func rotateSecurityKey(args []string) (map[string]any, error) {
 	}
 	rec := securityKeyRecord{ID: id, Purpose: purpose, Algorithm: "Ed25519", Fingerprint: fp, PublicKeyFile: publicPath, Status: "active", CreatedAt: now}
 	reg.Keys = append(reg.Keys, rec)
+	if purpose == "release-signing" {
+		reg.TrustEpoch++
+	}
 	if err := saveKeyRegistry(dir, reg); err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "rotated", "key": rec, "privateKeyFile": privatePath, "registry": registryPath(dir)}, nil
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "rotated", "trustEpoch": reg.TrustEpoch, "key": rec, "privateKeyFile": privatePath, "registry": registryPath(dir)}, nil
 }
 
 func securityRevocations(args []string) (map[string]any, error) {
@@ -152,6 +156,7 @@ func securityRevocations(args []string) (map[string]any, error) {
 		if !found {
 			return nil, fmt.Errorf("key %s не найден", revokeID)
 		}
+		reg.TrustEpoch++
 		if err := saveKeyRegistry(dir, reg); err != nil {
 			return nil, err
 		}
@@ -163,7 +168,7 @@ func securityRevocations(args []string) (map[string]any, error) {
 		}
 	}
 	sort.Slice(revoked, func(i, j int) bool { return revoked[i].ID < revoked[j].ID })
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "registry": registryPath(dir), "status": "loaded", "revoked": revoked, "count": len(revoked)}, nil
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "registry": registryPath(dir), "trustEpoch": reg.TrustEpoch, "status": "loaded", "revoked": revoked, "count": len(revoked)}, nil
 }
 
 func securityKeys(args []string) (map[string]any, error) {
@@ -172,7 +177,7 @@ func securityKeys(args []string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "registry": registryPath(dir), "keys": reg.Keys, "count": len(reg.Keys)}, nil
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "registry": registryPath(dir), "trustEpoch": reg.TrustEpoch, "keys": reg.Keys, "count": len(reg.Keys)}, nil
 }
 
 func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {

@@ -143,7 +143,9 @@ curl -fsS http://127.0.0.1/ready
 ```bash
 python3 scripts/contracts/validate-openapi.py
 export NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE=/secure/release-private.pem
-export NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE=/etc/neverlauncher/release-public.pem
+export NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=/etc/neverlauncher/root-public.pem
+export NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=/secure/RELEASE_TRUST_POLICY.json
+export NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=/var/lib/neverlauncher/release-trust-state.json
 bash scripts/release/build-release.sh
 NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ```

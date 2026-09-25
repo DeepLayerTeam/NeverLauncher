@@ -1313,6 +1313,40 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.7 native component updater self-tests are missing from CI")
 
 
+# 0.15.8 Release Verification v2 must bind release signatures to a root-signed
+# trust policy, enforce key lifecycle states, and persist anti-rollback state.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 8):
+    rv2_0158 = read("cli/cmd/neverlauncher/release_verification_v2.go")
+    keyring_0158 = read("cli/cmd/neverlauncher/security_keyring.go")
+    release_0158 = read("cli/cmd/neverlauncher/release_commands.go")
+    build_release_0158 = read("scripts/release/build-release.sh")
+    gate_0158 = read("scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py")
+    tests_0158 = read("cli/cmd/neverlauncher/release_verification_v2_test.go")
+    for required in [
+        "RELEASE_TRUST_POLICY.json", "neverlauncher.release.v2", "verifyReleaseTrustPolicy0158",
+        "signReleaseBundleV20158", "verifyReleaseSignatureV20158", "verify-only", "revoked",
+        "trust epoch rollback", "release rollback blocked", "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE",
+    ]:
+        if required not in rv2_0158:
+            fail(f"0.15.8 Release Verification v2 incomplete: {required}")
+    for required in ["TrustEpoch", "reg.TrustEpoch++", 'Status: "active"']:
+        if required not in keyring_0158:
+            fail(f"0.15.8 trust/key lifecycle registry incomplete: {required}")
+    for required in ["verifyReleaseBundleWithTrustState", "release-verification-v2-trust-lifecycle-anti-rollback"]:
+        if required not in release_0158:
+            fail(f"0.15.8 release integration incomplete: {required}")
+    for required in ["NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE", "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE", "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE"]:
+        if required not in build_release_0158:
+            fail(f"0.15.8 production release trust input missing: {required}")
+    for required in ["TestReleaseVerificationV2TrustLifecycleAndAntiRollback", "TestReleaseTrustPolicyRejectsTampering"]:
+        if required not in tests_0158:
+            fail(f"0.15.8 verification regression tests missing: {required}")
+    if "Release Verification v2 + trust/key lifecycle gate: OK" not in gate_0158:
+        fail("0.15.8 mandatory verification gate incomplete")
+    if "release-verification-v2-trust-lifecycle-0158.py" not in preflight or "release-verification-v2-trust-lifecycle-0158.py" not in ci:
+        fail("0.15.8 verification gate is not wired into preflight/CI")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

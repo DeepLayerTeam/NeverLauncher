@@ -1,3 +1,15 @@
+## 0.15.8 — Release Verification v2 + trust/key lifecycle
+
+`0.15.8` заменяет single-key release verification на root-anchored trust hierarchy. Offline root подписывает versioned trust policy, а online release keys ротируются/отзываются независимо. Проверка релиза сохраняет monotonic trust state и fail-closed блокирует rollback trust epoch и release version. DB migration не требуется.
+
+- Добавлен `RELEASE_TRUST_POLICY.json` schema 2.0: trust domain, monotonic epoch, active/verify-only/revoked Ed25519 release keys, activation/retirement metadata и offline-root signature.
+- `security rotate-key` и `security revocation-list` двигают trust epoch; `security trust-policy` экспортирует root-signed policy из key registry, а `security trust-verify` проверяет её внешним root public key.
+- `SHA256SUMS.sig` для 0.15.8+ стал Release Verification v2 envelope и криптографически связывает SHA256SUMS, RELEASE_MANIFEST hash/version, trust epoch, key id/fingerprint и signedAt.
+- `release verify/publish-check` требуют внешний root trust anchor и persistent trust state; downgrade policy epoch/release version, revoked key, signature после retirement, expired/tampered policy и root/key reuse блокируются fail-closed.
+- `PROVENANCE.json.sig` проверяется тем же trusted release key; root/private/release private keys никогда не принимаются из release bundle.
+- В verification добавлена strict bundle path validation для required files, artifacts и SHA256SUMS, чтобы абсолютные/`..` paths не читались за пределами release directory.
+- `scripts/release/build-release.sh`, release bundle gate, CI, strict preflight, release doctor и repository policy переведены на v2 trust inputs/state.
+
 ## 0.15.7 — Desktop/Guard/Runtime transactional update
 
 `0.15.7` переводит self-update пользовательской поставки на Unified Transactional Updater Core: Desktop, NeverGuard и NeverRuntime обновляются как один проверенный transaction boundary. На Windows/Linux применяется adjacent-file transaction, а на macOS целиком переключается подписанный/notarized `.app`, чтобы не разрушать подпись bundle. DB migration не требуется.

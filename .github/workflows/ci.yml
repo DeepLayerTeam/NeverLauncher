@@ -68,6 +68,7 @@ jobs:
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
           python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
           python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py
+          python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -626,15 +627,26 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
-      - name: Generate ephemeral CI release signing key
+      - name: Generate ephemeral CI release trust hierarchy
         run: |
           umask 077
-          openssl genpkey -algorithm ED25519 -out /tmp/neverlauncher-release-private.pem
-          openssl pkey -in /tmp/neverlauncher-release-private.pem -pubout -out /tmp/neverlauncher-release-public.pem
+          openssl genpkey -algorithm ED25519 -out /tmp/neverlauncher-release-root-private.pem
+          openssl pkey -in /tmp/neverlauncher-release-root-private.pem -pubout -out /tmp/neverlauncher-release-root-public.pem
+          (cd cli && go run ./cmd/neverlauncher security rotate-key \
+            --registry-dir /tmp/neverlauncher-release-trust \
+            --key release-signing \
+            --private-key-out /tmp/neverlauncher-release-private.pem \
+            --public-key-out /tmp/neverlauncher-release-public.pem)
+          (cd cli && go run ./cmd/neverlauncher security trust-policy \
+            --registry-dir /tmp/neverlauncher-release-trust \
+            --root-private-key /tmp/neverlauncher-release-root-private.pem \
+            --policy-out /tmp/neverlauncher-release-trust-policy.json)
       - name: Build and cryptographically verify complete release bundle
         env:
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
-          NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-public.pem
+          NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
+          NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
+          NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/neverlauncher-release-trust-state.json
           NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
           NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
@@ -648,6 +660,8 @@ jobs:
           DIR="dist/release-${VERSION}"
           test -s "${DIR}/SHA256SUMS.sig"
           test -s "${DIR}/PROVENANCE.json.sig"
+          test -s "${DIR}/RELEASE_TRUST_POLICY.json"
+          jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
           test -s "${DIR}/neverguard-linux-amd64"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"

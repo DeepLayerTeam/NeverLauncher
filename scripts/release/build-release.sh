@@ -11,7 +11,9 @@ VERSION="${CANONICAL_VERSION}"
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
 PRIVATE_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
-PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}"
+PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}}"
+TRUST_POLICY="${NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE:-}"
+TRUST_STATE="${NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE:-${WORK_DIR}/release-trust-state.json}"
 COMPATIBILITY_MATRIX="${NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE:-}"
 COMPATIBILITY_TARGETS="${NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE:-${ROOT_DIR}/compatibility/targets.json}"
 DEVICE_TRUST_MATRIX="${NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE:-}"
@@ -43,12 +45,13 @@ require_file() {
 }
 
 for tool in go python3 npm cargo gradle; do require "${tool}"; done
-if [[ -z "${PRIVATE_KEY}" || -z "${PUBLIC_KEY}" ]]; then
-  echo "Ошибка: задайте NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE и NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" >&2
+if [[ -z "${PRIVATE_KEY}" || -z "${PUBLIC_KEY}" || -z "${TRUST_POLICY}" ]]; then
+  echo "Ошибка: задайте NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE, NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE и NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE" >&2
   exit 1
 fi
 require_file "${PRIVATE_KEY}"
 require_file "${PUBLIC_KEY}"
+require_file "${TRUST_POLICY}"
 python3 "${ROOT_DIR}/scripts/version/manage.py" check
 GUARD_CERT_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
 import sys
@@ -415,7 +418,7 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
 fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
-release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}")
+release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
   log "Встраивание machine-verifiable Minecraft Compatibility certification для commit ${SOURCE_COMMIT}"
   release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}")
@@ -437,10 +440,10 @@ log "Ed25519 release signing"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
-"${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+"${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then
   log "Publish-check Minecraft Compatibility + Device Trust Release + cross-platform Guard CI certification"
-  "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}"
+  "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
 elif [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD_CI_MATRIX}" ]]; then
   log "Передан неполный certification set: официальный publish-check ${VERSION} требует Compatibility, Device Trust и Guard CI evidence"
 else

@@ -4,7 +4,28 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.7**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery / 0.15.8**. ServerBridge 2 из 0.15.0 сохраняется без изменения Protocol v2; Windows остаётся подписанным x64/ARM64 boundary из 0.15.2, Linux — нативным x64/ARM64 package boundary из 0.15.3, а macOS теперь выпускается отдельными notarized x64 и ARM64 package.
+
+## Проверка релиза v2 и lifecycle доверия/ключей — 0.15.8
+
+`0.15.8` отделяет offline root trust anchor от online release-signing keys. `security rotate-key` создаёт новый release key и переводит предыдущий active key в `verify-only`; `security revocation-list --revoke <id>` блокирует скомпрометированный key. `security trust-policy` экспортирует root-signed `RELEASE_TRUST_POLICY.json`, а release verification сохраняет persistent state с максимальными trust epoch и принятой release version.
+
+```bash
+nl security rotate-key --registry-dir /secure/neverlauncher-trust --key release-signing \
+  --private-key-out /secure/release-private.pem --public-key-out /secure/release-public.pem
+nl security trust-policy --registry-dir /secure/neverlauncher-trust \
+  --root-private-key /offline/root-private.pem --policy-out /secure/RELEASE_TRUST_POLICY.json
+nl security trust-verify --path /secure/RELEASE_TRUST_POLICY.json \
+  --root-public-key /etc/neverlauncher/root-public.pem
+
+nl release build --out "dist/release-${VERSION}" --trust-policy /secure/RELEASE_TRUST_POLICY.json
+nl release sign "dist/release-${VERSION}" --private-key /secure/release-private.pem
+nl release verify "dist/release-${VERSION}" --public-key /etc/neverlauncher/root-public.pem \
+  --trust-state /var/lib/neverlauncher/release-trust-state.json \
+  --trust-policy /secure/RELEASE_TRUST_POLICY.json
+```
+
+`trust-state` должен храниться вне release bundle. После принятия более нового trust epoch или release version проверка старого bundle блокируется как rollback.
 
 ## Транзакционное обновление Desktop/Guard/Runtime — 0.15.7
 

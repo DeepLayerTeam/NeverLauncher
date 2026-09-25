@@ -41,6 +41,9 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	if err != nil {
 		return fmt.Errorf("release signing key: %w", err)
 	}
+	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
+		return signReleaseBundleV20158(dir, privateKey)
+	}
 	data, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {
 		return err
