@@ -1,6 +1,6 @@
 pluginManagement { repositories { maven("https://maven.fabricmc.net/"); maven("https://maven.minecraftforge.net/"); maven("https://maven.neoforged.net/releases/"); mavenCentral(); gradlePluginPortal() } }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         mavenCentral()
         maven("https://maven.fabricmc.net/")

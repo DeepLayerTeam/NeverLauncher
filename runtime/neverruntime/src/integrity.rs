@@ -768,7 +768,7 @@ mod tests {
 mod linux_impl {
     use super::*;
     use rand::{rngs::OsRng, RngCore};
-    use std::{collections::BTreeMap, fs::File, io::{BufReader, Read}, os::unix::fs::MetadataExt, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+    use std::{collections::BTreeMap, fs::File, io::{BufReader, Read}, path::Path, time::{SystemTime, UNIX_EPOCH}};
 
     const MAX_REPORTED_NON_SYSTEM_MODULES: usize = 64;
 

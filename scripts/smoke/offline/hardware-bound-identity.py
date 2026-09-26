@@ -13,7 +13,7 @@ def need(rel: str, needles: list[str]) -> None:
 
 need('apps/desktop/src-tauri/Cargo.toml', [
     'hardware-enclave = { version = "=0.2.10"',
-    'features = ["signing", "linux-tpm"]',
+    'features = ["signing", "encryption", "linux-tpm"]',
     'p256 = { version = "0.13", features = ["ecdsa"] }',
 ])
 need('apps/desktop/src-tauri/src/device_keys.rs', [

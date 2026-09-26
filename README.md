@@ -4,7 +4,13 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Production Delivery Release / 0.16.0**. GA-релиз сохраняет ServerBridge 2 Protocol v2, signed Windows x64/ARM64, native Linux x64/ARM64, notarized macOS x64/ARM64, six-target Managed JRE, transactional updater и Release Verification v2 как единый production boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **CI Recovery / 0.16.1**. Patch-релиз сохраняет production boundary 0.16.0 и устраняет ошибки, из-за которых обязательные CI/Compatibility/Device Trust jobs не могли пройти на одном commit.
+
+## CI Recovery — 0.16.1
+
+`0.16.1` — maintenance-релиз без новой DB migration и без ослабления release/security gates. Он исправляет фактические причины красного `main`: Fabric Loom теперь может регистрировать собственный remapped-mod repository; production Compose CI получает обязательную WebAuthn-конфигурацию; Desktop frontend использует типы, соответствующие реальным ответам Backend API; NeverRuntime исправляет Rust lifetime error `E0716`; Tauri Device Trust включает требуемую `hardware-enclave` encryption feature; Windows hardening gate проверяет актуальный `signtool`/RFC3161/Authenticode pipeline. Rust jobs нормализуют исходники через `cargo fmt` перед строгими `cargo test`/`cargo clippy -D warnings`, поэтому форматирование больше не скрывает реальные compile/test failures.
+
+Compatibility, Device Trust, NeverGuard и ServerBridge остаются fail-closed: CI Recovery не заменяет E2E декларациями и не переводит обязательные jobs в `continue-on-error`.
 
 ## Production Delivery Release — 0.16.0
 

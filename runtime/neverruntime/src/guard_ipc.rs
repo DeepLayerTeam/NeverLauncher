@@ -14,7 +14,9 @@ use sha2::Digest;
 #[cfg(any(windows, test))]
 use subtle::ConstantTimeEq;
 use std::path::{Path, PathBuf};
-use crate::attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation};
+use crate::attestation::NeverGuardRemoteAttestation;
+#[cfg(windows)]
+use crate::attestation::GuardAttestationRequest;
 use crate::integrity::NeverGuardIntegrityEvidence;
 use crate::windows_policy::GuardProcessPolicyReport;
 #[cfg(windows)]

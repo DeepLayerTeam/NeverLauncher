@@ -1,3 +1,15 @@
+## 0.16.1 — CI Recovery
+
+`0.16.1` восстанавливает обязательный CI-контур поверх Production Delivery Release 0.16.0 без новой DB migration и без отключения functional/security gates.
+
+- Исправлен Gradle repository policy: Fabric Loom 1.17.21 может добавить `LoomLocalRemappedMods`, поэтому ServerBridge и actual-client compatibility больше не падают до сборки plugins.
+- Production Compose validation получает обязательные `NEVERLAUNCHER_WEBAUTHN_RP_ID` и `NEVERLAUNCHER_WEBAUTHN_ORIGINS`.
+- Desktop frontend readiness/binding models приведены к фактической структуре Backend API; устранены TypeScript `TS2353` в production build.
+- NeverRuntime исправляет `E0716` в OS target normalization; Linux-only unused imports устранены для strict `clippy -D warnings`.
+- Tauri Device Trust включает `hardware-enclave` feature `encryption`, необходимую для Linux TPM/software encryptor implementation.
+- Windows production hardening smoke gate синхронизирован с реальным `signtool sign/verify` + RFC3161 + Authenticode pipeline и текущим package verification boundary.
+- Rust CI нормализует formatting перед test/clippy/build, не маскируя compile/test/security failures.
+
 ## 0.16.0 — Production Delivery Release
 
 `0.16.0` — GA-релиз production delivery-контура 0.15.1–0.15.11. Он не добавляет DB migration и не ослабляет RC: `PRODUCTION_RELEASE_CANDIDATE.json` остаётся exact-commit pre-sign certification, а новый `PRODUCTION_DELIVERY_RELEASE.json` промотит его в stable six-target release и сам входит в Release Verification v2 signature boundary.

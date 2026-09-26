@@ -65,9 +65,11 @@ type CleanUnusedResult = { moved: number; preserved: number; quarantineDir: stri
 type LaunchHistoryEntry = { startedAt: string; projectId: string; profileId: string; version: string; success: boolean; exitCode?: number; logPath: string; message: string };
 type BackendProject = { id: string; title?: string; name?: string; homepage?: string; profilesEndpoint?: string };
 type BackendProfile = { id: string; title?: string; name?: string; loader?: string; defaultChannel?: string; description?: string };
-type DesktopReadiness = { schemaVersion?: string; toolVersion?: string; status?: string; checks?: Record<string, string>; requiredScreens?: string[]; actions?: string[] };
-type DesktopDiagnosticsPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; privacyMode?: string; sections?: string[]; export?: Record<string, unknown> };
-type DesktopBindingPolicy = { schemaVersion?: string; toolVersion?: string; status?: string; required?: string[]; storage?: Record<string, unknown>; manifestUrlTemplate?: string; checks?: string[] };
+type BackendReadiness = { status?: string; version?: string; storage?: unknown; repository?: unknown; checks?: Record<string, unknown> };
+type BackendServiceStatus = { name?: string; version?: string; status?: string; environment?: string; message?: string; storage?: unknown };
+type DesktopReadiness = { status: string; readiness: BackendReadiness; serviceStatus: BackendServiceStatus; apiVersion: 'v1'; runtime: 'NeverRuntime' };
+type DesktopDiagnosticsPolicy = { enabled?: boolean; version?: string; privacyMode?: string; allowedFields?: string[]; redactedFields?: string[]; status?: string };
+type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Ed25519 pinned-key required'; runtime: 'NeverRuntime' };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
 type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
@@ -758,8 +760,14 @@ function App() {
       const status = await fetchBackendJson('/api/v1/status');
       await fetchBackendJson('/api/v1/runtime/requirements');
       const diagnostics = await fetchBackendJson('/api/v1/diagnostics/policy');
-      setReadinessContract({ readiness, status, apiVersion: 'v1', runtime: 'NeverRuntime' });
-      setDiagnosticsPolicy(diagnostics ?? null);
+      setReadinessContract({
+        status: String(readiness?.status ?? status?.status ?? 'ready'),
+        readiness: readiness ?? {},
+        serviceStatus: status ?? {},
+        apiVersion: 'v1',
+        runtime: 'NeverRuntime',
+      });
+      setDiagnosticsPolicy(diagnostics ? { ...diagnostics, status: diagnostics.enabled === false ? 'disabled' : 'enabled' } : null);
       setBindingPolicy({ apiVersion: 'v1', manifestVerification: 'Ed25519 pinned-key required', runtime: 'NeverRuntime' });
       setBackendStatus('ready');
       log('Backend API v1 готов: health, readiness, status, требования runtime и политика диагностики отвечают.');

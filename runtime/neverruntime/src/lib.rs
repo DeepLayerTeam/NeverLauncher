@@ -879,7 +879,8 @@ fn manifest_file_applies(file: &ManifestFile) -> bool {
         other => other,
     };
     file.target_os.iter().any(|item| {
-        let normalized = match item.trim().to_ascii_lowercase().as_str() {
+        let normalized_item = item.trim().to_ascii_lowercase();
+        let normalized = match normalized_item.as_str() {
             "macos" | "darwin" | "osx" => "osx",
             "win" | "windows" => "windows",
             "linux" => "linux",

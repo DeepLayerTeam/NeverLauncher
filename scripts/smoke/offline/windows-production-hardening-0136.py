@@ -89,13 +89,15 @@ require(release, [
     "RequireCodeSigning",
     "AllowUnsignedDevelopmentPackage",
     "$SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)",
-    "Set-AuthenticodeSignature",
+    "Sign-And-VerifyAuthenticode",
+    "signtool sign",
+    "signtool verify",
     "Get-AuthenticodeSignature",
     "neverGuardProtocolVersion = 4",
     "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
-    "authenticodeRequired = $AuthenticodeRequired",
-    "requireAuthenticode = $AuthenticodeRequired",
-    "packageVerification = \"sha256-before-neverguard-spawn\"",
+    "authenticodeRequired = $SignedProduction",
+    "requireAuthenticode = $SignedProduction",
+    "packageVerification = \"sha256+pe-machine+authenticode-before-neverguard-spawn\"",
 ], "Windows signed release pipeline")
 
 integration = read("runtime/neverruntime/tests/neverguard_windows.rs")
