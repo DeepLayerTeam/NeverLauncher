@@ -706,31 +706,21 @@ async fn client_authenticate(
         return Err("NeverGuard IPC protocol mismatch на server challenge".to_string());
     }
     let server_nonce = decode_hex_32(&challenge.server_nonce, "serverNonce")?;
-    let expected_server_proof = handshake_proof(
-        bootstrap_secret,
-        b"server",
+    let handshake = HandshakeContext {
         endpoint,
         client_pid,
-        challenge.guard_pid,
-        challenge.started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+        guard_pid: challenge.guard_pid,
+        started_at_unix: challenge.started_at_unix,
+        client_nonce: &client_nonce,
+        server_nonce: &server_nonce,
+    };
+    let expected_server_proof = handshake_proof(bootstrap_secret, b"server", &handshake);
     let actual_server_proof = decode_hex_32(&challenge.server_proof, "serverProof")?;
     if !constant_time_eq(&expected_server_proof, &actual_server_proof) {
         return Err("NeverGuard server authentication failed".to_string());
     }
 
-    let client_proof = handshake_proof(
-        bootstrap_secret,
-        b"client",
-        endpoint,
-        client_pid,
-        challenge.guard_pid,
-        challenge.started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+    let client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
     write_frame(
         &mut pipe,
         &ClientAuthentication {
@@ -740,15 +730,7 @@ async fn client_authenticate(
     )
     .await?;
 
-    let session_key = derive_session_key(
-        bootstrap_secret,
-        endpoint,
-        client_pid,
-        challenge.guard_pid,
-        challenge.started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+    let session_key = derive_session_key(bootstrap_secret, &handshake);
     let ready: ServerReady = read_frame(&mut pipe).await?;
     if ready.kind != "ready"
         || ready.protocol_version != NEVERGUARD_PROTOCOL_VERSION
@@ -764,13 +746,15 @@ async fn client_authenticate(
     }
     let expected_ready = ready_proof(
         &session_key,
-        ready.guard_pid,
-        ready.started_at_unix,
-        ready.process_policy_version,
-        ready.process_policy_enforced,
-        ready.hardening_version,
-        ready.hardening_enforced,
-        ready.secure_pipe_acl,
+        ReadyProofState {
+            guard_pid: ready.guard_pid,
+            started_at_unix: ready.started_at_unix,
+            process_policy_version: ready.process_policy_version,
+            process_policy_enforced: ready.process_policy_enforced,
+            hardening_version: ready.hardening_version,
+            hardening_enforced: ready.hardening_enforced,
+            secure_pipe_acl: ready.secure_pipe_acl,
+        },
     );
     let actual_ready = decode_hex_32(&ready.ready_proof, "readyProof")?;
     if !constant_time_eq(&expected_ready, &actual_ready) {
@@ -886,6 +870,7 @@ fn parse_status(value: Value) -> Result<NeverGuardStatus, String> {
     Ok(status)
 }
 
+#[cfg(windows)]
 fn validate_release_identity(status: &NeverGuardStatus, expected_platform: &str) -> Result<(), String> {
     if status.product_version != env!("CARGO_PKG_VERSION") {
         return Err(format!(
@@ -1100,7 +1085,7 @@ fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> 
 
     let mut attributes = SECURITY_ATTRIBUTES {
         nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
-        lpSecurityDescriptor: security_descriptor as *mut c_void,
+        lpSecurityDescriptor: security_descriptor,
         bInheritHandle: 0,
     };
     let result = unsafe {
@@ -1114,7 +1099,7 @@ fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> 
             )
     };
     unsafe {
-        let _ = LocalFree(security_descriptor as *mut c_void);
+        let _ = LocalFree(security_descriptor);
     }
     result.map_err(|err| format!("не удалось создать hardened NeverGuard named pipe {endpoint}: {err}"))
 }
@@ -1148,10 +1133,11 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     }
 
     let mut bootstrap_secret = [0u8; BOOTSTRAP_SECRET_LEN];
-    let mut bootstrap_stdin = std::io::stdin();
-    std::io::Read::read_exact(&mut bootstrap_stdin, &mut bootstrap_secret)
-        .map_err(|err| format!("NeverGuard bootstrap secret не получен: {err}"))?;
-    drop(bootstrap_stdin);
+    {
+        let mut bootstrap_stdin = std::io::stdin();
+        std::io::Read::read_exact(&mut bootstrap_stdin, &mut bootstrap_secret)
+            .map_err(|err| format!("NeverGuard bootstrap secret не получен: {err}"))?;
+    }
 
     let started_at_unix = now_unix()?;
     let mut server = create_secure_pipe_server(&endpoint)?;
@@ -1189,13 +1175,15 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             handshake_budget,
             server_authenticate(
                 &mut server,
-                &endpoint,
-                parent_pid,
-                guard_pid,
-                started_at_unix,
-                &bootstrap_secret,
-                &process_policy,
-                &hardening,
+                &ServerAuthContext {
+                    endpoint: &endpoint,
+                    expected_parent_pid: parent_pid,
+                    guard_pid,
+                    started_at_unix,
+                    bootstrap_secret: &bootstrap_secret,
+                    process_policy: &process_policy,
+                    hardening: &hardening,
+                },
             ),
         )
         .await;
@@ -1241,14 +1229,17 @@ pub async fn run_windows_guard_server(_endpoint: String, _parent_pid: u32) -> Re
 #[cfg(windows)]
 async fn server_authenticate(
     server: &mut NamedPipeServer,
-    endpoint: &str,
-    expected_parent_pid: u32,
-    guard_pid: u32,
-    started_at_unix: u64,
-    bootstrap_secret: &[u8; 32],
-    process_policy: &GuardProcessPolicyReport,
-    hardening: &WindowsProductionHardeningReport,
+    context: &ServerAuthContext<'_>,
 ) -> Result<[u8; 32], String> {
+    let ServerAuthContext {
+        endpoint,
+        expected_parent_pid,
+        guard_pid,
+        started_at_unix,
+        bootstrap_secret,
+        process_policy,
+        hardening,
+    } = *context;
     let hello: ClientHello = read_frame(server).await?;
     if hello.kind != "hello"
         || hello.protocol_version != NEVERGUARD_PROTOCOL_VERSION
@@ -1258,16 +1249,15 @@ async fn server_authenticate(
     }
     let client_nonce = decode_hex_32(&hello.client_nonce, "clientNonce")?;
     let server_nonce = random_bytes_32();
-    let server_proof = handshake_proof(
-        bootstrap_secret,
-        b"server",
+    let handshake = HandshakeContext {
         endpoint,
-        hello.client_pid,
+        client_pid: hello.client_pid,
         guard_pid,
         started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+        client_nonce: &client_nonce,
+        server_nonce: &server_nonce,
+    };
+    let server_proof = handshake_proof(bootstrap_secret, b"server", &handshake);
     write_frame(
         server,
         &ServerChallenge {
@@ -1285,30 +1275,13 @@ async fn server_authenticate(
     if authentication.kind != "authenticate" {
         return Err("NeverGuard client authentication message rejected".to_string());
     }
-    let expected_client_proof = handshake_proof(
-        bootstrap_secret,
-        b"client",
-        endpoint,
-        hello.client_pid,
-        guard_pid,
-        started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+    let expected_client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
     let actual_client_proof = decode_hex_32(&authentication.client_proof, "clientProof")?;
     if !constant_time_eq(&expected_client_proof, &actual_client_proof) {
         return Err("NeverGuard client authentication failed".to_string());
     }
 
-    let session_key = derive_session_key(
-        bootstrap_secret,
-        endpoint,
-        hello.client_pid,
-        guard_pid,
-        started_at_unix,
-        &client_nonce,
-        &server_nonce,
-    );
+    let session_key = derive_session_key(bootstrap_secret, &handshake);
     write_frame(
         server,
         &ServerReady {
@@ -1323,13 +1296,15 @@ async fn server_authenticate(
             secure_pipe_acl: true,
             ready_proof: hex::encode(ready_proof(
                 &session_key,
-                guard_pid,
-                started_at_unix,
-                process_policy.policy_version,
-                process_policy.enforced,
-                hardening.hardening_version,
-                hardening.enforced,
-                true,
+                ReadyProofState {
+                    guard_pid,
+                    started_at_unix,
+                    process_policy_version: process_policy.policy_version,
+                    process_policy_enforced: process_policy.enforced,
+                    hardening_version: hardening.hardening_version,
+                    hardening_enforced: hardening.enforced,
+                    secure_pipe_acl: true,
+                },
             )),
         },
     )
@@ -1593,85 +1568,18 @@ fn decode_hex_32(value: &str, field: &str) -> Result<[u8; 32], String> {
 }
 
 #[cfg(any(windows, test))]
-fn append_len_prefixed(out: &mut Vec<u8>, value: &[u8]) {
-    out.extend_from_slice(&(value.len() as u32).to_le_bytes());
-    out.extend_from_slice(value);
-}
-
-#[cfg(any(windows, test))]
-fn handshake_transcript(
-    label: &[u8],
-    endpoint: &str,
+struct HandshakeContext<'a> {
+    endpoint: &'a str,
     client_pid: u32,
     guard_pid: u32,
     started_at_unix: u64,
-    client_nonce: &[u8; 32],
-    server_nonce: &[u8; 32],
-) -> Vec<u8> {
-    let mut data = Vec::with_capacity(192);
-    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v4\0");
-    append_len_prefixed(&mut data, label);
-    append_len_prefixed(&mut data, endpoint.as_bytes());
-    data.extend_from_slice(&client_pid.to_le_bytes());
-    data.extend_from_slice(&guard_pid.to_le_bytes());
-    data.extend_from_slice(&started_at_unix.to_le_bytes());
-    data.extend_from_slice(client_nonce);
-    data.extend_from_slice(server_nonce);
-    data
+    client_nonce: &'a [u8; 32],
+    server_nonce: &'a [u8; 32],
 }
 
 #[cfg(any(windows, test))]
-fn handshake_proof(
-    secret: &[u8; 32],
-    label: &[u8],
-    endpoint: &str,
-    client_pid: u32,
-    guard_pid: u32,
-    started_at_unix: u64,
-    client_nonce: &[u8; 32],
-    server_nonce: &[u8; 32],
-) -> [u8; 32] {
-    hmac_sha256(
-        secret,
-        &handshake_transcript(
-            label,
-            endpoint,
-            client_pid,
-            guard_pid,
-            started_at_unix,
-            client_nonce,
-            server_nonce,
-        ),
-    )
-}
-
-#[cfg(any(windows, test))]
-fn derive_session_key(
-    secret: &[u8; 32],
-    endpoint: &str,
-    client_pid: u32,
-    guard_pid: u32,
-    started_at_unix: u64,
-    client_nonce: &[u8; 32],
-    server_nonce: &[u8; 32],
-) -> [u8; 32] {
-    hmac_sha256(
-        secret,
-        &handshake_transcript(
-            b"session-key",
-            endpoint,
-            client_pid,
-            guard_pid,
-            started_at_unix,
-            client_nonce,
-            server_nonce,
-        ),
-    )
-}
-
-#[cfg(any(windows, test))]
-fn ready_proof(
-    session_key: &[u8; 32],
+#[derive(Clone, Copy)]
+struct ReadyProofState {
     guard_pid: u32,
     started_at_unix: u64,
     process_policy_version: u32,
@@ -1679,16 +1587,65 @@ fn ready_proof(
     hardening_version: u32,
     hardening_enforced: bool,
     secure_pipe_acl: bool,
+}
+
+#[cfg(windows)]
+#[derive(Clone, Copy)]
+struct ServerAuthContext<'a> {
+    endpoint: &'a str,
+    expected_parent_pid: u32,
+    guard_pid: u32,
+    started_at_unix: u64,
+    bootstrap_secret: &'a [u8; 32],
+    process_policy: &'a GuardProcessPolicyReport,
+    hardening: &'a WindowsProductionHardeningReport,
+}
+
+#[cfg(any(windows, test))]
+fn append_len_prefixed(out: &mut Vec<u8>, value: &[u8]) {
+    out.extend_from_slice(&(value.len() as u32).to_le_bytes());
+    out.extend_from_slice(value);
+}
+
+#[cfg(any(windows, test))]
+fn handshake_transcript(label: &[u8], context: &HandshakeContext<'_>) -> Vec<u8> {
+    let mut data = Vec::with_capacity(192);
+    data.extend_from_slice(b"NeverLauncher NeverGuard IPC v4\0");
+    append_len_prefixed(&mut data, label);
+    append_len_prefixed(&mut data, context.endpoint.as_bytes());
+    data.extend_from_slice(&context.client_pid.to_le_bytes());
+    data.extend_from_slice(&context.guard_pid.to_le_bytes());
+    data.extend_from_slice(&context.started_at_unix.to_le_bytes());
+    data.extend_from_slice(context.client_nonce);
+    data.extend_from_slice(context.server_nonce);
+    data
+}
+
+#[cfg(any(windows, test))]
+fn handshake_proof(
+    secret: &[u8; 32],
+    label: &[u8],
+    context: &HandshakeContext<'_>,
 ) -> [u8; 32] {
+    hmac_sha256(secret, &handshake_transcript(label, context))
+}
+
+#[cfg(any(windows, test))]
+fn derive_session_key(secret: &[u8; 32], context: &HandshakeContext<'_>) -> [u8; 32] {
+    hmac_sha256(secret, &handshake_transcript(b"session-key", context))
+}
+
+#[cfg(any(windows, test))]
+fn ready_proof(session_key: &[u8; 32], state: ReadyProofState) -> [u8; 32] {
     let mut data = Vec::with_capacity(96);
     data.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v4\0");
-    data.extend_from_slice(&guard_pid.to_le_bytes());
-    data.extend_from_slice(&started_at_unix.to_le_bytes());
-    data.extend_from_slice(&process_policy_version.to_le_bytes());
-    data.push(u8::from(process_policy_enforced));
-    data.extend_from_slice(&hardening_version.to_le_bytes());
-    data.push(u8::from(hardening_enforced));
-    data.push(u8::from(secure_pipe_acl));
+    data.extend_from_slice(&state.guard_pid.to_le_bytes());
+    data.extend_from_slice(&state.started_at_unix.to_le_bytes());
+    data.extend_from_slice(&state.process_policy_version.to_le_bytes());
+    data.push(u8::from(state.process_policy_enforced));
+    data.extend_from_slice(&state.hardening_version.to_le_bytes());
+    data.push(u8::from(state.hardening_enforced));
+    data.push(u8::from(state.secure_pipe_acl));
     hmac_sha256(session_key, &data)
 }
 
@@ -1734,7 +1691,7 @@ fn integrity_session_proof(session_key: &[u8; 32], evidence_digest: &[u8; 32]) -
     hmac_sha256(session_key, &data)
 }
 
-#[cfg(any(windows, test))]
+#[cfg(windows)]
 fn attestation_session_proof(session_key: &[u8; 32], attestation_digest: &[u8; 32]) -> [u8; 32] {
     let mut data = Vec::with_capacity(80);
     data.extend_from_slice(b"NeverLauncher NeverGuard remote attestation session v1\0");
@@ -1806,26 +1763,10 @@ mod tests {
         let secret = [7u8; 32];
         let client_nonce = [1u8; 32];
         let server_nonce = [2u8; 32];
-        let a = handshake_proof(
-            &secret,
-            b"server",
-            r"\\.\pipe\NeverLauncher.Guard.10.aaa",
-            10,
-            20,
-            30,
-            &client_nonce,
-            &server_nonce,
-        );
-        let b = handshake_proof(
-            &secret,
-            b"server",
-            r"\\.\pipe\NeverLauncher.Guard.11.aaa",
-            10,
-            20,
-            30,
-            &client_nonce,
-            &server_nonce,
-        );
+        let first = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.10.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let second = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.11.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let a = handshake_proof(&secret, b"server", &first);
+        let b = handshake_proof(&secret, b"server", &second);
         assert_ne!(a, b);
     }
 
@@ -1834,37 +1775,22 @@ mod tests {
         let secret = [3u8; 32];
         let client_nonce = [4u8; 32];
         let server_nonce = [5u8; 32];
-        let session = derive_session_key(
-            &secret,
-            r"\\.\pipe\NeverLauncher.Guard.42.abcdef",
-            42,
-            43,
-            44,
-            &client_nonce,
-            &server_nonce,
-        );
-        let server = handshake_proof(
-            &secret,
-            b"server",
-            r"\\.\pipe\NeverLauncher.Guard.42.abcdef",
-            42,
-            43,
-            44,
-            &client_nonce,
-            &server_nonce,
-        );
+        let handshake = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.42.abcdef", client_pid: 42, guard_pid: 43, started_at_unix: 44, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let session = derive_session_key(&secret, &handshake);
+        let server = handshake_proof(&secret, b"server", &handshake);
         assert_ne!(session, server);
-        assert_ne!(ready_proof(&session, 43, 44, 1, true, 1, true, true), session);
+        assert_ne!(ready_proof(&session, ReadyProofState { guard_pid: 43, started_at_unix: 44, process_policy_version: 1, process_policy_enforced: true, hardening_version: 1, hardening_enforced: true, secure_pipe_acl: true }), session);
     }
 
     #[test]
     fn ready_proof_is_bound_to_process_policy_state() {
         let key = [6u8; 32];
-        let enforced = ready_proof(&key, 43, 44, 1, true, 1, true, true);
-        let not_enforced = ready_proof(&key, 43, 44, 1, false, 1, true, true);
-        let next_version = ready_proof(&key, 43, 44, 2, true, 1, true, true);
-        let no_hardening = ready_proof(&key, 43, 44, 1, true, 1, false, true);
-        let insecure_acl = ready_proof(&key, 43, 44, 1, true, 1, true, false);
+        let base = ReadyProofState { guard_pid: 43, started_at_unix: 44, process_policy_version: 1, process_policy_enforced: true, hardening_version: 1, hardening_enforced: true, secure_pipe_acl: true };
+        let enforced = ready_proof(&key, base);
+        let not_enforced = ready_proof(&key, ReadyProofState { process_policy_enforced: false, ..base });
+        let next_version = ready_proof(&key, ReadyProofState { process_policy_version: 2, ..base });
+        let no_hardening = ready_proof(&key, ReadyProofState { hardening_enforced: false, ..base });
+        let insecure_acl = ready_proof(&key, ReadyProofState { secure_pipe_acl: false, ..base });
         assert_ne!(enforced, not_enforced);
         assert_ne!(enforced, next_version);
         assert_ne!(enforced, no_hardening);

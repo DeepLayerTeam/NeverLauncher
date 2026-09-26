@@ -78,7 +78,7 @@ mod imp {
         let Some(index) = text.find(&needle) else { return false; };
         let tail = &text[index + needle.len()..];
         tail.find("<true/>").is_some_and(|true_index| {
-            tail.find("<key>").map_or(true, |next_key| true_index < next_key)
+            tail.find("<key>").is_none_or(|next_key| true_index < next_key)
         })
     }
 

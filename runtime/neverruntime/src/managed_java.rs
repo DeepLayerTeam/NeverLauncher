@@ -166,18 +166,20 @@ pub async fn ensure_managed_java(
 
     install_managed_java_archive(
         &runtime_root,
-        &distribution,
-        required_major,
-        &platform.0,
-        &platform.1,
-        &asset.release_name,
-        &asset.version.semver,
-        &asset.binary.package.link,
-        &asset.binary.package.name,
-        &checksum,
-        asset.binary.package.size,
-        None,
-        None,
+        ManagedJavaInstallRequest {
+            distribution: &distribution,
+            required_major,
+            platform_os: &platform.0,
+            platform_arch: &platform.1,
+            release_name: &asset.release_name,
+            semver: &asset.version.semver,
+            source_url: &asset.binary.package.link,
+            archive_name: &asset.binary.package.name,
+            checksum: &checksum,
+            archive_size: asset.binary.package.size,
+            local_archive: None,
+            expected_java_entry: None,
+        },
     )
     .await
 }
@@ -247,18 +249,20 @@ pub async fn ensure_managed_java_from_distribution(
     let (archive_source, local_archive) = archive_base.resolve(&target.archive)?;
     install_managed_java_archive(
         &runtime_root,
-        &distribution,
-        required_major,
-        &record_os,
-        &record_arch,
-        &target.release_name,
-        &target.semver,
-        &archive_source,
-        &target.archive,
-        &target.sha256,
-        target.size,
-        local_archive.as_deref(),
-        Some(&target.java_entry),
+        ManagedJavaInstallRequest {
+            distribution: &distribution,
+            required_major,
+            platform_os: &record_os,
+            platform_arch: &record_arch,
+            release_name: &target.release_name,
+            semver: &target.semver,
+            source_url: &archive_source,
+            archive_name: &target.archive,
+            checksum: &target.sha256,
+            archive_size: target.size,
+            local_archive: local_archive.as_deref(),
+            expected_java_entry: Some(&target.java_entry),
+        },
     )
     .await
 }
@@ -432,21 +436,39 @@ fn configured_distribution_manifest() -> Result<Option<(String, Option<String>)>
     Ok(None)
 }
 
+struct ManagedJavaInstallRequest<'a> {
+    distribution: &'a str,
+    required_major: u32,
+    platform_os: &'a str,
+    platform_arch: &'a str,
+    release_name: &'a str,
+    semver: &'a str,
+    source_url: &'a str,
+    archive_name: &'a str,
+    checksum: &'a str,
+    archive_size: u64,
+    local_archive: Option<&'a Path>,
+    expected_java_entry: Option<&'a str>,
+}
+
 async fn install_managed_java_archive(
     runtime_root: &Path,
-    distribution: &str,
-    required_major: u32,
-    platform_os: &str,
-    platform_arch: &str,
-    release_name: &str,
-    semver: &str,
-    source_url: &str,
-    archive_name: &str,
-    checksum: &str,
-    archive_size: u64,
-    local_archive: Option<&Path>,
-    expected_java_entry: Option<&str>,
+    request: ManagedJavaInstallRequest<'_>,
 ) -> Result<ManagedJavaResult, String> {
+    let ManagedJavaInstallRequest {
+        distribution,
+        required_major,
+        platform_os,
+        platform_arch,
+        release_name,
+        semver,
+        source_url,
+        archive_name,
+        checksum,
+        archive_size,
+        local_archive,
+        expected_java_entry,
+    } = request;
     let checksum = normalize_sha256(checksum)?;
     if archive_size == 0 || archive_size > MAX_RUNTIME_ARCHIVE_SIZE {
         return Err(format!("некорректный размер Java runtime archive: {archive_size}"));

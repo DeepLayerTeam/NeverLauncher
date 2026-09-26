@@ -1,5 +1,5 @@
 plugins {
-    id("net.fabricmc.fabric-loom") version "1.17.21"
+    id("net.fabricmc.fabric-loom-remap") version "1.17.21"
 }
 
 version = rootProject.file("VERSION").readText().trim()

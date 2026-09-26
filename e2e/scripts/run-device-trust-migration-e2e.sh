@@ -124,8 +124,9 @@ printf '[device-trust-migration-e2e] upgrade with shipping CLI and verify sealed
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
 
 latest_after="$(psql "$DB_DSN" -Atqc "SELECT max(version) FROM schema_migrations")"
-[[ "$latest_after" == "0018_device_trust_stabilization_01210" ]] || { echo "unexpected post-upgrade migration: $latest_after" >&2; exit 1; }
-sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'")"
+shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'")"
 [[ "$sealed" == "true" ]]
 
 printf '[device-trust-migration-e2e] verify normalization and new relational boundaries\n'

@@ -35,7 +35,7 @@ require(settings, [
 
 build_gradle = read("plugins/fabric-bridge/build.gradle.kts")
 require(build_gradle, [
-    'id("net.fabricmc.fabric-loom") version "1.17.21"',
+    'id("net.fabricmc.fabric-loom-remap") version "1.17.21"',
     'minecraft("com.mojang:minecraft:1.21.1")',
     'mappings("net.fabricmc:yarn:1.21.1+build.3:v2")',
     'modImplementation("net.fabricmc:fabric-loader:0.16.14")',

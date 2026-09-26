@@ -10,7 +10,7 @@ COPY services/api/pkg ./pkg
 RUN go build -trimpath -ldflags="-s -w -X main.version=${NEVERLAUNCHER_VERSION}" -o /out/neverlauncher-api ./cmd/neverlauncher-api
 
 FROM alpine:3.20
-RUN apk add --no-cache postgresql-client libargon2 wget ca-certificates \
+RUN apk add --no-cache postgresql-client argon2-libs wget ca-certificates \
     && addgroup -g 10001 neverlauncher \
     && adduser -D -H -u 10001 -G neverlauncher neverlauncher \
     && mkdir -p /var/lib/neverlauncher/storage/current /var/lib/neverlauncher/backups \

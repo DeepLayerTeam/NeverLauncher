@@ -549,10 +549,10 @@ pub fn sign_guard_attestation(
         .map_err(|e| format!("hardware Guard Attestation signing failed: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
-        fingerprint: record.fingerprint,
-        public_key: record.public_key,
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
         signature,
-        key_algorithm: record.key_algorithm,
+        key_algorithm: record.key_algorithm.clone(),
         key_binding: record.key_binding.clone(),
         hardware_provider: record.hardware_provider.clone(),
         hardware_bound: true,
@@ -583,10 +583,10 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
         URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes())
     };
     Ok(DeviceSignatureResult {
-        fingerprint: record.fingerprint,
-        public_key: record.public_key,
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
         signature,
-        key_algorithm: record.key_algorithm,
+        key_algorithm: record.key_algorithm.clone(),
         key_binding: record.key_binding.clone(),
         hardware_provider: record.hardware_provider.clone(),
         hardware_bound: record.key_binding == "hardware",
@@ -639,10 +639,10 @@ pub fn sign_session_refresh(
         URL_SAFE_NO_PAD.encode(signing.sign(payload.as_bytes()).to_bytes())
     };
     Ok(DeviceSignatureResult {
-        fingerprint: record.fingerprint,
-        public_key: record.public_key,
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
         signature,
-        key_algorithm: record.key_algorithm,
+        key_algorithm: record.key_algorithm.clone(),
         key_binding: record.key_binding.clone(),
         hardware_provider: record.hardware_provider.clone(),
         hardware_bound: record.key_binding == "hardware",
@@ -664,10 +664,10 @@ pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) ->
         .map_err(|e| format!("hardware device attestation signing failed: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
-        fingerprint: record.fingerprint,
-        public_key: record.public_key,
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
         signature,
-        key_algorithm: record.key_algorithm,
+        key_algorithm: record.key_algorithm.clone(),
         key_binding: record.key_binding.clone(),
         hardware_provider: record.hardware_provider.clone(),
         hardware_bound: true,
@@ -740,7 +740,7 @@ pub fn sign_staged_device_replacement(backend_url: &str, user_id: &str, payload:
         return Err("replacement payload не соответствует staged device key".into());
     }
     let signature = sign_with_record(&mut record, payload)?;
-    Ok(DeviceSignatureResult { fingerprint: record.fingerprint, public_key: record.public_key, signature, key_algorithm: record.key_algorithm, key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
+    Ok(DeviceSignatureResult { fingerprint: record.fingerprint.clone(), public_key: record.public_key.clone(), signature, key_algorithm: record.key_algorithm.clone(), key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
 }
 
 pub fn sign_current_device_replacement(backend_url: &str, user_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
@@ -754,7 +754,7 @@ pub fn sign_current_device_replacement(backend_url: &str, user_id: &str, payload
         return Err("rotation payload не соответствует текущему device key".into());
     }
     let signature = sign_with_record(&mut record, payload)?;
-    Ok(DeviceSignatureResult { fingerprint: record.fingerprint, public_key: record.public_key, signature, key_algorithm: record.key_algorithm, key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
+    Ok(DeviceSignatureResult { fingerprint: record.fingerprint.clone(), public_key: record.public_key.clone(), signature, key_algorithm: record.key_algorithm.clone(), key_binding: record.key_binding.clone(), hardware_provider: record.hardware_provider.clone(), hardware_bound: record.key_binding == "hardware" })
 }
 
 pub fn commit_staged_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Result<DeviceKeyInfo, String> {

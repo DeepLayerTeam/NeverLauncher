@@ -458,10 +458,12 @@ fn merge_layers(layers: &[(String, String, VersionMetadata)]) -> Result<MergedVe
     Ok(merged)
 }
 
+type ResolvedLibraries = (Vec<ResolvedLibrary>, Vec<ResolvedNative>, Vec<String>);
+
 fn resolve_libraries(
     libraries: &[Library],
     environment: &CompatibilityEnvironment,
-) -> Result<(Vec<ResolvedLibrary>, Vec<ResolvedNative>, Vec<String>), String> {
+) -> Result<ResolvedLibraries, String> {
     let mut resolved = Vec::new();
     let mut natives = Vec::new();
     let mut classpath = Vec::new();
@@ -530,13 +532,7 @@ fn resolve_libraries(
 }
 
 fn native_classifier<'a>(library: &'a Library, environment: &CompatibilityEnvironment) -> Option<&'a String> {
-    let key = match environment.os.as_str() {
-        "windows" => "windows",
-        "linux" => "linux",
-        "osx" => "osx",
-        other => other,
-    };
-    library.natives.get(key)
+    library.natives.get(environment.os.as_str())
 }
 
 fn resolve_arguments(arguments: &[Argument], environment: &CompatibilityEnvironment) -> Result<Vec<String>, String> {
@@ -583,10 +579,11 @@ fn rule_matches(rule: &Rule, environment: &CompatibilityEnvironment) -> Result<b
         if !os.arch.trim().is_empty() && !pattern_matches(&os.arch, &environment.arch)? {
             return Ok(false);
         }
-        if !os.version.trim().is_empty() {
-            if environment.os_version.trim().is_empty() || !pattern_matches(&os.version, &environment.os_version)? {
-                return Ok(false);
-            }
+        if !os.version.trim().is_empty()
+            && (environment.os_version.trim().is_empty()
+                || !pattern_matches(&os.version, &environment.os_version)?)
+        {
+            return Ok(false);
         }
     }
     for (name, expected) in &rule.features {
@@ -656,10 +653,7 @@ fn split_legacy_arguments(input: &str) -> Result<Vec<String>, String> {
     let mut current = String::new();
     let mut chars = input.chars().peekable();
     let mut quote: Option<char> = None;
-    loop {
-        let Some(ch) = chars.next() else {
-            break;
-        };
+    while let Some(ch) = chars.next() {
         match quote {
             Some(marker) if ch == marker => quote = None,
             Some(_) if ch == '\\' => {
@@ -799,13 +793,7 @@ fn normalize_os_name(value: &str) -> String {
 }
 
 fn normalized_current_arch() -> &'static str {
-    match std::env::consts::ARCH {
-        "x86" => "x86",
-        "x86_64" => "x86_64",
-        "aarch64" => "aarch64",
-        "arm" => "arm",
-        other => other,
-    }
+    std::env::consts::ARCH
 }
 
 fn native_arch_token(arch: &str) -> &'static str {
