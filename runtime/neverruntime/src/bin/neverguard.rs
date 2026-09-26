@@ -32,9 +32,30 @@ async fn run() -> Result<(), String> {
         return Ok(());
     }
     let parent_pid = required_flag(&args, "--parent-pid")?.parse::<u32>().map_err(|_| "--parent-pid must be a positive u32".to_string())?;
-    #[cfg(windows)] { return run_windows_guard_server(required_flag(&args, "--pipe")?, parent_pid).await; }
-    #[cfg(target_os = "linux")] { return run_linux_guard_server(std::path::PathBuf::from(required_flag(&args, "--socket")?), parent_pid).await; }
-    #[cfg(target_os = "macos")] { return run_macos_guard_server(std::path::PathBuf::from(required_flag(&args, "--socket")?), parent_pid).await; }
-    #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))] { let _=parent_pid; Err("NeverGuard production implementation is available on Windows, Linux and macOS".into()) }
+    #[cfg(windows)]
+    {
+        run_windows_guard_server(required_flag(&args, "--pipe")?, parent_pid).await
+    }
+    #[cfg(target_os = "linux")]
+    {
+        run_linux_guard_server(
+            std::path::PathBuf::from(required_flag(&args, "--socket")?),
+            parent_pid,
+        )
+        .await
+    }
+    #[cfg(target_os = "macos")]
+    {
+        run_macos_guard_server(
+            std::path::PathBuf::from(required_flag(&args, "--socket")?),
+            parent_pid,
+        )
+        .await
+    }
+    #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
+    {
+        let _ = parent_pid;
+        Err("NeverGuard production implementation is available on Windows, Linux and macOS".into())
+    }
 }
 fn required_flag(args:&[String],name:&str)->Result<String,String>{args.windows(2).find(|p|p[0]==name).map(|p|p[1].clone()).ok_or_else(||format!("required argument {name} is missing"))}

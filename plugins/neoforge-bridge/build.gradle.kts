@@ -16,11 +16,11 @@ neoForge {
     }
 }
 
-val bridgeRuntime by configurations.creating
+val bridgeRuntime = configurations.create("bridgeRuntime")
 
 dependencies {
     implementation(project(":plugins:modloader-family-common"))
-    bridgeRuntime(project(":plugins:modloader-family-common"))
+    add(bridgeRuntime.name, project(":plugins:modloader-family-common"))
 }
 
 tasks.jar {

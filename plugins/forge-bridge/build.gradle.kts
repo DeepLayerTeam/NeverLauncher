@@ -11,12 +11,12 @@ minecraft {
     mappings("official", "1.21.1")
 }
 
-val bridgeRuntime by configurations.creating
+val bridgeRuntime = configurations.create("bridgeRuntime")
 
 dependencies {
-    minecraft("net.minecraftforge:forge:1.21.1-52.1.16")
+    implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))
     implementation(project(":plugins:modloader-family-common"))
-    bridgeRuntime(project(":plugins:modloader-family-common"))
+    add(bridgeRuntime.name, project(":plugins:modloader-family-common"))
 }
 
 tasks.jar {

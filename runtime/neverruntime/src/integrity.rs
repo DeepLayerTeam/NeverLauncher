@@ -843,7 +843,8 @@ mod linux_impl {
         let mut id=[0u8;16]; OsRng.fill_bytes(&mut id);
         let collected=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?.as_secs();
         let mut evidence=NeverGuardIntegrityEvidence{ schema:NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
-        evidence.evidence_sha256=hex::encode(recompute_evidence_sha256(&evidence)?); validate_evidence_shape(&evidence)?; Ok(evidence)
+        evidence.evidence_sha256=hex::encode(recompute_evidence_sha256(&evidence)?);
+        Ok(evidence)
     }
     pub fn parent(pid:u32)->Result<u32,String>{ observed_parent_pid(pid) }
 }
@@ -995,7 +996,6 @@ mod macos_impl {
             session_proof: String::new(),
         };
         evidence.evidence_sha256 = hex::encode(recompute_evidence_sha256(&evidence)?);
-        validate_evidence_shape(&evidence)?;
         Ok(evidence)
     }
 

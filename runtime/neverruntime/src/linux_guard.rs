@@ -222,7 +222,149 @@ fn policy_report()->Result<GuardProcessPolicyReport,String>{let l=guard_policy_r
 async fn server_authenticate(mut s:UnixStream,endpoint:&Path,parent_pid:u32,started:u64,secret:&[u8;32],policy:&GuardProcessPolicyReport,hard:&crate::linux_policy::LinuxProductionHardeningReport)->Result<(UnixStream,[u8;32]),String>{
     let hello:ClientHello=timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),read_frame(&mut s)).await.map_err(|_|"client hello timeout".to_string())??; if hello.kind!="client-hello"||hello.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||hello.client_pid!=parent_pid{return Err("client hello mismatch".into())}; let cn=decode32(&hello.client_nonce,"clientNonce")?;let sn=random32();let pid=std::process::id();let ep=endpoint.to_string_lossy();let handshake=HandshakeContext{endpoint:&ep,client_pid:parent_pid,guard_pid:pid,started,client_nonce:&cn,server_nonce:&sn};let sp=proof(secret,b"server-proof",&handshake);write_frame(&mut s,&ServerChallenge{kind:"server-challenge".into(),protocol_version:NEVERGUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,server_nonce:hex::encode(sn),server_proof:hex::encode(sp)}).await?;let auth:ClientAuthentication=read_frame(&mut s).await?;let expected=proof(secret,b"client-proof",&handshake);if auth.kind!="client-auth"||!ct_eq(&expected,&hex::decode(auth.client_proof).map_err(|_|"invalid client proof")?){return Err("client authentication failed".into())};let key=session_key(secret,&handshake);let rp=ready_proof(&key,ReadyProofState{pid,started,policy_version:policy.policy_version,policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_acl:true});write_frame(&mut s,&ServerReady{kind:"ready".into(),protocol_version:NEVERGUARD_PROTOCOL_VERSION,guard_pid:pid,started_at_unix:started,process_policy_version:policy.policy_version,process_policy_enforced:policy.enforced,hardening_version:hard.hardening_version,hardening_enforced:hard.enforced,secure_pipe_acl:true,ready_proof:hex::encode(rp)}).await?;Ok((s,key))
 }
-async fn serve_commands(mut s:UnixStream,key:[u8;32],parent_pid:u32,started:u64,policy:GuardProcessPolicyReport,hard:crate::linux_policy::LinuxProductionHardeningReport)->Result<(),String>{let mut seq=1u64;loop{let req:RequestEnvelope=read_frame(&mut s).await?;if req.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||req.sequence!=seq{return Err("request sequence mismatch".into())};let expected=request_mac(&key,seq,&req.request_id,&req.command,&req.payload);if !ct_eq(&expected,&hex::decode(&req.mac).map_err(|_|"invalid request mac")?){return Err("request MAC invalid".into())};let (ok,payload,shutdown)=match req.command.as_str(){"ping"=>(true,json!({"pong":true}).to_string(),false),"status"=>(true,serde_json::to_string(&NeverGuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"linux-amd64".into(),pid:std::process::id(),parent_pid,protocol_version:NEVERGUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:1,process_policy_enforced:true,hardening_version:hard.hardening_version,hardening_enforced:true,secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:started,message:"NeverGuard Linux production boundary ready".into()}).unwrap(),false),"process-policy"=>(true,serde_json::to_string(&policy).unwrap(),false),"integrity-evidence"=>{let mut e=tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid)).await.map_err(|e|format!("NeverGuard integrity worker failed: {e}"))??;let d=recompute_evidence_sha256(&e)?;e.session_proof=hex::encode(integrity_proof(&key,&d));(true,serde_json::to_string(&e).unwrap(),false)},"guard-attestation"=>{let r:GuardAttestationRequest=serde_json::from_str(&req.payload).map_err(|e|format!("attestation request invalid: {e}"))?;let mut e=tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid)).await.map_err(|e|format!("NeverGuard attestation integrity worker failed: {e}"))??;let ed=recompute_evidence_sha256(&e)?;e.session_proof=hex::encode(integrity_proof(&key,&ed));let mut a=NeverGuardRemoteAttestation{schema:NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA.into(),attestation_version:NEVERGUARD_REMOTE_ATTESTATION_VERSION,challenge_id:r.challenge_id,challenge_sha256:challenge_sha256(&r.challenge),collected_at_unix:e.collected_at_unix,evidence:e,process_policy:policy.clone(),attestation_sha256:String::new(),session_proof:String::new()};let ad=recompute_attestation_sha256(&a)?;a.attestation_sha256=hex::encode(ad);a.session_proof=hex::encode(attestation_proof(&key,&ad));(true,serde_json::to_string(&a).unwrap(),false)},"shutdown"=>(true,json!({"shutdown":true}).to_string(),true),_=>(false,"unsupported command".into(),false)};let mac=response_mac(&key,seq,&req.request_id,ok,&payload);write_frame(&mut s,&ResponseEnvelope{protocol_version:NEVERGUARD_PROTOCOL_VERSION,sequence:seq,request_id:req.request_id,ok,payload,mac:hex::encode(mac)}).await?;if shutdown{return Ok(())}seq=seq.checked_add(1).ok_or("sequence exhausted")?}}
+async fn build_integrity_evidence(
+    parent_pid: u32,
+    key: &[u8; 32],
+) -> Result<NeverGuardIntegrityEvidence, String> {
+    let mut evidence = tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid))
+        .await
+        .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
+    let digest = recompute_evidence_sha256(&evidence)?;
+    evidence.session_proof = hex::encode(integrity_proof(key, &digest));
+    validate_evidence_shape(&evidence)?;
+    Ok(evidence)
+}
+
+async fn build_guard_attestation(
+    parent_pid: u32,
+    key: &[u8; 32],
+    policy: &GuardProcessPolicyReport,
+    payload: &str,
+) -> Result<NeverGuardRemoteAttestation, String> {
+    let request: GuardAttestationRequest = serde_json::from_str(payload)
+        .map_err(|err| format!("attestation request invalid: {err}"))?;
+    let evidence = build_integrity_evidence(parent_pid, key).await?;
+    let mut attestation = NeverGuardRemoteAttestation {
+        schema: NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA.into(),
+        attestation_version: NEVERGUARD_REMOTE_ATTESTATION_VERSION,
+        challenge_id: request.challenge_id,
+        challenge_sha256: challenge_sha256(&request.challenge),
+        collected_at_unix: evidence.collected_at_unix,
+        evidence,
+        process_policy: policy.clone(),
+        attestation_sha256: String::new(),
+        session_proof: String::new(),
+    };
+    let digest = recompute_attestation_sha256(&attestation)?;
+    attestation.attestation_sha256 = hex::encode(digest);
+    attestation.session_proof = hex::encode(attestation_proof(key, &digest));
+    validate_attestation_shape(&attestation)?;
+    Ok(attestation)
+}
+
+async fn serve_commands(
+    mut stream: UnixStream,
+    key: [u8; 32],
+    parent_pid: u32,
+    started: u64,
+    policy: GuardProcessPolicyReport,
+    hardening: crate::linux_policy::LinuxProductionHardeningReport,
+) -> Result<(), String> {
+    let mut sequence = 1u64;
+    loop {
+        let request: RequestEnvelope = read_frame(&mut stream).await?;
+        if request.protocol_version != NEVERGUARD_PROTOCOL_VERSION || request.sequence != sequence {
+            return Err("request sequence mismatch".into());
+        }
+        let expected = request_mac(
+            &key,
+            sequence,
+            &request.request_id,
+            &request.command,
+            &request.payload,
+        );
+        if !ct_eq(
+            &expected,
+            &hex::decode(&request.mac).map_err(|_| "invalid request mac")?,
+        ) {
+            return Err("request MAC invalid".into());
+        }
+
+        let (ok, payload, shutdown) = match request.command.as_str() {
+            "ping" => (true, json!({"pong": true}).to_string(), false),
+            "status" => (
+                true,
+                serde_json::to_string(&NeverGuardStatus {
+                    state: "ready".into(),
+                    product_version: env!("CARGO_PKG_VERSION").into(),
+                    platform: "linux-amd64".into(),
+                    pid: std::process::id(),
+                    parent_pid,
+                    protocol_version: NEVERGUARD_PROTOCOL_VERSION,
+                    authenticated: true,
+                    process_policy_version: 1,
+                    process_policy_enforced: true,
+                    hardening_version: hardening.hardening_version,
+                    hardening_enforced: true,
+                    secure_pipe_acl: true,
+                    lifetime_job_enforced: true,
+                    package_manifest_verified: false,
+                    started_at_unix: started,
+                    message: "NeverGuard Linux production boundary ready".into(),
+                })
+                .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                false,
+            ),
+            "process-policy" => (
+                true,
+                serde_json::to_string(&policy)
+                    .map_err(|err| format!("NeverGuard process policy serialization failed: {err}"))?,
+                false,
+            ),
+            "integrity-evidence" => match build_integrity_evidence(parent_pid, &key).await {
+                Ok(evidence) => (
+                    true,
+                    serde_json::to_string(&evidence)
+                        .map_err(|err| format!("NeverGuard integrity serialization failed: {err}"))?,
+                    false,
+                ),
+                Err(err) => (false, format!("NeverGuard integrity evidence failed: {err}"), false),
+            },
+            "guard-attestation" => {
+                match build_guard_attestation(parent_pid, &key, &policy, &request.payload).await {
+                    Ok(attestation) => (
+                        true,
+                        serde_json::to_string(&attestation).map_err(|err| {
+                            format!("NeverGuard attestation serialization failed: {err}")
+                        })?,
+                        false,
+                    ),
+                    Err(err) => (false, format!("NeverGuard attestation failed: {err}"), false),
+                }
+            }
+            "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
+            _ => (false, "unsupported command".into(), false),
+        };
+
+        let mac = response_mac(&key, sequence, &request.request_id, ok, &payload);
+        write_frame(
+            &mut stream,
+            &ResponseEnvelope {
+                protocol_version: NEVERGUARD_PROTOCOL_VERSION,
+                sequence,
+                request_id: request.request_id,
+                ok,
+                payload,
+                mac: hex::encode(mac),
+            },
+        )
+        .await?;
+        if shutdown {
+            return Ok(());
+        }
+        sequence = sequence.checked_add(1).ok_or("sequence exhausted")?;
+    }
+}
 
 async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
 async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(one[0]);}if b.is_empty(){return Err("empty IPC frame".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
