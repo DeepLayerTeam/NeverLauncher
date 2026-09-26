@@ -3,15 +3,21 @@ package ru.neverlauncher.bridge.forge;
 import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
 import net.minecraft.network.Connection;
+import net.minecraft.network.PacketListener;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.network.ConfigurationTask;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerNegotiationEvent;
+import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.network.config.ConfigurationTaskContext;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
@@ -19,12 +25,15 @@ import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 @Mod(NeverLauncherForgeBridge.MOD_ID)
 public final class NeverLauncherForgeBridge {
     public static final String MOD_ID = "neverlauncher_serverbridge";
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final ConfigurationTask.Type JOIN_VALIDATION_TASK =
+        new ConfigurationTask.Type("neverlauncher:join_validation");
+
     private final ModLoaderBridgeRuntime runtime;
 
     public NeverLauncherForgeBridge(FMLJavaModLoadingContext context) {
@@ -52,31 +61,82 @@ public final class NeverLauncherForgeBridge {
     }
 
     @SubscribeEvent
-    public void onPlayerNegotiation(PlayerNegotiationEvent event) {
-        GameProfile profile = event.getProfile();
+    public void onGatherLoginConfigurationTasks(GatherLoginConfigurationTasksEvent event) {
         Connection connection = event.getConnection();
-        String username = profile == null || profile.getName() == null ? "" : profile.getName().trim();
-        String uuid = profile == null || profile.getId() == null ? "" : profile.getId().toString();
-
-        if (username.isBlank()) {
-            connection.disconnect(Component.literal("NeverLauncher could not resolve the login profile"));
+        PacketListener listener = connection.getPacketListener();
+        if (!(listener instanceof ServerCommonPacketListenerImpl serverListener)) {
+            connection.disconnect(Component.literal("NeverLauncher could not resolve the login listener"));
             return;
         }
 
-        CompletableFuture<Void> gate = runtime.validateJoinAsync(username, uuid, remoteIp(connection))
-            .handle((decision, error) -> error == null && decision != null
-                ? decision
-                : new JoinValidationResult(false, "backend_unavailable", "{}"))
-            .thenAccept(decision -> {
-                if (decision.allowed) {
-                    LOGGER.info("neverlauncher.join.allowed username={} serverId={} platform=forge", username, runtime.serverId());
+        GameProfile profile = serverListener.getOwner();
+        String username = profile == null || profile.getName() == null ? "" : profile.getName().trim();
+        String uuid = profile == null || profile.getId() == null ? "" : profile.getId().toString();
+        event.addTask(new JoinValidationTask(username, uuid));
+    }
+
+    private final class JoinValidationTask implements ConfigurationTask {
+        private final String username;
+        private final String uuid;
+
+        private JoinValidationTask(String username, String uuid) {
+            this.username = username;
+            this.uuid = uuid;
+        }
+
+        @Override
+        public void start(ConfigurationTaskContext ctx) {
+            if (username.isBlank()) {
+                ctx.getConnection().disconnect(Component.literal("NeverLauncher could not resolve the login profile"));
+                return;
+            }
+
+            runtime.validateJoinAsync(username, uuid, remoteIp(ctx.getConnection()))
+                .handle((decision, error) -> error == null && decision != null
+                    ? decision
+                    : new JoinValidationResult(false, "backend_unavailable", "{}"))
+                .thenAccept(decision -> completeOnServerThread(ctx, decision));
+        }
+
+        @Override
+        public void start(Consumer<Packet<?>> send) {
+            throw new IllegalStateException("Forge must start NeverLauncher join validation with ConfigurationTaskContext");
+        }
+
+        @Override
+        public Type type() {
+            return JOIN_VALIDATION_TASK;
+        }
+
+        private void completeOnServerThread(ConfigurationTaskContext ctx, JoinValidationResult decision) {
+            var server = ServerLifecycleHooks.getCurrentServer();
+            if (server == null) {
+                ctx.getConnection().disconnect(Component.literal("NeverLauncher server is not available"));
+                return;
+            }
+
+            server.execute(() -> {
+                if (!ctx.getConnection().isConnected()) {
                     return;
                 }
-                connection.disconnect(Component.literal(decision.userMessage()));
-                LOGGER.info("neverlauncher.join.denied username={} reason={} platform=forge", username, decision.reason);
-            });
+                if (decision.allowed) {
+                    LOGGER.info(
+                        "neverlauncher.join.allowed username={} serverId={} platform=forge",
+                        username,
+                        runtime.serverId()
+                    );
+                    ctx.finish(JOIN_VALIDATION_TASK);
+                    return;
+                }
 
-        event.enqueueWork(gate);
+                ctx.getConnection().disconnect(Component.literal(decision.userMessage()));
+                LOGGER.info(
+                    "neverlauncher.join.denied username={} reason={} platform=forge",
+                    username,
+                    decision.reason
+                );
+            });
+        }
     }
 
     private static String remoteIp(Connection connection) {

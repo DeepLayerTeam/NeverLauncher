@@ -17,8 +17,8 @@ runtime=read("plugins/modloader-family-common/src/main/java/ru/neverlauncher/bri
 require(runtime,["new ArrayBlockingQueue<>(256)","new ThreadPoolExecutor.AbortPolicy()","BridgeIntegrity.artifactSha256","NodeIdentity.loadOrCreate","validateJoinAsync","current.api.validateJoin","current.api.heartbeat","validationExecutor.shutdownNow()","heartbeatExecutor.shutdownNow()"],"shared modloader-family production runtime")
 forge=read("plugins/forge-bridge/src/main/java/ru/neverlauncher/bridge/forge/NeverLauncherForgeBridge.java")
 neo=read("plugins/neoforge-bridge/src/main/java/ru/neverlauncher/bridge/neoforge/NeverLauncherNeoForgeBridge.java")
-for text,label,platform in ((forge,"Forge","forge"),(neo,"NeoForge","neoforge")):
-    require(text,["PlayerNegotiationEvent","event.enqueueWork(gate)","validateJoinAsync","connection.disconnect",f'"{platform}"'],f"{label} pre-world login gate")
+require(forge,["GatherLoginConfigurationTasksEvent","ConfigurationTaskContext","new ConfigurationTask.Type(\"neverlauncher:join_validation\")","event.addTask(new JoinValidationTask","runtime.validateJoinAsync","ServerLifecycleHooks.getCurrentServer()","server.execute(() ->","ctx.finish(JOIN_VALIDATION_TASK)","connection.disconnect",'"forge"'],"Forge pre-world configuration login gate")
+require(neo,["PlayerNegotiationEvent","event.enqueueWork(gate)","validateJoinAsync","connection.disconnect",'"neoforge"'],"NeoForge pre-world negotiation login gate")
 forge_build=read("plugins/forge-bridge/build.gradle.kts")
 neo_build=read("plugins/neoforge-bridge/build.gradle.kts")
 require(forge_build,['net.minecraftforge.gradle','1.21.1-52.1.16','minecraft.mavenizer(this)','maven(fg.forgeMaven)','maven(fg.minecraftLibsMaven)','configurations.create("bridgeRuntime")','implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))','add(bridgeRuntime.name, project(":plugins:modloader-family-common"))'],"Forge production build")

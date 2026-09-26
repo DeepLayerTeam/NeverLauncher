@@ -138,7 +138,7 @@ CURRENT_MIGRATION="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migra
   echo "device-trust-e2e: current migration mismatch: db=$CURRENT_MIGRATION source=$EXPECTED_CURRENT_MIGRATION" >&2
   exit 1
 }
-jq -e --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="ready" and .checks.migrations==$migration and .repository=="pgx"' "$RESULT_DIR/release-readiness.json" >/dev/null
+jq -e --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="ready" and .checks.migrations==$migration and .repository=="postgres" and .checks.repository=="ok"' "$RESULT_DIR/release-readiness.json" >/dev/null
 
 printf '[device-trust-e2e] real Ed25519 registration, binding epoch and replay protection\n'
 LOGIN1="$(login dt-primary)"
