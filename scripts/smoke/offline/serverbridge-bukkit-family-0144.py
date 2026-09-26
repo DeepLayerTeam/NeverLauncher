@@ -74,7 +74,7 @@ for kind, (java_rel, expected) in wrappers.items():
     build = read(f"{module}/build.gradle.kts")
     require(java, ["extends BukkitFamilyBridgePlugin", expected], f"{kind} adapter")
     require(descriptor, ["main:", "version: ${version}", "api-version: '1.21'", "nlbridge:"], f"{kind} plugin descriptor")
-    require(build, ['implementation(project(":plugins:bukkit-family-common"))', 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT'], f"{kind} Gradle build")
+    require(build, ['implementation(project(":plugins:bukkit-family-common"))', 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT', 'attributes["paperweight-mappings-namespace"] = "mojang"'], f"{kind} Gradle build")
 if "folia-supported: true" not in read("plugins/folia-bridge/src/main/resources/plugin.yml"):
     raise SystemExit("Folia plugin.yml must explicitly declare folia-supported: true")
 

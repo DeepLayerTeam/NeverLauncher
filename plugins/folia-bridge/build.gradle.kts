@@ -10,6 +10,7 @@ tasks.jar {
     archiveBaseName.set("neverlauncher-folia-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest { attributes["paperweight-mappings-namespace"] = "mojang" }
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }
 tasks.processResources {

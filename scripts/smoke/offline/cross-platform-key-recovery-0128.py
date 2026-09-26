@@ -42,8 +42,10 @@ require(handler, [
 require(routes, ["key-rotation/begin", "key-rotation/complete", "key-recovery/begin", "key-recovery/complete"], "routes")
 require(repo, [
     "func (r *SQLRepository) ReplaceTrustedDeviceKey", "BeginTx", "FOR UPDATE",
-    "binding_epoch=GREATEST(binding_epoch,1)+1", "replaced_by_device_id", "refresh_token_families",
-    "minecraft_sessions", "trusted-device-key-replaced",
+    "SET CONSTRAINTS ALL DEFERRED", "ON CONFLICT DO NOTHING RETURNING",
+    "binding_epoch=GREATEST(binding_epoch,1)+1", "current session changed during replacement",
+    "replaced_by_device_id", "refresh_token_families", "minecraft_sessions",
+    "trusted-device-key-replaced", "replace trusted device: commit: %w",
 ], "atomic SQL key replacement")
 require(model, ["ReplacedAt", "ReplacedByDeviceID", "ReplacementReason", "DeviceKeyReplacementResult"], "device replacement model")
 if migration_api != migration_cli:

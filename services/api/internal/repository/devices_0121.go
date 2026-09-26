@@ -688,7 +688,7 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	var err error
 	replacement, err = normalizeTrustedDevice0121(replacement)
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: normalize replacement: %w", err)
 	}
 	if replacement.UserID != userID || replacement.ID == oldDeviceID || replacement.Status != "active" || replacement.TrustState != "verified" {
 		return model.DeviceKeyReplacementResult{}, errors.New("invalid replacement trusted device")
@@ -701,16 +701,25 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: begin transaction: %w", err)
 	}
 	defer tx.Rollback()
+
+	// Key replacement intentionally changes both sides of several ownership
+	// relations in one transaction. Keep every deferrable FK deferred until
+	// COMMIT so PostgreSQL validates the final atomic state, never an
+	// intermediate rebind/revocation state. CHECK/UNIQUE constraints remain
+	// immediate and all deferred constraints are still enforced at COMMIT.
+	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL DEFERRED`); err != nil {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: defer constraints: %w", err)
+	}
 
 	var sessionUser, sessionStatus, sessionTrustedDevice, familyID string
 	if err := tx.QueryRowContext(ctx, `SELECT user_id,status,COALESCE(trusted_device_id,''),refresh_family_id FROM auth_sessions WHERE id=$1 FOR UPDATE`, currentSessionID).Scan(&sessionUser, &sessionStatus, &sessionTrustedDevice, &familyID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: lock current session: %w", err)
 	}
 	if sessionUser != userID || sessionStatus != "active" {
 		return model.DeviceKeyReplacementResult{}, ErrNotFound
@@ -724,38 +733,50 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: lock old device: %w", err)
 	}
 	if oldOwner != userID || oldStatus != "active" {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old trusted device is not active", ErrConflict)
 	}
 
-	_, err = tx.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason)
-VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested','',NULL,NULL,$7,$8,$9,$10,$11,$11,$11,$11,$12,$13,NULL,'',NULL,NULL,'')`, replacement.ID, replacement.UserID, replacement.Name, replacement.KeyAlgorithm, replacement.KeyBinding, replacement.HardwareProvider, replacement.PublicKey, replacement.KeyFingerprint, replacement.Platform, replacement.ClientVersion, now, replacement.LastIP, replacement.LastUserAgent)
+	result := model.DeviceKeyReplacementResult{}
+	row := tx.QueryRowContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason)
+VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested','',NULL,NULL,$7,$8,$9,$10,$11,$11,$11,$11,$12,$13,NULL,'',NULL,NULL,'')
+ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, replacement.UserID, replacement.Name, replacement.KeyAlgorithm, replacement.KeyBinding, replacement.HardwareProvider, replacement.PublicKey, replacement.KeyFingerprint, replacement.Platform, replacement.ClientVersion, now, replacement.LastIP, replacement.LastUserAgent)
+	result.NewDevice, err = scanTrustedDevice0121(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: replacement device id or fingerprint already registered", ErrConflict)
+	}
 	if err != nil {
-		var existingID string
-		if lookupErr := tx.QueryRowContext(ctx, `SELECT id FROM trusted_devices WHERE key_fingerprint=$1`, replacement.KeyFingerprint).Scan(&existingID); lookupErr == nil {
-			return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: replacement fingerprint already registered", ErrConflict)
-		}
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: insert replacement: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=$4,risk_state='normal',risk_reasons='[]'::jsonb,risk_score=0,risk_action='allow',risk_evaluated_at=$4,risk_updated_at=NULL WHERE id=$1 AND user_id=$2 AND status='active'`, currentSessionID, userID, replacement.ID, now); err != nil {
-		return model.DeviceKeyReplacementResult{}, err
+	if res, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=$4,risk_state='normal',risk_reasons='[]'::jsonb,risk_score=0,risk_action='allow',risk_evaluated_at=$4,risk_updated_at=NULL WHERE id=$1 AND user_id=$2 AND status='active'`, currentSessionID, userID, replacement.ID, now); err != nil {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: rebind current session: %w", err)
+	} else if n, rowsErr := res.RowsAffected(); rowsErr != nil {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: count rebound current session: %w", rowsErr)
+	} else if n != 1 {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: current session changed during replacement", ErrConflict)
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1`, oldDeviceID, now, reason, replacement.ID, mode); err != nil {
-		return model.DeviceKeyReplacementResult{}, err
+
+	row = tx.QueryRowContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='active' RETURNING `+trustedDeviceColumns0121, oldDeviceID, now, reason, replacement.ID, mode, userID)
+	result.OldDevice, err = scanTrustedDevice0121(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old trusted device changed during replacement", ErrConflict)
 	}
-	result := model.DeviceKeyReplacementResult{}
+	if err != nil {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: revoke old device: %w", err)
+	}
+
 	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, oldDeviceID, now); err != nil {
-		return result, err
+		return result, fmt.Errorf("replace trusted device: consume outstanding challenges: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.InvalidatedChallenges = int(n)
 	}
 
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' AND id<>$3 FOR UPDATE`, userID, oldDeviceID, currentSessionID)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("replace trusted device: lock sibling sessions: %w", err)
 	}
 	type pair struct{ session, family string }
 	affected := []pair{}
@@ -763,31 +784,31 @@ VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested',
 		var p pair
 		if err := rows.Scan(&p.session, &p.family); err != nil {
 			rows.Close()
-			return result, err
+			return result, fmt.Errorf("replace trusted device: scan sibling session: %w", err)
 		}
 		affected = append(affected, p)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return result, err
+		return result, fmt.Errorf("replace trusted device: iterate sibling sessions: %w", err)
 	}
 	rows.Close()
 	families := map[string]struct{}{}
 	for _, a := range affected {
 		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return result, err
+			return result, fmt.Errorf("replace trusted device: revoke sibling session %s: %w", a.session, err)
 		}
 		if a.family != "" {
 			families[a.family] = struct{}{}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status<>'revoked'`, a.family, now, reason); err != nil {
-				return result, err
+				return result, fmt.Errorf("replace trusted device: revoke sibling refresh family: %w", err)
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
-				return result, err
+				return result, fmt.Errorf("replace trusted device: revoke sibling refresh tokens: %w", err)
 			}
 		}
 		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return result, err
+			return result, fmt.Errorf("replace trusted device: revoke sibling minecraft sessions: %w", err)
 		} else if n, e := res.RowsAffected(); e == nil {
 			result.RevokedMinecraftSessions += int(n)
 		}
@@ -796,25 +817,17 @@ VALUES($1,$2,$3,'active','verified','proof-of-possession',$4,$5,$6,'unattested',
 	// Current gameplay credentials were minted for the old binding epoch and are
 	// explicitly revoked rather than left as stale rows that only fail live checks.
 	if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, currentSessionID, now, reason); err != nil {
-		return result, err
+		return result, fmt.Errorf("replace trusted device: revoke current minecraft sessions: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.RevokedMinecraftSessions += int(n)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-key-replaced',jsonb_build_object('oldDeviceId',$4,'newDeviceId',$5,'mode',$6),$7)`, userID, currentSessionID, familyID, oldDeviceID, replacement.ID, mode, now); err != nil {
-		return result, err
+		return result, fmt.Errorf("replace trusted device: insert auth event: %w", err)
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
 	if err := tx.Commit(); err != nil {
-		return model.DeviceKeyReplacementResult{}, err
-	}
-	result.OldDevice, err = r.GetTrustedDevice(userID, oldDeviceID)
-	if err != nil {
-		return model.DeviceKeyReplacementResult{}, err
-	}
-	result.NewDevice, err = r.GetTrustedDevice(userID, replacement.ID)
-	if err != nil {
-		return model.DeviceKeyReplacementResult{}, err
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: commit: %w", err)
 	}
 	return result, nil
 }

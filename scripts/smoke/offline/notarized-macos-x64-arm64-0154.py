@@ -43,8 +43,14 @@ require(
     ],
     "macOS production builder",
 )
-if 'APP_SIGN_ARGS+=(--deep)' in builder or 'codesign --deep --force' in builder:
-    raise SystemExit("macOS production builder must not use --deep while signing nested code")
+require(builder, [
+    'APP_SIGN_ARGS=(--force --sign "${SIGN_IDENTITY}" --options runtime',
+    'if [[ "${MODE}" == "adhoc" ]]; then',
+    'APP_SIGN_ARGS+=(--deep)',
+    'codesign "${APP_SIGN_ARGS[@]}" "${APP_ROOT}"',
+], "ad-hoc nested macOS signing")
+if 'codesign --deep --force' in builder:
+    raise SystemExit("macOS production builder must not use an unconditional --deep signing command")
 if builder.count('codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"') < 2:
     raise SystemExit("macOS production builder must verify nested binaries both before and after outer bundle signing")
 

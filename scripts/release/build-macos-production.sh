@@ -129,13 +129,18 @@ EOF_PLIST
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
   chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
-  # Sign strictly inside-out for both Developer ID and ad-hoc CI. --deep is a
-  # verification tool here, not a signing shortcut: re-signing the bundle with
-  # --deep can replace/lose helper signatures under Contents/MacOS.
+  # Production Developer ID signing remains explicit and inside-out. The ad-hoc
+  # CI delivery boundary has no persistent signing identity, so re-sign the full
+  # nested graph after package metadata is written; otherwise codesign can leave
+  # a nested helper (notably neverguard) outside the final ad-hoc code directory.
   for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
     codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"
   done
-  codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
+  APP_SIGN_ARGS=(--force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher)
+  if [[ "${MODE}" == "adhoc" ]]; then
+    APP_SIGN_ARGS+=(--deep)
+  fi
+  codesign "${APP_SIGN_ARGS[@]}" "${APP_ROOT}"
   for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
     codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"
   done

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -252,6 +253,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	if atomicRepo, ok := s.Repo.(repository.DeviceKeyReplacementRepository); ok {
 		result, err = atomicRepo.ReplaceTrustedDeviceKey(r.Context(), claims.Sub, oldDeviceID, claims.SessionID, mode, reason, replacement, now)
 		if err != nil {
+			log.Printf("device key %s atomic replacement failed: %v", mode, err)
 			writeError(w, http.StatusConflict, "не удалось атомарно заменить device key")
 			return
 		}
