@@ -455,19 +455,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - name: Build ad-hoc thin x64 + ARM64 delivery candidates
+      - name: Verify updater core before packaging
         shell: bash
-        run: bash scripts/release/build-macos-production.sh --allow-ad-hoc
-      - name: Verify macOS candidate metadata and architectures
+        run: |
+          set -euo pipefail
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          /tmp/nl update self-test
+          /tmp/nl update component-self-test
+          /tmp/nl update stabilization-self-test
+      - name: Build and verify ad-hoc thin x64 + ARM64 delivery candidates
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
-          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
-          /tmp/nl update self-test
-          /tmp/nl update component-self-test
-          /tmp/nl update stabilization-self-test
+          bash scripts/release/build-macos-production.sh --allow-ad-hoc
+          echo "macOS production inventory before delivery verification:"
+          find "${DIR}" -maxdepth 1 -type f -print | sort
+          test -x /tmp/nl
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
           /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
       - name: Upload macOS x64 + ARM64 delivery candidates

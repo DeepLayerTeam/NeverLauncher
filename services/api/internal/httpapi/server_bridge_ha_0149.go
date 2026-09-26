@@ -49,7 +49,6 @@ func (b *serverBridgeStore) maybeMaintain0149() {
 }
 
 func (b *serverBridgeStore) haStatus0149() (model.ServerBridgeHAStatus, error) {
-	b.maybeMaintain0149()
 	backend := b.backendV2()
 	if backend == nil {
 		return model.ServerBridgeHAStatus{}, nil

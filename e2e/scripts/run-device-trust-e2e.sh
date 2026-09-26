@@ -57,6 +57,21 @@ wait_http() {
   echo "[device-trust-e2e] timeout waiting for Backend" >&2
   return 1
 }
+wait_ready() {
+  local out="$1" tmp="${1}.tmp" code=""
+  for _ in $(seq 1 60); do
+    code="$(curl -sS -o "$tmp" -w '%{http_code}' "$API/ready" || true)"
+    mv -f "$tmp" "$out" 2>/dev/null || true
+    if [[ "$code" == "200" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "[device-trust-e2e] Backend readiness stayed non-200 (last HTTP ${code:-curl-error})" >&2
+  [[ -s "$out" ]] && cat "$out" >&2 || true
+  compose logs api-a >&2 || true
+  return 1
+}
 json_post() {
   local url="$1" token="$2" body="$3"
   curl -fsS -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
@@ -116,7 +131,7 @@ repo_driver="$(psql "$DB_DSN" -Atqc "SELECT current_database()")"
 printf '[device-trust-e2e] verify 0.13.0 runtime release/readiness contract\n'
 curl -fsS "$API/api/v1/auth/capabilities" > "$RESULT_DIR/release-capabilities.json"
 jq -e --arg version "$VERSION" '.data.deviceTrustRelease.status=="released" and .data.deviceTrustRelease.releaseVersion=="0.13.0" and .data.deviceTrustRelease.runtimeVersion==$version and .data.deviceTrustRelease.schemaMigration=="0018_device_trust_stabilization_01210" and .data.deviceTrustRelease.schemaFrozen==true and .data.deviceTrustRelease.enforcement.sessionDeviceBinding==true and .data.deviceTrustRelease.enforcement.deviceBoundRefresh==true and .data.deviceTrustRelease.enforcement.riskActions==true and .data.deviceTrustRelease.enforcement.minecraftServerBridge==true and .data.deviceTrustRelease.releaseCertification.required==true and .data.deviceTrustRelease.attestation.vendorProvenance=="not-remotely-verified"' "$RESULT_DIR/release-capabilities.json" >/dev/null
-curl -fsS "$API/ready" > "$RESULT_DIR/release-readiness.json"
+wait_ready "$RESULT_DIR/release-readiness.json"
 EXPECTED_CURRENT_MIGRATION="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
 CURRENT_MIGRATION="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ -n "$EXPECTED_CURRENT_MIGRATION" && "$CURRENT_MIGRATION" == "$EXPECTED_CURRENT_MIGRATION" ]] || {

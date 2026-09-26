@@ -15,6 +15,7 @@ import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.CompletionException;
@@ -122,9 +123,9 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         });
     }
 
-    private static String remoteIP(InetSocketAddress address) {
-        if (address == null || address.getAddress() == null) return "";
-        return address.getAddress().getHostAddress();
+    private static String remoteIP(SocketAddress address) {
+        if (!(address instanceof InetSocketAddress inet) || inet.getAddress() == null) return "";
+        return inet.getAddress().getHostAddress();
     }
 
     private final class BridgeCommand extends Command {
