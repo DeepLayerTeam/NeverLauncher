@@ -84,6 +84,7 @@ cat > "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_MANIFEST
   "macosProductionHardeningVersion":1,
   "bundleIdentifier":"ru.skif4er.neverlauncher",
   "signingTeamId":"${TEAM_ID}",
+  "hashBindingMode":"codesign+external-release-policy",
   "desktopSha256":"${DESKTOP_HASH}",
   "desktopSize":${DESKTOP_SIZE},
   "guardSha256":"${GUARD_HASH}",
@@ -117,12 +118,40 @@ fi
 
 SIGNING_MODE="adhoc-development"
 [[ "${MODE}" == "production" ]] && SIGNING_MODE="developer-id-notarized"
+
+# The outer .app signature seals Contents/Resources and therefore changes the main
+# executable's final code-signature bytes. Full-file SHA-256 values are emitted
+# only after the final bundle signing/notarization step; the embedded manifest is
+# protected by the bundle signature and uses code-signing + external release-policy
+# binding to avoid a circular self-hash.
+DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
+GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/neverguard" | awk '{print $1}')"
+DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
+GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverguard")"
+cat > "${OUT_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_FINAL_MANIFEST
+{
+  "schemaVersion":"1.0",
+  "productVersion":"${VERSION}",
+  "platform":"macos-universal",
+  "neverGuardProtocolVersion":4,
+  "authenticatedIpc":"unix-domain-socket+0600+peer-credentials+hmac-sha256-v4",
+  "macosProductionHardeningVersion":1,
+  "bundleIdentifier":"ru.skif4er.neverlauncher",
+  "signingTeamId":"${TEAM_ID}",
+  "hashBindingMode":"final-artifact-sha256",
+  "desktopSha256":"${DESKTOP_HASH}",
+  "desktopSize":${DESKTOP_SIZE},
+  "guardSha256":"${GUARD_HASH}",
+  "guardSize":${GUARD_SIZE},
+  "developerIdRequired":${DEV_REQUIRED},
+  "notarizationRequired":${NOTARY_REQUIRED}
+}
+EOF_FINAL_MANIFEST
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" <<EOF_ALLOW
 {"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"macos":{"signingMode":"${SIGNING_MODE}","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF_ALLOW
 cp "${MACOS_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-macos-universal"
 cp "${MACOS_DIR}/neverguard" "${OUT_DIR}/neverguard-macos-universal"
-cp "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${OUT_DIR}/MACOS_PACKAGE_MANIFEST.json"
 FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
 rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"

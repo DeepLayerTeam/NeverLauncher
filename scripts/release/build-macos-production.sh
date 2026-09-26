@@ -158,6 +158,10 @@ PY
     if [[ "${arch}" == "x64" ]]; then NOTARY_X64="${NOTARY_JSON}"; else NOTARY_ARM64="${NOTARY_JSON}"; fi
   fi
 
+  python3 "${ROOT_DIR}/scripts/release/macos-package.py" finalize \
+    --version "${VERSION}" --arch "${arch}" \
+    --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
+
   FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
   rm -f "${FINAL_ZIP}"
   ditto -c -k --sequesterRsrc --keepParent "${APP_ROOT}" "${FINAL_ZIP}"

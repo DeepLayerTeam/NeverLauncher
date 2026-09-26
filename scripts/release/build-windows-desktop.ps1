@@ -133,7 +133,7 @@ function Get-PEMachine([string]$Path) {
 function Assert-PEArchitecture([string]$Path, [int]$ExpectedMachine, [string]$Architecture) {
     $Actual = Get-PEMachine $Path
     if ($Actual -ne $ExpectedMachine) {
-        throw "$Path PE machine mismatch for $Architecture: expected 0x$('{0:X4}' -f $ExpectedMachine), got 0x$('{0:X4}' -f $Actual)"
+        throw "${Path} PE machine mismatch for ${Architecture}: expected 0x$('{0:X4}' -f $ExpectedMachine), got 0x$('{0:X4}' -f $Actual)"
     }
 }
 
@@ -152,7 +152,7 @@ function Sign-And-VerifyAuthenticode([string]$Path, $SigningContext, [string]$Si
 
     $Signature = Get-AuthenticodeSignature -FilePath $Path
     if ($Signature.Status -ne "Valid") {
-        throw "Authenticode verification failed for $Path: $($Signature.Status) $($Signature.StatusMessage)"
+        throw "Authenticode verification failed for ${Path}: $($Signature.Status) $($Signature.StatusMessage)"
     }
     if ($null -eq $Signature.SignerCertificate -or $Signature.SignerCertificate.Thumbprint -ne $SigningContext.Certificate.Thumbprint) {
         throw "Authenticode signer mismatch for $Path"

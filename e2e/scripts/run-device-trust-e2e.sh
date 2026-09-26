@@ -116,7 +116,13 @@ printf '[device-trust-e2e] verify 0.13.0 runtime release/readiness contract\n'
 curl -fsS "$API/api/v1/auth/capabilities" > "$RESULT_DIR/release-capabilities.json"
 jq -e --arg version "$VERSION" '.data.deviceTrustRelease.status=="released" and .data.deviceTrustRelease.releaseVersion=="0.13.0" and .data.deviceTrustRelease.runtimeVersion==$version and .data.deviceTrustRelease.schemaMigration=="0018_device_trust_stabilization_01210" and .data.deviceTrustRelease.schemaFrozen==true and .data.deviceTrustRelease.enforcement.sessionDeviceBinding==true and .data.deviceTrustRelease.enforcement.deviceBoundRefresh==true and .data.deviceTrustRelease.enforcement.riskActions==true and .data.deviceTrustRelease.enforcement.minecraftServerBridge==true and .data.deviceTrustRelease.releaseCertification.required==true and .data.deviceTrustRelease.attestation.vendorProvenance=="not-remotely-verified"' "$RESULT_DIR/release-capabilities.json" >/dev/null
 curl -fsS "$API/ready" > "$RESULT_DIR/release-readiness.json"
-jq -e '.status=="ready" and .checks.migrations=="0018_device_trust_stabilization_01210" and .repository=="pgx"' "$RESULT_DIR/release-readiness.json" >/dev/null
+EXPECTED_CURRENT_MIGRATION="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+CURRENT_MIGRATION="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
+[[ -n "$EXPECTED_CURRENT_MIGRATION" && "$CURRENT_MIGRATION" == "$EXPECTED_CURRENT_MIGRATION" ]] || {
+  echo "device-trust-e2e: current migration mismatch: db=$CURRENT_MIGRATION source=$EXPECTED_CURRENT_MIGRATION" >&2
+  exit 1
+}
+jq -e --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="ready" and .checks.migrations==$migration and .repository=="pgx"' "$RESULT_DIR/release-readiness.json" >/dev/null
 
 printf '[device-trust-e2e] real Ed25519 registration, binding epoch and replay protection\n'
 LOGIN1="$(login dt-primary)"

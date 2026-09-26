@@ -113,12 +113,11 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         "packageArtifact": package_name,
         "bundleIdentifier": "ru.skif4er.neverlauncher",
         "minimumSystemVersion": "12.0",
+        "hashBindingMode": "codesign+external-release-policy",
         "artifacts": artifacts,
     }
     embedded = resources / "MACOS_PACKAGE_MANIFEST.json"
-    top = out / f"MACOS_PACKAGE_MANIFEST_{arch.upper()}.json"
     write_json(embedded, payload)
-    shutil.copy2(embedded, top)
 
     by_component = {row["component"]: row for row in artifacts}
     component_update = {
@@ -154,6 +153,40 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     write_json(update_manifest, component_update)
     return 0
 
+
+
+def finalize_cmd(args: argparse.Namespace) -> int:
+    arch = args.arch
+    app = Path(args.app)
+    out = Path(args.out_dir)
+    embedded = app / "Contents" / "Resources" / "MACOS_PACKAGE_MANIFEST.json"
+    payload = json.loads(embedded.read_text(encoding="utf-8"))
+    if payload.get("productVersion") != args.version or payload.get("architecture") != arch:
+        raise RuntimeError("embedded macOS package manifest identity mismatch during finalization")
+    macos_dir = app / "Contents" / "MacOS"
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        raise RuntimeError("embedded macOS package manifest contains no artifacts")
+    for artifact in artifacts:
+        component = str(artifact.get("component", ""))
+        if component not in COMPONENTS:
+            raise RuntimeError(f"unknown macOS package component during finalization: {component!r}")
+        bundle_name, canonical_pattern = COMPONENTS[component]
+        source = macos_dir / bundle_name
+        if not source.is_file():
+            raise RuntimeError(f"missing final signed macOS executable: {source}")
+        inspect_macho(source, arch)
+        canonical_name = canonical_pattern.format(arch=arch)
+        canonical = out / canonical_name
+        shutil.copy2(source, canonical)
+        artifact["name"] = canonical_name
+        artifact["bundlePath"] = f"NeverLauncher.app/Contents/MacOS/{bundle_name}"
+        artifact["sha256"] = sha256(source)
+        artifact["size"] = source.stat().st_size
+    payload["hashBindingMode"] = "final-artifact-sha256"
+    top = out / f"MACOS_PACKAGE_MANIFEST_{arch.upper()}.json"
+    write_json(top, payload)
+    return 0
 
 def load_notary(path: str | None, production: bool) -> tuple[str, str, bool, bool, bool]:
     if not production:
@@ -257,6 +290,11 @@ def main() -> int:
     manifest.add_argument("--trust-mode", choices=["developer-id-notarized", "adhoc-development"], required=True)
     manifest.add_argument("--app", required=True)
     manifest.add_argument("--out-dir", required=True)
+    finalize = sub.add_parser("finalize")
+    finalize.add_argument("--version", required=True)
+    finalize.add_argument("--arch", choices=sorted(ARCHES), required=True)
+    finalize.add_argument("--app", required=True)
+    finalize.add_argument("--out-dir", required=True)
     evidence = sub.add_parser("evidence")
     evidence.add_argument("--version", required=True)
     evidence.add_argument("--signing-mode", choices=["developer-id-notarized", "adhoc-development"], required=True)
@@ -267,7 +305,11 @@ def main() -> int:
     evidence.add_argument("--notary-arm64-json")
     args = parser.parse_args()
     try:
-        return manifest_cmd(args) if args.command == "manifest" else evidence_cmd(args)
+        if args.command == "manifest":
+            return manifest_cmd(args)
+        if args.command == "finalize":
+            return finalize_cmd(args)
+        return evidence_cmd(args)
     except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError) as exc:
         print(f"macos-package: {exc}", file=sys.stderr)
         return 1

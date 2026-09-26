@@ -58,6 +58,8 @@ struct MacOSPackageManifest {
     #[serde(default)]
     signing_team_id: String,
     #[serde(default)]
+    hash_binding_mode: String,
+    #[serde(default)]
     desktop_sha256: String,
     #[serde(default)]
     desktop_size: u64,
@@ -226,17 +228,24 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==NEVERGUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
     let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
+    let external_hash_binding = match manifest.hash_binding_mode.as_str() {
+        "" => false,
+        "codesign+external-release-policy" => true,
+        other => return Err(format!("unsupported macOS package hash binding mode: {other}")),
+    };
     let mut signing_team=manifest.signing_team_id.clone();
     if canonical {
         for (component,path) in [("desktop-launcher",desktop.as_path()),("guard",guard)] {
             let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
             let expected_bundle_path=format!("NeverLauncher.app/Contents/MacOS/{}",path.file_name().and_then(|v|v.to_str()).ok_or("macOS artifact filename invalid")?);
             if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
-            let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
-            if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("macOS package artifact verification failed: {component}"))}
+            if !external_hash_binding {
+                let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
+                if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("macOS package artifact verification failed: {component}"))}
+            }
             if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("macOS package signing team is inconsistent".into())}
         }
-    } else {
+    } else if !external_hash_binding {
         for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
             let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
             if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}

@@ -1,22 +1,14 @@
 package httpapi
 
-/*
-#cgo linux LDFLAGS: -l:libargon2.so.1
-#include <stdlib.h>
-#include <stdint.h>
-
-int argon2id_hash_encoded(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
-    const void *pwd, size_t pwdlen, const void *salt, size_t saltlen,
-    size_t hashlen, char *encoded, size_t encodedlen);
-
-int argon2id_verify(const char *encoded, const void *pwd, size_t pwdlen);
-*/
-import "C"
-
 import (
 	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
-	"unsafe"
+	"strconv"
+	"strings"
+
+	"golang.org/x/crypto/argon2"
 )
 
 const (
@@ -25,7 +17,6 @@ const (
 	argon2idParallelism = 1
 	argon2idSaltLength  = 16
 	argon2idHashLength  = 32
-	argon2idEncodedMax  = 256
 )
 
 func hashPasswordArgon2id(password string) (string, error) {
@@ -33,51 +24,69 @@ func hashPasswordArgon2id(password string) (string, error) {
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("не удалось создать salt для Argon2id: %w", err)
 	}
-
-	passwordBytes := []byte(password)
-	passwordPtr := unsafe.Pointer(nil)
-	if len(passwordBytes) > 0 {
-		passwordPtr = C.CBytes(passwordBytes)
-		defer C.free(passwordPtr)
-	}
-
-	saltPtr := C.CBytes(salt)
-	defer C.free(saltPtr)
-
-	encoded := (*C.char)(C.malloc(C.size_t(argon2idEncodedMax)))
-	if encoded == nil {
-		return "", fmt.Errorf("не удалось выделить память для Argon2id-хеша")
-	}
-	defer C.free(unsafe.Pointer(encoded))
-
-	result := C.argon2id_hash_encoded(
-		C.uint32_t(argon2idTimeCost),
-		C.uint32_t(argon2idMemoryKiB),
-		C.uint32_t(argon2idParallelism),
-		passwordPtr,
-		C.size_t(len(passwordBytes)),
-		saltPtr,
-		C.size_t(len(salt)),
-		C.size_t(argon2idHashLength),
-		encoded,
-		C.size_t(argon2idEncodedMax),
+	digest := argon2.IDKey(
+		[]byte(password),
+		salt,
+		argon2idTimeCost,
+		argon2idMemoryKiB,
+		argon2idParallelism,
+		argon2idHashLength,
 	)
-	if result != 0 {
-		return "", fmt.Errorf("argon2id_hash_encoded завершился с кодом %d", int(result))
-	}
-	return C.GoString(encoded), nil
+	return fmt.Sprintf(
+		"$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
+		argon2.Version,
+		argon2idMemoryKiB,
+		argon2idTimeCost,
+		argon2idParallelism,
+		base64.RawStdEncoding.EncodeToString(salt),
+		base64.RawStdEncoding.EncodeToString(digest),
+	), nil
 }
 
 func verifyPasswordArgon2id(password, encoded string) bool {
-	encodedC := C.CString(encoded)
-	defer C.free(unsafe.Pointer(encodedC))
+	memory, iterations, parallelism, salt, expected, ok := parseArgon2idPHC(encoded)
+	if !ok {
+		return false
+	}
+	actual := argon2.IDKey([]byte(password), salt, iterations, memory, parallelism, uint32(len(expected)))
+	return subtle.ConstantTimeCompare(actual, expected) == 1
+}
 
-	passwordBytes := []byte(password)
-	passwordPtr := unsafe.Pointer(nil)
-	if len(passwordBytes) > 0 {
-		passwordPtr = C.CBytes(passwordBytes)
-		defer C.free(passwordPtr)
+func parseArgon2idPHC(encoded string) (uint32, uint32, uint8, []byte, []byte, bool) {
+	parts := strings.Split(encoded, "$")
+	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {
+		return 0, 0, 0, nil, nil, false
 	}
 
-	return C.argon2id_verify(encodedC, passwordPtr, C.size_t(len(passwordBytes))) == 0
+	values := map[string]uint64{}
+	for _, parameter := range strings.Split(parts[3], ",") {
+		pair := strings.SplitN(parameter, "=", 2)
+		if len(pair) != 2 || (pair[0] != "m" && pair[0] != "t" && pair[0] != "p") {
+			return 0, 0, 0, nil, nil, false
+		}
+		if _, duplicate := values[pair[0]]; duplicate {
+			return 0, 0, 0, nil, nil, false
+		}
+		value, err := strconv.ParseUint(pair[1], 10, 32)
+		if err != nil || value == 0 {
+			return 0, 0, 0, nil, nil, false
+		}
+		values[pair[0]] = value
+	}
+	memory, mok := values["m"]
+	iterations, tok := values["t"]
+	parallelism, pok := values["p"]
+	if !mok || !tok || !pok || memory > 1024*1024 || iterations > 20 || parallelism > 32 {
+		return 0, 0, 0, nil, nil, false
+	}
+
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil || len(salt) < 8 || len(salt) > 1024 {
+		return 0, 0, 0, nil, nil, false
+	}
+	expected, err := base64.RawStdEncoding.DecodeString(parts[5])
+	if err != nil || len(expected) < 16 || len(expected) > 128 {
+		return 0, 0, 0, nil, nil, false
+	}
+	return uint32(memory), uint32(iterations), uint8(parallelism), salt, expected, true
 }

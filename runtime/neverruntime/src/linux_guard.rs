@@ -225,11 +225,32 @@ async fn server_authenticate(mut s:UnixStream,endpoint:&Path,parent_pid:u32,star
 async fn build_integrity_evidence(
     parent_pid: u32,
     key: &[u8; 32],
+    policy: &GuardProcessPolicyReport,
 ) -> Result<NeverGuardIntegrityEvidence, String> {
+    validate_policy(policy)?;
+    let verified_guard = policy
+        .linux
+        .clone()
+        .ok_or_else(|| "Linux process policy details missing".to_string())?;
     let mut evidence = tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid))
         .await
         .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
+
+    // PR_GET_PDEATHSIG is task/thread-local on Linux. The policy report is captured
+    // on NeverGuard's original task before heavy evidence collection is moved to a
+    // blocking worker. Re-bind those already verified hardening facts here instead
+    // of treating the worker thread's task-local state as the Guard process state.
+    let guard_security = evidence
+        .guard
+        .linux
+        .as_mut()
+        .ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
+    guard_security.no_new_privs = verified_guard.no_new_privs;
+    guard_security.dumpable_disabled = verified_guard.dumpable_disabled;
+    guard_security.parent_death_signal = verified_guard.parent_death_signal;
+
     let digest = recompute_evidence_sha256(&evidence)?;
+    evidence.evidence_sha256 = hex::encode(digest);
     evidence.session_proof = hex::encode(integrity_proof(key, &digest));
     validate_evidence_shape(&evidence)?;
     Ok(evidence)
@@ -243,7 +264,7 @@ async fn build_guard_attestation(
 ) -> Result<NeverGuardRemoteAttestation, String> {
     let request: GuardAttestationRequest = serde_json::from_str(payload)
         .map_err(|err| format!("attestation request invalid: {err}"))?;
-    let evidence = build_integrity_evidence(parent_pid, key).await?;
+    let evidence = build_integrity_evidence(parent_pid, key, policy).await?;
     let mut attestation = NeverGuardRemoteAttestation {
         schema: NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA.into(),
         attestation_version: NEVERGUARD_REMOTE_ATTESTATION_VERSION,
@@ -321,7 +342,7 @@ async fn serve_commands(
                     .map_err(|err| format!("NeverGuard process policy serialization failed: {err}"))?,
                 false,
             ),
-            "integrity-evidence" => match build_integrity_evidence(parent_pid, &key).await {
+            "integrity-evidence" => match build_integrity_evidence(parent_pid, &key, &policy).await {
                 Ok(evidence) => (
                     true,
                     serde_json::to_string(&evidence)

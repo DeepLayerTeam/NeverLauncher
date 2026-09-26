@@ -12,7 +12,7 @@ val generateVersionSource by tasks.registering {
         file.writeText(
             """package ru.neverlauncher.bridge.common;
 public final class BridgeVersion {
-    public static final String VERSION = \"${project.version}\";
+    public static final String VERSION = "${project.version}";
     private BridgeVersion() {}
 }
 """
