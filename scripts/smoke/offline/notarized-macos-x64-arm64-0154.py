@@ -39,9 +39,14 @@ require(
         'macos-package.py',
         'developer-id-notarized',
         'adhoc-development',
+        'if [[ "${MODE}" == "adhoc" ]]',
+        'APP_SIGN_ARGS+=(--deep)',
+        'codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"',
     ],
     "macOS production builder",
 )
+if builder.index('APP_SIGN_ARGS+=(--deep)') < builder.index('if [[ "${MODE}" == "adhoc" ]]'):
+    raise SystemExit("macOS ad-hoc deep signing is not scoped to the ad-hoc branch")
 
 packager = read("scripts/release/macos-package.py")
 require(

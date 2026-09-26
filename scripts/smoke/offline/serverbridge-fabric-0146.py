@@ -100,7 +100,13 @@ require(build, [
     "fabric.mod.json",
     "META-INF/jars/bridge-common-",
     '"clientModRequired":false',
+    'zipfile.ZipFile',
+    'json.loads',
+    'metadata.get("environment") != "server"',
+    'neverlauncher.get("clientModRequired") is not False',
 ], "Fabric release build/integrity")
+if 'unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q' in build:
+    raise SystemExit("Fabric release validation still uses pipefail-sensitive text grep")
 
 release = read("scripts/release/build-release.sh")
 release_cli = read("cli/cmd/neverlauncher/release_commands.go")

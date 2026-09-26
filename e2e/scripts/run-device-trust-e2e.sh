@@ -73,8 +73,17 @@ wait_ready() {
   return 1
 }
 json_post() {
-  local url="$1" token="$2" body="$3"
-  curl -fsS -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
+  local url="$1" token="$2" body="$3" tmp code
+  tmp="$(mktemp "$RUNTIME_DIR/http-json-post.XXXXXX")"
+  code="$(request_code POST "$url" "$token" "$body" "$tmp")"
+  if [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
+    echo "[device-trust-e2e] POST ${url#${API}} failed: HTTP $code" >&2
+    [[ -s "$tmp" ]] && cat "$tmp" >&2 || true
+    rm -f "$tmp"
+    return 22
+  fi
+  cat "$tmp"
+  rm -f "$tmp"
 }
 request_code() {
   local method="$1" url="$2" token="$3" body="$4" out="$5" user_agent="${6:-}"
@@ -90,11 +99,14 @@ expect_code() {
 }
 login() {
   local label="$1"
-  curl -fsS -H 'Content-Type: application/json' -d "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" --arg device "$label" '{email:$email,password:$password,deviceId:$device}')" "$API/api/v1/auth/login"
+  json_post "$API/api/v1/auth/login" '' "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" --arg device "$label" '{email:$email,password:$password,deviceId:$device}')"
 }
 sign_payload() {
   local algorithm="$1" key="$2" payload="$3" file="$RUNTIME_DIR/payload-$RANDOM-$RANDOM.txt"
-  printf '%s' "$payload" > "$file"
+  # All Device Trust proof payloads are newline-terminated server contracts.
+  # Bash command substitution strips trailing newlines, so restore exactly one
+  # protocol-significant LF before signing.
+  printf '%s\n' "$payload" > "$file"
   python3 "$CRYPTO" sign --algorithm "$algorithm" --key "$key" --payload "$file"
   rm -f "$file"
 }

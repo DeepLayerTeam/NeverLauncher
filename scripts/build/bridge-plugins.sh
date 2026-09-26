@@ -103,14 +103,25 @@ jar tf "$FABRIC_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' 
   echo "[NeverLauncher] Fabric artifact does not embed bridge-common runtime" >&2
   exit 1
 }
-unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q '"environment": "server"' || {
-  echo "[NeverLauncher] Fabric artifact must be server-only" >&2
-  exit 1
-}
-unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q '"clientModRequired": false' || {
-  echo "[NeverLauncher] Fabric artifact must not require a client mod" >&2
-  exit 1
-}
+python3 - "$FABRIC_ARTIFACT" <<'PY_FABRIC_META'
+import json
+import sys
+import zipfile
+
+artifact = sys.argv[1]
+try:
+    with zipfile.ZipFile(artifact) as zf:
+        metadata = json.loads(zf.read("fabric.mod.json"))
+except (OSError, KeyError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
+    raise SystemExit(f"[NeverLauncher] Fabric metadata is unreadable: {exc}")
+
+if metadata.get("environment") != "server":
+    raise SystemExit("[NeverLauncher] Fabric artifact must be server-only")
+custom = metadata.get("custom")
+neverlauncher = custom.get("neverlauncher") if isinstance(custom, dict) else None
+if not isinstance(neverlauncher, dict) or neverlauncher.get("clientModRequired") is not False:
+    raise SystemExit("[NeverLauncher] Fabric artifact must not require a client mod")
+PY_FABRIC_META
 
 for platform in forge neoforge; do
   artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"

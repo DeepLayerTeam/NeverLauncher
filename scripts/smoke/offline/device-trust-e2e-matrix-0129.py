@@ -71,6 +71,8 @@ require(protocol, [
     "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
     "/revoke", "psql", "openssl genpkey", "secret material leaked into public evidence",
     'claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false',
+    'printf \'%s\\n\' "$payload"',
+    'POST ${url#${API}} failed: HTTP $code',
 ], "PostgreSQL Device Trust E2E")
 
 crypto = read("e2e/scripts/device-trust-crypto.py")
