@@ -11,6 +11,13 @@ minecraft {
     mappings("official", "1.21.1")
 }
 
+repositories {
+    minecraft.mavenizer(this)
+    maven(fg.forgeMaven)
+    maven(fg.minecraftLibsMaven)
+    mavenCentral()
+}
+
 val bridgeRuntime = configurations.create("bridgeRuntime")
 
 dependencies {

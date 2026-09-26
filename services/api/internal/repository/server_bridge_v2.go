@@ -446,10 +446,10 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_nodes_v2`).Scan(&nodes); err != nil {
 		return nil, err
 	}
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1`, now.UTC()).Scan(&joins); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1::timestamptz`, now.UTC()).Scan(&joins); err != nil {
 		return nil, err
 	}
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1`, now.UTC()).Scan(&handoffs); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1::timestamptz`, now.UTC()).Scan(&handoffs); err != nil {
 		return nil, err
 	}
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textures); err != nil {
@@ -741,7 +741,7 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
-	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 e SET status='disabled' FROM (SELECT source_node_id,target_node_id FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1 - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.source_node_id=q.source_node_id AND e.target_node_id=q.target_node_id`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 e SET status='disabled' FROM (SELECT source_node_id,target_node_id FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1::timestamptz - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.source_node_id=q.source_node_id AND e.target_node_id=q.target_node_id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.TopologyEdgesDisabled, _ = res.RowsAffected()
@@ -750,12 +750,12 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	// records. Keep recent rows for diagnostics, but cap unbounded growth. A
 	// consumed join remains available while its auth session is active because it
 	// is the source proof for later proxy -> backend handoffs.
-	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_join_tickets_v2 j USING (SELECT j2.id FROM server_bridge_join_tickets_v2 j2 LEFT JOIN auth_sessions a ON a.id=j2.session_id WHERE ((j2.status='consumed' AND COALESCE(j2.consumed_at,j2.expires_at) <= $1 - interval '1 hour' AND (a.id IS NULL OR a.status<>'active' OR a.expires_at <= $1)) OR (j2.status IN ('invalidated','replaced') AND COALESCE(j2.invalidated_at,j2.expires_at) <= $1 - interval '1 hour')) ORDER BY COALESCE(j2.consumed_at,j2.invalidated_at,j2.expires_at) LIMIT 5000 FOR UPDATE OF j2 SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_join_tickets_v2 j USING (SELECT j2.id FROM server_bridge_join_tickets_v2 j2 LEFT JOIN auth_sessions a ON a.id=j2.session_id WHERE ((j2.status='consumed' AND COALESCE(j2.consumed_at,j2.expires_at) <= $1::timestamptz - interval '1 hour' AND (a.id IS NULL OR a.status<>'active' OR a.expires_at <= $1::timestamptz)) OR (j2.status IN ('invalidated','replaced') AND COALESCE(j2.invalidated_at,j2.expires_at) <= $1::timestamptz - interval '1 hour')) ORDER BY COALESCE(j2.consumed_at,j2.invalidated_at,j2.expires_at) LIMIT 5000 FOR UPDATE OF j2 SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.TerminalJoinTicketsPurged, _ = res.RowsAffected()
 	}
-	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_handoffs_v2 h USING (SELECT id FROM server_bridge_handoffs_v2 WHERE status IN ('consumed','replaced','invalidated','expired') AND COALESCE(consumed_at,invalidated_at,expires_at) <= $1 - interval '1 hour' ORDER BY COALESCE(consumed_at,invalidated_at,expires_at) LIMIT 5000 FOR UPDATE SKIP LOCKED) q WHERE h.id=q.id`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_handoffs_v2 h USING (SELECT id FROM server_bridge_handoffs_v2 WHERE status IN ('consumed','replaced','invalidated','expired') AND COALESCE(consumed_at,invalidated_at,expires_at) <= $1::timestamptz - interval '1 hour' ORDER BY COALESCE(consumed_at,invalidated_at,expires_at) LIMIT 5000 FOR UPDATE SKIP LOCKED) q WHERE h.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.TerminalHandoffsPurged, _ = res.RowsAffected()
@@ -774,16 +774,16 @@ func (r *SQLRepository) ServerBridgeHAStatus(ctx context.Context, now time.Time)
 	row := r.db.QueryRowContext(ctx, `SELECT
  (SELECT count(*) FROM server_bridge_nodes_v2),
  (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active'),
- (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND last_heartbeat_at > $1 - interval '2 minutes'),
- (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND (last_heartbeat_at IS NULL OR last_heartbeat_at <= $1 - interval '2 minutes')),
+ (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND last_heartbeat_at > $1::timestamptz - interval '2 minutes'),
+ (SELECT count(*) FROM server_bridge_nodes_v2 WHERE status='active' AND (last_heartbeat_at IS NULL OR last_heartbeat_at <= $1::timestamptz - interval '2 minutes')),
  (SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE status='active'),
- (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND e.last_seen_at > $1 - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1 - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1 - interval '2 minutes'),
- (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND NOT COALESCE((e.last_seen_at > $1 - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1 - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1 - interval '2 minutes'),FALSE)),
- (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1),
- (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at<=$1),
- (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1),
- (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at<=$1),
- (SELECT count(*) FROM server_bridge_node_nonces_v2 WHERE expires_at<=$1)`, now.UTC())
+ (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND e.last_seen_at > $1::timestamptz - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1::timestamptz - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1::timestamptz - interval '2 minutes'),
+ (SELECT count(*) FROM server_bridge_topology_edges_v2 e JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id WHERE e.status='active' AND NOT COALESCE((e.last_seen_at > $1::timestamptz - interval '2 minutes' AND s.status='active' AND s.last_heartbeat_at > $1::timestamptz - interval '2 minutes' AND t.status='active' AND t.last_heartbeat_at > $1::timestamptz - interval '2 minutes'),FALSE)),
+ (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at>$1::timestamptz),
+ (SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE status='active' AND expires_at<=$1::timestamptz),
+ (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1::timestamptz),
+ (SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at<=$1::timestamptz),
+ (SELECT count(*) FROM server_bridge_node_nonces_v2 WHERE expires_at<=$1::timestamptz)`, now.UTC())
 	if err := row.Scan(&status.NodesTotal, &status.NodesActive, &status.NodesFresh, &status.NodesStale, &status.TopologyActive, &status.TopologyFresh, &status.TopologyStale, &status.ActiveJoinTickets, &status.ExpiredJoinBacklog, &status.ActiveHandoffs, &status.ExpiredHandoffBacklog, &status.ExpiredNonceBacklog); err != nil {
 		return status, err
 	}

@@ -103,17 +103,18 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
-  declare -A IDENTIFIERS=(
-    [neverlauncher-desktop]="ru.skif4er.neverlauncher"
-    [neverguard]="ru.skif4er.neverlauncher.guard"
-    [neverruntime]="ru.skif4er.neverlauncher.runtime"
-    [neverlauncher-cli]="ru.skif4er.neverlauncher.cli"
-  )
   for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
+    case "${binary}" in
+      neverlauncher-desktop) identifier="ru.skif4er.neverlauncher" ;;
+      neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
+      neverruntime) identifier="ru.skif4er.neverlauncher.runtime" ;;
+      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli" ;;
+      *) echo "unsupported macOS binary identifier mapping: ${binary}" >&2; exit 1 ;;
+    esac
     file="${MACOS_DIR}/${binary}"
     actual_arch="$(lipo -archs "${file}")"
     [[ "${actual_arch}" == "${LIPO_ARCH}" ]] || { echo "${file}: expected thin ${LIPO_ARCH}, got ${actual_arch}" >&2; exit 1; }
-    codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier "${IDENTIFIERS[$binary]}" "${file}"
+    codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier "${identifier}" "${file}"
     codesign --verify --strict --verbose=2 "${file}"
     if [[ "${MODE}" == "production" ]]; then
       details="$(codesign -dv --verbose=4 "${file}" 2>&1)"
