@@ -1,6 +1,6 @@
-plugins { java }
+plugins { `java-library` }
 version = rootProject.file("VERSION").readText().trim()
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 dependencies {
-    implementation(project(":plugins:bridge-common"))
+    api(project(":plugins:bridge-common"))
 }

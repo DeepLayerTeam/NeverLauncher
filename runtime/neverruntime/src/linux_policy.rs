@@ -111,7 +111,7 @@ mod imp {
     fn configure_child() -> io::Result<()> {
         unsafe {
             if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 { return Err(io::Error::last_os_error()); }
-            if libc::getppid() == 1 { return Err(io::Error::new(io::ErrorKind::Other, "launcher parent already exited")); }
+            if libc::getppid() == 1 { return Err(io::Error::other("launcher parent already exited")); }
             if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 { return Err(io::Error::last_os_error()); }
             let lim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
             if libc::setrlimit(libc::RLIMIT_CORE, &lim) != 0 { return Err(io::Error::last_os_error()); }
