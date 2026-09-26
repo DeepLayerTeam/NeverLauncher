@@ -1010,15 +1010,17 @@ function App() {
     }
 
     const submission = await callTauri<GuardAttestationSubmission>('neverguard_guard_attestation', {
-      backendUrl: settings.backendUrl,
-      userId,
-      deviceId,
-      sessionId: authSession.sessionId,
-      bindingEpoch: accessTokenBindingEpoch(authSession.accessToken),
-      launcherVersion: DESKTOP_VERSION,
-      challengeId: begin.challengeId,
-      challenge: begin.challenge,
-      challengeExpiresAt: begin.expiresAt,
+      request: {
+        backendUrl: settings.backendUrl,
+        userId,
+        deviceId,
+        sessionId: authSession.sessionId,
+        bindingEpoch: accessTokenBindingEpoch(authSession.accessToken),
+        launcherVersion: DESKTOP_VERSION,
+        challengeId: begin.challengeId,
+        challenge: begin.challenge,
+        challengeExpiresAt: begin.expiresAt,
+      },
     });
     if (submission.launcherVersion !== DESKTOP_VERSION || submission.fingerprint !== key.fingerprint || submission.keyAlgorithm !== 'p256' || submission.keyBinding !== 'hardware' || !submission.hardwareBound) {
       throw new Error('Native Guard Attestation signer вернул неожиданную release/device identity.');
@@ -1080,12 +1082,14 @@ function App() {
       const minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
       await createServerJoinBeforeLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
-        manifest,
-        root: settings.gameDirectory,
-        javaPath: settings.javaPath || null,
-        username: minecraftCredentials.username,
-        minecraftCredentials,
-        pinnedPublicKey: settings.pinnedPublicKey,
+        request: {
+          manifest,
+          root: settings.gameDirectory,
+          javaPath: settings.javaPath || null,
+          username: minecraftCredentials.username,
+          minecraftCredentials,
+          pinnedPublicKey: settings.pinnedPublicKey,
+        },
       });
       setLaunchResult(result);
       setStage('running');

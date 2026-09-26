@@ -456,21 +456,32 @@ fn require_hex_sha256(label: &str, value: &str) -> Result<String, String> {
     Ok(value)
 }
 
+#[derive(Debug, Clone)]
+pub struct GuardAttestationSignRequest {
+    pub backend_url: String,
+    pub user_id: String,
+    pub device_id: String,
+    pub session_id: String,
+    pub binding_epoch: i64,
+    pub launcher_version: String,
+    pub challenge_id: String,
+    pub challenge: String,
+    pub challenge_expires_at: String,
+    pub attestation_sha256: String,
+    pub evidence_sha256: String,
+    pub guard_sha256: String,
+    pub launcher_sha256: String,
+}
+
 fn guard_attestation_device_payload(
     user_id: &str,
     record: &SecureDeviceKeyRecord,
-    device_id: &str,
-    session_id: &str,
-    binding_epoch: i64,
-    launcher_version: &str,
-    challenge_id: &str,
-    challenge: &str,
-    challenge_expires_at: &str,
-    attestation_sha256: &str,
-    evidence_sha256: &str,
-    guard_sha256: &str,
-    launcher_sha256: &str,
+    request: &GuardAttestationSignRequest,
 ) -> Result<String, String> {
+    let GuardAttestationSignRequest {
+        device_id, session_id, binding_epoch, launcher_version, challenge_id, challenge,
+        challenge_expires_at, attestation_sha256, evidence_sha256, guard_sha256, launcher_sha256, ..
+    } = request;
     if record.key_binding != "hardware" || record.key_algorithm != "p256" {
         return Err("Guard Attestation требует hardware-bound P-256 device key".into());
     }
@@ -483,7 +494,7 @@ fn guard_attestation_device_payload(
     let challenge_id = challenge_id.trim();
     let challenge = challenge.trim();
     let challenge_expires_at = challenge_expires_at.trim();
-    if session_id.is_empty() || session_id.len() > 256 || binding_epoch < 1 {
+    if session_id.is_empty() || session_id.len() > 256 || *binding_epoch < 1 {
         return Err("Guard Attestation session binding недействителен".into());
     }
     if launcher_version.is_empty() || launcher_version.len() > 64
@@ -521,29 +532,12 @@ fn guard_attestation_device_payload(
     ))
 }
 
-pub fn sign_guard_attestation(
-    backend_url: &str,
-    user_id: &str,
-    device_id: &str,
-    session_id: &str,
-    binding_epoch: i64,
-    launcher_version: &str,
-    challenge_id: &str,
-    challenge: &str,
-    challenge_expires_at: &str,
-    attestation_sha256: &str,
-    evidence_sha256: &str,
-    guard_sha256: &str,
-    launcher_sha256: &str,
-) -> Result<DeviceSignatureResult, String> {
-    let user = normalize_user_id(user_id)?;
-    let mut record = load_record(backend_url, &user)?
+pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(&request.user_id)?;
+    let mut record = load_record(&request.backend_url, &user)?
         .ok_or_else(|| "device key отсутствует".to_string())?;
     validate_record(&mut record)?;
-    let payload = guard_attestation_device_payload(
-        &user, &record, device_id, session_id, binding_epoch, launcher_version, challenge_id, challenge,
-        challenge_expires_at, attestation_sha256, evidence_sha256, guard_sha256, launcher_sha256,
-    )?;
+    let payload = guard_attestation_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
         .map_err(|e| format!("hardware Guard Attestation signing failed: {e}"))?;

@@ -45,6 +45,8 @@ services:
     build:
       context: ..
       dockerfile: services/api/Dockerfile
+      args:
+        NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_E2E_VERSION:-dev}
     environment:
       NEVERLAUNCHER_ENV: e2e-production
       NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080

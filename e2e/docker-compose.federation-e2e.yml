@@ -27,6 +27,8 @@ x-api-common: &api-common
   build:
     context: ..
     dockerfile: services/api/Dockerfile
+    args:
+      NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_E2E_VERSION:-dev}
   depends_on:
     volume-init:
       condition: service_completed_successfully

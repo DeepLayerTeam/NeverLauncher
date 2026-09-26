@@ -61,7 +61,18 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			payloadByPath[row.bundle] = data
 		}
 		pkgName, manifestName := expectedMacOSPackage0154(ver, arch)
-		manifest := MacOSPackageManifest0154{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", Architecture: arch, CPUType: cpuText, RustTarget: rustTarget, PackageFormat: "zip", PackageArtifact: pkgName, BundleIdentifier: "ru.skif4er.neverlauncher", MinimumSystemVersion: "12.0", Artifacts: artifacts}
+		manifest := MacOSPackageManifest0154{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", Architecture: arch, CPUType: cpuText, RustTarget: rustTarget, PackageFormat: "zip", PackageArtifact: pkgName, BundleIdentifier: "ru.skif4er.neverlauncher", MinimumSystemVersion: "12.0", HashBindingMode: "final-artifact-sha256", Artifacts: artifacts}
+		embeddedManifest := manifest
+		embeddedManifest.HashBindingMode = "codesign+external-release-policy"
+		embeddedManifest.Artifacts = append([]MacOSPackageArtifact0154(nil), artifacts...)
+		if componentTransactionalUpdateRequired0157(ver) {
+			for i := range embeddedManifest.Artifacts {
+				if embeddedManifest.Artifacts[i].Component == "desktop-launcher" {
+					preSign := append(append([]byte(nil), payloadByPath[embeddedManifest.Artifacts[i].BundlePath]...), []byte("-pre-outer-codesign")...)
+					embeddedManifest.Artifacts[i].SHA256, embeddedManifest.Artifacts[i].Size = hashBytes0154(preSign)
+				}
+			}
+		}
 		manifestRaw, err := json.MarshalIndent(manifest, "", "  ")
 		if err != nil {
 			t.Fatal(err)
@@ -88,12 +99,46 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 				t.Fatal(err)
 			}
 		}
+		embeddedRaw, err := json.MarshalIndent(embeddedManifest, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		embeddedRaw = append(embeddedRaw, '\n')
 		w, err := zw.Create("NeverLauncher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := w.Write(manifestRaw); err != nil {
+		if _, err := w.Write(embeddedRaw); err != nil {
 			t.Fatal(err)
+		}
+		if componentTransactionalUpdateRequired0157(ver) {
+			byComponent := map[string]MacOSPackageArtifact0154{}
+			for _, artifact := range embeddedManifest.Artifacts {
+				byComponent[artifact.Component] = artifact
+			}
+			update := componentUpdateManifest0157{
+				SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", Architecture: arch,
+				Layout: "macos-app-bundle", TrustMode: signingMode, BundleName: "NeverLauncher.app",
+			}
+			for _, row := range []struct{ public, source, path string }{
+				{"desktop", "desktop-launcher", "Contents/MacOS/neverlauncher-desktop"},
+				{"guard", "guard", "Contents/MacOS/neverguard"},
+				{"runtime", "runtime", "Contents/MacOS/neverruntime"},
+			} {
+				artifact := byComponent[row.source]
+				update.Components = append(update.Components, componentUpdateArtifact0157{Component: row.public, SourcePath: row.path, TargetPath: row.path, SHA256: artifact.SHA256, Size: artifact.Size, Executable: true})
+			}
+			updateRaw, err := json.MarshalIndent(update, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+			uw, err := zw.Create("NeverLauncher.app/Contents/Resources/" + componentUpdateManifestFile0157)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := uw.Write(append(updateRaw, '\n')); err != nil {
+				t.Fatal(err)
+			}
 		}
 		if err := zw.Close(); err != nil {
 			t.Fatal(err)
@@ -190,6 +235,18 @@ func TestMacOSProductionEvidenceAdhocAndNotarized0154(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMacOSProductionEvidenceDualManifestBinding0161(t *testing.T) {
+	dir := t.TempDir()
+	ver := "0.16.1"
+	writeMacOSFixture0154(t, dir, ver, "adhoc-development", "ADHOC-CI", false)
+	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyMacOSNotarizationEvidence0154(dir, ver, false); err != nil {
+		t.Fatal(err)
 	}
 }
 

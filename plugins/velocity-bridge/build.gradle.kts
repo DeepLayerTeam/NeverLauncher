@@ -6,6 +6,7 @@ dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
 }
 tasks.jar {
+    dependsOn(configurations.runtimeClasspath.get().buildDependencies)
     archiveBaseName.set("neverlauncher-velocity-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

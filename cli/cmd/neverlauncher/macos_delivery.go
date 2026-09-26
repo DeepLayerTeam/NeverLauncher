@@ -50,6 +50,7 @@ type MacOSPackageManifest0154 struct {
 	PackageArtifact      string                     `json:"packageArtifact"`
 	BundleIdentifier     string                     `json:"bundleIdentifier"`
 	MinimumSystemVersion string                     `json:"minimumSystemVersion"`
+	HashBindingMode      string                     `json:"hashBindingMode"`
 	Artifacts            []MacOSPackageArtifact0154 `json:"artifacts"`
 }
 
@@ -212,7 +213,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 	if err != nil {
 		return MacOSPackageManifest0154{}, "", err
 	}
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || manifest.ProductVersion != ver || manifest.Platform != "macos" || manifest.Architecture != arch || manifest.CPUType != cpuText || manifest.RustTarget != rustTarget || manifest.PackageFormat != "zip" || manifest.PackageArtifact != expectedPackage || manifest.BundleIdentifier != "ru.skif4er.neverlauncher" || strings.TrimSpace(manifest.MinimumSystemVersion) == "" {
+	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || manifest.ProductVersion != ver || manifest.Platform != "macos" || manifest.Architecture != arch || manifest.CPUType != cpuText || manifest.RustTarget != rustTarget || manifest.PackageFormat != "zip" || manifest.PackageArtifact != expectedPackage || manifest.BundleIdentifier != "ru.skif4er.neverlauncher" || strings.TrimSpace(manifest.MinimumSystemVersion) == "" || manifest.HashBindingMode != "final-artifact-sha256" {
 		return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s package manifest identity/schema mismatch", arch)
 	}
 	expected := expectedMacOSArtifacts0154(arch)
@@ -296,6 +297,50 @@ func readZipEntries0154(path string) (map[string][]byte, error) {
 	return entries, nil
 }
 
+func verifyEmbeddedMacOSPackageManifest0154(raw []byte, external MacOSPackageManifest0154, arch string) (MacOSPackageManifest0154, error) {
+	var embedded MacOSPackageManifest0154
+	if err := json.Unmarshal(raw, &embedded); err != nil {
+		return MacOSPackageManifest0154{}, fmt.Errorf("macOS %s embedded package manifest invalid: %w", arch, err)
+	}
+	if embedded.SchemaVersion != external.SchemaVersion ||
+		embedded.Product != external.Product ||
+		embedded.ProductVersion != external.ProductVersion ||
+		embedded.Platform != external.Platform ||
+		embedded.Architecture != external.Architecture ||
+		embedded.CPUType != external.CPUType ||
+		embedded.RustTarget != external.RustTarget ||
+		embedded.PackageFormat != external.PackageFormat ||
+		embedded.PackageArtifact != external.PackageArtifact ||
+		embedded.BundleIdentifier != external.BundleIdentifier ||
+		embedded.MinimumSystemVersion != external.MinimumSystemVersion ||
+		embedded.HashBindingMode != "codesign+external-release-policy" ||
+		len(embedded.Artifacts) != len(external.Artifacts) {
+		return MacOSPackageManifest0154{}, fmt.Errorf("macOS %s embedded package manifest identity/schema mismatch", arch)
+	}
+
+	externalByComponent := make(map[string]MacOSPackageArtifact0154, len(external.Artifacts))
+	for _, artifact := range external.Artifacts {
+		externalByComponent[artifact.Component] = artifact
+	}
+	seen := make(map[string]bool, len(embedded.Artifacts))
+	for _, artifact := range embedded.Artifacts {
+		externalArtifact, ok := externalByComponent[artifact.Component]
+		if !ok || seen[artifact.Component] ||
+			artifact.Name != externalArtifact.Name ||
+			artifact.BundlePath != externalArtifact.BundlePath ||
+			artifact.Architecture != externalArtifact.Architecture ||
+			artifact.CPUType != externalArtifact.CPUType ||
+			artifact.CodeSigned != externalArtifact.CodeSigned ||
+			artifact.HardenedRuntime != externalArtifact.HardenedRuntime ||
+			artifact.TeamID != externalArtifact.TeamID ||
+			artifact.Size <= 0 || !validDeliverySHA256(artifact.SHA256) {
+			return MacOSPackageManifest0154{}, fmt.Errorf("macOS %s embedded package artifact identity mismatch for %s", arch, artifact.Component)
+		}
+		seen[artifact.Component] = true
+	}
+	return embedded, nil
+}
+
 func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageManifest0154, manifestHash string, evidencePackage MacOSNotarizedPackage0154) error {
 	packageName, manifestName := expectedMacOSPackage0154(ver, arch)
 	if evidencePackage.Name != packageName || evidencePackage.Manifest != manifestName || !strings.EqualFold(evidencePackage.ManifestSHA256, manifestHash) {
@@ -331,16 +376,13 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		}
 	}
 	manifestPath := "NeverLauncher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json"
-	embedded, ok := entries[manifestPath]
+	embeddedRaw, ok := entries[manifestPath]
 	if !ok {
 		return fmt.Errorf("macOS %s package missing embedded manifest", arch)
 	}
-	top, err := os.ReadFile(filepath.Join(dir, manifestName))
+	embeddedManifest, err := verifyEmbeddedMacOSPackageManifest0154(embeddedRaw, manifest, arch)
 	if err != nil {
 		return err
-	}
-	if !bytes.Equal(bytes.TrimSpace(embedded), bytes.TrimSpace(top)) {
-		return fmt.Errorf("macOS %s embedded package manifest mismatch", arch)
 	}
 	if componentTransactionalUpdateRequired0157(ver) {
 		updatePath := "NeverLauncher.app/Contents/Resources/" + componentUpdateManifestFile0157
@@ -360,7 +402,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 			return fmt.Errorf("macOS %s component update manifest identity mismatch", arch)
 		}
 		byComponent := map[string]MacOSPackageArtifact0154{}
-		for _, row := range manifest.Artifacts {
+		for _, row := range embeddedManifest.Artifacts {
 			byComponent[row.Component] = row
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}

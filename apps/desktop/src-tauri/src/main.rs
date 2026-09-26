@@ -1,18 +1,20 @@
 mod device_keys;
 
 use neverruntime::{
-    self, CleanUnusedResult, DownloadResult, FileCheckResult, JavaInfoResult, LaunchHistoryEntry,
-    GuardProcessPolicyReport, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
-    NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardStatus, NeverGuardSupervisor, ProcessStatus,
-    ProcessSupervisor, RepairResult, SignatureCheckResult, NEVERGUARD_WINDOWS_HARDENING_VERSION,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION, NEVERGUARD_LINUX_HARDENING_VERSION,
-    NEVERGUARD_LINUX_PROCESS_POLICY_VERSION, NEVERGUARD_MACOS_HARDENING_VERSION,
-    NEVERGUARD_MACOS_PROCESS_POLICY_VERSION,
+    self, CleanUnusedResult, DownloadResult, FileCheckResult, GuardProcessPolicyReport, JavaInfoResult,
+    LaunchHistoryEntry, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
+    NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardStatus, NeverGuardSupervisor,
+    ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
+#[cfg(target_os = "linux")]
+use neverruntime::{NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
+#[cfg(target_os = "macos")]
+use neverruntime::{NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
+#[cfg(windows)]
+use neverruntime::{NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{path::PathBuf, process::Stdio, time::{Duration, SystemTime, UNIX_EPOCH}};
-use tauri::Manager;
 use device_keys::{DeviceKeyInfo, DeviceSignatureResult};
 use tokio::{fs, process::Command};
 use zeroize::Zeroize;
@@ -42,6 +44,31 @@ struct GuardAttestationSubmission {
     key_binding: String,
     hardware_provider: String,
     hardware_bound: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LaunchMinecraftRequest {
+    manifest: Manifest,
+    root: String,
+    java_path: Option<String>,
+    username: Option<String>,
+    minecraft_credentials: Option<MinecraftLaunchCredentials>,
+    pinned_public_key: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GuardAttestationRequest {
+    backend_url: String,
+    user_id: String,
+    device_id: String,
+    session_id: String,
+    binding_epoch: i64,
+    launcher_version: String,
+    challenge_id: String,
+    challenge: String,
+    challenge_expires_at: String,
 }
 
 const KEYRING_SERVICE: &str = "NeverLauncher Desktop";
@@ -285,7 +312,14 @@ async fn ensure_managed_java(required_major_version: u32, distribution: String) 
 #[tauri::command]
 async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String) -> Result<LaunchPlan, String> { neverruntime::build_launch_plan(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await }
 #[tauri::command]
-async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, minecraft_credentials: Option<MinecraftLaunchCredentials>, pinned_public_key: String, supervisor: tauri::State<'_, ProcessSupervisor>, neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<ProcessStatus, String> {
+async fn launch_minecraft(
+    request: LaunchMinecraftRequest,
+    supervisor: tauri::State<'_, ProcessSupervisor>,
+    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+) -> Result<ProcessStatus, String> {
+    let LaunchMinecraftRequest {
+        manifest, root, java_path, username, minecraft_credentials, pinned_public_key,
+    } = request;
     #[cfg(windows)]
     {
         let status = neverguard.ensure_started().await?;
@@ -380,24 +414,20 @@ async fn launch_minecraft(manifest: Manifest, root: String, java_path: Option<St
 
 #[tauri::command]
 async fn neverguard_guard_attestation(
-    backend_url: String,
-    user_id: String,
-    device_id: String,
-    session_id: String,
-    binding_epoch: i64,
-    launcher_version: String,
-    challenge_id: String,
-    challenge: String,
-    challenge_expires_at: String,
+    request: GuardAttestationRequest,
     neverguard: tauri::State<'_, NeverGuardSupervisor>,
 ) -> Result<GuardAttestationSubmission, String> {
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
-        let _ = (backend_url, user_id, device_id, session_id, binding_epoch, launcher_version, challenge_id, challenge, challenge_expires_at, neverguard);
+        let _ = (request, neverguard);
         return Err("Guard Attestation production implementation доступна только для Windows, Linux и macOS".to_string());
     }
     #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     {
+        let GuardAttestationRequest {
+            backend_url, user_id, device_id, session_id, binding_epoch, launcher_version,
+            challenge_id, challenge, challenge_expires_at,
+        } = request;
         let attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
         let evidence_sha256 = attestation.evidence.evidence_sha256.clone();
         let guard_sha256 = attestation.evidence.guard.image_sha256.clone();
@@ -405,11 +435,21 @@ async fn neverguard_guard_attestation(
         let attestation_sha256 = attestation.attestation_sha256.clone();
         let submission_launcher_version = launcher_version.clone();
         let signing = tokio::task::spawn_blocking(move || {
-            device_keys::sign_guard_attestation(
-                &backend_url, &user_id, &device_id, &session_id, binding_epoch, &launcher_version,
-                &challenge_id, &challenge, &challenge_expires_at, &attestation_sha256,
-                &evidence_sha256, &guard_sha256, &launcher_sha256,
-            )
+            device_keys::sign_guard_attestation(device_keys::GuardAttestationSignRequest {
+                backend_url,
+                user_id,
+                device_id,
+                session_id,
+                binding_epoch,
+                launcher_version,
+                challenge_id,
+                challenge,
+                challenge_expires_at,
+                attestation_sha256,
+                evidence_sha256,
+                guard_sha256,
+                launcher_sha256,
+            })
         })
         .await
         .map_err(|e| format!("Guard Attestation device signing task завершилась ошибкой: {e}"))??;

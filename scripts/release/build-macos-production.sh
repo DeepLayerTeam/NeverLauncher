@@ -45,10 +45,8 @@ else
 fi
 
 mkdir -p "${OUT_DIR}"
-WORK_ROOT="${OUT_DIR}/.macos-production-work"
-rm -rf "${WORK_ROOT}"
-mkdir -p "${WORK_ROOT}"
-cleanup() { rm -rf "${WORK_ROOT}"; }
+WORK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/neverlauncher-macos-production.XXXXXX")"
+cleanup() { rm -rf -- "${WORK_ROOT}"; }
 trap cleanup EXIT
 
 # Tauri's Rust build embeds assets produced by the desktop web build.
@@ -183,6 +181,21 @@ fi
 python3 "${ROOT_DIR}/scripts/release/macos-package.py" "${EVIDENCE_ARGS[@]}"
 
 for arch in x64 arm64; do
+  case "${arch}" in
+    x64) MANIFEST_SUFFIX="X64" ;;
+    arm64) MANIFEST_SUFFIX="ARM64" ;;
+  esac
+  REQUIRED_ARTIFACTS=(
+    "neverlauncher-cli-macos-${arch}"
+    "neverlauncher-desktop-macos-${arch}"
+    "neverguard-macos-${arch}"
+    "neverruntime-macos-${arch}"
+    "neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
+    "MACOS_PACKAGE_MANIFEST_${MANIFEST_SUFFIX}.json"
+  )
+  for artifact in "${REQUIRED_ARTIFACTS[@]}"; do
+    [[ -s "${OUT_DIR}/${artifact}" ]] || { echo "missing final macOS delivery artifact: ${OUT_DIR}/${artifact}" >&2; exit 1; }
+  done
   shasum -a 256 \
     "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
     "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
@@ -190,5 +203,9 @@ for arch in x64 arm64; do
     "${OUT_DIR}/neverruntime-macos-${arch}" \
     "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
 done
+[[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "missing final macOS notarization evidence" >&2; exit 1; }
+[[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "missing final macOS Guard allowlist evidence" >&2; exit 1; }
+printf 'Final macOS delivery inventory (%s):\n' "${OUT_DIR}"
+find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 
 echo "NeverLauncher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"

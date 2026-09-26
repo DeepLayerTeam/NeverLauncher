@@ -6,6 +6,7 @@ dependencies {
     compileOnly("org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT")
 }
 tasks.jar {
+    dependsOn(configurations.runtimeClasspath.get().buildDependencies)
     archiveBaseName.set("neverlauncher-folia-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

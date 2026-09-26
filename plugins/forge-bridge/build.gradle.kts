@@ -20,6 +20,7 @@ dependencies {
 }
 
 tasks.jar {
+    dependsOn(bridgeRuntime.buildDependencies)
     archiveBaseName.set("neverlauncher-forge-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
