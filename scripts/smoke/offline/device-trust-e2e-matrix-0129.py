@@ -73,6 +73,9 @@ require(protocol, [
     'claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false',
     'printf \'%s\\n\' "$payload"',
     'POST ${url#${API}} failed: HTTP $code',
+    '/guard-attest/begin', '/guard-attest/complete', 'guardAttestationTicket',
+    '/api/v1/minecraft/session', 'minecraftAccessToken', 'software-device-guard-required.json',
+    'guard-attestation-e2e.py', 'bridge-after-recovery.json',
 ], "PostgreSQL Device Trust E2E")
 
 crypto = read("e2e/scripts/device-trust-crypto.py")

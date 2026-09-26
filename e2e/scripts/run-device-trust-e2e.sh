@@ -20,6 +20,8 @@ ADMIN_EMAIL="device-trust-e2e@neverlauncher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("DT-E2E-" + secrets.token_urlsafe(24))')"
 CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
+GUARD_EVIDENCE="$ROOT/e2e/scripts/guard-attestation-e2e.py"
+GUARD_E2E_VERSION="0.14.0"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
@@ -192,16 +194,14 @@ ACCESS1R="$(jq -er '.data.tokens.accessToken' <<<"$REFRESH_OK1")"
 REFRESH2="$(jq -er '.data.tokens.refreshToken' <<<"$REFRESH_OK1")"
 [[ "$REFRESH2" != "$REFRESH1" ]]
 
-printf '[device-trust-e2e] ServerBridge join is live-bound to device identity and epoch\n'
+printf '[device-trust-e2e] ServerBridge node is registered; software device launch remains Guard fail-closed\n'
 json_post "$API/api/v1/install/first-project" "$ACCESS1R" '{"projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable","version":"0.0.1-device-trust","actor":"device-trust-e2e"}' > "$RUNTIME_DIR/first-project.json"
 SERVER_REG_BODY="$(jq -cn --arg publicKey "$SERVER_NODE_PUBLIC" '{id:"dt-e2e-paper",name:"Device Trust E2E Paper",kind:"paper",projectId:"dt-e2e-project",profileId:"vanilla",keyAlgorithm:"ed25519",publicKey:$publicKey}')"
 SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R" "$SERVER_REG_BODY")"
 jq -e '.data.status=="registered" and .data.nodeIdentity.keyAlgorithm=="ed25519" and .data.nodeIdentity.identityEpoch==1' <<<"$SERVER_REG" >/dev/null
-json_post "$API/api/v1/session/join" "$ACCESS1R" '{"username":"DeviceTrustE2E","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' > "$RUNTIME_DIR/join-before-rotation.json"
-BRIDGE_VALIDATE_BODY='{"protocolVersion":2,"serverId":"dt-e2e-paper","username":"DeviceTrustE2E","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}'
-code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-before-rotation.json")"
-expect_code 200 "$code" 'trusted ServerBridge validate before rotation'
-jq -e '.data.allowed==true' "$RESULT_DIR/bridge-before-rotation.json" >/dev/null
+code="$(request_code POST "$API/api/v1/session/join" "$ACCESS1R" '{"username":"DeviceTrustE2E","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RESULT_DIR/software-device-guard-required.json")"
+expect_code 412 "$code" 'software Linux device bypassed Guard-bound Minecraft integrity'
+jq -e '.error.code==412 and (.error.message|contains("minecraftAccessToken"))' "$RESULT_DIR/software-device-guard-required.json" >/dev/null
 
 printf '[device-trust-e2e] key rotation requires BOTH old/new proofs and burns failed challenge\n'
 rotation_begin() {
@@ -228,9 +228,6 @@ EPOCH2="$(jq -er '.data.session.bindingEpoch' <<<"$ROT_OK")"
 jq -e '.data.oldFingerprintPermanentTombstone==true and .data.mode=="rotate"' <<<"$ROT_OK" >/dev/null
 printf '%s' "$ROT_OK" | sanitize_rotation > "$RESULT_DIR/rotation.json"
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$ACCESS1R" '' "$RUNTIME_DIR/pre-rotation-access.json")"; expect_code 401 "$code" 'pre-rotation access survived binding epoch change'
-code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-after-rotation.json")"
-expect_code 403 "$code" 'old ServerBridge join survived rotation'
-jq -e '.data.allowed==false and (.data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed")' "$RESULT_DIR/bridge-after-rotation.json" >/dev/null
 
 printf '[device-trust-e2e] same refresh family now requires replacement key and replacement device id\n'
 OLD_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE1" "$EPOCH1" "$REFRESH2")"
@@ -279,6 +276,45 @@ ATT_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_A
 HW_ACCESS_ATTESTED="$(jq -er '.data.accessToken' <<<"$ATT_OK")"
 jq -e '.data.attestationState=="verified" and .data.device.assurance=="challenge-response-attested" and .data.hardwareProvenance=="not-remotely-verified" and .data.authorizationElevation==false' <<<"$ATT_OK" >/dev/null
 jq '{data:{device:.data.device,attestationState:.data.attestationState,attestationMethod:.data.attestationMethod,hardwareProvenance:.data.hardwareProvenance,authorizationElevation:.data.authorizationElevation,phishingResistantElevation:.data.phishingResistantElevation}}' <<<"$ATT_OK" > "$RESULT_DIR/p256-attestation.json"
+
+printf '[device-trust-e2e] hardware-attested Linux session obtains one-time Guard ticket and integrity-bound Minecraft token\n'
+HW_SESSION="$(jq -er '.data.session.id' <<<"$HW_COMPLETE")"
+HW_EPOCH="$(jq -er '.data.session.bindingEpoch' <<<"$HW_COMPLETE")"
+HW_FINGERPRINT="$(jq -er '.data.device.keyFingerprint' <<<"$HW_COMPLETE")"
+GUARD_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/begin" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg v "$GUARD_E2E_VERSION" '{launcherVersion:$v}')")"
+jq -e '.data.platform=="linux" and .data.releasePolicySchema=="2.0" and .data.guardProtocolVersion==4 and .data.oneTime==true' <<<"$GUARD_BEGIN" >/dev/null
+GUARD_FIXTURE="$(python3 "$GUARD_EVIDENCE" \
+  --challenge-id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
+  --challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  --challenge-expires-at "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
+  --launcher-version "$GUARD_E2E_VERSION" \
+  --user-id "$USER_ID" --device-id "$HW_DEVICE" --session-id "$HW_SESSION" \
+  --binding-epoch "$HW_EPOCH" --fingerprint "$HW_FINGERPRINT")"
+GUARD_SIG="$(sign_payload p256 "$HW_KEY" "$(jq -er '.signingPayload' <<<"$GUARD_FIXTURE")")"
+GUARD_COMPLETE_BODY="$(jq -cn \
+  --arg id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
+  --arg challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  --arg expires "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
+  --arg launcher "$GUARD_E2E_VERSION" --arg signature "$GUARD_SIG" \
+  --argjson attestation "$(jq -c '.attestation' <<<"$GUARD_FIXTURE")" \
+  '{challengeId:$id,challenge:$challenge,challengeExpiresAt:$expires,launcherVersion:$launcher,attestation:$attestation,signature:$signature}')"
+GUARD_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/complete" "$HW_ACCESS_ATTESTED" "$GUARD_COMPLETE_BODY")"
+GUARD_TICKET="$(jq -er '.data.launchTicket' <<<"$GUARD_OK")"
+jq -e '.data.verified==true and .data.oneTime==true and .data.platform=="linux" and .data.guardProtocolVersion==4' <<<"$GUARD_OK" >/dev/null
+MC_SESSION="$(json_post "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg ticket "$GUARD_TICKET" '{clientToken:"device-trust-e2e-guard",guardAttestationTicket:$ticket}')")"
+MC_ACCESS="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
+MC_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
+jq -e --arg v "$GUARD_E2E_VERSION" --arg gh "$(printf 'a%.0s' {1..64})" --arg lh "$(printf 'b%.0s' {1..64})" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
+code="$(request_code POST "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg ticket "$GUARD_TICKET" '{clientToken:"device-trust-e2e-guard-replay",guardAttestationTicket:$ticket}')" "$RUNTIME_DIR/guard-ticket-replay.json")"
+expect_code 412 "$code" 'Guard launch ticket replay was accepted'
+GUARD_JOIN_BODY="$(jq -cn --arg username "$MC_USERNAME" --arg token "$MC_ACCESS" '{username:$username,serverId:"dt-e2e-paper",projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable",minecraftAccessToken:$token}')"
+json_post "$API/api/v1/session/join" "$HW_ACCESS_ATTESTED" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join.json"
+BRIDGE_VALIDATE_BODY="$(jq -cn --arg username "$MC_USERNAME" '{protocolVersion:2,serverId:"dt-e2e-paper",username:$username,projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable"}')"
+code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-guard-bound-allowed.json")"
+expect_code 200 "$code" 'Guard-bound ServerBridge join was rejected'
+jq -e '.data.allowed==true' "$RESULT_DIR/bridge-guard-bound-allowed.json" >/dev/null
+jq '{data:{verified:.data.verified,platform:.data.platform,guardProtocolVersion:.data.guardProtocolVersion,oneTime:.data.oneTime}}' <<<"$GUARD_OK" > "$RESULT_DIR/guard-attestation.json"
+jq '{data:{profile:.data.profile,integrity:.data.integrity}}' <<<"$MC_SESSION" > "$RESULT_DIR/minecraft-integrity-session.json"
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_ACCESS_ATTESTED" "$ATT_BODY" "$RUNTIME_DIR/attestation-replay.json")"; expect_code 401 "$code" 'attestation replay'
 code="$(request_code POST "$API/api/v1/auth/devices/key-recovery/begin" "$HW_ACCESS_ATTESTED" '{}' "$RESULT_DIR/recovery-step-up-required.json")"; expect_code 428 "$code" 'recovery without phishing-resistant step-up'
 
@@ -303,6 +339,8 @@ STEP_BODY="$(python3 "$WEBAUTHN" assert \
 STEP_OK="$(json_post "$API/api/v1/auth/passkeys/step-up/complete" "$HW_ACCESS_ATTESTED" "$STEP_BODY")"
 HW_STEPPED_ACCESS="$(jq -er '.data.accessToken' <<<"$STEP_OK")"
 jq -e '.data.status=="stepped-up" and .data.session.authStrength=="phishing-resistant"' <<<"$STEP_OK" >/dev/null
+# Keep one integrity-bound join pending so key recovery must invalidate it before server redemption.
+json_post "$API/api/v1/session/join" "$HW_STEPPED_ACCESS" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join-pending-recovery.json"
 RECOVERY_KEY="$RUNTIME_DIR/keys/device-recovered-ed25519.pem"
 openssl genpkey -algorithm Ed25519 -out "$RECOVERY_KEY" >/dev/null 2>&1
 RECOVERY_PUB="$(python3 "$CRYPTO" public --algorithm ed25519 --key "$RECOVERY_KEY")"
@@ -314,6 +352,9 @@ REC_DEVICE="$(jq -er '.data.device.id' <<<"$REC_OK")"
 [[ "$REC_DEVICE" != "$HW_DEVICE" ]]
 jq -e '.data.mode=="recover" and .data.oldFingerprintPermanentTombstone==true and .data.session.authStrength=="phishing-resistant"' <<<"$REC_OK" >/dev/null
 printf '%s' "$REC_OK" | sanitize_rotation > "$RESULT_DIR/recovery.json"
+code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-after-recovery.json")"
+expect_code 403 "$code" 'Guard-bound ServerBridge join survived device recovery'
+jq -e '.data.allowed==false and (.data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed" or .data.reason=="minecraft_session_missing_or_expired" or .data.reason=="minecraft_integrity_invalid")' "$RESULT_DIR/bridge-after-recovery.json" >/dev/null
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'pre-recovery access survived binding epoch change'
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RUNTIME_DIR/recovery-replay.json")"; expect_code 401 "$code" 'recovery challenge replay'
 
@@ -349,8 +390,9 @@ psql "$DB_DSN" -Atqc "SELECT json_build_object(
 jq -e '.sealed==true and .replacementChallengePurposes==true and .ownershipConstraints==5 and .bindingShapeConstraint==true and .replacementShapeConstraint==true' "$RESULT_DIR/migration-stabilization.json" >/dev/null
 
 EVIDENCE_FILES=(
-  registration.json trust-after-registration.json bridge-before-rotation.json rotation.json
-  bridge-after-rotation.json old-key-tombstone.json risk-step-up.json p256-attestation.json
+  registration.json trust-after-registration.json software-device-guard-required.json rotation.json
+  old-key-tombstone.json risk-step-up.json p256-attestation.json guard-attestation.json
+  minecraft-integrity-session.json bridge-guard-bound-allowed.json bridge-after-recovery.json
   recovery-step-up-required.json recovery.json revocation.json migration-stabilization.json migration-upgrade-e2e.json
   release-capabilities.json release-readiness.json
 )

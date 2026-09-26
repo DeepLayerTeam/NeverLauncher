@@ -39,14 +39,14 @@ require(
         'macos-package.py',
         'developer-id-notarized',
         'adhoc-development',
-        'if [[ "${MODE}" == "adhoc" ]]',
-        'APP_SIGN_ARGS+=(--deep)',
         'codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"',
     ],
     "macOS production builder",
 )
-if builder.index('APP_SIGN_ARGS+=(--deep)') < builder.index('if [[ "${MODE}" == "adhoc" ]]'):
-    raise SystemExit("macOS ad-hoc deep signing is not scoped to the ad-hoc branch")
+if 'APP_SIGN_ARGS+=(--deep)' in builder or 'codesign --deep --force' in builder:
+    raise SystemExit("macOS production builder must not use --deep while signing nested code")
+if builder.count('codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"') < 2:
+    raise SystemExit("macOS production builder must verify nested binaries both before and after outer bundle signing")
 
 packager = read("scripts/release/macos-package.py")
 require(

@@ -120,7 +120,13 @@ def main() -> int:
                         die('folia: descriptor does not declare folia-supported: true')
                 elif target == 'fabric':
                     data = json.loads(zf.read('fabric.mod.json').decode('utf-8'))
-                    if data.get('environment') != 'server' or data.get('clientModRequired') is not False:
+                    custom = data.get('custom')
+                    neverlauncher = custom.get('neverlauncher') if isinstance(custom, dict) else None
+                    if (
+                        data.get('environment') != 'server'
+                        or not isinstance(neverlauncher, dict)
+                        or neverlauncher.get('clientModRequired') is not False
+                    ):
                         die('fabric: artifact must be server-only and clientModRequired=false')
         except zipfile.BadZipFile:
             die(f'{target}: invalid JAR/ZIP')
