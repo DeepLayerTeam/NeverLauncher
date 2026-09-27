@@ -24,6 +24,9 @@ PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
 BRIDGE_ALLOWLIST_JSON="{}"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
+DEVICE_CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
+GUARD_EVIDENCE="$ROOT/e2e/scripts/guard-attestation-e2e.py"
+GUARD_E2E_VERSION="$VERSION"
 E2E_USER_AGENT="NeverLauncher-E2E/${VERSION}"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
@@ -57,9 +60,19 @@ fi
 "$JAVA_BIN" -version >/dev/null 2>&1 || { echo "[e2e] Java executable failed: $JAVA_BIN" >&2; exit 1; }
 
 rm -rf "$RUNTIME_DIR"
+GUARD_SHA="$(printf 'a%.0s' {1..64})"
+LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
+GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
 mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/bungeecord" "$RUNTIME_DIR/plugins/waterfall" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" "$RUNTIME_DIR/plugins/fabric" "$RUNTIME_DIR/plugins/forge" "$RUNTIME_DIR/plugins/neoforge" \
   "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/bungeecord" "$RUNTIME_DIR/node-identities/waterfall" "$RUNTIME_DIR/node-identities/spigot" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-identities/folia" "$RUNTIME_DIR/node-identities/fabric" "$RUNTIME_DIR/node-identities/forge" "$RUNTIME_DIR/node-identities/neoforge" "$RUNTIME_DIR/node-keys" \
   "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
+GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
+cat > "$GUARD_POLICY_OVERRIDE" <<YAML
+services:
+  neverlauncher-api:
+    environment:
+      NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
+YAML
 write_env_file() {
   cat > "$ENV_FILE" <<ENV
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
@@ -75,7 +88,7 @@ ENV
 }
 write_env_file
 
-compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
+compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$GUARD_POLICY_OVERRIDE" "$@"; }
 cleanup() {
   if [[ "${NEVERLAUNCHER_E2E_KEEP:-0}" != "1" ]]; then
     compose down -v --remove-orphans >/dev/null 2>&1 || true
@@ -144,6 +157,14 @@ wait_log() {
 json_post() {
   local url="$1" token="$2" body="$3"
   curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
+}
+sign_payload() {
+  local algorithm="$1" key="$2" payload="$3" file="$RUNTIME_DIR/device-proof-$RANDOM-$RANDOM.txt"
+  # Device/Guard proof contracts are newline-terminated; command substitution
+  # strips trailing LF, so restore exactly one protocol-significant newline.
+  printf '%s\n' "$payload" > "$file"
+  python3 "$DEVICE_CRYPTO" sign --algorithm "$algorithm" --key "$key" --payload "$file"
+  rm -f "$file"
 }
 
 printf '[e2e] build real ServerBridge artifacts\n'
@@ -366,8 +387,64 @@ printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> a
 jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/runtime-verify.json" >/dev/null
 jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 and ([.files[] | select(.status != "ok")] | length) == 0' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
 
+printf '[e2e] establish hardware-attested Guard-bound Minecraft session for integrity-enforced joins\n'
+HW_LOGIN="$(json_post "$API/api/v1/auth/login" '' "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email:$email,password:$password,deviceId:"minecraft-compat-guard"}')")"
+HW_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$HW_LOGIN")"
+HW_USER_ID="$(jq -er '.data.session.userId' <<<"$HW_LOGIN")"
+HW_KEY="$RUNTIME_DIR/device-hardware-p256.pem"
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out "$HW_KEY" >/dev/null 2>&1
+HW_PUB="$(python3 "$DEVICE_CRYPTO" public --algorithm p256 --key "$HW_KEY")"
+HW_BEGIN="$(json_post "$API/api/v1/auth/devices/register/begin" "$HW_ACCESS_PRE" "$(jq -cn --arg v "$VERSION" '{name:"Minecraft compatibility P-256 identity",platform:"linux",clientVersion:$v,keyAlgorithm:"p256",keyBinding:"hardware",hardwareProvider:"ci-protocol-p256"}')")"
+HW_SIG="$(sign_payload p256 "$HW_KEY" "$(jq -er '.data.signingPayload' <<<"$HW_BEGIN")")"
+HW_COMPLETE="$(json_post "$API/api/v1/auth/devices/register/complete" "$HW_ACCESS_PRE" "$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$HW_BEGIN")" --arg dev "$(jq -er '.data.deviceId' <<<"$HW_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$HW_BEGIN")" --arg pub "$HW_PUB" --arg sig "$HW_SIG" '{challengeId:$id,deviceId:$dev,challenge:$ch,publicKey:$pub,signature:$sig}')")"
+HW_ACCESS="$(jq -er '.data.accessToken' <<<"$HW_COMPLETE")"
+HW_DEVICE="$(jq -er '.data.device.id' <<<"$HW_COMPLETE")"
+HW_SESSION="$(jq -er '.data.session.id' <<<"$HW_COMPLETE")"
+HW_EPOCH="$(jq -er '.data.session.bindingEpoch' <<<"$HW_COMPLETE")"
+HW_FINGERPRINT="$(jq -er '.data.device.keyFingerprint' <<<"$HW_COMPLETE")"
+jq -e '.data.device.keyAlgorithm=="p256" and .data.device.keyBinding=="hardware" and .data.device.attestationState=="unattested"' <<<"$HW_COMPLETE" >/dev/null
+
+ATT_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/attest/begin" "$HW_ACCESS" '{}')"
+ATT_SIG="$(sign_payload p256 "$HW_KEY" "$(jq -er '.data.signingPayload' <<<"$ATT_BEGIN")")"
+ATT_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$ATT_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$ATT_BEGIN")" --arg sig "$ATT_SIG" '{challengeId:$id,challenge:$ch,signature:$sig}')"
+ATT_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_ACCESS" "$ATT_BODY")"
+HW_ACCESS_ATTESTED="$(jq -er '.data.accessToken' <<<"$ATT_OK")"
+jq -e '.data.attestationState=="verified" and .data.device.assurance=="challenge-response-attested" and .data.authorizationElevation==false' <<<"$ATT_OK" >/dev/null
+
+GUARD_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/begin" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg v "$GUARD_E2E_VERSION" '{launcherVersion:$v}')")"
+jq -e --arg v "$VERSION" '.data.launcherVersion==$v and .data.platform=="linux" and .data.releasePolicySchema=="2.0" and .data.guardProtocolVersion==4 and .data.oneTime==true' <<<"$GUARD_BEGIN" >/dev/null
+GUARD_FIXTURE="$(python3 "$GUARD_EVIDENCE" \
+  --challenge-id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
+  --challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  --challenge-expires-at "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
+  --launcher-version "$GUARD_E2E_VERSION" \
+  --user-id "$HW_USER_ID" --device-id "$HW_DEVICE" --session-id "$HW_SESSION" \
+  --binding-epoch "$HW_EPOCH" --fingerprint "$HW_FINGERPRINT")"
+GUARD_SIG="$(sign_payload p256 "$HW_KEY" "$(jq -er '.signingPayload' <<<"$GUARD_FIXTURE")")"
+GUARD_COMPLETE_BODY="$(jq -cn \
+  --arg id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
+  --arg challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  --arg expires "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
+  --arg launcher "$GUARD_E2E_VERSION" --arg signature "$GUARD_SIG" \
+  --argjson attestation "$(jq -c '.attestation' <<<"$GUARD_FIXTURE")" \
+  '{challengeId:$id,challenge:$challenge,challengeExpiresAt:$expires,launcherVersion:$launcher,attestation:$attestation,signature:$signature}')"
+GUARD_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/complete" "$HW_ACCESS_ATTESTED" "$GUARD_COMPLETE_BODY")"
+GUARD_TICKET="$(jq -er '.data.launchTicket' <<<"$GUARD_OK")"
+jq -e '.data.verified==true and .data.oneTime==true and .data.platform=="linux" and .data.guardProtocolVersion==4' <<<"$GUARD_OK" >/dev/null
+MC_SESSION="$(json_post "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$(jq -cn --arg ticket "$GUARD_TICKET" '{clientToken:"minecraft-compatibility-e2e",guardAttestationTicket:$ticket}')")"
+MINECRAFT_ACCESS_TOKEN="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
+PLAYER_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
+jq -e --arg v "$VERSION" --arg gh "$GUARD_SHA" --arg lh "$LAUNCHER_SHA" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
+# All subsequent joins/invalidation/topology calls must use the same hardware-
+# attested NeverLauncher session that owns the integrity-bound Minecraft token.
+ACCESS_TOKEN="$HW_ACCESS_ATTESTED"
+build_join_body() {
+  local server_id="$1"
+  jq -cn --arg username "$PLAYER_USERNAME" --arg server "$server_id" --arg profile "$PROFILE_ID" --arg token "$MINECRAFT_ACCESS_TOKEN" '{username:$username,serverId:$server,projectId:"e2e-project",profileId:$profile,channel:"stable",minecraftAccessToken:$token}'
+}
+
 printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
-json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client.json"
+json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_")) and .data.join.issuedIdentityEpoch >= 1 and (.data.join.issuedKeyFingerprint | length) == 64' "$RUNTIME_DIR/join-paper-real-client.json" >/dev/null
 validate_join() {
   local id="$1" key="$2" plugin_sha="$3" expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json" code body
@@ -389,7 +466,7 @@ IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch
 [[ "$redemption_version" == "2" && "$fingerprint_match" == "t" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "t" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
 # The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
 # the actual Minecraft connection; the server plugin must be the only consumer.
-json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"paper-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
+json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_"))' "$RUNTIME_DIR/join-paper-real-client-fresh.json" >/dev/null
 
 (
@@ -419,7 +496,7 @@ wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
 
 if [[ "$MODE" == "full" ]]; then
   printf '[e2e] verify zero-patch proxy -> backend one-time handoff and runtime-learned topology\n'
-  json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "{\"username\":\"$PLAYER_USERNAME\",\"serverId\":\"velocity-e2e-p3\",\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\"}" > "$RUNTIME_DIR/join-velocity-handoff-source.json"
+  json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body velocity-e2e-p3)" > "$RUNTIME_DIR/join-velocity-handoff-source.json"
   validate_join velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" allow
   handoff_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg target "paper-e2e-p3" '{protocolVersion:2,username:$username,targetServer:$target}')"
   handoff_code="$(serverbridge_node_signed_request "$VELOCITY_NODE_KEY" velocity-e2e-p3 POST "$API/api/v1/server-bridge/handoff" "$handoff_body" "$RUNTIME_DIR/handoff-velocity-paper.json")"
@@ -437,7 +514,7 @@ if [[ "$MODE" == "full" ]]; then
   printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
-    join_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg id "$id" --arg profile "$PROFILE_ID" '{username:$username,serverId:$id,projectId:"e2e-project",profileId:$profile,channel:"stable"}')"
+    join_body="$(build_join_body "$id")"
     revoke_body="$(jq -cn --arg id "$id" '{serverId:$id,reason:"e2e-revoke"}')"
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id.json"
     validate_join "$id" "$key" "$plugin_sha" allow

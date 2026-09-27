@@ -665,6 +665,13 @@ for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/jav
 for required in ['webauthn-test-authenticator.py', '/api/v1/auth/passkeys/register/begin', '--webauthn-helper "$WEBAUTHN"', '--webauthn-state "$PASSKEY_STATE"']:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E не выполняет реальный fresh WebAuthn step-up перед publish: {required}")
+for required in [
+    'device-trust-crypto.py', 'guard-attestation-e2e.py', 'keyAlgorithm:"p256"', 'keyBinding:"hardware"',
+    '/attest/begin', '/guard-attest/begin', 'guardAttestationTicket', '/api/v1/minecraft/session',
+    'minecraftAccessToken:$token', 'GUARD_E2E_VERSION="$VERSION"', 'guard-policy.override.yml',
+]:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E не проходит hardware-attested Guard-bound Minecraft integrity flow: {required}")
 if "actual-mojang-client" not in ci or "xvfb" not in ci or "Minecraft Client E2E" not in ci:
     fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
 
@@ -782,6 +789,21 @@ for required in [
         fail(f"build-release compatibility certification incomplete: {required}")
 if not (ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go").is_file():
     fail("compatibility release certification regression tests are missing")
+
+release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
+for required in [
+    'head_sha', 'refusing release fallback', 'status": "passed"', 'archive_download_url',
+    'neverlauncher-compatibility-matrix-', 'neverlauncher-device-trust-matrix-', 'exact-commit',
+]:
+    if required not in release_cert_fetch:
+        fail(f"release exact-commit certification fetcher incomplete: {required}")
+for required in [
+    'actions: read', 'fetch-exact-certifications.py', '--commit "$GITHUB_SHA"',
+    'NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE', 'NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE',
+    'external-certifications/compatibility/matrix.json', 'external-certifications/device-trust/matrix.json',
+]:
+    if required not in ci:
+        fail(f"release-bundle не ждёт exact-commit Compatibility/Device Trust certification: {required}")
 
 
 # 0.12.8 Cross-platform hardening + device key recovery/rotation.

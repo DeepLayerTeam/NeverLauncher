@@ -75,6 +75,7 @@ require(protocol, [
     'POST ${url#${API}} failed: HTTP $code',
     '/guard-attest/begin', '/guard-attest/complete', 'guardAttestationTicket',
     '/api/v1/minecraft/session', 'minecraftAccessToken', 'software-device-guard-required.json',
+    'GUARD_E2E_VERSION="$VERSION"', 'guard-policy.override.yml', 'GUARD_RELEASE_ALLOWLIST_JSON',
     'guard-attestation-e2e.py', 'bridge-after-recovery.json',
 ], "PostgreSQL Device Trust E2E")
 

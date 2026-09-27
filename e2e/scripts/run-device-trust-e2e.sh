@@ -21,7 +21,7 @@ ADMIN_PASSWORD="$(python3 -c 'import secrets; print("DT-E2E-" + secrets.token_ur
 CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
 GUARD_EVIDENCE="$ROOT/e2e/scripts/guard-attestation-e2e.py"
-GUARD_E2E_VERSION="0.14.0"
+GUARD_E2E_VERSION="$VERSION"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
@@ -33,6 +33,16 @@ docker compose version >/dev/null
 rm -rf "$RUNTIME_DIR" "$RESULT_DIR"
 mkdir -p "$RUNTIME_DIR/keys" "$RESULT_DIR"
 chmod 0700 "$RUNTIME_DIR" "$RUNTIME_DIR/keys"
+GUARD_SHA="$(printf 'a%.0s' {1..64})"
+LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
+GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
+GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
+cat > "$GUARD_POLICY_OVERRIDE" <<YAML
+services:
+  api-a:
+    environment:
+      NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
+YAML
 cat > "$ENV_FILE" <<ENV
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
 NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
@@ -41,7 +51,7 @@ NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
 NEVERLAUNCHER_E2E_VERSION=$VERSION
 ENV
 chmod 0600 "$ENV_FILE"
-compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
+compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$GUARD_POLICY_OVERRIDE" "$@"; }
 cleanup() {
   if [[ "${NEVERLAUNCHER_E2E_KEEP:-0}" != "1" ]]; then
     compose down -v --remove-orphans >/dev/null 2>&1 || true

@@ -30,6 +30,7 @@ jobs:
       - name: Repository policy and version alignment
         run: |
           python3 scripts/smoke/offline/repository-policy.py
+          python3 scripts/release/test_fetch_exact_certifications.py
           python3 scripts/smoke/offline/device-key-storage.py
           python3 scripts/smoke/offline/hardware-bound-identity.py
           python3 scripts/smoke/offline/challenge-response-attestation.py
@@ -582,6 +583,9 @@ jobs:
   release-bundle:
     name: Release candidate bundle
     needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -617,6 +621,21 @@ jobs:
         with:
           name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
+      - name: Wait for exact-commit Compatibility + Device Trust certifications
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          python3 scripts/release/fetch-exact-certifications.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --version "$VERSION" \
+            --token "$GITHUB_TOKEN" \
+            --output-dir external-certifications \
+            --timeout-seconds 1200 \
+            --poll-seconds 15
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
@@ -662,6 +681,10 @@ jobs:
           NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
           NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
           NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/neverlauncher-release-trust-state.json
+          NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE: ${{ github.workspace }}/external-certifications/compatibility/matrix.json
+          NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE: ${{ github.workspace }}/compatibility/targets.json
+          NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE: ${{ github.workspace }}/external-certifications/device-trust/matrix.json
+          NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE: ${{ github.workspace }}/device-trust/targets.json
           NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
           NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
