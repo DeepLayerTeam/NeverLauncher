@@ -645,10 +645,14 @@ for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixtu
 for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',
-    'passkey_step_up', '/api/v1/auth/passkeys/step-up/begin', '--webauthn-state',
+    'passkey_step_up', '/api/v1/auth/passkeys/step-up/begin', '--webauthn-state', 'f"--challenge={challenge}"',
 ]:
     if required not in e2e_publish:
         fail(f"E2E package publisher не проверяет реальный artifact lifecycle/rate-limit contract: {required}")
+neverruntime_lib = read("runtime/neverruntime/src/lib.rs")
+if '#[serde(default)]\n    pub executable: bool,' not in neverruntime_lib:
+    fail("NeverRuntime manifest signing payload must preserve executable=false exactly like Go ManifestFile")
+
 for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/java', '--java "$JAVA_BIN"']:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E не закрепляет setup-java runtime: {required}")

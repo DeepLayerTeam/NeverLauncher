@@ -87,7 +87,7 @@ class PasskeyStepUpTests(unittest.TestCase):
         def json(self, method: str, path: str, payload: object | None = None) -> object:
             self.calls.append((method, path, payload))
             if path.endswith("/begin"):
-                return {"data": {"transactionToken": "tx", "publicKey": {"challenge": "challenge"}}}
+                return {"data": {"transactionToken": "-tx-leading-dash", "publicKey": {"challenge": "-challenge-leading-dash"}}}
             if path.endswith("/complete"):
                 return {"data": {"accessToken": "fresh-token", "session": {"authStrength": "phishing-resistant"}}}
             raise AssertionError(path)
@@ -99,7 +99,7 @@ class PasskeyStepUpTests(unittest.TestCase):
             helper.write_text("# fixture\n", encoding="utf-8")
             state.write_text("{}\n", encoding="utf-8")
             client = self.Client()
-            assertion = '{"transactionToken":"tx","credential":{"type":"public-key"}}'
+            assertion = '{"transactionToken":"-tx-leading-dash","credential":{"type":"public-key"}}'
             with patch.object(module.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout=assertion, stderr="")) as run:
                 client.passkey_step_up(helper, state, sign_count=3)
             self.assertEqual(client.token, "fresh-token")
@@ -107,8 +107,10 @@ class PasskeyStepUpTests(unittest.TestCase):
                 "/api/v1/auth/passkeys/step-up/begin",
                 "/api/v1/auth/passkeys/step-up/complete",
             ])
-            self.assertIn("--sign-count", run.call_args.args[0])
-            self.assertIn("3", run.call_args.args[0])
+            argv = run.call_args.args[0]
+            self.assertIn("--transaction-token=-tx-leading-dash", argv)
+            self.assertIn("--challenge=-challenge-leading-dash", argv)
+            self.assertIn("--sign-count=3", argv)
 
 
 if __name__ == "__main__":

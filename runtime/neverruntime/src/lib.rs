@@ -179,7 +179,7 @@ pub struct ManifestFile {
     pub sha256: String,
     pub url: String,
     pub required: bool,
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(default)]
     pub executable: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target_os: Vec<String>,
@@ -1003,6 +1003,17 @@ mod tests {
         let result = verify_manifest_signature(&manifest, &public_key).expect("verify");
         assert!(result.valid);
         assert_eq!(result.public_key, public_key);
+    }
+
+    #[test]
+    fn signing_payload_preserves_explicit_false_executable_for_go_contract() {
+        let manifest = sample_manifest();
+        let payload = manifest_signing_payload(&manifest).expect("payload");
+        let json = String::from_utf8(payload).expect("utf8");
+        assert!(
+            json.contains("\"executable\":false"),
+            "Go ManifestFile signs executable=false explicitly: {json}"
+        );
     }
 
     #[test]

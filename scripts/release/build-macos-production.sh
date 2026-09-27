@@ -104,14 +104,18 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
-  for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
+  # Sign nested helper tools first. Never sign Contents/MacOS/neverlauncher-desktop
+  # directly while it lives inside the .app: codesign treats the bundle main
+  # executable as the bundle itself and requires every nested helper to already
+  # be signed. The final APP_ROOT signature signs/seals the main executable.
+  for binary in neverguard neverruntime neverlauncher-cli; do
     case "${binary}" in
-      neverlauncher-desktop) identifier="ru.skif4er.neverlauncher"; file="${MACOS_DIR}/${binary}" ;;
-      neverguard) identifier="ru.skif4er.neverlauncher.guard"; file="${HELPERS_DIR}/${binary}" ;;
-      neverruntime) identifier="ru.skif4er.neverlauncher.runtime"; file="${HELPERS_DIR}/${binary}" ;;
-      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli"; file="${HELPERS_DIR}/${binary}" ;;
-      *) echo "unsupported macOS binary identifier mapping: ${binary}" >&2; exit 1 ;;
+      neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
+      neverruntime) identifier="ru.skif4er.neverlauncher.runtime" ;;
+      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli" ;;
+      *) echo "unsupported macOS helper identifier mapping: ${binary}" >&2; exit 1 ;;
     esac
+    file="${HELPERS_DIR}/${binary}"
     actual_arch="$(lipo -archs "${file}")"
     [[ "${actual_arch}" == "${LIPO_ARCH}" ]] || { echo "${file}: expected thin ${LIPO_ARCH}, got ${actual_arch}" >&2; exit 1; }
     codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier "${identifier}" "${file}"
@@ -123,19 +127,16 @@ EOF_PLIST
     fi
   done
 
+  # Generate the Resources that must be sealed by the outer application
+  # signature. The main executable is intentionally still unsigned here.
   python3 "${ROOT_DIR}/scripts/release/macos-package.py" manifest \
     --version "${VERSION}" --arch "${arch}" --team-id "${TEAM_ID}" \
     --trust-mode "${UPDATE_TRUST_MODE}" \
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
   chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
-  # Keep nested code in Apple's standard locations and sign strictly inside-out.
-  # Contents/MacOS contains only the main executable; helper tools live in
-  # Contents/Helpers. --deep is verification-only and is never used for signing.
-  codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
-  for binary in neverguard neverruntime neverlauncher-cli; do
-    codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"
-  done
+  # Complete inside-out signing by signing the application bundle exactly once.
+  # This signs the main executable and seals already-signed Helpers + Resources.
   codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
   codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
   for binary in neverguard neverruntime neverlauncher-cli; do
@@ -146,6 +147,9 @@ EOF_PLIST
     app_details="$(codesign -dv --verbose=4 "${APP_ROOT}" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${APP_ROOT}" >&2; exit 1; }
     grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${APP_ROOT}" >&2; exit 1; }
+    desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/neverlauncher-desktop" 2>&1)"
+    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${MACOS_DIR}/neverlauncher-desktop" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${MACOS_DIR}/neverlauncher-desktop" >&2; exit 1; }
   fi
 
   NOTARY_ZIP="${WORK_ROOT}/neverlauncher-${arch}-notary.zip"

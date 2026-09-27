@@ -35,7 +35,7 @@ def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def inspect_macho(path: Path, expected_arch: str) -> dict[str, Any]:
+def inspect_macho(path: Path, expected_arch: str, *, require_signature: bool = True) -> dict[str, Any]:
     data = path.read_bytes()
     if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
         raise RuntimeError(f"{path}: production package requires thin 64-bit little-endian Mach-O")
@@ -63,7 +63,7 @@ def inspect_macho(path: Path, expected_arch: str) -> dict[str, Any]:
                 raise RuntimeError(f"{path}: invalid LC_CODE_SIGNATURE bounds")
             has_signature = True
         offset += cmdsize
-    if not has_signature:
+    if require_signature and not has_signature:
         raise RuntimeError(f"{path}: LC_CODE_SIGNATURE is required")
     return meta
 
@@ -81,7 +81,9 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         source = app / bundle_path
         if not source.is_file():
             raise RuntimeError(f"missing signed macOS bundle executable: {source}")
-        inspect_macho(source, arch)
+        # The app main executable is signed by the final APP_ROOT codesign step,
+        # after Resources have been generated. Helpers must already be signed.
+        inspect_macho(source, arch, require_signature=(component != "desktop-launcher"))
         canonical_name = canonical_pattern.format(arch=arch)
         canonical = out / canonical_name
         shutil.copy2(source, canonical)

@@ -53,8 +53,15 @@ require(builder, [
 ], "inside-out macOS signing")
 if 'APP_SIGN_ARGS+=(--deep)' in builder or 'codesign --deep --force' in builder:
     raise SystemExit("macOS builder must never use --deep for signing; nested code is signed explicitly inside-out")
-if builder.count('codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"') < 2:
+if 'codesign --verify --strict --verbose=2 "${file}"' not in builder or 'codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"' not in builder:
     raise SystemExit("macOS builder must verify helper binaries both before and after outer bundle signing")
+if 'file="${MACOS_DIR}/${binary}"' in builder or 'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"' in builder:
+    raise SystemExit("macOS builder must not sign the bundle main executable as a standalone nested step")
+helper_sign = builder.find('for binary in neverguard neverruntime neverlauncher-cli; do')
+manifest_build = builder.find('macos-package.py" manifest')
+app_sign = builder.find('codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"')
+if min(helper_sign, manifest_build, app_sign) < 0 or not (helper_sign < manifest_build < app_sign):
+    raise SystemExit("macOS signing order must be helpers -> Resources manifest -> APP_ROOT")
 
 packager = read("scripts/release/macos-package.py")
 require(
@@ -70,6 +77,8 @@ require(
         'Contents/Helpers/neverguard',
         'Contents/Helpers/neverruntime',
         'Contents/Helpers/neverlauncher-cli',
+        'require_signature: bool = True',
+        'require_signature=(component != "desktop-launcher")',
     ],
     "macOS package helper",
 )
