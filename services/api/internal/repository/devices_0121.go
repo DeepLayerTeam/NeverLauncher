@@ -826,6 +826,13 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
+	// Force every deferred ownership relation to validate while the transaction
+	// is still open. This preserves fail-closed semantics (COMMIT would perform
+	// the same checks) while making a violated invariant attributable to this
+	// stage instead of collapsing into an opaque commit failure.
+	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: validate deferred constraints: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: commit: %w", err)
 	}

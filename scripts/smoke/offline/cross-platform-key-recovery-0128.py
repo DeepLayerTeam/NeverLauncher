@@ -42,7 +42,7 @@ require(handler, [
 require(routes, ["key-rotation/begin", "key-rotation/complete", "key-recovery/begin", "key-recovery/complete"], "routes")
 require(repo, [
     "func (r *SQLRepository) ReplaceTrustedDeviceKey", "BeginTx", "FOR UPDATE",
-    "SET CONSTRAINTS ALL DEFERRED", "ON CONFLICT DO NOTHING RETURNING",
+    "SET CONSTRAINTS ALL DEFERRED", "ON CONFLICT DO NOTHING RETURNING", "SET CONSTRAINTS ALL IMMEDIATE",
     "binding_epoch=GREATEST(binding_epoch,1)+1", "current session changed during replacement",
     "replaced_by_device_id", "refresh_token_families", "minecraft_sessions",
     "trusted-device-key-replaced", "replace trusted device: commit: %w",

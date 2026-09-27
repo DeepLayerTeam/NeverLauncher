@@ -81,6 +81,9 @@ json_post() {
   if [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
     echo "[device-trust-e2e] POST ${url#${API}} failed: HTTP $code" >&2
     [[ -s "$tmp" ]] && cat "$tmp" >&2 || true
+    # Keep production responses generic, but surface the server-side wrapped
+    # PostgreSQL stage in CI so a failed fail-closed transaction is actionable.
+    compose logs --no-color --tail 200 api-a >&2 || true
     rm -f "$tmp"
     return 22
   fi

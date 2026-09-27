@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import secrets
 import sys
+import time
 from urllib.parse import quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,17 +42,46 @@ class APIClient:
             self.conn = cls(self.host, self.port, timeout=120)
         return self.conn
 
+    @staticmethod
+    def _retry_after_seconds(response: http.client.HTTPResponse) -> int:
+        values = [response.getheader("Retry-After", ""), response.getheader("X-RateLimit-Reset", "")]
+        delays: list[int] = []
+        for value in values:
+            try:
+                parsed = int(str(value).strip())
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0:
+                delays.append(parsed)
+        # The API exposes a fixed-window reset in seconds. Add one second so a
+        # retry never races the Redis TTL boundary. Keep an upper bound so a
+        # broken proxy cannot stall the release job indefinitely.
+        return min(65, max(delays, default=1) + 1)
+
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
         merged = {"Authorization": f"Bearer {self.token}", "User-Agent": f"NeverLauncher-E2E/{PRODUCT_VERSION}", **headers}
         request_path = self.base_path + path
-        for attempt in range(2):
+        transport_retries = 0
+        rate_limit_retries = 0
+        while True:
             conn = self._connect()
             try:
                 conn.request(method, request_path, body=body, headers=merged)
                 response = conn.getresponse()
                 payload = response.read()
+                transport_retries = 0
                 if response.getheader("Connection", "").lower() == "close":
                     self.conn = None
+                if response.status == 429 and rate_limit_retries < 8:
+                    delay = self._retry_after_seconds(response)
+                    rate_limit_retries += 1
+                    print(
+                        f"[e2e-upload] rate limited on {method} {path}; retry {rate_limit_retries}/8 after {delay}s",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    time.sleep(delay)
+                    continue
                 return response.status, payload
             except (ConnectionError, OSError, http.client.HTTPException):
                 try:
@@ -59,9 +89,9 @@ class APIClient:
                 except Exception:
                     pass
                 self.conn = None
-                if attempt:
+                if transport_retries >= 1:
                     raise
-        raise RuntimeError("unreachable")
+                transport_retries += 1
 
     def json(self, method: str, path: str, payload: object | None = None) -> object:
         body = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()

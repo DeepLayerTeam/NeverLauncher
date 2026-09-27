@@ -48,7 +48,7 @@ repo_devices = read("services/api/internal/repository/devices_0121.go")
 repo_postgres = read("services/api/internal/repository/postgres.go")
 require(repo_devices, [
     "var replacedBy sql.NullString", "d.ReplacedByDeviceID = replacedBy.String",
-    "NULL,NULL,'')`, replacement.ID",
+    "NULL,NULL,'')", "ON CONFLICT DO NOTHING RETURNING",
 ], "nullable replacement repository path")
 require(repo_postgres, [
     "func nullText(value string) any", "nullText(item.TrustedDeviceID)",

@@ -55,5 +55,26 @@ class SafeLocalTests(unittest.TestCase):
                 module.safe_local(root, "libraries/a.jar")
 
 
+class RetryAfterTests(unittest.TestCase):
+    class Response:
+        def __init__(self, headers: dict[str, str]):
+            self.headers = headers
+
+        def getheader(self, name: str, default: str = "") -> str:
+            return self.headers.get(name, default)
+
+    def test_retry_after_prefers_longest_server_reset(self) -> None:
+        response = self.Response({"Retry-After": "7", "X-RateLimit-Reset": "11"})
+        self.assertEqual(module.APIClient._retry_after_seconds(response), 12)
+
+    def test_retry_after_is_bounded(self) -> None:
+        response = self.Response({"Retry-After": "600"})
+        self.assertEqual(module.APIClient._retry_after_seconds(response), 65)
+
+    def test_retry_after_defaults_to_short_backoff(self) -> None:
+        response = self.Response({})
+        self.assertEqual(module.APIClient._retry_after_seconds(response), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

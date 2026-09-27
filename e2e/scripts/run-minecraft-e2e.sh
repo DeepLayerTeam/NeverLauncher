@@ -41,8 +41,18 @@ fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go java cargo python3 gradle xvfb-run openssl psql; do need "$cmd"; done
+for cmd in docker curl jq go cargo python3 gradle xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
+
+JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
+if [[ -z "$JAVA_BIN" && -n "${JAVA_HOME:-}" && -x "${JAVA_HOME}/bin/java" ]]; then
+  JAVA_BIN="${JAVA_HOME}/bin/java"
+fi
+if [[ -z "$JAVA_BIN" ]]; then
+  JAVA_BIN="$(command -v java || true)"
+fi
+[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[e2e] Java executable is unavailable; set NEVERLAUNCHER_E2E_JAVA or JAVA_HOME" >&2; exit 1; }
+"$JAVA_BIN" -version >/dev/null 2>&1 || { echo "[e2e] Java executable failed: $JAVA_BIN" >&2; exit 1; }
 
 rm -rf "$RUNTIME_DIR"
 mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/bungeecord" "$RUNTIME_DIR/plugins/waterfall" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" "$RUNTIME_DIR/plugins/fabric" "$RUNTIME_DIR/plugins/forge" "$RUNTIME_DIR/plugins/neoforge" \
@@ -288,7 +298,7 @@ case "$LOADER" in
     "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR"
     ;;
   forge|neoforge)
-    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --java "$(command -v java)"
+    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --java "$JAVA_BIN"
     ;;
 esac
 
@@ -372,7 +382,7 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
       --manifest "$RUNTIME_DIR/manifest.json" \
       --pinned-public-key "$PINNED_PUBLIC_KEY" \
       --root "$RUNTIME_DIR/client" \
-      --java "$(command -v java)" \
+      --java "$JAVA_BIN" \
       --username "$PLAYER_USERNAME" \
       --max-runtime-seconds "${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
       > "$RUNTIME_DIR/runtime-launch-minecraft.json"
