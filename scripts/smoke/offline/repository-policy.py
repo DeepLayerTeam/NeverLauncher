@@ -650,6 +650,20 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E validate_join nounset regression guard missing: {required}")
+for forbidden in [
+    '$fingerprint_match" == "t"',
+    '$redeemed_ip_present" == "t"',
+    'consumed\\|t\\|t\\|64\\|t',
+]:
+    if forbidden in e2e_script:
+        fail(f"actual Minecraft E2E сравнивает PostgreSQL ::text boolean с устаревшим psql token t: {forbidden}")
+for required in [
+    '$fingerprint_match" == "true"',
+    '$redeemed_ip_present" == "true"',
+    'consumed\\|true\\|true\\|64\\|true',
+]:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E PostgreSQL redemption/handoff boolean assertion missing: {required}")
 for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',
@@ -864,6 +878,8 @@ for required in [
 for required in [
     "db migrate apply", "/api/v1/auth/devices/register/begin", "/api/v1/auth/refresh",
     "/api/v1/auth/devices/key-rotation/begin", "/api/v1/server-bridge/validate-join",
+    "/api/v1/server-bridge/servers/dt-e2e-paper/heartbeat", "BRIDGE_RELEASE_ALLOWLIST_JSON",
+    "bridge_integrity_verified", "pluginVersion:$version", "pluginSha256:$sha",
     "/api/v1/auth/sessions", "/attest/begin", "/api/v1/auth/devices/key-recovery/begin",
     "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",
     "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
@@ -1118,6 +1134,13 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         fail("0.14.2 cryptographic node identity gate is not wired into preflight/CI")
     if "run-serverbridge-crypto-identity-migration-e2e.sh" not in preflight or "run-serverbridge-crypto-identity-migration-e2e.sh" not in ci:
         fail("0.14.2 exact 0.14.1 -> 0.14.2 migration E2E is not wired into preflight/CI")
+    crypto_migration_e2e_0142 = read("e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh")
+    for forbidden in ['identity-enrollment-required||||||0||||t|t', 'invalidated|t"']:
+        if forbidden in crypto_migration_e2e_0142:
+            fail(f"0.14.2 migration E2E compares PostgreSQL ::text boolean with obsolete token: {forbidden}")
+    for required in ['identity-enrollment-required||||||0||||true|true', 'invalidated|true']:
+        if required not in crypto_migration_e2e_0142:
+            fail(f"0.14.2 migration E2E PostgreSQL boolean assertion missing: {required}")
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
         fail("0.14.2 mandatory cryptographic identity release gate is incomplete")
 
@@ -1145,6 +1168,13 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         fail("0.14.3 one-time join ticket gate is not wired into preflight/CI")
     if "run-one-time-join-ticket-migration-e2e.sh" not in preflight or "run-one-time-join-ticket-migration-e2e.sh" not in ci:
         fail("0.14.3 exact 0.14.2 -> 0.14.3 migration E2E is not wired into preflight/CI")
+    ticket_migration_e2e_0143 = read("e2e/scripts/run-one-time-join-ticket-migration-e2e.sh")
+    for forbidden in ['invalidated|t|', '|t|64']:
+        if forbidden in ticket_migration_e2e_0143:
+            fail(f"0.14.3 migration E2E compares PostgreSQL ::text boolean with obsolete token: {forbidden}")
+    for required in ['invalidated|true|', '|true|64']:
+        if required not in ticket_migration_e2e_0143:
+            fail(f"0.14.3 migration E2E PostgreSQL boolean assertion missing: {required}")
     if "One-Time Join Tickets gate" not in ticket_gate_0143:
         fail("0.14.3 mandatory one-time join ticket release gate is incomplete")
 

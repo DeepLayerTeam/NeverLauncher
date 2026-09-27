@@ -464,7 +464,7 @@ consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_
 (( consumed_count >= 1 )) || { echo "[e2e] ServerBridge Protocol v2 ticket was not persisted as consumed" >&2; exit 1; }
 redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
 IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
-[[ "$redemption_version" == "2" && "$fingerprint_match" == "t" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "t" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
+[[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
 # The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
 # the actual Minecraft connection; the server plugin must be the only consumer.
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
@@ -506,7 +506,7 @@ if [[ "$MODE" == "full" ]]; then
   validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
   validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
   handoff_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,(source_node_id='velocity-e2e-p3')::text,(target_node_id='paper-e2e-p3')::text,length(redeemed_nonce_hash),(consumed_at IS NOT NULL)::text FROM server_bridge_handoffs_v2 WHERE username_normalized=lower('$PLAYER_USERNAME') ORDER BY created_at DESC LIMIT 1")"
-  [[ "$handoff_state" == consumed\|t\|t\|64\|t ]] || { echo "[e2e] invalid consumed handoff state: $handoff_state" >&2; exit 1; }
+  [[ "$handoff_state" == consumed\|true\|true\|64\|true ]] || { echo "[e2e] invalid consumed handoff state: $handoff_state" >&2; exit 1; }
   topology_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE source_node_id='velocity-e2e-p3' AND target_node_id='paper-e2e-p3' AND status='active'")"
   [[ "$topology_count" == "1" ]] || { echo "[e2e] runtime topology edge was not persisted" >&2; exit 1; }
   curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"

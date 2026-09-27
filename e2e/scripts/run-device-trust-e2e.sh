@@ -35,6 +35,8 @@ mkdir -p "$RUNTIME_DIR/keys" "$RESULT_DIR"
 chmod 0700 "$RUNTIME_DIR" "$RUNTIME_DIR/keys"
 GUARD_SHA="$(printf 'a%.0s' {1..64})"
 LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
+BRIDGE_SHA="$(printf 'c%.0s' {1..64})"
+BRIDGE_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{($version):{velocitySha256:[$sha],paperSha256:[$sha],purpurSha256:[$sha]}}')"
 GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
 GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
 cat > "$GUARD_POLICY_OVERRIDE" <<YAML
@@ -42,6 +44,7 @@ services:
   api-a:
     environment:
       NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
+      NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '$BRIDGE_RELEASE_ALLOWLIST_JSON'
 YAML
 cat > "$ENV_FILE" <<ENV
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
@@ -212,6 +215,10 @@ json_post "$API/api/v1/install/first-project" "$ACCESS1R" '{"projectId":"dt-e2e-
 SERVER_REG_BODY="$(jq -cn --arg publicKey "$SERVER_NODE_PUBLIC" '{id:"dt-e2e-paper",name:"Device Trust E2E Paper",kind:"paper",projectId:"dt-e2e-project",profileId:"vanilla",keyAlgorithm:"ed25519",publicKey:$publicKey}')"
 SERVER_REG="$(json_post "$API/api/v1/server-bridge/servers/register" "$ACCESS1R" "$SERVER_REG_BODY")"
 jq -e '.data.status=="registered" and .data.nodeIdentity.keyAlgorithm=="ed25519" and .data.nodeIdentity.identityEpoch==1' <<<"$SERVER_REG" >/dev/null
+BRIDGE_HEARTBEAT_BODY="$(jq -cn --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{protocolVersion:2,serverId:"dt-e2e-paper",serverType:"paper",pluginVersion:$version,pluginSha256:$sha,hostname:"device-trust-e2e"}')"
+code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/servers/dt-e2e-paper/heartbeat" "$BRIDGE_HEARTBEAT_BODY" "$RESULT_DIR/bridge-heartbeat.json")"
+expect_code 200 "$code" 'ServerBridge integrity heartbeat was rejected'
+jq -e --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '.data.status=="heartbeat-accepted" and .data.integrity.allowed==true and .data.integrity.required==true and .data.integrity.reason=="bridge_integrity_verified" and .data.pluginVersion==$version and .data.pluginSha256==$sha' "$RESULT_DIR/bridge-heartbeat.json" >/dev/null
 code="$(request_code POST "$API/api/v1/session/join" "$ACCESS1R" '{"username":"DeviceTrustE2E","serverId":"dt-e2e-paper","projectId":"dt-e2e-project","profileId":"vanilla","channel":"stable"}' "$RESULT_DIR/software-device-guard-required.json")"
 expect_code 412 "$code" 'software Linux device bypassed Guard-bound Minecraft integrity'
 jq -e '.error.code==412 and (.error.message|contains("minecraftAccessToken"))' "$RESULT_DIR/software-device-guard-required.json" >/dev/null
@@ -322,7 +329,7 @@ code="$(request_code POST "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" 
 expect_code 412 "$code" 'Guard launch ticket replay was accepted'
 GUARD_JOIN_BODY="$(jq -cn --arg username "$MC_USERNAME" --arg token "$MC_ACCESS" '{username:$username,serverId:"dt-e2e-paper",projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable",minecraftAccessToken:$token}')"
 json_post "$API/api/v1/session/join" "$HW_ACCESS_ATTESTED" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join.json"
-BRIDGE_VALIDATE_BODY="$(jq -cn --arg username "$MC_USERNAME" '{protocolVersion:2,serverId:"dt-e2e-paper",username:$username,projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable"}')"
+BRIDGE_VALIDATE_BODY="$(jq -cn --arg username "$MC_USERNAME" --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{protocolVersion:2,serverId:"dt-e2e-paper",username:$username,projectId:"dt-e2e-project",profileId:"vanilla",channel:"stable",pluginVersion:$version,pluginSha256:$sha}')"
 code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-guard-bound-allowed.json")"
 expect_code 200 "$code" 'Guard-bound ServerBridge join was rejected'
 jq -e '.data.allowed==true' "$RESULT_DIR/bridge-guard-bound-allowed.json" >/dev/null

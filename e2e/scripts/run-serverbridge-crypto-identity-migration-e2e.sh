@@ -102,15 +102,15 @@ grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
 identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0022_serverbridge_crypto_node_identities_0142'")"
-[[ "$identity_sealed" == "t" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
+[[ "$identity_sealed" == "true" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
 
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,plugin_version,plugin_sha256,integrity_status,(integrity_verified_at IS NULL)::text,(last_heartbeat_at IS NULL)::text FROM server_bridge_nodes_v2 WHERE id='paper-0141'")"
 # psql renders empty text columns as adjacent delimiters.
-[[ "$node_state" == "identity-enrollment-required||||||0||||t|t" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
+[[ "$node_state" == "identity-enrollment-required||||||0||||true|true" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
 disabled_legacy_secret="$(psql "$DB_DSN" -AtF '|' -qc "SELECT token_hash,token_prefix,status FROM server_bridge_nodes_v2 WHERE id='paper-disabled-0141'")"
 [[ "$disabled_legacy_secret" == "||disabled" ]] || { echo "disabled node retained legacy bearer material: $disabled_legacy_secret" >&2; exit 1; }
 join_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,(invalidated_at IS NOT NULL)::text FROM server_bridge_join_tickets_v2 WHERE id='join-0141'")"
-[[ "$join_state" == "invalidated|t" ]] || { echo "0.14.1 active join survived identity boundary: $join_state" >&2; exit 1; }
+[[ "$join_state" == "invalidated|true" ]] || { echo "0.14.1 active join survived identity boundary: $join_state" >&2; exit 1; }
 nonce_table="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('server_bridge_node_nonces_v2') IS NOT NULL")"
 [[ "$nonce_table" == "t" ]] || { echo "node nonce table missing" >&2; exit 1; }
 identity_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_nodes_v2_key_fingerprint') IS NOT NULL")"
