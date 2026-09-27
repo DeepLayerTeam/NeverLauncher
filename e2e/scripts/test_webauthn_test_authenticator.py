@@ -21,22 +21,28 @@ class WebAuthnTestAuthenticator(unittest.TestCase):
     def test_registration_and_signed_assertion(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
-            challenge = base64.urlsafe_b64encode(b"registration-challenge-32-byte!!").rstrip(b"=").decode()
-            user_handle = base64.urlsafe_b64encode(b"user-handle-32-byte-test-value!!").rstrip(b"=").decode()
+            # 0xf8 starts with base64url index 62 ('-'). These values reproduce
+            # the argparse failure that occurs when an opaque value is passed as
+            # a separate argv element after --challenge/--user-handle.
+            challenge = base64.urlsafe_b64encode(b"\xf8registration-challenge-32-byte!!").rstrip(b"=").decode()
+            user_handle = base64.urlsafe_b64encode(b"\xf8user-handle-32-byte-test-value!!").rstrip(b"=").decode()
+            self.assertTrue(challenge.startswith("-"))
+            self.assertTrue(user_handle.startswith("-"))
             register = subprocess.run([
-                "python3", str(HELPER), "register", "--transaction-token", "tx-register",
-                "--challenge", challenge, "--rp-id", "127.0.0.1", "--origin", "http://127.0.0.1:18081",
-                "--user-handle", user_handle, "--state", str(td / "state.json"), "--key", str(td / "key.pem"),
+                "python3", str(HELPER), "register", "--transaction-token=-tx-register",
+                f"--challenge={challenge}", "--rp-id=127.0.0.1", "--origin=http://127.0.0.1:18081",
+                f"--user-handle={user_handle}", f"--state={td / 'state.json'}", f"--key={td / 'key.pem'}",
             ], check=True, text=True, capture_output=True)
             body = json.loads(register.stdout)
-            self.assertEqual(body["transactionToken"], "tx-register")
+            self.assertEqual(body["transactionToken"], "-tx-register")
             self.assertEqual(body["credential"]["id"], body["credential"]["rawId"])
             self.assertGreater(len(b64d(body["credential"]["response"]["attestationObject"])), 100)
 
-            assert_challenge = base64.urlsafe_b64encode(b"assertion-challenge-32-byte-value!").rstrip(b"=").decode()
+            assert_challenge = base64.urlsafe_b64encode(b"\xf8assertion-challenge-32-byte-value!").rstrip(b"=").decode()
+            self.assertTrue(assert_challenge.startswith("-"))
             assertion = subprocess.run([
-                "python3", str(HELPER), "assert", "--transaction-token", "tx-assert", "--challenge", assert_challenge,
-                "--state", str(td / "state.json"), "--sign-count", "1",
+                "python3", str(HELPER), "assert", "--transaction-token=-tx-assert", f"--challenge={assert_challenge}",
+                f"--state={td / 'state.json'}", "--sign-count=1",
             ], check=True, text=True, capture_output=True)
             assertion_body = json.loads(assertion.stdout)
             response = assertion_body["credential"]["response"]

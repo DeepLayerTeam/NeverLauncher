@@ -228,11 +228,11 @@ PASSKEY_STATE="$RUNTIME_DIR/publish-passkey-state.json"
 PASSKEY_KEY="$RUNTIME_DIR/publish-passkey-p256.pem"
 PASSKEY_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$ACCESS_TOKEN" '{}')"
 PASSKEY_BODY="$(python3 "$WEBAUTHN" register \
-  --transaction-token "$(jq -er '.data.transactionToken' <<<"$PASSKEY_BEGIN")" \
-  --challenge "$(jq -er '.data.publicKey.challenge' <<<"$PASSKEY_BEGIN")" \
-  --rp-id "$(jq -er '.data.publicKey.rp.id' <<<"$PASSKEY_BEGIN")" \
+  "--transaction-token=$(jq -er '.data.transactionToken' <<<"$PASSKEY_BEGIN")" \
+  "--challenge=$(jq -er '.data.publicKey.challenge' <<<"$PASSKEY_BEGIN")" \
+  "--rp-id=$(jq -er '.data.publicKey.rp.id' <<<"$PASSKEY_BEGIN")" \
   --origin "$API" \
-  --user-handle "$(jq -er '.data.publicKey.user.id' <<<"$PASSKEY_BEGIN")" \
+  "--user-handle=$(jq -er '.data.publicKey.user.id' <<<"$PASSKEY_BEGIN")" \
   --state "$PASSKEY_STATE" --key "$PASSKEY_KEY" \
   --friendly-name "Minecraft compatibility E2E publish passkey")"
 PASSKEY_COMPLETE="$(json_post "$API/api/v1/auth/passkeys/register/complete" "$ACCESS_TOKEN" "$PASSKEY_BODY")"
@@ -415,7 +415,7 @@ GUARD_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/begin
 jq -e --arg v "$VERSION" '.data.launcherVersion==$v and .data.platform=="linux" and .data.releasePolicySchema=="2.0" and .data.guardProtocolVersion==4 and .data.oneTime==true' <<<"$GUARD_BEGIN" >/dev/null
 GUARD_FIXTURE="$(python3 "$GUARD_EVIDENCE" \
   --challenge-id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
-  --challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  "--challenge=$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
   --challenge-expires-at "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
   --launcher-version "$GUARD_E2E_VERSION" \
   --user-id "$HW_USER_ID" --device-id "$HW_DEVICE" --session-id "$HW_SESSION" \

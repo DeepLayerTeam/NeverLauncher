@@ -298,7 +298,7 @@ GUARD_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/guard-attest/begin
 jq -e '.data.platform=="linux" and .data.releasePolicySchema=="2.0" and .data.guardProtocolVersion==4 and .data.oneTime==true' <<<"$GUARD_BEGIN" >/dev/null
 GUARD_FIXTURE="$(python3 "$GUARD_EVIDENCE" \
   --challenge-id "$(jq -er '.data.challengeId' <<<"$GUARD_BEGIN")" \
-  --challenge "$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
+  "--challenge=$(jq -er '.data.challenge' <<<"$GUARD_BEGIN")" \
   --challenge-expires-at "$(jq -er '.data.expiresAt' <<<"$GUARD_BEGIN")" \
   --launcher-version "$GUARD_E2E_VERSION" \
   --user-id "$USER_ID" --device-id "$HW_DEVICE" --session-id "$HW_SESSION" \
@@ -336,18 +336,18 @@ PASS_LOGIN="$(login dt-passkey-bootstrap)"; PASS_ACCESS="$(jq -er '.data.tokens.
 PK_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$PASS_ACCESS" '{}')"
 PK_STATE="$RUNTIME_DIR/keys/passkey-state.json"; PK_KEY="$RUNTIME_DIR/keys/passkey-p256.pem"
 PK_BODY="$(python3 "$WEBAUTHN" register \
-  --transaction-token "$(jq -er '.data.transactionToken' <<<"$PK_BEGIN")" \
-  --challenge "$(jq -er '.data.publicKey.challenge' <<<"$PK_BEGIN")" \
-  --rp-id "$(jq -er '.data.publicKey.rp.id' <<<"$PK_BEGIN")" \
+  "--transaction-token=$(jq -er '.data.transactionToken' <<<"$PK_BEGIN")" \
+  "--challenge=$(jq -er '.data.publicKey.challenge' <<<"$PK_BEGIN")" \
+  "--rp-id=$(jq -er '.data.publicKey.rp.id' <<<"$PK_BEGIN")" \
   --origin "$API" \
-  --user-handle "$(jq -er '.data.publicKey.user.id' <<<"$PK_BEGIN")" \
+  "--user-handle=$(jq -er '.data.publicKey.user.id' <<<"$PK_BEGIN")" \
   --state "$PK_STATE" --key "$PK_KEY")"
 PK_COMPLETE="$(json_post "$API/api/v1/auth/passkeys/register/complete" "$PASS_ACCESS" "$PK_BODY")"
 jq -e '.data.status=="registered" and (.data.accessToken|type=="string") and .data.session.authStrength=="phishing-resistant"' <<<"$PK_COMPLETE" >/dev/null
 STEP_BEGIN="$(json_post "$API/api/v1/auth/passkeys/step-up/begin" "$HW_ACCESS_ATTESTED" '{}')"
 STEP_BODY="$(python3 "$WEBAUTHN" assert \
-  --transaction-token "$(jq -er '.data.transactionToken' <<<"$STEP_BEGIN")" \
-  --challenge "$(jq -er '.data.publicKey.challenge' <<<"$STEP_BEGIN")" \
+  "--transaction-token=$(jq -er '.data.transactionToken' <<<"$STEP_BEGIN")" \
+  "--challenge=$(jq -er '.data.publicKey.challenge' <<<"$STEP_BEGIN")" \
   --state "$PK_STATE" --sign-count 1)"
 STEP_OK="$(json_post "$API/api/v1/auth/passkeys/step-up/complete" "$HW_ACCESS_ATTESTED" "$STEP_BODY")"
 HW_STEPPED_ACCESS="$(jq -er '.data.accessToken' <<<"$STEP_OK")"

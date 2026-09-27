@@ -35,6 +35,13 @@ const (
 	guardProtocolVersion0140          = 4
 )
 
+func canonicalGuardAttestationTime0134(value time.Time) time.Time {
+	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
+	// persistence and response/signing so challenge bindings remain byte-identical
+	// after the challenge is read back from PostgreSQL.
+	return value.UTC().Truncate(time.Microsecond)
+}
+
 type guardReleaseArtifactPair0140 struct {
 	GuardSHA256         string `json:"guardSha256"`
 	LauncherSHA256      string `json:"launcherSha256"`
@@ -792,8 +799,8 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation challenge")
 		return
 	}
-	now := time.Now().UTC()
-	expires := now.Add(guardAttestationChallengeTTL0134)
+	now := canonicalGuardAttestationTime0134(time.Now())
+	expires := canonicalGuardAttestationTime0134(now.Add(guardAttestationChallengeTTL0134))
 	entry := model.DeviceChallenge{
 		ID: challengeID, UserID: claims.Sub, DeviceID: device.ID, Purpose: guardAttestationPurpose0134,
 		ChallengeHash: deviceChallengeHash0121(challenge),
@@ -904,7 +911,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		return
 	}
 
-	now := time.Now().UTC()
+	now := canonicalGuardAttestationTime0134(time.Now())
 	challenge, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, deviceID, guardAttestationPurpose0134, deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Guard Attestation challenge недействителен, истёк или уже использован")
@@ -939,7 +946,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusInternalServerError, "не удалось выпустить Guard launch ticket")
 		return
 	}
-	ticketExpires := now.Add(guardLaunchTicketTTL0134)
+	ticketExpires := canonicalGuardAttestationTime0134(now.Add(guardLaunchTicketTTL0134))
 	ticket := model.DeviceChallenge{
 		ID: ticketID, UserID: claims.Sub, DeviceID: deviceID, Purpose: guardLaunchTicketPurpose0134,
 		ChallengeHash: deviceChallengeHash0121(ticketSecret),

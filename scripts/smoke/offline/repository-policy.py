@@ -665,6 +665,9 @@ for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/jav
 for required in ['webauthn-test-authenticator.py', '/api/v1/auth/passkeys/register/begin', '--webauthn-helper "$WEBAUTHN"', '--webauthn-state "$PASSKEY_STATE"']:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E не выполняет реальный fresh WebAuthn step-up перед publish: {required}")
+for required in ['"--transaction-token=$(jq -er', '"--challenge=$(jq -er', '"--user-handle=$(jq -er']:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E передаёт opaque WebAuthn argv небезопасно: {required}")
 for required in [
     'device-trust-crypto.py', 'guard-attestation-e2e.py', 'keyAlgorithm:"p256"', 'keyBinding:"hardware"',
     '/attest/begin', '/guard-attest/begin', 'guardAttestationTicket', '/api/v1/minecraft/session',
@@ -860,6 +863,9 @@ for required in [
 ]:
     if required not in device_trust_e2e:
         fail(f"0.12.9 PostgreSQL Device Trust E2E missing runtime primitive: {required}")
+for required in ['"--transaction-token=$(jq -er', '"--challenge=$(jq -er', '"--user-handle=$(jq -er']:
+    if required not in device_trust_e2e:
+        fail(f"Device Trust E2E передаёт opaque WebAuthn argv небезопасно: {required}")
 for required in ["webauthn.create", "webauthn.get", "registration_auth_data", "assertion_auth_data", '"openssl", "dgst", "-sha256", "-sign"']:
     if required not in device_trust_webauthn:
         fail(f"0.12.9 WebAuthn Device Trust E2E helper incomplete: {required}")
@@ -952,6 +958,16 @@ for required in [
 ]:
     if required not in guard_migration_e2e:
         fail(f"0.16.1 Guard challenge-purpose PostgreSQL E2E missing: {required}")
+
+guard_attestation_backend_0161 = read("services/api/internal/httpapi/guard_attestation_0134.go")
+for required in [
+    "canonicalGuardAttestationTime0134",
+    "Truncate(time.Microsecond)",
+    "expires := canonicalGuardAttestationTime0134",
+    "ticketExpires := canonicalGuardAttestationTime0134",
+]:
+    if required not in guard_attestation_backend_0161:
+        fail(f"0.16.1 Guard Attestation timestamp canonicalization missing: {required}")
 
 # 0.13.2 NeverGuard Windows Integrity Evidence v1. Evidence is collected by the
 # separate guard process and authenticated over the existing local IPC session.

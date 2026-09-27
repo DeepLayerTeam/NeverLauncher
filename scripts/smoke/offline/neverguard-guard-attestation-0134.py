@@ -99,6 +99,8 @@ require(guard_migration_e2e, [
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
 require(backend, [
     'guardAttestationChallengeTTL0134',
+    'canonicalGuardAttestationTime0134',
+    'Truncate(time.Microsecond)',
     'guardLaunchTicketTTL0134',
     'SaveDeviceChallenge',
     'ConsumeDeviceChallenge',
