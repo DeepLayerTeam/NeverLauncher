@@ -45,9 +45,40 @@ PY
   trap - RETURN
 }
 
+serverbridge_node_sign() {
+  local key="$1" canonical="$2" canonical_file signature_file signature
+  canonical_file="$(mktemp)" || return 1
+  signature_file="$(mktemp)" || { rm -f "$canonical_file"; return 1; }
+
+  if ! printf '%s' "$canonical" > "$canonical_file"; then
+    rm -f "$canonical_file" "$signature_file"
+    return 1
+  fi
+  # Ed25519 is a one-shot algorithm in OpenSSL. pkeyutl must receive a seekable
+  # input file; piping the canonical payload through stdin can fail with
+  # "unable to determine file size for oneshot operation" and yield 0 bytes.
+  if ! openssl pkeyutl -sign -rawin -inkey "$key" -in "$canonical_file" -out "$signature_file" >/dev/null 2>&1; then
+    rm -f "$canonical_file" "$signature_file"
+    return 1
+  fi
+  if ! signature="$(python3 - "$signature_file" <<'PY'
+import base64, pathlib, sys
+sig = pathlib.Path(sys.argv[1]).read_bytes()
+if len(sig) != 64:
+    raise SystemExit(f"invalid Ed25519 signature length: {len(sig)}")
+print(base64.urlsafe_b64encode(sig).decode().rstrip("="))
+PY
+  )"; then
+    rm -f "$canonical_file" "$signature_file"
+    return 1
+  fi
+  rm -f "$canonical_file" "$signature_file"
+  printf '%s\n' "$signature"
+}
+
 serverbridge_node_signed_request() {
   local key="$1" node_id="$2" method="$3" url="$4" body="$5" out="$6"
-  local timestamp nonce target body_hash canonical signature_file signature
+  local timestamp nonce target body_hash canonical signature
   timestamp="$(date +%s)"
   nonce="$(python3 -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(24)).decode().rstrip("="))')"
   target="$(python3 - "$url" <<'PY'
@@ -61,14 +92,7 @@ PY
 )"
   body_hash="$(printf '%s' "$body" | sha256sum | awk '{print $1}')"
   canonical="$(printf 'NeverLauncher-ServerBridge-Node-v1\n%s\n%s\n%s\n%s\n%s\n%s' "$node_id" "${method^^}" "$target" "$timestamp" "$nonce" "$body_hash")"
-  signature_file="$(mktemp)"
-  printf '%s' "$canonical" | openssl pkeyutl -sign -rawin -inkey "$key" -out "$signature_file" >/dev/null 2>&1
-  signature="$(python3 - "$signature_file" <<'PY'
-import base64, pathlib, sys
-print(base64.urlsafe_b64encode(pathlib.Path(sys.argv[1]).read_bytes()).decode().rstrip("="))
-PY
-)"
-  rm -f "$signature_file"
+  signature="$(serverbridge_node_sign "$key" "$canonical")"
 
   local args=(-sS -o "$out" -w '%{http_code}' -X "${method^^}"
     -H "X-NeverLauncher-Node-Id: $node_id"

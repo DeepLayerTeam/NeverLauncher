@@ -447,7 +447,8 @@ printf '[e2e] create real launcher session and connect the actual Minecraft clie
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_")) and .data.join.issuedIdentityEpoch >= 1 and (.data.join.issuedKeyFingerprint | length) == 64' "$RUNTIME_DIR/join-paper-real-client.json" >/dev/null
 validate_join() {
-  local id="$1" key="$2" plugin_sha="$3" expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json" code body
+  local id="$1" key="$2" plugin_sha="$3" expect="$4"
+  local out="$RUNTIME_DIR/validate-${id}-${expect}.json" code body
   body="$(jq -cn --arg id "$id" --arg username "$PLAYER_USERNAME" --arg project "e2e-project" --arg profile "$PROFILE_ID" --arg version "$VERSION" --arg sha "$plugin_sha" '{protocolVersion:2,serverId:$id,username:$username,projectId:$project,profileId:$profile,channel:"stable",pluginVersion:$version,pluginSha256:$sha}')"
   code="$(serverbridge_node_signed_request "$key" "$id" POST "$API/api/v1/server-bridge/validate-join" "$body" "$out")"
   if [[ "$expect" == allow ]]; then

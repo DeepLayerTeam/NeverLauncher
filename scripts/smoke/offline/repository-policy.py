@@ -642,6 +642,14 @@ for required in [
 for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(f"production Minecraft E2E снова использует synthetic fixture: {forbidden}")
+if 'expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json"' in e2e_script:
+    fail("actual Minecraft E2E validate_join снова разыменовывает local id/expect до их присваивания при set -u")
+for required in [
+    'local id="$1" key="$2" plugin_sha="$3" expect="$4"',
+    'local out="$RUNTIME_DIR/validate-${id}-${expect}.json" code body',
+]:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E validate_join nounset regression guard missing: {required}")
 for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',

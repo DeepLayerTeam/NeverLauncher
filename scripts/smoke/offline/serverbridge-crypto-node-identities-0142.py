@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import base64
+import subprocess
+import tempfile
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[3]
@@ -139,6 +142,59 @@ require(main_e2e, [
     'keyAlgorithm:"ed25519"',
     "node-identities/paper",
 ], "Minecraft signed-node E2E")
+
+crypto_helper = read("e2e/scripts/serverbridge-node-crypto.sh")
+require(crypto_helper, [
+    "serverbridge_node_sign",
+    '-in "$canonical_file"',
+    "invalid Ed25519 signature length",
+], "ServerBridge E2E Ed25519 signer")
+
+# Regression for OpenSSL Ed25519 one-shot signing. stdin is not seekable on
+# affected OpenSSL builds and previously produced a zero-byte signature while
+# the E2E continued to an HTTP 401. Exercise the actual helper and verify the
+# resulting 64-byte signature against the generated public key.
+with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
+    td = Path(td)
+    key = td / "node.pem"
+    public = td / "node.pub.pem"
+    payload = td / "canonical.txt"
+    signature_file = td / "signature.bin"
+    canonical = (
+        "NeverLauncher-ServerBridge-Node-v1\n"
+        "ci-node\nPOST\n/api/v1/server-bridge/validate-join\n"
+        "1770000000\nregression-nonce\n" + "0" * 64
+    )
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "Ed25519", "-out", str(key)],
+        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+    )
+    signed = subprocess.run(
+        [
+            "bash", "-c",
+            'set -euo pipefail; source "$1"; serverbridge_node_sign "$2" "$3"',
+            "--", str(root / "e2e/scripts/serverbridge-node-crypto.sh"), str(key), canonical,
+        ],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    raw_signature = base64.urlsafe_b64decode(signed + "=" * ((4 - len(signed) % 4) % 4))
+    if len(raw_signature) != 64:
+        raise SystemExit(f"ServerBridge helper returned {len(raw_signature)}-byte Ed25519 signature")
+    payload.write_text(canonical, encoding="utf-8")
+    signature_file.write_bytes(raw_signature)
+    subprocess.run(
+        ["openssl", "pkey", "-in", str(key), "-pubout", "-out", str(public)],
+        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+    )
+    verified = subprocess.run(
+        [
+            "openssl", "pkeyutl", "-verify", "-rawin", "-pubin",
+            "-inkey", str(public), "-in", str(payload), "-sigfile", str(signature_file),
+        ],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    if verified.returncode != 0:
+        raise SystemExit(f"ServerBridge helper Ed25519 verification failed: {verified.stderr.strip()}")
 if "X-NeverLauncher-Server-Token" in main_e2e or ".data.serverToken" in main_e2e:
     raise SystemExit("Minecraft E2E still uses legacy ServerBridge bearer authentication")
 
