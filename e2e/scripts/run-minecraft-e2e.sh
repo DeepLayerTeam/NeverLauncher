@@ -23,6 +23,8 @@ LOADER_VERSION_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-}"
 PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
 BRIDGE_ALLOWLIST_JSON="{}"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
+WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
+E2E_USER_AGENT="NeverLauncher-E2E/${VERSION}"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
 
@@ -141,7 +143,7 @@ wait_log() {
 }
 json_post() {
   local url="$1" token="$2" body="$3"
-  curl -fsS -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
+  curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' ${token:+-H "Authorization: Bearer $token"} -d "$body" "$url"
 }
 
 printf '[e2e] build real ServerBridge artifacts\n'
@@ -175,10 +177,10 @@ compose up -d --build neverlauncher-api
 wait_http "$API/health"
 
 printf '[e2e] one-time bootstrap and canonical /api/v1 login\n'
-curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"E2E Owner\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"github-actions\"}" \
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
-LOGIN="$(curl -fsS -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
+LOGIN="$(curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
 ACCESS_TOKEN="$(jq -er '.token' <<<"$LOGIN")"
 
 printf '[e2e] bind canonical launcher session to a real Ed25519 trusted-device key for 0.12.7 gameplay trust\n'
@@ -199,6 +201,22 @@ DEVICE_COMPLETE="$(jq -cn \
   --arg signature "$DEVICE_SIGNATURE_B64" \
   '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
 ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_TOKEN" "$DEVICE_COMPLETE" | jq -er '.data.accessToken')"
+
+printf '[e2e] register real WebAuthn P-256 passkey for fresh release-publish step-up\n'
+PASSKEY_STATE="$RUNTIME_DIR/publish-passkey-state.json"
+PASSKEY_KEY="$RUNTIME_DIR/publish-passkey-p256.pem"
+PASSKEY_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$ACCESS_TOKEN" '{}')"
+PASSKEY_BODY="$(python3 "$WEBAUTHN" register \
+  --transaction-token "$(jq -er '.data.transactionToken' <<<"$PASSKEY_BEGIN")" \
+  --challenge "$(jq -er '.data.publicKey.challenge' <<<"$PASSKEY_BEGIN")" \
+  --rp-id "$(jq -er '.data.publicKey.rp.id' <<<"$PASSKEY_BEGIN")" \
+  --origin "$API" \
+  --user-handle "$(jq -er '.data.publicKey.user.id' <<<"$PASSKEY_BEGIN")" \
+  --state "$PASSKEY_STATE" --key "$PASSKEY_KEY" \
+  --friendly-name "Minecraft compatibility E2E publish passkey")"
+PASSKEY_COMPLETE="$(json_post "$API/api/v1/auth/passkeys/register/complete" "$ACCESS_TOKEN" "$PASSKEY_BODY")"
+jq -e '.data.status == "registered" and .data.session.authStrength == "phishing-resistant" and (.data.accessToken | type == "string")' <<<"$PASSKEY_COMPLETE" >/dev/null
+ACCESS_TOKEN="$(jq -er '.data.accessToken' <<<"$PASSKEY_COMPLETE")"
 
 json_post "$API/api/v1/install/first-project" "$ACCESS_TOKEN" "{\"projectId\":\"e2e-project\",\"profileId\":\"$PROFILE_ID\",\"channel\":\"stable\",\"version\":\"0.0.1-bootstrap\",\"actor\":\"github-actions\"}" > "$RUNTIME_DIR/first-project.json"
 
@@ -325,6 +343,8 @@ python3 "$ROOT/e2e/scripts/publish-client-package.py" \
   --package "$CLIENT_PACKAGE" \
   --client-dir "$RUNTIME_DIR/materialized-client" \
   --quick-play "127.0.0.1:25571" \
+  --webauthn-helper "$WEBAUTHN" \
+  --webauthn-state "$PASSKEY_STATE" \
   --output "$RUNTIME_DIR/published-client-package.json" \
   > "$RUNTIME_DIR/published-client-package.stdout.json"
 MANIFEST_URL="$(jq -er '.manifestUrl' "$RUNTIME_DIR/published-client-package.json")"
@@ -411,7 +431,7 @@ if [[ "$MODE" == "full" ]]; then
   [[ "$handoff_state" == consumed\|t\|t\|64\|t ]] || { echo "[e2e] invalid consumed handoff state: $handoff_state" >&2; exit 1; }
   topology_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE source_node_id='velocity-e2e-p3' AND target_node_id='paper-e2e-p3' AND status='active'")"
   [[ "$topology_count" == "1" ]] || { echo "[e2e] runtime topology edge was not persisted" >&2; exit 1; }
-  curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
+  curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
   jq -e '.data.sourceOfTruth == "postgresql" and .data.mode == "runtime-learned-zero-patch" and ([.data.items[] | select(.sourceNodeId == "velocity-e2e-p3" and .targetNodeId == "paper-e2e-p3")] | length) == 1' "$RUNTIME_DIR/serverbridge-topology.json" >/dev/null
 
   printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
@@ -441,7 +461,7 @@ if [[ "$MODE" == "full" ]]; then
   flow_for_server neoforge-e2e-p3 "$NEOFORGE_NODE_KEY" "$NEOFORGE_BRIDGE_SHA" neoforge 25579
 fi
 
-curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
+curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
 jq -e '.data.protocolVersion == 2 and .data.summary.protocolVersion == 2 and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
 required_nodes=1

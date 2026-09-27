@@ -821,7 +821,7 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.RevokedMinecraftSessions += int(n)
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-key-replaced',jsonb_build_object('oldDeviceId',$4,'newDeviceId',$5,'mode',$6),$7)`, userID, currentSessionID, familyID, oldDeviceID, replacement.ID, mode, now); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-key-replaced',jsonb_build_object('oldDeviceId',$4::text,'newDeviceId',$5::text,'mode',$6::text),$7)`, userID, currentSessionID, familyID, oldDeviceID, replacement.ID, mode, now); err != nil {
 		return result, fmt.Errorf("replace trusted device: insert auth event: %w", err)
 	}
 	result.RevokedSessions = len(affected)

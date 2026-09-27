@@ -122,6 +122,15 @@ func expectedMacOSArtifacts0154(arch string) map[string]string {
 	}
 }
 
+func expectedMacOSBundlePaths0154() map[string]string {
+	return map[string]string{
+		"cli":              "NeverLauncher.app/Contents/Helpers/neverlauncher-cli",
+		"desktop-launcher": "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop",
+		"guard":            "NeverLauncher.app/Contents/Helpers/neverguard",
+		"runtime":          "NeverLauncher.app/Contents/Helpers/neverruntime",
+	}
+}
+
 func expectedMacOSPackage0154(ver, arch string) (string, string) {
 	return "neverlauncher-desktop-" + ver + "-macos-" + arch + ".zip", "MACOS_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
 }
@@ -217,13 +226,15 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 		return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s package manifest identity/schema mismatch", arch)
 	}
 	expected := expectedMacOSArtifacts0154(arch)
+	expectedBundlePaths := expectedMacOSBundlePaths0154()
 	if len(manifest.Artifacts) != len(expected) {
 		return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s package manifest must contain %d artifacts", arch, len(expected))
 	}
 	seen := map[string]bool{}
 	for _, artifact := range manifest.Artifacts {
 		expectedName, ok := expected[artifact.Component]
-		if !ok || artifact.Name != expectedName || artifact.Architecture != arch || artifact.CPUType != cpuText || !strings.HasPrefix(artifact.BundlePath, "NeverLauncher.app/Contents/MacOS/") || strings.Contains(artifact.BundlePath, "..") {
+		expectedBundlePath := expectedBundlePaths[artifact.Component]
+		if !ok || artifact.Name != expectedName || artifact.BundlePath != expectedBundlePath || artifact.Architecture != arch || artifact.CPUType != cpuText || strings.Contains(artifact.BundlePath, "..") {
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s package artifact identity mismatch: %s", arch, artifact.Name)
 		}
 		if seen[artifact.Component] {
@@ -406,7 +417,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 			byComponent[row.Component] = row
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
-		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/MacOS/neverguard", "runtime": "Contents/MacOS/neverruntime"}
+		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/Helpers/neverguard", "runtime": "Contents/Helpers/neverruntime"}
 		seen := map[string]bool{}
 		for _, row := range update.Components {
 			sourceComponent, known := aliases[row.Component]

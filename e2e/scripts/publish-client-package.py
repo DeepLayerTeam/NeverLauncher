@@ -16,6 +16,7 @@ import mimetypes
 import os
 from pathlib import Path
 import secrets
+import subprocess
 import sys
 import time
 from urllib.parse import quote, urlsplit
@@ -100,6 +101,57 @@ class APIClient:
             raise RuntimeError(f"{method} {path} => HTTP {status}: {raw.decode(errors='replace')}")
         return json.loads(raw or b"{}")
 
+    def passkey_step_up(self, helper: Path, state: Path, sign_count: int = 1) -> None:
+        if not helper.is_file():
+            raise RuntimeError(f"WebAuthn helper is unavailable: {helper}")
+        if not state.is_file():
+            raise RuntimeError(f"WebAuthn state is unavailable: {state}")
+        begin = self.json("POST", "/api/v1/auth/passkeys/step-up/begin", {})
+        if not isinstance(begin, dict) or not isinstance(begin.get("data"), dict):
+            raise RuntimeError(f"invalid passkey step-up begin response: {begin!r}")
+        data = begin["data"]
+        public_key = data.get("publicKey")
+        if not isinstance(public_key, dict):
+            raise RuntimeError("passkey step-up response does not contain publicKey")
+        transaction = str(data.get("transactionToken", ""))
+        challenge = str(public_key.get("challenge", ""))
+        if not transaction or not challenge:
+            raise RuntimeError("passkey step-up response is missing transaction/challenge")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(helper),
+                "assert",
+                "--transaction-token",
+                transaction,
+                "--challenge",
+                challenge,
+                "--state",
+                str(state),
+                "--sign-count",
+                str(sign_count),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"WebAuthn assertion helper failed: {proc.stderr.strip()}")
+        try:
+            assertion = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("WebAuthn assertion helper returned invalid JSON") from exc
+        complete = self.json("POST", "/api/v1/auth/passkeys/step-up/complete", assertion)
+        if not isinstance(complete, dict) or not isinstance(complete.get("data"), dict):
+            raise RuntimeError(f"invalid passkey step-up complete response: {complete!r}")
+        step_data = complete["data"]
+        token = str(step_data.get("accessToken", ""))
+        session = step_data.get("session")
+        if not token or not isinstance(session, dict) or session.get("authStrength") != "phishing-resistant":
+            raise RuntimeError("passkey step-up did not produce phishing-resistant access token")
+        self.token = token
+
     def upload(self, path: str, local_file: Path, expected_sha256: str, expected_size: int, executable: bool, target_os: list[str]) -> object:
         boundary = "----neverlauncher-e2e-" + secrets.token_hex(16)
         filename = local_file.name
@@ -167,6 +219,8 @@ def main() -> int:
     parser.add_argument("--package", required=True, type=Path)
     parser.add_argument("--client-dir", required=True, type=Path)
     parser.add_argument("--quick-play", default="")
+    parser.add_argument("--webauthn-helper", type=Path)
+    parser.add_argument("--webauthn-state", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
@@ -220,6 +274,12 @@ def main() -> int:
         total_bytes += expected_size
         if index == 1 or index % 250 == 0 or index == total:
             print(f"[e2e-upload] {index}/{total} files, {total_bytes} bytes", file=sys.stderr, flush=True)
+
+    if bool(args.webauthn_helper) != bool(args.webauthn_state):
+        raise RuntimeError("--webauthn-helper and --webauthn-state must be provided together")
+    if args.webauthn_helper and args.webauthn_state:
+        print("[e2e-upload] refresh phishing-resistant step-up immediately before publish", file=sys.stderr, flush=True)
+        client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
 
     published = client.json("POST", f"/api/v1/admin/projects/{quote(project, safe='')}/versions/{quote(version_id, safe='')}/publish")
     manifest_url = f"{args.api.rstrip('/')}/api/v1/projects/{quote(project, safe='')}/profiles/{quote(profile, safe='')}/manifest?channel={quote(channel, safe='')}"

@@ -39,20 +39,22 @@ require(
         'macos-package.py',
         'developer-id-notarized',
         'adhoc-development',
-        'codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"',
+        'HELPERS_DIR="${APP_ROOT}/Contents/Helpers"',
+        'codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"',
+        'codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"',
     ],
     "macOS production builder",
 )
 require(builder, [
-    'APP_SIGN_ARGS=(--force --sign "${SIGN_IDENTITY}" --options runtime',
-    'if [[ "${MODE}" == "adhoc" ]]; then',
-    'APP_SIGN_ARGS+=(--deep)',
-    'codesign "${APP_SIGN_ARGS[@]}" "${APP_ROOT}"',
-], "ad-hoc nested macOS signing")
-if 'codesign --deep --force' in builder:
-    raise SystemExit("macOS production builder must not use an unconditional --deep signing command")
-if builder.count('codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"') < 2:
-    raise SystemExit("macOS production builder must verify nested binaries both before and after outer bundle signing")
+    'cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverguard" "${HELPERS_DIR}/neverguard"',
+    'cp "${GO_CLI}" "${HELPERS_DIR}/neverlauncher-cli"',
+    'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"',
+    'codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"',
+], "inside-out macOS signing")
+if 'APP_SIGN_ARGS+=(--deep)' in builder or 'codesign --deep --force' in builder:
+    raise SystemExit("macOS builder must never use --deep for signing; nested code is signed explicitly inside-out")
+if builder.count('codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"') < 2:
+    raise SystemExit("macOS builder must verify helper binaries both before and after outer bundle signing")
 
 packager = read("scripts/release/macos-package.py")
 require(
@@ -65,6 +67,9 @@ require(
         'MACOS_NOTARIZATION_EVIDENCE.json',
         'GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json',
         'notarytool result is not Accepted',
+        'Contents/Helpers/neverguard',
+        'Contents/Helpers/neverruntime',
+        'Contents/Helpers/neverlauncher-cli',
     ],
     "macOS package helper",
 )

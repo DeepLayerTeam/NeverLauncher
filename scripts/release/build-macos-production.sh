@@ -79,13 +79,14 @@ for arch in x64 arm64; do
 
   APP_ROOT="${WORK_ROOT}/${arch}/NeverLauncher.app"
   MACOS_DIR="${APP_ROOT}/Contents/MacOS"
+  HELPERS_DIR="${APP_ROOT}/Contents/Helpers"
   RES_DIR="${APP_ROOT}/Contents/Resources"
-  mkdir -p "${MACOS_DIR}" "${RES_DIR}"
+  mkdir -p "${MACOS_DIR}" "${HELPERS_DIR}" "${RES_DIR}"
   cp "${ROOT_DIR}/apps/desktop/src-tauri/target/${RUST_TARGET}/release/neverlauncher-desktop" "${MACOS_DIR}/neverlauncher-desktop"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverguard" "${MACOS_DIR}/neverguard"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverruntime" "${MACOS_DIR}/neverruntime"
-  cp "${GO_CLI}" "${MACOS_DIR}/neverlauncher-cli"
-  chmod 0755 "${MACOS_DIR}/"*
+  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverguard" "${HELPERS_DIR}/neverguard"
+  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverruntime" "${HELPERS_DIR}/neverruntime"
+  cp "${GO_CLI}" "${HELPERS_DIR}/neverlauncher-cli"
+  chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${HELPERS_DIR}/"*
 
   cat > "${APP_ROOT}/Contents/Info.plist" <<EOF_PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -105,13 +106,12 @@ EOF_PLIST
 
   for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
     case "${binary}" in
-      neverlauncher-desktop) identifier="ru.skif4er.neverlauncher" ;;
-      neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
-      neverruntime) identifier="ru.skif4er.neverlauncher.runtime" ;;
-      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli" ;;
+      neverlauncher-desktop) identifier="ru.skif4er.neverlauncher"; file="${MACOS_DIR}/${binary}" ;;
+      neverguard) identifier="ru.skif4er.neverlauncher.guard"; file="${HELPERS_DIR}/${binary}" ;;
+      neverruntime) identifier="ru.skif4er.neverlauncher.runtime"; file="${HELPERS_DIR}/${binary}" ;;
+      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli"; file="${HELPERS_DIR}/${binary}" ;;
       *) echo "unsupported macOS binary identifier mapping: ${binary}" >&2; exit 1 ;;
     esac
-    file="${MACOS_DIR}/${binary}"
     actual_arch="$(lipo -archs "${file}")"
     [[ "${actual_arch}" == "${LIPO_ARCH}" ]] || { echo "${file}: expected thin ${LIPO_ARCH}, got ${actual_arch}" >&2; exit 1; }
     codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier "${identifier}" "${file}"
@@ -129,20 +129,17 @@ EOF_PLIST
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
   chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
-  # Production Developer ID signing remains explicit and inside-out. The ad-hoc
-  # CI delivery boundary has no persistent signing identity, so re-sign the full
-  # nested graph after package metadata is written; otherwise codesign can leave
-  # a nested helper (notably neverguard) outside the final ad-hoc code directory.
-  for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
-    codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"
+  # Keep nested code in Apple's standard locations and sign strictly inside-out.
+  # Contents/MacOS contains only the main executable; helper tools live in
+  # Contents/Helpers. --deep is verification-only and is never used for signing.
+  codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
+  for binary in neverguard neverruntime neverlauncher-cli; do
+    codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"
   done
-  APP_SIGN_ARGS=(--force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher)
-  if [[ "${MODE}" == "adhoc" ]]; then
-    APP_SIGN_ARGS+=(--deep)
-  fi
-  codesign "${APP_SIGN_ARGS[@]}" "${APP_ROOT}"
-  for binary in neverlauncher-desktop neverguard neverruntime neverlauncher-cli; do
-    codesign --verify --strict --verbose=2 "${MACOS_DIR}/${binary}"
+  codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
+  codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
+  for binary in neverguard neverruntime neverlauncher-cli; do
+    codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"
   done
   codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"
   if [[ "${MODE}" == "production" ]]; then

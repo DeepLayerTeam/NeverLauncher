@@ -39,10 +39,10 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			t.Fatal(err)
 		}
 		components := []struct{ component, name, bundle string }{
-			{"cli", "neverlauncher-cli-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverlauncher-cli"},
+			{"cli", "neverlauncher-cli-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverlauncher-cli"},
 			{"desktop-launcher", "neverlauncher-desktop-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"},
-			{"guard", "neverguard-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverguard"},
-			{"runtime", "neverruntime-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverruntime"},
+			{"guard", "neverguard-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverguard"},
+			{"runtime", "neverruntime-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverruntime"},
 		}
 		var artifacts []MacOSPackageArtifact0154
 		payloadByPath := map[string][]byte{}
@@ -122,8 +122,8 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			}
 			for _, row := range []struct{ public, source, path string }{
 				{"desktop", "desktop-launcher", "Contents/MacOS/neverlauncher-desktop"},
-				{"guard", "guard", "Contents/MacOS/neverguard"},
-				{"runtime", "runtime", "Contents/MacOS/neverruntime"},
+				{"guard", "guard", "Contents/Helpers/neverguard"},
+				{"runtime", "runtime", "Contents/Helpers/neverruntime"},
 			} {
 				artifact := byComponent[row.source]
 				update.Components = append(update.Components, componentUpdateArtifact0157{Component: row.public, SourcePath: row.path, TargetPath: row.path, SHA256: artifact.SHA256, Size: artifact.Size, Executable: true})

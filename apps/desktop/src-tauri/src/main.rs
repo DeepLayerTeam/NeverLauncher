@@ -510,7 +510,13 @@ async fn install_launcher_update(
     let current_exe = std::env::current_exe().map_err(|e| format!("не удалось определить Desktop executable: {e}"))?;
     let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("не удалось canonicalize Desktop executable: {e}"))?;
     let bin_dir = current_exe.parent().ok_or_else(|| "Desktop executable не имеет родительского каталога".to_string())?;
-    let helper = bin_dir.join(launcher_update_helper_name());
+    let helper = if cfg!(target_os = "macos") {
+        let contents = bin_dir.parent().ok_or_else(|| "macOS Desktop executable не находится внутри Contents/MacOS".to_string())?;
+        let canonical = contents.join("Helpers").join(launcher_update_helper_name());
+        if canonical.is_file() { canonical } else { bin_dir.join(launcher_update_helper_name()) }
+    } else {
+        bin_dir.join(launcher_update_helper_name())
+    };
     let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("transactional updater helper отсутствует {}: {e}", helper.display()))?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() || helper_meta.len() == 0 {
         return Err(format!("transactional updater helper небезопасен: {}", helper.display()));

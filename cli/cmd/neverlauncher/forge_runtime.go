@@ -691,7 +691,12 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		return nil, nil
 	}
 	tasks := []vanillaDownloadTask{}
-	seen := map[string]string{}
+	type forgeLibraryDownloadIdentity struct {
+		SHA1 string
+		URL  string
+		Size int64
+	}
+	seen := map[string]forgeLibraryDownloadIdentity{}
 	localFiles := []vanillaDownloadedFile{}
 	for i := range *libraries {
 		lib := &(*libraries)[i]
@@ -759,14 +764,23 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if strict && !validSHA1Hex(expected) {
 			return nil, fmt.Errorf("library %s не имеет корректного SHA-1", lib.Name)
 		}
-		if previous, ok := seen[dstRel]; ok && previous != expected {
-			return nil, fmt.Errorf("конфликтующие artifacts для %s", dstRel)
-		}
-		seen[dstRel] = expected
 		artifact.Path = rel
 		artifact.URL = artifactURL
 		artifact.SHA1 = expected
 		lib.Downloads.Artifact = artifact
+		identity := forgeLibraryDownloadIdentity{SHA1: expected, URL: artifactURL, Size: artifact.Size}
+		if previous, ok := seen[dstRel]; ok {
+			shaConflict := previous.SHA1 != identity.SHA1
+			sizeConflict := previous.Size > 0 && identity.Size > 0 && previous.Size != identity.Size
+			unverifiedSourceConflict := identity.SHA1 == "" && previous.URL != identity.URL
+			if shaConflict || sizeConflict || unverifiedSourceConflict {
+				return nil, fmt.Errorf("конфликтующие artifacts для %s", dstRel)
+			}
+			// Forge installer/version metadata may repeat the same Maven artifact.
+			// Queue it only once so concurrent workers never share the same .nlpart.
+			continue
+		}
+		seen[dstRel] = identity
 		tasks = append(tasks, vanillaDownloadTask{Path: dstRel, URL: artifactURL, SHA1: expected, Size: artifact.Size, Kind: loader + "-library"})
 	}
 	downloaded, err := runVanillaDownloads(ctx, client, clientDir, tasks, workers)

@@ -645,12 +645,16 @@ for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixtu
 for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',
+    'passkey_step_up', '/api/v1/auth/passkeys/step-up/begin', '--webauthn-state',
 ]:
     if required not in e2e_publish:
         fail(f"E2E package publisher не проверяет реальный artifact lifecycle/rate-limit contract: {required}")
 for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/java', '--java "$JAVA_BIN"']:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E не закрепляет setup-java runtime: {required}")
+for required in ['webauthn-test-authenticator.py', '/api/v1/auth/passkeys/register/begin', '--webauthn-helper "$WEBAUTHN"', '--webauthn-state "$PASSKEY_STATE"']:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E не выполняет реальный fresh WebAuthn step-up перед publish: {required}")
 if "actual-mojang-client" not in ci or "xvfb" not in ci or "Minecraft Client E2E" not in ci:
     fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
 

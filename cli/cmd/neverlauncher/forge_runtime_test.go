@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -155,6 +156,33 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	}
 	if _, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.1", "latest-stable", server.URL+"/neo.xml"); err == nil {
 		t.Fatal("incompatible NeoForge/Minecraft pair accepted")
+	}
+}
+
+func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *testing.T) {
+	payload := []byte("same-forge-library")
+	sha1sum := sha1HexLocal(payload)
+	var requests atomic.Int32
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	mux.HandleFunc("/unsafe.jar", func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		_, _ = w.Write(payload)
+	})
+	libraries := []MojangLibrary{
+		{Name: "net.minecraftforge:unsafe:0.9.2", Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "net/minecraftforge/unsafe/0.9.2/unsafe-0.9.2.jar", URL: server.URL + "/unsafe.jar", SHA1: sha1sum, Size: int64(len(payload))}}},
+		{Name: "net.minecraftforge:unsafe:0.9.2", Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "net/minecraftforge/unsafe/0.9.2/unsafe-0.9.2.jar", URL: server.URL + "/unsafe.jar", SHA1: sha1sum, Size: int64(len(payload))}}},
+	}
+	downloaded, err := materializeForgeLibraries(context.Background(), server.Client(), t.TempDir(), &libraries, "forge", 8, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := requests.Load(); got != 1 {
+		t.Fatalf("duplicate destination downloaded %d times, want 1", got)
+	}
+	if len(downloaded) != 1 || downloaded[0].Path != "libraries/net/minecraftforge/unsafe/0.9.2/unsafe-0.9.2.jar" {
+		t.Fatalf("unexpected deduplicated result: %+v", downloaded)
 	}
 }
 

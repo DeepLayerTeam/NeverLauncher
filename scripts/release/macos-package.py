@@ -15,10 +15,10 @@ ARCHES = {
     "arm64": {"cpu": 0x0100000C, "cpuText": "CPU_TYPE_ARM64", "rustTarget": "aarch64-apple-darwin"},
 }
 COMPONENTS = {
-    "cli": ("neverlauncher-cli", "neverlauncher-cli-macos-{arch}"),
-    "desktop-launcher": ("neverlauncher-desktop", "neverlauncher-desktop-macos-{arch}"),
-    "guard": ("neverguard", "neverguard-macos-{arch}"),
-    "runtime": ("neverruntime", "neverruntime-macos-{arch}"),
+    "cli": ("Contents/Helpers/neverlauncher-cli", "neverlauncher-cli-macos-{arch}"),
+    "desktop-launcher": ("Contents/MacOS/neverlauncher-desktop", "neverlauncher-desktop-macos-{arch}"),
+    "guard": ("Contents/Helpers/neverguard", "neverguard-macos-{arch}"),
+    "runtime": ("Contents/Helpers/neverruntime", "neverruntime-macos-{arch}"),
 }
 
 
@@ -73,13 +73,12 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     meta = ARCHES[arch]
     app = Path(args.app)
     out = Path(args.out_dir)
-    macos_dir = app / "Contents" / "MacOS"
     resources = app / "Contents" / "Resources"
     out.mkdir(parents=True, exist_ok=True)
     resources.mkdir(parents=True, exist_ok=True)
     artifacts: list[dict[str, Any]] = []
-    for component, (bundle_name, canonical_pattern) in COMPONENTS.items():
-        source = macos_dir / bundle_name
+    for component, (bundle_path, canonical_pattern) in COMPONENTS.items():
+        source = app / bundle_path
         if not source.is_file():
             raise RuntimeError(f"missing signed macOS bundle executable: {source}")
         inspect_macho(source, arch)
@@ -89,7 +88,7 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         artifacts.append(
             {
                 "name": canonical_name,
-                "bundlePath": f"NeverLauncher.app/Contents/MacOS/{bundle_name}",
+                "bundlePath": f"NeverLauncher.app/{bundle_path}",
                 "component": component,
                 "architecture": arch,
                 "cpuType": meta["cpuText"],
@@ -132,13 +131,13 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         "components": [],
         "supportFiles": [],
     }
-    for public_name, source_component, binary_name in (
-        ("desktop", "desktop-launcher", "neverlauncher-desktop"),
-        ("guard", "guard", "neverguard"),
-        ("runtime", "runtime", "neverruntime"),
+    for public_name, source_component in (
+        ("desktop", "desktop-launcher"),
+        ("guard", "guard"),
+        ("runtime", "runtime"),
     ):
         row = by_component[source_component]
-        relative = f"Contents/MacOS/{binary_name}"
+        relative = str(row["bundlePath"]).removeprefix("NeverLauncher.app/")
         component_update["components"].append(
             {
                 "component": public_name,
@@ -163,7 +162,6 @@ def finalize_cmd(args: argparse.Namespace) -> int:
     payload = json.loads(embedded.read_text(encoding="utf-8"))
     if payload.get("productVersion") != args.version or payload.get("architecture") != arch:
         raise RuntimeError("embedded macOS package manifest identity mismatch during finalization")
-    macos_dir = app / "Contents" / "MacOS"
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
         raise RuntimeError("embedded macOS package manifest contains no artifacts")
@@ -171,8 +169,8 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         component = str(artifact.get("component", ""))
         if component not in COMPONENTS:
             raise RuntimeError(f"unknown macOS package component during finalization: {component!r}")
-        bundle_name, canonical_pattern = COMPONENTS[component]
-        source = macos_dir / bundle_name
+        bundle_path, canonical_pattern = COMPONENTS[component]
+        source = app / bundle_path
         if not source.is_file():
             raise RuntimeError(f"missing final signed macOS executable: {source}")
         inspect_macho(source, arch)
@@ -180,7 +178,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         canonical = out / canonical_name
         shutil.copy2(source, canonical)
         artifact["name"] = canonical_name
-        artifact["bundlePath"] = f"NeverLauncher.app/Contents/MacOS/{bundle_name}"
+        artifact["bundlePath"] = f"NeverLauncher.app/{bundle_path}"
         artifact["sha256"] = sha256(source)
         artifact["size"] = source.stat().st_size
     payload["hashBindingMode"] = "final-artifact-sha256"

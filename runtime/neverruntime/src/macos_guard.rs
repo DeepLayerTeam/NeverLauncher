@@ -219,7 +219,6 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
     let desktop_dir=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?;
     let guard_dir=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?;
-    if desktop_dir!=guard_dir{return Err("Desktop and NeverGuard must be in the same app bundle MacOS directory".into())}
     let app=bundle_root(&desktop)?;
     let manifest_path=app.join("Contents/Resources").join(PACKAGE_MANIFEST);
     validate_secure_file(&manifest_path,false)?;
@@ -228,6 +227,12 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==NEVERGUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
     let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
+    if canonical {
+        let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("resolve app Helpers directory failed: {e}"))?;
+        if guard_dir!=helpers{return Err("NeverGuard must run from the signed .app/Contents/Helpers directory".into())}
+    } else if desktop_dir!=guard_dir {
+        return Err("legacy Desktop and NeverGuard must be in the same app bundle MacOS directory".into())
+    }
     let external_hash_binding = match manifest.hash_binding_mode.as_str() {
         "" => false,
         "codesign+external-release-policy" => true,
@@ -235,9 +240,11 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     };
     let mut signing_team=manifest.signing_team_id.clone();
     if canonical {
-        for (component,path) in [("desktop-launcher",desktop.as_path()),("guard",guard)] {
+        for (component,path,expected_bundle_path) in [
+            ("desktop-launcher",desktop.as_path(),"NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"),
+            ("guard",guard,"NeverLauncher.app/Contents/Helpers/neverguard"),
+        ] {
             let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
-            let expected_bundle_path=format!("NeverLauncher.app/Contents/MacOS/{}",path.file_name().and_then(|v|v.to_str()).ok_or("macOS artifact filename invalid")?);
             if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
             if !external_hash_binding {
                 let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
@@ -266,7 +273,16 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if !gatekeeper.status.success(){return Err(format!("macOS Gatekeeper/notarization assessment failed: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
     Ok(())
 }
-fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("desktop parent missing")?.join("neverguard"))}
+fn resolve_guard_executable()->Result<PathBuf,String>{
+    let exe=std::env::current_exe().map_err(|e|e.to_string())?;
+    let macos=exe.parent().ok_or("desktop MacOS directory missing")?;
+    let contents=macos.parent().ok_or("desktop Contents directory missing")?;
+    let helper=contents.join("Helpers").join("neverguard");
+    if helper.is_file(){return Ok(helper)}
+    // Backward-compatible development fallback for pre-0.16.1 layouts only;
+    // canonical package verification above requires Contents/Helpers.
+    Ok(macos.join("neverguard"))
+}
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
     let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
