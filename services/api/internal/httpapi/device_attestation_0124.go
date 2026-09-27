@@ -16,6 +16,13 @@ const (
 	deviceAttestationMethod0124       = "challenge-response-v1"
 )
 
+func canonicalDeviceAttestationTime0124(value time.Time) time.Time {
+	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
+	// persistence and signing so the begin/complete payload stays byte-identical
+	// after the challenge is read back from PostgreSQL.
+	return value.UTC().Truncate(time.Microsecond)
+}
+
 func effectiveDeviceAttestation0124(device model.TrustedDevice, now time.Time) (state, assurance string) {
 	state = strings.ToLower(strings.TrimSpace(device.AttestationState))
 	if state == "" {
@@ -106,9 +113,9 @@ func (s Server) authDeviceAttestationBegin0124(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, "не удалось создать attestation challenge")
 		return
 	}
-	now := time.Now().UTC()
-	challengeExpires := now.Add(deviceAttestationChallengeTTL0124)
-	validUntil := now.Add(deviceAttestationValidity0124)
+	now := canonicalDeviceAttestationTime0124(time.Now())
+	challengeExpires := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationChallengeTTL0124))
+	validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))
 	entry := model.DeviceChallenge{
 		ID:            challengeID,
 		UserID:        claims.Sub,

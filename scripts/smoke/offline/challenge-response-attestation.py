@@ -34,6 +34,11 @@ need('services/api/internal/httpapi/device_attestation_0124.go', [
     'not-remotely-verified',
     'authorizationElevation',
     'phishingResistantElevation',
+    'canonicalDeviceAttestationTime0124',
+    'Truncate(time.Microsecond)',
+    'now := canonicalDeviceAttestationTime0124(time.Now())',
+    'challengeExpires := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationChallengeTTL0124))',
+    'validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))',
 ])
 need('services/api/internal/repository/devices_0121.go', [
     'challenge-response-attested',
@@ -77,6 +82,7 @@ need('services/api/internal/httpapi/device_attestation_0124_test.go', [
     'wrong attestation signature accepted',
     'unbound session obtained attestation challenge',
     'TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124',
+    'TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124',
 ])
 need('services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql', [
     "assurance IN ('proof-of-possession','challenge-response-attested')",

@@ -652,6 +652,12 @@ for required in [
 neverruntime_lib = read("runtime/neverruntime/src/lib.rs")
 if '#[serde(default)]\n    pub executable: bool,' not in neverruntime_lib:
     fail("NeverRuntime manifest signing payload must preserve executable=false exactly like Go ManifestFile")
+for required in [
+    'reqwest::StatusCode::TOO_MANY_REQUESTS', 'Retry-After', 'X-RateLimit-Reset',
+    'tokio::time::sleep(Duration::from_secs(delay)).await', 'FILE_DOWNLOAD_RATE_LIMIT_RETRIES',
+]:
+    if required not in neverruntime_lib:
+        fail(f"NeverRuntime clean sync не уважает production rate-limit retry contract: {required}")
 
 for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/java', '--java "$JAVA_BIN"']:
     if required not in e2e_script:

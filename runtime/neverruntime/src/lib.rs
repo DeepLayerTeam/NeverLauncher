@@ -389,6 +389,39 @@ pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileChe
     Ok(results)
 }
 
+const FILE_DOWNLOAD_RATE_LIMIT_RETRIES: usize = 8;
+const FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS: u64 = 65;
+
+fn bounded_rate_limit_delay_seconds(values: impl IntoIterator<Item = Option<u64>>) -> u64 {
+    let longest = values.into_iter().flatten().filter(|value| *value > 0).max().unwrap_or(1);
+    // The API uses a fixed one-minute window. Waiting one extra second avoids
+    // racing Redis expiry while keeping a hard bound against malformed proxies.
+    longest.saturating_add(1).min(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS)
+}
+
+fn rate_limit_retry_delay_seconds(response: &reqwest::Response) -> u64 {
+    let headers = response.headers();
+    bounded_rate_limit_delay_seconds(["Retry-After", "X-RateLimit-Reset"].map(|name| {
+        headers.get(name).and_then(|value| value.to_str().ok()).and_then(|text| text.trim().parse::<u64>().ok())
+    }))
+}
+
+async fn get_release_file_with_rate_limit_retry(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<reqwest::Response, reqwest::Error> {
+    let mut retries = 0usize;
+    loop {
+        let response = client.get(url).send().await?;
+        if response.status() != reqwest::StatusCode::TOO_MANY_REQUESTS || retries >= FILE_DOWNLOAD_RATE_LIMIT_RETRIES {
+            return Ok(response);
+        }
+        let delay = rate_limit_retry_delay_seconds(&response);
+        retries += 1;
+        tokio::time::sleep(Duration::from_secs(delay)).await;
+    }
+}
+
 pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     let client = reqwest::Client::new();
@@ -409,7 +442,7 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
             fs::create_dir_all(parent).await.map_err(|err| format!("не удалось создать каталог {}: {err}", parent.display()))?;
         }
 
-        let mut response = match client.get(&file.url).send().await {
+        let mut response = match get_release_file_with_rate_limit_retry(&client, &file.url).await {
             Ok(response) => response,
             Err(err) => {
                 result.failed += 1;
@@ -1014,6 +1047,19 @@ mod tests {
             json.contains("\"executable\":false"),
             "Go ManifestFile signs executable=false explicitly: {json}"
         );
+    }
+
+    #[test]
+    fn file_download_rate_limit_delay_prefers_server_reset_and_is_bounded() {
+        assert_eq!(bounded_rate_limit_delay_seconds([Some(7), Some(11)]), 12);
+        assert_eq!(bounded_rate_limit_delay_seconds([Some(600), None]), 65);
+        assert_eq!(bounded_rate_limit_delay_seconds([None, None]), 2);
+    }
+
+    #[test]
+    fn file_download_rate_limit_retry_budget_remains_bounded() {
+        assert_eq!(FILE_DOWNLOAD_RATE_LIMIT_RETRIES, 8);
+        assert_eq!(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS, 65);
     }
 
     #[test]

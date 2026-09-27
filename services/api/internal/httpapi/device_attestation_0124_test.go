@@ -146,6 +146,33 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 }
 
+func TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124(t *testing.T) {
+	raw := time.Date(2026, time.September, 27, 11, 29, 48, 822071312, time.UTC)
+	now := canonicalDeviceAttestationTime0124(raw)
+	if now.Nanosecond()%1000 != 0 {
+		t.Fatalf("attestation timestamp was not canonicalized to PostgreSQL microseconds: %s", now.Format(time.RFC3339Nano))
+	}
+	challenge := model.DeviceChallenge{
+		CreatedAt: now,
+		ExpiresAt: canonicalDeviceAttestationTime0124(now.Add(deviceAttestationChallengeTTL0124)),
+	}
+	device := model.TrustedDevice{
+		ID: "dev-test", UserID: "user-test", KeyFingerprint: "fp", KeyAlgorithm: "p256",
+		KeyBinding: "hardware", HardwareProvider: "test-provider",
+	}
+	validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))
+	beginPayload := deviceAttestationPayload0124("challenge", challenge, device, "session-test", validUntil)
+
+	// Simulate the exact PostgreSQL timestamptz precision observed after round-trip.
+	fromPostgres := challenge
+	fromPostgres.CreatedAt = challenge.CreatedAt.Truncate(time.Microsecond)
+	fromPostgres.ExpiresAt = challenge.ExpiresAt.Truncate(time.Microsecond)
+	completePayload := deviceAttestationPayload0124("challenge", fromPostgres, device, "session-test", validUntil)
+	if beginPayload != completePayload {
+		t.Fatalf("attestation payload changed after PostgreSQL timestamp round-trip:\nbegin=%q\ncomplete=%q", beginPayload, completePayload)
+	}
+}
+
 func TestDeviceAttestationFreshnessDowngradesExpired0124(t *testing.T) {
 	now := time.Now().UTC()
 	device := model.TrustedDevice{
