@@ -74,6 +74,28 @@ require(frontend, [
     'guardAttestationTicket',
 ], "Desktop end-to-end Guard verification flow")
 
+guard_purpose_migration_api = read("services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+guard_purpose_migration_cli = read("cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+if guard_purpose_migration_api != guard_purpose_migration_cli:
+    raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
+require(guard_purpose_migration_api, [
+    'device_challenges_purpose_check',
+    'guard-attest-v1',
+    'guard-launch-v1',
+    'key-rotate',
+    'key-recover',
+], "PostgreSQL Guard challenge-purpose schema")
+
+guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
+require(guard_migration_e2e, [
+    '0031_guard_attestation_challenge_purposes_0161',
+    'dtmig-guard-attest',
+    'guard-attest-v1',
+    'dtmig-guard-launch',
+    'guard-launch-v1',
+    'guardPurposeMigrationSealed:true',
+], "PostgreSQL Guard challenge-purpose migration E2E")
+
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
 require(backend, [
     'guardAttestationChallengeTTL0134',

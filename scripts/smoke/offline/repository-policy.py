@@ -930,6 +930,29 @@ if "e2e/device-trust-migration-result/" not in ci or "e2e/device-trust-migration
 if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
     fail("0.12.10 mandatory migration stabilization release gate is incomplete")
 
+
+# 0.16.1 Guard Attestation PostgreSQL challenge-purpose completion. The runtime
+# security flow is useless if the sealed SQL schema rejects its one-shot purposes.
+guard_purpose_migration_api = read("services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+guard_purpose_migration_cli = read("cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+if guard_purpose_migration_api != guard_purpose_migration_cli:
+    fail("0.16.1 API/CLI Guard challenge-purpose migration 0031 differs")
+for required in [
+    "device_challenges_purpose_check", "guard-attest-v1", "guard-launch-v1",
+    "key-rotate", "key-recover",
+]:
+    if required not in guard_purpose_migration_api:
+        fail(f"0.16.1 Guard challenge-purpose migration missing invariant: {required}")
+
+guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
+for required in [
+    "0031_guard_attestation_challenge_purposes_0161", "dtmig-guard-attest",
+    "guard-attest-v1", "dtmig-guard-launch", "guard-launch-v1",
+    "guardPurposeMigrationSealed:true",
+]:
+    if required not in guard_migration_e2e:
+        fail(f"0.16.1 Guard challenge-purpose PostgreSQL E2E missing: {required}")
+
 # 0.13.2 NeverGuard Windows Integrity Evidence v1. Evidence is collected by the
 # separate guard process and authenticated over the existing local IPC session.
 integrity_0132 = read("runtime/neverruntime/src/integrity.rs")

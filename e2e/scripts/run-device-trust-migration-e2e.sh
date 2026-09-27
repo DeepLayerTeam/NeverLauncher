@@ -117,7 +117,7 @@ if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_i
   exit 1
 fi
 
-printf '[device-trust-migration-e2e] upgrade with shipping CLI and verify sealed 0018\n'
+printf '[device-trust-migration-e2e] upgrade with shipping CLI and verify sealed 0018 + 0031\n'
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.json"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.json"
@@ -128,6 +128,8 @@ shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'")"
 [[ "$sealed" == "true" ]]
+guard_purpose_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0031_guard_attestation_challenge_purposes_0161'")"
+[[ "$guard_purpose_sealed" == "true" ]]
 
 printf '[device-trust-migration-e2e] verify normalization and new relational boundaries\n'
 legacy_revoked="$(psql "$DB_DSN" -Atqc "SELECT (attestation_state='revoked' AND assurance='proof-of-possession' AND revoked_at IS NOT NULL AND revoked_reason<>'')::text FROM trusted_devices WHERE id='dtmig-old'")"
@@ -141,6 +143,8 @@ expired_consumed="$(psql "$DB_DSN" -Atqc "SELECT (consumed_at IS NOT NULL)::text
 
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-post-rotate','dtmig-user','dtmig-old','key-rotate',repeat('d',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-post-recover','dtmig-user','dtmig-old','key-recover',repeat('e',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
+psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-guard-attest','dtmig-user','dtmig-new','guard-attest-v1',repeat('f',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
+psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-guard-launch','dtmig-user','dtmig-new','guard-launch-v1',repeat('0',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
 
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_sessions SET trusted_device_id='dtmig-new',device_trust_state='verified',device_verified_at=now() WHERE id='dtmig-other-session'" >/dev/null 2>&1; then
   echo '[device-trust-migration-e2e] cross-user auth session/device binding unexpectedly succeeded' >&2
@@ -163,7 +167,7 @@ jq -n \
   --arg before "$latest_before" \
   --arg after "$latest_after" \
   --argjson constraints "$constraint_count" \
-  '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true},normalization:{revokedDevice:true,emptyReplacementToNull:true,emptyMinecraftDeviceToNull:true,expiredChallengeConsumed:true},replacementChallenges:{pre01210Rejected:true,keyRotateAccepted:true,keyRecoverAccepted:true},ownershipEnforcement:{authSessionDevice:true,replacementChain:true,minecraftDevice:true,constraints:$constraints}}' \
+  '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true,guardPurposeMigrationSealed:true},normalization:{revokedDevice:true,emptyReplacementToNull:true,emptyMinecraftDeviceToNull:true,expiredChallengeConsumed:true},replacementChallenges:{pre01210Rejected:true,keyRotateAccepted:true,keyRecoverAccepted:true},guardChallenges:{guardAttestAccepted:true,guardLaunchAccepted:true},ownershipEnforcement:{authSessionDevice:true,replacementChain:true,minecraftDevice:true,constraints:$constraints}}' \
   > "$RESULT_DIR/migration-stabilization.json"
 
-printf '[device-trust-migration-e2e] PASS 0.12.9 -> 0.12.10 migration + stabilization\n'
+printf '[device-trust-migration-e2e] PASS 0.12.9 baseline -> current sealed Device Trust catalog\n'

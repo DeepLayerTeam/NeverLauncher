@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0030_serverbridge_migration_stabilization_01410" {
+	if st.Current != "0031_guard_attestation_challenge_purposes_0161" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0030_serverbridge_migration_stabilization_01410" {
+		if k != "0031_guard_attestation_challenge_purposes_0161" {
 			pending[k] = v
 		}
 	}
@@ -308,6 +308,25 @@ func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.14.9 migration missing %q", required)
+		}
+	}
+}
+
+func TestGuardAttestationChallengePurposeMigration0161(t *testing.T) {
+	b, err := os.ReadFile("sql/0031_guard_attestation_challenge_purposes_0161.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"device_challenges_purpose_check",
+		"guard-attest-v1",
+		"guard-launch-v1",
+		"key-rotate",
+		"key-recover",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.16.1 Guard challenge-purpose migration missing %q", required)
 		}
 	}
 }

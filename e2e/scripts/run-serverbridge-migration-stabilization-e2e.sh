@@ -55,7 +55,7 @@ SQL
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.log"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"; grep -q verified "$RUNTIME_DIR/migrate-verify.log"
-latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"; [[ "$latest_after" == "0030_serverbridge_migration_stabilization_01410" ]]
+latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"; [[ "$latest_after" == "0031_guard_attestation_challenge_purposes_0161" ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT identity_epoch FROM server_bridge_nodes_v2 WHERE id='stabilization-proxy'")" == 7 ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT status FROM server_bridge_nodes_v2 WHERE id='stabilization-backend'")" == active ]]
 [[ "$(psql "$DB_DSN" -Atqc "SELECT status FROM server_bridge_topology_edges_v2 WHERE source_node_id='stabilization-proxy' AND target_node_id='stabilization-backend'")" == disabled ]]
@@ -64,4 +64,4 @@ for index in idx_server_bridge_join_consumed_source_01410 idx_server_bridge_node
   [[ "$(psql "$DB_DSN" -Atqc "SELECT to_regclass('public.$index') IS NOT NULL")" == t ]]
 done
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},nodeIdentityPreserved:true,expiredNonceRemoved:true,staleTopologySealed:true,retentionIndexes:true}' > "$RESULT_DIR/serverbridge-migration-stabilization.json"
-printf '[serverbridge-stabilization] PASS 0.14.9 -> 0.14.10 migration + stabilization\n'
+printf '[serverbridge-stabilization] PASS 0.14.9 baseline -> current sealed catalog with 0.14.10 stabilization\n'
