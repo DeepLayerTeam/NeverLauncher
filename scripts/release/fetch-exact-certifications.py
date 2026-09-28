@@ -20,6 +20,38 @@ import zipfile
 
 API_ROOT = "https://api.github.com"
 API_VERSION = "2022-11-28"
+USER_AGENT = "NeverLauncher-release-certification-fetch/0.16.1"
+ARTIFACT_REDIRECT_SUFFIXES = (
+    ".blob.core.windows.net",
+    ".githubusercontent.com",
+    ".github.com",
+)
+
+
+def _artifact_redirect_request(req: urllib.request.Request, newurl: str) -> urllib.request.Request:
+    parsed = urllib.parse.urlparse(newurl)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if parsed.scheme != "https" or not host or parsed.username is not None or parsed.password is not None:
+        raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
+    if not any(host.endswith(suffix) or host == suffix[1:] for suffix in ARTIFACT_REDIRECT_SUFFIXES):
+        raise RuntimeError(f"artifact redirect host is not trusted: {host}")
+    # Never forward the GitHub bearer token to the signed artifact origin.
+    # The redirect URL already carries its own short-lived authorization query.
+    return urllib.request.Request(
+        newurl,
+        headers={
+            "Accept": "application/octet-stream",
+            "User-Agent": USER_AGENT,
+        },
+        method="GET",
+    )
+
+
+class ArtifactRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        if code not in (301, 302, 303, 307, 308):
+            return None
+        return _artifact_redirect_request(req, newurl)
 
 SPECS = (
     ("compatibility", "compatibility.yml", "neverlauncher-compatibility-matrix-"),
@@ -41,7 +73,7 @@ class GitHubAPI:
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {self.token}",
                 "X-GitHub-Api-Version": API_VERSION,
-                "User-Agent": "NeverLauncher-release-certification-fetch/0.16.1",
+                "User-Agent": USER_AGENT,
             },
         )
         try:
@@ -65,7 +97,27 @@ class GitHubAPI:
         return doc
 
     def bytes(self, url: str) -> bytes:
-        return self._request(url)
+        if not url.startswith(API_ROOT + "/"):
+            raise RuntimeError("artifact download must start from the GitHub API origin")
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {self.token}",
+                "X-GitHub-Api-Version": API_VERSION,
+                "User-Agent": USER_AGENT,
+            },
+            method="GET",
+        )
+        opener = urllib.request.build_opener(ArtifactRedirectHandler())
+        try:
+            with opener.open(req, timeout=60) as response:
+                return response.read()
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"GitHub artifact HTTP {exc.code} for {url}: {body[:500]}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"GitHub artifact request failed for {url}: {exc}") from exc
 
 
 def select_exact_run(runs: list[dict[str, Any]], commit: str) -> dict[str, Any] | None:

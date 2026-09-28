@@ -48,6 +48,9 @@ need('services/api/internal/repository/devices_0121.go', [
     'UPDATE minecraft_sessions SET status=\'revoked\'',
     'FOR UPDATE',
     'CascadeHandled: true',
+    'jsonb_build_array($3::text)',
+    'SET CONSTRAINTS ALL IMMEDIATE',
+    'revoke trusted device: validate deferred constraints',
 ])
 need('services/api/internal/httpapi/device_management_0125_test.go', [
     'TestDeviceManagementRevokeOthersAndChallengeInvalidation0125',

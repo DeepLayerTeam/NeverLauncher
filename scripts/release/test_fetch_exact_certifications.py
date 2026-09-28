@@ -44,6 +44,27 @@ class ExactCertificationTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             mod.validate_matrix_document(bad, repository=doc["repository"], commit=doc["commit"], version="0.16.1", run_id=123, label="compatibility")
 
+
+    def test_artifact_redirect_strips_github_authorization(self) -> None:
+        req = mod.urllib.request.Request(
+            "https://api.github.com/repos/DeepLayerTeam/NeverLauncher/actions/artifacts/123/zip",
+            headers={"Authorization": "Bearer secret", "User-Agent": mod.USER_AGENT},
+        )
+        redirected = mod._artifact_redirect_request(
+            req,
+            "https://productionresultssa8.blob.core.windows.net/actions-results/test.zip?sig=abc",
+        )
+        self.assertIsNone(redirected.get_header("Authorization"))
+        self.assertEqual(redirected.get_header("User-agent"), mod.USER_AGENT)
+        self.assertEqual(redirected.full_url, "https://productionresultssa8.blob.core.windows.net/actions-results/test.zip?sig=abc")
+
+    def test_artifact_redirect_rejects_untrusted_or_insecure_target(self) -> None:
+        req = mod.urllib.request.Request("https://api.github.com/repos/x/y/actions/artifacts/1/zip")
+        with self.assertRaises(RuntimeError):
+            mod._artifact_redirect_request(req, "https://evil.example/artifact.zip")
+        with self.assertRaises(RuntimeError):
+            mod._artifact_redirect_request(req, "http://productionresultssa8.blob.core.windows.net/artifact.zip")
+
     def test_matrix_zip_accepts_single_matrix_only(self) -> None:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:

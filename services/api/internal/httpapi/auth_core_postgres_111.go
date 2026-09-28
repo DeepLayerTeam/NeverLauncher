@@ -364,7 +364,7 @@ func (p *authSessionPostgres111) compromiseFamilyTx111(ctx context.Context, tx *
 	if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='compromised',compromised_at=$2,revoked_at=$2,revoked_reason=$3 WHERE id=$1`, familyID, now, reason); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2 WHERE id=$1`, sessionID, now, reason); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2 WHERE id=$1`, sessionID, now, reason); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1`, familyID, now); err != nil {

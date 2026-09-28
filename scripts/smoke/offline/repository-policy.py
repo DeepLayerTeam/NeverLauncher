@@ -838,6 +838,8 @@ release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
 for required in [
     'head_sha', 'refusing release fallback', 'status": "passed"', 'archive_download_url',
     'neverlauncher-compatibility-matrix-', 'neverlauncher-device-trust-matrix-', 'exact-commit',
+    'ArtifactRedirectHandler', 'ARTIFACT_REDIRECT_SUFFIXES', 'artifact redirect host is not trusted',
+    'Never forward the GitHub bearer token',
 ]:
     if required not in release_cert_fetch:
         fail(f"release exact-commit certification fetcher incomplete: {required}")

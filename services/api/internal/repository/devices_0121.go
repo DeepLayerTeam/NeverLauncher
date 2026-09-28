@@ -514,17 +514,17 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 	result := model.DeviceRevocationResult{AlreadyRevoked: status == "revoked", CascadeHandled: true}
 	if !result.AlreadyRevoked {
 		if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, err
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: mark device revoked: %w", err)
 		}
 	}
 	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, deviceID, now); err != nil {
-		return model.DeviceRevocationResult{}, err
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: consume outstanding challenges: %w", err)
 	} else if n, err := res.RowsAffected(); err == nil {
 		result.InvalidatedChallenges = int(n)
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, owner, deviceID)
 	if err != nil {
-		return model.DeviceRevocationResult{}, err
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: lock bound sessions: %w", err)
 	}
 	type pair struct{ session, family string }
 	affected := []pair{}
@@ -532,41 +532,48 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 		var p pair
 		if err := rows.Scan(&p.session, &p.family); err != nil {
 			rows.Close()
-			return model.DeviceRevocationResult{}, err
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: scan bound session: %w", err)
 		}
 		affected = append(affected, p)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return model.DeviceRevocationResult{}, err
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: iterate bound sessions: %w", err)
 	}
 	rows.Close()
 	families := map[string]struct{}{}
 	for _, a := range affected {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, err
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke session %s: %w", a.session, err)
 		}
 		if a.family != "" {
 			families[a.family] = struct{}{}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status<>'revoked'`, a.family, now, reason); err != nil {
-				return model.DeviceRevocationResult{}, err
+				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh family %s: %w", a.family, err)
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status<>'revoked'`, a.family, now); err != nil {
-				return model.DeviceRevocationResult{}, err
+				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh tokens for family %s: %w", a.family, err)
 			}
 		}
 		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, err
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke minecraft sessions for %s: %w", a.session, err)
 		} else if n, err := res.RowsAffected(); err == nil {
 			result.RevokedMinecraftSessions += int(n)
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4,'reason',$5),$6)`, owner, a.session, a.family, deviceID, reason, now); err != nil {
-			return model.DeviceRevocationResult{}, err
+		if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4::text,'reason',$5::text),$6)`, owner, a.session, a.family, deviceID, reason, now); err != nil {
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: insert auth event for %s: %w", a.session, err)
 		}
 		result.RevokedSessionIDs = append(result.RevokedSessionIDs, a.session)
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
+	// Fail inside this transaction with an attributable error if any deferred
+	// ownership invariant was broken by the cascade. COMMIT would enforce the
+	// same constraints; doing it here preserves fail-closed semantics while
+	// avoiding an opaque commit-time 409.
+	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: validate deferred constraints: %w", err)
+	}
 	return result, nil
 }
 
@@ -587,7 +594,7 @@ func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceI
 		return model.DeviceRevocationResult{}, err
 	}
 	if err := tx.Commit(); err != nil {
-		return model.DeviceRevocationResult{}, err
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: commit: %w", err)
 	}
 	owner := strings.TrimSpace(userID)
 	if owner == "" {
@@ -795,7 +802,7 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	rows.Close()
 	families := map[string]struct{}{}
 	for _, a := range affected {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
 			return result, fmt.Errorf("replace trusted device: revoke sibling session %s: %w", a.session, err)
 		}
 		if a.family != "" {

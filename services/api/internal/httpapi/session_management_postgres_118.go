@@ -363,7 +363,7 @@ func (p *authSessionPostgres111) revokeTrustedDevice121(userID, deviceID, reason
 	rows.Close()
 	now := time.Now().UTC()
 	for _, it := range items {
-		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1`, it.session, now, reason); err != nil {
 			return nil
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1`, it.family, now, reason); err != nil {
