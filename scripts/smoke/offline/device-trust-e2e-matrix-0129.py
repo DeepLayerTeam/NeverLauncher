@@ -80,6 +80,9 @@ require(protocol, [
     'launcher_session_or_handoff_missing_or_expired', 'recovery-replay.json',
     "expect_code 404 \"$code\" 'recovery challenge replay after source-device tombstone'",
     "purpose='key-recover' AND consumed_at IS NOT NULL", 'активное исходное устройство не найдено',
+    'require 0.12.9 -> current shipping migration upgrade evidence',
+    '--arg migration "$EXPECTED_CURRENT_MIGRATION"', '.upgrade.toMigration==$migration',
+    '.upgrade.guardPurposeMigrationSealed==true',
 ], "PostgreSQL Device Trust E2E")
 
 crypto = read("e2e/scripts/device-trust-crypto.py")

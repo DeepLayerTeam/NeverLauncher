@@ -909,6 +909,9 @@ for required in [
     "launcher_session_or_handoff_missing_or_expired", "recovery-replay.json",
     "recovery challenge replay after source-device tombstone", "purpose='key-recover' AND consumed_at IS NOT NULL",
     "активное исходное устройство не найдено",
+    "require 0.12.9 -> current shipping migration upgrade evidence",
+    '--arg migration "$EXPECTED_CURRENT_MIGRATION"', '.upgrade.toMigration==$migration',
+    '.upgrade.guardPurposeMigrationSealed==true',
     "secret material leaked into public evidence", 'repository:"postgresql"',
 ]:
     if required not in device_trust_e2e:

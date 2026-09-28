@@ -390,10 +390,10 @@ REVOKED_REFRESH_PAYLOAD="$(refresh_payload "$USER_ID" "$SESSION_ID" "$DEVICE2" "
 REVOKED_REFRESH_SIG="$(sign_payload ed25519 "$KEY2" "$REVOKED_REFRESH_PAYLOAD")"
 code="$(request_code POST "$API/api/v1/auth/refresh" '' "$(jq -cn --arg refresh "$REFRESH3" --arg device "$DEVICE2" --arg sig "$REVOKED_REFRESH_SIG" '{refreshToken:$refresh,deviceId:$device,deviceSignature:$sig}')" "$RUNTIME_DIR/revoked-refresh.json")"; expect_code 401 "$code" 'revoked device refresh survived'
 
-printf '[device-trust-e2e] require 0.12.9 -> 0.12.10 upgrade evidence\n'
+printf '[device-trust-e2e] require 0.12.9 -> current shipping migration upgrade evidence\n'
 MIGRATION_UPGRADE_EVIDENCE="$ROOT/e2e/device-trust-migration-result/migration-stabilization.json"
 [[ -f "$MIGRATION_UPGRADE_EVIDENCE" ]] || { echo '[device-trust-e2e] migration upgrade evidence missing; run run-device-trust-migration-e2e.sh first' >&2; exit 1; }
-jq -e --arg version "$VERSION" '.status=="passed" and .version==$version and .upgrade.fromMigration=="0017_device_key_recovery_rotation_0128" and .upgrade.toMigration=="0018_device_trust_stabilization_01210" and .upgrade.sealedChecksum==true and .ownershipEnforcement.constraints==7' "$MIGRATION_UPGRADE_EVIDENCE" >/dev/null
+jq -e --arg version "$VERSION" --arg migration "$EXPECTED_CURRENT_MIGRATION" '.status=="passed" and .version==$version and .upgrade.fromMigration=="0017_device_key_recovery_rotation_0128" and .upgrade.toMigration==$migration and .upgrade.sealedChecksum==true and .upgrade.guardPurposeMigrationSealed==true and .ownershipEnforcement.constraints==7' "$MIGRATION_UPGRADE_EVIDENCE" >/dev/null
 cp "$MIGRATION_UPGRADE_EVIDENCE" "$RESULT_DIR/migration-upgrade-e2e.json"
 
 printf '[device-trust-e2e] verify runtime really used PostgreSQL and migrations remain sealed\n'
