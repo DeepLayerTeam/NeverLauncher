@@ -580,9 +580,51 @@ jobs:
           docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f services/api/Dockerfile -t neverlauncher-api:ci .
           docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
 
+  managed-jre-production:
+    name: Managed JRE Temurin 21 six-target production delivery
+    needs: [go-contracts]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: cli/go.sum
+      - name: Build exact-vendor Managed JRE Distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          OUT="managed-jre-artifacts"
+          python3 scripts/release/managed-jre-distribution.py \
+            --out "${OUT}" \
+            --version "${VERSION}" \
+            --major 21
+      - name: Verify Managed JRE six-target delivery binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          OUT="managed-jre-artifacts"
+          (cd cli && go build -trimpath -o /tmp/nl-managed-jre ./cmd/neverlauncher)
+          /tmp/nl-managed-jre delivery manifest --bundle "${OUT}" --version "${VERSION}"
+          /tmp/nl-managed-jre delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
+          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+      - name: Upload exact-commit Managed JRE production assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-managed-jre-${{ github.sha }}
+          path: managed-jre-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers]
+    needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers, managed-jre-production]
     permissions:
       contents: read
       actions: read
@@ -606,6 +648,11 @@ jobs:
         with:
           name: neverlauncher-macos-production-${{ github.sha }}
           path: macos-production-artifacts
+      - name: Download Managed JRE six-target production assets
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-managed-jre-${{ github.sha }}
+          path: managed-jre-artifacts
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -690,6 +737,7 @@ jobs:
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
           NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
           NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
+          NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
@@ -754,6 +802,14 @@ jobs:
           test -s "${DIR}/GUARD_CI_TARGETS.json"
           test -s "${DIR}/GUARD_CI_MATRIX.json"
           test -s "${DIR}/GUARD_CI_CERTIFICATION.json"
+          test -s "${DIR}/MANAGED_JRE_MANIFEST.json"
+          test -s "${DIR}/MANAGED_JRE_EVIDENCE.json"
+          test -s "${DIR}/neverlauncher-jre-temurin21-windows-x64-${VERSION}.zip"
+          test -s "${DIR}/neverlauncher-jre-temurin21-windows-arm64-${VERSION}.zip"
+          test -s "${DIR}/neverlauncher-jre-temurin21-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-macos-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-macos-arm64-${VERSION}.tar.gz"
           test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
           test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"
           test -s "${DIR}/neverlauncher-bungeecord-bridge-${VERSION}.jar"

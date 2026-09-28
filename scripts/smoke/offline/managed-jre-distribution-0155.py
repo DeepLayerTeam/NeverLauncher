@@ -113,6 +113,22 @@ require(
     "Managed JRE production workflow",
 )
 
+ci = read(".github/workflows/ci.yml")
+require(
+    ci,
+    [
+        'managed-jre-production:',
+        'Managed JRE Temurin 21 six-target production delivery',
+        'Upload exact-commit Managed JRE production assets',
+        'name: neverlauncher-managed-jre-${{ github.sha }}',
+        'Download Managed JRE six-target production assets',
+        'path: managed-jre-artifacts',
+        'NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts',
+        'managed-jre-production]',
+    ],
+    "Managed JRE main CI release wiring",
+)
+
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestManagedJRE", "-count=1"],
     cwd=ROOT / "cli",

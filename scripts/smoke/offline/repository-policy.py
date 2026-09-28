@@ -1366,6 +1366,18 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in jre_workflow_0155:
             fail(f"0.15.5 Managed JRE production workflow incomplete: {required}")
     for required in [
+        "managed-jre-production:",
+        "Managed JRE Temurin 21 six-target production delivery",
+        "Upload exact-commit Managed JRE production assets",
+        'name: neverlauncher-managed-jre-${{ github.sha }}',
+        "Download Managed JRE six-target production assets",
+        "path: managed-jre-artifacts",
+        'NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts',
+        "managed-jre-production]",
+    ]:
+        if required not in ci:
+            fail(f"0.15.5 Managed JRE is not wired into the exact-commit main release graph: {required}")
+    for required in [
         "MANAGED_JRE_MANIFEST.json", "MANAGED_JRE_EVIDENCE.json",
         "neverlauncher-jre-temurin21-windows-x64", "neverlauncher-jre-temurin21-windows-arm64",
         "neverlauncher-jre-temurin21-linux-x64", "neverlauncher-jre-temurin21-linux-arm64",
