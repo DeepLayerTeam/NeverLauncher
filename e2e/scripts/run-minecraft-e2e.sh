@@ -120,6 +120,29 @@ wait_healthy() {
   compose logs "$service" >&2 || true
   return 1
 }
+paper_bootstrap_hash_failure() {
+  compose logs --no-color paper 2>&1 | grep -Eq 'Hash check failed for downloaded file mojang_[^[:space:]]*\.jar'
+}
+reset_paper_bootstrap_jars() {
+  compose rm -sf paper >/dev/null
+  compose run --rm --no-deps --entrypoint sh paper -c 'rm -f /data/mojang_*.jar /data/paper-*.jar' >/dev/null
+  compose up -d --force-recreate paper >/dev/null
+}
+wait_paper_healthy_with_bootstrap_recovery() {
+  local attempt
+  for attempt in 1 2 3; do
+    if wait_healthy paper; then
+      return 0
+    fi
+    if ! paper_bootstrap_hash_failure || [[ "$attempt" == "3" ]]; then
+      return 1
+    fi
+    compose logs --no-color paper > "$RUNTIME_DIR/paper-bootstrap-hash-failure-attempt-${attempt}.log" 2>&1 || true
+    echo "[e2e] Paper/Mojang bootstrap hash mismatch; cleaning only bootstrap JARs and retrying (${attempt}/3)" >&2
+    reset_paper_bootstrap_jars
+  done
+  return 1
+}
 wait_bridge_heartbeat() {
   local service="$1"
   for _ in $(seq 1 60); do
@@ -313,7 +336,11 @@ else
   SERVICES=(paper)
 fi
 for service in "${SERVICES[@]}"; do
-  wait_healthy "$service"
+  if [[ "$service" == "paper" ]]; then
+    wait_paper_healthy_with_bootstrap_recovery
+  else
+    wait_healthy "$service"
+  fi
   wait_bridge_heartbeat "$service"
   capture_health_evidence "$service"
 done

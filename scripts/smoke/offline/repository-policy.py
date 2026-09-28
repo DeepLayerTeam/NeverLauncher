@@ -668,6 +668,15 @@ for required in ["onboardAccessibility:false", "skipMultiplayerWarning:true", "j
     if required not in e2e_script:
         fail(f"actual Minecraft E2E pristine client may block Quick Play on first-run UI: {required}")
 for required in [
+    "paper_bootstrap_hash_failure", "wait_paper_healthy_with_bootstrap_recovery",
+    "Hash check failed for downloaded file mojang_", "for attempt in 1 2 3",
+    "rm -f /data/mojang_*.jar /data/paper-*.jar", "compose up -d --force-recreate paper",
+]:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E Paper/Mojang bootstrap recovery hardening missing: {required}")
+if "compose down -v" in e2e_script[e2e_script.find("paper_bootstrap_hash_failure"):e2e_script.find("wait_bridge_heartbeat")]:
+    fail("Paper bootstrap recovery must not reset PostgreSQL/Redis/security state")
+for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',
     'passkey_step_up', '/api/v1/auth/passkeys/step-up/begin', '--webauthn-state', 'f"--challenge={challenge}"',

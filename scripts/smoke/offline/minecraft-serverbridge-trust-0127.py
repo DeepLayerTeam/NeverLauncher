@@ -90,6 +90,12 @@ require("e2e/scripts/run-minecraft-e2e.sh", [
     "openssl genpkey -algorithm Ed25519",
     "/api/v1/auth/devices/register/begin",
     "/api/v1/auth/devices/register/complete",
+    "paper_bootstrap_hash_failure",
+    "wait_paper_healthy_with_bootstrap_recovery",
+    "Hash check failed for downloaded file mojang_",
+    "for attempt in 1 2 3",
+    "rm -f /data/mojang_*.jar /data/paper-*.jar",
+    "compose up -d --force-recreate paper",
 ])
 
 print("Minecraft/ServerBridge trust enforcement gate OK: live parent session/device/risk checks, binding-epoch snapshots, channel pinning and plugin deny reasons are enforced")
