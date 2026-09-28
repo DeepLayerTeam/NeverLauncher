@@ -760,6 +760,8 @@ stability_tests = read("cli/cmd/neverlauncher/compatibility_stability_test.go")
 vanilla_runtime = read("cli/cmd/neverlauncher/vanilla_runtime.go")
 managed_java = read("runtime/neverruntime/src/managed_java.rs")
 runtime_compat = read("runtime/neverruntime/src/compatibility.rs")
+forge_runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
+forge_runtime_tests = read("cli/cmd/neverlauncher/forge_runtime_test.go")
 if not (ROOT / "runtime/neverruntime/src/bin/neverruntime.rs").is_file():
     fail("Cargo declares neverruntime binary but src/bin/neverruntime.rs is missing")
 for required in [
@@ -778,6 +780,12 @@ for required in [
 for required in ["maxCompatibilityArtifact+1", "secureClientDestination", "validateAssetLogicalPath"]:
     if required not in vanilla_runtime:
         fail(f"Vanilla stabilization missing: {required}")
+for required in ["fetchForgeLikeMetadata", "compatibilityHTTPAttempts", 'strings.Contains(err.Error(), "HTTP 404")', "compatibilityRetryDelay"]:
+    if required not in forge_runtime:
+        fail(f"Forge/NeoForge mutable Maven metadata retry hardening missing: {required}")
+for required in ["TestNeoForgeMavenMetadataRetriesTransientNotFound", "TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed"]:
+    if required not in forge_runtime_tests:
+        fail(f"NeoForge Maven metadata retry regression test missing: {required}")
 if managed_java.count("check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?") != 1:
     fail("Managed Java cached runtime validation must invoke java -version exactly once")
 if "compatibility path содержит symlink" not in runtime_compat:
@@ -896,7 +904,9 @@ for required in [
     "/api/v1/auth/sessions", "/attest/begin", "/api/v1/auth/devices/key-recovery/begin",
     "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",
     "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
-    "launcher_session_or_handoff_missing_or_expired",
+    "launcher_session_or_handoff_missing_or_expired", "recovery-replay.json",
+    "recovery challenge replay after source-device tombstone", "purpose='key-recover' AND consumed_at IS NOT NULL",
+    "активное исходное устройство не найдено",
     "secret material leaked into public evidence", 'repository:"postgresql"',
 ]:
     if required not in device_trust_e2e:

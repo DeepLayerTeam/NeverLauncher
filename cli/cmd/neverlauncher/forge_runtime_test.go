@@ -159,6 +159,46 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	}
 }
 
+func TestNeoForgeMavenMetadataRetriesTransientNotFound(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if requests.Add(1) <= 2 {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = fmt.Fprint(w, `<metadata><versioning><versions><version>21.1.252</version></versions></versioning></metadata>`)
+	}))
+	defer server.Close()
+
+	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL)
+	if err != nil {
+		t.Fatalf("transient metadata 404 was not retried: %v", err)
+	}
+	if loaderVersion != "21.1.252" || artifactVersion != "21.1.252" {
+		t.Fatalf("unexpected NeoForge version after metadata retry: %q %q", loaderVersion, artifactVersion)
+	}
+	if got := requests.Load(); got != 3 {
+		t.Fatalf("metadata request count=%d, want 3", got)
+	}
+}
+
+func TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL)
+	if err == nil || !strings.Contains(err.Error(), "HTTP 404") {
+		t.Fatalf("persistent metadata 404 must fail closed, got %v", err)
+	}
+	if got := requests.Load(); got != compatibilityHTTPAttempts {
+		t.Fatalf("metadata request count=%d, want %d", got, compatibilityHTTPAttempts)
+	}
+}
+
 func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *testing.T) {
 	payload := []byte("same-forge-library")
 	sha1sum := sha1HexLocal(payload)

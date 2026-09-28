@@ -366,7 +366,8 @@ openssl genpkey -algorithm Ed25519 -out "$RECOVERY_KEY" >/dev/null 2>&1
 RECOVERY_PUB="$(python3 "$CRYPTO" public --algorithm ed25519 --key "$RECOVERY_KEY")"
 REC_BEGIN="$(json_post "$API/api/v1/auth/devices/key-recovery/begin" "$HW_STEPPED_ACCESS" "$(jq -cn --arg old "$HW_DEVICE" --arg pub "$RECOVERY_PUB" --arg v "$VERSION" '{oldDeviceId:$old,name:"Recovered Device Trust E2E identity",platform:"linux",clientVersion:$v,publicKey:$pub,keyAlgorithm:"ed25519",keyBinding:"software"}')")"
 REC_SIG="$(sign_payload ed25519 "$RECOVERY_KEY" "$(jq -er '.data.signingPayload' <<<"$REC_BEGIN")")"
-REC_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$REC_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$REC_BEGIN")" --arg sig "$REC_SIG" '{challengeId:$id,challenge:$ch,newSignature:$sig}')"
+REC_CHALLENGE_ID="$(jq -er '.data.challengeId' <<<"$REC_BEGIN")"
+REC_BODY="$(jq -cn --arg id "$REC_CHALLENGE_ID" --arg ch "$(jq -er '.data.challenge' <<<"$REC_BEGIN")" --arg sig "$REC_SIG" '{challengeId:$id,challenge:$ch,newSignature:$sig}')"
 REC_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$HW_STEPPED_ACCESS" "$REC_BODY")"
 REC_DEVICE="$(jq -er '.data.device.id' <<<"$REC_OK")"
 [[ "$REC_DEVICE" != "$HW_DEVICE" ]]
@@ -376,7 +377,9 @@ code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$
 expect_code 403 "$code" 'Guard-bound ServerBridge join survived device recovery'
 jq -e '.data.allowed==false and (.data.reason=="launcher_session_or_handoff_missing_or_expired" or .data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed" or .data.reason=="minecraft_session_missing_or_expired" or .data.reason=="minecraft_integrity_invalid")' "$RESULT_DIR/bridge-after-recovery.json" >/dev/null
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'pre-recovery access survived binding epoch change'
-code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RUNTIME_DIR/recovery-replay.json")"; expect_code 401 "$code" 'recovery challenge replay'
+[[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM device_challenges WHERE id='$REC_CHALLENGE_ID' AND user_id='$USER_ID' AND device_id='$HW_DEVICE' AND purpose='key-recover' AND consumed_at IS NOT NULL")" == "1" ]]
+code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RESULT_DIR/recovery-replay.json")"; expect_code 404 "$code" 'recovery challenge replay after source-device tombstone'
+jq -e '.error.code==404 and .error.message=="активное исходное устройство не найдено"' "$RESULT_DIR/recovery-replay.json" >/dev/null
 
 printf '[device-trust-e2e] permanent device revoke cascades to access and refresh credentials\n'
 REVOKE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/revoke" "$ACCESS2R" '{"reason":"device-trust-e2e-revoke"}')"
@@ -413,7 +416,7 @@ EVIDENCE_FILES=(
   registration.json trust-after-registration.json software-device-guard-required.json rotation.json
   old-key-tombstone.json risk-step-up.json p256-attestation.json guard-attestation.json
   minecraft-integrity-session.json bridge-guard-bound-allowed.json bridge-after-recovery.json
-  recovery-step-up-required.json recovery.json revocation.json migration-stabilization.json migration-upgrade-e2e.json
+  recovery-step-up-required.json recovery.json recovery-replay.json revocation.json migration-stabilization.json migration-upgrade-e2e.json
   release-capabilities.json release-readiness.json
 )
 EVIDENCE_FILES_JSON="$(printf '%s\n' "${EVIDENCE_FILES[@]}" | jq -R . | jq -s -c .)"

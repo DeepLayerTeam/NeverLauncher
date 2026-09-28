@@ -470,7 +470,7 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		}
 		return requested, requested, metadataURL, nil
 	}
-	data, err := fetchLimitedBytes(ctx, client, metadataURL, 8<<20)
+	data, err := fetchForgeLikeMetadata(ctx, client, metadataURL)
 	if err != nil {
 		return "", "", metadataURL, fmt.Errorf("%s Maven metadata: %w", loader, err)
 	}
@@ -499,6 +499,27 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		}
 	}
 	return "", "", metadataURL, fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
+}
+
+func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataURL string) ([]byte, error) {
+	var lastErr error
+	for attempt := 0; attempt < compatibilityHTTPAttempts; attempt++ {
+		data, err := fetchLimitedBytes(ctx, client, metadataURL, 8<<20)
+		if err == nil {
+			return data, nil
+		}
+		lastErr = err
+		// Maven metadata can briefly return 404 while repository/CDN indexes are
+		// converging. Retry only this mutable metadata lookup; concrete artifact
+		// downloads remain strict and fail closed on 404.
+		if !strings.Contains(err.Error(), "HTTP 404") || attempt+1 == compatibilityHTTPAttempts {
+			break
+		}
+		if err := sleepContext(ctx, compatibilityRetryDelay(nil, attempt)); err != nil {
+			return nil, err
+		}
+	}
+	return nil, fmt.Errorf("metadata GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
 }
 
 func forgeInstallerURL(loader, artifactVersion string) string {
