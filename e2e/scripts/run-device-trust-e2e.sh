@@ -374,7 +374,7 @@ jq -e '.data.mode=="recover" and .data.oldFingerprintPermanentTombstone==true an
 printf '%s' "$REC_OK" | sanitize_rotation > "$RESULT_DIR/recovery.json"
 code="$(serverbridge_node_signed_request "$SERVER_NODE_KEY" dt-e2e-paper POST "$API/api/v1/server-bridge/validate-join" "$BRIDGE_VALIDATE_BODY" "$RESULT_DIR/bridge-after-recovery.json")"
 expect_code 403 "$code" 'Guard-bound ServerBridge join survived device recovery'
-jq -e '.data.allowed==false and (.data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed" or .data.reason=="minecraft_session_missing_or_expired" or .data.reason=="minecraft_integrity_invalid")' "$RESULT_DIR/bridge-after-recovery.json" >/dev/null
+jq -e '.data.allowed==false and (.data.reason=="launcher_session_or_handoff_missing_or_expired" or .data.reason=="launcher_session_missing_or_expired" or .data.reason=="session_binding_changed" or .data.reason=="session_device_changed" or .data.reason=="minecraft_session_missing_or_expired" or .data.reason=="minecraft_integrity_invalid")' "$RESULT_DIR/bridge-after-recovery.json" >/dev/null
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'pre-recovery access survived binding epoch change'
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RUNTIME_DIR/recovery-replay.json")"; expect_code 401 "$code" 'recovery challenge replay'
 

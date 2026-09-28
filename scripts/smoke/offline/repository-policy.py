@@ -782,6 +782,14 @@ if managed_java.count("check_java(Some(java.to_string_lossy().to_string()), Some
     fail("Managed Java cached runtime validation must invoke java -version exactly once")
 if "compatibility path содержит symlink" not in runtime_compat:
     fail("NeverRuntime Compatibility Engine must reject symlink path components")
+for required in [
+    "ensure_neoforge_bootstrap_ignores_base_client",
+    'value == "--fml.neoForgeVersion"',
+    "neoforge_bootstrap_ignores_base_client_jar_module",
+    'file_name.starts_with(prefix)',
+]:
+    if required not in runtime_compat:
+        fail(f"NeverRuntime NeoForge BootstrapLauncher module-isolation regression guard missing: {required}")
 if "runtime record java path вышел за Managed Java root через symlink" not in managed_java:
     fail("Managed Java cache validation must reject symlink escape")
 for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "evidence manifestLoader mismatch"]:
@@ -888,6 +896,7 @@ for required in [
     "/api/v1/auth/sessions", "/attest/begin", "/api/v1/auth/devices/key-recovery/begin",
     "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",
     "recoveryPhishingResistantEndToEnd:true", "replacement_reason='recover'",
+    "launcher_session_or_handoff_missing_or_expired",
     "secret material leaked into public evidence", 'repository:"postgresql"',
 ]:
     if required not in device_trust_e2e:

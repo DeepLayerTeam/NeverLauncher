@@ -77,6 +77,7 @@ require(protocol, [
     '/api/v1/minecraft/session', 'minecraftAccessToken', 'software-device-guard-required.json',
     'GUARD_E2E_VERSION="$VERSION"', 'guard-policy.override.yml', 'GUARD_RELEASE_ALLOWLIST_JSON',
     'guard-attestation-e2e.py', 'bridge-after-recovery.json',
+    'launcher_session_or_handoff_missing_or_expired',
 ], "PostgreSQL Device Trust E2E")
 
 crypto = read("e2e/scripts/device-trust-crypto.py")

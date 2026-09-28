@@ -363,10 +363,17 @@ pub async fn resolve_compatibility(
     } else {
         resolve_arguments(&merged.arguments.game, &environment)?
     };
+    let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
     let raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     let game_args = substitute_all(raw_game_args, &variables)?;
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
+    if is_neoforge {
+        // Modern NeoForge creates the transformed Minecraft production module itself.
+        // Keep Mojang's base client on the legacy classpath for launcher compatibility,
+        // but prevent BootstrapLauncher from turning it into a second named module.
+        ensure_neoforge_bootstrap_ignores_base_client(&mut jvm_args, &client_jar)?;
+    }
 
     let logging_file = if let Some(logging) = merged.logging_client.as_ref() {
         if logging.file.id.trim().is_empty() || logging.argument.trim().is_empty() {
@@ -633,6 +640,35 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
     Ok(out)
 }
 
+fn ensure_neoforge_bootstrap_ignores_base_client(jvm_args: &mut Vec<String>, client_jar: &str) -> Result<(), String> {
+    let file_name = client_jar
+        .rsplit('/')
+        .next()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "NeoForge base client JAR path не содержит filename".to_string())?;
+
+    for arg in jvm_args.iter_mut() {
+        let Some(list) = arg.strip_prefix("-DignoreList=") else {
+            continue;
+        };
+        let already_ignored = list
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .any(|prefix| file_name.starts_with(prefix));
+        if !already_ignored {
+            if !list.is_empty() {
+                arg.push(',');
+            }
+            arg.push_str(file_name);
+        }
+        return Ok(());
+    }
+
+    jvm_args.push(format!("-DignoreList={file_name}"));
+    Ok(())
+}
+
 fn strip_classpath_pair(args: &mut Vec<String>) -> Result<(), String> {
     let mut index = 0usize;
     while index < args.len() {
@@ -888,6 +924,43 @@ mod tests {
         assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
         assert_eq!(result.inheritance_chain, vec!["1.21.1", "custom"]);
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn neoforge_bootstrap_ignores_base_client_jar_module() {
+        let root = temp_root("neoforge-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.21.1")).unwrap();
+        stdfs::create_dir_all(root.join("versions/neoforge-21.1.252")).unwrap();
+        stdfs::write(
+            root.join("versions/1.21.1/1.21.1.json"),
+            r#"{
+              "id":"1.21.1","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"17",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":21}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/neoforge-21.1.252/neoforge-21.1.252.json"),
+            r#"{
+              "id":"neoforge-21.1.252","inheritsFrom":"1.21.1","mainClass":"cpw.mods.bootstraplauncher.BootstrapLauncher",
+              "arguments":{
+                "jvm":["-DignoreList=client-extra,neoforge-21.1.252.jar"],
+                "game":["--fml.neoForgeVersion","21.1.252","--launchTarget","forgeclient"]
+              }
+            }"#,
+        ).unwrap();
+
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/neoforge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
+        assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 
