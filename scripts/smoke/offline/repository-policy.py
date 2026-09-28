@@ -664,6 +664,9 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E PostgreSQL redemption/handoff boolean assertion missing: {required}")
+for required in ["onboardAccessibility:false", "skipMultiplayerWarning:true", "joinedFirstServer:true"]:
+    if required not in e2e_script:
+        fail(f"actual Minecraft E2E pristine client may block Quick Play on first-run UI: {required}")
 for required in [
     "hashlib.sha256", "backend checksum mismatch after upload", "local package file changed before upload", "manifestSettings",
     'response.status == 429', 'Retry-After', 'X-RateLimit-Reset', 'time.sleep(delay)',
@@ -879,6 +882,8 @@ for required in [
     "db migrate apply", "/api/v1/auth/devices/register/begin", "/api/v1/auth/refresh",
     "/api/v1/auth/devices/key-rotation/begin", "/api/v1/server-bridge/validate-join",
     "/api/v1/server-bridge/servers/dt-e2e-paper/heartbeat", "BRIDGE_RELEASE_ALLOWLIST_JSON",
+    "bungeeCordSha256", "waterfallSha256", "bukkitSha256", "spigotSha256", "foliaSha256",
+    "fabricSha256", "forgeSha256", "neoforgeSha256",
     "bridge_integrity_verified", "pluginVersion:$version", "pluginSha256:$sha",
     "/api/v1/auth/sessions", "/attest/begin", "/api/v1/auth/devices/key-recovery/begin",
     "/api/v1/auth/passkeys/register/begin", "/api/v1/auth/passkeys/step-up/begin",

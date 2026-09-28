@@ -103,6 +103,9 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if strings.Contains(string(profileDisk), `: null`) {
+				t.Fatalf("materialized loader profile contains null collection fields: %s", profileDisk)
+			}
 			var resolved loaderVersionProfile
 			if err := json.Unmarshal(profileDisk, &resolved); err != nil {
 				t.Fatal(err)
@@ -151,6 +154,24 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				t.Fatalf("incorrect manifest settings: %+v", minecraft)
 			}
 		})
+	}
+}
+
+func TestMojangMetadataJSONOmitsAbsentCollectionsInsteadOfNull(t *testing.T) {
+	payload := MojangVersionFile{
+		ID:        "loader-child",
+		MainClass: "example.LoaderMain",
+		Libraries: []MojangLibrary{{
+			Name:      "example:loader:1.0",
+			Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "example/loader/1.0/loader-1.0.jar"}},
+		}},
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `:null`) || strings.Contains(string(raw), `: null`) {
+		t.Fatalf("Mojang metadata serialized absent collection as null: %s", raw)
 	}
 }
 

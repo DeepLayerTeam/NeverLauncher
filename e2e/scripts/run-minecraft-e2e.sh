@@ -386,6 +386,16 @@ printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> a
 )
 jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/runtime-verify.json" >/dev/null
 jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 and ([.files[] | select(.status != "ok")] | length) == 0' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
+# A pristine Mojang client opens first-run accessibility and multiplayer warning
+# screens before Quick Play is allowed to connect. This is user-state, not a
+# product/security bypass: seed only the two acknowledged first-run choices so
+# the real client can exercise --quickPlayMultiplayer unattended under Xvfb.
+cat > "$RUNTIME_DIR/client/options.txt" <<'OPTIONS'
+onboardAccessibility:false
+skipMultiplayerWarning:true
+joinedFirstServer:true
+pauseOnLostFocus:false
+OPTIONS
 
 printf '[e2e] establish hardware-attested Guard-bound Minecraft session for integrity-enforced joins\n'
 HW_LOGIN="$(json_post "$API/api/v1/auth/login" '' "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email:$email,password:$password,deviceId:"minecraft-compat-guard"}')")"

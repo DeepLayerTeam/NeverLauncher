@@ -201,11 +201,11 @@ type MojangVersionFile struct {
 	MainClass     string                    `json:"mainClass"`
 	Assets        string                    `json:"assets"`
 	AssetIndex    MojangDownload            `json:"assetIndex"`
-	Downloads     map[string]MojangDownload `json:"downloads"`
-	Libraries     []MojangLibrary           `json:"libraries"`
+	Downloads     map[string]MojangDownload `json:"downloads,omitempty"`
+	Libraries     []MojangLibrary           `json:"libraries,omitempty"`
 	Arguments     MojangArguments           `json:"arguments"`
 	MinecraftArgs string                    `json:"minecraftArguments"`
-	JavaVersion   map[string]any            `json:"javaVersion"`
+	JavaVersion   map[string]any            `json:"javaVersion,omitempty"`
 }
 
 type MojangDownload struct {
@@ -219,20 +219,20 @@ type MojangDownload struct {
 type MojangLibrary struct {
 	Name      string                 `json:"name"`
 	URL       string                 `json:"url,omitempty"`
-	Downloads MojangLibraryDownloads `json:"downloads"`
-	Natives   map[string]string      `json:"natives"`
-	Rules     []map[string]any       `json:"rules"`
-	Extract   map[string]any         `json:"extract"`
+	Downloads MojangLibraryDownloads `json:"downloads,omitempty"`
+	Natives   map[string]string      `json:"natives,omitempty"`
+	Rules     []map[string]any       `json:"rules,omitempty"`
+	Extract   map[string]any         `json:"extract,omitempty"`
 }
 
 type MojangLibraryDownloads struct {
 	Artifact    MojangDownload            `json:"artifact"`
-	Classifiers map[string]MojangDownload `json:"classifiers"`
+	Classifiers map[string]MojangDownload `json:"classifiers,omitempty"`
 }
 
 type MojangArguments struct {
-	Game []any `json:"game"`
-	JVM  []any `json:"jvm"`
+	Game []any `json:"game,omitempty"`
+	JVM  []any `json:"jvm,omitempty"`
 }
 
 type MojangAssetIndex struct {
@@ -282,7 +282,7 @@ type FabricMetaVersion struct {
 type FabricMetaProfile struct {
 	ID        string          `json:"id"`
 	MainClass string          `json:"mainClass"`
-	Libraries []MojangLibrary `json:"libraries"`
+	Libraries []MojangLibrary `json:"libraries,omitempty"`
 	Arguments MojangArguments `json:"arguments"`
 }
 
@@ -294,7 +294,7 @@ type ForgeInstallProfile struct {
 	Minecraft  string           `json:"minecraft"`
 	Data       map[string]any   `json:"data"`
 	Processors []map[string]any `json:"processors"`
-	Libraries  []MojangLibrary  `json:"libraries"`
+	Libraries  []MojangLibrary  `json:"libraries,omitempty"`
 }
 
 func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
