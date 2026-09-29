@@ -282,7 +282,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     --expected-commit "${SOURCE_COMMIT}"
   if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     windows_delivery_source="${WINDOWS_SIGNED_ARTIFACTS_DIR:-${GUARD_PLATFORM_ARTIFACTS_DIR}/windows}"
-    [[ -d "${windows_delivery_source}" ]] || { echo "Ошибка: Windows x64/ARM64 artifact directory отсутствует: ${windows_delivery_source}" >&2; exit 1; }
+    windows_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
+      "${windows_delivery_source}" "${VERSION}" "neverlauncher-cli-windows-x64.exe" "Windows x64/ARM64 delivery")"
     log "Импорт Windows x64/ARM64 delivery artifacts из ${windows_delivery_source}"
     for artifact in \
       "neverlauncher-cli-windows-x64.exe" \
@@ -304,7 +305,9 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     done
   fi
   if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-    log "Импорт native Linux x64/ARM64 production artifacts из ${LINUX_PRODUCTION_ARTIFACTS_DIR}"
+    linux_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
+      "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "neverlauncher-cli-linux-x64" "Linux x64/ARM64 delivery")"
+    log "Импорт native Linux x64/ARM64 production artifacts из ${linux_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
         "neverlauncher-cli-linux-${arch}" \
@@ -314,8 +317,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "neverruntime-linux-${arch}" \
         "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
         "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
-        require_file "${LINUX_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
-        cp "${LINUX_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+        require_file "${linux_delivery_source}/${artifact}"
+        cp "${linux_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
       done
       chmod 0755 \
         "${OUT_DIR}/neverlauncher-cli-linux-${arch}" \
@@ -326,7 +329,9 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     done
   fi
   if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-    log "Импорт macOS x64/ARM64 delivery artifacts из ${MACOS_PRODUCTION_ARTIFACTS_DIR}"
+    macos_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
+      "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "neverlauncher-cli-macos-x64" "macOS x64/ARM64 delivery")"
+    log "Импорт macOS x64/ARM64 delivery artifacts из ${macos_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
         "neverlauncher-cli-macos-${arch}" \
@@ -335,8 +340,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "neverruntime-macos-${arch}" \
         "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
         "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
-        require_file "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
-        cp "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+        require_file "${macos_delivery_source}/${artifact}"
+        cp "${macos_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
       done
       chmod 0755 \
         "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
@@ -345,8 +350,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "${OUT_DIR}/neverruntime-macos-${arch}"
     done
     for artifact in MACOS_NOTARIZATION_EVIDENCE.json GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json; do
-      require_file "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}"
-      cp "${MACOS_PRODUCTION_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
+      require_file "${macos_delivery_source}/${artifact}"
+      cp "${macos_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
     done
   fi
 else

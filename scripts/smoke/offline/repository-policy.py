@@ -1633,6 +1633,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     rc_tests_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511_test.go")
     release_01511 = read("cli/cmd/neverlauncher/release_commands.go")
     build_01511 = read("scripts/release/build-release.sh")
+    artifact_layout_01511 = read("scripts/release/resolve-artifact-payload.sh")
     bundle_gate_01511 = read("scripts/smoke/release-required/release-bundle.sh")
     gate_01511 = read("scripts/smoke/offline/production-release-candidate-01511.py")
     for required in [
@@ -1653,9 +1654,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "PRODUCTION_RC_REQUIRED", "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --', "release candidate-verify", "PRODUCTION_RELEASE_CANDIDATE.json",
+        "resolve-artifact-payload.sh", "windows_delivery_source", "linux_delivery_source", "macos_delivery_source",
     ]:
         if required not in build_01511:
             fail(f"0.15.11 production build fail-closed integration incomplete: {required}")
+    for required in [
+        "release-${VERSION}", "неоднозначный mixed artifact layout", "ожидался ровно один release-${VERSION}",
+        "artifact payload относится не к ${VERSION}", "nested artifact layout содержит неожиданные top-level files/symlinks",
+        "release-${VERSION} payload содержит symlink", "flat artifact payload содержит symlink",
+    ]:
+        if required not in artifact_layout_01511:
+            fail(f"0.15.11 exact artifact layout resolver incomplete: {required}")
     if "PRODUCTION_RELEASE_CANDIDATE.json" not in bundle_gate_01511:
         fail("0.15.11 release-bundle gate does not require candidate certification")
     for required in [
