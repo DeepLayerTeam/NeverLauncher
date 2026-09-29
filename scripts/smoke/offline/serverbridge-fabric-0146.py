@@ -134,8 +134,10 @@ require(tests, [
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 compose_e2e = read("e2e/docker-compose.minecraft-e2e.yml")
 require(runtime_e2e, [
-    "compose up -d velocity bungeecord waterfall spigot paper purpur folia fabric",
-    "flow_for_server fabric-e2e-p3",
+    "compose up -d velocity paper",
+    "certify_aux_bridge fabric-e2e-p3",
+    'wait_bridge_heartbeat "$service"',
+    'capture_health_evidence "$service"',
     "neverlauncher-fabric-bridge.jar",
     "fabricServerBridge:true",
     "health-fabric.json",

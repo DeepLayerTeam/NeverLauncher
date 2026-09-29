@@ -107,17 +107,19 @@ wait_http() {
   return 1
 }
 wait_healthy() {
-  local service="$1" id status
-  id="$(compose ps -q "$service")"
+  local service="$1" id status state
+  id="$(compose ps -aq "$service")"
   [[ -n "$id" ]] || { echo "[e2e] $service container not found" >&2; return 1; }
   for _ in $(seq 1 120); do
     status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || true)"
     [[ "$status" == "healthy" ]] && return 0
-    [[ "$status" == "exited" || "$status" == "dead" ]] && break
+    state="$(docker inspect --format '{{.State.Status}}' "$id" 2>/dev/null || true)"
+    [[ "$state" == "exited" || "$state" == "dead" ]] && break
     sleep 3
   done
   echo "[e2e] $service did not become healthy" >&2
-  compose logs "$service" >&2 || true
+  docker inspect --format '[e2e] state={{.State.Status}} exitCode={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} error={{printf "%q" .State.Error}}' "$id" >&2 || true
+  compose logs --no-color "$service" >&2 || true
   return 1
 }
 paper_bootstrap_hash_failure() {
@@ -157,7 +159,7 @@ wait_bridge_heartbeat() {
 }
 capture_health_evidence() {
   local service="$1" id out
-  id="$(compose ps -q "$service")"
+  id="$(compose ps -aq "$service")"
   [[ -n "$id" ]] || { echo "[e2e] $service container not found for health evidence" >&2; return 1; }
   out="$RUNTIME_DIR/health-$service.json"
   docker inspect --format '{{json .State.Health}}' "$id" > "$out"
@@ -327,9 +329,9 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] start real Velocity/BungeeCord/Waterfall plus Spigot/Paper/Purpur/Folia/Fabric/Forge/NeoForge 1.21.1\n'
-  compose up -d velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge
-  SERVICES=(velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge)
+  printf '[e2e] start core Paper + Velocity runtimes; auxiliary bridge runtimes are certified sequentially to keep CI memory bounded\n'
+  compose up -d velocity paper
+  SERVICES=(velocity paper)
 else
   printf '[e2e] compatibility mode: start real Paper 1.21.1 only\n'
   compose up -d paper
@@ -566,14 +568,30 @@ if [[ "$MODE" == "full" ]]; then
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
-  flow_for_server bungeecord-e2e-p3 "$BUNGEECORD_NODE_KEY" "$BUNGEECORD_BRIDGE_SHA" bungeecord 25575
-  flow_for_server waterfall-e2e-p3 "$WATERFALL_NODE_KEY" "$WATERFALL_BRIDGE_SHA" waterfall 25576
-  flow_for_server spigot-e2e-p3 "$SPIGOT_NODE_KEY" "$SPIGOT_BRIDGE_SHA" spigot 25573
-  flow_for_server purpur-e2e-p3 "$PURPUR_NODE_KEY" "$PURPUR_BRIDGE_SHA" purpur 25572
-  flow_for_server folia-e2e-p3 "$FOLIA_NODE_KEY" "$FOLIA_BRIDGE_SHA" folia 25574
-  flow_for_server fabric-e2e-p3 "$FABRIC_NODE_KEY" "$FABRIC_BRIDGE_SHA" fabric 25577
-  flow_for_server forge-e2e-p3 "$FORGE_NODE_KEY" "$FORGE_BRIDGE_SHA" forge 25578
-  flow_for_server neoforge-e2e-p3 "$NEOFORGE_NODE_KEY" "$NEOFORGE_BRIDGE_SHA" neoforge 25579
+
+  certify_aux_bridge() {
+    local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5"
+    printf '[e2e] certify %s runtime in bounded-memory isolation\n' "$service"
+    compose up -d "$service"
+    if [[ "$service" == "paper" ]]; then
+      wait_paper_healthy_with_bootstrap_recovery
+    else
+      wait_healthy "$service"
+    fi
+    wait_bridge_heartbeat "$service"
+    capture_health_evidence "$service"
+    flow_for_server "$id" "$key" "$plugin_sha" "$service" "$port"
+    compose stop "$service" >/dev/null
+  }
+
+  certify_aux_bridge bungeecord-e2e-p3 "$BUNGEECORD_NODE_KEY" "$BUNGEECORD_BRIDGE_SHA" bungeecord 25575
+  certify_aux_bridge waterfall-e2e-p3 "$WATERFALL_NODE_KEY" "$WATERFALL_BRIDGE_SHA" waterfall 25576
+  certify_aux_bridge spigot-e2e-p3 "$SPIGOT_NODE_KEY" "$SPIGOT_BRIDGE_SHA" spigot 25573
+  certify_aux_bridge purpur-e2e-p3 "$PURPUR_NODE_KEY" "$PURPUR_BRIDGE_SHA" purpur 25572
+  certify_aux_bridge folia-e2e-p3 "$FOLIA_NODE_KEY" "$FOLIA_BRIDGE_SHA" folia 25574
+  certify_aux_bridge fabric-e2e-p3 "$FABRIC_NODE_KEY" "$FABRIC_BRIDGE_SHA" fabric 25577
+  certify_aux_bridge forge-e2e-p3 "$FORGE_NODE_KEY" "$FORGE_BRIDGE_SHA" forge 25578
+  certify_aux_bridge neoforge-e2e-p3 "$NEOFORGE_NODE_KEY" "$NEOFORGE_BRIDGE_SHA" neoforge 25579
 fi
 
 curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"

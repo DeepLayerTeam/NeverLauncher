@@ -115,9 +115,12 @@ require(tests, [
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 compose_e2e = read("e2e/docker-compose.minecraft-e2e.yml")
 require(runtime_e2e, [
-    "compose up -d velocity bungeecord waterfall spigot paper purpur folia",
-    "flow_for_server bungeecord-e2e-p3",
-    "flow_for_server waterfall-e2e-p3",
+    "compose up -d velocity paper",
+    "flow_for_server velocity-e2e-p3",
+    "certify_aux_bridge bungeecord-e2e-p3",
+    "certify_aux_bridge waterfall-e2e-p3",
+    'wait_bridge_heartbeat "$service"',
+    'capture_health_evidence "$service"',
     "neverlauncher-bungeecord-bridge.jar",
     "neverlauncher-waterfall-bridge.jar",
     "proxyFamilyRuntime:true",
