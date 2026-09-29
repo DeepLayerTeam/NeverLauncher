@@ -144,6 +144,7 @@ workflow = read(".github/workflows/macos-production-delivery.yml")
 require(
     workflow,
     [
+        'workflow_call:',
         'MACOS_DEVELOPER_ID_P12_BASE64',
         'MACOS_DEVELOPER_ID_APPLICATION',
         'APPLE_NOTARY_KEY_ID',
@@ -154,6 +155,20 @@ require(
         '--production',
     ],
     "production notarization workflow",
+)
+
+require(
+    ci,
+    [
+        'macos-production-notarized:',
+        'uses: ./.github/workflows/macos-production-delivery.yml',
+        'secrets: inherit',
+        'neverlauncher-macos-notarized-${{ github.sha }}',
+        'path: macos-production-artifacts',
+        'NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts',
+        'windows-production-signed, macos-production-notarized',
+    ],
+    "main CI production macOS notarization wiring",
 )
 
 subprocess.run(

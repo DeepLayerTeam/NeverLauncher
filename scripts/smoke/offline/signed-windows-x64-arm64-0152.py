@@ -94,6 +94,7 @@ workflow = read(".github/workflows/windows-production-delivery.yml")
 require(
     workflow,
     [
+        'workflow_call:',
         'WINDOWS_CODESIGN_PFX_BASE64',
         'WINDOWS_CODESIGN_PFX_PASSWORD',
         '-RequireCodeSigning',
@@ -101,6 +102,21 @@ require(
         '--production',
     ],
     "production signing workflow",
+)
+
+ci = read(".github/workflows/ci.yml")
+require(
+    ci,
+    [
+        'windows-production-signed:',
+        'uses: ./.github/workflows/windows-production-delivery.yml',
+        'secrets: inherit',
+        'neverlauncher-windows-production-${{ github.sha }}',
+        'path: windows-production-artifacts',
+        'NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts',
+        'windows-production-signed, macos-production-notarized',
+    ],
+    "main CI production Windows signing wiring",
 )
 
 subprocess.run(

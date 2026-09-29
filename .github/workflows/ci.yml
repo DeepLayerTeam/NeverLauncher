@@ -622,9 +622,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  windows-production-signed:
+    name: Authenticode Windows x64 + ARM64 production delivery
+    needs: [go-contracts]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/windows-production-delivery.yml
+    secrets: inherit
+
+  macos-production-notarized:
+    name: Developer ID + notarized macOS x64/ARM64 production delivery
+    needs: [go-contracts]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/macos-production-delivery.yml
+    secrets: inherit
+
   release-bundle:
     name: Release candidate bundle
-    needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers, managed-jre-production]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [go-contracts, web, rust-desktop, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, bridge, containers, windows-production-signed, macos-production-notarized, managed-jre-production]
     permissions:
       contents: read
       actions: read
@@ -643,16 +658,21 @@ jobs:
           pattern: neverlauncher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
-      - name: Download macOS x64 + ARM64 delivery candidates
+      - name: Download notarized macOS x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macos-production-${{ github.sha }}
+          name: neverlauncher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
       - name: Download Managed JRE six-target production assets
         uses: actions/download-artifact@v4
         with:
           name: neverlauncher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts
+      - name: Download Authenticode Windows x64 + ARM64 production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-windows-production-${{ github.sha }}
+          path: windows-production-artifacts
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -735,6 +755,7 @@ jobs:
           NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
           NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
           NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
+          NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts
           NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
           NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
           NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts

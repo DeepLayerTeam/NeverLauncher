@@ -1,6 +1,7 @@
 name: macOS Production Delivery
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 permissions:
