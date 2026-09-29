@@ -115,6 +115,9 @@ require(runtime_e2e, [
     "certify_aux_bridge folia-e2e-p3",
     'wait_bridge_heartbeat "$service"',
     'capture_health_evidence "$service"',
+    'spigot|paper|purpur|folia)',
+    'NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5',
+    'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"',
     "neverlauncher-spigot-bridge.jar",
     "neverlauncher-folia-bridge.jar",
     "bukkitFamilyRuntime:true",
@@ -123,6 +126,13 @@ require(compose_e2e, [
     "TYPE: SPIGOT", "TYPE: FOLIA",
     "./runtime/plugins/spigot:/plugins:ro", "./runtime/plugins/folia:/plugins:ro",
 ], "Spigot/Folia Docker E2E")
+
+
+allow_marker = 'wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"'
+deny_marker = 'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"'
+cooldown_marker = 'NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5'
+if not (runtime_e2e.index(allow_marker) < runtime_e2e.index(cooldown_marker) < runtime_e2e.index(deny_marker)):
+    raise SystemExit("Bukkit-family E2E reconnect cooldown is not between allow and deny network assertions")
 
 migration_e2e = read("e2e/scripts/run-bukkit-family-migration-e2e.sh")
 require(migration_e2e, [

@@ -571,6 +571,13 @@ if [[ "$MODE" == "full" ]]; then
         # production default window so the deny probe reaches NeverLauncher.
         sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
+      spigot|paper|purpur|folia)
+        # Bukkit/Paper-family runtimes apply their own connection-throttle
+        # before AsyncPlayerPreLoginEvent. Preserve that protection and wait
+        # out the production default window so the revoked-session probe
+        # reaches the NeverLauncher deny handler instead of Bukkit's throttle.
+        sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
+        ;;
     esac
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
