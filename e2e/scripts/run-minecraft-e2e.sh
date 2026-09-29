@@ -564,6 +564,14 @@ if [[ "$MODE" == "full" ]]; then
     wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
     json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "$revoke_body" > "$RUNTIME_DIR/revoke-$id.json"
     validate_join "$id" "$key" "$plugin_sha" deny
+    case "$service" in
+      velocity|bungeecord|waterfall)
+        # Proxy runtimes enforce an IP-level reconnect throttle before their
+        # PreLogin hooks. Keep that protection enabled and wait out the
+        # production default window so the deny probe reaches NeverLauncher.
+        sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
+        ;;
+    esac
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }

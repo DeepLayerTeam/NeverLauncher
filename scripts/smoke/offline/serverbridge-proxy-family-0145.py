@@ -121,6 +121,9 @@ require(runtime_e2e, [
     "certify_aux_bridge waterfall-e2e-p3",
     'wait_bridge_heartbeat "$service"',
     'capture_health_evidence "$service"',
+    'velocity|bungeecord|waterfall)',
+    'NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5',
+    'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"',
     "neverlauncher-bungeecord-bridge.jar",
     "neverlauncher-waterfall-bridge.jar",
     "proxyFamilyRuntime:true",
@@ -132,6 +135,13 @@ require(compose_e2e, [
 ], "Velocity/BungeeCord/Waterfall Docker E2E")
 if '- "25570:25565"' in compose_e2e:
     raise SystemExit("Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577")
+
+
+allow_marker = 'wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"'
+deny_marker = 'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"'
+cooldown_marker = 'NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5'
+if not (runtime_e2e.index(allow_marker) < runtime_e2e.index(cooldown_marker) < runtime_e2e.index(deny_marker)):
+    raise SystemExit("proxy E2E reconnect cooldown is not between allow and deny network assertions")
 
 migration_e2e = read("e2e/scripts/run-proxy-family-migration-e2e.sh")
 require(migration_e2e, [
