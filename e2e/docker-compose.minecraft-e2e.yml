@@ -93,7 +93,7 @@ services:
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: velocity-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -113,7 +113,7 @@ services:
       - "25570:25565"
     volumes:
       - ./runtime/plugins/velocity:/plugins:ro
-      - ./runtime/node-identities/velocity:/neverlauncher-identity
+      - ./runtime/node-identities/velocity:/server/.neverlauncher-identity
       - velocity-data:/server
 
   bungeecord:
@@ -125,7 +125,7 @@ services:
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: bungeecord-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -145,7 +145,7 @@ services:
       - "25575:25577"
     volumes:
       - ./runtime/plugins/bungeecord:/plugins:ro
-      - ./runtime/node-identities/bungeecord:/neverlauncher-identity
+      - ./runtime/node-identities/bungeecord:/server/.neverlauncher-identity
       - bungeecord-data:/server
 
   waterfall:
@@ -157,7 +157,7 @@ services:
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: waterfall-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -177,7 +177,7 @@ services:
       - "25576:25577"
     volumes:
       - ./runtime/plugins/waterfall:/plugins:ro
-      - ./runtime/node-identities/waterfall:/neverlauncher-identity
+      - ./runtime/node-identities/waterfall:/server/.neverlauncher-identity
       - waterfall-data:/server
 
   spigot:
@@ -194,7 +194,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: spigot-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -214,7 +214,7 @@ services:
       - "25573:25565"
     volumes:
       - ./runtime/plugins/spigot:/plugins:ro
-      - ./runtime/node-identities/spigot:/neverlauncher-identity
+      - ./runtime/node-identities/spigot:/data/.neverlauncher-identity
       - spigot-data:/data
 
   paper:
@@ -231,7 +231,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: paper-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -251,7 +251,7 @@ services:
       - "25571:25565"
     volumes:
       - ./runtime/plugins/paper:/plugins:ro
-      - ./runtime/node-identities/paper:/neverlauncher-identity
+      - ./runtime/node-identities/paper:/data/.neverlauncher-identity
       - paper-data:/data
 
   purpur:
@@ -268,7 +268,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: purpur-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -288,7 +288,7 @@ services:
       - "25572:25565"
     volumes:
       - ./runtime/plugins/purpur:/plugins:ro
-      - ./runtime/node-identities/purpur:/neverlauncher-identity
+      - ./runtime/node-identities/purpur:/data/.neverlauncher-identity
       - purpur-data:/data
 
   folia:
@@ -305,7 +305,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: folia-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -325,7 +325,7 @@ services:
       - "25574:25565"
     volumes:
       - ./runtime/plugins/folia:/plugins:ro
-      - ./runtime/node-identities/folia:/neverlauncher-identity
+      - ./runtime/node-identities/folia:/data/.neverlauncher-identity
       - folia-data:/data
 
   fabric:
@@ -345,7 +345,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: fabric-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -365,7 +365,7 @@ services:
       - "25577:25565"
     volumes:
       - ./runtime/plugins/fabric:/mods:ro
-      - ./runtime/node-identities/fabric:/neverlauncher-identity
+      - ./runtime/node-identities/fabric:/data/.neverlauncher-identity
       - fabric-data:/data
 
   forge:
@@ -383,7 +383,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: forge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -403,7 +403,7 @@ services:
       - "25578:25565"
     volumes:
       - ./runtime/plugins/forge:/mods:ro
-      - ./runtime/node-identities/forge:/neverlauncher-identity
+      - ./runtime/node-identities/forge:/data/.neverlauncher-identity
       - forge-data:/data
 
   neoforge:
@@ -421,7 +421,7 @@ services:
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
       NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
       NEVERLAUNCHER_SERVER_ID: neoforge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -441,7 +441,7 @@ services:
       - "25579:25565"
     volumes:
       - ./runtime/plugins/neoforge:/mods:ro
-      - ./runtime/node-identities/neoforge:/neverlauncher-identity
+      - ./runtime/node-identities/neoforge:/data/.neverlauncher-identity
       - neoforge-data:/data
 
 volumes:
