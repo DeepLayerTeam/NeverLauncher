@@ -1,0 +1,248 @@
+name: NeverLauncher Production Release Candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: neverlauncher-production-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-release-ref:
+    name: Require main branch exact source
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject non-main production release dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || { echo "production release candidate must be dispatched from refs/heads/main" >&2; exit 2; }
+
+  base-ci:
+    name: Exact-commit main certification and full E2E
+    needs: [validate-release-ref]
+    uses: ./.github/workflows/ci.yml
+
+  windows-production-signed:
+    name: Authenticode Windows x64 + ARM64 production delivery
+    needs: [base-ci]
+    uses: ./.github/workflows/windows-production-delivery.yml
+    secrets: inherit
+
+  macos-production-notarized:
+    name: Developer ID + notarized macOS x64/ARM64 production delivery
+    needs: [base-ci]
+    uses: ./.github/workflows/macos-production-delivery.yml
+    secrets: inherit
+
+  release-bundle:
+    name: Release candidate bundle
+    needs: [base-ci, windows-production-signed, macos-production-notarized]
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download certified Linux Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-linux-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/linux
+      - name: Download native Linux x64 + ARM64 production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: neverlauncher-linux-production-*-${{ github.sha }}
+          path: linux-production-artifacts
+          merge-multiple: true
+      - name: Download notarized macOS x64 + ARM64 production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-macos-notarized-${{ github.sha }}
+          path: macos-production-artifacts
+      - name: Download Managed JRE six-target production assets
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-managed-jre-${{ github.sha }}
+          path: managed-jre-artifacts
+      - name: Download Authenticode Windows x64 + ARM64 production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-windows-production-${{ github.sha }}
+          path: windows-production-artifacts
+      - name: Download certified Windows Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-windows-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/windows
+      - name: Download certified macOS Guard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-macos-neverguard-${{ github.sha }}
+          path: guard-platform-artifacts/macos
+      - name: Download Guard CI matrix
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
+          path: guard-certification
+      - name: Wait for exact-commit Compatibility + Device Trust certifications
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          python3 scripts/release/fetch-exact-certifications.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --version "$VERSION" \
+            --token "$GITHUB_TOKEN" \
+            --output-dir external-certifications \
+            --timeout-seconds 1200 \
+            --poll-seconds 15
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: |
+            apps/admin/package-lock.json
+            apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.7.1'
+      - name: Install release dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
+      - name: Generate ephemeral CI release trust hierarchy
+        run: |
+          umask 077
+          openssl genpkey -algorithm ED25519 -out /tmp/neverlauncher-release-root-private.pem
+          openssl pkey -in /tmp/neverlauncher-release-root-private.pem -pubout -out /tmp/neverlauncher-release-root-public.pem
+          (cd cli && go run ./cmd/neverlauncher security rotate-key \
+            --registry-dir /tmp/neverlauncher-release-trust \
+            --key release-signing \
+            --private-key-out /tmp/neverlauncher-release-private.pem \
+            --public-key-out /tmp/neverlauncher-release-public.pem)
+          (cd cli && go run ./cmd/neverlauncher security trust-policy \
+            --registry-dir /tmp/neverlauncher-release-trust \
+            --root-private-key /tmp/neverlauncher-release-root-private.pem \
+            --policy-out /tmp/neverlauncher-release-trust-policy.json)
+      - name: Build and cryptographically verify complete release bundle
+        env:
+          NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
+          NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
+          NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
+          NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/neverlauncher-release-trust-state.json
+          NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE: ${{ github.workspace }}/external-certifications/compatibility/matrix.json
+          NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE: ${{ github.workspace }}/compatibility/targets.json
+          NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE: ${{ github.workspace }}/external-certifications/device-trust/matrix.json
+          NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE: ${{ github.workspace }}/device-trust/targets.json
+          NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
+          NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
+          NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
+          NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts
+          NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
+          NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
+          NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
+          NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
+        run: bash scripts/release/build-release.sh
+      - name: Assert required production artifacts
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          test -s "${DIR}/SHA256SUMS.sig"
+          test -s "${DIR}/PROVENANCE.json.sig"
+          test -s "${DIR}/RELEASE_TRUST_POLICY.json"
+          jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
+          test -s "${DIR}/neverlauncher-desktop-linux-amd64"
+          test -s "${DIR}/neverguard-linux-amd64"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
+          test -s "${DIR}/neverlauncher-cli-linux-x64"
+          test -s "${DIR}/neverlauncher-cli-linux-arm64"
+          test -s "${DIR}/neverlauncher-api-linux-x64"
+          test -s "${DIR}/neverlauncher-api-linux-arm64"
+          test -s "${DIR}/neverlauncher-desktop-linux-x64"
+          test -s "${DIR}/neverlauncher-desktop-linux-arm64"
+          test -s "${DIR}/neverguard-linux-x64"
+          test -s "${DIR}/neverguard-linux-arm64"
+          test -s "${DIR}/neverruntime-linux-x64"
+          test -s "${DIR}/neverruntime-linux-arm64"
+          test -s "${DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/LINUX_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/LINUX_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/LINUX_PRODUCTION_EVIDENCE.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
+          test -s "${DIR}/neverguard-windows-amd64.exe"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/neverlauncher-cli-windows-x64.exe"
+          test -s "${DIR}/neverlauncher-cli-windows-arm64.exe"
+          test -s "${DIR}/neverlauncher-desktop-windows-x64.exe"
+          test -s "${DIR}/neverlauncher-desktop-windows-arm64.exe"
+          test -s "${DIR}/neverguard-windows-x64.exe"
+          test -s "${DIR}/neverguard-windows-arm64.exe"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json"
+          test -s "${DIR}/WINDOWS_SIGNING_EVIDENCE.json"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
+          test -s "${DIR}/neverguard-macos-universal"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
+          test -s "${DIR}/neverlauncher-cli-macos-x64"
+          test -s "${DIR}/neverlauncher-cli-macos-arm64"
+          test -s "${DIR}/neverlauncher-desktop-macos-x64"
+          test -s "${DIR}/neverlauncher-desktop-macos-arm64"
+          test -s "${DIR}/neverguard-macos-x64"
+          test -s "${DIR}/neverguard-macos-arm64"
+          test -s "${DIR}/neverruntime-macos-x64"
+          test -s "${DIR}/neverruntime-macos-arm64"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
+          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST_X64.json"
+          test -s "${DIR}/MACOS_PACKAGE_MANIFEST_ARM64.json"
+          test -s "${DIR}/MACOS_NOTARIZATION_EVIDENCE.json"
+          test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json"
+          test -s "${DIR}/GUARD_CI_TARGETS.json"
+          test -s "${DIR}/GUARD_CI_MATRIX.json"
+          test -s "${DIR}/GUARD_CI_CERTIFICATION.json"
+          test -s "${DIR}/MANAGED_JRE_MANIFEST.json"
+          test -s "${DIR}/MANAGED_JRE_EVIDENCE.json"
+          test -s "${DIR}/neverlauncher-jre-temurin21-windows-x64-${VERSION}.zip"
+          test -s "${DIR}/neverlauncher-jre-temurin21-windows-arm64-${VERSION}.zip"
+          test -s "${DIR}/neverlauncher-jre-temurin21-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-macos-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-jre-temurin21-macos-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
+          test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-bungeecord-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-waterfall-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-bukkit-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-spigot-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-paper-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-purpur-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-folia-bridge-${VERSION}.jar"
+          test -s "${DIR}/neverlauncher-fabric-bridge-${VERSION}.jar"
+          test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
+          test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
+

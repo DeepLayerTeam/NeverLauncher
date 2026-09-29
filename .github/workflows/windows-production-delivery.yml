@@ -2,6 +2,11 @@ name: Windows production delivery
 
 on:
   workflow_call:
+    secrets:
+      WINDOWS_CODESIGN_PFX_BASE64:
+        required: true
+      WINDOWS_CODESIGN_PFX_PASSWORD:
+        required: true
   workflow_dispatch:
 
 permissions:

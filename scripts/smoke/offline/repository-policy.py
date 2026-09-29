@@ -223,6 +223,12 @@ backup_go = read("services/api/internal/httpapi/operations_backup.go")
 compose = read("deploy/production/docker-compose.yml")
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
+production_release_workflow = read(".github/workflows/production-release-candidate.yml")
+compatibility_workflow = read(".github/workflows/compatibility.yml")
+if 'group: neverlauncher-compatibility-${{ github.ref }}-${{ github.event_name }}' not in compatibility_workflow:
+    fail("Compatibility concurrency must isolate push from scheduled certification")
+if "needs.compatibility-e2e.result != 'cancelled'" not in compatibility_workflow:
+    fail("Compatibility publish must not convert a cancelled matrix into a failing check")
 
 for forbidden in ["AdminPassword", "AdminEmail", "NEVERLAUNCHER_ADMIN_PASSWORD", "NEVERLAUNCHER_ADMIN_EMAIL"]:
     if forbidden in config_go or forbidden in admin_handlers or forbidden in compose:
@@ -504,8 +510,12 @@ for required in ["source-package.py", "secret-scan.py", "neverruntime-linux-amd6
         fail(f"build-release не собирает/проверяет обязательный artifact: {required}")
 if "NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE" not in build_release or "NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in build_release:
     fail("build-release должен требовать внешний Ed25519 private/public key")
-if "release-bundle:" not in ci or "Build and cryptographically verify complete release bundle" not in ci:
-    fail("CI не собирает полный production release bundle")
+if "release-bundle:" not in production_release_workflow or "Build and cryptographically verify complete release bundle" not in production_release_workflow:
+    fail("dedicated production workflow не собирает полный production release bundle")
+if "release-bundle:" in ci or "windows-production-signed:" in ci or "macos-production-notarized:" in ci:
+    fail("ordinary main CI не должен зависеть от publish-only signing credentials")
+if "production-e2e:" not in ci or "release-bundle" in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]:
+    fail("main functional E2E должен выполняться независимо от production signing")
 if "NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in release_bundle_gate:
     fail("release-bundle smoke gate не требует trusted Ed25519 public key")
 
@@ -883,8 +893,8 @@ for required in [
     'NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE', 'NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE',
     'external-certifications/compatibility/matrix.json', 'external-certifications/device-trust/matrix.json',
 ]:
-    if required not in ci:
-        fail(f"release-bundle не ждёт exact-commit Compatibility/Device Trust certification: {required}")
+    if required not in production_release_workflow:
+        fail(f"production release не ждёт exact-commit Compatibility/Device Trust certification: {required}")
 
 
 # 0.12.8 Cross-platform hardening + device key recovery/rotation.
@@ -1299,9 +1309,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR", "LINUX_DUAL_ARCH_REQUIRED", "neverlauncher-linux-${arch}-${VERSION}.tar.gz"]:
         if required not in linux_release_0153:
             fail(f"0.15.3 release staging incomplete: {required}")
-    for required in ["linux-production:", "ubuntu-24.04-arm", "build-linux-production.sh", "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR"]:
+    for required in ["linux-production:", "ubuntu-24.04-arm", "build-linux-production.sh"]:
         if required not in ci:
             fail(f"0.15.3 Linux native CI matrix incomplete: {required}")
+    if "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR" not in production_release_workflow:
+        fail("0.15.3 Linux production release staging is not wired")
     for required in ["LINUX_PRODUCTION_EVIDENCE.json", "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json"]:
         if required not in release_bundle_0153:
             fail(f"0.15.3 release bundle gate incomplete: {required}")
@@ -1405,13 +1417,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Managed JRE Temurin 21 six-target production delivery",
         "Upload exact-commit Managed JRE production assets",
         'name: neverlauncher-managed-jre-${{ github.sha }}',
+    ]:
+        if required not in ci:
+            fail(f"0.15.5 Managed JRE main certification is incomplete: {required}")
+    for required in [
         "Download Managed JRE six-target production assets",
         "path: managed-jre-artifacts",
         'NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts',
-        "managed-jre-production]",
     ]:
-        if required not in ci:
-            fail(f"0.15.5 Managed JRE is not wired into the exact-commit main release graph: {required}")
+        if required not in production_release_workflow:
+            fail(f"0.15.5 Managed JRE production release staging is incomplete: {required}")
     for required in [
         "MANAGED_JRE_MANIFEST.json", "MANAGED_JRE_EVIDENCE.json",
         "neverlauncher-jre-temurin21-windows-x64", "neverlauncher-jre-temurin21-windows-arm64",

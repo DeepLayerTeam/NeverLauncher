@@ -105,8 +105,9 @@ require(
 )
 
 ci = read(".github/workflows/ci.yml")
+production_release = read(".github/workflows/production-release-candidate.yml")
 require(
-    ci,
+    production_release,
     [
         'windows-production-signed:',
         'uses: ./.github/workflows/windows-production-delivery.yml',
@@ -114,10 +115,14 @@ require(
         'neverlauncher-windows-production-${{ github.sha }}',
         'path: windows-production-artifacts',
         'NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts',
-        'windows-production-signed, macos-production-notarized',
+        'needs: [base-ci, windows-production-signed, macos-production-notarized]',
     ],
-    "main CI production Windows signing wiring",
+    "production release Windows signing wiring",
 )
+if 'windows-production-signed:' in ci or 'neverlauncher-windows-production-${{ github.sha }}' in ci:
+    raise SystemExit("ordinary main CI must not require production Authenticode credentials")
+if 'release-bundle' in ci.split('production-e2e:', 1)[1].split('needs:', 1)[1].split('\n', 1)[0]:
+    raise SystemExit("functional production E2E must not depend on publish-only signing")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestWindows", "-count=1"],

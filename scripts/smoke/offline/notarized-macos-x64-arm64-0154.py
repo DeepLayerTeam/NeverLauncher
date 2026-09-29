@@ -135,7 +135,6 @@ require(
         'macos-production:',
         'build-macos-production.sh --allow-ad-hoc',
         'neverlauncher-macos-production-${{ github.sha }}',
-        'NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR',
     ],
     "CI macOS delivery boundary",
 )
@@ -157,8 +156,9 @@ require(
     "production notarization workflow",
 )
 
+production_release = read(".github/workflows/production-release-candidate.yml")
 require(
-    ci,
+    production_release,
     [
         'macos-production-notarized:',
         'uses: ./.github/workflows/macos-production-delivery.yml',
@@ -166,10 +166,12 @@ require(
         'neverlauncher-macos-notarized-${{ github.sha }}',
         'path: macos-production-artifacts',
         'NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts',
-        'windows-production-signed, macos-production-notarized',
+        'needs: [base-ci, windows-production-signed, macos-production-notarized]',
     ],
-    "main CI production macOS notarization wiring",
+    "production release macOS notarization wiring",
 )
+if 'macos-production-notarized:' in ci or 'neverlauncher-macos-notarized-${{ github.sha }}' in ci:
+    raise SystemExit("ordinary main CI must not require Apple production notarization credentials")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestMacOS", "-count=1"],

@@ -2,6 +2,21 @@ name: macOS Production Delivery
 
 on:
   workflow_call:
+    secrets:
+      MACOS_DEVELOPER_ID_P12_BASE64:
+        required: true
+      MACOS_DEVELOPER_ID_P12_PASSWORD:
+        required: true
+      MACOS_DEVELOPER_ID_APPLICATION:
+        required: true
+      MACOS_TEAM_ID:
+        required: true
+      APPLE_NOTARY_KEY_ID:
+        required: true
+      APPLE_NOTARY_ISSUER_ID:
+        required: true
+      APPLE_NOTARY_PRIVATE_KEY_BASE64:
+        required: true
   workflow_dispatch:
 
 permissions:
