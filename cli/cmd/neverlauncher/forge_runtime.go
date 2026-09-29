@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -470,35 +471,64 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		}
 		return requested, requested, metadataURL, nil
 	}
-	data, err := fetchForgeLikeMetadata(ctx, client, metadataURL)
-	if err != nil {
-		return "", "", metadataURL, fmt.Errorf("%s Maven metadata: %w", loader, err)
-	}
-	var metadata mavenMetadataXML
-	if err := xml.Unmarshal(data, &metadata); err != nil {
-		return "", "", metadataURL, fmt.Errorf("%s Maven metadata XML повреждён: %w", loader, err)
-	}
-	versions := metadata.Versioning.Versions.Version
-	if len(versions) == 0 {
-		return "", "", metadataURL, fmt.Errorf("%s Maven metadata не содержит versions", loader)
-	}
 	allowPrerelease := requested == "latest"
-	for i := len(versions) - 1; i >= 0; i-- {
-		candidate := strings.TrimSpace(versions[i])
-		if candidate == "" || (!allowPrerelease && isPrereleaseVersion(candidate)) {
-			continue
+	semanticAttempts := 1
+	if loader == "neoforge" {
+		semanticAttempts = compatibilityHTTPAttempts
+	}
+	var lastSelectionErr error
+	for attempt := 0; attempt < semanticAttempts; attempt++ {
+		fetchURL := metadataURL
+		if attempt > 0 {
+			fetchURL = forgeLikeMetadataRefreshURL(metadataURL, attempt)
 		}
-		if loader == "forge" {
-			if !strings.HasPrefix(candidate, minecraftVersion+"-") {
-				continue
+		data, err := fetchForgeLikeMetadata(ctx, client, fetchURL)
+		if err != nil {
+			return "", "", metadataURL, fmt.Errorf("%s Maven metadata: %w", loader, err)
+		}
+		var metadata mavenMetadataXML
+		if err := xml.Unmarshal(data, &metadata); err != nil {
+			return "", "", metadataURL, fmt.Errorf("%s Maven metadata XML повреждён: %w", loader, err)
+		}
+		versions := metadata.Versioning.Versions.Version
+		if len(versions) == 0 {
+			lastSelectionErr = fmt.Errorf("%s Maven metadata не содержит versions", loader)
+		} else {
+			for i := len(versions) - 1; i >= 0; i-- {
+				candidate := strings.TrimSpace(versions[i])
+				if candidate == "" || (!allowPrerelease && isPrereleaseVersion(candidate)) {
+					continue
+				}
+				if loader == "forge" {
+					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
+						continue
+					}
+					return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, nil
+				}
+				if neoForgeVersionMatchesMinecraft(candidate, minecraftVersion) {
+					return candidate, candidate, metadataURL, nil
+				}
 			}
-			return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, nil
+			lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
 		}
-		if neoForgeVersionMatchesMinecraft(candidate, minecraftVersion) {
-			return candidate, candidate, metadataURL, nil
+		if attempt+1 < semanticAttempts {
+			if err := sleepContext(ctx, compatibilityRetryDelay(nil, attempt)); err != nil {
+				return "", "", metadataURL, err
+			}
 		}
 	}
-	return "", "", metadataURL, fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
+	return "", "", metadataURL, fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
+}
+
+func forgeLikeMetadataRefreshURL(metadataURL string, attempt int) string {
+	u, err := url.Parse(metadataURL)
+	if err != nil {
+		return metadataURL
+	}
+	query := u.Query()
+	query.Set("_neverlauncher_refresh", fmt.Sprintf("%d-%d", time.Now().UnixNano(), attempt))
+	u.RawQuery = query.Encode()
+	return u.String()
 }
 
 func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataURL string) ([]byte, error) {

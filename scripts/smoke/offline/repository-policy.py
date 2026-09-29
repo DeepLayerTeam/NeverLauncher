@@ -789,10 +789,19 @@ for required in [
 for required in ["maxCompatibilityArtifact+1", "secureClientDestination", "validateAssetLogicalPath"]:
     if required not in vanilla_runtime:
         fail(f"Vanilla stabilization missing: {required}")
-for required in ["fetchForgeLikeMetadata", "compatibilityHTTPAttempts", 'strings.Contains(err.Error(), "HTTP 404")', "compatibilityRetryDelay"]:
+for required in [
+    "fetchForgeLikeMetadata", "compatibilityHTTPAttempts", 'strings.Contains(err.Error(), "HTTP 404")',
+    "compatibilityRetryDelay", "forgeLikeMetadataRefreshURL", "_neverlauncher_refresh",
+    "fresh metadata snapshots",
+]:
     if required not in forge_runtime:
         fail(f"Forge/NeoForge mutable Maven metadata retry hardening missing: {required}")
-for required in ["TestNeoForgeMavenMetadataRetriesTransientNotFound", "TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed"]:
+for required in [
+    "TestNeoForgeMavenMetadataRetriesTransientNotFound",
+    "TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed",
+    "TestNeoForgeMavenMetadataRetriesSemanticallyIncompleteSnapshot",
+    "TestNeoForgeMavenMetadataPersistentSemanticMismatchFailsClosed",
+]:
     if required not in forge_runtime_tests:
         fail(f"NeoForge Maven metadata retry regression test missing: {required}")
 if managed_java.count("check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?") != 1:

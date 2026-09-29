@@ -182,6 +182,54 @@ func TestNeoForgeMavenMetadataRetriesTransientNotFound(t *testing.T) {
 	}
 }
 
+func TestNeoForgeMavenMetadataRetriesSemanticallyIncompleteSnapshot(t *testing.T) {
+	var requests atomic.Int32
+	var refreshed atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := requests.Add(1)
+		if request > 1 && r.URL.Query().Get("_neverlauncher_refresh") != "" {
+			refreshed.Add(1)
+		}
+		if request == 1 {
+			_, _ = fmt.Fprint(w, `<metadata><versioning><versions><version>21.4.20</version></versions></versioning></metadata>`)
+			return
+		}
+		_, _ = fmt.Fprint(w, `<metadata><versioning><versions><version>21.4.20</version><version>21.1.252</version></versions></versioning></metadata>`)
+	}))
+	defer server.Close()
+
+	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/maven-metadata.xml")
+	if err != nil {
+		t.Fatalf("semantically incomplete NeoForge metadata was not retried: %v", err)
+	}
+	if loaderVersion != "21.1.252" || artifactVersion != "21.1.252" {
+		t.Fatalf("unexpected NeoForge version after semantic metadata retry: %q %q", loaderVersion, artifactVersion)
+	}
+	if got := requests.Load(); got != 2 {
+		t.Fatalf("metadata request count=%d, want 2", got)
+	}
+	if got := refreshed.Load(); got != 1 {
+		t.Fatalf("semantic retry did not bypass mutable metadata cache: refresh requests=%d", got)
+	}
+}
+
+func TestNeoForgeMavenMetadataPersistentSemanticMismatchFailsClosed(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		_, _ = fmt.Fprint(w, `<metadata><versioning><versions><version>21.4.20</version><version>21.2.10-beta</version></versions></versioning></metadata>`)
+	}))
+	defer server.Close()
+
+	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/maven-metadata.xml")
+	if err == nil || !strings.Contains(err.Error(), "не имеет latest-stable версии") {
+		t.Fatalf("persistent incompatible metadata must fail closed, got %v", err)
+	}
+	if got := requests.Load(); got != compatibilityHTTPAttempts {
+		t.Fatalf("semantic metadata request count=%d, want %d", got, compatibilityHTTPAttempts)
+	}
+}
+
 func TestNeoForgeMavenMetadataPersistentNotFoundFailsClosed(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
