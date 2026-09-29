@@ -107,10 +107,22 @@ require(
         'runner: ubuntu-24.04',
         'runner: ubuntu-24.04-arm',
         'build-linux-production.sh',
-        'NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR',
         'neverlauncher-linux-production-${{ matrix.arch }}-${{ github.sha }}',
     ],
     "native Linux CI matrix",
+)
+
+production_release = read(".github/workflows/production-release-candidate.yml")
+require(
+    production_release,
+    [
+        'Download native Linux x64 + ARM64 production artifacts',
+        'pattern: neverlauncher-linux-production-*-${{ github.sha }}',
+        'path: linux-production-artifacts',
+        'merge-multiple: true',
+        'NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts',
+    ],
+    "production release Linux x64 + ARM64 staging",
 )
 
 subprocess.run(
