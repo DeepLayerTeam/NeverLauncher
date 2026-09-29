@@ -35,7 +35,7 @@ type releaseCompatibilityTarget struct {
 
 type releaseCompatibilityTargets struct {
 	SchemaVersion  string                       `json:"schemaVersion"`
-	ProductVersion string                       `json:"productVersion"`
+	ProductVersion string                       `json:"productVersion,omitempty"`
 	Targets        []releaseCompatibilityTarget `json:"targets"`
 }
 
@@ -137,7 +137,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
 		return releaseCompatibilityCertification{}, errors.New("compatibility evidence требует schemaVersion=1.0")
 	}
-	if strings.TrimSpace(ver) == "" || targets.ProductVersion != ver || matrix.ProductVersion != ver {
+	ver = strings.TrimSpace(ver)
+	targetsProductVersion := strings.TrimSpace(targets.ProductVersion)
+	if ver == "" || (targetsProductVersion != "" && targetsProductVersion != ver) || matrix.ProductVersion != ver {
 		return releaseCompatibilityCertification{}, fmt.Errorf("compatibility productVersion mismatch: release=%s targets=%s matrix=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {

@@ -838,6 +838,14 @@ for required in [
     if required not in compat_release:
         fail(f"compatibility release certification missing: {required}")
 for required in [
+    'ProductVersion string                       `json:"productVersion,omitempty"`',
+    "targetsProductVersion := strings.TrimSpace(targets.ProductVersion)",
+    'targetsProductVersion != "" && targetsProductVersion != ver',
+    "matrix.ProductVersion != ver",
+]:
+    if required not in compat_release:
+        fail(f"compatibility release VERSION single-source contract missing: {required}")
+for required in [
     "--compatibility-matrix", "--compatibility-targets", "--source-commit",
     "Minecraft compatibility certification", "compatibilityCertificationRequired",
 ]:
@@ -849,8 +857,17 @@ for required in [
 ]:
     if required not in build_release:
         fail(f"build-release compatibility certification incomplete: {required}")
-if not (ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go").is_file():
+compat_release_tests_path = ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go"
+if not compat_release_tests_path.is_file():
     fail("compatibility release certification regression tests are missing")
+compat_release_tests = compat_release_tests_path.read_text(encoding="utf-8")
+for required in [
+    "TestCompatibilityCertificationAcceptsVersionlessTargetsFromRepositoryContract",
+    "TestCompatibilityCertificationRejectsExplicitTargetsVersionMismatch",
+    "TestCompatibilityCertificationRejectsMatrixVersionMismatch",
+]:
+    if required not in compat_release_tests:
+        fail(f"compatibility release VERSION regression test missing: {required}")
 
 release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
 for required in [

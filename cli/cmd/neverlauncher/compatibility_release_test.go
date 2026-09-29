@@ -13,8 +13,7 @@ import (
 func writeCompatibilityEvidenceFixture(t *testing.T, dir, ver, commit string) (string, string) {
 	t.Helper()
 	targets := releaseCompatibilityTargets{
-		SchemaVersion:  "1.0",
-		ProductVersion: ver,
+		SchemaVersion: "1.0",
 		Targets: []releaseCompatibilityTarget{
 			{ID: "vanilla-1.21.1-linux-x64", Minecraft: "1.21.1", Loader: "vanilla", LoaderVersion: "", OS: "linux", Arch: "x86_64", Required: true},
 			{ID: "fabric-1.21.1-linux-x64", Minecraft: "1.21.1", Loader: "fabric", LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64", Required: true},
@@ -49,6 +48,83 @@ func writeCompatibilityEvidenceFixture(t *testing.T, dir, ver, commit string) (s
 		t.Fatal(err)
 	}
 	return matrixPath, targetsPath
+}
+
+func TestCompatibilityCertificationAcceptsVersionlessTargetsFromRepositoryContract(t *testing.T) {
+	dir := t.TempDir()
+	matrixPath, targetsPath := writeCompatibilityEvidenceFixture(t, dir, "0.16.1", "abc123")
+	matrixRaw, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetsRaw, err := os.ReadFile(targetsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var targetDocument map[string]any
+	if err := json.Unmarshal(targetsRaw, &targetDocument); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := targetDocument["productVersion"]; exists {
+		t.Fatal("repository-style compatibility targets must not duplicate VERSION")
+	}
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123")
+	if err != nil {
+		t.Fatalf("versionless compatibility targets must derive product version from release VERSION: %v", err)
+	}
+	if certification.ProductVersion != "0.16.1" {
+		t.Fatalf("certification productVersion=%q, want 0.16.1", certification.ProductVersion)
+	}
+}
+
+func TestCompatibilityCertificationRejectsExplicitTargetsVersionMismatch(t *testing.T) {
+	dir := t.TempDir()
+	matrixPath, targetsPath := writeCompatibilityEvidenceFixture(t, dir, "0.16.1", "abc123")
+	matrixRaw, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetsRaw, err := os.ReadFile(targetsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var targets map[string]any
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	targets["productVersion"] = "0.16.0"
+	targetsRaw, err = json.Marshal(targets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123"); err == nil {
+		t.Fatal("explicit compatibility targets productVersion mismatch must fail closed")
+	}
+}
+
+func TestCompatibilityCertificationRejectsMatrixVersionMismatch(t *testing.T) {
+	dir := t.TempDir()
+	matrixPath, targetsPath := writeCompatibilityEvidenceFixture(t, dir, "0.16.1", "abc123")
+	matrixRaw, err := os.ReadFile(matrixPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	matrix.ProductVersion = "0.16.0"
+	matrixRaw, err = json.Marshal(matrix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetsRaw, err := os.ReadFile(targetsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.1", "abc123"); err == nil {
+		t.Fatal("compatibility matrix productVersion mismatch must fail closed")
+	}
 }
 
 func TestCompatibilityCertificationRejectsIncompleteEvidence(t *testing.T) {
