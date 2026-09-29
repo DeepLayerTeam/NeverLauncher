@@ -287,10 +287,13 @@ func TestApplyUsesSessionAdvisoryLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(src)
-	for _, required := range []string{"pg_advisory_lock(718033100100)", "pg_advisory_unlock(718033100100)", "validateExistingBeforeApply"} {
+	for _, required := range []string{"pg_advisory_lock(718033100100)", "pg_advisory_unlock(718033100100)", "validateExistingBeforeApply", "lockConn.BeginTx(ctx, nil)"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("migration apply missing serialized gate %q", required)
 		}
+	}
+	if strings.Contains(text, "tx, err := db.BeginTx(ctx, nil)") {
+		t.Fatal("migration apply must start transactions on the advisory-lock connection")
 	}
 }
 

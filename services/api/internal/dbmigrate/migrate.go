@@ -207,7 +207,12 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		return Status{}, err
 	}
 	for _, m := range ms {
-		tx, err := db.BeginTx(ctx, nil)
+		// Run every migration transaction on the same dedicated connection that
+		// owns the session-level advisory lock above. Opening the transaction via
+		// db.BeginTx may select another pooled PostgreSQL session; that session
+		// would then block forever trying to acquire pg_advisory_xact_lock on a
+		// key already held by lockConn, until the caller context expires.
+		tx, err := lockConn.BeginTx(ctx, nil)
 		if err != nil {
 			return Status{}, err
 		}
