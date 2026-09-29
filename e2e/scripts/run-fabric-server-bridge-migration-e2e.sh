@@ -83,7 +83,10 @@ SQL
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0026_fabric_server_bridge_0146" ]]
+shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0026_fabric_server_bridge_0146'")"
+[[ "$target_sealed" == "true" ]] || { echo "Fabric ServerBridge migration is not sealed: 0026_fabric_server_bridge_0146" >&2; exit 1; }
 
 printf '[fabric-bridge-migration] verify existing node preserved and Fabric kind accepted\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='paper-before-0146'")" == "paper" ]]

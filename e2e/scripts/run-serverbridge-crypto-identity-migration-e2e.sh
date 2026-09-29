@@ -100,7 +100,8 @@ SQL
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
+shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
 identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema_migrations WHERE version='0022_serverbridge_crypto_node_identities_0142'")"
 [[ "$identity_sealed" == "true" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
 

@@ -98,7 +98,10 @@ SQL
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
+shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0021_serverbridge_protocol_v2_0141'")"
+[[ "$target_sealed" == "true" ]] || { echo "ServerBridge Protocol v2 migration is not sealed: 0021_serverbridge_protocol_v2_0141" >&2; exit 1; }
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT protocol_version,status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,project_id,profile_id FROM server_bridge_nodes_v2 WHERE id='legacy-paper'")"
 [[ "$node_state" == "2|identity-enrollment-required||||||0|legacy-project|vanilla" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
 texture_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT username,model,skin_url FROM server_bridge_textures_v2 WHERE player_uuid='00000000-0000-0000-0000-000000000141'")"

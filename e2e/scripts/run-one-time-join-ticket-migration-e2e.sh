@@ -101,7 +101,10 @@ SQL
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"
 latest_after="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
-[[ "$latest_after" == "0023_one_time_join_tickets_0143" ]]
+shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+[[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "unexpected post-upgrade migration: db=$latest_after shipping=$shipping_latest" >&2; exit 1; }
+target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0023_one_time_join_tickets_0143'")"
+[[ "$target_sealed" == "true" ]] || { echo "one-time join ticket migration is not sealed: 0023_one_time_join_tickets_0143" >&2; exit 1; }
 
 legacy_bridge_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,status,(invalidated_at IS NOT NULL)::text,issued_identity_epoch,issued_key_fingerprint FROM server_bridge_join_tickets_v2 WHERE id='legacy-ticket-0142'")"
 [[ "$legacy_bridge_state" == "1|invalidated|true|0|" ]] || { echo "0.14.2 ServerBridge ticket survived one-time boundary: $legacy_bridge_state" >&2; exit 1; }
