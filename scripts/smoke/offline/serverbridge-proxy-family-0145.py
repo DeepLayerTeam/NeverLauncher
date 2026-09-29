@@ -127,8 +127,11 @@ require(runtime_e2e, [
 ], "real proxy runtime E2E")
 require(compose_e2e, [
     "TYPE: BUNGEECORD", "TYPE: WATERFALL",
+    '- "25570:25577"',
     "./runtime/plugins/bungeecord:/plugins:ro", "./runtime/plugins/waterfall:/plugins:ro",
-], "BungeeCord/Waterfall Docker E2E")
+], "Velocity/BungeeCord/Waterfall Docker E2E")
+if '- "25570:25565"' in compose_e2e:
+    raise SystemExit("Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577")
 
 migration_e2e = read("e2e/scripts/run-proxy-family-migration-e2e.sh")
 require(migration_e2e, [

@@ -110,7 +110,7 @@ services:
       retries: 60
       start_period: 30s
     ports:
-      - "25570:25565"
+      - "25570:25577"
     volumes:
       - ./runtime/plugins/velocity:/plugins:ro
       - ./runtime/node-identities/velocity:/server/.neverlauncher-identity
