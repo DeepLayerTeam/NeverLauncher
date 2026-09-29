@@ -67,11 +67,30 @@ def main() -> int:
         sock.settimeout(3)
         sock.sendall(packet(handshake))
         sock.sendall(packet(login_start))
+        terminal = "response"
         try:
             response = sock.recv(4096)
+            if not response:
+                terminal = "eof"
         except socket.timeout:
+            # The probe is only a login stimulus. The bridge decision is asserted
+            # by the mandatory neverlauncher.join.allowed/denied log checks in
+            # run-minecraft-e2e.sh, so a peer that keeps the socket open without
+            # replying is a valid transport-level outcome here.
             response = b""
-    print(f"probe host={args.host} port={args.port} username={args.username} responseBytes={len(response)}")
+            terminal = "timeout"
+        except ConnectionResetError:
+            # Velocity/Bukkit-family runtimes may abort the intentionally
+            # incomplete login exchange with TCP RST after consuming the login
+            # stimulus. Treat only this post-send recv reset as terminal I/O;
+            # connect/send failures remain fatal and the functional/security
+            # result is still required from bridge allow/deny evidence.
+            response = b""
+            terminal = "reset"
+    print(
+        f"probe host={args.host} port={args.port} username={args.username} "
+        f"responseBytes={len(response)} terminal={terminal}"
+    )
     return 0
 
 
