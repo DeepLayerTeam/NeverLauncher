@@ -69,10 +69,14 @@ latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migration
 
 printf '[one-time-join-migration] seed replayable 0.14.2 ServerBridge and Yggdrasil joins\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+BEGIN;
+SET CONSTRAINTS ALL DEFERRED;
 INSERT INTO projects(id,name,default_channel) VALUES ('ticket-project','Ticket Project','stable');
 INSERT INTO users(id,email,display_name,role_id,status) VALUES ('ticket-user','ticket-user@example.invalid','Ticket User','player','active');
 INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at)
 VALUES ('ticket-session','ticket-user','ticket-user@example.invalid','player','','e2e','active','ticket-family',now()+interval '1 hour');
+INSERT INTO refresh_token_families(id,session_id,user_id,status)
+VALUES ('ticket-family','ticket-session','ticket-user','active');
 INSERT INTO minecraft_profiles(user_id,uuid,name)
 VALUES ('ticket-user','00000000-0000-0000-0000-000000000143','TicketPlayer');
 INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,status,expires_at)
@@ -94,6 +98,7 @@ INSERT INTO server_bridge_join_tickets_v2(
 );
 INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,created_at,expires_at)
 VALUES ('TicketPlayer','ticketplayer','00000000-0000-0000-0000-000000000143','ticket-user','minecraft-ticket-session','legacy-yggdrasil-0142','127.0.0.1',now(),now()+interval '2 minutes');
+COMMIT;
 SQL
 
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )

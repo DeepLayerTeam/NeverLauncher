@@ -69,10 +69,14 @@ latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migration
 
 printf '[serverbridge-crypto-migration] seed active 0.14.1 bearer node and live join ticket\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+BEGIN;
+SET CONSTRAINTS ALL DEFERRED;
 INSERT INTO projects(id,name,default_channel) VALUES ('crypto-project','Crypto Project','stable');
 INSERT INTO users(id,email,display_name,role_id,status) VALUES ('crypto-user','crypto-user@example.invalid','Crypto User','player','active');
 INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at)
 VALUES ('crypto-session','crypto-user','crypto-user@example.invalid','player','','e2e','active','crypto-family',now()+interval '1 hour');
+INSERT INTO refresh_token_families(id,session_id,user_id,status)
+VALUES ('crypto-family','crypto-session','crypto-user','active');
 INSERT INTO server_bridge_nodes_v2(
   id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,
   plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at
@@ -93,6 +97,7 @@ INSERT INTO server_bridge_join_tickets_v2(
   'join-0141','CryptoPlayer','cryptoplayer','00000000-0000-0000-0000-000000000142',
   'crypto-user','crypto-session','paper-0141','crypto-project','vanilla','stable',repeat('c',64),1,2,'active',now(),now()+interval '2 minutes'
 );
+COMMIT;
 SQL
 
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
