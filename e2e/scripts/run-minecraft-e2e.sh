@@ -427,7 +427,10 @@ GRADLE
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" createMojmapPaperclipJar
   )
 
-  mapfile -t candidates < <(find "$source_dir/Folia-Server/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
+  # createMojmapPaperclipJar is a root-project paperweight task. Its outputZip
+  # is rooted at the Folia checkout's build/libs directory, not Folia-Server/build/libs.
+  # Keep discovery strict so a stale/unrelated JAR cannot make the runtime gate pass.
+  mapfile -t candidates < <(find "$source_dir/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
   if (( ${#candidates[@]} != 1 )); then
     echo "[e2e] expected exactly one Folia paperclip JAR, found ${#candidates[@]}" >&2
     printf '[e2e] Folia build candidate: %s\n' "${candidates[@]:-<none>}" >&2

@@ -180,6 +180,11 @@ spark_patch_check = runtime_e2e.index('[[ "$patch_count" == "$SPARK_PATCH_VERSIO
 spark_build = runtime_e2e.index('./gradlew --no-daemon --stacktrace --init-script "$init_script" :spark-paper:shadowJar', spark_helper)
 folia_spark_call = runtime_e2e.index("materialize_pinned_spark_paper_dependency", folia_materialize_start)
 folia_paperclip = runtime_e2e.index("createMojmapPaperclipJar", folia_materialize_start)
+folia_paperclip_lookup = runtime_e2e.index("find \"$source_dir/build/libs\" -maxdepth 1 -type f -name '*paperclip*.jar'", folia_materialize_start)
+if 'find "$source_dir/Folia-Server/build/libs"' in runtime_e2e[folia_materialize_start:]:
+    raise SystemExit("Pinned Folia runtime still searches the obsolete Folia-Server/build/libs paperclip path")
+if folia_paperclip_lookup <= folia_paperclip:
+    raise SystemExit("Pinned Folia paperclip artifact discovery must run after createMojmapPaperclipJar")
 spark_bytesocks_call = runtime_e2e.index("materialize_pinned_bytesocks_dependency", spark_helper)
 if not (spark_bytesocks_call < spark_commit_check < spark_patch_check < spark_build):
     raise SystemExit("Pinned spark-paper source/version verification must precede its build")
