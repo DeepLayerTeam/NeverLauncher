@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
@@ -33,7 +34,7 @@ public final class NeverLauncherNeoForgeBridge {
             .resolve("neverlauncher-neoforge-bridge")
             .resolve("config.yml");
         this.runtime = new ModLoaderBridgeRuntime(
-            "neoforge", "NeoForge", configPath, NeverLauncherNeoForgeBridge.class, LOGGER
+            "neoforge", "NeoForge", configPath, NeverLauncherNeoForgeBridge.class, NeverLauncherNeoForgeBridge::loadedArtifactPath, LOGGER
         );
         NeoForge.EVENT_BUS.register(this);
     }
@@ -78,6 +79,15 @@ public final class NeverLauncherNeoForgeBridge {
             });
 
         event.enqueueWork(gate);
+    }
+
+
+    private static Path loadedArtifactPath() {
+        ModList modList = ModList.get();
+        if (modList == null) return null;
+        var modFileInfo = modList.getModFileById(MOD_ID);
+        if (modFileInfo == null || modFileInfo.getFile() == null) return null;
+        return modFileInfo.getFile().getFilePath();
     }
 
     private static String remoteIp(Connection connection) {

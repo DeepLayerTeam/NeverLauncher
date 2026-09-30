@@ -20,12 +20,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private final String platformId;
     private final String displayName;
     private final Path configPath;
     private final Class<?> artifactAnchor;
+    private final Supplier<Path> artifactPathSupplier;
     private final Logger logger;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ScheduledExecutorService heartbeatExecutor;
@@ -34,11 +36,12 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
 
-    public ModLoaderBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Logger logger) {
+    public ModLoaderBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Supplier<Path> artifactPathSupplier, Logger logger) {
         this.platformId = requireText(platformId, "platformId").toLowerCase(Locale.ROOT);
         this.displayName = requireText(displayName, "displayName");
         this.configPath = Objects.requireNonNull(configPath, "configPath").toAbsolutePath().normalize();
         this.artifactAnchor = Objects.requireNonNull(artifactAnchor, "artifactAnchor");
+        this.artifactPathSupplier = Objects.requireNonNull(artifactPathSupplier, "artifactPathSupplier");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(task -> daemonThread(task, "heartbeat"));
         this.validationExecutor = new ThreadPoolExecutor(
@@ -110,13 +113,28 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
 
     private RuntimeState loadState() throws Exception {
         BridgeConfig config = BridgeConfig.load(configPath, platformId + "-main");
-        String pluginSha256 = BridgeIntegrity.artifactSha256(artifactAnchor);
+        Path artifactPath = resolveArtifactPath();
+        String pluginSha256 = BridgeIntegrity.artifactSha256(artifactPath);
+        if (!BridgeIntegrity.isSha256(pluginSha256)) {
+            pluginSha256 = BridgeIntegrity.artifactSha256(artifactAnchor);
+        }
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) {
             throw new IllegalStateException("cannot measure running " + displayName + " bridge JAR SHA-256");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256);
         return new RuntimeState(config, identity, api, pluginSha256);
+    }
+
+
+    private Path resolveArtifactPath() {
+        try {
+            Path path = artifactPathSupplier.get();
+            return path == null ? null : path.toAbsolutePath().normalize();
+        } catch (RuntimeException e) {
+            logger.warn("NeverLauncher {} Server Bridge could not resolve loader-owned artifact path; trying CodeSource fallback", displayName, e);
+            return null;
+        }
     }
 
     private void scheduleHeartbeat(long delaySeconds) {

@@ -13,6 +13,7 @@ import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -41,7 +42,7 @@ public final class NeverLauncherForgeBridge {
             .resolve("neverlauncher-forge-bridge")
             .resolve("config.yml");
         this.runtime = new ModLoaderBridgeRuntime(
-            "forge", "Forge", configPath, NeverLauncherForgeBridge.class, LOGGER
+            "forge", "Forge", configPath, NeverLauncherForgeBridge.class, NeverLauncherForgeBridge::loadedArtifactPath, LOGGER
         );
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -137,6 +138,15 @@ public final class NeverLauncherForgeBridge {
                 );
             });
         }
+    }
+
+
+    private static Path loadedArtifactPath() {
+        ModList modList = ModList.get();
+        if (modList == null) return null;
+        var modFileInfo = modList.getModFileById(MOD_ID);
+        if (modFileInfo == null || modFileInfo.getFile() == null) return null;
+        return modFileInfo.getFile().getFilePath();
     }
 
     private static String remoteIp(Connection connection) {

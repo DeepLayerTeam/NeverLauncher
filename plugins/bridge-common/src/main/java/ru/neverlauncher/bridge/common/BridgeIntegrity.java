@@ -19,7 +19,16 @@ public final class BridgeIntegrity {
             if (source == null || source.getLocation() == null) return "";
             URI uri = source.getLocation().toURI();
             if (!"file".equalsIgnoreCase(uri.getScheme())) return "";
-            Path path = Path.of(uri).toAbsolutePath().normalize();
+            return artifactSha256(Path.of(uri));
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    public static String artifactSha256(Path artifactPath) {
+        if (artifactPath == null) return "";
+        try {
+            Path path = artifactPath.toAbsolutePath().normalize();
             if (!Files.isRegularFile(path)) return "";
             return sha256(path);
         } catch (Exception ignored) {
