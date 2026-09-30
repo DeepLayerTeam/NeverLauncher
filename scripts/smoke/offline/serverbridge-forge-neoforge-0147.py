@@ -42,7 +42,11 @@ require(read("scripts/contracts/generate_openapi.py"),['"fabric","forge","neofor
 tests=read("services/api/internal/httpapi/serverbridge_forge_neoforge_0147_test.go")
 require(tests,["TestForgeNeoForgeKinds0147","TestForgeNeoForgeIntegrityNamespaces0147","TestForgeNeoForgeManifest0147"],"Forge/NeoForge regressions")
 e2e=read("e2e/scripts/run-minecraft-e2e.sh"); compose=read("e2e/docker-compose.minecraft-e2e.yml")
-require(e2e,["compose up -d velocity paper","certify_aux_bridge forge-e2e-p3","certify_aux_bridge neoforge-e2e-p3","wait_bridge_heartbeat \"$service\"","capture_health_evidence \"$service\"","forgeNeoForgeServerBridge:true","health-forge.json","health-neoforge.json"],"Forge/NeoForge runtime E2E")
+probe=read("e2e/scripts/minecraft-login-probe.py")
+require(e2e,["compose up -d velocity paper","certify_aux_bridge forge-e2e-p3","certify_aux_bridge neoforge-e2e-p3","wait_bridge_heartbeat \"$service\"","capture_health_evidence \"$service\"","forgeNeoForgeServerBridge:true","health-forge.json","health-neoforge.json","forge)","--enter-configuration","NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS","${probe_mode[@]}"],"Forge/NeoForge runtime E2E")
+flow=e2e[e2e.index("flow_for_server() {"):e2e.index("flow_for_server velocity-e2e-p3")]
+if "forge|neoforge)" in flow: raise SystemExit("NeoForge must retain its pre-CONFIGURATION PlayerNegotiationEvent probe path")
+require(probe,["--enter-configuration","LOGIN_SET_COMPRESSION = 0x03","SERVERBOUND_LOGIN_ACKNOWLEDGED = 0x03","zlib.decompress","framed_packet","enter_configuration","send_protocol_packet(sock, acknowledgement, compression_threshold)","mode=configuration","loginAcknowledged=true"],"Minecraft 1.21.1 Forge CONFIGURATION probe")
 require(compose,["TYPE: FORGE","TYPE: NEOFORGE","FORGE_VERSION: \"52.1.16\"","NEOFORGE_VERSION: \"21.1.251\"","./runtime/plugins/forge:/mods:ro","./runtime/plugins/neoforge:/mods:ro"],"Forge/NeoForge Docker E2E")
 migration=read("e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh")
 require(migration,["0026_fabric_server_bridge_0146","0027_forge_neoforge_server_bridge_0147","kind IN ('forge','neoforge')","non-canonical kind bypassed constraint"],"0.14.6 -> 0.14.7 migration E2E")

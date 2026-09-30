@@ -816,13 +816,26 @@ if [[ "$MODE" == "full" ]]; then
   printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
+    local -a probe_mode=()
+    case "$service" in
+      forge)
+        # Forge enforces the NeverLauncher gate during Minecraft's
+        # CONFIGURATION phase. Complete LOGIN through Login Acknowledged so
+        # its pre-world validation task actually runs; keep all other
+        # runtimes on the established lightweight login stimulus.
+        probe_mode=(
+          --enter-configuration
+          --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
+        )
+        ;;
+    esac
     join_body="$(build_join_body "$id")"
     revoke_body="$(jq -cn --arg id "$id" '{serverId:$id,reason:"e2e-revoke"}')"
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id.json"
     validate_join "$id" "$key" "$plugin_sha" allow
     validate_join "$id" "$key" "$plugin_sha" deny
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id-fresh.json"
-    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-allow.txt"
+    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-allow.txt"
     wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
     json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "$revoke_body" > "$RUNTIME_DIR/revoke-$id.json"
     validate_join "$id" "$key" "$plugin_sha" deny
@@ -841,7 +854,7 @@ if [[ "$MODE" == "full" ]]; then
         sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
-    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-$id-deny.txt"
+    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
