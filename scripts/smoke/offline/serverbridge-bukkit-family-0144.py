@@ -120,11 +120,18 @@ require(runtime_e2e, [
     'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"',
     "neverlauncher-spigot-bridge.jar",
     "neverlauncher-folia-bridge.jar",
+    'FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"',
+    'FOLIA_MINECRAFT_VERSION="1.21.1"',
+    "createMojmapPaperclipJar",
+    "folia-runtime.json",
+    "foliaPinnedRuntime:true",
     "bukkitFamilyRuntime:true",
 ], "real Spigot/Folia runtime E2E")
 require(compose_e2e, [
     "TYPE: SPIGOT", "TYPE: FOLIA",
+    "PAPER_CUSTOM_JAR: /folia-runtime/folia-1.21.1-2e7bc0721af9-paperclip.jar",
     "./runtime/plugins/spigot:/plugins:ro", "./runtime/plugins/folia:/plugins:ro",
+    "./runtime/folia-runtime:/folia-runtime:ro",
 ], "Spigot/Folia Docker E2E")
 
 

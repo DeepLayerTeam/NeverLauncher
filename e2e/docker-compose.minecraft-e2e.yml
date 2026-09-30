@@ -297,6 +297,7 @@ services:
       EULA: "TRUE"
       TYPE: FOLIA
       VERSION: "1.21.1"
+      PAPER_CUSTOM_JAR: /folia-runtime/folia-1.21.1-2e7bc0721af9-paperclip.jar
       ONLINE_MODE: "FALSE"
       MEMORY: 768M
       ENABLE_RCON: "false"
@@ -326,6 +327,7 @@ services:
     volumes:
       - ./runtime/plugins/folia:/plugins:ro
       - ./runtime/node-identities/folia:/data/.neverlauncher-identity
+      - ./runtime/folia-runtime:/folia-runtime:ro
       - folia-data:/data
 
   fabric:

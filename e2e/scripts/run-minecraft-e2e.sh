@@ -21,6 +21,10 @@ MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-1.21.1}"
 LOADER="$(printf '%s' "${NEVERLAUNCHER_E2E_LOADER:-vanilla}" | tr '[:upper:]' '[:lower:]')"
 LOADER_VERSION_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-}"
 PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
+FOLIA_MINECRAFT_VERSION="1.21.1"
+FOLIA_SOURCE_REPOSITORY="https://github.com/PaperMC/Folia.git"
+FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"
+FOLIA_RUNTIME_NAME="folia-${FOLIA_MINECRAFT_VERSION}-${FOLIA_SOURCE_COMMIT:0:12}-paperclip.jar"
 BRIDGE_ALLOWLIST_JSON="{}"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
@@ -46,7 +50,7 @@ fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go cargo python3 gradle xvfb-run openssl psql; do need "$cmd"; done
+for cmd in docker curl jq go cargo python3 gradle git xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
 
 JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
@@ -65,7 +69,7 @@ LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
 GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
 mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/bungeecord" "$RUNTIME_DIR/plugins/waterfall" "$RUNTIME_DIR/plugins/spigot" "$RUNTIME_DIR/plugins/paper" "$RUNTIME_DIR/plugins/purpur" "$RUNTIME_DIR/plugins/folia" "$RUNTIME_DIR/plugins/fabric" "$RUNTIME_DIR/plugins/forge" "$RUNTIME_DIR/plugins/neoforge" \
   "$RUNTIME_DIR/node-identities/velocity" "$RUNTIME_DIR/node-identities/bungeecord" "$RUNTIME_DIR/node-identities/waterfall" "$RUNTIME_DIR/node-identities/spigot" "$RUNTIME_DIR/node-identities/paper" "$RUNTIME_DIR/node-identities/purpur" "$RUNTIME_DIR/node-identities/folia" "$RUNTIME_DIR/node-identities/fabric" "$RUNTIME_DIR/node-identities/forge" "$RUNTIME_DIR/node-identities/neoforge" "$RUNTIME_DIR/node-keys" \
-  "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client"
+  "$RUNTIME_DIR/client" "$RUNTIME_DIR/materialized-client" "$RUNTIME_DIR/folia-runtime"
 GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
 cat > "$GUARD_POLICY_OVERRIDE" <<YAML
 services:
@@ -192,6 +196,54 @@ sign_payload() {
   rm -f "$file"
 }
 
+materialize_pinned_folia_runtime() {
+  local source_dir="$RUNTIME_DIR/folia-source" output_jar="$RUNTIME_DIR/folia-runtime/$FOLIA_RUNTIME_NAME"
+  local resolved_commit resolved_mc build_jar runtime_sha
+  local -a candidates
+
+  printf '[e2e] materialize pinned Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
+  rm -rf "$source_dir"
+  git init -q "$source_dir"
+  git -C "$source_dir" remote add origin "$FOLIA_SOURCE_REPOSITORY"
+  git -C "$source_dir" fetch --quiet --depth=1 origin "$FOLIA_SOURCE_COMMIT"
+  git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
+  resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
+  [[ "$resolved_commit" == "$FOLIA_SOURCE_COMMIT" ]] || { echo "[e2e] Folia source commit mismatch: $resolved_commit" >&2; return 1; }
+
+  resolved_mc="$(sed -n 's/^mcVersion=//p' "$source_dir/gradle.properties" | head -n1 | tr -d '\r')"
+  [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] Folia source targets Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
+
+  git -C "$source_dir" config user.email "neverlauncher-e2e@invalid.local"
+  git -C "$source_dir" config user.name "NeverLauncher E2E"
+  (
+    cd "$source_dir"
+    ./gradlew --no-daemon --stacktrace applyPatches
+    ./gradlew --no-daemon --stacktrace createMojmapPaperclipJar
+  )
+
+  mapfile -t candidates < <(find "$source_dir/Folia-Server/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
+  if (( ${#candidates[@]} != 1 )); then
+    echo "[e2e] expected exactly one Folia paperclip JAR, found ${#candidates[@]}" >&2
+    printf '[e2e] Folia build candidate: %s\n' "${candidates[@]:-<none>}" >&2
+    return 1
+  fi
+  build_jar="${candidates[0]}"
+  install -m 0644 "$build_jar" "$output_jar"
+  runtime_sha="$(sha256sum "$output_jar" | awk '{print $1}')"
+  [[ "$runtime_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid Folia runtime SHA-256" >&2; return 1; }
+
+  jq -n \
+    --arg minecraftVersion "$FOLIA_MINECRAFT_VERSION" \
+    --arg repository "$FOLIA_SOURCE_REPOSITORY" \
+    --arg commit "$FOLIA_SOURCE_COMMIT" \
+    --arg jar "$FOLIA_RUNTIME_NAME" \
+    --arg sha256 "$runtime_sha" \
+    '{minecraftVersion:$minecraftVersion,sourceRepository:$repository,sourceCommit:$commit,artifact:$jar,sha256:$sha256,buildTask:"createMojmapPaperclipJar",verified:true}' \
+    > "$RUNTIME_DIR/folia-runtime.json"
+
+  rm -rf "$source_dir"
+}
+
 printf '[e2e] build real ServerBridge artifacts\n'
 bash "$ROOT/scripts/build/bridge-plugins.sh"
 BRIDGE_ALLOWLIST_JSON="$(tr -d '\r\n' < "$ROOT/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json")"
@@ -207,6 +259,7 @@ if [[ "$MODE" == "full" ]]; then
   cp "$ROOT/artifacts/plugins/neverlauncher-fabric-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/fabric/neverlauncher-fabric-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-forge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/forge/neverlauncher-forge-bridge.jar"
   cp "$ROOT/artifacts/plugins/neverlauncher-neoforge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/neoforge/neverlauncher-neoforge-bridge.jar"
+  materialize_pinned_folia_runtime
 fi
 
 printf '[e2e] start PostgreSQL and apply production migrations explicitly\n'
@@ -642,6 +695,6 @@ jq -n \
   --arg fabric "$FABRIC_HEALTH" \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true},evidence:["materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true},evidence:["folia-runtime.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"
