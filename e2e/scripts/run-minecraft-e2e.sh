@@ -828,14 +828,16 @@ if [[ "$MODE" == "full" ]]; then
         deny_probe_mode=("${allow_probe_mode[@]}")
         ;;
       neoforge)
-        # NeoForge fires PlayerNegotiationEvent while LOGIN is still being
-        # negotiated. The old one-read stimulus stopped after Set Compression
-        # and closed before that gate. Drive LOGIN forward like a real 1.21.1
-        # client. On the revoked path NeoForge may disconnect before Login
-        # Acknowledged; that transport terminal is accepted only because the
-        # mandatory neverlauncher.join.denied log assertion follows it.
+        # NeoForge 1.21.1 posts NeverLauncher through RegisterConfigurationTasksEvent.
+        # After Login Acknowledged its vanilla-client prelude waits for Pong(0),
+        # then SynchronizeRegistriesTask waits for Select Known Packs. Drive both
+        # protocol-native responses so the server-only NeverLauncher task becomes
+        # current without requiring a NeoForge client mod. The revoked path may
+        # disconnect at any earlier fail-closed stage; the mandatory deny marker
+        # below remains the authoritative assertion.
         allow_probe_mode=(
           --enter-configuration
+          --drive-neoforge-configuration
           --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
         )
         deny_probe_mode=(

@@ -5,9 +5,10 @@ The primary release gate launches the actual Mojang client. This probe is
 kept only for fast protocol-level bridge checks after session issuance or
 revocation; it is not accepted as evidence of Minecraft client compatibility.
 
-Forge runs its pre-world NeverLauncher gate in Minecraft's CONFIGURATION
-phase. --enter-configuration performs the minimum protocol transition needed
-to reach that phase while intentionally stopping before PLAY.
+Forge and NeoForge run their pre-world NeverLauncher gates in Minecraft's
+CONFIGURATION phase. --enter-configuration performs the LOGIN -> CONFIGURATION
+transition. --drive-neoforge-configuration additionally completes NeoForge's
+vanilla-client prelude (Ping/Pong and Select Known Packs) without entering PLAY.
 """
 from __future__ import annotations
 
@@ -28,6 +29,15 @@ LOGIN_COOKIE_REQUEST = 0x05
 
 SERVERBOUND_LOGIN_CUSTOM_QUERY_ANSWER = 0x02
 SERVERBOUND_LOGIN_ACKNOWLEDGED = 0x03
+
+CONFIG_CLIENTBOUND_DISCONNECT = 0x02
+CONFIG_CLIENTBOUND_KEEP_ALIVE = 0x04
+CONFIG_CLIENTBOUND_PING = 0x05
+CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS = 0x0E
+CONFIG_SERVERBOUND_KEEP_ALIVE = 0x04
+CONFIG_SERVERBOUND_PONG = 0x05
+CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS = 0x07
+
 MAX_PACKET_LENGTH = 8 * 1024 * 1024
 
 
@@ -230,6 +240,73 @@ def hold_configuration_socket(sock: socket.socket, seconds: float) -> tuple[str,
     return "configuration-hold", drained
 
 
+def drive_neoforge_configuration(
+    sock: socket.socket,
+    compression_threshold: int | None,
+    seconds: float,
+) -> tuple[str, int, int, int, int]:
+    """Drive the NeoForge 1.21.1 vanilla-client CONFIGURATION prelude.
+
+    NeoForge waits for Pong(0) before runConfiguration(), then vanilla's
+    SynchronizeRegistriesTask waits for ServerboundSelectKnownPacks. Replying
+    to those protocol-native packets is sufficient to let server-only
+    configuration tasks (including NeverLauncher) execute without a client mod.
+    """
+    deadline = time.monotonic() + max(0.0, seconds)
+    wire_bytes = 0
+    packets_seen = 0
+    pongs_sent = 0
+    known_packs_responses = 0
+
+    while time.monotonic() < deadline:
+        sock.settimeout(min(0.5, max(0.01, deadline - time.monotonic())))
+        try:
+            packet_id, payload, received = receive_packet(sock, compression_threshold)
+        except socket.timeout:
+            continue
+        except EOFError:
+            return "configuration-eof", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+        except ConnectionResetError:
+            return "configuration-reset", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+
+        packets_seen += 1
+        wire_bytes += received
+
+        if packet_id == CONFIG_CLIENTBOUND_DISCONNECT:
+            return "configuration-disconnect", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+
+        if packet_id == CONFIG_CLIENTBOUND_PING:
+            if len(payload) != 4:
+                raise ProtocolError(f"invalid configuration Ping payload length: {len(payload)}")
+            ping_id = struct.unpack(">i", payload)[0]
+            response = varint(CONFIG_SERVERBOUND_PONG) + struct.pack(">i", ping_id)
+            send_protocol_packet(sock, response, compression_threshold)
+            pongs_sent += 1
+            continue
+
+        if packet_id == CONFIG_CLIENTBOUND_KEEP_ALIVE:
+            if len(payload) != 8:
+                raise ProtocolError(f"invalid configuration KeepAlive payload length: {len(payload)}")
+            response = varint(CONFIG_SERVERBOUND_KEEP_ALIVE) + payload
+            send_protocol_packet(sock, response, compression_threshold)
+            continue
+
+        if packet_id == CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS:
+            # ServerboundSelectKnownPacks encodes a collection. An empty list is
+            # a valid vanilla-client answer and makes the server send the full
+            # registry data before advancing to later configuration tasks.
+            response = varint(CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS) + varint(0)
+            send_protocol_packet(sock, response, compression_threshold)
+            known_packs_responses += 1
+            continue
+
+    if pongs_sent == 0:
+        raise ProtocolError("NeoForge CONFIGURATION prelude did not expose ClientboundPingPacket")
+    if known_packs_responses == 0:
+        raise ProtocolError("NeoForge CONFIGURATION did not reach Select Known Packs")
+    return "configuration-hold", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
@@ -243,6 +320,11 @@ def main() -> int:
     )
     parser.add_argument("--login-timeout-seconds", type=float, default=8.0)
     parser.add_argument("--configuration-hold-seconds", type=float, default=8.0)
+    parser.add_argument(
+        "--drive-neoforge-configuration",
+        action="store_true",
+        help="reply to NeoForge 1.21.1 CONFIGURATION Ping and Select Known Packs packets",
+    )
     parser.add_argument(
         "--allow-pre-configuration-disconnect",
         action="store_true",
@@ -258,6 +340,8 @@ def main() -> int:
         raise SystemExit("--login-timeout-seconds must be positive")
     if args.configuration_hold_seconds < 0:
         raise SystemExit("--configuration-hold-seconds cannot be negative")
+    if args.drive_neoforge_configuration and not args.enter_configuration:
+        raise SystemExit("--drive-neoforge-configuration requires --enter-configuration")
 
     handshake = (
         varint(0x00)
@@ -280,10 +364,26 @@ def main() -> int:
                     args.login_timeout_seconds,
                     args.allow_pre_configuration_disconnect,
                 )
+                configuration_packets = 0
+                configuration_pongs = 0
+                known_packs_responses = 0
                 if login_terminal == "configuration":
-                    terminal, configuration_bytes = hold_configuration_socket(
-                        sock, args.configuration_hold_seconds
-                    )
+                    if args.drive_neoforge_configuration:
+                        (
+                            terminal,
+                            configuration_bytes,
+                            configuration_packets,
+                            configuration_pongs,
+                            known_packs_responses,
+                        ) = drive_neoforge_configuration(
+                            sock,
+                            compression_threshold,
+                            args.configuration_hold_seconds,
+                        )
+                    else:
+                        terminal, configuration_bytes = hold_configuration_socket(
+                            sock, args.configuration_hold_seconds
+                        )
                     login_acknowledged = True
                 else:
                     terminal = login_terminal
@@ -295,7 +395,9 @@ def main() -> int:
                 f"probe host={args.host} port={args.port} username={args.username} "
                 f"mode=configuration loginAcknowledged={str(login_acknowledged).lower()} packetsSeen={packets_seen} "
                 f"compressionThreshold={compression_threshold if compression_threshold is not None else 'disabled'} "
-                f"loginWireBytes={login_wire_bytes} configurationBytes={configuration_bytes} terminal={terminal}"
+                f"loginWireBytes={login_wire_bytes} configurationBytes={configuration_bytes} "
+                f"configurationPackets={configuration_packets} configurationPongs={configuration_pongs} "
+                f"knownPacksResponses={known_packs_responses} terminal={terminal}"
             )
             return 0
 
