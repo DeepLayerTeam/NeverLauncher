@@ -816,16 +816,31 @@ if [[ "$MODE" == "full" ]]; then
   printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
-    local -a probe_mode=()
+    local -a allow_probe_mode=() deny_probe_mode=()
     case "$service" in
       forge)
-        # Forge enforces the NeverLauncher gate during Minecraft's
-        # CONFIGURATION phase. Complete LOGIN through Login Acknowledged so
-        # its pre-world validation task actually runs; keep all other
-        # runtimes on the established lightweight login stimulus.
-        probe_mode=(
+        # Forge enforces NeverLauncher in CONFIGURATION. Complete LOGIN
+        # through Login Acknowledged for both allow and deny certification.
+        allow_probe_mode=(
           --enter-configuration
           --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
+        )
+        deny_probe_mode=("${allow_probe_mode[@]}")
+        ;;
+      neoforge)
+        # NeoForge fires PlayerNegotiationEvent while LOGIN is still being
+        # negotiated. The old one-read stimulus stopped after Set Compression
+        # and closed before that gate. Drive LOGIN forward like a real 1.21.1
+        # client. On the revoked path NeoForge may disconnect before Login
+        # Acknowledged; that transport terminal is accepted only because the
+        # mandatory neverlauncher.join.denied log assertion follows it.
+        allow_probe_mode=(
+          --enter-configuration
+          --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
+        )
+        deny_probe_mode=(
+          "${allow_probe_mode[@]}"
+          --allow-pre-configuration-disconnect
         )
         ;;
     esac
@@ -835,7 +850,7 @@ if [[ "$MODE" == "full" ]]; then
     validate_join "$id" "$key" "$plugin_sha" allow
     validate_join "$id" "$key" "$plugin_sha" deny
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id-fresh.json"
-    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-allow.txt"
+    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${allow_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-allow.txt"
     wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
     json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "$revoke_body" > "$RUNTIME_DIR/revoke-$id.json"
     validate_join "$id" "$key" "$plugin_sha" deny
@@ -854,7 +869,7 @@ if [[ "$MODE" == "full" ]]; then
         sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
-    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"
+    python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${deny_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570

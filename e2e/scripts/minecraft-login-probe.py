@@ -151,7 +151,11 @@ def offline_uuid(name: str) -> uuid.UUID:
     return uuid.UUID(bytes=bytes(digest))
 
 
-def enter_configuration(sock: socket.socket, login_timeout_seconds: float) -> tuple[int, int | None, int]:
+def enter_configuration(
+    sock: socket.socket,
+    login_timeout_seconds: float,
+    allow_pre_configuration_disconnect: bool = False,
+) -> tuple[int, int | None, int, str]:
     deadline = time.monotonic() + login_timeout_seconds
     compression_threshold: int | None = None
     packets_seen = 0
@@ -166,10 +170,20 @@ def enter_configuration(sock: socket.socket, login_timeout_seconds: float) -> tu
             packet_id, payload, received = receive_packet(sock, compression_threshold)
         except socket.timeout:
             continue
+        except EOFError:
+            if allow_pre_configuration_disconnect:
+                return packets_seen, compression_threshold, wire_bytes, "login-eof"
+            raise
+        except ConnectionResetError:
+            if allow_pre_configuration_disconnect:
+                return packets_seen, compression_threshold, wire_bytes, "login-reset"
+            raise
         packets_seen += 1
         wire_bytes += received
 
         if packet_id == LOGIN_DISCONNECT:
+            if allow_pre_configuration_disconnect:
+                return packets_seen, compression_threshold, wire_bytes, "login-disconnect"
             raise ProtocolError("server disconnected before CONFIGURATION")
         if packet_id == LOGIN_ENCRYPTION_REQUEST:
             raise ProtocolError("server requested online-mode encryption; E2E probe requires offline-mode runtime")
@@ -194,7 +208,7 @@ def enter_configuration(sock: socket.socket, login_timeout_seconds: float) -> tu
         if packet_id == LOGIN_SUCCESS:
             acknowledgement = varint(SERVERBOUND_LOGIN_ACKNOWLEDGED)
             send_protocol_packet(sock, acknowledgement, compression_threshold)
-            return packets_seen, compression_threshold, wire_bytes
+            return packets_seen, compression_threshold, wire_bytes, "configuration"
 
         raise ProtocolError(f"unexpected login packet id 0x{packet_id:02x}")
 
@@ -229,6 +243,14 @@ def main() -> int:
     )
     parser.add_argument("--login-timeout-seconds", type=float, default=8.0)
     parser.add_argument("--configuration-hold-seconds", type=float, default=8.0)
+    parser.add_argument(
+        "--allow-pre-configuration-disconnect",
+        action="store_true",
+        help=(
+            "treat LOGIN disconnect/EOF/reset before Login Acknowledged as a successful "
+            "transport terminal; callers must still assert the NeverLauncher deny marker"
+        ),
+    )
     args = parser.parse_args()
     if not (3 <= len(args.username) <= 16) or not all(c.isalnum() or c == "_" for c in args.username):
         raise SystemExit("username must match Minecraft Java rules: 3-16 [A-Za-z0-9_]")
@@ -253,17 +275,25 @@ def main() -> int:
 
         if args.enter_configuration:
             try:
-                packets_seen, compression_threshold, login_wire_bytes = enter_configuration(
-                    sock, args.login_timeout_seconds
+                packets_seen, compression_threshold, login_wire_bytes, login_terminal = enter_configuration(
+                    sock,
+                    args.login_timeout_seconds,
+                    args.allow_pre_configuration_disconnect,
                 )
-                terminal, configuration_bytes = hold_configuration_socket(
-                    sock, args.configuration_hold_seconds
-                )
+                if login_terminal == "configuration":
+                    terminal, configuration_bytes = hold_configuration_socket(
+                        sock, args.configuration_hold_seconds
+                    )
+                    login_acknowledged = True
+                else:
+                    terminal = login_terminal
+                    configuration_bytes = 0
+                    login_acknowledged = False
             except (EOFError, socket.timeout, ConnectionResetError, ProtocolError) as exc:
                 raise SystemExit(f"configuration login probe failed: {exc}") from exc
             print(
                 f"probe host={args.host} port={args.port} username={args.username} "
-                f"mode=configuration loginAcknowledged=true packetsSeen={packets_seen} "
+                f"mode=configuration loginAcknowledged={str(login_acknowledged).lower()} packetsSeen={packets_seen} "
                 f"compressionThreshold={compression_threshold if compression_threshold is not None else 'disabled'} "
                 f"loginWireBytes={login_wire_bytes} configurationBytes={configuration_bytes} terminal={terminal}"
             )
