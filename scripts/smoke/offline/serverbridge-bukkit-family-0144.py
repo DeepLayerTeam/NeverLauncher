@@ -127,6 +127,18 @@ require(runtime_e2e, [
     'SPARK_SOURCE_TAG="v1.10"',
     'SPARK_PATCH_VERSION="105"',
     'SPARK_MAVEN_VERSION="1.10.105-SNAPSHOT"',
+    'BYTESOCKS_SOURCE_REPOSITORY="https://github.com/lucko/bytesocks-java-client.git"',
+    'BYTESOCKS_SOURCE_COMMIT="b6147dcc8a9f1265ccf1491147d427fcfa7d2e27"',
+    'BYTESOCKS_MAVEN_VERSION="1.0-20230828.145440-5"',
+    'BYTESOCKS_BASE_VERSION="1.0-SNAPSHOT"',
+    'materialize_pinned_bytesocks_dependency()',
+    'BytesocksClient.create API',
+    'channelId API',
+    '<artifactId>Java-WebSocket</artifactId>',
+    'NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO',
+    'includeModule("me.lucko", "bytesocks-java-client")',
+    'bytesocks-build.json',
+    'bytesocksPinnedBuildDependency:true',
     'materialize_pinned_spark_paper_dependency()',
     ':spark-paper:shadowJar',
     'NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO',
@@ -154,13 +166,22 @@ for marker in (
     if position >= folia_apply:
         raise SystemExit("Pinned Folia Git identity is not inherited by paperweight patch subprocesses")
 
+bytesocks_helper = runtime_e2e.index("materialize_pinned_bytesocks_dependency() {")
+bytesocks_commit_check = runtime_e2e.index('[[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]]', bytesocks_helper)
+bytesocks_api_check = runtime_e2e.index("BytesocksClient.create API", bytesocks_helper)
+bytesocks_build = runtime_e2e.index("mvn --batch-mode --no-transfer-progress -Dmaven.test.skip=true package", bytesocks_helper)
+bytesocks_evidence = runtime_e2e.index('> "$RUNTIME_DIR/bytesocks-build.json"', bytesocks_helper)
+if not (bytesocks_commit_check < bytesocks_api_check < bytesocks_build < bytesocks_evidence):
+    raise SystemExit("Pinned bytesocks source/API verification must precede Maven build and evidence")
+
 spark_helper = runtime_e2e.index("materialize_pinned_spark_paper_dependency() {")
 spark_commit_check = runtime_e2e.index('[[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]]', spark_helper)
 spark_patch_check = runtime_e2e.index('[[ "$patch_count" == "$SPARK_PATCH_VERSION" ]]', spark_helper)
-spark_build = runtime_e2e.index('./gradlew --no-daemon --stacktrace :spark-paper:shadowJar', spark_helper)
+spark_build = runtime_e2e.index('./gradlew --no-daemon --stacktrace --init-script "$init_script" :spark-paper:shadowJar', spark_helper)
 folia_spark_call = runtime_e2e.index("materialize_pinned_spark_paper_dependency", folia_materialize_start)
 folia_paperclip = runtime_e2e.index("createMojmapPaperclipJar", folia_materialize_start)
-if not (spark_commit_check < spark_patch_check < spark_build):
+spark_bytesocks_call = runtime_e2e.index("materialize_pinned_bytesocks_dependency", spark_helper)
+if not (spark_bytesocks_call < spark_commit_check < spark_patch_check < spark_build):
     raise SystemExit("Pinned spark-paper source/version verification must precede its build")
 if folia_spark_call >= folia_paperclip:
     raise SystemExit("Pinned spark-paper dependency must be materialized before Folia paperclip build")
@@ -191,6 +212,6 @@ preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(text, ["serverbridge-bukkit-family-0144.py", "run-bukkit-family-migration-e2e.sh"], f"0.14.4 {label} wiring")
-require(ci, ["foliaPinnedBuildDependency", "spark-paper-build.json", "f06de5761a5dee3c809ab9c6ebae6f052c55f7eb", "1.10.105-SNAPSHOT"], "pinned Folia build dependency CI evidence")
+require(ci, ["foliaPinnedBuildDependency", "bytesocksPinnedBuildDependency", "spark-paper-build.json", "bytesocks-build.json", "f06de5761a5dee3c809ab9c6ebae6f052c55f7eb", "b6147dcc8a9f1265ccf1491147d427fcfa7d2e27", "1.10.105-SNAPSHOT", "1.0-20230828.145440-5"], "pinned Folia build dependency CI evidence")
 
 print(f"NeverLauncher 0.14.4 Bukkit family gate: OK ({version})")

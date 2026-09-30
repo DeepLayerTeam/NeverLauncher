@@ -30,6 +30,10 @@ SPARK_SOURCE_COMMIT="f06de5761a5dee3c809ab9c6ebae6f052c55f7eb"
 SPARK_SOURCE_TAG="v1.10"
 SPARK_PATCH_VERSION="105"
 SPARK_MAVEN_VERSION="1.10.105-SNAPSHOT"
+BYTESOCKS_SOURCE_REPOSITORY="https://github.com/lucko/bytesocks-java-client.git"
+BYTESOCKS_SOURCE_COMMIT="b6147dcc8a9f1265ccf1491147d427fcfa7d2e27"
+BYTESOCKS_MAVEN_VERSION="1.0-20230828.145440-5"
+BYTESOCKS_BASE_VERSION="1.0-SNAPSHOT"
 BRIDGE_ALLOWLIST_JSON="{}"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
@@ -55,7 +59,7 @@ fi
 RELEASE_VERSION="${VERSION}-${LOADER}-${MINECRAFT_VERSION}-e2e"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missing: $1" >&2; exit 1; }; }
-for cmd in docker curl jq go cargo python3 gradle git xvfb-run openssl psql; do need "$cmd"; done
+for cmd in docker curl jq go cargo python3 gradle git mvn jar xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
 
 JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
@@ -201,9 +205,115 @@ sign_payload() {
   rm -f "$file"
 }
 
+materialize_pinned_bytesocks_dependency() {
+  local source_dir="$RUNTIME_DIR/bytesocks-source" maven_repo="$RUNTIME_DIR/spark-build-maven"
+  local resolved_commit build_jar installed_jar artifact_sha maven_dir
+
+  printf '[e2e] materialize pinned compatible bytesocks %s from %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
+  rm -rf "$source_dir" "$maven_repo"
+  git init -q "$source_dir"
+  git -C "$source_dir" remote add origin "$BYTESOCKS_SOURCE_REPOSITORY"
+  git -C "$source_dir" fetch --quiet --depth=1 origin "$BYTESOCKS_SOURCE_COMMIT"
+  git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
+  resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
+  [[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]] || { echo "[e2e] bytesocks source commit mismatch: $resolved_commit" >&2; return 1; }
+
+  grep -Fq 'static BytesocksClient create(' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
+    echo "[e2e] pinned bytesocks source is missing BytesocksClient.create API" >&2; return 1;
+  }
+  grep -Fq 'String channelId();' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
+    echo "[e2e] pinned bytesocks source is missing channelId API" >&2; return 1;
+  }
+  grep -Fq '<artifactId>Java-WebSocket</artifactId>' "$source_dir/pom.xml" || {
+    echo "[e2e] pinned bytesocks source is missing Java-WebSocket dependency" >&2; return 1;
+  }
+  grep -Fq '<version>1.5.4</version>' "$source_dir/pom.xml" || {
+    echo "[e2e] pinned bytesocks source has unexpected Java-WebSocket version" >&2; return 1;
+  }
+
+  (
+    cd "$source_dir"
+    mvn --batch-mode --no-transfer-progress -Dmaven.test.skip=true package
+  )
+
+  build_jar="$source_dir/target/bytesocks-java-client-${BYTESOCKS_BASE_VERSION}.jar"
+  [[ -s "$build_jar" ]] || { echo "[e2e] pinned bytesocks build artifact missing: $build_jar" >&2; return 1; }
+  local jar_contents="$RUNTIME_DIR/bytesocks-jar-contents.txt"
+  jar tf "$build_jar" > "$jar_contents"
+  grep -Fxq 'me/lucko/bytesocks/client/BytesocksClient.class' "$jar_contents" || {
+    echo "[e2e] pinned bytesocks artifact is missing BytesocksClient.class" >&2; return 1;
+  }
+  grep -Fxq 'me/lucko/bytesocks/client/BytesocksClientImpl.class' "$jar_contents" || {
+    echo "[e2e] pinned bytesocks artifact is missing BytesocksClientImpl.class" >&2; return 1;
+  }
+  rm -f "$jar_contents"
+
+  # Gradle resolves a timestamped Maven snapshot through the base SNAPSHOT
+  # directory while requesting the timestamped POM/JAR names. Reconstruct only
+  # that isolated build dependency; do not publish it or claim it is the
+  # cryptographically verified historical artifact.
+  maven_dir="$maven_repo/me/lucko/bytesocks-java-client/$BYTESOCKS_BASE_VERSION"
+  mkdir -p "$maven_dir"
+  installed_jar="$maven_dir/bytesocks-java-client-${BYTESOCKS_MAVEN_VERSION}.jar"
+  install -m 0644 "$build_jar" "$installed_jar"
+  cat > "$maven_dir/bytesocks-java-client-${BYTESOCKS_MAVEN_VERSION}.pom" <<POM
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>me.lucko</groupId>
+  <artifactId>bytesocks-java-client</artifactId>
+  <version>${BYTESOCKS_BASE_VERSION}</version>
+  <dependencies>
+    <dependency>
+      <groupId>org.java-websocket</groupId>
+      <artifactId>Java-WebSocket</artifactId>
+      <version>1.5.4</version>
+    </dependency>
+  </dependencies>
+</project>
+POM
+  artifact_sha="$(sha256sum "$installed_jar" | awk '{print $1}')"
+  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid pinned bytesocks SHA-256" >&2; return 1; }
+
+  jq -n \
+    --arg sourceRepository "$BYTESOCKS_SOURCE_REPOSITORY" \
+    --arg sourceCommit "$BYTESOCKS_SOURCE_COMMIT" \
+    --arg requestedMavenCoordinate "me.lucko:bytesocks-java-client:$BYTESOCKS_MAVEN_VERSION" \
+    --arg sourcePomVersion "$BYTESOCKS_BASE_VERSION" \
+    --arg sha256 "$artifact_sha" \
+    '{sourceRepository:$sourceRepository,sourceCommit:$sourceCommit,requestedMavenCoordinate:$requestedMavenCoordinate,sourcePomVersion:$sourcePomVersion,reconstructionMode:"pinned-compatible-source",historicalArtifactOriginalVerified:false,apiContract:{factory:"BytesocksClient.create",channelId:"Socket.channelId",webSocketLibrary:"org.java-websocket:Java-WebSocket:1.5.4"},sha256:$sha256,buildTool:"maven",verified:true}' \
+    > "$RUNTIME_DIR/bytesocks-build.json"
+
+  rm -rf "$source_dir"
+}
+
 materialize_pinned_spark_paper_dependency() {
   local source_dir="$RUNTIME_DIR/spark-source" maven_repo="$RUNTIME_DIR/folia-build-maven"
+  local bytesocks_repo="$RUNTIME_DIR/spark-build-maven" init_script="$RUNTIME_DIR/spark-build.init.gradle"
   local resolved_commit patch_count build_jar installed_jar artifact_sha
+
+  materialize_pinned_bytesocks_dependency
+  cat > "$init_script" <<'GRADLE'
+def pinnedRepo = System.getenv("NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO")
+if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
+    throw new GradleException("NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO is required")
+}
+gradle.beforeProject { project ->
+    project.repositories {
+        maven {
+            name = "neverlauncherPinnedSparkBuild"
+            url = project.uri(pinnedRepo)
+            metadataSources {
+                mavenPom()
+                artifact()
+            }
+            content {
+                includeModule("me.lucko", "bytesocks-java-client")
+            }
+        }
+    }
+}
+GRADLE
 
   printf '[e2e] materialize pinned spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
@@ -220,9 +330,14 @@ materialize_pinned_spark_paper_dependency() {
   patch_count="$(git -C "$source_dir" rev-list --count "$SPARK_SOURCE_TAG..HEAD")"
   [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
 
+  grep -Fq "me.lucko:bytesocks-java-client:$BYTESOCKS_MAVEN_VERSION" "$source_dir/spark-common/build.gradle" || {
+    echo "[e2e] pinned spark source no longer requires expected bytesocks snapshot" >&2; return 1;
+  }
+
   (
+    export NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO="$bytesocks_repo"
     cd "$source_dir"
-    ./gradlew --no-daemon --stacktrace :spark-paper:shadowJar
+    ./gradlew --no-daemon --stacktrace --init-script "$init_script" :spark-paper:shadowJar
   )
 
   build_jar="$source_dir/spark-paper/build/libs/spark-1.10.${SPARK_PATCH_VERSION}-paper.jar"
@@ -251,10 +366,10 @@ POM
     --arg patchVersion "$SPARK_PATCH_VERSION" \
     --arg mavenVersion "$SPARK_MAVEN_VERSION" \
     --arg sha256 "$artifact_sha" \
-    '{sourceRepository:$sourceRepository,sourceCommit:$sourceCommit,sourceTag:$sourceTag,patchVersion:($patchVersion|tonumber),mavenCoordinate:("me.lucko:spark-paper:"+$mavenVersion),sha256:$sha256,buildTask:":spark-paper:shadowJar",verified:true}' \
+    '{sourceRepository:$sourceRepository,sourceCommit:$sourceCommit,sourceTag:$sourceTag,patchVersion:($patchVersion|tonumber),mavenCoordinate:("me.lucko:spark-paper:"+$mavenVersion),sha256:$sha256,buildTask:":spark-paper:shadowJar",pinnedBuildDependency:"me.lucko:bytesocks-java-client:1.0-20230828.145440-5",pinnedBuildDependencyEvidence:"bytesocks-build.json",verified:true}' \
     > "$RUNTIME_DIR/spark-paper-build.json"
 
-  rm -rf "$source_dir"
+  rm -rf "$source_dir" "$bytesocks_repo" "$init_script"
 }
 
 materialize_pinned_folia_runtime() {
@@ -329,7 +444,7 @@ GRADLE
     --arg commit "$FOLIA_SOURCE_COMMIT" \
     --arg jar "$FOLIA_RUNTIME_NAME" \
     --arg sha256 "$runtime_sha" \
-    '{minecraftVersion:$minecraftVersion,sourceRepository:$repository,sourceCommit:$commit,artifact:$jar,sha256:$sha256,buildTask:"createMojmapPaperclipJar",pinnedBuildDependency:"me.lucko:spark-paper:1.10.105-SNAPSHOT",pinnedBuildDependencyEvidence:"spark-paper-build.json",verified:true}' \
+    '{minecraftVersion:$minecraftVersion,sourceRepository:$repository,sourceCommit:$commit,artifact:$jar,sha256:$sha256,buildTask:"createMojmapPaperclipJar",pinnedBuildDependency:"me.lucko:spark-paper:1.10.105-SNAPSHOT",pinnedBuildDependencyEvidence:"spark-paper-build.json",transitivePinnedBuildDependency:"me.lucko:bytesocks-java-client:1.0-20230828.145440-5",transitivePinnedBuildDependencyEvidence:"bytesocks-build.json",verified:true}' \
     > "$RUNTIME_DIR/folia-runtime.json"
 
   rm -rf "$source_dir" "$build_maven_repo" "$init_script"
@@ -786,6 +901,6 @@ jq -n \
   --arg fabric "$FABRIC_HEALTH" \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"
