@@ -213,9 +213,14 @@ materialize_pinned_folia_runtime() {
   resolved_mc="$(sed -n 's/^mcVersion=//p' "$source_dir/gradle.properties" | head -n1 | tr -d '\r')"
   [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] Folia source targets Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
 
-  git -C "$source_dir" config user.email "neverlauncher-e2e@invalid.local"
-  git -C "$source_dir" config user.name "NeverLauncher E2E"
   (
+    # paperweight creates nested Git repositories while applying Paper/Folia patches.
+    # Export identity through the process environment so every nested git process
+    # inherits it without mutating the runner's global Git configuration.
+    export GIT_AUTHOR_NAME="NeverLauncher E2E"
+    export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"
+    export GIT_COMMITTER_NAME="NeverLauncher E2E"
+    export GIT_COMMITTER_EMAIL="neverlauncher-e2e@invalid.local"
     cd "$source_dir"
     ./gradlew --no-daemon --stacktrace applyPatches
     ./gradlew --no-daemon --stacktrace createMojmapPaperclipJar

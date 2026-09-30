@@ -122,11 +122,27 @@ require(runtime_e2e, [
     "neverlauncher-folia-bridge.jar",
     'FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"',
     'FOLIA_MINECRAFT_VERSION="1.21.1"',
+    'GIT_AUTHOR_NAME="NeverLauncher E2E"',
+    'GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"',
+    'GIT_COMMITTER_NAME="NeverLauncher E2E"',
+    'GIT_COMMITTER_EMAIL="neverlauncher-e2e@invalid.local"',
     "createMojmapPaperclipJar",
     "folia-runtime.json",
     "foliaPinnedRuntime:true",
     "bukkitFamilyRuntime:true",
 ], "real Spigot/Folia runtime E2E")
+folia_materialize_start = runtime_e2e.index("materialize_pinned_folia_runtime() {")
+folia_apply = runtime_e2e.index("./gradlew --no-daemon --stacktrace applyPatches", folia_materialize_start)
+for marker in (
+    'export GIT_AUTHOR_NAME="NeverLauncher E2E"',
+    'export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"',
+    'export GIT_COMMITTER_NAME="NeverLauncher E2E"',
+    'export GIT_COMMITTER_EMAIL="neverlauncher-e2e@invalid.local"',
+):
+    position = runtime_e2e.index(marker, folia_materialize_start)
+    if position >= folia_apply:
+        raise SystemExit("Pinned Folia Git identity is not inherited by paperweight patch subprocesses")
+
 require(compose_e2e, [
     "TYPE: SPIGOT", "TYPE: FOLIA",
     "PAPER_CUSTOM_JAR: /folia-runtime/folia-1.21.1-2e7bc0721af9-paperclip.jar",
