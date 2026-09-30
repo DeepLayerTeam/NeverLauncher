@@ -25,6 +25,11 @@ FOLIA_MINECRAFT_VERSION="1.21.1"
 FOLIA_SOURCE_REPOSITORY="https://github.com/PaperMC/Folia.git"
 FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"
 FOLIA_RUNTIME_NAME="folia-${FOLIA_MINECRAFT_VERSION}-${FOLIA_SOURCE_COMMIT:0:12}-paperclip.jar"
+SPARK_SOURCE_REPOSITORY="https://github.com/lucko/spark.git"
+SPARK_SOURCE_COMMIT="f06de5761a5dee3c809ab9c6ebae6f052c55f7eb"
+SPARK_SOURCE_TAG="v1.10"
+SPARK_PATCH_VERSION="105"
+SPARK_MAVEN_VERSION="1.10.105-SNAPSHOT"
 BRIDGE_ALLOWLIST_JSON="{}"
 SERVERBRIDGE_CRYPTO="$ROOT/e2e/scripts/serverbridge-node-crypto.sh"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
@@ -196,10 +201,90 @@ sign_payload() {
   rm -f "$file"
 }
 
+materialize_pinned_spark_paper_dependency() {
+  local source_dir="$RUNTIME_DIR/spark-source" maven_repo="$RUNTIME_DIR/folia-build-maven"
+  local resolved_commit patch_count build_jar installed_jar artifact_sha
+
+  printf '[e2e] materialize pinned spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
+  rm -rf "$source_dir" "$maven_repo"
+  git init -q "$source_dir"
+  git -C "$source_dir" remote add origin "$SPARK_SOURCE_REPOSITORY"
+  # Fetch full ancestry for the exact commit so spark's own git-describe based
+  # versioning can deterministically reproduce patch version 105.
+  git -C "$source_dir" fetch --quiet --no-tags origin "$SPARK_SOURCE_COMMIT"
+  git -C "$source_dir" fetch --quiet origin "refs/tags/$SPARK_SOURCE_TAG:refs/tags/$SPARK_SOURCE_TAG"
+  git -C "$source_dir" checkout --quiet --detach "$SPARK_SOURCE_COMMIT"
+  resolved_commit="$(git -C "$source_dir" rev-parse HEAD)"
+  [[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]] || { echo "[e2e] spark source commit mismatch: $resolved_commit" >&2; return 1; }
+  git -C "$source_dir" merge-base --is-ancestor "$SPARK_SOURCE_TAG" HEAD || { echo "[e2e] spark tag $SPARK_SOURCE_TAG is not an ancestor of pinned commit" >&2; return 1; }
+  patch_count="$(git -C "$source_dir" rev-list --count "$SPARK_SOURCE_TAG..HEAD")"
+  [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
+
+  (
+    cd "$source_dir"
+    ./gradlew --no-daemon --stacktrace :spark-paper:shadowJar
+  )
+
+  build_jar="$source_dir/spark-paper/build/libs/spark-1.10.${SPARK_PATCH_VERSION}-paper.jar"
+  [[ -s "$build_jar" ]] || { echo "[e2e] pinned spark-paper build artifact missing: $build_jar" >&2; return 1; }
+  local maven_dir="$maven_repo/me/lucko/spark-paper/$SPARK_MAVEN_VERSION"
+  mkdir -p "$maven_dir"
+  installed_jar="$maven_dir/spark-paper-${SPARK_MAVEN_VERSION}.jar"
+  install -m 0644 "$build_jar" "$installed_jar"
+  cat > "$maven_dir/spark-paper-${SPARK_MAVEN_VERSION}.pom" <<POM
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>me.lucko</groupId>
+  <artifactId>spark-paper</artifactId>
+  <version>${SPARK_MAVEN_VERSION}</version>
+  <dependencies/>
+</project>
+POM
+  artifact_sha="$(sha256sum "$installed_jar" | awk '{print $1}')"
+  [[ "$artifact_sha" =~ ^[0-9a-f]{64}$ ]] || { echo "[e2e] invalid pinned spark-paper SHA-256" >&2; return 1; }
+
+  jq -n \
+    --arg sourceRepository "$SPARK_SOURCE_REPOSITORY" \
+    --arg sourceCommit "$SPARK_SOURCE_COMMIT" \
+    --arg sourceTag "$SPARK_SOURCE_TAG" \
+    --arg patchVersion "$SPARK_PATCH_VERSION" \
+    --arg mavenVersion "$SPARK_MAVEN_VERSION" \
+    --arg sha256 "$artifact_sha" \
+    '{sourceRepository:$sourceRepository,sourceCommit:$sourceCommit,sourceTag:$sourceTag,patchVersion:($patchVersion|tonumber),mavenCoordinate:("me.lucko:spark-paper:"+$mavenVersion),sha256:$sha256,buildTask:":spark-paper:shadowJar",verified:true}' \
+    > "$RUNTIME_DIR/spark-paper-build.json"
+
+  rm -rf "$source_dir"
+}
+
 materialize_pinned_folia_runtime() {
   local source_dir="$RUNTIME_DIR/folia-source" output_jar="$RUNTIME_DIR/folia-runtime/$FOLIA_RUNTIME_NAME"
+  local build_maven_repo="$RUNTIME_DIR/folia-build-maven" init_script="$RUNTIME_DIR/folia-build.init.gradle"
   local resolved_commit resolved_mc build_jar runtime_sha
   local -a candidates
+
+  materialize_pinned_spark_paper_dependency
+  cat > "$init_script" <<'GRADLE'
+def pinnedRepo = System.getenv("NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO")
+if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
+    throw new GradleException("NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO is required")
+}
+gradle.beforeProject { project ->
+    project.repositories {
+        maven {
+            name = "neverlauncherPinnedFoliaBuild"
+            url = project.uri(pinnedRepo)
+            metadataSources {
+                mavenPom()
+                artifact()
+            }
+            content {
+                includeModule("me.lucko", "spark-paper")
+            }
+        }
+    }
+}
+GRADLE
 
   printf '[e2e] materialize pinned Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
   rm -rf "$source_dir"
@@ -221,9 +306,10 @@ materialize_pinned_folia_runtime() {
     export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"
     export GIT_COMMITTER_NAME="NeverLauncher E2E"
     export GIT_COMMITTER_EMAIL="neverlauncher-e2e@invalid.local"
+    export NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO="$build_maven_repo"
     cd "$source_dir"
-    ./gradlew --no-daemon --stacktrace applyPatches
-    ./gradlew --no-daemon --stacktrace createMojmapPaperclipJar
+    ./gradlew --no-daemon --stacktrace --init-script "$init_script" applyPatches
+    ./gradlew --no-daemon --stacktrace --init-script "$init_script" createMojmapPaperclipJar
   )
 
   mapfile -t candidates < <(find "$source_dir/Folia-Server/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
@@ -243,10 +329,10 @@ materialize_pinned_folia_runtime() {
     --arg commit "$FOLIA_SOURCE_COMMIT" \
     --arg jar "$FOLIA_RUNTIME_NAME" \
     --arg sha256 "$runtime_sha" \
-    '{minecraftVersion:$minecraftVersion,sourceRepository:$repository,sourceCommit:$commit,artifact:$jar,sha256:$sha256,buildTask:"createMojmapPaperclipJar",verified:true}' \
+    '{minecraftVersion:$minecraftVersion,sourceRepository:$repository,sourceCommit:$commit,artifact:$jar,sha256:$sha256,buildTask:"createMojmapPaperclipJar",pinnedBuildDependency:"me.lucko:spark-paper:1.10.105-SNAPSHOT",pinnedBuildDependencyEvidence:"spark-paper-build.json",verified:true}' \
     > "$RUNTIME_DIR/folia-runtime.json"
 
-  rm -rf "$source_dir"
+  rm -rf "$source_dir" "$build_maven_repo" "$init_script"
 }
 
 printf '[e2e] build real ServerBridge artifacts\n'
@@ -700,6 +786,6 @@ jq -n \
   --arg fabric "$FABRIC_HEALTH" \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true},evidence:["folia-runtime.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

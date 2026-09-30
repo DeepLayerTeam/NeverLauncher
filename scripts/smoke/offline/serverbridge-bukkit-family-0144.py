@@ -122,6 +122,17 @@ require(runtime_e2e, [
     "neverlauncher-folia-bridge.jar",
     'FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"',
     'FOLIA_MINECRAFT_VERSION="1.21.1"',
+    'SPARK_SOURCE_REPOSITORY="https://github.com/lucko/spark.git"',
+    'SPARK_SOURCE_COMMIT="f06de5761a5dee3c809ab9c6ebae6f052c55f7eb"',
+    'SPARK_SOURCE_TAG="v1.10"',
+    'SPARK_PATCH_VERSION="105"',
+    'SPARK_MAVEN_VERSION="1.10.105-SNAPSHOT"',
+    'materialize_pinned_spark_paper_dependency()',
+    ':spark-paper:shadowJar',
+    'NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO',
+    'includeModule("me.lucko", "spark-paper")',
+    'spark-paper-build.json',
+    'foliaPinnedBuildDependency:true',
     'GIT_AUTHOR_NAME="NeverLauncher E2E"',
     'GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"',
     'GIT_COMMITTER_NAME="NeverLauncher E2E"',
@@ -132,7 +143,7 @@ require(runtime_e2e, [
     "bukkitFamilyRuntime:true",
 ], "real Spigot/Folia runtime E2E")
 folia_materialize_start = runtime_e2e.index("materialize_pinned_folia_runtime() {")
-folia_apply = runtime_e2e.index("./gradlew --no-daemon --stacktrace applyPatches", folia_materialize_start)
+folia_apply = runtime_e2e.index("./gradlew --no-daemon --stacktrace --init-script \"$init_script\" applyPatches", folia_materialize_start)
 for marker in (
     'export GIT_AUTHOR_NAME="NeverLauncher E2E"',
     'export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"',
@@ -142,6 +153,17 @@ for marker in (
     position = runtime_e2e.index(marker, folia_materialize_start)
     if position >= folia_apply:
         raise SystemExit("Pinned Folia Git identity is not inherited by paperweight patch subprocesses")
+
+spark_helper = runtime_e2e.index("materialize_pinned_spark_paper_dependency() {")
+spark_commit_check = runtime_e2e.index('[[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]]', spark_helper)
+spark_patch_check = runtime_e2e.index('[[ "$patch_count" == "$SPARK_PATCH_VERSION" ]]', spark_helper)
+spark_build = runtime_e2e.index('./gradlew --no-daemon --stacktrace :spark-paper:shadowJar', spark_helper)
+folia_spark_call = runtime_e2e.index("materialize_pinned_spark_paper_dependency", folia_materialize_start)
+folia_paperclip = runtime_e2e.index("createMojmapPaperclipJar", folia_materialize_start)
+if not (spark_commit_check < spark_patch_check < spark_build):
+    raise SystemExit("Pinned spark-paper source/version verification must precede its build")
+if folia_spark_call >= folia_paperclip:
+    raise SystemExit("Pinned spark-paper dependency must be materialized before Folia paperclip build")
 
 require(compose_e2e, [
     "TYPE: SPIGOT", "TYPE: FOLIA",
@@ -169,5 +191,6 @@ preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(text, ["serverbridge-bukkit-family-0144.py", "run-bukkit-family-migration-e2e.sh"], f"0.14.4 {label} wiring")
+require(ci, ["foliaPinnedBuildDependency", "spark-paper-build.json", "f06de5761a5dee3c809ab9c6ebae6f052c55f7eb", "1.10.105-SNAPSHOT"], "pinned Folia build dependency CI evidence")
 
 print(f"NeverLauncher 0.14.4 Bukkit family gate: OK ({version})")

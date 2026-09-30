@@ -692,7 +692,9 @@ jobs:
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Verify Minecraft health evidence
         run: |
-          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .checks.foliaPinnedRuntime == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy" and .health.fabric == "healthy" and .health.forge == "healthy" and .health.neoforge == "healthy"' e2e/runtime/result.json >/dev/null
+          jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .checks.foliaPinnedRuntime == true and .checks.foliaPinnedBuildDependency == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy" and .health.fabric == "healthy" and .health.forge == "healthy" and .health.neoforge == "healthy"' e2e/runtime/result.json >/dev/null
+          jq -e '.verified == true and .sourceCommit == "f06de5761a5dee3c809ab9c6ebae6f052c55f7eb" and .sourceTag == "v1.10" and .patchVersion == 105 and .mavenCoordinate == "me.lucko:spark-paper:1.10.105-SNAPSHOT" and (.sha256 | test("^[0-9a-f]{64}$"))' e2e/runtime/spark-paper-build.json >/dev/null
+          jq -e '.verified == true and .sourceCommit == "2e7bc0721af95196c85500c7bb136aeea0bc12ce" and .minecraftVersion == "1.21.1" and .pinnedBuildDependency == "me.lucko:spark-paper:1.10.105-SNAPSHOT" and .pinnedBuildDependencyEvidence == "spark-paper-build.json"' e2e/runtime/folia-runtime.json >/dev/null
           for service in velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
@@ -712,6 +714,7 @@ jobs:
             e2e/runtime/runtime-launch-minecraft.json
             e2e/runtime/health-*.json
             e2e/runtime/folia-runtime.json
+            e2e/runtime/spark-paper-build.json
             e2e/runtime/bridge-diagnostics.json
             e2e/runtime/validate-*.json
             e2e/runtime/join-*.json
