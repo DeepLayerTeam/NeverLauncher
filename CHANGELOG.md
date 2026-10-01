@@ -1,3 +1,13 @@
+## 0.16.4 — Legacy Vanilla 1.0.0–1.7.10 / Java 8
+
+`0.16.4` расширяет исполняемый legacy-контур до первых release-линий Vanilla и закрывает несовместимости pre-1.6 metadata/assets, которые не покрывал gate 0.16.3.
+
+- Обязательная pre-1.7 линия: `1.0` (CLI alias `1.0.0`), `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10`; каждый target использует exact Java 8, verified Mojang materialization и `NeverRuntime certify-vanilla`.
+- Vanilla materializer принудительно строит legacy virtual asset tree для индексов `pre-1.6`/`legacy` в `assets/virtual/<asset-index>`, очищает stale generated files перед повторной materialization и продолжает проверять SHA-1/size каждого upstream asset.
+- NeverRuntime формирует pre-1.6 `${auth_session}` в legacy session-id формате и поддерживает `${game_assets}`, направляет `${game_assets}` в фактический virtual asset tree и применяет Java 8 fallback ко всему release-диапазону 1.0–1.16.5 при отсутствии `javaVersion`.
+- `1.0.0` принимается CLI как пользовательский alias и нормализуется к metadata id `1.0`; package/evidence сохраняют фактический resolved Minecraft version.
+- Release certification 0.16.4 fail-closed требует всю pre-1.7 Java 8 линию; gate 0.16.3 для 1.7.10–1.16.5, Baseline II и Fabric/Quilt/Forge/NeoForge integration coverage сохраняются.
+
 ## 0.16.3 — Legacy Vanilla 1.7.10–1.16.5 / Java 8
 
 `0.16.3` превращает legacy Vanilla coverage из трёх representative anchors в исполняемый Java 8 release-line gate и исправляет два runtime-дефекта, обнаруженных на настоящем metadata старых клиентов.

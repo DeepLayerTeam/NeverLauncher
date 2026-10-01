@@ -229,6 +229,93 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	}
 }
 
+func TestInstallVanillaPre16AliasAndVirtualAssets(t *testing.T) {
+	clientJar := []byte("legacy-client-jar")
+	asset := []byte("legacy-sound")
+	assetHash := sha1hex(asset)
+
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	base := server.URL
+
+	assetIndex := map[string]any{
+		"objects": map[string]any{
+			"sound/random/click.ogg": map[string]any{"hash": assetHash, "size": len(asset)},
+		},
+	}
+	assetIndexBytes, _ := json.Marshal(assetIndex)
+	versionDoc := map[string]any{
+		"id":        "1.0",
+		"type":      "release",
+		"mainClass": "net.minecraft.launchwrapper.Launch",
+		"assets":    "pre-1.6",
+		"assetIndex": map[string]any{
+			"id": "pre-1.6", "url": base + "/pre-1.6.json", "sha1": sha1hex(assetIndexBytes), "size": len(assetIndexBytes),
+		},
+		"downloads": map[string]any{
+			"client": map[string]any{"url": base + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)},
+		},
+		"javaVersion":        map[string]any{"majorVersion": 8},
+		"libraries":          []any{},
+		"minecraftArguments": "${auth_player_name} ${auth_session} --gameDir ${game_directory} --assetsDir ${game_assets}",
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	manifest := MojangVersionManifest{
+		Latest:   map[string]string{"release": "1.0", "snapshot": "1.0"},
+		Versions: []MojangManifestVersion{{ID: "1.0", Type: "release", URL: base + "/1.0.json", SHA1: sha1hex(versionBytes)}},
+	}
+	manifestBytes, _ := json.Marshal(manifest)
+
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/1.0.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+	mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
+	mux.HandleFunc("/pre-1.6.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
+	mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
+
+	dir := t.TempDir()
+	stale := filepath.Join(dir, "assets", "virtual", "pre-1.6", "stale.txt")
+	if err := os.MkdirAll(filepath.Dir(stale), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stale, []byte("stale"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := installVanilla(context.Background(), vanillaInstallOptions{
+		MinecraftVersion: "1.0.0",
+		ClientDir:        dir,
+		VersionManifest:  base + "/manifest.json",
+		AssetBaseURL:     base + "/assets",
+		Targets:          []vanillaTarget{currentVanillaTarget()},
+		Workers:          2,
+		StrictUpstream:   true,
+		HTTPClient:       server.Client(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MinecraftVersion != "1.0" || result.JavaMajorVersion != 8 {
+		t.Fatalf("unexpected canonical legacy result: %+v", result)
+	}
+	virtualAsset := filepath.Join(dir, "assets", "virtual", "pre-1.6", "sound", "random", "click.ogg")
+	if got, err := os.ReadFile(virtualAsset); err != nil || !bytes.Equal(got, asset) {
+		t.Fatalf("pre-1.6 virtual asset missing/corrupt: %v %q", err, got)
+	}
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale pre-1.6 virtual asset survived rebuild: %v", err)
+	}
+	found := false
+	for _, file := range result.Files {
+		if file.Path == "assets/virtual/pre-1.6/sound/random/click.ogg" && file.Kind == "virtual-asset" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("virtual asset not bound into install evidence: %+v", result.Files)
+	}
+}
+
 func TestExtractNativeJarRejectsTraversal(t *testing.T) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

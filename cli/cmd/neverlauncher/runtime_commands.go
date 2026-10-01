@@ -359,9 +359,16 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "release-bound compatibility certification", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines",
+		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla",
 		"javaMajors":         []int{8, 16, 17, 21},
 		"ciTargets": []string{
+			"vanilla-1.0-linux-x64",
+			"vanilla-1.1-linux-x64",
+			"vanilla-1.2.5-linux-x64",
+			"vanilla-1.3.2-linux-x64",
+			"vanilla-1.4.7-linux-x64",
+			"vanilla-1.5.2-linux-x64",
+			"vanilla-1.6.4-linux-x64",
 			"vanilla-1.7.10-linux-x64",
 			"vanilla-1.8.9-linux-x64",
 			"vanilla-1.9.4-linux-x64",
@@ -385,7 +392,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":                "0.16.3 PASS дополнительно требует все основные release-линии Vanilla 1.7.10-1.16.5 на exact Java 8; каждый legacy target materialize и запускает реальный Mojang client, а 1.21.1 сохраняет integration E2E.",
+		"note":                "0.16.4 PASS дополнительно требует pre-1.7 release-линии Vanilla 1.0 (alias 1.0.0), 1.1, 1.2.5, 1.3.2, 1.4.7, 1.5.2, 1.6.4 и 1.7.10 на exact Java 8; каждый target materialize и запускает реальный Mojang client, включая legacy auth_session/game_assets path.",
 	}
 }
 

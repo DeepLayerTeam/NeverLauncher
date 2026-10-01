@@ -254,6 +254,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityLegacyVanillaPre17Required(ver) {
+		for _, minecraft := range legacyVanillaPre17Compatibility0164 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -403,5 +408,41 @@ func TestCompatibilityCertificationLegacyVanilla0163RejectsMissingReleaseLine(t 
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.3", "commit-163"); err == nil {
 		t.Fatal("0.16.3 must reject missing legacy Vanilla release line")
+	}
+}
+func TestCompatibilityCertificationLegacyVanilla0164(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.4", "commit-164")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.4", "commit-164")
+	if err != nil {
+		t.Fatalf("0.16.4 pre-1.7 Legacy Vanilla evidence must pass: %v", err)
+	}
+	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8"
+	if certification.Policy != wantPolicy {
+		t.Fatalf("unexpected policy: %s", certification.Policy)
+	}
+	for _, minecraft := range legacyVanillaPre17Compatibility0164 {
+		if !slices.Contains(certification.VanillaVersions, minecraft) {
+			t.Fatalf("pre-1.7 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+		}
+	}
+}
+
+func TestCompatibilityCertificationLegacyVanilla0164RejectsMissingReleaseLine(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.4", "commit-164")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.2.5" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.4", "commit-164"); err == nil {
+		t.Fatal("0.16.4 must reject missing pre-1.7 Vanilla release line")
 	}
 }

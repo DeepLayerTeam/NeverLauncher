@@ -489,7 +489,29 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 	}
 
-	if assets.Virtual || assets.MapToResources {
+	virtualAssets := assets.Virtual || isLegacyVirtualAssetIndex(assetIndexID)
+	if virtualAssets || assets.MapToResources {
+		virtualIndexID := strings.TrimSpace(assetIndexID)
+		if virtualAssets {
+			if err := validateLegacyAssetIndexID(virtualIndexID); err != nil {
+				return vanillaInstallResult{}, err
+			}
+			virtualRootRel := filepath.ToSlash(filepath.Join("assets", "virtual", virtualIndexID))
+			virtualRoot, err := secureClientDestination(opts.ClientDir, virtualRootRel)
+			if err != nil {
+				return vanillaInstallResult{}, err
+			}
+			// assets/virtual is generated launcher output. Rebuild the selected index
+			// atomically from verified objects so stale files from another old client
+			// cannot leak into a package or alter pre-1.7 runtime behavior.
+			if err := os.RemoveAll(virtualRoot); err != nil {
+				return vanillaInstallResult{}, fmt.Errorf("virtual assets cleanup %s: %w", virtualIndexID, err)
+			}
+			if err := os.MkdirAll(virtualRoot, 0o755); err != nil {
+				return vanillaInstallResult{}, fmt.Errorf("virtual assets directory %s: %w", virtualIndexID, err)
+			}
+		}
+
 		names := make([]string, 0, len(assets.Objects))
 		for name := range assets.Objects {
 			names = append(names, name)
@@ -498,8 +520,8 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		for _, name := range names {
 			object := assets.Objects[name]
 			source := filepath.Join(opts.ClientDir, "assets", "objects", object.Hash[:2], object.Hash)
-			if assets.Virtual {
-				destRel := filepath.ToSlash(filepath.Join("assets", "virtual", "legacy", filepath.FromSlash(name)))
+			if virtualAssets {
+				destRel := filepath.ToSlash(filepath.Join("assets", "virtual", virtualIndexID, filepath.FromSlash(name)))
 				dest, err := secureClientDestination(opts.ClientDir, destRel)
 				if err != nil {
 					return vanillaInstallResult{}, err
@@ -511,7 +533,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				if err != nil {
 					return vanillaInstallResult{}, fmt.Errorf("virtual asset %s hash: %w", name, err)
 				}
-				downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("assets", "virtual", "legacy", name)), Kind: "virtual-asset", Size: size, SHA1: object.Hash, SHA256: sum})
+				downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: destRel, Kind: "virtual-asset", Size: size, SHA1: object.Hash, SHA256: sum})
 			}
 			if assets.MapToResources {
 				destRel := filepath.ToSlash(filepath.Join("resources", filepath.FromSlash(name)))
@@ -900,14 +922,36 @@ func validateRemoteURL(raw string) error {
 }
 
 func resolveRequestedMinecraftVersion(manifest MojangVersionManifest, requested string) string {
-	switch strings.ToLower(strings.TrimSpace(requested)) {
+	normalized := strings.TrimSpace(requested)
+	switch strings.ToLower(normalized) {
 	case "", "latest", "latest-release":
 		return manifest.Latest["release"]
 	case "latest-snapshot", "snapshot":
 		return manifest.Latest["snapshot"]
+	case "1.0.0":
+		// Mojang's canonical first release id is "1.0". Accept the common
+		// semantic-version spelling without fabricating a non-existent version.
+		return "1.0"
 	default:
-		return strings.TrimSpace(requested)
+		return normalized
 	}
+}
+
+func isLegacyVirtualAssetIndex(id string) bool {
+	switch strings.ToLower(strings.TrimSpace(id)) {
+	case "pre-1.6", "legacy":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateLegacyAssetIndexID(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" || strings.ContainsAny(id, `/\`) || id == "." || id == ".." || strings.ContainsRune(id, '\x00') {
+		return fmt.Errorf("небезопасный legacy asset index id: %q", id)
+	}
+	return nil
 }
 
 func parseVanillaTargets(raw string) ([]vanillaTarget, error) {

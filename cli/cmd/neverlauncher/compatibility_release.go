@@ -111,6 +111,10 @@ var legacyVanillaJava8Compatibility0163 = []string{
 	"1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5",
 }
 
+var legacyVanillaPre17Compatibility0164 = []string{
+	"1.0", "1.1", "1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10",
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -138,6 +142,10 @@ func compatibilityVanillaBaselineIIRequired(ver string) bool {
 
 func compatibilityLegacyVanillaJava8Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 3)
+}
+
+func compatibilityLegacyVanillaPre17Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 4)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -283,6 +291,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityLegacyVanillaPre17Required(ver) {
+			for _, minecraft := range legacyVanillaPre17Compatibility0164 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.16.4 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != 8 || target.Scope != "client" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s pre-1.7 mismatch: expected Java 8 scope=client, got Java %d scope=%s", minecraft, target.JavaMajor, target.Scope)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -395,6 +414,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityLegacyVanillaJava8Required(ver) {
 		policy += ";legacy-vanilla-1.7.10-1.16.5-java8"
+	}
+	if compatibilityLegacyVanillaPre17Required(ver) {
+		policy += ";legacy-vanilla-1.0-1.7.10-java8"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

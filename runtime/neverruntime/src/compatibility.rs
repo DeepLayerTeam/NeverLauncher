@@ -329,17 +329,21 @@ pub async fn resolve_compatibility(
         .collect::<Result<Vec<_>, _>>()?;
     let classpath_value = classpath_absolute.join(if cfg!(windows) { ";" } else { ":" });
     let library_directory = safe_join(root, "libraries")?.to_string_lossy().to_string();
+    let game_assets_directory = legacy_game_assets_directory(&context.assets_directory, &merged.assets, &assets_index)?;
+    let auth_session = legacy_auth_session(&context.access_token, &context.uuid);
 
     let mut variables = HashMap::from([
         ("auth_player_name".to_string(), context.username.clone()),
         ("version_name".to_string(), merged.id.clone()),
         ("game_directory".to_string(), context.game_directory.clone()),
         ("assets_root".to_string(), context.assets_directory.clone()),
-        ("game_assets".to_string(), context.assets_directory.clone()),
+        ("game_assets".to_string(), game_assets_directory),
         ("assets_index_name".to_string(), assets_index.clone()),
         ("auth_uuid".to_string(), context.uuid.clone()),
+        ("uuid".to_string(), context.uuid.clone()),
         ("auth_access_token".to_string(), context.access_token.clone()),
-        ("auth_session".to_string(), context.access_token.clone()),
+        ("accessToken".to_string(), context.access_token.clone()),
+        ("auth_session".to_string(), auth_session),
         // Legacy launcher metadata (notably 1.7.x-1.12.x) passes this
         // placeholder even for offline profiles. The official launcher uses
         // a JSON object; an empty object is the correct offline value.
@@ -602,10 +606,34 @@ fn is_legacy_vanilla_java8_release(version: &str) -> bool {
     } else {
         0
     };
-    if major != 1 {
-        return false;
+    major == 1 && (minor, patch) <= (16, 5)
+}
+
+fn legacy_auth_session(access_token: &str, uuid: &str) -> String {
+    let token = access_token.trim();
+    if token.is_empty() {
+        return "-".to_string();
     }
-    (minor, patch) >= (7, 10) && (minor, patch) <= (16, 5)
+    if token.starts_with("token:") {
+        return token.to_string();
+    }
+    format!("token:{token}:{}", uuid.trim())
+}
+
+fn legacy_game_assets_directory(assets_directory: &str, assets_name: &str, assets_index: &str) -> Result<String, String> {
+    let legacy_id = [assets_name, assets_index]
+        .into_iter()
+        .map(str::trim)
+        .find(|value| matches!(value.to_ascii_lowercase().as_str(), "pre-1.6" | "legacy"));
+    let Some(id) = legacy_id else {
+        return Ok(assets_directory.to_string());
+    };
+    let id = safe_component(id)?;
+    Ok(Path::new(assets_directory)
+        .join("virtual")
+        .join(id)
+        .to_string_lossy()
+        .to_string())
 }
 
 fn native_classifier<'a>(library: &'a Library, environment: &CompatibilityEnvironment) -> Option<&'a String> {
@@ -1066,6 +1094,51 @@ mod tests {
         assert!(!result.classpath.iter().any(|value| value.ends_with("lwjgl-platform-2.9.1.jar")));
         assert_eq!(result.natives.len(), 1);
         let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn pre16_metadata_resolves_legacy_session_assets_and_java8() {
+        let root = temp_root("pre16-legacy-runtime");
+        stdfs::create_dir_all(root.join("versions/1.5.2")).unwrap();
+        stdfs::create_dir_all(root.join("assets/virtual/pre-1.6")).unwrap();
+        stdfs::write(
+            root.join("versions/1.5.2/1.5.2.json"),
+            r#"{
+              "id":"1.5.2","type":"release","mainClass":"net.minecraft.launchwrapper.Launch","assets":"pre-1.6",
+              "assetIndex":{"id":"pre-1.6","sha1":"asset","size":1,"url":"https://example.invalid/pre-1.6.json"},
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example.invalid/client.jar"}},
+              "libraries":[{"name":"net.minecraft:launchwrapper:1.5","downloads":{"artifact":{"path":"net/minecraft/launchwrapper/1.5/launchwrapper-1.5.jar","sha1":"aa","size":1,"url":"https://example.invalid/launchwrapper.jar"}}}],
+              "minecraftArguments":"${auth_player_name} ${auth_session} --gameDir ${game_directory} --assetsDir ${game_assets}"
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "LegacyPlayer".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline-session".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.5.2", None, &ctx).await.expect("resolve pre-1.6");
+        assert_eq!(result.java_major_version, Some(8));
+        assert_eq!(result.main_class, "net.minecraft.launchwrapper.Launch");
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "LegacyPlayer" && pair[1] == "token:offline-session:00000000-0000-0000-0000-000000000000"));
+        let expected_assets = root.join("assets/virtual/pre-1.6").to_string_lossy().to_string();
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && pair[1] == expected_assets));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn legacy_auth_session_uses_session_id_format_and_is_idempotent() {
+        assert_eq!(legacy_auth_session("access", "profile"), "token:access:profile");
+        assert_eq!(legacy_auth_session("token:access:profile", "ignored"), "token:access:profile");
+        assert_eq!(legacy_auth_session("", "profile"), "-");
+    }
+
+    #[test]
+    fn java8_fallback_covers_first_release_through_1165() {
+        for version in ["1.0", "1.1", "1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10", "1.16.5"] {
+            assert!(is_legacy_vanilla_java8_release(version), "{version}");
+        }
+        assert!(!is_legacy_vanilla_java8_release("1.17"));
     }
 
     #[test]

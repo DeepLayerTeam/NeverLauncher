@@ -37,6 +37,10 @@ LEGACY_VANILLA_JAVA8_0163: tuple[str, ...] = (
     "1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5",
 )
 
+LEGACY_VANILLA_PRE17_0164: tuple[str, ...] = (
+    "1.0", "1.1", "1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10",
+)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -59,6 +63,9 @@ def vanilla_baseline_ii_required() -> bool:
 
 def legacy_vanilla_java8_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 3)
+
+def legacy_vanilla_pre17_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 4)
 
 
 def load_json(path: Path) -> Any:
@@ -99,6 +106,13 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Legacy Vanilla 0.16.3 missing required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(f"Legacy Vanilla {minecraft}: 0.16.3 requires Java 8 scope=client")
+    if legacy_vanilla_pre17_required():
+        for minecraft in LEGACY_VANILLA_PRE17_0164:
+            target = required_vanilla.get(minecraft)
+            if target is None:
+                die(f"Legacy Vanilla 0.16.4 missing required Minecraft {minecraft}")
+            if target["javaMajor"] != 8 or target["scope"] != "client":
+                die(f"Legacy Vanilla {minecraft}: 0.16.4 requires Java 8 scope=client")
 
 
 def load_targets(path: Path) -> dict[str, Any]:

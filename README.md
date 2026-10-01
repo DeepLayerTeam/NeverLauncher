@@ -4,15 +4,17 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Legacy Vanilla / 0.16.3**. Он доводит Java 8 compatibility до исполняемого release-line покрытия Vanilla 1.7.10–1.16.5 и сохраняет Baseline II для более новых Java/Minecraft.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Legacy Vanilla / 0.16.4**. Он расширяет исполняемое Java 8 compatibility-покрытие Vanilla до первых release-линий (`1.0.0` alias → `1.0`) и сохраняет gate 0.16.3 для 1.7.10–1.16.5 вместе с Baseline II для более новых Java/Minecraft.
 
-## Legacy Vanilla — 0.16.3
+## Legacy Vanilla — 0.16.4
 
-`0.16.3` сертифицирует реальные Mojang-клиенты основных release-линий `1.7.10`, `1.8.9`, `1.9.4`, `1.10.2`, `1.11.2`, `1.12.2`, `1.13.2`, `1.14.4`, `1.15.2`, `1.16.5` на exact Java 8. Materializer корректно обрабатывает classifier-only native libraries старого LWJGL/JInput без синтетического classpath JAR, а NeverRuntime поддерживает legacy `${user_properties}`/`${profile_properties}` и возвращает Java 8 как resolved runtime для этого release-диапазона при отсутствии `javaVersion`. Каждый legacy target выполняет verified materialization, package verify, Compatibility Engine resolution и фактический запуск Minecraft под Xvfb.
+`0.16.4` добавляет рабочую pre-1.7 линию `1.0` (`1.0.0` принимается CLI как alias), `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10` на exact Java 8. Materializer строит проверяемые `pre-1.6`/`legacy` virtual assets в `assets/virtual/<asset-index>` и очищает stale generated files, а NeverRuntime формирует legacy session id для `${auth_session}` и разрешает `${game_assets}` и использует фактический virtual-assets path. Java 8 fallback теперь покрывает весь release-диапазон 1.0–1.16.5 без `javaVersion`. Каждый target проходит verified materialization, package verify, Compatibility Engine resolution и фактический запуск Minecraft под Xvfb.
+
+`0.16.3` release-line gate `1.7.10`–`1.16.5` сохранён: classifier-only native libraries старого LWJGL/JInput не превращаются в синтетический classpath JAR, а `${user_properties}`/`${profile_properties}` продолжают поддерживаться.
 
 ## Vanilla Compatibility Baseline II — 0.16.2
 
-`0.16.2` ввёл многоверсионную certification model: восемь обязательных Vanilla anchors (`1.7.10`, `1.12.2`, `1.16.5`, `1.17.1`, `1.18.2`, `1.20.4`, `1.20.6`, `1.21.1`) привязаны к exact Java major. В 0.16.3 этот baseline сохранён и дополнен полным Java 8 release-line gate.
+`0.16.2` ввёл многоверсионную certification model: восемь обязательных Vanilla anchors (`1.7.10`, `1.12.2`, `1.16.5`, `1.17.1`, `1.18.2`, `1.20.4`, `1.20.6`, `1.21.1`) привязаны к exact Java major. В 0.16.3 этот baseline дополнен Java 8 release-line gate 1.7.10–1.16.5, а 0.16.4 добавляет pre-1.7 release-line gate.
 
 ## CI Recovery — 0.16.1
 
@@ -422,7 +424,7 @@ NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 
 ## Публичная CI Compatibility Matrix
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица проверяет Linux x86_64: пятнадцать Vanilla targets от 1.7.10 до 1.21.1 и Fabric/Quilt/Forge/NeoForge 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица проверяет Linux x86_64: двадцать два Vanilla targets от 1.0 до 1.21.1 и Fabric/Quilt/Forge/NeoForge 1.21.1. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
 
 Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
 
