@@ -188,6 +188,28 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Legacy Vanilla 0.16.4", proc.stderr)
 
+    def test_validate_rejects_missing_complete_legacy_grid_0170v1(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.8.8"]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Legacy Vanilla 0.17.0v1", proc.stderr)
+
+    def test_validate_rejects_wrong_java_complete_legacy_grid_0170v1(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "vanilla" and target["minecraft"] == "1.16.4":
+                    target["javaMajor"] = 17
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("0.17.0v1 requires Java 8", proc.stderr)
+
     def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"

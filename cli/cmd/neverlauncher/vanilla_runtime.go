@@ -31,6 +31,36 @@ const (
 	defaultMojangLibraryBase     = "https://libraries.minecraft.net"
 )
 
+// 0.17.0v1 expands the actual-client Legacy Vanilla grid rather than treating
+// the old line as a handful of representative anchors. These IDs are consumed
+// by the materializer/runtime/release gates, so removing one silently is not a
+// supported configuration.
+var legacyVanilla0170v1Releases = []string{
+	"1.2.1", "1.2.2", "1.2.3", "1.2.4",
+	"1.3.1",
+	"1.4.2", "1.4.4", "1.4.5", "1.4.6",
+	"1.5", "1.5.1",
+	"1.6.1", "1.6.2",
+	"1.7.2", "1.7.3", "1.7.4", "1.7.5", "1.7.6", "1.7.7", "1.7.8", "1.7.9",
+	"1.8", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.8.5", "1.8.6", "1.8.7", "1.8.8",
+	"1.9", "1.9.1", "1.9.2", "1.9.3",
+	"1.10", "1.10.1",
+	"1.11", "1.11.1",
+	"1.12", "1.12.1",
+	"1.13", "1.13.1",
+	"1.14", "1.14.1", "1.14.2", "1.14.3",
+	"1.15", "1.15.1",
+	"1.16", "1.16.1", "1.16.2", "1.16.3", "1.16.4",
+}
+
+var legacyVanilla0170v1ReleaseSet = func() map[string]struct{} {
+	out := make(map[string]struct{}, len(legacyVanilla0170v1Releases))
+	for _, release := range legacyVanilla0170v1Releases {
+		out[release] = struct{}{}
+	}
+	return out
+}()
+
 type vanillaTarget struct {
 	OS   string `json:"os"`
 	Arch string `json:"arch"`
@@ -344,6 +374,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
 	if err != nil {
+		return vanillaInstallResult{}, err
+	}
+	if err := validateVanillaLaunchMetadata(metadata); err != nil {
 		return vanillaInstallResult{}, err
 	}
 	clientDownload, ok := metadata.Downloads["client"]
@@ -1490,6 +1523,18 @@ func isExcludedNative(name string, excludes []string) bool {
 	return false
 }
 
+func validateVanillaLaunchMetadata(v vanillaVersionMetadata) error {
+	if len(v.Arguments.Game) == 0 && strings.TrimSpace(v.MinecraftArgs) == "" {
+		return fmt.Errorf("Minecraft %s version.json не содержит исполняемые arguments.game или minecraftArguments", strings.TrimSpace(v.ID))
+	}
+	return nil
+}
+
+func isLegacyVanilla0170v1Release(version string) bool {
+	_, ok := legacyVanilla0170v1ReleaseSet[strings.TrimSpace(version)]
+	return ok
+}
+
 func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, error) {
 	metadataMajor := 0
 	if raw, ok := v.JavaVersion["majorVersion"]; ok {
@@ -1508,6 +1553,12 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 				metadataMajor = value
 			}
 		}
+	}
+	if isLegacyVanillaJava8Release(minecraftVersion) {
+		if metadataMajor != 0 && metadataMajor != 8 {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: Legacy Vanilla требует Java 8, got %d", minecraftVersion, metadataMajor)
+		}
+		return 8, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
 		if metadataMajor == 0 {
@@ -1539,8 +1590,15 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	if metadataMajor > 0 {
 		return metadataMajor, nil
 	}
-	// Old launcher metadata predates javaVersion; Java 8 is the safe compatibility default.
+	// Unknown historical metadata outside the certified Legacy Vanilla release
+	// range keeps the old compatibility fallback, but certified 1.x releases are
+	// handled above by the exact Java 8 policy.
 	return 8, nil
+}
+
+func isLegacyVanillaJava8Release(version string) bool {
+	major, minor, patch, ok := parseMinecraftReleaseVersion(version)
+	return ok && major == 1 && (minor < 16 || (minor == 16 && patch <= 5))
 }
 
 func expectedJavaMajorForVanilla0166(version string) (int, bool) {

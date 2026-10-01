@@ -384,6 +384,106 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 	}
 }
 
+func TestLegacyVanilla0170v1GridIsExactJava8(t *testing.T) {
+	if len(legacyVanilla0170v1Releases) != 53 {
+		t.Fatalf("legacy 0.17.0v1 release grid=%d, want 53", len(legacyVanilla0170v1Releases))
+	}
+	for _, minecraftVersion := range legacyVanilla0170v1Releases {
+		t.Run(minecraftVersion, func(t *testing.T) {
+			if !isLegacyVanilla0170v1Release(minecraftVersion) {
+				t.Fatalf("%s missing from exact 0.17.0v1 release set", minecraftVersion)
+			}
+			got, err := javaMajorFromVersion(minecraftVersion, MojangVersionFile{})
+			if err != nil || got != 8 {
+				t.Fatalf("Minecraft %s Java=%d err=%v, want exact Java 8 fallback", minecraftVersion, got, err)
+			}
+			got, err = javaMajorFromVersion(minecraftVersion, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(8)}})
+			if err != nil || got != 8 {
+				t.Fatalf("Minecraft %s explicit Java 8 rejected: major=%d err=%v", minecraftVersion, got, err)
+			}
+			if _, err := javaMajorFromVersion(minecraftVersion, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(17)}}); err == nil {
+				t.Fatalf("Minecraft %s accepted tampered Java 17 metadata", minecraftVersion)
+			}
+		})
+	}
+	for _, outside := range []string{"1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2", "1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5"} {
+		if isLegacyVanilla0170v1Release(outside) {
+			t.Fatalf("anchor %s unexpectedly classified as newly added 0.17.0v1 release", outside)
+		}
+	}
+}
+
+func TestInstallVanilla0170v1MaterializesLegacyReleaseWithoutJavaVersion(t *testing.T) {
+	clientJar := []byte("legacy-1.2.1-client")
+	assetIndexBytes := []byte(`{"objects":{}}`)
+
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	base := server.URL
+
+	versionDoc := map[string]any{
+		"id":        "1.2.1",
+		"type":      "release",
+		"mainClass": "net.minecraft.client.Minecraft",
+		"assets":    "pre-1.6",
+		"assetIndex": map[string]any{
+			"id": "pre-1.6", "url": base + "/pre-1.6.json", "sha1": sha1hex(assetIndexBytes), "size": len(assetIndexBytes),
+		},
+		"downloads": map[string]any{
+			"client": map[string]any{"url": base + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)},
+		},
+		"libraries":          []any{},
+		"minecraftArguments": "${auth_player_name} ${auth_session} --gameDir ${game_directory} --assetsDir ${game_assets}",
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	manifest := MojangVersionManifest{
+		Latest:   map[string]string{"release": "1.2.1"},
+		Versions: []MojangManifestVersion{{ID: "1.2.1", Type: "release", URL: base + "/1.2.1.json", SHA1: sha1hex(versionBytes)}},
+	}
+	manifestBytes, _ := json.Marshal(manifest)
+
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/1.2.1.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+	mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
+	mux.HandleFunc("/pre-1.6.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
+
+	dir := t.TempDir()
+	result, err := installVanilla(context.Background(), vanillaInstallOptions{
+		MinecraftVersion: "1.2.1",
+		ClientDir:        dir,
+		VersionManifest:  base + "/manifest.json",
+		AssetBaseURL:     base + "/assets",
+		Targets:          []vanillaTarget{currentVanillaTarget()},
+		Workers:          2,
+		StrictUpstream:   true,
+		HTTPClient:       server.Client(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MinecraftVersion != "1.2.1" || result.JavaMajorVersion != 8 {
+		t.Fatalf("unexpected 0.17.0v1 legacy result: %+v", result)
+	}
+	for _, rel := range []string{"versions/1.2.1/1.2.1.json", "versions/1.2.1/1.2.1.jar", "assets/indexes/pre-1.6.json"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Fatalf("missing materialized %s: %v", rel, err)
+		}
+	}
+}
+
+func TestValidateVanillaLaunchMetadataRejectsNonExecutableProfile(t *testing.T) {
+	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.8.8"}}); err == nil {
+		t.Fatal("legacy metadata without minecraftArguments/arguments.game was accepted")
+	}
+	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.8.8", MinecraftArgs: "--username ${auth_player_name}"}}); err != nil {
+		t.Fatalf("legacy minecraftArguments rejected: %v", err)
+	}
+	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.16.4", Arguments: MojangArguments{Game: []any{"--username", "${auth_player_name}"}}}}); err != nil {
+		t.Fatalf("modern arguments.game rejected: %v", err)
+	}
+}
+
 func TestJavaMajorFromVersionEnforcesJava21VanillaRange(t *testing.T) {
 	versions := []string{
 		"1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4",

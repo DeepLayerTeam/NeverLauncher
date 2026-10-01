@@ -279,6 +279,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityLegacyVanilla0170v1Required(ver) {
+		for _, minecraft := range legacyVanilla0170v1Releases {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -800,7 +805,10 @@ func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
 	if !strings.Contains(certification.Policy, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base") {
 		t.Fatalf("0.17.0 policy does not bind GA JRE base: %s", certification.Policy)
 	}
-	if len(certification.VanillaVersions) < 40 {
+	if !strings.Contains(certification.Policy, "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8") {
+		t.Fatalf("0.17.0v1 policy does not bind complete legacy grid: %s", certification.Policy)
+	}
+	if len(certification.VanillaVersions) < 93 {
 		t.Fatalf("0.17.0 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
 	}
 	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21 25]" {
@@ -808,6 +816,26 @@ func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
 	}
 	if len(certification.JREBuilds) == 0 {
 		t.Fatal("0.17.0 GA certification must contain concrete JRE builds")
+	}
+}
+
+func TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.8.8" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil || !strings.Contains(err.Error(), "0.17.0v1") {
+		t.Fatalf("0.17.0v1 must reject missing 1.8.8 target, got %v", err)
 	}
 }
 

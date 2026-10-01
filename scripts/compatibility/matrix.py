@@ -59,6 +59,24 @@ JAVA25_VANILLA_0168: tuple[str, ...] = (
     "26.1", "26.1.1", "26.1.2", "26.3",
 )
 
+LEGACY_VANILLA_0170V1: tuple[str, ...] = (
+    "1.2.1", "1.2.2", "1.2.3", "1.2.4",
+    "1.3.1",
+    "1.4.2", "1.4.4", "1.4.5", "1.4.6",
+    "1.5", "1.5.1",
+    "1.6.1", "1.6.2",
+    "1.7.2", "1.7.3", "1.7.4", "1.7.5", "1.7.6", "1.7.7", "1.7.8", "1.7.9",
+    "1.8", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.8.5", "1.8.6", "1.8.7", "1.8.8",
+    "1.9", "1.9.1", "1.9.2", "1.9.3",
+    "1.10", "1.10.1",
+    "1.11", "1.11.1",
+    "1.12", "1.12.1",
+    "1.13", "1.13.1",
+    "1.14", "1.14.1", "1.14.2", "1.14.3",
+    "1.15", "1.15.1",
+    "1.16", "1.16.1", "1.16.2", "1.16.3", "1.16.4",
+)
+
 CROSS_PLATFORM_VANILLA_0169: tuple[tuple[str, str], ...] = (
     ("linux", "x86_64"),
     ("linux", "aarch64"),
@@ -76,8 +94,8 @@ ACTUAL_CLIENT_E2E_II_01610: dict[str, int] = {
     "26.3": 25,
 }
 
-COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 40
-COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 45
+COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 93
+COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 98
 COMPATIBILITY_II_GA_JAVA_MAJORS = {8, 16, 17, 21, 25}
 
 
@@ -128,6 +146,10 @@ def actual_client_e2e_ii_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 10)
 
 def compatibility_ii_ga_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
+
+
+def legacy_vanilla_0170v1_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
 
 
@@ -222,6 +244,13 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = matching[0]
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(f"Actual Client E2E II {minecraft}: requires Java {java_major} scope=client on linux/x86_64")
+    if legacy_vanilla_0170v1_required():
+        for minecraft in LEGACY_VANILLA_0170V1:
+            target = required_vanilla.get(minecraft)
+            if target is None:
+                die(f"Legacy Vanilla 0.17.0v1 missing required Minecraft {minecraft}")
+            if target["javaMajor"] != 8 or target["scope"] != "client":
+                die(f"Legacy Vanilla {minecraft}: 0.17.0v1 requires Java 8 scope=client")
     if compatibility_ii_ga_required():
         required_vanilla_rows = [target for target in targets if target["loader"] == "vanilla" and target["required"]]
         unique_versions = {target["minecraft"] for target in required_vanilla_rows}

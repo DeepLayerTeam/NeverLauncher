@@ -1,3 +1,12 @@
+## 0.17.0v1 — Complete Legacy Vanilla grid
+
+- Expanded the production Vanilla compatibility base with 53 exact Legacy Vanilla releases requested for `1.2.1`–`1.16.4`; the certified GA matrix now contains 98 required Vanilla targets covering 93 unique release IDs.
+- Vanilla materialization now fail-closed enforces Java 8 for official 1.x releases through `1.16.5`, including metadata that omits `javaVersion`, and rejects a conflicting declared Java major instead of silently selecting it.
+- Materialization rejects version metadata that contains neither executable modern `arguments.game` nor legacy `minecraftArguments`, preventing a nominally installed but non-launchable client.
+- NeverRuntime independently applies the same Legacy Java 8 rule and executable-argument validation before launch, so bypassing the installer cannot weaken the runtime policy.
+- Compatibility aggregation, release certification, offline GA gate and repository policy require the complete 53-release v1 grid; removing a listed release or changing its Java/scope/platform attributes fails certification.
+- Added regression coverage for the exact 53-release set, Java-major tampering, missing launch arguments and missing release targets. Product semantic version remains `0.17.0`; `v1` denotes this compatibility maintenance revision.
+
 ## 0.17.0 — Minecraft Compatibility II GA
 
 - Compatibility II promoted to GA with 45 required Vanilla targets covering 40 unique release IDs and exact Java 8/16/17/21/25 requirements; existing loader-family, cross-platform, matching-server and hardening gates remain mandatory.

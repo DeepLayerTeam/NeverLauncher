@@ -372,6 +372,12 @@ pub async fn resolve_compatibility(
     } else {
         resolve_arguments(&merged.arguments.game, &environment)?
     };
+    if raw_game_args.is_empty() {
+        return Err(format!(
+            "Minecraft {} metadata does not contain executable arguments.game or minecraftArguments",
+            merged.id
+        ));
+    }
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
     let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     if raw_jvm_args.is_empty() {
@@ -590,6 +596,16 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         .map(|value| value.major_version)
         .filter(|value| *value > 0);
 
+    if is_legacy_vanilla_java8_release(&merged.id) {
+        return match metadata_major {
+            Some(8) | None => Ok(Some(8)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: Legacy Vanilla requires Java 8, got {}",
+                merged.id, actual
+            )),
+        };
+    }
+
     if let Some(expected) = expected_java_major_for_vanilla_0166(&merged.id) {
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
@@ -632,13 +648,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         };
     }
 
-    if metadata_major.is_some() {
-        return Ok(metadata_major);
-    }
-    if is_legacy_vanilla_java8_release(&merged.id) {
-        return Ok(Some(8));
-    }
-    Ok(None)
+    Ok(metadata_major)
 }
 
 fn expected_java_major_for_vanilla_0166(version: &str) -> Option<u32> {
@@ -696,19 +706,10 @@ fn parse_minecraft_release_version(version: &str) -> Option<(u32, u32, u32)> {
 }
 
 fn is_legacy_vanilla_java8_release(version: &str) -> bool {
-    let parts = version.split('.').collect::<Vec<_>>();
-    if parts.len() < 2 || parts.len() > 3 {
-        return false;
-    }
-    let Ok(major) = parts[0].parse::<u32>() else { return false; };
-    let Ok(minor) = parts[1].parse::<u32>() else { return false; };
-    let patch = if parts.len() == 3 {
-        let Ok(value) = parts[2].parse::<u32>() else { return false; };
-        value
-    } else {
-        0
-    };
-    major == 1 && (minor, patch) <= (16, 5)
+    matches!(
+        parse_minecraft_release_version(version),
+        Some((1, minor, patch)) if (minor, patch) <= (16, 5)
+    )
 }
 
 fn legacy_auth_session(access_token: &str, uuid: &str) -> String {
@@ -1279,6 +1280,19 @@ mod tests {
             assert!(is_legacy_vanilla_java8_release(version), "{version}");
         }
         assert!(!is_legacy_vanilla_java8_release("1.17"));
+    }
+
+    #[test]
+    fn legacy_java8_policy_rejects_tampered_java_metadata() {
+        let mut merged = MergedVersion {
+            id: "1.16.4".to_string(),
+            ..MergedVersion::default()
+        };
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(8));
+        merged.java_version = Some(JavaVersion { major_version: 8 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(8));
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&merged).is_err());
     }
 
     #[test]

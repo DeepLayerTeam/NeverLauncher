@@ -20,10 +20,30 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 targets = json.loads(read("compatibility/targets.json"))
 vanilla = [row for row in targets["targets"] if row.get("required") and row.get("loader") == "vanilla"]
-if len(vanilla) < 45 or len({row["minecraft"] for row in vanilla}) < 40:
-    raise SystemExit("GA Vanilla base is narrower than 45 targets / 40 unique releases")
+if len(vanilla) < 98 or len({row["minecraft"] for row in vanilla}) < 93:
+    raise SystemExit("GA 0.17.0v1 Vanilla base is narrower than 98 targets / 93 unique releases")
 if {8,16,17,21,25} - {row["javaMajor"] for row in vanilla}:
     raise SystemExit("GA JRE base does not cover Java 8/16/17/21/25")
+
+legacy_0170v1 = {
+    "1.2.1", "1.2.2", "1.2.3", "1.2.4", "1.3.1",
+    "1.4.2", "1.4.4", "1.4.5", "1.4.6", "1.5", "1.5.1", "1.6.1", "1.6.2",
+    "1.7.2", "1.7.3", "1.7.4", "1.7.5", "1.7.6", "1.7.7", "1.7.8", "1.7.9",
+    "1.8", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.8.5", "1.8.6", "1.8.7", "1.8.8",
+    "1.9", "1.9.1", "1.9.2", "1.9.3", "1.10", "1.10.1", "1.11", "1.11.1", "1.12", "1.12.1",
+    "1.13", "1.13.1", "1.14", "1.14.1", "1.14.2", "1.14.3", "1.15", "1.15.1",
+    "1.16", "1.16.1", "1.16.2", "1.16.3", "1.16.4",
+}
+legacy_rows = {
+    row["minecraft"]: row for row in vanilla
+    if row["minecraft"] in legacy_0170v1 and row["os"] == "linux" and row["arch"] == "x86_64"
+}
+missing_legacy = sorted(legacy_0170v1 - set(legacy_rows))
+if missing_legacy:
+    raise SystemExit(f"GA 0.17.0v1 complete Legacy Vanilla grid missing: {missing_legacy}")
+for minecraft, row in legacy_rows.items():
+    if row["javaMajor"] != 8 or row["scope"] != "client":
+        raise SystemExit(f"GA 0.17.0v1 Legacy Vanilla {minecraft} must be Java 8 scope=client")
 
 require(read("scripts/compatibility/certify-jre.py"), [
     "executableSha256", "java.runtime.version", "java.vendor", "java.vm.name", "java.home",
@@ -33,13 +53,20 @@ require(read("e2e/scripts/run-compatibility-case.sh"), [
     "certify-jre.py", '"jreCertified"', '"jreVendor"', '"jreRuntimeVersion"', '"jreExecutableSha256"',
 ], "compatibility target JRE binding")
 require(read("scripts/compatibility/matrix.py"), [
-    "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "jreCertified", "build_ga_jre_base", '"jreBase"',
+    "LEGACY_VANILLA_0170V1", "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "jreCertified", "build_ga_jre_base", '"jreBase"',
 ], "GA matrix aggregation")
 require(read("cli/cmd/neverlauncher/compatibility_release.go"), [
-    "compatibilityIIGa0170Required", "JREExecutableSHA256", "JREBuilds",
+    "compatibilityLegacyVanilla0170v1Required", "compatibilityIIGa0170Required", "JREExecutableSHA256", "JREBuilds",
+    "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8",
     "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base",
 ], "GA release certification")
+require(read("cli/cmd/neverlauncher/vanilla_runtime.go"), [
+    "legacyVanilla0170v1Releases", "isLegacyVanillaJava8Release", "validateVanillaLaunchMetadata",
+], "GA 0.17.0v1 Legacy Vanilla materializer")
+require(read("runtime/neverruntime/src/compatibility.rs"), [
+    "Legacy Vanilla requires Java 8", "metadata does not contain executable arguments.game or minecraftArguments",
+], "GA 0.17.0v1 NeverRuntime legacy execution")
 require(read(".github/workflows/compatibility.yml"), ["java-runtime.json", "run-compatibility-case.sh"], "GA CI evidence")
 require(read("scripts/smoke/offline/compatibility-matrix.sh"), ["test_certify_jre.py"], "GA preflight regression")
 
-print(f"Minecraft Compatibility II GA 0.17.0 gate: OK ({len(vanilla)} Vanilla targets, {len({row['minecraft'] for row in vanilla})} releases, Java 8/16/17/21/25)")
+print(f"Minecraft Compatibility II GA 0.17.0 gate: OK / 0.17.0v1 legacy grid ({len(vanilla)} Vanilla targets, {len({row['minecraft'] for row in vanilla})} releases, Java 8/16/17/21/25)")

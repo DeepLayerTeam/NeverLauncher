@@ -244,6 +244,10 @@ func compatibilityIIGa0170Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 0)
 }
 
+func compatibilityLegacyVanilla0170v1Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 0)
+}
+
 func compatibilityCertificationRequired(ver string) bool {
 	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
 	if len(parts) < 2 {
@@ -468,6 +472,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityLegacyVanilla0170v1Required(ver) {
+			for _, minecraft := range legacyVanilla0170v1Releases {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.17.0v1 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s 0.17.0v1 mismatch: expected Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s", minecraft, target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+			}
+		}
 		if compatibilityIIGa0170Required(ver) {
 			vanillaTargets := 0
 			vanillaVersions := map[string]bool{}
@@ -479,8 +494,8 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					gaJava[target.JavaMajor] = true
 				}
 			}
-			if vanillaTargets < 45 || len(vanillaVersions) < 40 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA requires >=45 required Vanilla targets and >=40 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
+			if vanillaTargets < 98 || len(vanillaVersions) < 93 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA 0.17.0v1 requires >=98 required Vanilla targets and >=93 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !gaJava[major] {
@@ -668,6 +683,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityHardening01611Required(ver) {
 		policy += ";compatibility-hardening-cache-recovery-upstream-failure-security"
+	}
+	if compatibilityLegacyVanilla0170v1Required(ver) {
+		policy += ";legacy-vanilla-0.17.0v1-complete-53-release-grid-java8"
 	}
 	if compatibilityIIGa0170Required(ver) {
 		policy += ";minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"
