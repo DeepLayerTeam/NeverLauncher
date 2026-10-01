@@ -1,5 +1,9 @@
 # NeverLauncher CLI
 
+## NeoForge Compatibility II — 0.17.6
+
+`nl runtime neoforge-install` / `neoforge-package` исполняют production NeoForge processor installer для stable-линии Minecraft 1.20.1–26.2. Resolver отдельно поддерживает официальный 1.20.1 artifact `net.neoforged:forge` и современный `net.neoforged:neoforge`, проверяет соответствие loader↔Minecraft, выполняет client processors на target Java и возвращает только concrete immutable loader version.
+
 ## Forge Legacy 1.7.10 — 0.17.5
 
 `nl runtime forge-install` / `forge-package` теперь исполняют Forge 1.7.10 V1 universal installer как отдельный LaunchWrapper/FML path. Materializer требует Java 8, `net.minecraft.launchwrapper.Launch` и `cpw.mods.fml.common.launcher.FMLTweaker`, нормализует legacy profile к Vanilla 1.7.10 при отсутствии `inheritsFrom`, проверяет universal JAR и фиксирует `legacyTweaker`, `legacyBaseVersion`, `legacyProfileNormalized` и immutable Forge version в install evidence.

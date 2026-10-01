@@ -44,7 +44,7 @@ if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH"
   echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
   exit 2
 fi
-if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" && "$LOADER" != "quilt" && "$LOADER" != "forge" ]]; then
+if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" && "$LOADER" != "quilt" && "$LOADER" != "forge" && "$LOADER" != "neoforge" ]]; then
   echo "[compat] client scope is supported for Vanilla, Fabric, Quilt and Forge targets" >&2
   exit 2
 fi
@@ -90,6 +90,8 @@ elif [[ "$SCOPE" == "client" && "$LOADER" == "quilt" ]]; then
   bash "$ROOT/e2e/scripts/run-quilt-certification-case.sh"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "forge" ]]; then
   bash "$ROOT/e2e/scripts/run-forge-certification-case.sh"
+elif [[ "$SCOPE" == "client" && "$LOADER" == "neoforge" ]]; then
+  bash "$ROOT/e2e/scripts/run-neoforge-certification-case.sh"
 else
   bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 fi
@@ -140,7 +142,7 @@ if scope == "client":
     base = read("result.json") or {}
     package = read("client-package.json") or {}
     verify = read("materialized-client-verify.json") or {}
-    if loader in ("fabric", "quilt", "forge"):
+    if loader in ("fabric", "quilt", "forge", "neoforge"):
         install_name = f"{loader}-install.json"
         probe_name = f"{loader}-certification.json"
     else:
@@ -151,7 +153,7 @@ if scope == "client":
     manifest_settings = package.get("manifestSettings") if isinstance(package.get("manifestSettings"), dict) else {}
     minecraft_settings = manifest_settings.get("minecraft") if isinstance(manifest_settings.get("minecraft"), dict) else {}
     materialized = install.get("status") == "installed-and-verified" and install.get("minecraftVersion") == minecraft
-    if loader in ("fabric", "quilt", "forge"):
+    if loader in ("fabric", "quilt", "forge", "neoforge"):
         profile_id = str(install.get("profileId") or "")
         runtime_resolved = profile_id != "" and probe.get("minecraftVersion") == profile_id and probe.get("mainClass") == install.get("mainClass") and int(probe.get("classpathEntries") or 0) > 0
         resolved = str(install.get("loaderVersion") or ((base.get("minecraft") or {}).get("resolvedLoaderVersion")) or "")

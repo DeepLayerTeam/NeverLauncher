@@ -302,7 +302,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	}
 	installerURL := opts.InstallerURL
 	if installerURL == "" {
-		installerURL = forgeInstallerURL(loader, artifactVersion)
+		installerURL = forgeInstallerURL(loader, vanilla.MinecraftVersion, artifactVersion)
 	}
 	if err := validateRemoteURL(installerURL); err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("installer URL: %w", err)
@@ -815,9 +815,16 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		requested = "latest-stable"
 	}
 	metadataURL := strings.TrimSpace(metadataOverride)
+	legacyNeoForge1201 := loader == "neoforge" && minecraftVersion == "1.20.1"
 	if metadataURL == "" {
 		if loader == "forge" {
 			metadataURL = defaultForgeMavenBase + "/net/minecraftforge/forge/maven-metadata.xml"
+		} else if legacyNeoForge1201 {
+			// NeoForge 1.20.1 predates the net.neoforged:neoforge artifact. The
+			// official fork was published as net.neoforged:forge with Forge-style
+			// versions (1.20.1-47.1.x). Treat that repository as NeoForge only for
+			// this Minecraft release; all newer releases use net.neoforged:neoforge.
+			metadataURL = defaultNeoForgeMavenBase + "/net/neoforged/forge/maven-metadata.xml"
 		} else {
 			metadataURL = defaultNeoForgeMavenBase + "/net/neoforged/neoforge/maven-metadata.xml"
 		}
@@ -829,6 +836,16 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 				artifact = minecraftVersion + "-" + requested
 			}
 			return strings.TrimPrefix(artifact, minecraftVersion+"-"), artifact, metadataURL, nil
+		}
+		if legacyNeoForge1201 {
+			artifact := requested
+			if !strings.HasPrefix(artifact, minecraftVersion+"-") {
+				artifact = minecraftVersion + "-" + requested
+			}
+			return artifact, artifact, metadataURL, nil
+		}
+		if !neoForgeVersionMatchesMinecraft(requested, minecraftVersion) {
+			return "", "", metadataURL, fmt.Errorf("NeoForge version %s не совместима с Minecraft %s", requested, minecraftVersion)
 		}
 		return requested, requested, metadataURL, nil
 	}
@@ -865,6 +882,12 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 						continue
 					}
 					return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, nil
+				}
+				if legacyNeoForge1201 {
+					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
+						continue
+					}
+					return candidate, candidate, metadataURL, nil
 				}
 				if neoForgeVersionMatchesMinecraft(candidate, minecraftVersion) {
 					return candidate, candidate, metadataURL, nil
@@ -913,23 +936,43 @@ func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataUR
 	return nil, fmt.Errorf("metadata GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
 }
 
-func forgeInstallerURL(loader, artifactVersion string) string {
+func forgeInstallerURL(loader, minecraftVersion, artifactVersion string) string {
 	if loader == "forge" {
 		return fmt.Sprintf("%s/net/minecraftforge/forge/%s/forge-%s-installer.jar", defaultForgeMavenBase, artifactVersion, artifactVersion)
+	}
+	if loader == "neoforge" && minecraftVersion == "1.20.1" {
+		return fmt.Sprintf("%s/net/neoforged/forge/%s/forge-%s-installer.jar", defaultNeoForgeMavenBase, artifactVersion, artifactVersion)
 	}
 	return fmt.Sprintf("%s/net/neoforged/neoforge/%s/neoforge-%s-installer.jar", defaultNeoForgeMavenBase, artifactVersion, artifactVersion)
 }
 
 func neoForgeVersionMatchesMinecraft(loaderVersion, minecraftVersion string) bool {
-	parts := strings.Split(strings.TrimSpace(minecraftVersion), ".")
-	if len(parts) < 2 || parts[0] != "1" {
+	loaderVersion = strings.TrimSpace(loaderVersion)
+	minecraftVersion = strings.TrimSpace(minecraftVersion)
+	parts := strings.Split(minecraftVersion, ".")
+	if len(parts) < 2 {
 		return false
 	}
+	if parts[0] == "1" {
+		// 1.20.2 through 1.21.11 use NeoForge <mc-minor>.<mc-patch>.<build>.
+		// Minecraft 1.20.1 is handled separately because its official artifact is
+		// net.neoforged:forge with Forge-style 1.20.1-47.1.x versions.
+		patch := "0"
+		if len(parts) >= 3 && parts[2] != "" {
+			patch = parts[2]
+		}
+		prefix := parts[1] + "." + patch
+		return strings.HasPrefix(loaderVersion, prefix+".") || loaderVersion == prefix
+	}
+	// Starting with Minecraft 26.1 NeoForge includes the complete Minecraft
+	// release in its version. A missing Minecraft hotfix component maps to 0:
+	// 26.1 -> 26.1.0.x, 26.1.1 -> 26.1.1.x, 26.2 -> 26.2.0.x.
 	patch := "0"
 	if len(parts) >= 3 && parts[2] != "" {
 		patch = parts[2]
 	}
-	return strings.HasPrefix(loaderVersion, parts[1]+"."+patch+".") || loaderVersion == parts[1]+"."+patch
+	prefix := parts[0] + "." + parts[1] + "." + patch
+	return strings.HasPrefix(loaderVersion, prefix+".") || loaderVersion == prefix
 }
 
 func isPrereleaseVersion(value string) bool {

@@ -1,3 +1,11 @@
+## 0.17.6 — NeoForge Compatibility II
+
+- Expanded NeoForge from the single 1.21.1 integration target to a mandatory 22-release production line from Minecraft 1.20.1 through current stable 26.2, with exact Java 17/21/25 binding and full integration retained for 1.21.1.
+- Fixed real upstream version/artifact resolution: NeoForge 1.20.1 resolves the official `net.neoforged:forge` / `1.20.1-47.x` publication, while 1.20.2+ uses `net.neoforged:neoforge`; 26.x uses the full Minecraft-version scheme such as `26.2.0.x`. Explicit incompatible loader versions fail closed.
+- Added NeoForge actual-client certification: verified official installer, client processors and outputs, generated profile/libraries, package verification, immutable loader evidence, then real profile launch through NeverRuntime on the exact target Java.
+- Added `neoforge-install.json` / `neoforge-certification.json` CI evidence, separate `neoForgeVersions` release coverage with tamper verification, mandatory 0.17.6 matrix/preflight/repository gates and regression tests.
+- Promoted the public NeoForge loader catalog entry from `planned` to the production Compatibility Engine materializer; Fabric/Quilt/Forge gates remain mandatory regression boundaries.
+
 ## 0.17.5 — Forge Legacy 1.7.10
 
 - Added a real Forge 1.7.10 V1 universal-installer path with LaunchWrapper and the era-correct `cpw.mods.fml.common.launcher.FMLTweaker`; Java 8 is enforced and 1.7.10 never falls through to the modern processor pipeline.

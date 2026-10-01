@@ -37,7 +37,7 @@ class MatrixToolTests(unittest.TestCase):
                 "platformMatched": True,
                 "jreCertified": True,
             }
-            if target["loader"] in {"fabric", "quilt", "forge"}:
+            if target["loader"] in {"fabric", "quilt", "forge", "neoforge"}:
                 install_name = f"{target['loader']}-install.json"
                 certification_name = f"{target['loader']}-certification.json"
             else:
@@ -457,6 +457,48 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Forge Legacy 1.7.10 0.17.5 requires Java 8", proc.stderr)
+
+    def test_validate_accepts_neoforge_compatibility_ii_0176(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_validate_rejects_missing_neoforge_release_0176(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "neoforge" and target["minecraft"] == "1.20.1")]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("NeoForge Compatibility II 0.17.6", proc.stderr)
+
+    def test_validate_rejects_wrong_neoforge_java_0176(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "neoforge" and target["minecraft"] == "26.2":
+                    target["javaMajor"] = 21
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("NeoForge 26.2", proc.stderr)
+
+    def test_validate_rejects_duplicate_neoforge_release_0176(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "neoforge" and target["minecraft"] == "1.20.1")
+            duplicate["id"] = "neoforge-1.20.1-linux-x64-duplicate"
+            doc["targets"].append(duplicate)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("exactly one required target", proc.stderr)
 
     def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

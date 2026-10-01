@@ -97,6 +97,7 @@ run_step quilt-compatibility-II-0172 python3 "${ROOT_DIR}/scripts/smoke/offline/
 run_step forge-modern-0173 python3 "${ROOT_DIR}/scripts/smoke/offline/forge-modern-0173.py"
 run_step forge-legacy-1122-0174 python3 "${ROOT_DIR}/scripts/smoke/offline/forge-legacy-1122-0174.py"
 run_step forge-legacy-1710-0175 python3 "${ROOT_DIR}/scripts/smoke/offline/forge-legacy-1710-0175.py"
+run_step neoforge-compatibility-II-0176 python3 "${ROOT_DIR}/scripts/smoke/offline/neoforge-compatibility-II-0176.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

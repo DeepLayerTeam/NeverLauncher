@@ -499,6 +499,42 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		})
 	}
 
+	if compatibilityNeoForgeII0176Required(ver) {
+		versions := make([]string, 0, len(neoForgeCompatibilityII0176))
+		for minecraft := range neoForgeCompatibilityII0176 {
+			versions = append(versions, minecraft)
+		}
+		sort.Strings(versions)
+		for _, minecraft := range versions {
+			javaMajor := neoForgeCompatibilityII0176[minecraft]
+			scope := "client"
+			if minecraft == "1.21.1" {
+				scope = "integration"
+			}
+			id := "neoforge-" + minecraft + "-linux-x64"
+			targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+				ID: id, Minecraft: minecraft, Loader: "neoforge", LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, Scope: scope, Required: true,
+			})
+			checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true, "jreCertified": true}
+			if scope == "integration" {
+				checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true, "platformMatched": true, "jreCertified": true}
+			}
+			resolved := "21.1.200"
+			if minecraft == "1.20.1" {
+				resolved = "1.20.1-47.1.79"
+			} else if strings.HasPrefix(minecraft, "26.") {
+				resolved = "26.2.0.75"
+			}
+			matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+				SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
+				Loader: "neoforge", LoaderSelector: "latest-stable", ResolvedLoaderVersion: resolved, OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, DetectedJavaMajor: javaMajor, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: fmt.Sprintf("%d.0.0+ga", javaMajor), JREExecutableSHA256: evidence, Scope: scope, Commit: commit, RunID: "162", ExitCode: 0,
+				Checks: checks, EvidenceSHA256: evidence,
+			})
+		}
+	}
+
 	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
 		if loader == "fabric" && compatibilityFabricII0171Required(ver) {
 			continue
@@ -507,6 +543,9 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			continue
 		}
 		if loader == "forge" && compatibilityForgeModern0173Required(ver) {
+			continue
+		}
+		if loader == "neoforge" && compatibilityNeoForgeII0176Required(ver) {
 			continue
 		}
 		id := loader + "-1.21.1-linux-x64"
@@ -1467,5 +1506,115 @@ func TestCompatibilityCertificationGA0170RejectsMissingJREAttestation(t *testing
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil {
 		t.Fatal("0.17.0 GA must reject missing JRE attestation")
+	}
+}
+
+func TestCompatibilityCertificationNeoForgeII0176(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176")
+	if err != nil {
+		t.Fatalf("0.17.6 NeoForge Compatibility II evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client") {
+		t.Fatalf("0.17.6 policy does not bind NeoForge Compatibility II: %s", certification.Policy)
+	}
+	if len(certification.NeoForgeVersions) != len(neoForgeCompatibilityII0176) {
+		t.Fatalf("0.17.6 NeoForge coverage=%d, want %d", len(certification.NeoForgeVersions), len(neoForgeCompatibilityII0176))
+	}
+	for _, minecraft := range []string{"1.20.1", "1.20.6", "1.21.1", "1.21.11", "26.2"} {
+		if !slices.Contains(certification.NeoForgeVersions, minecraft) {
+			t.Fatalf("0.17.6 NeoForge coverage missing %s", minecraft)
+		}
+	}
+}
+
+func TestCompatibilityCertificationNeoForgeII0176RejectsMissingRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "neoforge" && target.Minecraft == "1.20.1" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "NeoForge Compatibility II 0.17.6") {
+		t.Fatalf("0.17.6 must reject missing NeoForge 1.20.1 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationNeoForgeII0176RejectsWrongJavaMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "neoforge" && targets.Targets[i].Minecraft == "26.2" {
+			targets.Targets[i].JavaMajor = 21
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "NeoForge 26.2") {
+		t.Fatalf("0.17.6 must reject NeoForge 26.2 Java mismatch, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationNeoForgeII0176RejectsMutableResolvedLoader(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].Loader == "neoforge" && matrix.Targets[i].MinecraftVersion == "1.20.1" {
+			matrix.Targets[i].ResolvedLoaderVersion = "latest-stable"
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+		t.Fatalf("0.17.6 must reject mutable NeoForge loader evidence, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.6", "commit-176")
+	dir := t.TempDir()
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.6", "commit-176"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert releaseCompatibilityCertification
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	cert.NeoForgeVersions = cert.NeoForgeVersions[:len(cert.NeoForgeVersions)-1]
+	raw, _ = json.MarshalIndent(cert, "", "  ")
+	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.6"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+		t.Fatalf("bundle verifier must reject tampered NeoForge coverage, got %v", err)
 	}
 }

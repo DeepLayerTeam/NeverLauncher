@@ -22,6 +22,11 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 	}
 	for _, loader := range []string{"forge", "neoforge"} {
 		t.Run(loader, func(t *testing.T) {
+			minecraftVersion := "1.21.1"
+			loaderVersion := "52.0.1"
+			if loader == "neoforge" {
+				loaderVersion = "21.1.105"
+			}
 			clientJar := []byte("minecraft-client")
 			asset := []byte("minecraft-asset")
 			assetHash := sha1HexLocal(asset)
@@ -36,7 +41,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			assetIndex := map[string]any{"objects": map[string]any{"test.txt": map[string]any{"hash": assetHash, "size": len(asset)}}}
 			assetIndexBytes, _ := json.Marshal(assetIndex)
 			vanillaVersion := map[string]any{
-				"id": "test-vanilla", "type": "release", "mainClass": "net.minecraft.client.main.Main", "assets": "test-assets",
+				"id": minecraftVersion, "type": "release", "mainClass": "net.minecraft.client.main.Main", "assets": "test-assets",
 				"assetIndex":  map[string]any{"id": "test-assets", "url": base + "/asset-index.json", "sha1": sha1HexLocal(assetIndexBytes), "size": len(assetIndexBytes)},
 				"downloads":   map[string]any{"client": map[string]any{"url": base + "/client.jar", "sha1": sha1HexLocal(clientJar), "size": len(clientJar)}},
 				"javaVersion": map[string]any{"majorVersion": 21},
@@ -47,10 +52,10 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				"libraries": []any{},
 			}
 			vanillaVersionBytes, _ := json.Marshal(vanillaVersion)
-			manifest := MojangVersionManifest{Latest: map[string]string{"release": "test-vanilla"}, Versions: []MojangManifestVersion{{ID: "test-vanilla", Type: "release", URL: base + "/version.json", SHA1: sha1HexLocal(vanillaVersionBytes)}}}
+			manifest := MojangVersionManifest{Latest: map[string]string{"release": minecraftVersion}, Versions: []MojangManifestVersion{{ID: minecraftVersion, Type: "release", URL: base + "/version.json", SHA1: sha1HexLocal(vanillaVersionBytes)}}}
 			manifestBytes, _ := json.Marshal(manifest)
 
-			installer := testForgeInstaller(t, loader, generated, processorJar)
+			installer := testForgeInstaller(t, loader, minecraftVersion, loaderVersion, generated, processorJar)
 			installerSHA1 := sha1HexLocal(installer)
 			mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
 			mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(vanillaVersionBytes) })
@@ -63,7 +68,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			javaPath := testFakeJava(t, generated)
 			dir := t.TempDir()
 			result, err := installForgeLike(context.Background(), forgeMaterializeOptions{
-				Loader: loader, MinecraftVersion: "latest-release", LoaderVersion: "1.0.0", ClientDir: dir,
+				Loader: loader, MinecraftVersion: "latest-release", LoaderVersion: loaderVersion, ClientDir: dir,
 				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar", VersionManifest: base + "/manifest.json",
 				AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries", Targets: []vanillaTarget{currentVanillaTarget()},
 				Workers: 3, StrictUpstream: true, HTTPClient: server.Client(),
@@ -79,7 +84,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, rel := range []string{
-				"versions/test-vanilla/test-vanilla.jar",
+				"versions/" + minecraftVersion + "/" + minecraftVersion + ".jar",
 				result.ProfilePath,
 				"libraries/com/example/processor/1.0/processor-1.0.jar",
 				"libraries/" + generatedRel,
@@ -95,7 +100,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 
 			// Idempotency: verified processor output must skip the expensive processor on the next run.
 			second, err := installForgeLike(context.Background(), forgeMaterializeOptions{
-				Loader: loader, MinecraftVersion: "test-vanilla", LoaderVersion: "1.0.0", ClientDir: dir,
+				Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, ClientDir: dir,
 				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar", InstallerSHA1: installerSHA1,
 				VersionManifest: base + "/manifest.json", AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries",
 				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, HTTPClient: server.Client(),
@@ -109,7 +114,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 
 			packagePath := filepath.Join(t.TempDir(), "package.json")
 			args := []string{
-				"--minecraft", "test-vanilla", "--loader-version", "1.0.0", "--client-dir", dir, "--java", javaPath,
+				"--minecraft", minecraftVersion, "--loader-version", loaderVersion, "--client-dir", dir, "--java", javaPath,
 				"--installer-url", base + "/installer.jar", "--installer-sha1", installerSHA1,
 				"--version-manifest", base + "/manifest.json", "--asset-base-url", base + "/assets", "--library-base-url", base + "/libraries",
 				"--target", currentVanillaTarget().OS + "/" + currentVanillaTarget().Arch,
@@ -142,20 +147,36 @@ func TestForgeNeoForgeMavenVersionSelection(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 	forgeMetadata := `<metadata><versioning><versions><version>1.20.1-47.3.0</version><version>1.20.1-47.4.0</version><version>1.21.1-52.0.1</version></versions></versioning></metadata>`
-	neoMetadata := `<metadata><versioning><versions><version>21.1.100-beta</version><version>21.1.105</version><version>21.4.20</version></versions></versioning></metadata>`
+	neoLegacyMetadata := `<metadata><versioning><versions><version>1.20.1-47.1.76</version><version>1.20.1-47.1.79</version><version>1.20.2-48.0.0</version></versions></versioning></metadata>`
+	neoMetadata := `<metadata><versioning><versions><version>21.1.100-beta</version><version>21.1.105</version><version>21.4.20</version><version>26.2.0.74</version><version>26.2.0.75</version></versions></versioning></metadata>`
 	mux.HandleFunc("/forge.xml", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprint(w, forgeMetadata) })
+	mux.HandleFunc("/neo-legacy.xml", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprint(w, neoLegacyMetadata) })
 	mux.HandleFunc("/neo.xml", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprint(w, neoMetadata) })
 
 	loaderVersion, artifactVersion, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "forge", "1.20.1", "latest-stable", server.URL+"/forge.xml")
 	if err != nil || loaderVersion != "47.4.0" || artifactVersion != "1.20.1-47.4.0" {
 		t.Fatalf("forge selection: %q %q %v", loaderVersion, artifactVersion, err)
 	}
+	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.1", "latest-stable", server.URL+"/neo-legacy.xml")
+	if err != nil || loaderVersion != "1.20.1-47.1.79" || artifactVersion != "1.20.1-47.1.79" {
+		t.Fatalf("NeoForge 1.20.1 selection: %q %q %v", loaderVersion, artifactVersion, err)
+	}
 	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "latest-stable", server.URL+"/neo.xml")
 	if err != nil || loaderVersion != "21.1.105" || artifactVersion != "21.1.105" {
 		t.Fatalf("neoforge selection: %q %q %v", loaderVersion, artifactVersion, err)
 	}
-	if _, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.1", "latest-stable", server.URL+"/neo.xml"); err == nil {
-		t.Fatal("incompatible NeoForge/Minecraft pair accepted")
+	loaderVersion, artifactVersion, _, err = resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "26.2", "latest-stable", server.URL+"/neo.xml")
+	if err != nil || loaderVersion != "26.2.0.75" || artifactVersion != "26.2.0.75" {
+		t.Fatalf("NeoForge 26.2 selection: %q %q %v", loaderVersion, artifactVersion, err)
+	}
+	if _, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.21.1", "21.4.20", server.URL+"/neo.xml"); err == nil {
+		t.Fatal("incompatible NeoForge/Minecraft explicit version accepted")
+	}
+	if got := forgeInstallerURL("neoforge", "1.20.1", "1.20.1-47.1.79"); !strings.Contains(got, "/net/neoforged/forge/1.20.1-47.1.79/forge-1.20.1-47.1.79-installer.jar") {
+		t.Fatalf("unexpected NeoForge 1.20.1 installer URL: %s", got)
+	}
+	if got := forgeInstallerURL("neoforge", "26.2", "26.2.0.75"); !strings.Contains(got, "/net/neoforged/neoforge/26.2.0.75/neoforge-26.2.0.75-installer.jar") {
+		t.Fatalf("unexpected NeoForge modern installer URL: %s", got)
 	}
 }
 
@@ -565,7 +586,11 @@ func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 	if _, err := safeArchiveRelative("../escape"); err == nil {
 		t.Fatal("installer archive traversal accepted")
 	}
-	if !neoForgeVersionMatchesMinecraft("21.1.105", "1.21.1") || neoForgeVersionMatchesMinecraft("21.4.20", "1.21.1") {
+	if !neoForgeVersionMatchesMinecraft("21.1.105", "1.21.1") ||
+		!neoForgeVersionMatchesMinecraft("26.2.0.75", "26.2") ||
+		!neoForgeVersionMatchesMinecraft("26.1.1.12", "26.1.1") ||
+		neoForgeVersionMatchesMinecraft("21.4.20", "1.21.1") ||
+		neoForgeVersionMatchesMinecraft("26.2.0.75", "26.1") {
 		t.Fatal("NeoForge Minecraft compatibility mapping incorrect")
 	}
 }
@@ -590,11 +615,11 @@ func testProcessorJar(t *testing.T) []byte {
 	return buf.Bytes()
 }
 
-func testForgeInstaller(t *testing.T, loader string, generated, processorJar []byte) []byte {
+func testForgeInstaller(t *testing.T, loader, minecraftVersion, loaderVersion string, generated, processorJar []byte) []byte {
 	t.Helper()
-	profileID := "test-vanilla-" + loader + "-1.0.0"
+	profileID := minecraftVersion + "-" + loader + "-" + loaderVersion
 	profile := map[string]any{
-		"spec": 1, "profile": "com.example:" + loader + ":1.0.0", "version": profileID, "json": "/version.json", "minecraft": "test-vanilla",
+		"spec": 1, "profile": "com.example:" + loader + ":" + loaderVersion, "version": profileID, "json": "/version.json", "minecraft": minecraftVersion,
 		"data": map[string]any{
 			"OUT":      map[string]any{"client": "[com.example:generated:1.0]", "server": ""},
 			"OUT_SHA":  map[string]any{"client": "'" + sha1HexLocal(generated) + "'", "server": ""},
@@ -607,7 +632,7 @@ func testForgeInstaller(t *testing.T, loader string, generated, processorJar []b
 		"libraries": []any{map[string]any{"name": "com.example:processor:1.0"}},
 	}
 	versionProfile := map[string]any{
-		"id": profileID, "inheritsFrom": "test-vanilla", "type": "release", "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
+		"id": profileID, "inheritsFrom": minecraftVersion, "type": "release", "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
 		"arguments": map[string]any{"game": []any{"--launchTarget", "forgeclient"}, "jvm": []any{"-D" + loader + ".fixture=true"}},
 		"libraries": []any{map[string]any{"name": "com.example:generated:1.0"}},
 	}

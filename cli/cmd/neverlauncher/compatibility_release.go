@@ -105,6 +105,7 @@ type releaseCompatibilityCertification struct {
 	FabricVersions    []string                       `json:"fabricVersions,omitempty"`
 	QuiltVersions     []string                       `json:"quiltVersions,omitempty"`
 	ForgeVersions     []string                       `json:"forgeVersions,omitempty"`
+	NeoForgeVersions  []string                       `json:"neoForgeVersions,omitempty"`
 	JavaMajors        []int                          `json:"javaMajors,omitempty"`
 	JREBuilds         []releaseCompatibilityJREBuild `json:"jreBuilds,omitempty"`
 	Scopes            []string                       `json:"scopes,omitempty"`
@@ -240,6 +241,15 @@ var forgeLegacy1122_0174 = map[string]int{
 
 var forgeLegacy1710_0175 = map[string]int{
 	"1.7.10": 8,
+}
+
+var neoForgeCompatibilityII0176 = map[string]int{
+	"1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
+	"1.20.5": 21, "1.20.6": 21,
+	"1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21, "1.21.4": 21,
+	"1.21.5": 21, "1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21,
+	"1.21.10": 21, "1.21.11": 21,
+	"26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25,
 }
 
 var java21VanillaCompatibility0167 = map[string]string{
@@ -378,6 +388,10 @@ func compatibilityForgeLegacy1710_0175Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 5)
 }
 
+func compatibilityNeoForgeII0176Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 6)
+}
+
 func compatibilityCertificationRequired(ver string) bool {
 	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
 	if len(parts) < 2 {
@@ -477,7 +491,8 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			clientLoaderAllowed := target.Loader == "vanilla" ||
 				(compatibilityFabricII0171Required(ver) && target.Loader == "fabric") ||
 				(compatibilityQuiltII0172Required(ver) && target.Loader == "quilt") ||
-				(compatibilityForgeModern0173Required(ver) && target.Loader == "forge")
+				(compatibilityForgeModern0173Required(ver) && target.Loader == "forge") ||
+				(compatibilityNeoForgeII0176Required(ver) && target.Loader == "neoforge")
 			if target.Scope == "client" && !clientLoaderAllowed {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: client scope не разрешён для loader=%s в версии %s", id, target.Loader, ver)
 			}
@@ -826,6 +841,47 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 		}
 
+		if compatibilityNeoForgeII0176Required(ver) {
+			neoForgeTargets := map[string]releaseCompatibilityTarget{}
+			neoForgeJava := map[int]bool{}
+			neoForgeCount := 0
+			for _, target := range targets.Targets {
+				if !target.Required || target.Loader != "neoforge" {
+					continue
+				}
+				neoForgeCount++
+				if _, exists := neoForgeTargets[target.Minecraft]; exists {
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 duplicate required target for Minecraft %s", target.Minecraft)
+				}
+				neoForgeTargets[target.Minecraft] = target
+				neoForgeJava[target.JavaMajor] = true
+			}
+			if neoForgeCount != len(neoForgeCompatibilityII0176) {
+				return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 requires exactly %d stable release targets; got %d", len(neoForgeCompatibilityII0176), neoForgeCount)
+			}
+			for minecraft, javaMajor := range neoForgeCompatibilityII0176 {
+				target, ok := neoForgeTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 missing required Minecraft %s", minecraft)
+				}
+				expectedScope := "client"
+				if minecraft == "1.21.1" {
+					expectedScope = "integration"
+				}
+				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+				if target.LoaderVersion != "latest-stable" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge %s 0.17.6 requires loaderVersion=latest-stable selector", minecraft)
+				}
+			}
+			for _, major := range []int{17, 21, 25} {
+				if !neoForgeJava[major] {
+					return releaseCompatibilityCertification{}, fmt.Errorf("NeoForge Compatibility II 0.17.6 missing JRE major %d", major)
+				}
+			}
+		}
+
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -852,6 +908,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	fabricVersionSet := map[string]bool{}
 	quiltVersionSet := map[string]bool{}
 	forgeVersionSet := map[string]bool{}
+	neoForgeVersionSet := map[string]bool{}
 	javaMajorSet := map[int]bool{}
 	jreBuildSet := map[string]*releaseCompatibilityJREBuild{}
 	scopeSet := map[string]bool{}
@@ -941,6 +998,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			if target.Loader == "forge" && target.Required {
 				forgeVersionSet[target.Minecraft] = true
 			}
+			if target.Loader == "neoforge" && target.Required {
+				neoForgeVersionSet[target.Minecraft] = true
+			}
 		}
 	}
 
@@ -971,6 +1031,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		forgeVersions = append(forgeVersions, minecraft)
 	}
 	sort.Strings(forgeVersions)
+	neoForgeVersions := make([]string, 0, len(neoForgeVersionSet))
+	for minecraft := range neoForgeVersionSet {
+		neoForgeVersions = append(neoForgeVersions, minecraft)
+	}
+	sort.Strings(neoForgeVersions)
 	javaMajors := make([]int, 0, len(javaMajorSet))
 	for major := range javaMajorSet {
 		javaMajors = append(javaMajors, major)
@@ -1061,6 +1126,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityForgeLegacy1710_0175Required(ver) {
 		policy += ";forge-legacy-0.17.5-real-1.7.10-launchwrapper-cpw-fml-actual-client"
 	}
+	if compatibilityNeoForgeII0176Required(ver) {
+		policy += ";neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",
 		ProductVersion:    ver,
@@ -1077,6 +1145,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		FabricVersions:    fabricVersions,
 		QuiltVersions:     quiltVersions,
 		ForgeVersions:     forgeVersions,
+		NeoForgeVersions:  neoForgeVersions,
 		JavaMajors:        javaMajors,
 		JREBuilds:         jreBuilds,
 		Scopes:            scopes,
@@ -1118,6 +1187,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		strings.Join(stored.FabricVersions, "\x00") != strings.Join(expected.FabricVersions, "\x00") ||
 		strings.Join(stored.QuiltVersions, "\x00") != strings.Join(expected.QuiltVersions, "\x00") ||
 		strings.Join(stored.ForgeVersions, "\x00") != strings.Join(expected.ForgeVersions, "\x00") ||
+		strings.Join(stored.NeoForgeVersions, "\x00") != strings.Join(expected.NeoForgeVersions, "\x00") ||
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {

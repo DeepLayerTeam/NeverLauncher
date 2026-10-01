@@ -2757,6 +2757,83 @@
       "required": true
     },
     {
+      "id": "neoforge-1.20.1-linux-x64",
+      "minecraft": "1.20.1",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.20.2-linux-x64",
+      "minecraft": "1.20.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.20.3-linux-x64",
+      "minecraft": "1.20.3",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.20.4-linux-x64",
+      "minecraft": "1.20.4",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.20.5-linux-x64",
+      "minecraft": "1.20.5",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.20.6-linux-x64",
+      "minecraft": "1.20.6",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21-linux-x64",
+      "minecraft": "1.21",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
       "id": "neoforge-1.21.1-linux-x64",
       "minecraft": "1.21.1",
       "loader": "neoforge",
@@ -2765,6 +2842,160 @@
       "arch": "x86_64",
       "javaMajor": 21,
       "scope": "integration",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.2-linux-x64",
+      "minecraft": "1.21.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.3-linux-x64",
+      "minecraft": "1.21.3",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.4-linux-x64",
+      "minecraft": "1.21.4",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.5-linux-x64",
+      "minecraft": "1.21.5",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.6-linux-x64",
+      "minecraft": "1.21.6",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.7-linux-x64",
+      "minecraft": "1.21.7",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.8-linux-x64",
+      "minecraft": "1.21.8",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.9-linux-x64",
+      "minecraft": "1.21.9",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.10-linux-x64",
+      "minecraft": "1.21.10",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-1.21.11-linux-x64",
+      "minecraft": "1.21.11",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.1-linux-x64",
+      "minecraft": "26.1",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.1.1-linux-x64",
+      "minecraft": "26.1.1",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.1.2-linux-x64",
+      "minecraft": "26.1.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-linux-x64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
       "required": true
     }
   ]

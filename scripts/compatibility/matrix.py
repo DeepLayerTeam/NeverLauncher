@@ -193,6 +193,18 @@ FORGE_MODERN_0173: dict[str, int] = {
 FORGE_LEGACY_1122_0174: dict[str, int] = {"1.12.2": 8}
 FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 
+# NeoForge Compatibility II 0.17.6 certifies every stable NeoForge Minecraft
+# release from the original 1.20.x line through the current stable 26.2 line.
+# 26.3 is intentionally absent until a stable net.neoforged:neoforge build exists.
+NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
+    "1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
+    "1.20.5": 21, "1.20.6": 21,
+    "1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21,
+    "1.21.4": 21, "1.21.5": 21, "1.21.6": 21, "1.21.7": 21,
+    "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
+    "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25,
+}
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -272,6 +284,10 @@ def forge_legacy_1122_0174_required() -> bool:
 
 def forge_legacy_1710_0175_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 5)
+
+
+def neoforge_compatibility_ii_0176_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 6)
 
 
 def load_json(path: Path) -> Any:
@@ -501,6 +517,29 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         if target["loaderVersion"] != "latest-stable":
             die("Forge Legacy 1.7.10 0.17.5 requires loaderVersion=latest-stable selector with immutable resolution evidence")
 
+    if neoforge_compatibility_ii_0176_required():
+        required_rows = [target for target in targets if target["loader"] == "neoforge" and target["required"]]
+        actual_versions = {target["minecraft"] for target in required_rows}
+        expected_versions = set(NEOFORGE_COMPATIBILITY_II_0176)
+        if actual_versions != expected_versions:
+            missing = sorted(expected_versions - actual_versions)
+            extra = sorted(actual_versions - expected_versions)
+            die(f"NeoForge Compatibility II 0.17.6 release grid mismatch: missing={missing} extra={extra}")
+        if len(required_rows) != len(NEOFORGE_COMPATIBILITY_II_0176):
+            die("NeoForge Compatibility II 0.17.6 requires exactly one required target per stable NeoForge Minecraft release")
+        for target in required_rows:
+            minecraft = target["minecraft"]
+            expected_java = NEOFORGE_COMPATIBILITY_II_0176[minecraft]
+            expected_scope = "integration" if minecraft == "1.21.1" else "client"
+            if target["javaMajor"] != expected_java or target["scope"] != expected_scope:
+                die(f"NeoForge {minecraft}: 0.17.6 requires Java {expected_java} scope={expected_scope}")
+            if target["os"] != "linux" or target["arch"] != "x86_64":
+                die(f"NeoForge {minecraft}: 0.17.6 requires linux/x86_64 certification target")
+            if target["loaderVersion"] != "latest-stable":
+                die(f"NeoForge {minecraft}: 0.17.6 requires loaderVersion=latest-stable selector with immutable resolution evidence")
+        if 25 not in {target["javaMajor"] for target in required_rows}:
+            die("NeoForge Compatibility II 0.17.6 requires Java 25 coverage for 26.x")
+
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -562,6 +601,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             or (loader == "fabric" and fabric_compatibility_ii_0171_required())
             or (loader == "quilt" and quilt_compatibility_ii_0172_required())
             or (loader == "forge" and forge_modern_0173_required())
+            or (loader == "neoforge" and neoforge_compatibility_ii_0176_required())
         )
         if scope == "client" and not client_loader_allowed:
             die(f"{target_id}: client scope is not enabled for loader {loader} in VERSION={PRODUCT_VERSION}")
@@ -746,7 +786,7 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             errors.append("evidence platformRuntime mismatch")
         files = evidence.get("files")
         if target["scope"] == "client":
-            if target["loader"] in {"fabric", "quilt", "forge"}:
+            if target["loader"] in {"fabric", "quilt", "forge", "neoforge"}:
                 install_file = f"{target['loader']}-install.json"
                 certification_file = f"{target['loader']}-certification.json"
             else:

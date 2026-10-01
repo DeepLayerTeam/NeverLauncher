@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## NeoForge Compatibility II — 0.17.6
+
+NeverLauncher 0.17.6 делает **NeoForge 1.20.1 → current stable 26.2** отдельной production compatibility-линией: 22 обязательных targets на exact Java 17/21/25, `1.21.1` остаётся полным integration E2E, остальные версии проходят actual-client certification на Linux x86_64. Для 1.20.1 используется реальная историческая публикация `net.neoforged:forge` (`1.20.1-47.x`); начиная с 1.20.2 применяется `net.neoforged:neoforge`, а 26.x разрешается по полной схеме Minecraft version (`26.2` → `26.2.0.x`).
+
+Client certification выполняет официальный NeoForge installer/processors, проверяет processor outputs, materialized Maven libraries и generated version profile, затем `nl client verify` проверяет package, а NeverRuntime запускает фактический NeoForge profile на exact target Java. PASS требует concrete immutable resolved loader version и raw `neoforge-install.json` / `neoforge-certification.json` evidence; missing/duplicate release, wrong Java/scope/platform или mutable loader блокируют release.
+
 ## Forge Legacy 1.7.10 — 0.17.5
 
 NeverLauncher 0.17.5 добавляет отдельный production path для **Forge 1.7.10 LaunchWrapper/FML legacy**. V1 `install_profile.json` разбирается как настоящий legacy installer: universal JAR извлекается из `install.filePath`, проверяется и размещается в Maven tree; `versionInfo` без `inheritsFrom` безопасно нормализуется к Vanilla 1.7.10, сохраняя LaunchWrapper metadata и `cpw.mods.fml.common.launcher.FMLTweaker`. Старый официальный `http://files.minecraftforge.net/maven/` канонизируется только в официальный HTTPS Forge Maven.
@@ -46,7 +52,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Forge Modern / 0.17.3**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeoForge Compatibility II / 0.17.6**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

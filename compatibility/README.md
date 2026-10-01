@@ -1,5 +1,7 @@
 # Minecraft compatibility
 
+NeverLauncher 0.17.6 — **NeoForge Compatibility II** поверх Forge/Fabric/Quilt/Minecraft Compatibility II GA. Обязательная NeoForge-линия: 22 release targets `1.20.1`–`26.2`, exact Java 17/21/25, Linux x86_64; `1.21.1` остаётся `integration`, остальные — `client`. PASS требует реальный processor installer, package integrity, immutable resolved NeoForge version и actual client launch через NeverRuntime.
+
 NeverLauncher 0.17.5 — **Forge Legacy 1.7.10 LaunchWrapper/FML** поверх Forge Legacy 1.12.2 / Forge Modern / Fabric / Quilt / Minecraft Compatibility II GA. Обязательная цель: `1.7.10`, Java 8, `client`, Linux x86_64, `latest-stable` selector с concrete immutable Forge version. PASS требует V1 universal installer, SHA-verified universal JAR, `net.minecraft.launchwrapper.Launch`, `cpw.mods.fml.common.launcher.FMLTweaker`, нормализованный parent Vanilla 1.7.10 profile, package integrity и actual client launch через NeverRuntime.
 
 NeverLauncher 0.17.4 — **Forge Legacy 1.12.2** поверх Forge Modern / Fabric Compatibility II / Minecraft Compatibility II GA: Vanilla Compatibility Baseline II + Legacy Vanilla Java 8 + Java 16/17 + Java 21 + Java 25 + Cross-platform Vanilla + Actual Client E2E II + Compatibility Hardening + certified JRE binary base. Release compatibility формируется только из фактической Mojang materialization, package integrity, Compatibility Engine resolution, exact Java/JRE attestation и запуска настоящего Minecraft Java Client. Representative targets дополнительно обязаны пройти реальный join на официальный Mojang server той же версии.
@@ -51,6 +53,12 @@ NeverLauncher 0.17.4 — **Forge Legacy 1.12.2** поверх Forge Modern / Fab
 | 26.1.2 | 25 | client |
 | 26.3 | 25 | client |
 
+
+## NeoForge Compatibility II — 0.17.6
+
+Для `>= 0.17.6` обязательны 22 stable NeoForge targets: `1.20.1`–`1.20.6`, `1.21`–`1.21.11`, `26.1`, `26.1.1`, `26.1.2`, `26.2`. Java mapping: 1.20.1–1.20.4 → 17, 1.20.5–1.21.11 → 21, 26.x → 25. Историческая 1.20.1-линия разрешается из `net.neoforged:forge`; 1.20.2+ — из `net.neoforged:neoforge`; prerelease versions не удовлетворяют `latest-stable`.
+
+Client scope выполняет `nl runtime neoforge-package`, реальный installer processor pipeline, package verify и NeverRuntime actual-client launch. Release evidence сохраняет `neoforge-install.json`, `neoforge-certification.json` и отдельный `neoForgeVersions` coverage; bundle verification повторно пересчитывает coverage из matrix/targets.
 
 ## Forge Modern — 0.17.3
 

@@ -2175,13 +2175,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     fabric_tests_0171 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
     fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II-0171.py")
     compat_workflow_0171 = read(".github/workflows/compatibility.yml")
-    for required in ["FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1", 'target["loader"] in {"fabric", "quilt", "forge"}', 'install_file = f"{target[\'loader\']}-install.json"', 'certification_file = f"{target[\'loader\']}-certification.json"']:
+    for required in ["FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1", 'target["loader"] in {"fabric", "quilt", "forge", "neoforge"}', 'install_file = f"{target[\'loader\']}-install.json"', 'certification_file = f"{target[\'loader\']}-certification.json"']:
         if required not in fabric_matrix_0171:
             fail(f"0.17.1 Fabric compatibility matrix incomplete: {required}")
     for required in ["runtime fabric-package", "client verify", "fabric-install.json", "fabric-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
         if required not in fabric_case_0171:
             fail(f"0.17.1 Fabric actual-client execution incomplete: {required}")
-    for required in ["run-fabric-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+    for required in ["run-fabric-certification-case.sh", 'loader in ("fabric", "quilt", "forge", "neoforge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
         if required not in compat_case_0171:
             fail(f"0.17.1 Fabric compatibility routing incomplete: {required}")
     for required in ["fabricCompatibilityII0171", "compatibilityFabricII0171Required", "FabricVersions", "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client"]:
@@ -2230,7 +2230,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["runtime quilt-package", "client verify", "quilt-install.json", "quilt-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
         if required not in quilt_case_0172:
             fail(f"0.17.2 Quilt actual-client execution incomplete: {required}")
-    for required in ["run-quilt-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+    for required in ["run-quilt-certification-case.sh", 'loader in ("fabric", "quilt", "forge", "neoforge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
         if required not in compat_case_0172:
             fail(f"0.17.2 Quilt compatibility routing incomplete: {required}")
     for required in ["quiltCompatibilityII0172", "compatibilityQuiltII0172Required", "QuiltVersions", "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client"]:
@@ -2285,7 +2285,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["runtime forge-package", "--java", "client verify", "forge-install.json", "forge-certification.json", "clientProcessorCount", "processorRan", "processorSkipped", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
         if required not in forge_case_0173:
             fail(f"0.17.3 Forge actual-client execution incomplete: {required}")
-    for required in ["run-forge-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+    for required in ["run-forge-certification-case.sh", 'loader in ("fabric", "quilt", "forge", "neoforge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
         if required not in compat_case_0173:
             fail(f"0.17.3 Forge compatibility routing incomplete: {required}")
     for required in ["forgeModern0173", "compatibilityForgeModern0173Required", "ForgeVersions", "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"]:
@@ -2403,6 +2403,66 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.5 mandatory Forge Legacy gate incomplete")
     if "forge-legacy-1710-0175.py" not in preflight or "forge-legacy-1710-0175.py" not in ci:
         fail("0.17.5 Forge Legacy gate is not wired into preflight/CI")
+
+
+# 0.17.6 NeoForge Compatibility II binds the real NeoForge processor installer
+# line, including the separate 1.20.1 net.neoforged:forge publication and the
+# post-26.1 full Minecraft version mapping, to actual-client release evidence.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 6):
+    neo_runtime_0176 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    neo_case_0176 = read("e2e/scripts/run-neoforge-certification-case.sh")
+    neo_compat_0176 = read("e2e/scripts/run-compatibility-case.sh")
+    neo_matrix_0176 = read("scripts/compatibility/matrix.py")
+    neo_release_0176 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    neo_api_0176 = read("services/api/internal/httpapi/server.go")
+    neo_workflow_0176 = read(".github/workflows/compatibility.yml")
+    neo_targets_0176 = json.loads(read("compatibility/targets.json"))["targets"]
+    neo_tests_0176 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+    neo_gate_0176 = read("scripts/smoke/offline/neoforge-compatibility-II-0176.py")
+    for required in ["legacyNeoForge1201", "/net/neoforged/forge/maven-metadata.xml", "/net/neoforged/neoforge/maven-metadata.xml", "neoForgeVersionMatchesMinecraft", "26.1 -> 26.1.0.x", "runForgeProcessors"]:
+        if required not in neo_runtime_0176:
+            fail(f"0.17.6 NeoForge production materializer incomplete: {required}")
+    for required in ["runtime neoforge-package", "neoforge-install.json", "neoforge-certification.json", "mode != 'processors'", "certify-vanilla", "mutable loader selector leaked"]:
+        if required not in neo_case_0176:
+            fail(f"0.17.6 NeoForge actual-client certification incomplete: {required}")
+    for required in ['"$LOADER" == "neoforge"', "run-neoforge-certification-case.sh", 'loader in ("fabric", "quilt", "forge", "neoforge")']:
+        if required not in neo_compat_0176:
+            fail(f"0.17.6 NeoForge compatibility routing incomplete: {required}")
+    for required in ["NEOFORGE_COMPATIBILITY_II_0176", "neoforge_compatibility_ii_0176_required", "NeoForge Compatibility II 0.17.6"]:
+        if required not in neo_matrix_0176:
+            fail(f"0.17.6 NeoForge matrix incomplete: {required}")
+    for required in ["neoForgeCompatibilityII0176", "compatibilityNeoForgeII0176Required", "NeoForgeVersions", "neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client"]:
+        if required not in neo_release_0176:
+            fail(f"0.17.6 NeoForge release certification incomplete: {required}")
+    expected_neo = {"1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17, "1.20.5": 21, "1.20.6": 21,
+                    "1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21, "1.21.4": 21, "1.21.5": 21,
+                    "1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
+                    "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25}
+    rows = [row for row in neo_targets_0176 if row.get("required") and row.get("loader") == "neoforge"]
+    if len(rows) != len(expected_neo):
+        fail(f"0.17.6 NeoForge grid requires exactly {len(expected_neo)} targets, got {len(rows)}")
+    else:
+        by_mc = {row.get("minecraft"): row for row in rows}
+        if set(by_mc) != set(expected_neo):
+            fail("0.17.6 NeoForge required release set mismatch")
+        else:
+            for mc, java in expected_neo.items():
+                row = by_mc[mc]
+                scope = "integration" if mc == "1.21.1" else "client"
+                if row.get("javaMajor") != java or row.get("scope") != scope or row.get("os") != "linux" or row.get("arch") != "x86_64" or row.get("loaderVersion") != "latest-stable":
+                    fail(f"0.17.6 NeoForge {mc} target binding mismatch")
+    if '"adapter": "compatibility-engine", "installer": "neverlauncher-neoforge-materializer", "managedJava": true' not in neo_api_0176:
+        fail("0.17.6 NeoForge public loader catalog still advertises a placeholder")
+    for required in ["neoforge-install.json", "neoforge-certification.json"]:
+        if required not in neo_workflow_0176:
+            fail(f"0.17.6 NeoForge CI raw evidence missing: {required}")
+    for required in ["TestCompatibilityCertificationNeoForgeII0176", "TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage", "test_validate_accepts_neoforge_compatibility_ii_0176", "1.20.1-47.1.79", "26.2.0.75"]:
+        if required not in neo_tests_0176:
+            fail(f"0.17.6 NeoForge regression coverage missing: {required}")
+    if "NeoForge Compatibility II 0.17.6 gate: OK" not in neo_gate_0176:
+        fail("0.17.6 mandatory NeoForge gate incomplete")
+    if "neoforge-compatibility-II-0176.py" not in preflight or "neoforge-compatibility-II-0176.py" not in ci:
+        fail("0.17.6 NeoForge gate is not wired into preflight/CI")
 
 
 if errors:

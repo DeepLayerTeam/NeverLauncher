@@ -68,7 +68,7 @@ require(forge_case, [
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
 require(compat_case, [
-    '"$LOADER" == "forge"', "run-forge-certification-case.sh", 'loader in ("fabric", "quilt", "forge")',
+    '"$LOADER" == "forge"', "run-forge-certification-case.sh", 'loader in ("fabric", "quilt", "forge", "neoforge")',
     'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"',
     "resolvedLoaderVersion", '"actualClient": probe.get("status") == "passed"',
 ], "Forge compatibility routing/evidence")
@@ -76,7 +76,7 @@ require(compat_case, [
 matrix = read("scripts/compatibility/matrix.py")
 require(matrix, [
     "FORGE_MODERN_0173", "forge_modern_0173_required", "Forge Modern 0.17.3",
-    'target["loader"] in {"fabric", "quilt", "forge"}', 'install_file = f"{target[\'loader\']}-install.json"',
+    'target["loader"] in {"fabric", "quilt", "forge", "neoforge"}', 'install_file = f"{target[\'loader\']}-install.json"',
     'certification_file = f"{target[\'loader\']}-certification.json"',
 ], "Forge matrix enforcement")
 
