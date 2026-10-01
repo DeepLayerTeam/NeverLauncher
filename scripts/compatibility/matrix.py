@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -14,15 +13,43 @@ from typing import Any
 ALLOWED_LOADERS = {"vanilla", "fabric", "quilt", "forge", "neoforge"}
 ALLOWED_OS = {"linux"}
 ALLOWED_ARCH = {"x86_64"}
+ALLOWED_SCOPES = {"client", "integration"}
+ALLOWED_JAVA_MAJORS = {8, 16, 17, 21, 25}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,95}$")
 VERSION_RE = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$")
 MUTABLE_SELECTORS = {"latest", "latest-stable", "stable", "recommended"}
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
+VANILLA_BASELINE_II: dict[str, tuple[int, str]] = {
+    "1.7.10": (8, "client"),
+    "1.12.2": (8, "client"),
+    "1.16.5": (8, "client"),
+    "1.17.1": (16, "client"),
+    "1.18.2": (17, "client"),
+    "1.20.4": (17, "client"),
+    "1.20.6": (21, "client"),
+    "1.21.1": (21, "integration"),
+}
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
+
+
+def semver_core(value: str) -> tuple[int, int, int]:
+    core = value.split("-", 1)[0].split("+", 1)[0]
+    parts = core.split(".")
+    if len(parts) < 3:
+        return (0, 0, 0)
+    try:
+        return tuple(int(part) for part in parts[:3])  # type: ignore[return-value]
+    except ValueError:
+        return (0, 0, 0)
+
+
+def vanilla_baseline_ii_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 2)
 
 
 def load_json(path: Path) -> Any:
@@ -30,6 +57,32 @@ def load_json(path: Path) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         die(f"{path}: invalid JSON: {exc}")
+
+
+def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
+    if not vanilla_baseline_ii_required():
+        return
+    required_loaders = {target["loader"] for target in targets if target["required"]}
+    missing_loaders = sorted(ALLOWED_LOADERS - required_loaders)
+    if missing_loaders:
+        die("Compatibility 0.16.2+ missing required loader families: " + ", ".join(missing_loaders))
+    required_vanilla = {
+        target["minecraft"]: target
+        for target in targets
+        if target["loader"] == "vanilla" and target["required"]
+    }
+    for minecraft, (java_major, scope) in VANILLA_BASELINE_II.items():
+        target = required_vanilla.get(minecraft)
+        if target is None:
+            die(f"Vanilla Compatibility Baseline II missing required Minecraft {minecraft}")
+        if target["javaMajor"] != java_major:
+            die(f"Vanilla {minecraft}: Baseline II requires Java {java_major}")
+        if target["scope"] != scope:
+            die(f"Vanilla {minecraft}: Baseline II requires scope={scope}")
+    java_coverage = {target["javaMajor"] for target in required_vanilla.values()}
+    required_java = {8, 16, 17, 21}
+    if not required_java.issubset(java_coverage):
+        die(f"Vanilla Compatibility Baseline II requires Java coverage {sorted(required_java)}")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -41,13 +94,12 @@ def load_targets(path: Path) -> dict[str, Any]:
     declared_version = str(payload.get("productVersion", "")).strip()
     if declared_version and declared_version != PRODUCT_VERSION:
         die(f"targets productVersion {declared_version!r} does not match VERSION={PRODUCT_VERSION}")
-    product_version = PRODUCT_VERSION
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
         die("targets must contain a non-empty array")
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
-    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "required"}
+    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "javaMajor", "scope", "required"}
     for index, raw in enumerate(rows):
         if not isinstance(raw, dict):
             die(f"target #{index + 1} must be an object")
@@ -60,6 +112,8 @@ def load_targets(path: Path) -> dict[str, Any]:
         selector = str(raw.get("loaderVersion", "")).strip()
         os_name = str(raw.get("os", "")).strip().lower()
         arch = str(raw.get("arch", "")).strip().lower()
+        scope = str(raw.get("scope", "")).strip().lower()
+        java_major = raw.get("javaMajor")
         required = raw.get("required")
         if not ID_RE.fullmatch(target_id):
             die(f"target #{index + 1}: invalid id {target_id!r}")
@@ -80,6 +134,12 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: unsupported CI OS {os_name}")
         if arch not in ALLOWED_ARCH:
             die(f"{target_id}: unsupported CI architecture {arch}")
+        if not isinstance(java_major, int) or isinstance(java_major, bool) or java_major not in ALLOWED_JAVA_MAJORS:
+            die(f"{target_id}: javaMajor must be one of {sorted(ALLOWED_JAVA_MAJORS)}")
+        if scope not in ALLOWED_SCOPES:
+            die(f"{target_id}: scope must be one of {sorted(ALLOWED_SCOPES)}")
+        if scope == "client" and loader != "vanilla":
+            die(f"{target_id}: client scope is allowed only for Vanilla")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
         normalized.append({
@@ -89,9 +149,12 @@ def load_targets(path: Path) -> dict[str, Any]:
             "loaderVersion": selector,
             "os": os_name,
             "arch": arch,
+            "javaMajor": java_major,
+            "scope": scope,
             "required": required,
         })
-    return {"schemaVersion": "1.0", "productVersion": product_version, "targets": normalized}
+    validate_baseline_ii(normalized)
+    return {"schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targets": normalized}
 
 
 def sha256_file(path: Path) -> str:
@@ -104,7 +167,9 @@ def sha256_file(path: Path) -> str:
 
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(f"Compatibility targets OK: {len(payload['targets'])} targets for {payload['productVersion']}")
+    vanilla = [target for target in payload["targets"] if target["loader"] == "vanilla"]
+    java = sorted({target["javaMajor"] for target in vanilla})
+    print(f"Compatibility targets OK: {len(payload['targets'])} targets for {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}")
     return 0
 
 
@@ -142,16 +207,18 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     expected = {
         "schemaVersion": "1.0",
         "targetId": target["id"],
-        "productVersion": None,
         "minecraftVersion": target["minecraft"],
         "loader": target["loader"],
         "os": target["os"],
         "arch": target["arch"],
+        "javaMajor": target["javaMajor"],
+        "detectedJavaMajor": target["javaMajor"],
+        "scope": target["scope"],
         "commit": commit,
         "runId": run_id,
     }
     for key, value in expected.items():
-        if value is not None and str(result.get(key, "")) != str(value):
+        if str(result.get(key, "")) != str(value):
             errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
     selector = str(result.get("loaderSelector", ""))
     if selector != target["loaderVersion"]:
@@ -160,30 +227,42 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     if target["loader"] == "vanilla":
         if resolved:
             errors.append("Vanilla result must not have resolvedLoaderVersion")
-    else:
-        if not resolved or resolved.lower() in MUTABLE_SELECTORS:
-            errors.append("loader result did not resolve to a concrete immutable version")
+    elif not resolved or resolved.lower() in MUTABLE_SELECTORS:
+        errors.append("loader result did not resolve to a concrete immutable version")
+
     checks = result.get("checks")
+    mandatory = (
+        ["materialized", "packageVerified", "runtimeResolved", "javaMatched", "actualClient"]
+        if target["scope"] == "client"
+        else ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "javaMatched"]
+    )
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
-        mandatory = ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy"]
         for key in mandatory:
             if checks.get(key) is not True:
                 errors.append(f"check {key} is not true")
     if result.get("exitCode") != 0:
         errors.append(f"exitCode is {result.get('exitCode')!r}")
+
     evidence = result.get("evidence")
     if not isinstance(evidence, dict):
         errors.append("evidence is missing")
     else:
         if str(evidence.get("manifestLoader", "")) != target["loader"]:
             errors.append("evidence manifestLoader mismatch")
+        runtime = evidence.get("javaRuntime")
+        if not isinstance(runtime, dict) or runtime.get("matched") is not True or runtime.get("detectedMajor") != target["javaMajor"]:
+            errors.append("evidence javaRuntime mismatch")
         files = evidence.get("files")
-        mandatory_files = {
-            "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
-            "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
-        }
+        mandatory_files = (
+            {"client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-certification.json"}
+            if target["scope"] == "client"
+            else {
+                "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
+                "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
+            }
+        )
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":
@@ -197,19 +276,17 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         "",
         "> Матрица сгенерирована автоматически из фактических E2E-результатов. Статусы PASS не хранятся и не редактируются вручную.",
         "",
-        "| Target | Minecraft | Loader | Resolved loader | OS / arch | Actual client | Paper join | Paper health | Result |",
-        "|---|---|---|---|---|---:|---:|---:|---:|",
+        "| Target | Minecraft | Loader | Java | Scope | Actual client | Paper join | Result |",
+        "|---|---|---|---:|---|---:|---:|---:|",
     ]
     for target in targets:
         record = records.get(target["id"], {})
         checks = record.get("checks") if isinstance(record.get("checks"), dict) else {}
         status = "✅ PASS" if record.get("status") == "passed" else "❌ FAIL"
-        resolved = str(record.get("resolvedLoaderVersion") or "—")
+        paper = "—" if target["scope"] == "client" else ("✅" if checks.get("paperJoin") is True else "❌")
         lines.append(
-            f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{resolved}` | "
-            f"`{target['os']}/{target['arch']}` | {'✅' if checks.get('actualClient') is True else '❌'} | "
-            f"{'✅' if checks.get('paperJoin') is True else '❌'} | "
-            f"{'✅' if checks.get('paperHealthy') is True else '❌'} | {status} |"
+            f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{target['javaMajor']}` | `{target['scope']}` | "
+            f"{'✅' if checks.get('actualClient') is True else '❌'} | {paper} | {status} |"
         )
     lines += [
         "",
@@ -217,7 +294,8 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Проверяемый путь каждого PASS: materialize → local SHA-256 verify → canonical API upload → immutable Ed25519 release → clean NeverRuntime sync → actual Minecraft client under Xvfb → Paper world join → session revoke → fail-closed deny.",
+        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → Compatibility Engine resolution → actual Minecraft process under Xvfb.",
+        "Integration scope: canonical API upload → signed immutable release → clean NeverRuntime sync → actual client → Paper join → revoke/deny and health checks.",
         "",
     ]
     return "\n".join(lines)

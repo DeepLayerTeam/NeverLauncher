@@ -20,7 +20,9 @@ import zipfile
 
 API_ROOT = "https://api.github.com"
 API_VERSION = "2022-11-28"
-USER_AGENT = "NeverLauncher-release-certification-fetch/0.16.1"
+ROOT = Path(__file__).resolve().parents[2]
+PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+USER_AGENT = f"NeverLauncher-release-certification-fetch/{PRODUCT_VERSION}"
 ARTIFACT_REDIRECT_SUFFIXES = (
     ".blob.core.windows.net",
     ".githubusercontent.com",

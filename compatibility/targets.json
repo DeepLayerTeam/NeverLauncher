@@ -2,12 +2,91 @@
   "schemaVersion": "1.0",
   "targets": [
     {
+      "id": "vanilla-1.7.10-linux-x64",
+      "minecraft": "1.7.10",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 8,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.12.2-linux-x64",
+      "minecraft": "1.12.2",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 8,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.16.5-linux-x64",
+      "minecraft": "1.16.5",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 8,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.17.1-linux-x64",
+      "minecraft": "1.17.1",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 16,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.18.2-linux-x64",
+      "minecraft": "1.18.2",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.20.4-linux-x64",
+      "minecraft": "1.20.4",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.20.6-linux-x64",
+      "minecraft": "1.20.6",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "client",
+      "required": true
+    },
+    {
       "id": "vanilla-1.21.1-linux-x64",
       "minecraft": "1.21.1",
       "loader": "vanilla",
       "loaderVersion": "",
       "os": "linux",
       "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "integration",
       "required": true
     },
     {
@@ -17,6 +96,8 @@
       "loaderVersion": "latest-stable",
       "os": "linux",
       "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "integration",
       "required": true
     },
     {
@@ -26,6 +107,8 @@
       "loaderVersion": "latest-stable",
       "os": "linux",
       "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "integration",
       "required": true
     },
     {
@@ -35,6 +118,8 @@
       "loaderVersion": "latest-stable",
       "os": "linux",
       "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "integration",
       "required": true
     },
     {
@@ -44,6 +129,8 @@
       "loaderVersion": "latest-stable",
       "os": "linux",
       "arch": "x86_64",
+      "javaMajor": 21,
+      "scope": "integration",
       "required": true
     }
   ]

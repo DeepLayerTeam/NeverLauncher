@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -236,5 +239,118 @@ func TestCompatibilityReleaseRequiresCertificationOnlyAtPublishGate(t *testing.T
 	}
 	if compatibilityCertificationRequired("0.10.7") {
 		t.Fatal("0.10.7 не должен ретроактивно требовать compatibility certification")
+	}
+}
+
+func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte, []byte) {
+	t.Helper()
+	versions := make([]string, 0, len(vanillaCompatibilityBaselineII))
+	for minecraft := range vanillaCompatibilityBaselineII {
+		versions = append(versions, minecraft)
+	}
+	sort.Strings(versions)
+	targets := releaseCompatibilityTargets{SchemaVersion: "1.0", ProductVersion: ver}
+	matrix := releaseCompatibilityMatrix{
+		SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-10-01T00:00:00Z",
+		Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "162", Status: "passed", Errors: []string{},
+	}
+	evidence := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	for _, minecraft := range versions {
+		expected := vanillaCompatibilityBaselineII[minecraft]
+		id := "vanilla-" + minecraft + "-linux-x64"
+		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+			ID: id, Minecraft: minecraft, Loader: "vanilla", OS: "linux", Arch: "x86_64",
+			JavaMajor: expected.JavaMajor, Scope: expected.Scope, Required: true,
+		})
+		checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true}
+		if expected.Scope == "integration" {
+			checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true}
+		}
+		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
+			Loader: "vanilla", OS: "linux", Arch: "x86_64", JavaMajor: expected.JavaMajor, DetectedJavaMajor: expected.JavaMajor,
+			Scope: expected.Scope, Commit: commit, RunID: "162", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence,
+		})
+	}
+	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
+		id := loader + "-1.21.1-linux-x64"
+		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+			ID: id, Minecraft: "1.21.1", Loader: loader, LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
+			JavaMajor: 21, Scope: "integration", Required: true,
+		})
+		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "1.21.1",
+			Loader: loader, LoaderSelector: "latest-stable", ResolvedLoaderVersion: "1.0.0", OS: "linux", Arch: "x86_64",
+			JavaMajor: 21, DetectedJavaMajor: 21, Scope: "integration", Commit: commit, RunID: "162", ExitCode: 0,
+			Checks:         map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true},
+			EvidenceSHA256: evidence,
+		})
+	}
+	targetRaw, err := json.Marshal(targets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matrixRaw, err := json.Marshal(matrix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return matrixRaw, targetRaw
+}
+
+func TestCompatibilityCertificationVanillaBaselineII(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.2", "commit-162")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162")
+	if err != nil {
+		t.Fatalf("0.16.2 Baseline II evidence must pass: %v", err)
+	}
+	if certification.Policy != "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact" {
+		t.Fatalf("unexpected policy: %s", certification.Policy)
+	}
+	if len(certification.VanillaVersions) != len(vanillaCompatibilityBaselineII) {
+		t.Fatalf("vanilla coverage=%v", certification.VanillaVersions)
+	}
+	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21]" {
+		t.Fatalf("java coverage=%s", got)
+	}
+	if got := strings.Join(certification.Scopes, ","); got != "client,integration" {
+		t.Fatalf("scope coverage=%s", got)
+	}
+}
+
+func TestCompatibilityCertificationVanillaBaselineIIRejectsJavaMismatch(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.2", "commit-162")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].MinecraftVersion == "1.17.1" && matrix.Targets[i].Loader == "vanilla" {
+			matrix.Targets[i].DetectedJavaMajor = 17
+			matrix.Targets[i].Checks["javaMatched"] = false
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162"); err == nil {
+		t.Fatal("0.16.2 Baseline II must reject Java mismatch")
+	}
+}
+
+func TestCompatibilityCertificationVanillaBaselineIIRejectsMissingAnchor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.2", "commit-162")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.12.2" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162"); err == nil {
+		t.Fatal("0.16.2 Baseline II must reject missing anchor")
 	}
 }

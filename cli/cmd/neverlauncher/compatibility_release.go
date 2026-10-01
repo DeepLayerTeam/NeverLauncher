@@ -30,6 +30,8 @@ type releaseCompatibilityTarget struct {
 	LoaderVersion string `json:"loaderVersion"`
 	OS            string `json:"os"`
 	Arch          string `json:"arch"`
+	JavaMajor     int    `json:"javaMajor,omitempty"`
+	Scope         string `json:"scope,omitempty"`
 	Required      bool   `json:"required"`
 }
 
@@ -50,6 +52,9 @@ type releaseCompatibilityResult struct {
 	ResolvedLoaderVersion string          `json:"resolvedLoaderVersion"`
 	OS                    string          `json:"os"`
 	Arch                  string          `json:"arch"`
+	JavaMajor             int             `json:"javaMajor,omitempty"`
+	DetectedJavaMajor     int             `json:"detectedJavaMajor,omitempty"`
+	Scope                 string          `json:"scope,omitempty"`
 	Commit                string          `json:"commit"`
 	RunID                 string          `json:"runId"`
 	ExitCode              int             `json:"exitCode"`
@@ -81,7 +86,49 @@ type releaseCompatibilityCertification struct {
 	RequiredTargetIDs []string `json:"requiredTargetIds"`
 	PassedTargetIDs   []string `json:"passedTargetIds"`
 	LoaderFamilies    []string `json:"loaderFamilies"`
+	VanillaVersions   []string `json:"vanillaVersions,omitempty"`
+	JavaMajors        []int    `json:"javaMajors,omitempty"`
+	Scopes            []string `json:"scopes,omitempty"`
 	Policy            string   `json:"policy"`
+}
+
+var vanillaCompatibilityBaselineII = map[string]struct {
+	JavaMajor int
+	Scope     string
+}{
+	"1.7.10": {JavaMajor: 8, Scope: "client"},
+	"1.12.2": {JavaMajor: 8, Scope: "client"},
+	"1.16.5": {JavaMajor: 8, Scope: "client"},
+	"1.17.1": {JavaMajor: 16, Scope: "client"},
+	"1.18.2": {JavaMajor: 17, Scope: "client"},
+	"1.20.4": {JavaMajor: 17, Scope: "client"},
+	"1.20.6": {JavaMajor: 21, Scope: "client"},
+	"1.21.1": {JavaMajor: 21, Scope: "integration"},
+}
+
+func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
+	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
+	parts := strings.Split(core, ".")
+	if len(parts) < 3 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	patch, err3 := strconv.Atoi(parts[2])
+	if err1 != nil || err2 != nil || err3 != nil {
+		return false
+	}
+	if major != wantMajor {
+		return major > wantMajor
+	}
+	if minor != wantMinor {
+		return minor > wantMinor
+	}
+	return patch >= wantPatch
+}
+
+func compatibilityVanillaBaselineIIRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 2)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -152,9 +199,12 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		return releaseCompatibilityCertification{}, fmt.Errorf("compatibility matrix commit mismatch: expected=%s actual=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
 	}
 
+	enhanced := compatibilityVanillaBaselineIIRequired(ver)
 	allowedLoaders := map[string]bool{"vanilla": true, "fabric": true, "quilt": true, "forge": true, "neoforge": true}
 	targetByID := map[string]releaseCompatibilityTarget{}
 	requiredIDs := []string{}
+	baselineTargets := map[string]releaseCompatibilityTarget{}
+	requiredLoaderTargets := map[string]bool{}
 	for _, target := range targets.Targets {
 		id := strings.TrimSpace(target.ID)
 		if id == "" {
@@ -169,13 +219,48 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		if strings.TrimSpace(target.Minecraft) == "" || strings.TrimSpace(target.OS) == "" || strings.TrimSpace(target.Arch) == "" {
 			return releaseCompatibilityCertification{}, fmt.Errorf("incomplete compatibility target: %s", id)
 		}
+		if enhanced {
+			if target.JavaMajor <= 0 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит javaMajor", id)
+			}
+			if target.Scope != "client" && target.Scope != "integration" {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s имеет неподдерживаемый scope=%s", id, target.Scope)
+			}
+			if target.Scope == "client" && target.Loader != "vanilla" {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: client scope разрешён только для Vanilla", id)
+			}
+		}
 		targetByID[id] = target
 		if target.Required {
 			requiredIDs = append(requiredIDs, id)
+			if enhanced {
+				requiredLoaderTargets[target.Loader] = true
+			}
+			if enhanced && target.Loader == "vanilla" {
+				if _, baseline := vanillaCompatibilityBaselineII[target.Minecraft]; baseline {
+					baselineTargets[target.Minecraft] = target
+				}
+			}
 		}
 	}
 	if len(requiredIDs) == 0 {
 		return releaseCompatibilityCertification{}, errors.New("compatibility targets не содержат required targets")
+	}
+	if enhanced {
+		for loader := range allowedLoaders {
+			if !requiredLoaderTargets[loader] {
+				return releaseCompatibilityCertification{}, fmt.Errorf("compatibility 0.16.2+ missing required loader family %s", loader)
+			}
+		}
+		for minecraft, expected := range vanillaCompatibilityBaselineII {
+			target, ok := baselineTargets[minecraft]
+			if !ok {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla Compatibility Baseline II missing required Minecraft %s", minecraft)
+			}
+			if target.JavaMajor != expected.JavaMajor || target.Scope != expected.Scope {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla %s baseline mismatch: expected Java %d scope=%s, got Java %d scope=%s", minecraft, expected.JavaMajor, expected.Scope, target.JavaMajor, target.Scope)
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -193,9 +278,14 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		return releaseCompatibilityCertification{}, fmt.Errorf("matrix target count mismatch: expected=%d actual=%d", len(targetByID), len(resultByID))
 	}
 
-	mandatoryChecks := []string{"actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy"}
+	legacyMandatoryChecks := []string{"actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy"}
+	clientMandatoryChecks := []string{"materialized", "packageVerified", "runtimeResolved", "javaMatched", "actualClient"}
+	integrationMandatoryChecks := []string{"actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "javaMatched"}
 	passedIDs := []string{}
 	loaderSet := map[string]bool{}
+	vanillaVersionSet := map[string]bool{}
+	javaMajorSet := map[int]bool{}
+	scopeSet := map[string]bool{}
 	mutable := map[string]bool{"latest": true, "latest-stable": true, "recommended": true, "stable": true}
 	for id, target := range targetByID {
 		result, ok := resultByID[id]
@@ -208,8 +298,21 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		if result.MinecraftVersion != target.Minecraft || result.Loader != target.Loader || result.LoaderSelector != target.LoaderVersion || result.OS != target.OS || result.Arch != target.Arch {
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s identity mismatch между targets и matrix", id)
 		}
+		if enhanced {
+			if result.JavaMajor != target.JavaMajor || result.DetectedJavaMajor != target.JavaMajor || result.Scope != target.Scope {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s Java/scope mismatch: target Java=%d scope=%s, result Java=%d detected=%d scope=%s", id, target.JavaMajor, target.Scope, result.JavaMajor, result.DetectedJavaMajor, result.Scope)
+			}
+		}
 		if result.Commit != matrix.Commit || result.RunID != matrix.RunID {
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s commit/runId не совпадает с aggregate matrix", id)
+		}
+		mandatoryChecks := legacyMandatoryChecks
+		if enhanced {
+			if target.Scope == "client" {
+				mandatoryChecks = clientMandatoryChecks
+			} else {
+				mandatoryChecks = integrationMandatoryChecks
+			}
 		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
@@ -231,6 +334,13 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		passedIDs = append(passedIDs, id)
 		loaderSet[target.Loader] = true
+		if enhanced {
+			javaMajorSet[target.JavaMajor] = true
+			scopeSet[target.Scope] = true
+			if target.Loader == "vanilla" && target.Required {
+				vanillaVersionSet[target.Minecraft] = true
+			}
+		}
 	}
 
 	sort.Strings(requiredIDs)
@@ -240,8 +350,27 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		loaderFamilies = append(loaderFamilies, loader)
 	}
 	sort.Strings(loaderFamilies)
+	vanillaVersions := make([]string, 0, len(vanillaVersionSet))
+	for minecraft := range vanillaVersionSet {
+		vanillaVersions = append(vanillaVersions, minecraft)
+	}
+	sort.Strings(vanillaVersions)
+	javaMajors := make([]int, 0, len(javaMajorSet))
+	for major := range javaMajorSet {
+		javaMajors = append(javaMajors, major)
+	}
+	sort.Ints(javaMajors)
+	scopes := make([]string, 0, len(scopeSet))
+	for scope := range scopeSet {
+		scopes = append(scopes, scope)
+	}
+	sort.Strings(scopes)
 	matrixHash := sha256.Sum256(matrixRaw)
 	targetsHash := sha256.Sum256(targetsRaw)
+	policy := "all-required-targets-must-pass-actual-client-e2e"
+	if enhanced {
+		policy = "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",
 		ProductVersion:    ver,
@@ -254,7 +383,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		RequiredTargetIDs: requiredIDs,
 		PassedTargetIDs:   passedIDs,
 		LoaderFamilies:    loaderFamilies,
-		Policy:            "all-required-targets-must-pass-actual-client-e2e",
+		VanillaVersions:   vanillaVersions,
+		JavaMajors:        javaMajors,
+		Scopes:            scopes,
+		Policy:            policy,
 	}, nil
 }
 
@@ -285,8 +417,13 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 	if stored.SchemaVersion != expected.SchemaVersion || stored.ProductVersion != expected.ProductVersion || stored.Repository != expected.Repository || stored.Commit != expected.Commit || stored.RunID != expected.RunID || stored.MatrixSHA256 != expected.MatrixSHA256 || stored.TargetsSHA256 != expected.TargetsSHA256 || stored.Policy != expected.Policy {
 		return errors.New("COMPATIBILITY_CERTIFICATION не соответствует embedded matrix/targets")
 	}
-	if strings.Join(stored.RequiredTargetIDs, "\x00") != strings.Join(expected.RequiredTargetIDs, "\x00") || strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") || strings.Join(stored.LoaderFamilies, "\x00") != strings.Join(expected.LoaderFamilies, "\x00") {
-		return errors.New("COMPATIBILITY_CERTIFICATION target/loader sets mismatch")
+	if strings.Join(stored.RequiredTargetIDs, "\x00") != strings.Join(expected.RequiredTargetIDs, "\x00") ||
+		strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") ||
+		strings.Join(stored.LoaderFamilies, "\x00") != strings.Join(expected.LoaderFamilies, "\x00") ||
+		strings.Join(stored.VanillaVersions, "\x00") != strings.Join(expected.VanillaVersions, "\x00") ||
+		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
+		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {
+		return errors.New("COMPATIBILITY_CERTIFICATION target/loader/vanilla/java coverage mismatch")
 	}
 	return nil
 }

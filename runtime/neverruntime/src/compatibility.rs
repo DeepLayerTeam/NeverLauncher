@@ -364,7 +364,20 @@ pub async fn resolve_compatibility(
         resolve_arguments(&merged.arguments.game, &environment)?
     };
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
-    let raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
+    let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
+    if raw_jvm_args.is_empty() {
+        // Minecraft releases before the arguments.jvm metadata era relied on the
+        // launcher to provide the native path, launcher identity and classpath.
+        // Keep that behavior here so old Vanilla versions are launched by the
+        // same Compatibility Engine instead of requiring an ad-hoc legacy path.
+        raw_jvm_args = vec![
+            "-Djava.library.path=${natives_directory}".to_string(),
+            "-Dminecraft.launcher.brand=${launcher_name}".to_string(),
+            "-Dminecraft.launcher.version=${launcher_version}".to_string(),
+            "-cp".to_string(),
+            "${classpath}".to_string(),
+        ];
+    }
     let game_args = substitute_all(raw_game_args, &variables)?;
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
@@ -961,6 +974,31 @@ mod tests {
         assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn legacy_metadata_injects_launcher_jvm_arguments() {
+        let root = temp_root("legacy-jvm");
+        stdfs::create_dir_all(root.join("versions/1.7.10")).unwrap();
+        stdfs::write(
+            root.join("versions/1.7.10/1.7.10.json"),
+            r#"{
+              "id":"1.7.10","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"1.7.10",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "minecraftArguments":"--username ${auth_player_name} --version ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userProperties {} --userType ${user_type}"
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("resolve legacy");
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=NeverLauncher"));
+        assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
         let _ = stdfs::remove_dir_all(root);
     }
 

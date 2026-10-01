@@ -1,5 +1,5 @@
 use neverruntime::{
-    build_launch_plan, check_files, download_missing_files, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
+    build_launch_plan, certify_vanilla_compatibility, check_files, download_missing_files, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
     resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest,
 };
 use serde_json::json;
@@ -35,11 +35,12 @@ async fn run() -> Result<serde_json::Value, String> {
         "launch" => command_launch(rest).await,
         "plan" => command_plan(rest).await,
         "compatibility" => command_compatibility(rest).await,
+        "certify-vanilla" => command_certify_vanilla(rest).await,
         "java" => command_java(rest).await,
         "help" | "--help" | "-h" => Ok(json!({
             "status": "ready",
             "version": env!("CARGO_PKG_VERSION"),
-            "commands": ["verify", "sync", "launch", "plan", "compatibility", "java ensure"]
+            "commands": ["verify", "sync", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
         })),
         other => Err(format!("неизвестная команда: {other}")),
     }
@@ -131,6 +132,28 @@ async fn command_compatibility(args: &[String]) -> Result<serde_json::Value, Str
     };
     let metadata = optional_flag(args, "--metadata");
     let result = resolve_compatibility(&root, &version, metadata.as_deref(), &context).await?;
+    serde_json::to_value(result).map_err(|err| err.to_string())
+}
+
+async fn command_certify_vanilla(args: &[String]) -> Result<serde_json::Value, String> {
+    let root = PathBuf::from(required_flag(args, "--root")?);
+    let version = required_flag(args, "--version")?;
+    let java = required_flag(args, "--java")?;
+    let required_java_major = required_flag(args, "--required-java-major")?
+        .parse::<u32>()
+        .map_err(|_| "--required-java-major должен быть целым числом".to_string())?;
+    let max_runtime_seconds = optional_flag(args, "--max-runtime-seconds")
+        .unwrap_or_else(|| "30".to_string())
+        .parse::<u64>()
+        .map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string())?;
+    let result = certify_vanilla_compatibility(
+        &root,
+        &version,
+        java,
+        required_java_major,
+        max_runtime_seconds,
+    )
+    .await?;
     serde_json::to_value(result).map_err(|err| err.to_string())
 }
 

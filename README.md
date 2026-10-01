@@ -4,7 +4,11 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **CI Recovery / 0.16.1**. Patch-релиз сохраняет production boundary 0.16.0 и устраняет ошибки, из-за которых обязательные CI/Compatibility/Device Trust jobs не могли пройти на одном commit.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Vanilla Compatibility Baseline II / 0.16.2**. Релиз переводит Vanilla certification с одной версии 1.21.1 на обязательную многоверсионную линию 1.7.10–1.21.1 с точными Java 8/16/17/21 и фактическим запуском клиента.
+
+## Vanilla Compatibility Baseline II — 0.16.2
+
+`0.16.2` добавляет исполняемую многоверсионную certification model без новой DB migration: восемь обязательных Vanilla anchors (`1.7.10`, `1.12.2`, `1.16.5`, `1.17.1`, `1.18.2`, `1.20.4`, `1.20.6`, `1.21.1`) привязаны к exact Java major и не могут быть удалены из release matrix без fail-closed ошибки. Исторические targets materialize официальный Mojang client и запускают его через `NeverRuntime certify-vanilla`; актуальная 1.21.1 и Fabric/Quilt/Forge/NeoForge сохраняют полный signed-release → clean sync → Paper join/revoke E2E. Compatibility Engine также получил реальный legacy JVM fallback для metadata эпохи `minecraftArguments`, где отсутствует `arguments.jvm`.
 
 ## CI Recovery — 0.16.1
 

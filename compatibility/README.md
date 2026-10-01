@@ -1,16 +1,40 @@
 # Публичная CI Compatibility Matrix NeverLauncher
 
-Матрица совместимости NeverLauncher формируется только из фактических запусков настоящего Minecraft Java Client. Файл `targets.json` содержит цели проверки, но **не содержит статусов PASS/FAIL**.
+NeverLauncher 0.16.2 использует **Vanilla Compatibility Baseline II**: release compatibility формируется из фактической materialization и запуска настоящего Minecraft Java Client на нескольких поколениях Vanilla и на точной Java, а не из вручную выставленных PASS/FAIL. `compatibility/targets.json` содержит только обязательные цели; статусы появляются исключительно из CI evidence.
 
-Канонические цели текущего compatibility release:
+Обязательная Vanilla-линия 0.16.2:
 
-- Vanilla 1.21.1 — Linux x86_64;
-- Fabric 1.21.1 — Linux x86_64, concrete loader разрешается из `latest-stable` до публикации release;
-- Quilt 1.21.1 — Linux x86_64;
-- Forge 1.21.1 — Linux x86_64;
-- NeoForge 1.21.1 — Linux x86_64.
+| Minecraft | Java | scope |
+| --- | ---: | --- |
+| 1.7.10 | 8 | client |
+| 1.12.2 | 8 | client |
+| 1.16.5 | 8 | client |
+| 1.17.1 | 16 | client |
+| 1.18.2 | 17 | client |
+| 1.20.4 | 17 | client |
+| 1.20.6 | 21 | client |
+| 1.21.1 | 21 | integration |
 
-Каждый target проходит один и тот же проверяемый путь:
+Дополнительно обязательны Fabric, Quilt, Forge и NeoForge 1.21.1 на Java 21 с `scope=integration`. Для loader targets mutable `latest-stable` разрешается до выполнения target, а опубликованный result обязан содержать конкретную версию loader.
+
+## Исполняемые scope
+
+`client` предназначен для исторических Vanilla-версий, которые нельзя корректно проверять world-join на Paper 1.21.1. Для каждого такого target CI выполняет рабочий путь:
+
+```text
+official Mojang version metadata
+ -> materialize client.jar/libraries/assets/natives
+ -> local SHA-256 package verify
+ -> resolve Compatibility Engine metadata
+ -> verify exact target Java major
+ -> launch real Minecraft main class under Xvfb
+ -> require process to stay healthy until certification window or exit successfully
+ -> store runtime log + machine-verifiable evidence
+```
+
+Это не metadata-only gate: `neverruntime certify-vanilla` запускает фактический материализованный клиент. Для legacy metadata без `arguments.jvm` Compatibility Engine добавляет launcher JVM baseline (`java.library.path`, launcher identity и classpath), поэтому 1.7.10/1.12.2 проходят тем же runtime resolver, а не отдельной заглушкой.
+
+`integration` сохраняет полный production E2E:
 
 ```text
 upstream metadata / installer
@@ -20,15 +44,16 @@ upstream metadata / installer
  -> Ed25519 signed immutable release
  -> clean NeverRuntime sync
  -> pinned signature + file integrity verification
+ -> exact Java major
  -> Xvfb actual Minecraft client
  -> Paper 1.21.1 world join
  -> launcher session revoke
  -> subsequent join denied
 ```
 
-Workflow `.github/workflows/compatibility.yml` запускается после push в `main`, по расписанию и вручную. Каждый target публикует machine-verifiable `compatibility-result.json`. Финальный job скачивает результаты, проверяет соответствие exact commit/run ID, целевой версии Minecraft/loader/OS/arch, concrete loader version и обязательным evidence checks, после чего генерирует `matrix.json` и `matrix.md` в GitHub Actions Summary и artifact.
+Workflow `.github/workflows/compatibility.yml` устанавливает Java каждого target отдельно от Java 21 build tooling, фиксирует реальный executable и detected major, запускает target и публикует `compatibility-result.json` вместе с evidence. Агрегатор отклоняет отсутствующий/дублированный target, Java mismatch, scope mismatch, несовпадение commit/run ID, mutable loader result и неполный actual-client evidence.
 
-Ручная запись зелёного статуса в `targets.json` запрещена repository policy. Пропущенный target, дублированный result, mutable `latest-stable` в уже опубликованном loader result, несовпадение commit/run ID или отсутствие actual-client evidence переводят итоговую матрицу в failed.
+Для product version `>= 0.16.2` агрегатор и CLI release certification fail-closed требуют все восемь Vanilla anchors, Java coverage `8/16/17/21`, все пять loader families и exact target binding. Удалить старую Vanilla-ветку из `targets.json` и получить зелёный release невозможно.
 
 Локальная проверка определения и агрегатора:
 
@@ -39,21 +64,6 @@ python3 scripts/compatibility/test_matrix.py
 
 ## Release certification
 
-Minecraft Compatibility Release сохраняет состав обязательных target'ов и добавляет связь между CI evidence и production release bundle. Стабилизация materialization из `0.10.7` остаётся обязательной частью контура:
+При сборке официального release CLI повторно валидирует `matrix.json` вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Для 0.16.2 certification фиксирует required/passed targets, восемь Vanilla versions, Java majors, scopes, SHA-256 исходной target definition и агрегированной matrix, source commit и Actions run ID.
 
-- materializer одного `clientDir` сериализован exclusive lock-файлом;
-- transient upstream `408/425/429/5xx` повторяются ограниченное число раз;
-- symlink-компоненты client tree и symlink package artifacts запрещены;
-- generated `natives/<os>` пересобираются с нуля;
-- Forge/NeoForge processor scratch data очищается перед каждым install;
-- агрегатор требует `exitCode == 0`, `paperHealthy == true`, совпадение `manifestLoader` и полный набор обязательных evidence files.
-
-Таким образом `status: passed` в одном JSON недостаточен для зелёной публичной матрицы: результат должен пройти независимую агрегационную проверку.
-
-## Как матрица становится частью release
-
-Агрегированный `matrix.json` сам по себе не является release trust anchor. При сборке официального release CLI повторно валидирует его вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Проверяются exact `productVersion`, source commit, Actions run ID, отсутствие matrix errors, все required targets, concrete loader versions, `exitCode=0` и полный набор mandatory checks.
-
-В release bundle сохраняются точные копии target definition и matrix. Certification содержит их SHA-256, commit/run ID и списки required/passed targets. `nl release publish-check` для Minecraft Compatibility Release и новее fail-closed требует эти три файла и повторно вычисляет certification перед разрешением публикации. Они включаются в `SHA256SUMS` и покрываются Ed25519-подписью release bundle.
-
-CI bundle без переданного `NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE` допустим только как build candidate; он проходит cryptographic `release verify`, но не проходит `release publish-check`.
+`nl release publish-check` fail-closed повторно вычисляет certification и требует policy `all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact`. Target definition, matrix и certification включаются в release signature boundary. CI bundle без compatibility matrix может существовать как build candidate, но не проходит официальный publish-check.

@@ -285,6 +285,24 @@ pub struct LaunchResult {
     pub message: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VanillaCompatibilityProbeResult {
+    pub status: String,
+    pub minecraft_version: String,
+    pub required_java_major: u32,
+    pub detected_java_major: u32,
+    pub java_executable: String,
+    pub main_class: String,
+    pub classpath_entries: usize,
+    pub success: bool,
+    pub timed_out: bool,
+    pub exit_code: Option<i32>,
+    pub log_path: String,
+    pub runtime_seconds: u64,
+    pub message: String,
+}
+
 pub async fn load_manifest(url: &str, pinned_public_key: &str) -> Result<Manifest, String> {
     let response = reqwest::Client::new()
         .get(url)
@@ -568,6 +586,139 @@ pub async fn build_authenticated_launch_plan(manifest: &Manifest, root: &Path, j
 
 pub async fn launch(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, pinned_public_key: &str) -> Result<LaunchResult, String> {
     launch_with_timeout(manifest, root, java_path, username, pinned_public_key, None).await
+}
+
+pub async fn certify_vanilla_compatibility(
+    root: &Path,
+    version: &str,
+    java_path: String,
+    required_java_major: u32,
+    max_runtime_seconds: u64,
+) -> Result<VanillaCompatibilityProbeResult, String> {
+    if required_java_major == 0 {
+        return Err("Vanilla certification требует required Java major".to_string());
+    }
+    if max_runtime_seconds < 5 {
+        return Err("Vanilla certification требует max-runtime-seconds >= 5".to_string());
+    }
+    fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть client root: {err}"))?;
+    let version = safe_component(version)?;
+    let natives_base = root.join("natives");
+    let natives_dir = platform_natives_directory(&natives_base).await;
+    let context = CompatibilityContext {
+        username: "NeverLauncherCertification".to_string(),
+        uuid: "00000000-0000-0000-0000-000000000000".to_string(),
+        access_token: "offline".to_string(),
+        user_type: "legacy".to_string(),
+        launcher_name: "NeverLauncher".to_string(),
+        launcher_version: env!("CARGO_PKG_VERSION").to_string(),
+        game_directory: root.to_string_lossy().to_string(),
+        assets_directory: root.join("assets").to_string_lossy().to_string(),
+        natives_directory: natives_dir.to_string_lossy().to_string(),
+        features: HashMap::new(),
+    };
+    let resolution = resolve_compatibility(root, &version, None, &context).await?;
+    if let Some(metadata_java) = resolution.java_major_version {
+        if metadata_java != required_java_major {
+            return Err(format!(
+                "Vanilla {version} Mojang metadata требует Java {metadata_java}, certification target требует Java {required_java_major}"
+            ));
+        }
+    }
+    let java_info = check_java(Some(java_path.clone()), Some(required_java_major)).await?;
+    if !java_info.found || java_info.detected_major_version != Some(required_java_major) {
+        return Err(format!(
+            "Vanilla {version} certification Java mismatch: требуется Java {required_java_major}, {}",
+            java_info.message
+        ));
+    }
+    let classpath_entries = resolution
+        .classpath
+        .iter()
+        .map(|entry| safe_join(root, entry).map(|path| path.to_string_lossy().to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    if classpath_entries.is_empty() {
+        return Err(format!("Vanilla {version} certification classpath пуст"));
+    }
+    let mut jvm_args = resolution.jvm_args.clone();
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
+        jvm_args.push("-Xmx1024m".to_string());
+    }
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Xms")) {
+        jvm_args.push("-Xms256m".to_string());
+    }
+    let plan = LaunchPlan {
+        java_executable: java_path.clone(),
+        working_directory: root.to_string_lossy().to_string(),
+        main_class: resolution.main_class.clone(),
+        classpath_entries,
+        jvm_args,
+        game_args: resolution.game_args.clone(),
+        command_preview: format!("{} ... {}", java_path, resolution.main_class),
+    };
+
+    let logs_dir = root.join("logs");
+    fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
+    let started_at = now_unix()?;
+    let log_path = logs_dir.join(format!("neverruntime-vanilla-certification-{version}-{started_at}.log"));
+    let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
+        .map_err(|err| format!("не удалось открыть certification log {}: {err}", log_path.display()))?;
+    use std::io::Write as _;
+    writeln!(log_file, "NeverRuntime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
+    writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
+    writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
+    log_file.flush().map_err(|e| e.to_string())?;
+    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
+    let mut command = Command::new(&plan.java_executable);
+    command
+        .args(&plan.jvm_args)
+        .arg("-cp")
+        .arg(join_classpath(&plan.classpath_entries))
+        .arg(&plan.main_class)
+        .args(&plan.game_args)
+        .current_dir(Path::new(&plan.working_directory))
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(stdout_file))
+        .stderr(Stdio::from(log_file));
+    windows_policy::prepare_runtime_command(&mut command);
+    let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
+    let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
+        .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
+    let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
+        Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla runtime: {err}"))?), false),
+        Err(_) => {
+            child.kill().await.map_err(|err| format!("Vanilla runtime не удалось остановить после timeout: {err}"))?;
+            let _ = child.wait().await;
+            (None, true)
+        }
+    };
+    let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
+    let exit_code = status.and_then(|value| value.code());
+    let finished_at = now_unix()?;
+    let runtime_seconds = finished_at.saturating_sub(started_at);
+    let passed = timed_out || success;
+    let message = if timed_out {
+        format!("Vanilla {version} оставался работоспособным до certification timeout {max_runtime_seconds}s")
+    } else if success {
+        format!("Vanilla {version} завершился успешно")
+    } else {
+        format!("Vanilla {version} завершился с ошибкой до certification timeout")
+    };
+    Ok(VanillaCompatibilityProbeResult {
+        status: if passed { "passed".to_string() } else { "failed".to_string() },
+        minecraft_version: version,
+        required_java_major,
+        detected_java_major: java_info.detected_major_version.unwrap_or_default(),
+        java_executable: java_path,
+        main_class: plan.main_class,
+        classpath_entries: plan.classpath_entries.len(),
+        success,
+        timed_out,
+        exit_code,
+        log_path: log_path.to_string_lossy().to_string(),
+        runtime_seconds,
+        message,
+    })
 }
 
 pub async fn launch_with_timeout(

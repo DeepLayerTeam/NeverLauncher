@@ -1,3 +1,14 @@
+## 0.16.2 — Vanilla Compatibility Baseline II
+
+`0.16.2` заменяет одноверсионную Vanilla certification на исполняемую многоверсионную модель без новой DB migration и без ослабления существующего integration E2E.
+
+- Обязательная Vanilla-линия теперь включает 1.7.10/1.12.2/1.16.5 на Java 8, 1.17.1 на Java 16, 1.18.2/1.20.4 на Java 17 и 1.20.6/1.21.1 на Java 21. Release gate требует весь набор и Java coverage 8/16/17/21.
+- Добавлен `NeverRuntime certify-vanilla`: он разрешает реальную Mojang metadata/classpath, проверяет exact Java major и запускает фактический материализованный Minecraft client под certification timeout с машинным result/log evidence.
+- Compatibility Engine корректно запускает legacy Vanilla metadata без `arguments.jvm`, добавляя launcher JVM baseline и сохраняя единый resolver для старых и новых версий.
+- Compatibility CI разделяет `client` и `integration` scope: исторические Vanilla версии получают реальный client-launch gate, а 1.21.1 + Fabric/Quilt/Forge/NeoForge сохраняют полный signed release, clean sync, actual client, Paper join, session revoke и health evidence.
+- Python matrix aggregator и Go release certification связывают target/result по Minecraft, loader, OS/arch, Java major и scope; 0.16.2 fail-closed отклоняет отсутствующий baseline anchor, Java mismatch, неполный evidence и попытку сузить обязательное покрытие.
+- Публичный runtime matrix и compatibility documentation обновлены до 12 обязательных targets.
+
 ## 0.16.1 — CI Recovery
 
 `0.16.1` восстанавливает обязательный CI-контур поверх Production Delivery Release 0.16.0 без новой DB migration и без отключения functional/security gates.
