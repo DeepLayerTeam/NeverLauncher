@@ -1,3 +1,11 @@
+## 0.17.4 — Forge Legacy 1.12.2
+
+- Added a real Forge 1.12.2 legacy installer path for classic V1 `install_profile.json` archives: NeverLauncher parses `install` + nested `versionInfo`, extracts the embedded universal JAR from `install.filePath`, verifies SHA-1, writes the Maven artifact and preserves the original runtime profile instead of pretending the installer has modern processors.
+- Added a separate path for repacked Forge 1.12.2 installers that contain `version.json` but intentionally have empty `data/processors`; their embedded Maven universal artifact is materialized and verified without processor emulation.
+- Legacy library handling now honors old `clientreq` and `checksums` fields in both the Go materializer and NeverRuntime, preventing server-only libraries from entering the client tree/classpath while retaining strict checksum validation.
+- Forge legacy certification requires LaunchWrapper + `FMLTweaker`, exact Java 8, package verification, immutable resolved Forge version, universal SHA-1/SHA-256 evidence and actual client launch through NeverRuntime.
+- Added the required Forge 1.12.2 target, 0.17.4 matrix/release/repository gates, real legacy-installer regression fixtures, and retained the separate 43-release processor-based Forge Modern 0.17.3 gate.
+
 ## 0.17.3 — Forge Modern
 
 - Promoted processor-based Forge to a mandatory executable compatibility line covering **43 official Forge release points from Minecraft 1.13.2 through 26.3**, with exact Java 8/16/17/21/25 binding. Forge 1.13/1.13.1 are not advertised because the modern processor installer line starts at 1.13.2.

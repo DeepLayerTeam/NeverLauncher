@@ -471,6 +471,20 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		}
 	}
 
+	if compatibilityForgeLegacy1122_0174Required(ver) {
+		id := "forge-1.12.2-linux-x64"
+		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+			ID: id, Minecraft: "1.12.2", Loader: "forge", LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
+			JavaMajor: 8, Scope: "client", Required: true,
+		})
+		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "1.12.2",
+			Loader: "forge", LoaderSelector: "latest-stable", ResolvedLoaderVersion: "14.23.5.2864", OS: "linux", Arch: "x86_64",
+			JavaMajor: 8, DetectedJavaMajor: 8, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: "8.0.0+ga", JREExecutableSHA256: evidence, Scope: "client", Commit: commit, RunID: "162", ExitCode: 0,
+			Checks: map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true, "jreCertified": true}, EvidenceSHA256: evidence,
+		})
+	}
+
 	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
 		if loader == "fabric" && compatibilityFabricII0171Required(ver) {
 			continue
@@ -1319,6 +1333,57 @@ func TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader(t
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "immutable version") {
 		t.Fatalf("0.17.3 must reject mutable Forge loader evidence, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationForgeLegacy1122_0174(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.4", "commit-174")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174")
+	if err != nil {
+		t.Fatalf("0.17.4 Forge Legacy evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client") {
+		t.Fatalf("0.17.4 policy does not bind Forge Legacy 1.12.2: %s", certification.Policy)
+	}
+	if !slices.Contains(certification.ForgeVersions, "1.12.2") {
+		t.Fatalf("0.17.4 Forge coverage missing 1.12.2: %v", certification.ForgeVersions)
+	}
+}
+
+func TestCompatibilityCertificationForgeLegacy1122_0174RejectsMissingTarget(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.4", "commit-174")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "forge" && target.Minecraft == "1.12.2" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "Forge Legacy 1.12.2 0.17.4") {
+		t.Fatalf("0.17.4 must reject missing Forge 1.12.2 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationForgeLegacy1122_0174RejectsMutableResolvedLoader(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.4", "commit-174")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].Loader == "forge" && matrix.Targets[i].MinecraftVersion == "1.12.2" {
+			matrix.Targets[i].ResolvedLoaderVersion = "latest-stable"
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+		t.Fatalf("0.17.4 must reject mutable Forge legacy loader evidence, got %v", err)
 	}
 }
 

@@ -36,7 +36,7 @@ printf '[forge-cert] build CLI and NeverRuntime\n'
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[forge-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
-printf '[forge-cert] materialize processor-based Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
+printf '[forge-cert] materialize Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 "$NL_BIN" runtime forge-package \
   --minecraft "$MINECRAFT_VERSION" \
   --loader-version "$LOADER_SELECTOR" \
@@ -71,8 +71,25 @@ if not (install.get('loaderVersion') and install.get('artifactVersion') and inst
 client_processors = int(install.get('clientProcessorCount') or 0)
 ran = int(install.get('processorRan') or 0)
 skipped = int(install.get('processorSkipped') or 0)
-if client_processors <= 0 or ran + skipped != client_processors:
-    raise SystemExit(f'Forge processor execution evidence is incomplete: client={client_processors} ran={ran} skipped={skipped}')
+mode = str(install.get('installMode') or '')
+if mc == '1.12.2':
+    if mode not in ('legacy-v1-universal', 'legacy-v2-empty-processors'):
+        raise SystemExit(f'Forge 1.12.2 did not use a legacy universal installer path: {mode!r}')
+    if client_processors != 0 or ran != 0 or skipped != 0:
+        raise SystemExit('Forge 1.12.2 legacy installer unexpectedly reported processors')
+    if not str(install.get('legacyUniversalPath') or '').startswith('libraries/net/minecraftforge/forge/'):
+        raise SystemExit('Forge 1.12.2 universal JAR was not materialized under libraries/')
+    if not re.fullmatch(r'[0-9a-f]{40}', str(install.get('legacyUniversalSha1') or '')):
+        raise SystemExit('invalid Forge 1.12.2 universal SHA-1')
+    if not re.fullmatch(r'[0-9a-f]{64}', str(install.get('legacyUniversalSha256') or '')):
+        raise SystemExit('invalid Forge 1.12.2 universal SHA-256')
+    if install.get('mainClass') != 'net.minecraft.launchwrapper.Launch':
+        raise SystemExit('Forge 1.12.2 legacy mainClass mismatch')
+else:
+    if mode != 'processors':
+        raise SystemExit(f'Forge modern target did not use processor mode: {mode!r}')
+    if client_processors <= 0 or ran + skipped != client_processors:
+        raise SystemExit(f'Forge processor execution evidence is incomplete: client={client_processors} ran={ran} skipped={skipped}')
 for key in ('installerSha256', 'profileSha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get(key) or '')):
         raise SystemExit(f'invalid Forge {key}')

@@ -234,6 +234,10 @@ var forgeModern0173 = map[string]int{
 	"26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25, "26.3": 25,
 }
 
+var forgeLegacy1122_0174 = map[string]int{
+	"1.12.2": 8,
+}
+
 var java21VanillaCompatibility0167 = map[string]string{
 	"1.20.5":  "client",
 	"1.20.6":  "client",
@@ -360,6 +364,10 @@ func compatibilityQuiltII0172Required(ver string) bool {
 
 func compatibilityForgeModern0173Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 3)
+}
+
+func compatibilityForgeLegacy1122_0174Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 4)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -731,6 +739,12 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				if !target.Required || target.Loader != "forge" {
 					continue
 				}
+				if _, modern := forgeModern0173[target.Minecraft]; !modern {
+					if compatibilityForgeLegacy1122_0174Required(ver) && target.Minecraft == "1.12.2" {
+						continue
+					}
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 unexpected required target for Minecraft %s", target.Minecraft)
+				}
 				forgeCount++
 				if _, exists := forgeTargets[target.Minecraft]; exists {
 					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 duplicate required target for Minecraft %s", target.Minecraft)
@@ -761,6 +775,24 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				if !forgeJava[major] {
 					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 missing JRE major %d", major)
 				}
+			}
+		}
+		if compatibilityForgeLegacy1122_0174Required(ver) {
+			legacyCount := 0
+			for _, target := range targets.Targets {
+				if !target.Required || target.Loader != "forge" || target.Minecraft != "1.12.2" {
+					continue
+				}
+				legacyCount++
+				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4 requires Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s", target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+				if target.LoaderVersion != "latest-stable" {
+					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.12.2 0.17.4 requires loaderVersion=latest-stable selector")
+				}
+			}
+			if legacyCount != 1 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4 requires exactly one required target; got %d", legacyCount)
 			}
 		}
 
@@ -992,6 +1024,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityForgeModern0173Required(ver) {
 		policy += ";forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"
+	}
+	if compatibilityForgeLegacy1122_0174Required(ver) {
+		policy += ";forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

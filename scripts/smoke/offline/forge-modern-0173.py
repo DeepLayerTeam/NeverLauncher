@@ -28,7 +28,10 @@ if len(expected) != 43 or expected.get("1.13.2") != 8 or expected.get("1.17.1") 
     raise SystemExit("Forge Modern 0.17.3 canonical processor-based release grid is incomplete")
 
 target_doc = json.loads(read("compatibility/targets.json"))
-forge_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "forge"]
+forge_rows = [
+    row for row in target_doc["targets"]
+    if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") in expected
+]
 if len(forge_rows) != len(expected):
     raise SystemExit(f"Forge Modern 0.17.3 requires exactly {len(expected)} required targets, got {len(forge_rows)}")
 by_version: dict[str, dict] = {}

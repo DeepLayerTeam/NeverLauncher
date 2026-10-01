@@ -226,6 +226,13 @@ type MojangLibrary struct {
 	Natives   map[string]string      `json:"natives,omitempty"`
 	Rules     []map[string]any       `json:"rules,omitempty"`
 	Extract   map[string]any         `json:"extract,omitempty"`
+	// Forge <=1.12.2 versionInfo uses the legacy lowercase clientreq/serverreq
+	// switches and a list of acceptable SHA-1 checksums instead of Mojang's
+	// downloads.artifact object. Keep them in the shared model so the legacy
+	// installer can be materialized without rewriting its runtime metadata.
+	ClientReq *bool    `json:"clientreq,omitempty"`
+	ServerReq *bool    `json:"serverreq,omitempty"`
+	Checksums []string `json:"checksums,omitempty"`
 }
 
 type MojangLibraryDownloads struct {
@@ -427,7 +434,7 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "complete 0.17.0v1 Legacy Vanilla 53-release actual-client grid", "status": "implemented"},
 			{"feature": "complete 0.17.0v2 Java 16/17 Vanilla 9-release actual-client grid", "status": "implemented"},
 		},
-		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
+		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "forge-legacy-1.12.2", "neoforge", "managed-java-temurin"},
 		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base",
 		"javaMajors":          []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":   managedJavaIIMajors0165(),
@@ -435,7 +442,7 @@ func runtimeMatrix740() map[string]any {
 		"ciTargets":           ciTargets,
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
-		"pending":             []string{"forge-legacy-pre-1.13"},
+		"pending":             []string{"forge-legacy-pre-1.12.2"},
 		"note":                "0.17.0v2 расширяет Minecraft Compatibility II GA до 107 обязательных Vanilla targets / 102 release IDs. Помимо полного v1 Legacy Java 8 grid, обязательны 1.17/Java 16 и 1.18, 1.18.1, 1.19, 1.19.1, 1.19.2, 1.19.3, 1.20, 1.20.3/Java 17; каждый PASS привязан к SHA-256 фактически запущенного JRE binary, vendor/runtime build и host OS/arch.",
 	}
 }
@@ -449,7 +456,7 @@ func runtimeMetadataPolicy740() map[string]any {
 			{"source": "version.json", "trust": "required", "validation": []string{"id", "mainClass", "downloads.client", "libraries", "arguments or minecraftArguments"}},
 			{"source": "asset index", "trust": "required-for-full-assets", "validation": []string{"objects hash", "objects size", "object path prefix"}},
 			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-never-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
-			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "processor-based install_profile (spec 0+)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
+			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "legacy V1 universal installer for Forge 1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
 		},
 		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "Range recovery requires final pinned checksum", "corrupt cache quarantined", "latest/snapshot stale metadata fallback denied", "native zip extraction bounded", "generated natives transactionally published", "remote URL credentials/fragments denied", "hash fields preserved", "signed manifest layer remains outside resolver"},
 	}

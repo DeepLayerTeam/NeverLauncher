@@ -1,5 +1,9 @@
 # NeverLauncher CLI
 
+## Forge Legacy 1.12.2 — 0.17.4
+
+`nl runtime forge-install` / `forge-package` теперь исполняют реальный Forge 1.12.2 legacy installer. V1 installer извлекает universal JAR из `install.filePath`, проверяет SHA-1, сохраняет nested `versionInfo` и материализует только client-required libraries; repacked 1.12.2 installer с пустыми processors использует embedded Maven universal artifact. Результат фиксирует `installMode`, universal SHA-1/SHA-256 и concrete Forge version для release certification.
+
 `nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
 
 Все общие отчёты CLI, ранее помеченные историческими `schemaVersion` 4.x–8.x, используют единую версию схемы `1.0`. Специализированные форматы, например manifest/runtime schema, сохраняют собственные версии формата.

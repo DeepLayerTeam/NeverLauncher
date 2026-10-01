@@ -2291,7 +2291,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["forgeModern0173", "compatibilityForgeModern0173Required", "ForgeVersions", "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"]:
         if required not in forge_release_0173:
             fail(f"0.17.3 Forge release certification incomplete: {required}")
-    forge_rows = [row for row in forge_targets_0173 if row.get("required") and row.get("loader") == "forge"]
+    forge_rows = [row for row in forge_targets_0173 if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") != "1.12.2"]
     if len(forge_rows) != 43 or len({row.get("minecraft") for row in forge_rows}) != 43:
         fail("0.17.3 Forge target grid must contain exactly 43 unique processor-based releases")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in forge_rows}:
@@ -2316,6 +2316,50 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.3 mandatory Forge Modern gate incomplete")
     if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
         fail("0.17.3 Forge Modern gate is not wired into preflight/CI")
+
+
+# 0.17.4 Forge Legacy makes the real 1.12.2 V1 universal-installer path
+# release-bound. It must remain distinct from the processor-based 1.13.2+ path.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 4):
+    legacy_runtime_0174 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    legacy_commands_0174 = read("cli/cmd/neverlauncher/runtime_commands.go")
+    legacy_neverruntime_0174 = read("runtime/neverruntime/src/compatibility.rs")
+    legacy_case_0174 = read("e2e/scripts/run-forge-certification-case.sh")
+    legacy_matrix_0174 = read("scripts/compatibility/matrix.py")
+    legacy_release_0174 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    legacy_targets_0174 = json.loads(read("compatibility/targets.json"))["targets"]
+    legacy_tests_0174 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+    legacy_gate_0174 = read("scripts/smoke/offline/forge-legacy-1122-0174.py")
+    for required in ["forgeLegacyInstallerProfile", "legacy-v1-universal", "legacy-v2-empty-processors", "installForgeLegacy", "extractInstallerEntry", "verifyForgeLegacyUniversal", "net.minecraft.launchwrapper.Launch", "net.minecraftforge.fml.common.launcher.FMLTweaker"]:
+        if required not in legacy_runtime_0174:
+            fail(f"0.17.4 Forge legacy materializer incomplete: {required}")
+    for required in ['"forge-legacy-1.12.2"', '"forge-legacy-pre-1.12.2"', "legacy V1 universal installer"]:
+        if required not in legacy_commands_0174:
+            fail(f"0.17.4 runtime capability status incomplete: {required}")
+    for required in ['alias = "clientreq"', "library.client_req == Some(false)"]:
+        if required not in legacy_neverruntime_0174:
+            fail(f"0.17.4 NeverRuntime legacy client library semantics incomplete: {required}")
+    for required in ["mc == '1.12.2'", "legacy-v1-universal", "legacy-v2-empty-processors", "legacyUniversalSha1", "legacyUniversalSha256", "certify-vanilla"]:
+        if required not in legacy_case_0174:
+            fail(f"0.17.4 Forge legacy actual-client certification incomplete: {required}")
+    for required in ["FORGE_LEGACY_1122_0174", "forge_legacy_1122_0174_required", "Forge Legacy 1.12.2 0.17.4"]:
+        if required not in legacy_matrix_0174:
+            fail(f"0.17.4 Forge legacy matrix incomplete: {required}")
+    for required in ["forgeLegacy1122_0174", "compatibilityForgeLegacy1122_0174Required", "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client"]:
+        if required not in legacy_release_0174:
+            fail(f"0.17.4 Forge legacy release certification incomplete: {required}")
+    legacy_rows = [row for row in legacy_targets_0174 if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") == "1.12.2"]
+    if len(legacy_rows) != 1:
+        fail("0.17.4 Forge legacy target grid must contain exactly one 1.12.2 row")
+    elif legacy_rows[0].get("javaMajor") != 8 or legacy_rows[0].get("scope") != "client" or legacy_rows[0].get("os") != "linux" or legacy_rows[0].get("arch") != "x86_64" or legacy_rows[0].get("loaderVersion") != "latest-stable":
+        fail("0.17.4 Forge 1.12.2 target must be latest-stable Java 8 client linux/x86_64")
+    for required in ["TestForgeLegacy1122V1UniversalInstaller", "TestForgeLegacy1122RepackedEmptyProcessorInstaller", "TestCompatibilityCertificationForgeLegacy1122_0174", "test_validate_accepts_forge_legacy_1122_0174"]:
+        if required not in legacy_tests_0174:
+            fail(f"0.17.4 Forge legacy regression test missing: {required}")
+    if "Forge Legacy 1.12.2 0.17.4 gate: OK" not in legacy_gate_0174:
+        fail("0.17.4 mandatory Forge Legacy gate incomplete")
+    if "forge-legacy-1122-0174.py" not in preflight or "forge-legacy-1122-0174.py" not in ci:
+        fail("0.17.4 Forge Legacy gate is not wired into preflight/CI")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

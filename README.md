@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Forge Legacy 1.12.2 — 0.17.4
+
+NeverLauncher 0.17.4 добавляет отдельный production materializer для **настоящего Forge 1.12.2 legacy installer**. Классический V1 `install_profile.json` (`install` + `versionInfo`) обрабатывается без эмуляции modern processors: universal JAR извлекается из `install.filePath`, публикуется в Maven layout, проверяется по SHA-1, исходный `versionInfo` сохраняется как launch profile, а старые `clientreq`/`checksums` учитываются при client materialization.
+
+Также поддерживается официальный переупакованный 1.12.2 layout с `version.json` и пустыми `data/processors`: embedded universal Maven artifact материализуется через отдельный `legacy-v2-empty-processors` path. Оба режима обязаны дать `net.minecraft.launchwrapper.Launch` + `FMLTweaker`, package integrity и фактический запуск Forge profile через NeverRuntime на exact Java 8. Modern Forge 1.13.2+ остаётся processor-based и не ослабляется.
+
 ## Forge Modern — 0.17.3
 
 NeverLauncher 0.17.3 делает **processor-based Forge 1.13.2+ → current** отдельной production compatibility-линией. Обязательная матрица содержит 43 Forge release points `1.13.2`–`26.3` на exact Java 8/16/17/21/25. Client targets выполняют официальный Forge installer pipeline: verified installer.jar, embedded/profile Maven libraries, client processors и их outputs, generated version profile, package integrity и реальный launch через NeverRuntime. `1.21.1` сохраняет полный integration E2E.

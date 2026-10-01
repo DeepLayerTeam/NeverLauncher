@@ -311,6 +311,160 @@ func TestForgeInstallV1ProcessorTokens(t *testing.T) {
 	}
 }
 
+func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
+	universal := []byte("forge-1.12.2-universal-fixture")
+	universalSHA1 := sha1HexLocal(universal)
+	clientOnly := []byte("legacy-client-library")
+	clientSHA1 := sha1HexLocal(clientOnly)
+	serverOnlyRequested := atomic.Bool{}
+
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	mux.HandleFunc("/repo/com/example/clientlib/1.0/clientlib-1.0.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientOnly) })
+	mux.HandleFunc("/repo/com/example/clientlib/1.0/clientlib-1.0.jar.sha1", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprint(w, clientSHA1) })
+	mux.HandleFunc("/repo/com/example/serverlib/1.0/serverlib-1.0.jar", func(w http.ResponseWriter, r *http.Request) {
+		serverOnlyRequested.Store(true)
+		http.Error(w, "server-only library must not be requested by client materialization", http.StatusTeapot)
+	})
+
+	profileID := "1.12.2-forge-14.23.5.2859"
+	universalCoord := "net.minecraftforge:forge:1.12.2-14.23.5.2859"
+	universalEntry := "forge-1.12.2-14.23.5.2859-universal.jar"
+	versionInfo := map[string]any{
+		"id": profileID, "inheritsFrom": "1.12.2", "type": "release",
+		"mainClass":          "net.minecraft.launchwrapper.Launch",
+		"minecraftArguments": "--username ${auth_player_name} --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker",
+		"libraries": []any{
+			map[string]any{"name": universalCoord, "checksums": []any{universalSHA1}, "clientreq": true, "serverreq": true},
+			map[string]any{"name": "com.example:clientlib:1.0", "url": server.URL + "/repo/", "checksums": []any{clientSHA1}, "clientreq": true, "serverreq": true},
+			map[string]any{"name": "com.example:serverlib:1.0", "url": server.URL + "/repo/", "checksums": []any{sha1HexLocal([]byte("unused"))}, "clientreq": false, "serverreq": true},
+		},
+	}
+	installProfile := map[string]any{
+		"install": map[string]any{
+			"profileName": "Forge", "target": profileID, "path": universalCoord,
+			"version": "14.23.5.2859", "filePath": universalEntry, "minecraft": "1.12.2",
+		},
+		"versionInfo": versionInfo,
+	}
+	profileBytes, _ := json.Marshal(installProfile)
+	var archive bytes.Buffer
+	zw := zip.NewWriter(&archive)
+	for name, payload := range map[string][]byte{"install_profile.json": profileBytes, universalEntry: universal} {
+		entry, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = entry.Write(payload)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	installerPath := filepath.Join(t.TempDir(), "forge-installer.jar")
+	if err := os.WriteFile(installerPath, archive.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := inspectForgeInstaller(installerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bundle.Legacy || bundle.LegacyMode != "legacy-v1-universal" || bundle.Version.ID != profileID {
+		t.Fatalf("legacy V1 installer detection mismatch: %+v", bundle)
+	}
+
+	clientDir := t.TempDir()
+	result, err := installForgeLegacy(context.Background(), forgeMaterializeOptions{
+		Loader: "forge", MinecraftVersion: "1.12.2", ClientDir: clientDir,
+		Workers: 2, StrictUpstream: true, HTTPClient: server.Client(),
+	}, vanillaInstallResult{MinecraftVersion: "1.12.2", JavaMajorVersion: 8, ClientDir: clientDir, Status: "installed-and-verified"},
+		"14.23.5.2859", "1.12.2-14.23.5.2859", "fixture-metadata", server.URL+"/installer.jar", sha1HexLocal(archive.Bytes()),
+		vanillaDownloadedFile{Path: ".neverlauncher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("b", 64)},
+		installerPath, bundle,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.InstallMode != "legacy-v1-universal" || result.MainClass != "net.minecraft.launchwrapper.Launch" || result.ProcessorCount != 0 {
+		t.Fatalf("unexpected legacy install result: %+v", result)
+	}
+	if result.LegacyUniversalSHA1 != universalSHA1 || result.LegacyUniversalSHA256 == "" {
+		t.Fatalf("legacy universal evidence mismatch: %+v", result)
+	}
+	if serverOnlyRequested.Load() {
+		t.Fatal("clientreq=false legacy library was requested")
+	}
+	for _, rel := range []string{
+		result.LegacyUniversalPath,
+		"libraries/com/example/clientlib/1.0/clientlib-1.0.jar",
+		result.ProfilePath,
+		".neverlauncher/forge-install.json",
+	} {
+		if _, err := os.Stat(filepath.Join(clientDir, filepath.FromSlash(rel))); err != nil {
+			t.Fatalf("missing legacy Forge artifact %s: %v", rel, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(clientDir, "libraries/com/example/serverlib/1.0/serverlib-1.0.jar")); !os.IsNotExist(err) {
+		t.Fatalf("server-only legacy library materialized: %v", err)
+	}
+	profileOnDisk, err := os.ReadFile(filepath.Join(clientDir, filepath.FromSlash(result.ProfilePath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(profileOnDisk, []byte(`"clientreq":false`)) || !bytes.Contains(profileOnDisk, []byte("FMLTweaker")) {
+		t.Fatalf("original legacy versionInfo was not preserved: %s", profileOnDisk)
+	}
+}
+
+func TestForgeLegacy1122RepackedEmptyProcessorInstaller(t *testing.T) {
+	universal := []byte("forge-1.12.2-repacked-universal")
+	coord := "net.minecraftforge:forge:1.12.2-14.23.5.2864"
+	rel, err := mavenCoordinatePath(coord)
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := map[string]any{
+		"spec": 1, "profile": "Forge", "version": "1.12.2-forge-14.23.5.2864", "json": "/version.json",
+		"path": coord, "minecraft": "1.12.2", "data": map[string]any{}, "processors": []any{},
+		"libraries": []any{map[string]any{"name": coord, "downloads": map[string]any{"artifact": map[string]any{"path": rel, "sha1": sha1HexLocal(universal), "size": len(universal)}}}},
+	}
+	versionInfo := map[string]any{
+		"id": "1.12.2-forge-14.23.5.2864", "inheritsFrom": "1.12.2", "type": "release",
+		"mainClass":          "net.minecraft.launchwrapper.Launch",
+		"minecraftArguments": "--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker", "libraries": []any{},
+	}
+	profileBytes, _ := json.Marshal(profile)
+	versionBytes, _ := json.Marshal(versionInfo)
+	var archive bytes.Buffer
+	zw := zip.NewWriter(&archive)
+	for name, payload := range map[string][]byte{
+		"install_profile.json": profileBytes,
+		"version.json":         versionBytes,
+		"maven/" + rel:         universal,
+	} {
+		entry, createErr := zw.Create(name)
+		if createErr != nil {
+			t.Fatal(createErr)
+		}
+		_, _ = entry.Write(payload)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	installerPath := filepath.Join(t.TempDir(), "forge-installer.jar")
+	if err := os.WriteFile(installerPath, archive.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := inspectForgeInstaller(installerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bundle.Legacy || bundle.LegacyMode != "legacy-v2-empty-processors" || bundle.Profile.Path != coord {
+		t.Fatalf("repacked 1.12.2 legacy installer detection mismatch: %+v", bundle)
+	}
+}
+
 func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 	if got, err := mavenCoordinatePath("net.minecraftforge:installertools:1.4.1:fatjar@jar"); err != nil || got != "net/minecraftforge/installertools/1.4.1/installertools-1.4.1-fatjar.jar" {
 		t.Fatalf("unexpected Maven path: %q %v", got, err)

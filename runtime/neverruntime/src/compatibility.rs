@@ -190,6 +190,10 @@ struct Library {
     rules: Vec<Rule>,
     #[serde(default)]
     extract: ExtractRules,
+    // Forge <=1.12.2 uses lowercase clientreq/serverreq in versionInfo.
+    // Server-only libraries must not leak into the client classpath.
+    #[serde(default, alias = "clientreq")]
+    client_req: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -505,6 +509,9 @@ fn resolve_libraries(
     let mut classpath = Vec::new();
 
     for library in libraries {
+        if library.client_req == Some(false) {
+            continue;
+        }
         if !rules_allow(&library.rules, environment)? || !library_artifact_matches_environment(&library.name, environment) {
             continue;
         }
