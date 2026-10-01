@@ -167,6 +167,10 @@ FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
 }
 
 
+# Quilt Compatibility II 0.17.2 certifies the same stable Minecraft release
+# span as Fabric Compatibility II, but through Quilt Meta v3 and Quilt KnotClient.
+QUILT_COMPATIBILITY_II_0172: dict[str, int] = dict(FABRIC_COMPATIBILITY_II_0171)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -231,6 +235,10 @@ def java21_25_vanilla_0170v3_required() -> bool:
 
 def fabric_compatibility_ii_0171_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 1)
+
+
+def quilt_compatibility_ii_0172_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 2)
 
 
 def load_json(path: Path) -> Any:
@@ -379,6 +387,30 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(fabric_java):
             die(f"Fabric Compatibility II 0.17.1 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
 
+    if quilt_compatibility_ii_0172_required():
+        required_quilt_rows = [target for target in targets if target["loader"] == "quilt" and target["required"]]
+        actual_versions = {target["minecraft"] for target in required_quilt_rows}
+        expected_versions = set(QUILT_COMPATIBILITY_II_0172)
+        if actual_versions != expected_versions:
+            missing = sorted(expected_versions - actual_versions)
+            extra = sorted(actual_versions - expected_versions)
+            die(f"Quilt Compatibility II 0.17.2 release grid mismatch: missing={missing} extra={extra}")
+        if len(required_quilt_rows) != len(QUILT_COMPATIBILITY_II_0172):
+            die("Quilt Compatibility II 0.17.2 requires exactly one required target per stable Minecraft release")
+        for target in required_quilt_rows:
+            minecraft = target["minecraft"]
+            expected_java = QUILT_COMPATIBILITY_II_0172[minecraft]
+            expected_scope = "integration" if minecraft == "1.21.1" else "client"
+            if target["javaMajor"] != expected_java or target["scope"] != expected_scope:
+                die(f"Quilt {minecraft}: 0.17.2 requires Java {expected_java} scope={expected_scope}")
+            if target["os"] != "linux" or target["arch"] != "x86_64":
+                die(f"Quilt {minecraft}: 0.17.2 requires linux/x86_64 certification target")
+            if target["loaderVersion"] != "latest-stable":
+                die(f"Quilt {minecraft}: 0.17.2 requires loaderVersion=latest-stable selector with immutable resolution evidence")
+        quilt_java = {target["javaMajor"] for target in required_quilt_rows}
+        if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(quilt_java):
+            die(f"Quilt Compatibility II 0.17.2 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
+
 
 def load_targets(path: Path) -> dict[str, Any]:
     payload = load_json(path)
@@ -434,8 +466,13 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: javaMajor must be one of {sorted(ALLOWED_JAVA_MAJORS)}")
         if scope not in ALLOWED_SCOPES:
             die(f"{target_id}: scope must be one of {sorted(ALLOWED_SCOPES)}")
-        if scope == "client" and loader not in {"vanilla", "fabric"}:
-            die(f"{target_id}: client scope is allowed only for Vanilla and Fabric")
+        client_loader_allowed = (
+            loader == "vanilla"
+            or (loader == "fabric" and fabric_compatibility_ii_0171_required())
+            or (loader == "quilt" and quilt_compatibility_ii_0172_required())
+        )
+        if scope == "client" and not client_loader_allowed:
+            die(f"{target_id}: client scope is not enabled for loader {loader} in VERSION={PRODUCT_VERSION}")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
         if not isinstance(matching_server, bool):
@@ -617,8 +654,12 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             errors.append("evidence platformRuntime mismatch")
         files = evidence.get("files")
         if target["scope"] == "client":
-            install_file = "fabric-install.json" if target["loader"] == "fabric" else "vanilla-install.json"
-            certification_file = "fabric-certification.json" if target["loader"] == "fabric" else "vanilla-certification.json"
+            if target["loader"] in {"fabric", "quilt"}:
+                install_file = f"{target['loader']}-install.json"
+                certification_file = f"{target['loader']}-certification.json"
+            else:
+                install_file = "vanilla-install.json"
+                certification_file = "vanilla-certification.json"
             mandatory_files = {
                 "client-package.json", "materialized-client-verify.json", install_file, certification_file, "platform-runtime.json",
             }

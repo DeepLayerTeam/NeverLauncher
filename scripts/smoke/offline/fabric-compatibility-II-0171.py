@@ -67,15 +67,16 @@ require(fabric_case, [
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
 require(compat_case, [
-    '"$LOADER" == "fabric"', "run-fabric-certification-case.sh", 'install_name = "fabric-install.json"',
-    'probe_name = "fabric-certification.json"', "resolvedLoaderVersion", '"actualClient": probe.get("status") == "passed"',
+    '"$LOADER" == "fabric"', "run-fabric-certification-case.sh", 'loader in ("fabric", "quilt")',
+    'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"',
+    "resolvedLoaderVersion", '"actualClient": probe.get("status") == "passed"',
 ], "Fabric compatibility routing/evidence")
 
 matrix = read("scripts/compatibility/matrix.py")
 require(matrix, [
     "FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1",
-    'install_file = "fabric-install.json"', 'certification_file = "fabric-certification.json"',
-    'loader not in {"vanilla", "fabric"}',
+    'target["loader"] in {"fabric", "quilt"}', "install_file = f\"{target[\'loader\']}-install.json\"",
+    "certification_file = f\"{target[\'loader\']}-certification.json\"",
 ], "Fabric matrix enforcement")
 
 release = read("cli/cmd/neverlauncher/compatibility_release.go")

@@ -239,7 +239,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		return loaderMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
 	}
 
-	selectedEntry, err := resolveMetaLoaderVersion(ctx, opts.HTTPClient, opts.MetaBaseURL, vanilla.MinecraftVersion, opts.LoaderVersion)
+	selectedEntry, err := resolveMetaLoaderVersion(ctx, opts.HTTPClient, loader, opts.MetaBaseURL, vanilla.MinecraftVersion, opts.LoaderVersion)
 	if err != nil {
 		return loaderMaterializeResult{}, err
 	}
@@ -359,39 +359,78 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	}, nil
 }
 
-func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, metaBase, minecraftVersion, requested string) (loaderMetaEntry, error) {
+func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, error) {
+	loader = strings.ToLower(strings.TrimSpace(loader))
+	if loader != "fabric" && loader != "quilt" {
+		return loaderMetaEntry{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+	}
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), minecraftVersion)
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
-		return loaderMetaEntry{}, fmt.Errorf("loader version metadata: %w", err)
+		return loaderMetaEntry{}, fmt.Errorf("%s loader version metadata: %w", loader, err)
 	}
 	var entries []loaderMetaEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
-		return loaderMetaEntry{}, fmt.Errorf("loader version metadata повреждены: %w", err)
+		return loaderMetaEntry{}, fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
 	}
 	if len(entries) == 0 {
-		return loaderMetaEntry{}, fmt.Errorf("для Minecraft %s нет совместимых loader versions", minecraftVersion)
+		return loaderMetaEntry{}, fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
 	}
 	requested = strings.TrimSpace(requested)
-	if requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended" {
+	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
+	if mutable {
 		for _, entry := range entries {
-			if entry.Loader.Version != "" && entry.Loader.Stable {
+			version := strings.TrimSpace(entry.Loader.Version)
+			if version == "" {
+				continue
+			}
+			if entry.Loader.Stable || (loader == "quilt" && isStableQuiltLoaderVersion(version)) {
 				return entry, nil
 			}
 		}
-		for _, entry := range entries {
-			if entry.Loader.Version != "" {
-				return entry, nil
+		if requested == "latest" {
+			for _, entry := range entries {
+				if strings.TrimSpace(entry.Loader.Version) != "" {
+					return entry, nil
+				}
 			}
 		}
-		return loaderMetaEntry{}, errors.New("Meta API не вернул loader.version")
+		return loaderMetaEntry{}, fmt.Errorf("Meta API не вернул стабильную %s loader version для Minecraft %s", loader, minecraftVersion)
 	}
 	for _, entry := range entries {
 		if entry.Loader.Version == requested {
 			return entry, nil
 		}
 	}
-	return loaderMetaEntry{}, fmt.Errorf("loader %s несовместим с Minecraft %s по Meta API", requested, minecraftVersion)
+	return loaderMetaEntry{}, fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
+}
+
+// Quilt Meta v3 does not guarantee the Fabric-style `stable` boolean on loader rows.
+// Stable Quilt Loader releases use a plain numeric SemVer core; prereleases carry a
+// suffix such as -beta/-rc. This keeps `latest-stable` fail-closed instead of silently
+// selecting the first prerelease returned by Meta.
+func isStableQuiltLoaderVersion(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+	core := strings.SplitN(value, "+", 2)[0]
+	if strings.Contains(core, "-") {
+		return false
+	}
+	parts := strings.Split(core, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" {
+			return false
+		}
+		if _, err := strconv.Atoi(part); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func profileHasLibrary(libraries []MojangLibrary, coordinate string) bool {

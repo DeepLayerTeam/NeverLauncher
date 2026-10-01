@@ -411,8 +411,41 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			})
 		}
 	}
+	if compatibilityQuiltII0172Required(ver) {
+		quiltVersions := make([]string, 0, len(quiltCompatibilityII0172))
+		for minecraft := range quiltCompatibilityII0172 {
+			quiltVersions = append(quiltVersions, minecraft)
+		}
+		sort.Strings(quiltVersions)
+		for _, minecraft := range quiltVersions {
+			javaMajor := quiltCompatibilityII0172[minecraft]
+			scope := "client"
+			if minecraft == "1.21.1" {
+				scope = "integration"
+			}
+			id := "quilt-" + minecraft + "-linux-x64"
+			targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+				ID: id, Minecraft: minecraft, Loader: "quilt", LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, Scope: scope, Required: true,
+			})
+			checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true, "jreCertified": true}
+			if scope == "integration" {
+				checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true, "platformMatched": true, "jreCertified": true}
+			}
+			matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+				SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
+				Loader: "quilt", LoaderSelector: "latest-stable", ResolvedLoaderVersion: "0.31.0", OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, DetectedJavaMajor: javaMajor, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: fmt.Sprintf("%d.0.0+ga", javaMajor), JREExecutableSHA256: evidence, Scope: scope, Commit: commit, RunID: "162", ExitCode: 0,
+				Checks: checks, EvidenceSHA256: evidence,
+			})
+		}
+	}
+
 	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
 		if loader == "fabric" && compatibilityFabricII0171Required(ver) {
+			continue
+		}
+		if loader == "quilt" && compatibilityQuiltII0172Required(ver) {
 			continue
 		}
 		id := loader + "-1.21.1-linux-x64"
@@ -1063,6 +1096,79 @@ func TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader(t *t
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "immutable version") {
 		t.Fatalf("0.17.1 must reject mutable Fabric loader evidence, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationQuiltII0172(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.2", "commit-172")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172")
+	if err != nil {
+		t.Fatalf("0.17.2 Quilt Compatibility II evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client") {
+		t.Fatalf("0.17.2 policy does not bind Quilt Compatibility II: %s", certification.Policy)
+	}
+	if len(certification.QuiltVersions) != len(quiltCompatibilityII0172) {
+		t.Fatalf("0.17.2 Quilt coverage=%d, want %d", len(certification.QuiltVersions), len(quiltCompatibilityII0172))
+	}
+	for _, minecraft := range []string{"1.14", "1.17", "1.20.5", "1.21.11", "26.3"} {
+		if !slices.Contains(certification.QuiltVersions, minecraft) {
+			t.Fatalf("0.17.2 Quilt coverage missing %s", minecraft)
+		}
+	}
+}
+
+func TestCompatibilityCertificationQuiltII0172RejectsMissingRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.2", "commit-172")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "quilt" && target.Minecraft == "1.14" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "Quilt Compatibility II 0.17.2") {
+		t.Fatalf("0.17.2 must reject missing Quilt 1.14 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationQuiltII0172RejectsWrongJavaMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.2", "commit-172")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "quilt" && targets.Targets[i].Minecraft == "1.17" {
+			targets.Targets[i].JavaMajor = 17
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "Quilt 1.17") {
+		t.Fatalf("0.17.2 must reject Quilt 1.17 Java mismatch, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationQuiltII0172RejectsMutableResolvedLoader(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.2", "commit-172")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].Loader == "quilt" && matrix.Targets[i].MinecraftVersion == "1.14" {
+			matrix.Targets[i].ResolvedLoaderVersion = "latest-stable"
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+		t.Fatalf("0.17.2 must reject mutable Quilt loader evidence, got %v", err)
 	}
 }
 

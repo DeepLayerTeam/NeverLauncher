@@ -1,3 +1,12 @@
+## 0.17.2 — Quilt Compatibility II
+
+- Expanded executable Quilt compatibility from the single 1.21.1 integration target to **48 stable Minecraft releases from 1.14 through 26.3**, bound to exact Java 8/16/17/21/25.
+- Quilt client certification now executes the production `quilt-package` materializer against official Quilt Meta v3, verifies the materialized package and Maven libraries, resolves a concrete immutable Quilt Loader, and launches the real materialized Quilt `KnotClient` profile through NeverRuntime.
+- Hardened Quilt `latest-stable` resolution for Meta responses that omit Fabric-style stability metadata: semantic-version prereleases are rejected, no-stable responses fail closed, and exact prerelease selectors remain explicitly usable.
+- Added fail-closed release certification for the complete Quilt grid, exact Java/scope/platform mapping, immutable Loader evidence, actual-client launch evidence, and retained full integration E2E for Quilt 1.21.1.
+- Added dedicated Quilt install/certification artifacts, offline release gate, repository policy enforcement, CI/preflight wiring, and regression tests for missing/duplicate releases, wrong Java and mutable Loader results.
+- Updated the public loader catalog so Fabric and Quilt expose their production Compatibility Engine materializers instead of obsolete `planned` adapters.
+
 ## 0.17.1 — Fabric Compatibility II
 
 - Expanded the executable Fabric compatibility line from the single 1.21.1 integration target to **48 stable Minecraft releases from 1.14 through 26.3**, with exact Java 8/16/17/21/25 binding.

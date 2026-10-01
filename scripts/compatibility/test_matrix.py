@@ -37,8 +37,12 @@ class MatrixToolTests(unittest.TestCase):
                 "platformMatched": True,
                 "jreCertified": True,
             }
-            install_name = "fabric-install.json" if target["loader"] == "fabric" else "vanilla-install.json"
-            certification_name = "fabric-certification.json" if target["loader"] == "fabric" else "vanilla-certification.json"
+            if target["loader"] in {"fabric", "quilt"}:
+                install_name = f"{target['loader']}-install.json"
+                certification_name = f"{target['loader']}-certification.json"
+            else:
+                install_name = "vanilla-install.json"
+                certification_name = "vanilla-certification.json"
             files = [
                 "client-package.json",
                 "materialized-client-verify.json",
@@ -295,6 +299,51 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
             duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "fabric" and target["minecraft"] == "1.14")
             duplicate["id"] = "fabric-1.14-linux-x64-duplicate"
+            doc["targets"].append(duplicate)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("exactly one required target", proc.stderr)
+
+    def test_validate_accepts_quilt_compatibility_ii_0172_grid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_validate_rejects_missing_quilt_release_0172(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [
+                target for target in doc["targets"]
+                if not (target["loader"] == "quilt" and target["minecraft"] == "1.14")
+            ]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Quilt Compatibility II 0.17.2", proc.stderr)
+
+    def test_validate_rejects_wrong_quilt_java_0172(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "quilt" and target["minecraft"] == "1.17":
+                    target["javaMajor"] = 17
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Quilt 1.17", proc.stderr)
+
+    def test_validate_rejects_duplicate_quilt_release_0172(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "quilt" and target["minecraft"] == "1.14")
+            duplicate["id"] = "quilt-1.14-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))

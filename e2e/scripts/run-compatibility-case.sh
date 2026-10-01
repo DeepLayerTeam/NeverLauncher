@@ -44,8 +44,8 @@ if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH"
   echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
   exit 2
 fi
-if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" ]]; then
-  echo "[compat] client scope is supported for Vanilla and Fabric targets" >&2
+if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" && "$LOADER" != "quilt" ]]; then
+  echo "[compat] client scope is supported for Vanilla, Fabric and Quilt targets" >&2
   exit 2
 fi
 
@@ -86,6 +86,8 @@ elif [[ "$SCOPE" == "client" && "$LOADER" == "vanilla" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh"
 elif [[ "$SCOPE" == "client" && "$LOADER" == "fabric" ]]; then
   bash "$ROOT/e2e/scripts/run-fabric-certification-case.sh"
+elif [[ "$SCOPE" == "client" && "$LOADER" == "quilt" ]]; then
+  bash "$ROOT/e2e/scripts/run-quilt-certification-case.sh"
 else
   bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 fi
@@ -136,18 +138,22 @@ if scope == "client":
     base = read("result.json") or {}
     package = read("client-package.json") or {}
     verify = read("materialized-client-verify.json") or {}
-    install_name = "fabric-install.json" if loader == "fabric" else "vanilla-install.json"
-    probe_name = "fabric-certification.json" if loader == "fabric" else "vanilla-certification.json"
+    if loader in ("fabric", "quilt"):
+        install_name = f"{loader}-install.json"
+        probe_name = f"{loader}-certification.json"
+    else:
+        install_name = "vanilla-install.json"
+        probe_name = "vanilla-certification.json"
     install = read(install_name) or {}
     probe = read(probe_name) or {}
     manifest_settings = package.get("manifestSettings") if isinstance(package.get("manifestSettings"), dict) else {}
     minecraft_settings = manifest_settings.get("minecraft") if isinstance(manifest_settings.get("minecraft"), dict) else {}
     materialized = install.get("status") == "installed-and-verified" and install.get("minecraftVersion") == minecraft
-    if loader == "fabric":
+    if loader in ("fabric", "quilt"):
         profile_id = str(install.get("profileId") or "")
         runtime_resolved = profile_id != "" and probe.get("minecraftVersion") == profile_id and probe.get("mainClass") == install.get("mainClass") and int(probe.get("classpathEntries") or 0) > 0
         resolved = str(install.get("loaderVersion") or ((base.get("minecraft") or {}).get("resolvedLoaderVersion")) or "")
-        materialized = materialized and install.get("loader") == "fabric" and resolved not in ("", "latest", "latest-stable", "stable", "recommended")
+        materialized = materialized and install.get("loader") == loader and resolved not in ("", "latest", "latest-stable", "stable", "recommended")
     else:
         runtime_resolved = probe.get("minecraftVersion") == minecraft and probe.get("mainClass") not in (None, "") and int(probe.get("classpathEntries") or 0) > 0
         resolved = ""

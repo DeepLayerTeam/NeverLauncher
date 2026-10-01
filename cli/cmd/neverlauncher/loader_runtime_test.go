@@ -194,3 +194,51 @@ func sha1HexLocal(data []byte) string {
 	h := sha1.Sum(data)
 	return hex.EncodeToString(h[:])
 }
+
+func TestQuiltLatestStableSelectionUsesStableSemVerWhenMetaOmitsStableFlag(t *testing.T) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	payload, err := json.Marshal([]any{
+		map[string]any{"loader": map[string]any{"version": "0.32.0-beta.3", "maven": "org.quiltmc:quilt-loader:0.32.0-beta.3"}},
+		map[string]any{"loader": map[string]any{"version": "0.31.0", "maven": "org.quiltmc:quilt-loader:0.31.0"}},
+		map[string]any{"loader": map[string]any{"version": "0.30.2", "maven": "org.quiltmc:quilt-loader:0.30.2"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux.HandleFunc("/versions/loader/1.21.1", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(payload)
+	})
+
+	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "1.21.1", "latest-stable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Loader.Version != "0.31.0" {
+		t.Fatalf("latest-stable selected %q, want 0.31.0", entry.Loader.Version)
+	}
+}
+
+func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.T) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	payload := []byte(`[{"loader":{"version":"0.32.0-beta.3","maven":"org.quiltmc:quilt-loader:0.32.0-beta.3"}}]`)
+	mux.HandleFunc("/versions/loader/26.3", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(payload)
+	})
+
+	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "стабильную quilt loader version") {
+		t.Fatalf("latest-stable must reject prerelease-only Quilt metadata, got %v", err)
+	}
+	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "0.32.0-beta.3")
+	if err != nil {
+		t.Fatalf("exact Quilt prerelease selector should remain supported: %v", err)
+	}
+	if entry.Loader.Version != "0.32.0-beta.3" {
+		t.Fatalf("exact Quilt loader mismatch: %s", entry.Loader.Version)
+	}
+}
