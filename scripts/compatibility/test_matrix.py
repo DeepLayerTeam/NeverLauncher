@@ -201,6 +201,28 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("requires Java 21", proc.stderr)
 
+    def test_validate_rejects_missing_java25_release_line_0168(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "vanilla" and target["minecraft"] == "26.3")]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Java 25 Vanilla 0.16.8", proc.stderr)
+
+    def test_validate_rejects_wrong_java25_major_0168(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["minecraft"] == "26.1.2" and target["loader"] == "vanilla":
+                    target["javaMajor"] = 21
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("requires Java 25", proc.stderr)
+
     def test_aggregate_accepts_bound_multiversion_java_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

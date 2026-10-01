@@ -140,6 +140,13 @@ var java21VanillaCompatibility0167 = map[string]string{
 	"1.21.10": "client",
 }
 
+var java25VanillaCompatibility0168 = map[string]string{
+	"26.1":   "client",
+	"26.1.1": "client",
+	"26.1.2": "client",
+	"26.3":   "client",
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -179,6 +186,10 @@ func compatibilityJava16_17VanillaRequired(ver string) bool {
 
 func compatibilityJava21VanillaRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 7)
+}
+
+func compatibilityJava25VanillaRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 8)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -357,6 +368,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityJava25VanillaRequired(ver) {
+			for minecraft, scope := range java25VanillaCompatibility0168 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 25 Vanilla 0.16.8 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != 25 || target.Scope != scope {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 25 Vanilla %s mismatch: expected Java 25 scope=%s, got Java %d scope=%s", minecraft, scope, target.JavaMajor, target.Scope)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -478,6 +500,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityJava21VanillaRequired(ver) {
 		policy += ";vanilla-1.20.5-1.21.10-java21-exact"
+	}
+	if compatibilityJava25VanillaRequired(ver) {
+		policy += ";vanilla-26.1.x-26.3-java25-exact"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

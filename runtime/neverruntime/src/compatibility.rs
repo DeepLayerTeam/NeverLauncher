@@ -618,6 +618,20 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         };
     }
 
+    if let Some(expected) = expected_java_major_for_vanilla_0168(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.8 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
     if metadata_major.is_some() {
         return Ok(metadata_major);
     }
@@ -654,6 +668,14 @@ fn expected_java_major_for_vanilla_0167(version: &str) -> Option<u32> {
     }
     if minor == 21 && patch <= 10 {
         return Some(21);
+    }
+    None
+}
+
+fn expected_java_major_for_vanilla_0168(version: &str) -> Option<u32> {
+    let (major, minor, patch) = parse_minecraft_release_version(version)?;
+    if major == 26 && (minor == 1 || (minor == 3 && patch == 0)) {
+        return Some(25);
     }
     None
 }
@@ -1253,6 +1275,16 @@ mod tests {
     }
 
     #[test]
+    fn exact_java25_policy_covers_261x_and_263() {
+        for version in ["26.1", "26.1.1", "26.1.2", "26.3"] {
+            assert_eq!(expected_java_major_for_vanilla_0168(version), Some(25), "{version}");
+        }
+        for version in ["1.21.10", "26.2", "26.3.1", "26.4"] {
+            assert_eq!(expected_java_major_for_vanilla_0168(version), None, "{version}");
+        }
+    }
+
+    #[test]
     fn exact_java_policy_rejects_missing_or_wrong_modern_metadata() {
         let mut modern = MergedVersion {
             id: "1.17.1".into(),
@@ -1275,6 +1307,14 @@ mod tests {
         assert!(resolved_java_major_version(&modern).is_err());
         modern.java_version = Some(JavaVersion { major_version: 21 });
         assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(21));
+
+        modern.id = "26.3".into();
+        modern.java_version = None;
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 21 });
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 25 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(25));
     }
 
     #[test]

@@ -1588,6 +1588,53 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.7 Java 21 Vanilla regression coverage missing: {required}")
 
 
+# 0.16.8 Java 25 Vanilla must be an executable exact-Java path for the released
+# 26.1 hotfix line and the 26.3 game drop, backed by actual-client certification.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 8):
+    vanilla_0168 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+    vanilla_tests_0168 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
+    runtime_0168 = read("runtime/neverruntime/src/compatibility.rs")
+    matrix_0168 = read("scripts/compatibility/matrix.py")
+    matrix_tests_0168 = read("scripts/compatibility/test_matrix.py")
+    targets_0168 = read("compatibility/targets.json")
+    release_0168 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    release_tests_0168 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    for required in [
+        "expectedJavaMajorForVanilla0168",
+        "0.16.8 требует exact Java",
+        "Mojang metadata Java mismatch",
+    ]:
+        if required not in vanilla_0168:
+            fail(f"0.16.8 Vanilla materializer exact-Java 25 path incomplete: {required}")
+    for required in [
+        "expected_java_major_for_vanilla_0168",
+        "0.16.8 requires exact Java",
+        "resolved_java_major_version(&merged)?",
+    ]:
+        if required not in runtime_0168:
+            fail(f"0.16.8 NeverRuntime exact-Java 25 path incomplete: {required}")
+    for version in ["26.1", "26.1.1", "26.1.2", "26.3"]:
+        target = f"vanilla-{version}-linux-x64"
+        if target not in targets_0168:
+            fail(f"0.16.8 Java 25 actual-client target missing: {target}")
+    for required in [
+        "JAVA25_VANILLA_0168", "Java 25 Vanilla 0.16.8", "java25_vanilla_required",
+    ]:
+        if required not in matrix_0168:
+            fail(f"0.16.8 compatibility matrix Java 25 gate incomplete: {required}")
+    if "vanilla-26.1.x-26.3-java25-exact" not in release_0168:
+        fail("0.16.8 release certification does not bind exact Java 25 Vanilla policy")
+    for required in [
+        "TestJavaMajorFromVersionEnforcesJava25VanillaRange",
+        "TestInstallVanilla0168RejectsWrongJavaBeforeArtifactDownload",
+        "TestCompatibilityCertificationJava25Vanilla0168",
+        "test_validate_rejects_missing_java25_release_line_0168",
+    ]:
+        corpus = vanilla_tests_0168 + release_tests_0168 + matrix_tests_0168
+        if required not in corpus:
+            fail(f"0.16.8 Java 25 Vanilla regression coverage missing: {required}")
+
+
 # 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
 # not a manifest-only declaration. It is used by client install/update/package-apply
 # and is self-tested on native Linux/Windows/macOS CI runners.

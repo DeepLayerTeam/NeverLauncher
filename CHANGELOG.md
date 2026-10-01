@@ -1,3 +1,13 @@
+## 0.16.8 — Java 25 Vanilla / 26.1.x + 26.3
+
+`0.16.8` добавляет рабочую Java 25 Vanilla certification для новой календарной линии Minecraft Java Edition.
+
+- Exact Java 25 policy применяется к `26.1`, `26.1.1`, `26.1.2` и `26.3`; missing/mismatched `javaVersion.majorVersion` отклоняется до загрузки client artifacts.
+- NeverRuntime независимо валидирует тот же exact major, поэтому локально подменённая metadata не может уйти на Java 21 или другой runtime.
+- Compatibility matrix содержит отдельные actual-client targets для всех четырёх выпущенных версий; каждый target использует verified Mojang materialization, package integrity, runtime resolution и реальный client launch.
+- Release certification 0.16.8 fail-closed требует policy `vanilla-26.1.x-26.3-java25-exact`, Java 25 coverage и полный evidence для каждого target.
+- Managed Java II уже поставляет Java 25 on-demand; Java 21/16/17 и Java 8 legacy gates сохраняются без ослабления.
+
 ## 0.16.7 — Java 21 Vanilla / 1.20.5–1.21.10
 
 `0.16.7` превращает Java 21 Vanilla coverage из двух Baseline II anchors в обязательную actual-client release-line certification для 1.20.5/1.20.6 и всей 1.21.x линии до 1.21.10.

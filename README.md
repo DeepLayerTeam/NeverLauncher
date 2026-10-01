@@ -4,7 +4,11 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Java 21 Vanilla / 0.16.7**. Диапазон Vanilla 1.20.5/1.20.6–1.21.10 теперь проходит обязательную actual-client certification на exact Java 21; Managed Java II 8/16/17/21/25 и предыдущие Java 8/16/17 compatibility gates сохраняются.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Java 25 Vanilla / 0.16.8**. Выпущенные Vanilla `26.1`, `26.1.1`, `26.1.2` и `26.3` проходят обязательную actual-client certification на exact Java 25; Managed Java II 8/16/17/21/25 и предыдущие Java 8/16/17/21 compatibility gates сохраняются.
+
+## Java 25 Vanilla — 0.16.8
+
+`0.16.8` добавляет исполняемую exact-Java-25 policy для release-линии 26.1.x и 26.3. Vanilla materializer проверяет официальный `javaVersion.majorVersion=25` до скачивания client/assets; NeverRuntime повторяет эту проверку перед запуском. Обязательные actual-client targets — `26.1`, `26.1.1`, `26.1.2`, `26.3`, каждый через verified Mojang materialization, package verification, Managed Java 25 и реальный Minecraft client launch под Xvfb. Release certification fail-closed требует весь набор и policy `vanilla-26.1.x-26.3-java25-exact`.
 
 ## Java 21 Vanilla — 0.16.7
 
