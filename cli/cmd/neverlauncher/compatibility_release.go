@@ -222,6 +222,10 @@ func compatibilityActualClientE2EIIRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 10)
 }
 
+func compatibilityHardening01611Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 11)
+}
+
 func compatibilityCertificationRequired(ver string) bool {
 	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
 	if len(parts) < 2 {
@@ -582,6 +586,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityActualClientE2EIIRequired(ver) {
 		policy += ";actual-client-e2e-II-real-clients-matching-mojang-servers"
+	}
+	if compatibilityHardening01611Required(ver) {
+		policy += ";compatibility-hardening-cache-recovery-upstream-failure-security"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

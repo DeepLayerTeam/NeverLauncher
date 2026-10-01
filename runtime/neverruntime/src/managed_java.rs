@@ -13,6 +13,7 @@ use tokio::{fs, io::AsyncWriteExt, process::Command, time::sleep};
 const ADOPTIUM_API: &str = "https://api.adoptium.net/v3";
 const MAX_RUNTIME_ARCHIVE_SIZE: u64 = 1_500_000_000;
 const MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25];
+const MANAGED_JAVA_HTTP_ATTEMPTS: usize = 4;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -115,6 +116,8 @@ struct ManagedJavaRecord {
     archive_sha256: String,
     archive_size: u64,
     java_relative_path: String,
+    #[serde(default)]
+    java_sha256: String,
     installed_at: u64,
 }
 
@@ -320,15 +323,13 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         let url = Url::parse(location).map_err(|err| format!("Managed JRE manifest URL: {err}"))?;
         validate_https_url(location)?;
         let client = managed_java_http_client()?;
-        let response = client
-            .get(url.clone())
-            .header("User-Agent", format!("NeverLauncher/{} ManagedJRE", env!("CARGO_PKG_VERSION")))
-            .send()
-            .await
-            .map_err(|err| format!("Managed JRE manifest download: {err}"))?;
-        if response.url().scheme() != "https" {
-            return Err("Managed JRE manifest redirect downgraded from HTTPS".to_string());
-        }
+        let response = managed_java_send_with_retry(
+            &client,
+            url.as_str(),
+            &format!("NeverLauncher/{} ManagedJRE", env!("CARGO_PKG_VERSION")),
+        )
+        .await
+        .map_err(|err| format!("Managed JRE manifest download: {err}"))?;
         if !response.status().is_success() {
             return Err(format!("Managed JRE manifest HTTP {}", response.status()));
         }
@@ -556,8 +557,9 @@ async fn install_managed_java_archive(
         let _ = fs::remove_dir_all(&staging).await;
         return Err(format!("установленный runtime не прошёл java -version: {}", java_info.message));
     }
+    let (java_sha256, _) = sha256_file(&java).await?;
     let record = ManagedJavaRecord {
-        schema_version: "1.1".to_string(),
+        schema_version: "1.2".to_string(),
         distribution: distribution.to_string(),
         major_version: required_major,
         image_type: image_type.to_string(),
@@ -569,6 +571,7 @@ async fn install_managed_java_archive(
         archive_sha256: checksum,
         archive_size,
         java_relative_path: java_relative,
+        java_sha256,
         installed_at: stamp,
     };
     fs::write(
@@ -594,9 +597,42 @@ fn managed_java_http_client() -> Result<Client, String> {
         .map_err(|err| format!("не удалось создать Managed Java HTTP client: {err}"))
 }
 
+async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &str) -> Result<reqwest::Response, String> {
+    let mut last_error = String::new();
+    for attempt in 0..MANAGED_JAVA_HTTP_ATTEMPTS {
+        match client.get(url).header("User-Agent", user_agent).send().await {
+            Ok(response) => {
+                if response.url().scheme() != "https" {
+                    return Err("Managed Java redirect downgraded from HTTPS".to_string());
+                }
+                let status = response.status().as_u16();
+                let retryable = matches!(status, 408 | 425 | 429 | 500 | 502 | 503 | 504);
+                if !retryable || attempt + 1 == MANAGED_JAVA_HTTP_ATTEMPTS {
+                    return Ok(response);
+                }
+                last_error = format!("HTTP {status}");
+            }
+            Err(err) => {
+                last_error = err.to_string();
+                if attempt + 1 == MANAGED_JAVA_HTTP_ATTEMPTS {
+                    break;
+                }
+            }
+        }
+        let delay_ms = 250u64.saturating_mul(1u64 << attempt.min(4));
+        sleep(Duration::from_millis(delay_ms.min(4_000))).await;
+    }
+    Err(format!(
+        "Managed Java upstream failed after {MANAGED_JAVA_HTTP_ATTEMPTS} attempts: {last_error}"
+    ))
+}
+
 async fn ensure_local_archive(source: &Path, destination: &Path, checksum: &str, size: u64) -> Result<(), String> {
-    if fs::metadata(destination).await.is_ok() && verify_file_sha256(destination, checksum, size).await? {
-        return Ok(());
+    if fs::metadata(destination).await.is_ok() {
+        if verify_file_sha256(destination, checksum, size).await? {
+            return Ok(());
+        }
+        quarantine_broken_archive(destination).await?;
     }
     if !verify_file_sha256(source, checksum, size).await? {
         return Err("локальный Managed JRE archive не совпадает с manifest SHA-256/size".to_string());
@@ -692,12 +728,13 @@ async fn resolve_adoptium_latest_asset(
     let url = format!(
         "{ADOPTIUM_API}/assets/latest/{major}/hotspot?architecture={api_arch}&heap_size=normal&image_type={image_type}&jvm_impl=hotspot&os={api_os}&vendor=eclipse"
     );
-    let response = client
-        .get(&url)
-        .header("User-Agent", format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")))
-        .send()
-        .await
-        .map_err(|err| format!("Adoptium latest API request: {err}"))?;
+    let response = managed_java_send_with_retry(
+        client,
+        &url,
+        &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
+    )
+    .await
+    .map_err(|err| format!("Adoptium latest API request: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
@@ -727,12 +764,13 @@ async fn resolve_adoptium_feature_release_asset(
     let url = format!(
         "{ADOPTIUM_API}/assets/feature_releases/{major}/ga?architecture={api_arch}&heap_size=normal&image_type={image_type}&jvm_impl=hotspot&os={api_os}&project=jdk&vendor=eclipse&page_size=20&sort_order=DESC"
     );
-    let response = client
-        .get(&url)
-        .header("User-Agent", format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")))
-        .send()
-        .await
-        .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
+    let response = managed_java_send_with_retry(
+        client,
+        &url,
+        &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
+    )
+    .await
+    .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
@@ -783,22 +821,36 @@ fn default_managed_image_type() -> String {
 }
 
 async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str, size: u64) -> Result<(), String> {
-    if fs::metadata(path).await.is_ok() && verify_file_sha256(path, checksum, size).await? {
-        return Ok(());
+    if fs::metadata(path).await.is_ok() {
+        if verify_file_sha256(path, checksum, size).await? {
+            return Ok(());
+        }
+        quarantine_broken_archive(path).await?;
     }
     validate_https_url(url)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).await.map_err(|err| format!("archive parent: {err}"))?;
     }
-    let mut response = client
-        .get(url)
-        .header("User-Agent", format!("NeverLauncher/{} ManagedJava", env!("CARGO_PKG_VERSION")))
-        .send()
-        .await
-        .map_err(|err| format!("Java runtime download: {err}"))?;
-    if response.url().scheme() != "https" {
-        return Err("Java runtime redirect downgraded from HTTPS".to_string());
+    let part = path.with_extension(format!("{}nlpart", path.extension().and_then(|v| v.to_str()).unwrap_or("")));
+    if std::fs::symlink_metadata(&part).map(|meta| meta.file_type().is_symlink()).unwrap_or(false) {
+        return Err("Managed Java partial archive must not be a symlink".to_string());
     }
+    if fs::metadata(&part).await.is_ok() {
+        if verify_file_sha256(&part, checksum, size).await? {
+            fs::rename(&part, path)
+                .await
+                .map_err(|err| format!("recovered archive atomic rename: {err}"))?;
+            return Ok(());
+        }
+        let _ = fs::remove_file(&part).await;
+    }
+    let mut response = managed_java_send_with_retry(
+        client,
+        url,
+        &format!("NeverLauncher/{} ManagedJava", env!("CARGO_PKG_VERSION")),
+    )
+    .await
+    .map_err(|err| format!("Java runtime download: {err}"))?;
     if !response.status().is_success() {
         return Err(format!("Java runtime download HTTP {}", response.status()));
     }
@@ -807,7 +859,6 @@ async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str,
             return Err(format!("Java runtime Content-Length {content_length}, ожидалось {size}"));
         }
     }
-    let part = path.with_extension(format!("{}nlpart", path.extension().and_then(|v| v.to_str()).unwrap_or("")));
     let mut file = fs::File::create(&part).await.map_err(|err| format!("archive temp create: {err}"))?;
     let mut hasher = Sha256::new();
     let mut written = 0u64;
@@ -832,6 +883,15 @@ async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str,
     Ok(())
 }
 
+async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
+    let stamp = now_unix()?;
+    let name = path.file_name().and_then(|value| value.to_str()).unwrap_or("runtime-archive");
+    let quarantine = path.with_file_name(format!(".broken-{name}-{stamp}"));
+    fs::rename(path, &quarantine)
+        .await
+        .map_err(|err| format!("Managed Java corrupt archive quarantine: {err}"))
+}
+
 async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> Result<bool, String> {
     let metadata = match fs::metadata(path).await {
         Ok(value) => value,
@@ -852,6 +912,32 @@ async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> 
         hasher.update(&buffer[..n]);
     }
     Ok(hex::encode(hasher.finalize()).eq_ignore_ascii_case(expected))
+}
+
+async fn sha256_file(path: &Path) -> Result<(String, u64), String> {
+    use tokio::io::AsyncReadExt;
+    let metadata = fs::metadata(path)
+        .await
+        .map_err(|err| format!("runtime file metadata {}: {err}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(format!("runtime file is not regular: {}", path.display()));
+    }
+    let mut file = fs::File::open(path)
+        .await
+        .map_err(|err| format!("runtime file open {}: {err}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; 1024 * 1024];
+    loop {
+        let n = file
+            .read(&mut buffer)
+            .await
+            .map_err(|err| format!("runtime file read {}: {err}", path.display()))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buffer[..n]);
+    }
+    Ok((hex::encode(hasher.finalize()), metadata.len()))
 }
 
 async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String> {
@@ -1006,10 +1092,27 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         Ok(record) => record,
         Err(_) => return Ok(None),
     };
-    if record.major_version != major || record.distribution != distribution {
+    let (expected_os, expected_arch) = adoptium_platform()?;
+    if record.schema_version != "1.2"
+        || record.major_version != major
+        || record.distribution != distribution
+        || record.os != expected_os
+        || record.arch != expected_arch
+        || record.archive_size == 0
+        || record.archive_size > MAX_RUNTIME_ARCHIVE_SIZE
+        || normalize_sha256(&record.archive_sha256).is_err()
+        || normalize_sha256(&record.java_sha256).is_err()
+    {
         return Ok(None);
     }
     let java = safe_record_join(dir, &record.java_relative_path)?;
+    let (java_sha256, _) = match sha256_file(&java).await {
+        Ok(value) => value,
+        Err(_) => return Ok(None),
+    };
+    if !java_sha256.eq_ignore_ascii_case(&record.java_sha256) {
+        return Ok(None);
+    }
     let info = super::check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?;
     if !info.found || info.detected_major_version != Some(major) {
         return Ok(None);
@@ -1152,7 +1255,12 @@ fn normalize_sha256(value: &str) -> Result<String, String> {
 
 fn validate_https_url(value: &str) -> Result<(), String> {
     let url = Url::parse(value).map_err(|err| format!("некорректный runtime URL: {err}"))?;
-    if url.scheme() != "https" || url.host_str().is_none() {
+    if url.scheme() != "https"
+        || url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.fragment().is_some()
+    {
         return Err("Managed Java разрешает только HTTPS URL".to_string());
     }
     Ok(())
@@ -1272,5 +1380,13 @@ mod tests {
         assert!(validate_distribution_java_entry("jdk-21/bin/java", "linux").is_ok());
         assert!(validate_distribution_java_entry("../bin/java", "linux").is_err());
         assert!(validate_distribution_java_entry("jdk/bin/java.exe", "windows").is_ok());
+    }
+
+    #[test]
+    fn managed_java_https_policy_rejects_credentials_and_fragments() {
+        assert!(validate_https_url("https://api.adoptium.net/v3/assets/latest/21/hotspot").is_ok());
+        assert!(validate_https_url("http://api.adoptium.net/runtime.tar.gz").is_err());
+        assert!(validate_https_url("https://user:secret@example.com/runtime.tar.gz").is_err());
+        assert!(validate_https_url("https://example.com/runtime.tar.gz#fragment").is_err());
     }
 }

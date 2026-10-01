@@ -1,3 +1,15 @@
+## 0.16.11 — Compatibility Hardening
+
+- Vanilla artifact downloads recover interrupted `.nlpart` files with validated HTTP Range/`Content-Range`; every resumed result is still bounded by expected size and must pass the final Mojang SHA-1 before atomic publication.
+- Corrupt compatibility cache entries are moved to a bounded quarantine instead of being silently overwritten; already-complete verified partials are atomically promoted without another network request.
+- Exact-version Mojang `version.json` metadata is cached with SHA-1/SHA-256/size and identity binding, allowing verified outage recovery only for exact versions. Mutable `latest`/snapshot selectors and versions absent from a successfully fetched authoritative manifest stay fail-closed.
+- Pinned asset-index and Mojang server/client artifacts can reuse checksum-verified local cache during upstream failure; malformed asset hashes and unsafe remote URLs are rejected before path/network use.
+- Native ZIP extraction rejects traversal, symlinks and unsupported entries, enforces entry/count/total-uncompressed limits, and publishes `natives/<os>/<arch>` transactionally; legacy virtual assets/resources are also built in staging so a failed refresh preserves the previous verified tree.
+- Compatibility HTTP retry handling preserves request headers and honours bounded `Retry-After`; URL validation rejects credentials, fragments, control characters and private literal upstreams unless explicitly opted in.
+- Managed Java cache schema 1.2 binds cached runtimes to OS/arch, vendor archive SHA-256 and the SHA-256 of the actual Java executable before `java -version`; legacy/incomplete cache records are reinstalled instead of trusted.
+- Managed Java upstream requests use bounded transient retries with HTTPS downgrade protection. Corrupt archives are quarantined, symlink partials are rejected, and a complete verified partial archive can recover atomically after interruption.
+- Release compatibility certification for 0.16.11 appends `compatibility-hardening-cache-recovery-upstream-failure-security`; existing 49-target / 45-Vanilla, cross-platform and Actual Client E2E II gates remain mandatory.
+
 ## 0.16.10 — Actual Client E2E II / real clients + matching servers
 
 `0.16.10` усиливает actual-client certification: representative Vanilla versions больше не считаются совместимыми только по успешному запуску клиента — CI поднимает официальный Mojang server той же версии и требует фактический вход клиента.

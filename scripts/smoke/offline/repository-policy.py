@@ -796,7 +796,7 @@ for required in [
 ]:
     if required not in stability_tests:
         fail(f"0.10.7 compatibility stabilization missing regression test: {required}")
-for required in ["maxCompatibilityArtifact+1", "secureClientDestination", "validateAssetLogicalPath"]:
+for required in ["maxCompatibilityArtifact", "secureClientDestination", "validateAssetLogicalPath"]:
     if required not in vanilla_runtime:
         fail(f"Vanilla stabilization missing: {required}")
 for required in [
@@ -831,6 +831,39 @@ if "runtime record java path вышел за Managed Java root через symlin
 for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "evidence manifestLoader mismatch"]:
     if required not in compat_tool:
         fail(f"compatibility evidence stabilization missing: {required}")
+
+# 11b. 0.16.11 compatibility hardening: interrupted downloads must be
+# recoverable, corrupt cache entries quarantined, exact-version Mojang
+# metadata may recover from a verified local snapshot during an outage, and
+# archive/security boundaries must remain fail-closed.
+compat_hardening = read("cli/cmd/neverlauncher/compatibility_hardening.go")
+for required in [
+    "resolveVanillaMetadataWithRecovery", "latest/snapshot metadata recovery запрещён",
+    "quarantineCompatibilityArtifact", "fetchVerifiedBytesWithLocalCache",
+]:
+    if required not in compat_hardening:
+        fail(f"0.16.11 compatibility hardening missing recovery primitive: {required}")
+for required in [
+    "inspectVanillaPartial", "validateContentRange", "Range", "Resumed",
+    "maxCompatibilityNativeExtract", "replaceDirectoryAtomicPortable", "virtual assets staging", "resources staging",
+]:
+    if required not in vanilla_runtime and required not in stability_go:
+        fail(f"0.16.11 compatibility hardening missing cache/security primitive: {required}")
+for required in [
+    "TestDownloadVanillaArtifactResumesVerifiedPartial",
+    "TestVanillaMetadataRecoveryExactVersionOnly",
+    "TestDownloadVanillaArtifactQuarantinesCorruptCache",
+    "TestDownloadVanillaArtifactRepairsCorruptCompletedPartialInSameRun",
+    "TestVanillaMetadataRecoveryDoesNotResurrectMissingAuthoritativeVersion",
+]:
+    if required not in read("cli/cmd/neverlauncher/compatibility_hardening_test.go"):
+        fail(f"0.16.11 compatibility hardening regression test missing: {required}")
+for required in [
+    "java_sha256", "schema_version: \"1.2\"", "managed_java_send_with_retry",
+    "quarantine_broken_archive", "Managed Java partial archive must not be a symlink",
+]:
+    if required not in managed_java:
+        fail(f"0.16.11 Managed Java hardening missing: {required}")
 
 
 
@@ -878,6 +911,11 @@ for required in [
 ]:
     if required not in compat_release_tests:
         fail(f"compatibility release VERSION regression test missing: {required}")
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 11):
+    if "compatibility-hardening-cache-recovery-upstream-failure-security" not in compat_release:
+        fail("0.16.11 release certification does not bind compatibility hardening policy")
+    if "TestCompatibilityCertificationHardening01611Policy" not in compat_release_tests:
+        fail("0.16.11 compatibility hardening release regression test missing")
 
 release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
 for required in [

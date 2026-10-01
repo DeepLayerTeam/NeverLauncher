@@ -13,10 +13,13 @@ import (
 )
 
 const (
-	compatibilityHTTPAttempts = 4
-	compatibilityLockWait     = 2 * time.Minute
-	compatibilityLockStale    = 2 * time.Hour
-	maxCompatibilityArtifact  = int64(2 << 30)
+	compatibilityHTTPAttempts     = 4
+	compatibilityLockWait         = 2 * time.Minute
+	compatibilityLockStale        = 2 * time.Hour
+	maxCompatibilityArtifact      = int64(2 << 30)
+	maxCompatibilityNativeEntry   = int64(512 << 20)
+	maxCompatibilityNativeExtract = int64(1 << 30)
+	maxCompatibilityNativeEntries = 100000
 )
 
 type compatibilityMaterializationLock struct {
@@ -142,6 +145,10 @@ func validateAssetLogicalPath(name string) error {
 }
 
 func compatibilityGET(ctx context.Context, client *http.Client, rawURL, userAgent string) (*http.Response, error) {
+	return compatibilityGETWithHeaders(ctx, client, rawURL, userAgent, nil)
+}
+
+func compatibilityGETWithHeaders(ctx context.Context, client *http.Client, rawURL, userAgent string, headers http.Header) (*http.Response, error) {
 	var lastErr error
 	for attempt := 0; attempt < compatibilityHTTPAttempts; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
@@ -149,6 +156,11 @@ func compatibilityGET(ctx context.Context, client *http.Client, rawURL, userAgen
 			return nil, err
 		}
 		req.Header.Set("User-Agent", userAgent)
+		for key, values := range headers {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
 		resp, err := client.Do(req)
 		if err == nil && !retryableCompatibilityStatus(resp.StatusCode) {
 			return resp, nil
@@ -196,6 +208,16 @@ func compatibilityRetryDelay(resp *http.Response, attempt int) time.Duration {
 				}
 				return delay
 			}
+			if retryAt, err := http.ParseTime(value); err == nil {
+				delay := time.Until(retryAt)
+				if delay < 0 {
+					return 0
+				}
+				if delay > 10*time.Second {
+					return 10 * time.Second
+				}
+				return delay
+			}
 		}
 	}
 	delay := 250 * time.Millisecond * time.Duration(1<<attempt)
@@ -203,6 +225,32 @@ func compatibilityRetryDelay(resp *http.Response, attempt int) time.Duration {
 		delay = 4 * time.Second
 	}
 	return delay
+}
+
+func replaceDirectoryAtomicPortable(staging, dst string) error {
+	if staging == "" || dst == "" {
+		return errors.New("atomic directory replace требует staging/destination")
+	}
+	if info, err := os.Lstat(staging); err != nil {
+		return fmt.Errorf("atomic directory staging: %w", err)
+	} else if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return errors.New("atomic directory staging должен быть реальным каталогом")
+	}
+	if _, err := os.Lstat(dst); errors.Is(err, os.ErrNotExist) {
+		return os.Rename(staging, dst)
+	} else if err != nil {
+		return fmt.Errorf("atomic directory destination: %w", err)
+	}
+	backup := dst + ".nlreplace-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	if err := os.Rename(dst, backup); err != nil {
+		return fmt.Errorf("atomic directory backup %s: %w", dst, err)
+	}
+	if err := os.Rename(staging, dst); err != nil {
+		_ = os.Rename(backup, dst)
+		return fmt.Errorf("atomic directory publish %s: %w", dst, err)
+	}
+	_ = os.RemoveAll(backup)
+	return nil
 }
 
 func sleepContext(ctx context.Context, delay time.Duration) error {

@@ -363,12 +363,16 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "exact Vanilla Java 21 release-line policy through 1.21.10", "status": "implemented"},
 			{"feature": "exact Vanilla Java 25 policy for 26.1.x and 26.3", "status": "implemented"},
 			{"feature": "cross-platform Vanilla Windows/Linux/macOS x64/ARM64 certification", "status": "implemented"},
+			{"feature": "resumable verified Vanilla artifact downloads", "status": "implemented"},
+			{"feature": "exact-version Mojang metadata outage recovery", "status": "implemented"},
+			{"feature": "corrupt compatibility cache quarantine", "status": "implemented"},
+			{"feature": "Managed Java executable hash-bound cache", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla",
+		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening",
 		"javaMajors":         []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":  managedJavaIIMajors0165(),
-		"managedJavaMode":    "temurin-latest-ga+historical-feature-release-fallback+sha256+atomic-install+java-version",
+		"managedJavaMode":    "temurin-latest-ga+historical-feature-release-fallback+bounded-retry+sha256+java-binary-sha256+quarantine+atomic-install+java-version",
 		"ciTargets": []string{
 			"vanilla-1.0-linux-x64",
 			"vanilla-1.1-linux-x64",
@@ -423,7 +427,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13"},
-		"note":                "0.16.10 добавляет Actual Client E2E II: representative Vanilla targets запускают verified Mojang server той же версии и обязаны доказать реальный world join; cross-platform и все Java/legacy gates сохраняются.",
+		"note":                "0.16.11 усиливает рабочий compatibility path: проверенный partial resume, corrupt-cache quarantine, exact-version metadata recovery при upstream outage, transactional native publish и hash-bound Managed Java cache; Actual Client E2E II и прежние release gates сохраняются.",
 	}
 }
 
@@ -438,7 +442,7 @@ func runtimeMetadataPolicy740() map[string]any {
 			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-never-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
 			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "processor-based install_profile (spec 0+)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
 		},
-		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "stale generated natives rebuilt", "remote metadata source recorded", "hash fields preserved", "signed manifest layer remains outside resolver"},
+		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "Range recovery requires final pinned checksum", "corrupt cache quarantined", "latest/snapshot stale metadata fallback denied", "native zip extraction bounded", "generated natives transactionally published", "remote URL credentials/fragments denied", "hash fields preserved", "signed manifest layer remains outside resolver"},
 	}
 }
 

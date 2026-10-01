@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Compatibility Hardening — 0.16.11
+
+NeverLauncher 0.16.11 усиливает рабочий compatibility path на отказах cache/upstream и на локальных trust boundaries. Vanilla artifacts теперь продолжают прерванные загрузки через HTTP Range только при корректном `206 Content-Range`, после чего по-прежнему обязаны совпасть с Mojang SHA-1/size; повреждённый готовый cache переносится в ограниченный quarantine. Exact-version `version.json` сохраняется как проверенный snapshot и может использоваться при недоступности Mojang upstream, но `latest`/snapshot aliases никогда не восстанавливаются из потенциально stale cache. Native extraction ограничена по количеству/размеру entries и публикуется через transactional directory replacement; legacy virtual assets/resources также строятся в staging и заменяются только после полной проверки.
+
+Managed Java cache 0.16.11 привязан не только к vendor archive SHA-256, но и к SHA-256 фактического `bin/java`/`java.exe`; повреждённые runtime archives quarantined, полностью скачанный verified `.nlpart` может быть восстановлен без повторной сети, а Adoptium/Managed JRE requests используют bounded retry с запретом HTTPS downgrade. Existing Actual Client E2E II, cross-platform Vanilla и exact Java 8/16/17/21/25 gates сохраняются.
+
 ## Actual Client E2E II — 0.16.10
 
 NeverLauncher 0.16.10 добавляет обязательный matching-server E2E поверх actual-client certification. Пять representative Vanilla targets — `1.7.10`/Java 8, `1.17.1`/Java 16, `1.20.4`/Java 17, `1.21.10`/Java 21 и `26.3`/Java 25 — материализуют официальный Mojang `server.jar` из той же verified `version.json`, проверяют SHA-1/size, запускают сервер на exact Java и подключают реальный клиент той же Minecraft version. PASS требует доказанный world join по server log; обычный client timeout больше не удовлетворяет этим targets.
@@ -10,7 +16,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Actual Client E2E II / 0.16.10**. Release certification сохраняет Java coverage 8/16/17/21/25 и cross-platform Vanilla, а representative release boundaries дополнительно требуют реальный matching-server world join.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Compatibility Hardening / 0.16.11**. Release certification сохраняет Java coverage 8/16/17/21/25, cross-platform Vanilla и matching-server joins, а runtime/cache paths дополнительно fail-closed проверяют recovery, upstream и local integrity boundaries.
 
 ## Java 25 Vanilla — 0.16.8
 

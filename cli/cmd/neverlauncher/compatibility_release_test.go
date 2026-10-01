@@ -777,3 +777,14 @@ func TestCompatibilityCertificationActualClientE2EII01610RejectsMissingMatchingF
 		t.Fatal("0.16.10 must reject missing required matching-server target")
 	}
 }
+
+func TestCompatibilityCertificationHardening01611Policy(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.11", "commit-1611")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.11", "commit-1611")
+	if err != nil {
+		t.Fatalf("0.16.11 compatibility evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "compatibility-hardening-cache-recovery-upstream-failure-security") {
+		t.Fatalf("0.16.11 policy does not bind compatibility hardening: %s", certification.Policy)
+	}
+}

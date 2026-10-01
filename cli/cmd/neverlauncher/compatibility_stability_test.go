@@ -136,3 +136,55 @@ func TestCompatibilityRetryDelayIsBounded(t *testing.T) {
 		t.Fatalf("Retry-After bound: %v", got)
 	}
 }
+
+func TestValidateRemoteURLRejectsCredentialsAndPrivateLiteral(t *testing.T) {
+	t.Setenv("NEVERLAUNCHER_ALLOW_PRIVATE_UPSTREAM", "")
+	for _, raw := range []string{
+		"https://user:secret@example.com/file.jar",
+		"https://example.com/file.jar#fragment",
+		"https://127.0.0.1/file.jar",
+		"https://10.0.0.1/file.jar",
+		"http://example.com/file.jar",
+	} {
+		if err := validateRemoteURL(raw); err == nil {
+			t.Fatalf("unsafe upstream URL accepted: %s", raw)
+		}
+	}
+	if err := validateRemoteURL("https://example.com/file.jar"); err != nil {
+		t.Fatalf("public HTTPS URL rejected: %v", err)
+	}
+	if err := validateRemoteURL("http://127.0.0.1:8080/file.jar"); err != nil {
+		t.Fatalf("loopback HTTP test upstream rejected: %v", err)
+	}
+	t.Setenv("NEVERLAUNCHER_ALLOW_PRIVATE_UPSTREAM", "1")
+	if err := validateRemoteURL("https://10.0.0.1/file.jar"); err != nil {
+		t.Fatalf("explicit private upstream opt-in rejected: %v", err)
+	}
+}
+
+func TestReplaceDirectoryAtomicPortablePreservesNewTree(t *testing.T) {
+	root := t.TempDir()
+	dst := filepath.Join(root, "natives")
+	staging := filepath.Join(root, "staging")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dst, "old.bin"), []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(staging, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staging, "new.bin"), []byte("new"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := replaceDirectoryAtomicPortable(staging, dst); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "old.bin")); !os.IsNotExist(err) {
+		t.Fatalf("old tree survived atomic publish: %v", err)
+	}
+	if raw, err := os.ReadFile(filepath.Join(dst, "new.bin")); err != nil || string(raw) != "new" {
+		t.Fatalf("new tree not published: %q / %v", raw, err)
+	}
+}
