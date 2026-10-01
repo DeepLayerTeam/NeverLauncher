@@ -15,13 +15,15 @@ import (
 
 func handleRuntime(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, fabric-install, fabric-package, quilt-install, quilt-package, forge-install, forge-package, neoforge-install, neoforge-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
+		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, vanilla-server, fabric-install, fabric-package, quilt-install, quilt-package, forge-install, forge-package, neoforge-install, neoforge-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
 	}
 	switch args[0] {
 	case "vanilla-install":
 		return handleRuntimeVanillaInstall(args[1:])
 	case "vanilla-package":
 		return handleRuntimeVanillaPackage(args[1:])
+	case "vanilla-server":
+		return handleRuntimeVanillaServer(args[1:])
 	case "fabric-install":
 		return handleRuntimeFabricInstall(args[1:])
 	case "fabric-package":
@@ -421,7 +423,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13"},
-		"note":                "0.16.9 добавляет native-host actual-client certification Vanilla для Windows/Linux/macOS на x64/ARM64, OS+arch-isolated natives и platform-bound release evidence; все Java/legacy gates сохраняются.",
+		"note":                "0.16.10 добавляет Actual Client E2E II: representative Vanilla targets запускают verified Mojang server той же версии и обязаны доказать реальный world join; cross-platform и все Java/legacy gates сохраняются.",
 	}
 }
 

@@ -68,6 +68,14 @@ CROSS_PLATFORM_VANILLA_0169: tuple[tuple[str, str], ...] = (
     ("macos", "aarch64"),
 )
 
+ACTUAL_CLIENT_E2E_II_01610: dict[str, int] = {
+    "1.7.10": 8,
+    "1.17.1": 16,
+    "1.20.4": 17,
+    "1.21.10": 21,
+    "26.3": 25,
+}
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -109,6 +117,10 @@ def java25_vanilla_required() -> bool:
 
 def cross_platform_vanilla_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 9)
+
+
+def actual_client_e2e_ii_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 10)
 
 
 def load_json(path: Path) -> Any:
@@ -190,6 +202,18 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Cross-platform Vanilla 0.16.9 missing required 26.3 target {os_name}/{arch}")
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(f"Cross-platform Vanilla 26.3 {os_name}/{arch}: 0.16.9 requires Java 25 scope=client")
+    if actual_client_e2e_ii_required():
+        for minecraft, java_major in ACTUAL_CLIENT_E2E_II_01610.items():
+            matching = [
+                target for target in targets
+                if target["required"] and target["loader"] == "vanilla" and target["minecraft"] == minecraft
+                and target["os"] == "linux" and target["arch"] == "x86_64" and target.get("matchingServer") is True
+            ]
+            if len(matching) != 1:
+                die(f"Actual Client E2E II 0.16.10 requires one matching-server target for Minecraft {minecraft}")
+            target = matching[0]
+            if target["javaMajor"] != java_major or target["scope"] != "client":
+                die(f"Actual Client E2E II {minecraft}: requires Java {java_major} scope=client on linux/x86_64")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -206,7 +230,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         die("targets must contain a non-empty array")
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
-    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "javaMajor", "scope", "required"}
+    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "javaMajor", "scope", "matchingServer", "required"}
     for index, raw in enumerate(rows):
         if not isinstance(raw, dict):
             die(f"target #{index + 1} must be an object")
@@ -222,6 +246,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         scope = str(raw.get("scope", "")).strip().lower()
         java_major = raw.get("javaMajor")
         required = raw.get("required")
+        matching_server = raw.get("matchingServer", False)
         if not ID_RE.fullmatch(target_id):
             die(f"target #{index + 1}: invalid id {target_id!r}")
         if target_id in seen:
@@ -249,6 +274,10 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: client scope is allowed only for Vanilla")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
+        if not isinstance(matching_server, bool):
+            die(f"{target_id}: matchingServer must be boolean")
+        if matching_server and not (loader == "vanilla" and scope == "client" and os_name == "linux" and arch == "x86_64"):
+            die(f"{target_id}: matchingServer requires Vanilla client scope on linux/x86_64")
         normalized.append({
             "id": target_id,
             "minecraft": minecraft,
@@ -258,6 +287,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             "arch": arch,
             "javaMajor": java_major,
             "scope": scope,
+            "matchingServer": matching_server,
             "required": required,
         })
     validate_baseline_ii(normalized)
@@ -351,6 +381,7 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         "javaMajor": target["javaMajor"],
         "detectedJavaMajor": target["javaMajor"],
         "scope": target["scope"],
+        "matchingServer": target.get("matchingServer", False),
         "commit": commit,
         "runId": run_id,
     }
@@ -373,6 +404,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         if target["scope"] == "client"
         else ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "javaMatched", "platformMatched"]
     )
+    if target.get("matchingServer") is True:
+        mandatory = list(mandatory) + ["matchingServer", "serverVersionMatched", "serverHealthy", "clientJoinedServer"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -404,6 +437,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
                 "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json", "platform-runtime.json",
             }
         )
+        if target.get("matchingServer") is True:
+            mandatory_files = set(mandatory_files) | {"vanilla-server-install.json", "matching-server.json", "matching-server.log"}
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":
@@ -417,17 +452,18 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         "",
         "> Матрица сгенерирована автоматически из фактических E2E-результатов. Статусы PASS не хранятся и не редактируются вручную.",
         "",
-        "| Target | Minecraft | Loader | Java | Scope | Actual client | Paper join | Result |",
-        "|---|---|---|---:|---|---:|---:|---:|",
+        "| Target | Minecraft | Loader | Java | Scope | Actual client | Matching server | Paper join | Result |",
+        "|---|---|---|---:|---|---:|---:|---:|---:|",
     ]
     for target in targets:
         record = records.get(target["id"], {})
         checks = record.get("checks") if isinstance(record.get("checks"), dict) else {}
         status = "✅ PASS" if record.get("status") == "passed" else "❌ FAIL"
         paper = "—" if target["scope"] == "client" else ("✅" if checks.get("paperJoin") is True else "❌")
+        matching = "✅" if target.get("matchingServer") is True and checks.get("matchingServer") is True else ("—" if not target.get("matchingServer") else "❌")
         lines.append(
             f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{target['javaMajor']}` | `{target['scope']}` | "
-            f"{'✅' if checks.get('actualClient') is True else '❌'} | {paper} | {status} |"
+            f"{'✅' if checks.get('actualClient') is True else '❌'} | {matching} | {paper} | {status} |"
         )
     lines += [
         "",
@@ -435,7 +471,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS).",
+        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
         "Integration scope: canonical API upload → signed immutable release → clean NeverRuntime sync → actual client → Paper join → revoke/deny and health checks.",
         "",
     ]

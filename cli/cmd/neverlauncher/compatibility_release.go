@@ -24,15 +24,16 @@ const (
 var compatibilitySHA256RE = regexp.MustCompile(`^[0-9a-fA-F]{64}$`)
 
 type releaseCompatibilityTarget struct {
-	ID            string `json:"id"`
-	Minecraft     string `json:"minecraft"`
-	Loader        string `json:"loader"`
-	LoaderVersion string `json:"loaderVersion"`
-	OS            string `json:"os"`
-	Arch          string `json:"arch"`
-	JavaMajor     int    `json:"javaMajor,omitempty"`
-	Scope         string `json:"scope,omitempty"`
-	Required      bool   `json:"required"`
+	ID             string `json:"id"`
+	Minecraft      string `json:"minecraft"`
+	Loader         string `json:"loader"`
+	LoaderVersion  string `json:"loaderVersion"`
+	OS             string `json:"os"`
+	Arch           string `json:"arch"`
+	JavaMajor      int    `json:"javaMajor,omitempty"`
+	Scope          string `json:"scope,omitempty"`
+	MatchingServer bool   `json:"matchingServer,omitempty"`
+	Required       bool   `json:"required"`
 }
 
 type releaseCompatibilityTargets struct {
@@ -55,6 +56,7 @@ type releaseCompatibilityResult struct {
 	JavaMajor             int             `json:"javaMajor,omitempty"`
 	DetectedJavaMajor     int             `json:"detectedJavaMajor,omitempty"`
 	Scope                 string          `json:"scope,omitempty"`
+	MatchingServer        bool            `json:"matchingServer,omitempty"`
 	Commit                string          `json:"commit"`
 	RunID                 string          `json:"runId"`
 	ExitCode              int             `json:"exitCode"`
@@ -159,6 +161,14 @@ var crossPlatformVanillaCompatibility0169 = []struct {
 	{OS: "macos", Arch: "aarch64"},
 }
 
+var actualClientE2EIICompatibility01610 = map[string]int{
+	"1.7.10":  8,
+	"1.17.1":  16,
+	"1.20.4":  17,
+	"1.21.10": 21,
+	"26.3":    25,
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -206,6 +216,10 @@ func compatibilityJava25VanillaRequired(ver string) bool {
 
 func compatibilityCrossPlatformVanillaRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 9)
+}
+
+func compatibilityActualClientE2EIIRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 10)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -306,6 +320,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			if target.Scope == "client" && target.Loader != "vanilla" {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: client scope разрешён только для Vanilla", id)
+			}
+			if target.MatchingServer && !(target.Loader == "vanilla" && target.Scope == "client" && target.OS == "linux" && target.Arch == "x86_64") {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: matchingServer требует Vanilla client scope на linux/x86_64", id)
 			}
 		}
 		targetByID[id] = target
@@ -413,6 +430,22 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityActualClientE2EIIRequired(ver) {
+			for minecraft, javaMajor := range actualClientE2EIICompatibility01610 {
+				count := 0
+				for _, target := range targets.Targets {
+					if target.Required && target.Loader == "vanilla" && target.Minecraft == minecraft && target.OS == "linux" && target.Arch == "x86_64" && target.MatchingServer {
+						count++
+						if target.JavaMajor != javaMajor || target.Scope != "client" {
+							return releaseCompatibilityCertification{}, fmt.Errorf("Actual Client E2E II %s mismatch: expected Java %d scope=client linux/x86_64", minecraft, javaMajor)
+						}
+					}
+				}
+				if count != 1 {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Actual Client E2E II 0.16.10 requires one matching-server target for Minecraft %s", minecraft)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -451,8 +484,8 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s identity mismatch между targets и matrix", id)
 		}
 		if enhanced {
-			if result.JavaMajor != target.JavaMajor || result.DetectedJavaMajor != target.JavaMajor || result.Scope != target.Scope {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s Java/scope mismatch: target Java=%d scope=%s, result Java=%d detected=%d scope=%s", id, target.JavaMajor, target.Scope, result.JavaMajor, result.DetectedJavaMajor, result.Scope)
+			if result.JavaMajor != target.JavaMajor || result.DetectedJavaMajor != target.JavaMajor || result.Scope != target.Scope || result.MatchingServer != target.MatchingServer {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s Java/scope/matching mismatch: target Java=%d scope=%s matchingServer=%t, result Java=%d detected=%d scope=%s matchingServer=%t", id, target.JavaMajor, target.Scope, target.MatchingServer, result.JavaMajor, result.DetectedJavaMajor, result.Scope, result.MatchingServer)
 			}
 		}
 		if result.Commit != matrix.Commit || result.RunID != matrix.RunID {
@@ -468,6 +501,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if compatibilityCrossPlatformVanillaRequired(ver) {
 			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "platformMatched")
+		}
+		if compatibilityActualClientE2EIIRequired(ver) && target.MatchingServer {
+			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "matchingServer", "serverVersionMatched", "serverHealthy", "clientJoinedServer")
 		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
@@ -543,6 +579,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityCrossPlatformVanillaRequired(ver) {
 		policy += ";cross-platform-vanilla-windows-linux-macos-x64-arm64"
+	}
+	if compatibilityActualClientE2EIIRequired(ver) {
+		policy += ";actual-client-e2e-II-real-clients-matching-mojang-servers"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

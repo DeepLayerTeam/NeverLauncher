@@ -146,12 +146,18 @@ async fn command_certify_vanilla(args: &[String]) -> Result<serde_json::Value, S
         .unwrap_or_else(|| "30".to_string())
         .parse::<u64>()
         .map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string())?;
+    let matching_server = optional_flag(args, "--server");
+    let matching_server_port = optional_flag(args, "--server-port")
+        .map(|value| value.parse::<u16>().map_err(|_| "--server-port должен быть TCP port 1..65535".to_string()))
+        .transpose()?;
     let result = certify_vanilla_compatibility(
         &root,
         &version,
         java,
         required_java_major,
         max_runtime_seconds,
+        matching_server,
+        matching_server_port,
     )
     .await?;
     serde_json::to_value(result).map_err(|err| err.to_string())

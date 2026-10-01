@@ -583,3 +583,75 @@ func TestVanillaRuleAndNativeClassifierMatchTargetArchitecture(t *testing.T) {
 		t.Fatal("non-native library must be architecture-neutral")
 	}
 }
+
+func TestInstallVanillaServerMaterializesVerifiedMatchingServer(t *testing.T) {
+	serverJar := []byte("fake-mojang-server-jar")
+	clientJar := []byte("fake-client")
+	mux := http.NewServeMux()
+	httpServer := httptest.NewServer(mux)
+	defer httpServer.Close()
+	base := httpServer.URL
+
+	versionDoc := map[string]any{
+		"id": "1.20.4", "type": "release", "mainClass": "net.minecraft.client.main.Main",
+		"downloads": map[string]any{
+			"client": map[string]any{"url": base + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)},
+			"server": map[string]any{"url": base + "/server.jar", "sha1": sha1hex(serverJar), "size": len(serverJar)},
+		},
+		"javaVersion": map[string]any{"majorVersion": 17},
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	manifest := MojangVersionManifest{
+		Latest:   map[string]string{"release": "1.20.4"},
+		Versions: []MojangManifestVersion{{ID: "1.20.4", Type: "release", URL: base + "/version.json", SHA1: sha1hex(versionBytes)}},
+	}
+	manifestBytes, _ := json.Marshal(manifest)
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+	mux.HandleFunc("/server.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(serverJar) })
+	mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
+
+	dir := t.TempDir()
+	result, err := installVanillaServer(context.Background(), "1.20.4", dir, base+"/manifest.json", httpServer.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "installed-and-verified" || result.MinecraftVersion != "1.20.4" || result.JavaMajorVersion != 17 {
+		t.Fatalf("unexpected server result: %+v", result)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "server.jar"))
+	if err != nil || !bytes.Equal(got, serverJar) {
+		t.Fatalf("matching server jar missing/corrupt: %v %q", err, got)
+	}
+	if result.SHA1 != sha1hex(serverJar) || len(result.SHA256) != 64 || result.Size != int64(len(serverJar)) {
+		t.Fatalf("server integrity evidence invalid: %+v", result)
+	}
+	second, err := installVanillaServer(context.Background(), "1.20.4", dir, base+"/manifest.json", httpServer.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !second.Cached || second.SHA256 != result.SHA256 {
+		t.Fatalf("verified server cache not reused: first=%+v second=%+v", result, second)
+	}
+}
+
+func TestInstallVanillaServerRejectsMissingServerDownload(t *testing.T) {
+	versionDoc := map[string]any{
+		"id": "test-no-server", "type": "release", "mainClass": "net.minecraft.client.main.Main",
+		"downloads":   map[string]any{"client": map[string]any{"url": "https://example.invalid/client.jar", "sha1": strings.Repeat("a", 40), "size": 1}},
+		"javaVersion": map[string]any{"majorVersion": 21},
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	mux := http.NewServeMux()
+	httpServer := httptest.NewServer(mux)
+	defer httpServer.Close()
+	manifest := MojangVersionManifest{Latest: map[string]string{"release": "test-no-server"}, Versions: []MojangManifestVersion{{ID: "test-no-server", Type: "release", URL: httpServer.URL + "/version.json", SHA1: sha1hex(versionBytes)}}}
+	manifestBytes, _ := json.Marshal(manifest)
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+
+	_, err := installVanillaServer(context.Background(), "test-no-server", t.TempDir(), httpServer.URL+"/manifest.json", httpServer.Client())
+	if err == nil || !strings.Contains(err.Error(), "downloads.server") {
+		t.Fatalf("missing verified server artifact must fail closed, got %v", err)
+	}
+}

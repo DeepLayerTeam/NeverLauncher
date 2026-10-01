@@ -1693,6 +1693,62 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.9 cross-platform regression coverage missing: {required}")
 
 
+# 0.16.10 Actual Client E2E II must prove that representative real Mojang
+# clients join verified Mojang servers for the exact same Minecraft version.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 10):
+    vanilla_01610 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+    vanilla_tests_01610 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
+    runtime_01610 = read("runtime/neverruntime/src/lib.rs") + read("runtime/neverruntime/src/bin/neverruntime.rs")
+    matching_case_01610 = read("e2e/scripts/run-vanilla-matching-e2e.sh")
+    compat_case_01610 = read("e2e/scripts/run-compatibility-case.sh")
+    matrix_01610 = read("scripts/compatibility/matrix.py")
+    matrix_tests_01610 = read("scripts/compatibility/test_matrix.py")
+    targets_01610 = read("compatibility/targets.json")
+    workflow_01610 = read(".github/workflows/compatibility.yml")
+    release_01610 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    release_tests_01610 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    for required in ["handleRuntimeVanillaServer", "installVanillaServer", 'metadata.Downloads["server"]', "installed-and-verified"]:
+        if required not in vanilla_01610:
+            fail(f"0.16.10 verified Mojang server materializer incomplete: {required}")
+    for target in [
+        "vanilla-1.7.10-linux-x64", "vanilla-1.17.1-linux-x64", "vanilla-1.20.4-linux-x64",
+        "vanilla-1.21.10-linux-x64", "vanilla-26.3-linux-x64",
+    ]:
+        if target not in targets_01610:
+            fail(f"0.16.10 matching-server target missing: {target}")
+    if targets_01610.count('"matchingServer": true') < 5:
+        fail("0.16.10 targets do not bind five representative matching-server pairs")
+    for required in ["--server", "--server-port", "matching_server", "matching_server_port"]:
+        if required not in runtime_01610:
+            fail(f"0.16.10 NeverRuntime direct matching-server launch incomplete: {required}")
+    for required in [
+        "runtime vanilla-server", "server.jar", "online-mode=false", "clientJoinedServer", "serverVersionMatched",
+        "joined the game|logged in with entity id", "vanilla-server-install.json", "matching-server.json",
+    ]:
+        if required not in matching_case_01610:
+            fail(f"0.16.10 real client/matching server E2E incomplete: {required}")
+    for required in ["NEVERLAUNCHER_COMPAT_MATCHING_SERVER", "run-vanilla-matching-e2e.sh", "matchingServer"]:
+        if required not in compat_case_01610:
+            fail(f"0.16.10 compatibility dispatcher incomplete: {required}")
+    for required in ["ACTUAL_CLIENT_E2E_II_01610", "Actual Client E2E II 0.16.10", "clientJoinedServer", "serverVersionMatched"]:
+        if required not in matrix_01610:
+            fail(f"0.16.10 matrix matching-server gate incomplete: {required}")
+    for required in ["matrix.matchingServer", "vanilla-server-install.json", "matching-server.json", "matching-server.log"]:
+        if required not in workflow_01610:
+            fail(f"0.16.10 workflow matching-server evidence incomplete: {required}")
+    if "actual-client-e2e-II-real-clients-matching-mojang-servers" not in release_01610:
+        fail("0.16.10 release certification does not bind matching-server policy")
+    for required in [
+        "TestInstallVanillaServerMaterializesVerifiedMatchingServer",
+        "test_validate_rejects_missing_matching_server_target_01610",
+        "test_aggregate_rejects_matching_server_without_real_join_01610",
+        "TestCompatibilityCertificationActualClientE2EII01610",
+    ]:
+        corpus = vanilla_tests_01610 + matrix_tests_01610 + release_tests_01610
+        if required not in corpus:
+            fail(f"0.16.10 matching-server regression coverage missing: {required}")
+
+
 # 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
 # not a manifest-only declaration. It is used by client install/update/package-apply
 # and is self-tested on native Linux/Windows/macOS CI runners.

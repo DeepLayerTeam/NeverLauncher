@@ -79,6 +79,7 @@ jobs:
           NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
           NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
           NEVERLAUNCHER_COMPAT_SCOPE: ${{ matrix.scope }}
+          NEVERLAUNCHER_COMPAT_MATCHING_SERVER: ${{ matrix.matchingServer }}
           NEVERLAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
           NEVERLAUNCHER_E2E_LOADER: ${{ matrix.loader }}
           NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
@@ -99,7 +100,10 @@ jobs:
             e2e/runtime/client-package.json
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/vanilla-install.json
+            e2e/runtime/vanilla-server-install.json
             e2e/runtime/vanilla-certification.json
+            e2e/runtime/matching-server.json
+            e2e/runtime/matching-server.log
             e2e/runtime/manifest.json
             e2e/runtime/runtime-verify.json
             e2e/runtime/runtime-sync.json

@@ -274,6 +274,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityActualClientE2EIIRequired(ver) {
+		for minecraft := range actualClientE2EIICompatibility01610 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -307,10 +312,14 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			expected.JavaMajor = 21
 			expected.Scope = scope
 		}
+		matchingServer := false
+		if _, required := actualClientE2EIICompatibility01610[minecraft]; compatibilityActualClientE2EIIRequired(ver) && required {
+			matchingServer = true
+		}
 		id := "vanilla-" + minecraft + "-linux-x64"
 		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
 			ID: id, Minecraft: minecraft, Loader: "vanilla", OS: "linux", Arch: "x86_64",
-			JavaMajor: expected.JavaMajor, Scope: expected.Scope, Required: true,
+			JavaMajor: expected.JavaMajor, Scope: expected.Scope, MatchingServer: matchingServer, Required: true,
 		})
 		checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true}
 		if expected.Scope == "integration" {
@@ -319,10 +328,16 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		if compatibilityCrossPlatformVanillaRequired(ver) {
 			checks["platformMatched"] = true
 		}
+		if matchingServer {
+			checks["matchingServer"] = true
+			checks["serverVersionMatched"] = true
+			checks["serverHealthy"] = true
+			checks["clientJoinedServer"] = true
+		}
 		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
 			Loader: "vanilla", OS: "linux", Arch: "x86_64", JavaMajor: expected.JavaMajor, DetectedJavaMajor: expected.JavaMajor,
-			Scope: expected.Scope, Commit: commit, RunID: "162", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence,
+			Scope: expected.Scope, MatchingServer: matchingServer, Commit: commit, RunID: "162", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence,
 		})
 	}
 	if compatibilityCrossPlatformVanillaRequired(ver) {
@@ -715,5 +730,50 @@ func TestCompatibilityCertificationCrossPlatformVanilla0169RejectsPlatformMismat
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169"); err == nil {
 		t.Fatal("0.16.9 must reject host platform mismatch evidence")
+	}
+}
+
+func TestCompatibilityCertificationActualClientE2EII01610(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.10", "commit-1610")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610")
+	if err != nil {
+		t.Fatalf("0.16.10 Actual Client E2E II evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "actual-client-e2e-II-real-clients-matching-mojang-servers") {
+		t.Fatalf("0.16.10 policy does not bind matching servers: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationActualClientE2EII01610RejectsMissingJoin(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.10", "commit-1610")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].MinecraftVersion == "1.20.4" && matrix.Targets[i].MatchingServer {
+			matrix.Targets[i].Checks["clientJoinedServer"] = false
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610"); err == nil {
+		t.Fatal("0.16.10 must reject matching-server target without a real client join")
+	}
+}
+
+func TestCompatibilityCertificationActualClientE2EII01610RejectsMissingMatchingFlag(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.10", "commit-1610")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Minecraft == "1.17.1" && targets.Targets[i].OS == "linux" && targets.Targets[i].Arch == "x86_64" {
+			targets.Targets[i].MatchingServer = false
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.10", "commit-1610"); err == nil {
+		t.Fatal("0.16.10 must reject missing required matching-server target")
 	}
 }

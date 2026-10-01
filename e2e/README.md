@@ -56,7 +56,9 @@ materialize
  -> subsequent join denied
 ```
 
-`run-compatibility-case.sh` формирует `e2e/compatibility-result/compatibility-result.json`. PASS выставляется только если присутствуют package verification, valid manifest signature, clean sync, actual-client launch, Paper join, revoke/deny и healthy Paper evidence. Результат содержит exact Git commit и GitHub Actions run ID; агрегатор не принимает result от другого запуска.
+Для Vanilla targets с `matchingServer=true` wrapper вместо timeout-only certification вызывает `run-vanilla-matching-e2e.sh`. Сценарий материализует verified Mojang client и `downloads.server` из одной exact `version.json`, проверяет server JAR по declared SHA-1/size, запускает сервер на target Java, затем запускает NeverRuntime с `--server 127.0.0.1 --server-port <ephemeral>`. PASS возможен только если server остаётся healthy и его log подтверждает вход `NeverLauncherCertification`. В 0.16.10 это обязательно для 1.7.10/Java 8, 1.17.1/Java 16, 1.20.4/Java 17, 1.21.10/Java 21 и 26.3/Java 25.
+
+`run-compatibility-case.sh` формирует `e2e/compatibility-result/compatibility-result.json`. Для loader/integration PASS требует package verification, valid manifest signature, clean sync, actual-client launch, Paper join, revoke/deny и healthy Paper evidence. Для matching Vanilla PASS вместо этого требует `matchingServer`, `serverVersionMatched`, `serverHealthy` и `clientJoinedServer`, а также `vanilla-server-install.json`, `matching-server.json` и server log. Результат содержит exact Git commit и GitHub Actions run ID; агрегатор не принимает result от другого запуска.
 
 `e2e/scripts/publish-client-package.py` повторно SHA-256-хеширует каждый materialized artifact перед multipart upload, сверяет checksum/size из Backend и отклоняет path traversal и symlink-компоненты внутри client tree.
 

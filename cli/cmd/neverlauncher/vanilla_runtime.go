@@ -87,6 +87,22 @@ type vanillaInstallResult struct {
 	Status           string                  `json:"status"`
 }
 
+type vanillaServerInstallResult struct {
+	SchemaVersion    string `json:"schemaVersion"`
+	ToolVersion      string `json:"toolVersion"`
+	MinecraftVersion string `json:"minecraftVersion"`
+	ReleaseType      string `json:"releaseType"`
+	JavaMajorVersion int    `json:"javaMajorVersion"`
+	ServerDir        string `json:"serverDir"`
+	ServerJar        string `json:"serverJar"`
+	MetadataPath     string `json:"metadataPath"`
+	Size             int64  `json:"size"`
+	SHA1             string `json:"sha1"`
+	SHA256           string `json:"sha256"`
+	Cached           bool   `json:"cached"`
+	Status           string `json:"status"`
+}
+
 type mojangLogging struct {
 	Client *mojangLoggingClient `json:"client"`
 }
@@ -192,6 +208,105 @@ func handleRuntimeVanillaPackage(args []string) error {
 	}
 	out := flagValue(args, "--output", "client-package.json")
 	return writeOrPrintJSON(out, pkg)
+}
+
+func handleRuntimeVanillaServer(args []string) error {
+	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
+	serverDir := flagValue(args, "--server-dir", filepath.Join(".neverlauncher", "vanilla-server", minecraftVersion))
+	lock, err := acquireCompatibilityMaterializationLock(serverDir)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	result, err := installVanillaServer(context.Background(), minecraftVersion, serverDir, flagValue(args, "--version-manifest", defaultMojangVersionManifest), nil)
+	if err != nil {
+		return err
+	}
+	return writeOrPrintJSON(flagValue(args, "--output", ""), result)
+}
+
+func installVanillaServer(ctx context.Context, requestedVersion, serverDir, versionManifest string, client *http.Client) (vanillaServerInstallResult, error) {
+	if strings.TrimSpace(serverDir) == "" {
+		return vanillaServerInstallResult{}, errors.New("Vanilla server install требует serverDir")
+	}
+	if strings.TrimSpace(versionManifest) == "" {
+		versionManifest = defaultMojangVersionManifest
+	}
+	if client == nil {
+		client = secureHTTPClient()
+	}
+	if err := os.MkdirAll(serverDir, 0o755); err != nil {
+		return vanillaServerInstallResult{}, fmt.Errorf("не удалось создать serverDir: %w", err)
+	}
+
+	manifestBytes, err := fetchJSONBytes(ctx, client, versionManifest, 16<<20)
+	if err != nil {
+		return vanillaServerInstallResult{}, fmt.Errorf("Mojang version manifest: %w", err)
+	}
+	var manifest MojangVersionManifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return vanillaServerInstallResult{}, fmt.Errorf("Mojang version manifest повреждён: %w", err)
+	}
+	selectedID := resolveRequestedMinecraftVersion(manifest, requestedVersion)
+	selected, ok := findMojangManifestVersion(manifest, selectedID)
+	if !ok {
+		return vanillaServerInstallResult{}, fmt.Errorf("Minecraft %s отсутствует в Mojang version manifest", selectedID)
+	}
+	if selected.URL == "" || selected.SHA1 == "" {
+		return vanillaServerInstallResult{}, fmt.Errorf("Mojang manifest entry %s не содержит URL/SHA1", selectedID)
+	}
+	versionBytes, err := fetchBytesVerified(ctx, client, selected.URL, selected.SHA1, 0, 32<<20, true)
+	if err != nil {
+		return vanillaServerInstallResult{}, fmt.Errorf("version.json %s: %w", selectedID, err)
+	}
+	var metadata vanillaVersionMetadata
+	if err := json.Unmarshal(versionBytes, &metadata); err != nil {
+		return vanillaServerInstallResult{}, fmt.Errorf("version.json %s повреждён: %w", selectedID, err)
+	}
+	if metadata.ID == "" {
+		metadata.ID = selectedID
+	}
+	if metadata.ID != selectedID {
+		return vanillaServerInstallResult{}, fmt.Errorf("version.json id mismatch: ожидался %s, получен %s", selectedID, metadata.ID)
+	}
+	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
+	if err != nil {
+		return vanillaServerInstallResult{}, err
+	}
+	serverDownload, ok := metadata.Downloads["server"]
+	if !ok || strings.TrimSpace(serverDownload.URL) == "" || strings.TrimSpace(serverDownload.SHA1) == "" || serverDownload.Size <= 0 {
+		return vanillaServerInstallResult{}, fmt.Errorf("Minecraft %s version.json не содержит проверяемый downloads.server", selectedID)
+	}
+
+	metadataPath := filepath.Join(serverDir, "version.json")
+	if err := writeAtomicBytes(metadataPath, versionBytes, 0o644); err != nil {
+		return vanillaServerInstallResult{}, err
+	}
+	serverPath := filepath.Join(serverDir, "server.jar")
+	cached := false
+	serverBytes, err := os.ReadFile(serverPath)
+	if err == nil && int64(len(serverBytes)) == serverDownload.Size {
+		h := sha1.Sum(serverBytes)
+		if strings.EqualFold(hex.EncodeToString(h[:]), serverDownload.SHA1) {
+			cached = true
+		}
+	}
+	if !cached {
+		serverBytes, err = fetchBytesVerified(ctx, client, serverDownload.URL, serverDownload.SHA1, serverDownload.Size, 512<<20, true)
+		if err != nil {
+			return vanillaServerInstallResult{}, fmt.Errorf("server.jar %s: %w", selectedID, err)
+		}
+		if err := writeAtomicBytes(serverPath, serverBytes, 0o644); err != nil {
+			return vanillaServerInstallResult{}, err
+		}
+	}
+	h256 := sha256.Sum256(serverBytes)
+	return vanillaServerInstallResult{
+		SchemaVersion: "1.0", ToolVersion: version, MinecraftVersion: selectedID, ReleaseType: selected.Type,
+		JavaMajorVersion: javaMajor, ServerDir: filepath.Clean(serverDir), ServerJar: filepath.ToSlash(filepath.Join(filepath.Clean(serverDir), "server.jar")),
+		MetadataPath: filepath.ToSlash(filepath.Join(filepath.Clean(serverDir), "version.json")), Size: int64(len(serverBytes)), SHA1: strings.ToLower(serverDownload.SHA1),
+		SHA256: hex.EncodeToString(h256[:]), Cached: cached, Status: "installed-and-verified",
+	}, nil
 }
 
 func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaInstallResult, error) {

@@ -295,6 +295,10 @@ pub struct VanillaCompatibilityProbeResult {
     pub java_executable: String,
     pub main_class: String,
     pub classpath_entries: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matching_server: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub matching_server_port: Option<u16>,
     pub success: bool,
     pub timed_out: bool,
     pub exit_code: Option<i32>,
@@ -594,6 +598,8 @@ pub async fn certify_vanilla_compatibility(
     java_path: String,
     required_java_major: u32,
     max_runtime_seconds: u64,
+    matching_server: Option<String>,
+    matching_server_port: Option<u16>,
 ) -> Result<VanillaCompatibilityProbeResult, String> {
     if required_java_major == 0 {
         return Err("Vanilla certification требует required Java major".to_string());
@@ -640,6 +646,22 @@ pub async fn certify_vanilla_compatibility(
     if classpath_entries.is_empty() {
         return Err(format!("Vanilla {version} certification classpath пуст"));
     }
+    let mut game_args = resolution.game_args.clone();
+    let normalized_matching_server = matching_server.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+    if let Some(host) = normalized_matching_server.as_ref() {
+        if host.chars().any(|ch| ch.is_whitespace()) {
+            return Err("Vanilla certification matching server host содержит пробелы".to_string());
+        }
+        let port = matching_server_port.ok_or_else(|| "Vanilla certification matching server требует --server-port".to_string())?;
+        if port == 0 {
+            return Err("Vanilla certification matching server port должен быть > 0".to_string());
+        }
+        replace_or_append_arg_pair(&mut game_args, "--server", host.clone());
+        replace_or_append_arg_pair(&mut game_args, "--port", port.to_string());
+    } else if matching_server_port.is_some() {
+        return Err("Vanilla certification --server-port требует --server".to_string());
+    }
+
     let mut jvm_args = resolution.jvm_args.clone();
     if !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
         jvm_args.push("-Xmx1024m".to_string());
@@ -653,7 +675,7 @@ pub async fn certify_vanilla_compatibility(
         main_class: resolution.main_class.clone(),
         classpath_entries,
         jvm_args,
-        game_args: resolution.game_args.clone(),
+        game_args,
         command_preview: format!("{} ... {}", java_path, resolution.main_class),
     };
 
@@ -712,6 +734,8 @@ pub async fn certify_vanilla_compatibility(
         java_executable: java_path,
         main_class: plan.main_class,
         classpath_entries: plan.classpath_entries.len(),
+        matching_server: normalized_matching_server,
+        matching_server_port,
         success,
         timed_out,
         exit_code,

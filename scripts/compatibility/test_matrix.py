@@ -44,6 +44,9 @@ class MatrixToolTests(unittest.TestCase):
                 "platform-runtime.json",
                 "result.json",
             ]
+            if target.get("matchingServer") is True:
+                checks.update({"matchingServer": True, "serverVersionMatched": True, "serverHealthy": True, "clientJoinedServer": True})
+                files.extend(["vanilla-server-install.json", "matching-server.json", "matching-server.log"])
         else:
             checks = {
                 "actualClient": True,
@@ -81,6 +84,7 @@ class MatrixToolTests(unittest.TestCase):
             "javaMajor": target["javaMajor"],
             "detectedJavaMajor": target["javaMajor"],
             "scope": target["scope"],
+            "matchingServer": target.get("matchingServer", False),
             "commit": commit,
             "runId": "77",
             "exitCode": 0,
@@ -243,6 +247,30 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Cross-platform Vanilla 0.16.9", proc.stderr)
+
+
+    def test_validate_rejects_missing_matching_server_target_01610(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["id"] == "vanilla-1.20.4-linux-x64":
+                    target["matchingServer"] = False
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Actual Client E2E II 0.16.10", proc.stderr)
+
+    def test_aggregate_rejects_matching_server_without_real_join_01610(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            doc = self.target_doc()
+            def mutate(target: dict, result: dict) -> None:
+                if target.get("matchingServer") is True and target["minecraft"] == "1.17.1":
+                    result["checks"]["clientJoinedServer"] = False
+            proc = self.aggregate(tmp, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("clientJoinedServer", proc.stderr)
 
     def test_plan_binds_hosted_runner_and_java_distribution(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

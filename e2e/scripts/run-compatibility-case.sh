@@ -11,6 +11,7 @@ TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
 JAVA_MAJOR="${NEVERLAUNCHER_E2E_JAVA_MAJOR:-}"
 SCOPE="${NEVERLAUNCHER_COMPAT_SCOPE:-integration}"
+MATCHING_SERVER="${NEVERLAUNCHER_COMPAT_MATCHING_SERVER:-false}"
 JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 COMMIT="${GITHUB_SHA:-local}"
@@ -30,6 +31,11 @@ if ! valid_id "$TARGET_ID" || ! valid_version "$MINECRAFT"; then
 fi
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[compat] invalid loader" >&2; exit 2 ;; esac
 case "$SCOPE" in client|integration) ;; *) echo "[compat] invalid certification scope" >&2; exit 2 ;; esac
+case "$MATCHING_SERVER" in true|false) ;; *) echo "[compat] matchingServer must be true/false" >&2; exit 2 ;; esac
+if [[ "$MATCHING_SERVER" == "true" && ! ( "$SCOPE" == "client" && "$LOADER" == "vanilla" && "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
+  echo "[compat] matchingServer requires Vanilla client scope on linux/x86_64" >&2
+  exit 2
+fi
 case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[compat] unsupported target OS" >&2; exit 2 ;; esac
 case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] unsupported target architecture" >&2; exit 2 ;; esac
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[compat] java major is required" >&2; exit 2; }
@@ -93,7 +99,9 @@ export NEVERLAUNCHER_E2E_MODE=compatibility
 export NEVERLAUNCHER_E2E_PROFILE_ID="$LOADER"
 
 set +e
-if [[ "$SCOPE" == "client" ]]; then
+if [[ "$SCOPE" == "client" && "$MATCHING_SERVER" == "true" ]]; then
+  bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh"
+elif [[ "$SCOPE" == "client" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh"
 else
   bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
@@ -101,7 +109,7 @@ fi
 rc=$?
 set -e
 
-python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
+python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$MATCHING_SERVER" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
 from __future__ import annotations
 import json
 import sys
@@ -113,8 +121,9 @@ java_evidence_path = Path(sys.argv[3])
 platform_evidence_path = Path(sys.argv[4])
 target_id, product_version, minecraft, loader, selector, os_name, arch = sys.argv[5:12]
 java_major = int(sys.argv[12])
-scope, commit, run_id = sys.argv[13:16]
-rc = int(sys.argv[16])
+scope, matching_server_raw, commit, run_id = sys.argv[13:17]
+matching_server = matching_server_raw == "true"
+rc = int(sys.argv[17])
 runtime = root / "e2e" / "runtime"
 
 def read(name: str):
@@ -156,10 +165,20 @@ if scope == "client":
         "actualClient": probe.get("status") == "passed" and (probe.get("timedOut") is True or probe.get("success") is True),
         "platformMatched": platform_matched,
     }
+    matching = read("matching-server.json") or {}
+    server_install = read("vanilla-server-install.json") or {}
+    if matching_server:
+        checks.update({
+            "matchingServer": matching.get("status") == "passed" and matching.get("minecraftVersion") == minecraft,
+            "serverVersionMatched": matching.get("serverVersionMatched") is True and matching.get("serverVersion") == minecraft and server_install.get("minecraftVersion") == minecraft,
+            "serverHealthy": matching.get("serverProcessAlive") is True,
+            "clientJoinedServer": matching.get("clientJoinedServer") is True,
+        })
     resolved = ""
     manifest_loader = str(minecraft_settings.get("loader", ""))
     evidence_files = [name for name in [
-        "client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-certification.json", "result.json"
+        "client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-server-install.json",
+        "vanilla-certification.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
 else:
     base = read("result.json") or {}
@@ -202,6 +221,7 @@ payload = {
     "javaMajor": java_major,
     "detectedJavaMajor": detected_java,
     "scope": scope,
+    "matchingServer": matching_server,
     "commit": commit,
     "runId": run_id,
     "exitCode": rc,
@@ -211,6 +231,7 @@ payload = {
         "javaRuntime": java_evidence,
         "platformRuntime": platform_evidence,
         "files": evidence_files + ["platform-runtime.json"],
+        "matchingServer": matching_server,
     },
 }
 out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

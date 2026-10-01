@@ -1,3 +1,14 @@
+## 0.16.10 — Actual Client E2E II / real clients + matching servers
+
+`0.16.10` усиливает actual-client certification: representative Vanilla versions больше не считаются совместимыми только по успешному запуску клиента — CI поднимает официальный Mojang server той же версии и требует фактический вход клиента.
+
+- Добавлен production `nl runtime vanilla-server`: server artifact берётся из `downloads.server` verified Mojang `version.json`, проверяется по declared size/SHA-1, атомарно кэшируется и получает локальный SHA-256 evidence.
+- Обязательные matching pairs: `1.7.10`/Java 8, `1.17.1`/Java 16, `1.20.4`/Java 17, `1.21.10`/Java 21 и `26.3`/Java 25. Client и server обязаны иметь одну exact Minecraft version и запускаться на target Java major.
+- NeverRuntime `certify-vanilla` поддерживает прямое подключение через `--server`/`--server-port`; matching E2E запускает реальный клиент и считает PASS только после server-log evidence о входе `NeverLauncherCertification`.
+- `matching-server.json`, `vanilla-server-install.json` и server log входят в machine-verifiable evidence; `serverVersionMatched`, `serverHealthy` и `clientJoinedServer` обязательны.
+- Compatibility aggregator и CLI release certification fail-closed требуют policy `actual-client-e2e-II-real-clients-matching-mojang-servers`; подмена matching target обычным client-launch result отклоняется.
+- Остальная 49-target matrix, cross-platform 26.3 и loader integration E2E сохраняются без ослабления.
+
 ## 0.16.9 — Cross-platform Vanilla / Windows, Linux, macOS × x64, ARM64
 
 `0.16.9` делает Vanilla certification нативной для всех шести desktop OS/architecture targets вместо Linux/x64-only запуска.
