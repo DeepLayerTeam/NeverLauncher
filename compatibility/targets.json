@@ -2262,6 +2262,17 @@
       "required": true
     },
     {
+      "id": "forge-1.7.10-linux-x64",
+      "minecraft": "1.7.10",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 8,
+      "scope": "client",
+      "required": true
+    },
+    {
       "id": "forge-1.12.2-linux-x64",
       "minecraft": "1.12.2",
       "loader": "forge",

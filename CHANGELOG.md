@@ -1,3 +1,11 @@
+## 0.17.5 — Forge Legacy 1.7.10
+
+- Added a real Forge 1.7.10 V1 universal-installer path with LaunchWrapper and the era-correct `cpw.mods.fml.common.launcher.FMLTweaker`; Java 8 is enforced and 1.7.10 never falls through to the modern processor pipeline.
+- Legacy `versionInfo` without `inheritsFrom` is normalized to Vanilla 1.7.10 while preserving old metadata, and legacy Forge Maven URLs are upgraded narrowly from the retired `files.minecraftforge.net/maven` HTTP base to the official HTTPS Maven host.
+- NeverRuntime can resolve pre-`downloads.classifiers` native metadata by deriving native classifier paths from Maven coordinates, while remaining fail-closed for incomplete modern classifier maps.
+- Added explicit install evidence (`legacyTweaker`, `legacyBaseVersion`, `legacyProfileNormalized`), actual-client certification through NeverRuntime, the required Forge 1.7.10/Java 8 target, 0.17.5 matrix/release/repository gates, and regression tests.
+- Retained independent Forge Legacy 1.12.2 and 43-release Forge Modern 1.13.2+ certification gates.
+
 ## 0.17.4 — Forge Legacy 1.12.2
 
 - Added a real Forge 1.12.2 legacy installer path for classic V1 `install_profile.json` archives: NeverLauncher parses `install` + nested `versionInfo`, extracts the embedded universal JAR from `install.filePath`, verifies SHA-1, writes the Maven artifact and preserves the original runtime profile instead of pretending the installer has modern processors.

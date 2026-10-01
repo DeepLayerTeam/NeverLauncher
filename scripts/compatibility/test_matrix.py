@@ -428,6 +428,36 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Forge Legacy 1.12.2 0.17.4 requires Java 8", proc.stderr)
 
+    def test_validate_accepts_forge_legacy_1710_0175(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_validate_rejects_missing_forge_legacy_1710_0175(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "forge" and target["minecraft"] == "1.7.10")]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Forge Legacy 1.7.10 0.17.5", proc.stderr)
+
+    def test_validate_rejects_wrong_forge_legacy_java_0175(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "forge" and target["minecraft"] == "1.7.10":
+                    target["javaMajor"] = 17
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Forge Legacy 1.7.10 0.17.5 requires Java 8", proc.stderr)
+
     def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"

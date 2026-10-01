@@ -238,6 +238,10 @@ var forgeLegacy1122_0174 = map[string]int{
 	"1.12.2": 8,
 }
 
+var forgeLegacy1710_0175 = map[string]int{
+	"1.7.10": 8,
+}
+
 var java21VanillaCompatibility0167 = map[string]string{
 	"1.20.5":  "client",
 	"1.20.6":  "client",
@@ -368,6 +372,10 @@ func compatibilityForgeModern0173Required(ver string) bool {
 
 func compatibilityForgeLegacy1122_0174Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 4)
+}
+
+func compatibilityForgeLegacy1710_0175Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 5)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -743,6 +751,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					if compatibilityForgeLegacy1122_0174Required(ver) && target.Minecraft == "1.12.2" {
 						continue
 					}
+					if compatibilityForgeLegacy1710_0175Required(ver) && target.Minecraft == "1.7.10" {
+						continue
+					}
 					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 unexpected required target for Minecraft %s", target.Minecraft)
 				}
 				forgeCount++
@@ -793,6 +804,25 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			if legacyCount != 1 {
 				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.12.2 0.17.4 requires exactly one required target; got %d", legacyCount)
+			}
+		}
+
+		if compatibilityForgeLegacy1710_0175Required(ver) {
+			legacyCount := 0
+			for _, target := range targets.Targets {
+				if !target.Required || target.Loader != "forge" || target.Minecraft != "1.7.10" {
+					continue
+				}
+				legacyCount++
+				if target.JavaMajor != 8 || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5 requires Java 8 scope=client linux/x86_64, got Java %d scope=%s %s/%s", target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+				if target.LoaderVersion != "latest-stable" {
+					return releaseCompatibilityCertification{}, errors.New("Forge Legacy 1.7.10 0.17.5 requires loaderVersion=latest-stable selector")
+				}
+			}
+			if legacyCount != 1 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Legacy 1.7.10 0.17.5 requires exactly one required target; got %d", legacyCount)
 			}
 		}
 
@@ -1027,6 +1057,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityForgeLegacy1122_0174Required(ver) {
 		policy += ";forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client"
+	}
+	if compatibilityForgeLegacy1710_0175Required(ver) {
+		policy += ";forge-legacy-0.17.5-real-1.7.10-launchwrapper-cpw-fml-actual-client"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

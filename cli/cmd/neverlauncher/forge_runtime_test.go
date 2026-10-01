@@ -417,6 +417,96 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 	}
 }
 
+func TestForgeLegacy1710V1LaunchWrapperInstaller(t *testing.T) {
+	universal := []byte("forge-1.7.10-universal-fixture")
+	universalSHA1 := sha1HexLocal(universal)
+	profileID := "1.7.10-Forge10.13.4.1614-1.7.10"
+	universalCoord := "net.minecraftforge:forge:1.7.10-10.13.4.1614-1.7.10"
+	universalEntry := "forge-1.7.10-10.13.4.1614-1.7.10-universal.jar"
+	versionInfo := map[string]any{
+		"id": profileID, "type": "release",
+		"mainClass":          "net.minecraft.launchwrapper.Launch",
+		"minecraftArguments": "--username ${auth_player_name} --tweakClass cpw.mods.fml.common.launcher.FMLTweaker",
+		"libraries": []any{
+			map[string]any{"name": universalCoord, "checksums": []any{universalSHA1}, "clientreq": true, "serverreq": true},
+		},
+	}
+	installProfile := map[string]any{
+		"install": map[string]any{
+			"profileName": "Forge", "target": profileID, "path": universalCoord,
+			"version": "10.13.4.1614-1.7.10", "filePath": universalEntry, "minecraft": "1.7.10",
+		},
+		"versionInfo": versionInfo,
+	}
+	profileBytes, _ := json.Marshal(installProfile)
+	var archive bytes.Buffer
+	zw := zip.NewWriter(&archive)
+	for name, payload := range map[string][]byte{"install_profile.json": profileBytes, universalEntry: universal} {
+		entry, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = entry.Write(payload)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	installerPath := filepath.Join(t.TempDir(), "forge-1.7.10-installer.jar")
+	if err := os.WriteFile(installerPath, archive.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundle, err := inspectForgeInstaller(installerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bundle.Legacy || bundle.LegacyMode != "legacy-v1-universal" || bundle.Version.InheritsFrom != "" {
+		t.Fatalf("1.7.10 V1 installer detection mismatch: %+v", bundle)
+	}
+	clientDir := t.TempDir()
+	result, err := installForgeLegacy(context.Background(), forgeMaterializeOptions{
+		Loader: "forge", MinecraftVersion: "1.7.10", ClientDir: clientDir,
+		Workers: 1, StrictUpstream: true, HTTPClient: http.DefaultClient,
+	}, vanillaInstallResult{MinecraftVersion: "1.7.10", JavaMajorVersion: 8, ClientDir: clientDir, Status: "installed-and-verified"},
+		"10.13.4.1614-1.7.10", "1.7.10-10.13.4.1614-1.7.10", "fixture-metadata", "https://example.invalid/installer.jar", sha1HexLocal(archive.Bytes()),
+		vanillaDownloadedFile{Path: ".neverlauncher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("c", 64)},
+		installerPath, bundle,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.InstallMode != "legacy-v1-universal" || result.MainClass != "net.minecraft.launchwrapper.Launch" {
+		t.Fatalf("unexpected Forge 1.7.10 result: %+v", result)
+	}
+	if result.LegacyTweaker != "cpw.mods.fml.common.launcher.FMLTweaker" || result.LegacyBaseVersion != "1.7.10" || !result.LegacyProfileNormalized {
+		t.Fatalf("Forge 1.7.10 legacy evidence mismatch: %+v", result)
+	}
+	profileOnDisk, err := os.ReadFile(filepath.Join(clientDir, filepath.FromSlash(result.ProfilePath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var normalized map[string]any
+	if err := json.Unmarshal(profileOnDisk, &normalized); err != nil {
+		t.Fatal(err)
+	}
+	if normalized["inheritsFrom"] != "1.7.10" || !strings.Contains(string(profileOnDisk), "cpw.mods.fml.common.launcher.FMLTweaker") {
+		t.Fatalf("Forge 1.7.10 profile was not normalized correctly: %s", profileOnDisk)
+	}
+}
+
+func TestCanonicalLegacyForgeRepositoryURL(t *testing.T) {
+	for input, expected := range map[string]string{
+		"http://files.minecraftforge.net/maven/": "https://maven.minecraftforge.net",
+		"http://maven.minecraftforge.net/":       "https://maven.minecraftforge.net",
+		"https://maven.minecraftforge.net/":      "https://maven.minecraftforge.net/",
+		"http://127.0.0.1:8080/repo/":            "http://127.0.0.1:8080/repo/",
+	} {
+		if actual := canonicalLegacyForgeURL(input); actual != expected {
+			t.Fatalf("canonicalLegacyForgeURL(%q)=%q want %q", input, actual, expected)
+		}
+	}
+}
+
 func TestForgeLegacy1122RepackedEmptyProcessorInstaller(t *testing.T) {
 	universal := []byte("forge-1.12.2-repacked-universal")
 	coord := "net.minecraftforge:forge:1.12.2-14.23.5.2864"

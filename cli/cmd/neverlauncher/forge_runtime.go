@@ -90,35 +90,38 @@ type forgeLegacyInstallerProfile struct {
 }
 
 type forgeMaterializeResult struct {
-	SchemaVersion         string                  `json:"schemaVersion"`
-	ToolVersion           string                  `json:"toolVersion"`
-	Loader                string                  `json:"loader"`
-	MinecraftVersion      string                  `json:"minecraftVersion"`
-	LoaderVersion         string                  `json:"loaderVersion"`
-	ArtifactVersion       string                  `json:"artifactVersion"`
-	ProfileID             string                  `json:"profileId"`
-	ProfilePath           string                  `json:"profilePath"`
-	MainClass             string                  `json:"mainClass"`
-	ClientDir             string                  `json:"clientDir"`
-	JavaMajorVersion      int                     `json:"javaMajorVersion"`
-	InstallerSHA1         string                  `json:"installerSha1"`
-	InstallerSHA256       string                  `json:"installerSha256"`
-	InstallMode           string                  `json:"installMode"`
-	LegacyUniversalPath   string                  `json:"legacyUniversalPath,omitempty"`
-	LegacyUniversalSHA1   string                  `json:"legacyUniversalSha1,omitempty"`
-	LegacyUniversalSHA256 string                  `json:"legacyUniversalSha256,omitempty"`
-	ProcessorCount        int                     `json:"processorCount"`
-	ClientProcessorCount  int                     `json:"clientProcessorCount"`
-	ProcessorRan          int                     `json:"processorRan"`
-	ProcessorSkipped      int                     `json:"processorSkipped"`
-	LibraryCount          int                     `json:"libraryCount"`
-	Downloaded            int                     `json:"downloaded"`
-	Cached                int                     `json:"cached"`
-	TotalBytes            int64                   `json:"totalBytes"`
-	ProfileSHA256         string                  `json:"profileSha256"`
-	Vanilla               vanillaInstallResult    `json:"vanilla"`
-	Files                 []vanillaDownloadedFile `json:"files"`
-	Status                string                  `json:"status"`
+	SchemaVersion           string                  `json:"schemaVersion"`
+	ToolVersion             string                  `json:"toolVersion"`
+	Loader                  string                  `json:"loader"`
+	MinecraftVersion        string                  `json:"minecraftVersion"`
+	LoaderVersion           string                  `json:"loaderVersion"`
+	ArtifactVersion         string                  `json:"artifactVersion"`
+	ProfileID               string                  `json:"profileId"`
+	ProfilePath             string                  `json:"profilePath"`
+	MainClass               string                  `json:"mainClass"`
+	ClientDir               string                  `json:"clientDir"`
+	JavaMajorVersion        int                     `json:"javaMajorVersion"`
+	InstallerSHA1           string                  `json:"installerSha1"`
+	InstallerSHA256         string                  `json:"installerSha256"`
+	InstallMode             string                  `json:"installMode"`
+	LegacyUniversalPath     string                  `json:"legacyUniversalPath,omitempty"`
+	LegacyUniversalSHA1     string                  `json:"legacyUniversalSha1,omitempty"`
+	LegacyUniversalSHA256   string                  `json:"legacyUniversalSha256,omitempty"`
+	LegacyTweaker           string                  `json:"legacyTweaker,omitempty"`
+	LegacyBaseVersion       string                  `json:"legacyBaseVersion,omitempty"`
+	LegacyProfileNormalized bool                    `json:"legacyProfileNormalized,omitempty"`
+	ProcessorCount          int                     `json:"processorCount"`
+	ClientProcessorCount    int                     `json:"clientProcessorCount"`
+	ProcessorRan            int                     `json:"processorRan"`
+	ProcessorSkipped        int                     `json:"processorSkipped"`
+	LibraryCount            int                     `json:"libraryCount"`
+	Downloaded              int                     `json:"downloaded"`
+	Cached                  int                     `json:"cached"`
+	TotalBytes              int64                   `json:"totalBytes"`
+	ProfileSHA256           string                  `json:"profileSha256"`
+	Vanilla                 vanillaInstallResult    `json:"vanilla"`
+	Files                   []vanillaDownloadedFile `json:"files"`
+	Status                  string                  `json:"status"`
 }
 
 type mavenMetadataXML struct {
@@ -495,11 +498,29 @@ func installForgeLegacy(
 	installerPath string,
 	bundle installerBundle,
 ) (forgeMaterializeResult, error) {
-	if vanilla.MinecraftVersion != "1.12.2" {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy compatibility 0.17.4 поддерживает только Minecraft 1.12.2, получен %s", vanilla.MinecraftVersion)
+	expectedTweaker := ""
+	allowedModes := map[string]bool{}
+	switch vanilla.MinecraftVersion {
+	case "1.7.10":
+		expectedTweaker = "cpw.mods.fml.common.launcher.FMLTweaker"
+		allowedModes["legacy-v1-universal"] = true
+	case "1.12.2":
+		expectedTweaker = "net.minecraftforge.fml.common.launcher.FMLTweaker"
+		allowedModes["legacy-v1-universal"] = true
+		allowedModes["legacy-v2-empty-processors"] = true
+	default:
+		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy compatibility поддерживает Minecraft 1.7.10 и 1.12.2, получен %s", vanilla.MinecraftVersion)
 	}
+	if vanilla.JavaMajorVersion != 8 {
+		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy %s требует Java 8, materializer получил Java %d", vanilla.MinecraftVersion, vanilla.JavaMajorVersion)
+	}
+	if !allowedModes[bundle.LegacyMode] {
+		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy %s не поддерживает install mode %q", vanilla.MinecraftVersion, bundle.LegacyMode)
+	}
+	profileNormalized := false
 	if bundle.Version.InheritsFrom == "" {
 		bundle.Version.InheritsFrom = vanilla.MinecraftVersion
+		profileNormalized = true
 	}
 	if bundle.Version.InheritsFrom != vanilla.MinecraftVersion {
 		return forgeMaterializeResult{}, fmt.Errorf("Forge legacy profile inheritsFrom=%s, ожидался %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
@@ -511,10 +532,10 @@ func installForgeLegacy(
 		return forgeMaterializeResult{}, err
 	}
 	if bundle.Version.MainClass != "net.minecraft.launchwrapper.Launch" {
-		return forgeMaterializeResult{}, fmt.Errorf("Forge 1.12.2 legacy profile mainClass=%s, ожидался net.minecraft.launchwrapper.Launch", bundle.Version.MainClass)
+		return forgeMaterializeResult{}, fmt.Errorf("Forge %s legacy profile mainClass=%s, ожидался net.minecraft.launchwrapper.Launch", vanilla.MinecraftVersion, bundle.Version.MainClass)
 	}
-	if !strings.Contains(bundle.Version.MinecraftArgs, "net.minecraftforge.fml.common.launcher.FMLTweaker") {
-		return forgeMaterializeResult{}, errors.New("Forge 1.12.2 legacy profile не содержит FMLTweaker в minecraftArguments")
+	if !legacyMinecraftArgumentsContainTweaker(bundle.Version.MinecraftArgs, expectedTweaker) {
+		return forgeMaterializeResult{}, fmt.Errorf("Forge %s legacy profile не содержит --tweakClass %s", vanilla.MinecraftVersion, expectedTweaker)
 	}
 
 	files := make([]vanillaDownloadedFile, 0, len(bundle.Version.Libraries)+4)
@@ -526,7 +547,7 @@ func installForgeLegacy(
 		universalCoord = strings.TrimSpace(bundle.LegacyInstall.Path)
 	}
 	if universalCoord == "" {
-		return forgeMaterializeResult{}, errors.New("Forge 1.12.2 legacy installer не содержит Maven coordinate universal JAR")
+		return forgeMaterializeResult{}, fmt.Errorf("Forge %s legacy installer не содержит Maven coordinate universal JAR", vanilla.MinecraftVersion)
 	}
 	universalRel, err := mavenCoordinatePath(universalCoord)
 	if err != nil {
@@ -590,14 +611,12 @@ func installForgeLegacy(
 	}
 	files = append(files, versionFiles...)
 
-	profileBytes := bytes.TrimSpace(bundle.VersionRaw)
-	if len(profileBytes) == 0 {
-		profileBytes, err = json.MarshalIndent(bundle.Version, "", "  ")
-		if err != nil {
-			return forgeMaterializeResult{}, err
-		}
+	profileBytes, normalizedRaw, err := normalizeForgeLegacyRuntimeProfile(bundle.VersionRaw, bundle.Version, vanilla.MinecraftVersion)
+	if err != nil {
+		return forgeMaterializeResult{}, err
 	}
-	profileBytes = append(append([]byte(nil), profileBytes...), '\n')
+	profileNormalized = profileNormalized || normalizedRaw
+	profileBytes = append(profileBytes, '\n')
 	profilePath := filepath.ToSlash(filepath.Join("versions", bundle.Version.ID, bundle.Version.ID+".json"))
 	profileDest, err := secureClientDestination(opts.ClientDir, profilePath)
 	if err != nil {
@@ -629,6 +648,7 @@ func installForgeLegacy(
 		"installerSha1": installerSHA1, "installerSha256": installerFile.SHA256,
 		"mavenMetadata": metadataURL, "installMode": bundle.LegacyMode,
 		"legacyUniversalPath": universalDestRel, "legacyUniversalSha1": universalSHA1, "legacyUniversalSha256": universalSHA256,
+		"legacyTweaker": expectedTweaker, "legacyBaseVersion": vanilla.MinecraftVersion, "legacyProfileNormalized": profileNormalized,
 		"clientProcessorCount": 0, "processorRan": 0, "processorSkipped": 0,
 		"status": "installed-and-verified",
 	}
@@ -648,11 +668,75 @@ func installForgeLegacy(
 		ClientDir: opts.ClientDir, JavaMajorVersion: vanilla.JavaMajorVersion,
 		InstallerSHA1: installerSHA1, InstallerSHA256: installerFile.SHA256, InstallMode: bundle.LegacyMode,
 		LegacyUniversalPath: universalDestRel, LegacyUniversalSHA1: universalSHA1, LegacyUniversalSHA256: universalSHA256,
+		LegacyTweaker: expectedTweaker, LegacyBaseVersion: vanilla.MinecraftVersion, LegacyProfileNormalized: profileNormalized,
 		ProcessorCount: 0, ClientProcessorCount: 0, ProcessorRan: 0, ProcessorSkipped: 0,
 		LibraryCount: len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
 		TotalBytes: total, ProfileSHA256: hex.EncodeToString(profileSHA[:]), Vanilla: vanilla, Files: files,
 		Status: "installed-and-verified",
 	}, nil
+}
+
+func legacyMinecraftArgumentsContainTweaker(arguments, expected string) bool {
+	fields := strings.Fields(arguments)
+	for i := 0; i+1 < len(fields); i++ {
+		if fields[i] == "--tweakClass" && fields[i+1] == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile, parent string) ([]byte, bool, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		profile.InheritsFrom = parent
+		out, err := json.MarshalIndent(profile, "", "  ")
+		return out, true, err
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(trimmed, &object); err != nil {
+		return nil, false, fmt.Errorf("Forge legacy versionInfo JSON повреждён: %w", err)
+	}
+	normalized := false
+	var inherited string
+	if value, ok := object["inheritsFrom"]; ok {
+		_ = json.Unmarshal(value, &inherited)
+	}
+	if strings.TrimSpace(inherited) == "" {
+		encoded, _ := json.Marshal(parent)
+		object["inheritsFrom"] = encoded
+		normalized = true
+	} else if inherited != parent {
+		return nil, false, fmt.Errorf("Forge legacy versionInfo inheritsFrom=%s, ожидался %s", inherited, parent)
+	} else {
+		return append([]byte(nil), trimmed...), false, nil
+	}
+	out, err := json.MarshalIndent(object, "", "  ")
+	if err != nil {
+		return nil, false, err
+	}
+	return out, normalized, nil
+}
+
+func canonicalLegacyForgeURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	host := strings.ToLower(parsed.Hostname())
+	cleanPath := strings.TrimRight(parsed.EscapedPath(), "/")
+	if host == "files.minecraftforge.net" && (cleanPath == "" || cleanPath == "/maven") {
+		return defaultForgeMavenBase
+	}
+	if host == "maven.minecraftforge.net" && parsed.Scheme == "http" {
+		parsed.Scheme = "https"
+		return strings.TrimRight(parsed.String(), "/")
+	}
+	return raw
 }
 
 func extractInstallerEntry(installerPath, entryName, destination string) error {
@@ -692,7 +776,7 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 			}
 		}
 		if strings.TrimSpace(lib.URL) != "" {
-			baseURL = strings.TrimRight(strings.TrimSpace(lib.URL), "/")
+			baseURL = strings.TrimRight(canonicalLegacyForgeURL(strings.TrimSpace(lib.URL)), "/")
 		}
 	}
 	if len(acceptable) > 0 {
@@ -1159,9 +1243,9 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			localFiles = append(localFiles, vanillaDownloadedFile{Path: dstRel, Kind: loader + "-library", Size: size, SHA1: sha1sum, SHA256: sha256sum, Cached: true})
 			continue
 		}
-		artifactURL := strings.TrimSpace(artifact.URL)
+		artifactURL := canonicalLegacyForgeURL(strings.TrimSpace(artifact.URL))
 		if artifactURL == "" {
-			base := strings.TrimSpace(lib.URL)
+			base := canonicalLegacyForgeURL(strings.TrimSpace(lib.URL))
 			if base == "" {
 				if lib.ClientReq != nil || lib.ServerReq != nil || len(lib.Checksums) > 0 {
 					base = defaultLegacyForgeRepositoryForCoordinate(lib.Name)

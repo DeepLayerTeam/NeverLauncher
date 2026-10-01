@@ -91,6 +91,7 @@ jobs:
           python3 scripts/smoke/offline/quilt-compatibility-II-0172.py
           python3 scripts/smoke/offline/forge-modern-0173.py
           python3 scripts/smoke/offline/forge-legacy-1122-0174.py
+          python3 scripts/smoke/offline/forge-legacy-1710-0175.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json

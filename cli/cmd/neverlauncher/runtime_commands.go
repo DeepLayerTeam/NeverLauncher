@@ -332,7 +332,7 @@ func runtimeResolver740(minecraftVersion string, loader string) map[string]any {
 			{"id": "mojang-asset-index", "requiredFor": []string{"all"}, "input": "--asset-index", "resolves": []string{"assets/objects", "asset total size", "asset object paths"}},
 			{"id": "fabric-meta-profile", "requiredFor": []string{"fabric"}, "input": "Fabric Meta v2", "resolves": []string{"pinned loader version", "KnotClient", "fabric-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
 			{"id": "quilt-meta-profile", "requiredFor": []string{"quilt"}, "input": "Quilt Meta v3", "resolves": []string{"pinned loader version", "Quilt KnotClient", "quilt-loader", "intermediary", "loader arguments", "verified Maven libraries"}},
-			{"id": "forge-installer", "requiredFor": []string{"forge"}, "input": "Forge Maven installer.jar", "resolves": []string{"install_profile.json", "version.json", "embedded Maven", "client processors", "verified outputs"}},
+			{"id": "forge-installer", "requiredFor": []string{"forge"}, "input": "Forge Maven installer.jar", "resolves": []string{"legacy V1 universal installer", "install_profile.json", "version.json", "embedded Maven", "client processors", "verified outputs"}},
 			{"id": "neoforge-installer", "requiredFor": []string{"neoforge"}, "input": "NeoForge Maven installer.jar", "resolves": []string{"install_profile.json", "version.json", "embedded Maven", "client processors", "verified outputs"}},
 		},
 		"pipeline": []string{"load-version-json", "resolve-java-constraints", "filter-libraries-by-rules", "resolve-natives-for-current-os", "resolve-assets", "merge-loader-metadata", "build-classpath", "build-jvm-args", "build-game-args", "validate-launch-plan"},
@@ -434,7 +434,7 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "complete 0.17.0v1 Legacy Vanilla 53-release actual-client grid", "status": "implemented"},
 			{"feature": "complete 0.17.0v2 Java 16/17 Vanilla 9-release actual-client grid", "status": "implemented"},
 		},
-		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "forge-legacy-1.12.2", "neoforge", "managed-java-temurin"},
+		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "forge-legacy-1.12.2", "forge-legacy-1.7.10", "neoforge", "managed-java-temurin"},
 		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base",
 		"javaMajors":          []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":   managedJavaIIMajors0165(),
@@ -442,7 +442,7 @@ func runtimeMatrix740() map[string]any {
 		"ciTargets":           ciTargets,
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
-		"pending":             []string{"forge-legacy-pre-1.12.2"},
+		"pending":             []string{"forge-legacy-pre-1.7.10"},
 		"note":                "0.17.0v2 расширяет Minecraft Compatibility II GA до 107 обязательных Vanilla targets / 102 release IDs. Помимо полного v1 Legacy Java 8 grid, обязательны 1.17/Java 16 и 1.18, 1.18.1, 1.19, 1.19.1, 1.19.2, 1.19.3, 1.20, 1.20.3/Java 17; каждый PASS привязан к SHA-256 фактически запущенного JRE binary, vendor/runtime build и host OS/arch.",
 	}
 }

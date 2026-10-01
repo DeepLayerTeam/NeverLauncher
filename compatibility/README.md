@@ -1,4 +1,6 @@
-# Публичная CI Compatibility Matrix NeverLauncher
+# Minecraft compatibility
+
+NeverLauncher 0.17.5 — **Forge Legacy 1.7.10 LaunchWrapper/FML** поверх Forge Legacy 1.12.2 / Forge Modern / Fabric / Quilt / Minecraft Compatibility II GA. Обязательная цель: `1.7.10`, Java 8, `client`, Linux x86_64, `latest-stable` selector с concrete immutable Forge version. PASS требует V1 universal installer, SHA-verified universal JAR, `net.minecraft.launchwrapper.Launch`, `cpw.mods.fml.common.launcher.FMLTweaker`, нормализованный parent Vanilla 1.7.10 profile, package integrity и actual client launch через NeverRuntime.
 
 NeverLauncher 0.17.4 — **Forge Legacy 1.12.2** поверх Forge Modern / Fabric Compatibility II / Minecraft Compatibility II GA: Vanilla Compatibility Baseline II + Legacy Vanilla Java 8 + Java 16/17 + Java 21 + Java 25 + Cross-platform Vanilla + Actual Client E2E II + Compatibility Hardening + certified JRE binary base. Release compatibility формируется только из фактической Mojang materialization, package integrity, Compatibility Engine resolution, exact Java/JRE attestation и запуска настоящего Minecraft Java Client. Representative targets дополнительно обязаны пройти реальный join на официальный Mojang server той же версии.
 

@@ -16,7 +16,7 @@ MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] invalid Minecraft version" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[forge-cert] invalid Forge loader selector" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[forge-cert] invalid Java major" >&2; exit 2; }
-[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[forge-cert] 0.17.3 certification requires linux/x86_64" >&2; exit 2; }
+[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[forge-cert] Forge certification requires linux/x86_64" >&2; exit 2; }
 [[ -n "$JAVA_BIN" && -f "$JAVA_BIN" ]] || { echo "[forge-cert] target Java executable is unavailable: $JAVA_BIN" >&2; exit 2; }
 for cmd in go cargo python3 xvfb-run; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[forge-cert] required command missing: $cmd" >&2; exit 1; }
@@ -72,19 +72,25 @@ client_processors = int(install.get('clientProcessorCount') or 0)
 ran = int(install.get('processorRan') or 0)
 skipped = int(install.get('processorSkipped') or 0)
 mode = str(install.get('installMode') or '')
-if mc == '1.12.2':
-    if mode not in ('legacy-v1-universal', 'legacy-v2-empty-processors'):
-        raise SystemExit(f'Forge 1.12.2 did not use a legacy universal installer path: {mode!r}')
+if mc in ('1.7.10', '1.12.2'):
+    allowed_modes = ('legacy-v1-universal',) if mc == '1.7.10' else ('legacy-v1-universal', 'legacy-v2-empty-processors')
+    if mode not in allowed_modes:
+        raise SystemExit(f'Forge {mc} did not use the required legacy universal installer path: {mode!r}')
     if client_processors != 0 or ran != 0 or skipped != 0:
-        raise SystemExit('Forge 1.12.2 legacy installer unexpectedly reported processors')
+        raise SystemExit(f'Forge {mc} legacy installer unexpectedly reported processors')
     if not str(install.get('legacyUniversalPath') or '').startswith('libraries/net/minecraftforge/forge/'):
-        raise SystemExit('Forge 1.12.2 universal JAR was not materialized under libraries/')
+        raise SystemExit(f'Forge {mc} universal JAR was not materialized under libraries/')
     if not re.fullmatch(r'[0-9a-f]{40}', str(install.get('legacyUniversalSha1') or '')):
-        raise SystemExit('invalid Forge 1.12.2 universal SHA-1')
+        raise SystemExit(f'invalid Forge {mc} universal SHA-1')
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get('legacyUniversalSha256') or '')):
-        raise SystemExit('invalid Forge 1.12.2 universal SHA-256')
+        raise SystemExit(f'invalid Forge {mc} universal SHA-256')
     if install.get('mainClass') != 'net.minecraft.launchwrapper.Launch':
-        raise SystemExit('Forge 1.12.2 legacy mainClass mismatch')
+        raise SystemExit(f'Forge {mc} legacy mainClass mismatch')
+    expected_tweaker = 'cpw.mods.fml.common.launcher.FMLTweaker' if mc == '1.7.10' else 'net.minecraftforge.fml.common.launcher.FMLTweaker'
+    if install.get('legacyTweaker') != expected_tweaker or install.get('legacyBaseVersion') != mc:
+        raise SystemExit(f'Forge {mc} legacy LaunchWrapper/FML evidence mismatch')
+    if mc == '1.7.10' and install.get('legacyProfileNormalized') is not True:
+        raise SystemExit('Forge 1.7.10 V1 profile was not normalized to inherit Vanilla 1.7.10')
 else:
     if mode != 'processors':
         raise SystemExit(f'Forge modern target did not use processor mode: {mode!r}')

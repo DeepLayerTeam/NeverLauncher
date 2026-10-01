@@ -46,7 +46,7 @@ require(runtime, [
 
 commands = read("cli/cmd/neverlauncher/runtime_commands.go")
 require(commands, [
-    '"forge-legacy-1.12.2"', '"forge-legacy-pre-1.12.2"', "legacy V1 universal installer",
+    '"forge-legacy-1.12.2"', "legacy V1 universal installer",
 ], "runtime capability status")
 
 neverruntime = read("runtime/neverruntime/src/compatibility.rs")
@@ -56,7 +56,7 @@ require(neverruntime, [
 
 forge_case = read("e2e/scripts/run-forge-certification-case.sh")
 require(forge_case, [
-    "mc == '1.12.2'", "legacy-v1-universal", "legacy-v2-empty-processors", "legacyUniversalPath",
+    "mc in ('1.7.10', '1.12.2')", "legacy-v1-universal", "legacy-v2-empty-processors", "legacyUniversalPath",
     "legacyUniversalSha1", "legacyUniversalSha256", "net.minecraft.launchwrapper.Launch", "certify-vanilla",
     "resolvedLoaderVersion", "actual-mojang-client",
 ], "Forge legacy actual-client certification")

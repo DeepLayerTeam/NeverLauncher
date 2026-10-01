@@ -561,18 +561,38 @@ fn resolve_libraries(
 
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
-            let native = library
-                .downloads
-                .classifiers
-                .get(&classifier)
-                .ok_or_else(|| format!("{}: отсутствует classifier {}", library.name, classifier))?;
-            let native_path = if native.path.trim().is_empty() {
-                maven_path_with_classifier(&library.name, &classifier)?
-            } else {
-                normalize_relative_path(&format!("libraries/{}", native.path.trim_start_matches('/')))?
+            // Minecraft/Forge 1.7.x metadata predates downloads.classifiers.
+            // The Vanilla materializer already places the native classifier JARs
+            // into the Maven tree, so derive their paths from the legacy Maven
+            // coordinate instead of rejecting a valid LaunchWrapper profile.
+            // If a modern classifiers map is present but incomplete, remain
+            // fail-closed because that indicates corrupted modern metadata.
+            let native = match library.downloads.classifiers.get(&classifier) {
+                Some(native) => Some(native),
+                None if library.downloads.classifiers.is_empty() => None,
+                None => return Err(format!("{}: отсутствует classifier {}", library.name, classifier)),
             };
-            let native_url = if !native.url.trim().is_empty() {
-                native.url.clone()
+            let native_path = if let Some(native) = native {
+                if native.path.trim().is_empty() {
+                    maven_path_with_classifier(&library.name, &classifier)?
+                } else {
+                    normalize_relative_path(&format!("libraries/{}", native.path.trim_start_matches('/')))?
+                }
+            } else {
+                maven_path_with_classifier(&library.name, &classifier)?
+            };
+            let native_url = if let Some(native) = native {
+                if !native.url.trim().is_empty() {
+                    native.url.clone()
+                } else if !library.url.trim().is_empty() {
+                    format!(
+                        "{}/{}",
+                        library.url.trim_end_matches('/'),
+                        native_path.trim_start_matches("libraries/")
+                    )
+                } else {
+                    String::new()
+                }
             } else if !library.url.trim().is_empty() {
                 format!(
                     "{}/{}",
@@ -587,8 +607,8 @@ fn resolve_libraries(
                 classifier,
                 path: native_path,
                 url: native_url,
-                sha1: native.sha1.clone(),
-                size: native.size,
+                sha1: native.map(|value| value.sha1.clone()).unwrap_or_default(),
+                size: native.map(|value| value.size).unwrap_or_default(),
                 excludes: library.extract.exclude.clone(),
             });
         }
@@ -1482,6 +1502,27 @@ mod tests {
           {"action":"allow","features":{"is_demo_user":false}}
         ]"#).unwrap();
         assert!(rules_allow(&rules, &env).unwrap());
+    }
+
+    #[test]
+    fn legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate() {
+        let env = CompatibilityEnvironment {
+            os: "linux".into(),
+            arch: "x86_64".into(),
+            os_version: String::new(),
+            features: HashMap::new(),
+        };
+        let library: Library = serde_json::from_str(r#"{
+          "name":"org.lwjgl.lwjgl:lwjgl-platform:2.9.1-nightly-20130708-debug3",
+          "url":"https://libraries.minecraft.net/",
+          "natives":{"linux":"natives-linux","windows":"natives-windows","osx":"natives-osx"},
+          "extract":{"exclude":["META-INF/"]}
+        }"#).unwrap();
+        let (_, natives, _) = resolve_libraries(&[library], &env).unwrap();
+        assert_eq!(natives.len(), 1);
+        assert_eq!(natives[0].classifier, "natives-linux");
+        assert_eq!(natives[0].path, "libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.1-nightly-20130708-debug3/lwjgl-platform-2.9.1-nightly-20130708-debug3-natives-linux.jar");
+        assert!(natives[0].sha1.is_empty());
     }
 
     #[test]

@@ -191,6 +191,7 @@ FORGE_MODERN_0173: dict[str, int] = {
 }
 
 FORGE_LEGACY_1122_0174: dict[str, int] = {"1.12.2": 8}
+FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 
 
 def die(message: str) -> None:
@@ -268,6 +269,9 @@ def forge_modern_0173_required() -> bool:
 
 def forge_legacy_1122_0174_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 4)
+
+def forge_legacy_1710_0175_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 5)
 
 
 def load_json(path: Path) -> Any:
@@ -464,7 +468,11 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         forge_java = {target["javaMajor"] for target in required_forge_rows}
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(forge_java):
             die(f"Forge Modern 0.17.3 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
-        allowed_extra = {"1.12.2"} if forge_legacy_1122_0174_required() else set()
+        allowed_extra = set()
+        if forge_legacy_1122_0174_required():
+            allowed_extra.add("1.12.2")
+        if forge_legacy_1710_0175_required():
+            allowed_extra.add("1.7.10")
         unexpected = sorted({target["minecraft"] for target in all_required_forge_rows if target["minecraft"] not in FORGE_MODERN_0173 and target["minecraft"] not in allowed_extra})
         if unexpected:
             die(f"Forge Modern 0.17.3 unexpected required targets: {unexpected}")
@@ -480,6 +488,18 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             die("Forge Legacy 1.12.2 0.17.4 requires linux/x86_64 certification target")
         if target["loaderVersion"] != "latest-stable":
             die("Forge Legacy 1.12.2 0.17.4 requires loaderVersion=latest-stable selector with immutable resolution evidence")
+
+    if forge_legacy_1710_0175_required():
+        legacy_rows = [target for target in targets if target["loader"] == "forge" and target["required"] and target["minecraft"] == "1.7.10"]
+        if len(legacy_rows) != 1:
+            die(f"Forge Legacy 1.7.10 0.17.5 requires exactly one required target, got {len(legacy_rows)}")
+        target = legacy_rows[0]
+        if target["javaMajor"] != 8 or target["scope"] != "client":
+            die("Forge Legacy 1.7.10 0.17.5 requires Java 8 scope=client")
+        if target["os"] != "linux" or target["arch"] != "x86_64":
+            die("Forge Legacy 1.7.10 0.17.5 requires linux/x86_64 certification target")
+        if target["loaderVersion"] != "latest-stable":
+            die("Forge Legacy 1.7.10 0.17.5 requires loaderVersion=latest-stable selector with immutable resolution evidence")
 
 
 

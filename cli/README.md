@@ -1,5 +1,9 @@
 # NeverLauncher CLI
 
+## Forge Legacy 1.7.10 — 0.17.5
+
+`nl runtime forge-install` / `forge-package` теперь исполняют Forge 1.7.10 V1 universal installer как отдельный LaunchWrapper/FML path. Materializer требует Java 8, `net.minecraft.launchwrapper.Launch` и `cpw.mods.fml.common.launcher.FMLTweaker`, нормализует legacy profile к Vanilla 1.7.10 при отсутствии `inheritsFrom`, проверяет universal JAR и фиксирует `legacyTweaker`, `legacyBaseVersion`, `legacyProfileNormalized` и immutable Forge version в install evidence.
+
 ## Forge Legacy 1.12.2 — 0.17.4
 
 `nl runtime forge-install` / `forge-package` теперь исполняют реальный Forge 1.12.2 legacy installer. V1 installer извлекает universal JAR из `install.filePath`, проверяет SHA-1, сохраняет nested `versionInfo` и материализует только client-required libraries; repacked 1.12.2 installer с пустыми processors использует embedded Maven universal artifact. Результат фиксирует `installMode`, universal SHA-1/SHA-256 и concrete Forge version для release certification.

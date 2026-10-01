@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Forge Legacy 1.7.10 — 0.17.5
+
+NeverLauncher 0.17.5 добавляет отдельный production path для **Forge 1.7.10 LaunchWrapper/FML legacy**. V1 `install_profile.json` разбирается как настоящий legacy installer: universal JAR извлекается из `install.filePath`, проверяется и размещается в Maven tree; `versionInfo` без `inheritsFrom` безопасно нормализуется к Vanilla 1.7.10, сохраняя LaunchWrapper metadata и `cpw.mods.fml.common.launcher.FMLTweaker`. Старый официальный `http://files.minecraftforge.net/maven/` канонизируется только в официальный HTTPS Forge Maven.
+
+NeverRuntime поддерживает legacy native classifier metadata без современного `downloads.classifiers`: путь classifier выводится из Maven-coordinate, а неполные современные classifier maps по-прежнему отклоняются. Обязательная certification-цель — Forge 1.7.10, Java 8, Linux x86_64, package verify и фактический client launch через NeverRuntime с immutable resolved Forge version. Forge 1.12.2 и processor-based Forge 1.13.2+ сохраняют отдельные regression/release gates.
+
 ## Forge Legacy 1.12.2 — 0.17.4
 
 NeverLauncher 0.17.4 добавляет отдельный production materializer для **настоящего Forge 1.12.2 legacy installer**. Классический V1 `install_profile.json` (`install` + `versionInfo`) обрабатывается без эмуляции modern processors: universal JAR извлекается из `install.filePath`, публикуется в Maven layout, проверяется по SHA-1, исходный `versionInfo` сохраняется как launch profile, а старые `clientreq`/`checksums` учитываются при client materialization.
