@@ -1,3 +1,13 @@
+## 0.16.6 — Java 16/17 Vanilla / 1.17.1–1.20.4
+
+`0.16.6` переводит переходный диапазон Vanilla 1.17.1–1.20.4 из трёх representative anchors в обязательную actual-client release-line certification и делает Java transition исполняемой runtime policy.
+
+- Обязательная линия: `1.17.1` на exact Java 16; `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4` на exact Java 17. Каждый target выполняет verified Mojang materialization, package integrity, Compatibility Engine resolution и фактический запуск клиента под Xvfb.
+- Vanilla materializer fail-closed проверяет официальный `javaVersion.majorVersion` до скачивания client/assets: 1.17.1 обязан объявлять Java 16, а release 1.18.x–1.20.4 — Java 17. Отсутствующее или противоречащее metadata поле больше не может тихо уйти в legacy Java 8 fallback.
+- NeverRuntime применяет ту же independent exact-Java policy при runtime resolution, поэтому локально подменённая metadata также отклоняется до запуска JVM.
+- Compatibility matrix/release certification 0.16.6 нельзя сузить до старых anchors: обязательны 1.19.4/1.20.1/1.20.2, exact target Java, actual-client evidence и policy `vanilla-1.17.1-1.20.4-java16-17-exact`.
+- Managed Java II 8/16/17/21/25, Legacy Vanilla Java 8 и Baseline II сохраняются без ослабления.
+
 ## 0.16.5 — Managed Java II / Java 8, 16, 17, 21, 25
 
 `0.16.5` переводит Managed Java из частично реализованного набора major-веток в исполняемый production lifecycle для Java 8/16/17/21/25 без подмены отсутствующих vendor binaries декларациями.

@@ -253,6 +253,10 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	if metadata.MainClass == "" {
 		return vanillaInstallResult{}, errors.New("version.json не содержит mainClass")
 	}
+	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
+	if err != nil {
+		return vanillaInstallResult{}, err
+	}
 	clientDownload, ok := metadata.Downloads["client"]
 	if !ok || clientDownload.URL == "" || clientDownload.SHA1 == "" || clientDownload.Size <= 0 {
 		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый downloads.client")
@@ -560,7 +564,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		MinecraftVersion: selectedID,
 		ReleaseType:      selected.Type,
 		ClientDir:        opts.ClientDir,
-		JavaMajorVersion: javaMajorFromVersion(metadata.MojangVersionFile),
+		JavaMajorVersion: javaMajor,
 		MainClass:        metadata.MainClass,
 		AssetIndex:       assetIndexID,
 		Targets:          opts.Targets,
@@ -1112,26 +1116,78 @@ func isExcludedNative(name string, excludes []string) bool {
 	return false
 }
 
-func javaMajorFromVersion(v MojangVersionFile) int {
+func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, error) {
+	metadataMajor := 0
 	if raw, ok := v.JavaVersion["majorVersion"]; ok {
 		switch n := raw.(type) {
 		case float64:
-			if n > 0 {
-				return int(n)
+			if n > 0 && n == float64(int(n)) {
+				metadataMajor = int(n)
 			}
 		case int:
 			if n > 0 {
-				return n
+				metadataMajor = n
 			}
 		case json.Number:
-			value, _ := strconv.Atoi(n.String())
-			if value > 0 {
-				return value
+			value, err := strconv.Atoi(n.String())
+			if err == nil && value > 0 {
+				metadataMajor = value
 			}
 		}
 	}
+	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
+		if metadataMajor == 0 {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
+		}
+		if metadataMajor != expected {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+		}
+		return metadataMajor, nil
+	}
+	if metadataMajor > 0 {
+		return metadataMajor, nil
+	}
 	// Old launcher metadata predates javaVersion; Java 8 is the safe compatibility default.
-	return 8
+	return 8, nil
+}
+
+func expectedJavaMajorForVanilla0166(version string) (int, bool) {
+	major, minor, patch, ok := parseMinecraftReleaseVersion(version)
+	if !ok || major != 1 {
+		return 0, false
+	}
+	if minor == 17 && patch == 1 {
+		return 16, true
+	}
+	if minor < 18 || minor > 20 {
+		return 0, false
+	}
+	if minor == 20 && patch > 4 {
+		return 0, false
+	}
+	return 17, true
+}
+
+func parseMinecraftReleaseVersion(value string) (major, minor, patch int, ok bool) {
+	parts := strings.Split(strings.TrimSpace(value), ".")
+	if len(parts) < 2 || len(parts) > 3 {
+		return 0, 0, 0, false
+	}
+	major, err := strconv.Atoi(parts[0])
+	if err != nil || major < 0 {
+		return 0, 0, 0, false
+	}
+	minor, err = strconv.Atoi(parts[1])
+	if err != nil || minor < 0 {
+		return 0, 0, 0, false
+	}
+	if len(parts) == 3 {
+		patch, err = strconv.Atoi(parts[2])
+		if err != nil || patch < 0 {
+			return 0, 0, 0, false
+		}
+	}
+	return major, minor, patch, true
 }
 
 func validateVanillaRelativePath(rel string) error {

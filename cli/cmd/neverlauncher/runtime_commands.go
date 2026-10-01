@@ -357,9 +357,10 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "actual Minecraft client E2E", "status": "implemented"},
 			{"feature": "public CI evidence aggregation", "status": "implemented"},
 			{"feature": "release-bound compatibility certification", "status": "implemented"},
+			{"feature": "exact Vanilla Java 16/17 transition policy", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla",
+		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines",
 		"javaMajors":         []int{8, 16, 17, 21},
 		"managedJavaMajors":  managedJavaIIMajors0165(),
 		"managedJavaMode":    "temurin-latest-ga+historical-feature-release-fallback+sha256+atomic-install+java-version",
@@ -383,6 +384,9 @@ func runtimeMatrix740() map[string]any {
 			"vanilla-1.16.5-linux-x64",
 			"vanilla-1.17.1-linux-x64",
 			"vanilla-1.18.2-linux-x64",
+			"vanilla-1.19.4-linux-x64",
+			"vanilla-1.20.1-linux-x64",
+			"vanilla-1.20.2-linux-x64",
 			"vanilla-1.20.4-linux-x64",
 			"vanilla-1.20.6-linux-x64",
 			"vanilla-1.21.1-linux-x64",
@@ -394,7 +398,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":                "0.16.5 сохраняет Vanilla gates 0.16.2–0.16.4 и добавляет Managed Java II: Java 8/16/17/21/25 устанавливаются через verified Temurin GA lifecycle; Java 16 использует historical feature-release fallback.",
+		"note":                "0.16.6 добавляет exact Java policy и actual-client certification для Vanilla 1.17.1–1.20.4: 1.17.1 = Java 16, 1.18.x–1.20.4 = Java 17; Managed Java II 8/16/17/21/25 сохраняется.",
 	}
 }
 

@@ -156,6 +156,28 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Legacy Vanilla 0.16.4", proc.stderr)
 
+    def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.20.2"]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Java 16/17 Vanilla 0.16.6", proc.stderr)
+
+    def test_validate_rejects_wrong_java16_17_major_0166(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["minecraft"] == "1.19.4" and target["loader"] == "vanilla":
+                    target["javaMajor"] = 16
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("requires Java 17", proc.stderr)
+
     def test_aggregate_accepts_bound_multiversion_java_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

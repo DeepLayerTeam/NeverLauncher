@@ -259,6 +259,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityJava16_17VanillaRequired(ver) {
+		for minecraft := range java16_17VanillaCompatibility0166 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -273,8 +278,13 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 	for _, minecraft := range versions {
 		expected, ok := vanillaCompatibilityBaselineII[minecraft]
 		if !ok {
-			expected.JavaMajor = 8
-			expected.Scope = "client"
+			if javaMajor, modern := java16_17VanillaCompatibility0166[minecraft]; modern {
+				expected.JavaMajor = javaMajor
+				expected.Scope = "client"
+			} else {
+				expected.JavaMajor = 8
+				expected.Scope = "client"
+			}
 		}
 		id := "vanilla-" + minecraft + "-linux-x64"
 		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
@@ -444,5 +454,60 @@ func TestCompatibilityCertificationLegacyVanilla0164RejectsMissingReleaseLine(t 
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.4", "commit-164"); err == nil {
 		t.Fatal("0.16.4 must reject missing pre-1.7 Vanilla release line")
+	}
+}
+
+func TestCompatibilityCertificationJava16_17Vanilla0166(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.6", "commit-166")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166")
+	if err != nil {
+		t.Fatalf("0.16.6 Java 16/17 Vanilla evidence must pass: %v", err)
+	}
+	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact"
+	if certification.Policy != wantPolicy {
+		t.Fatalf("unexpected policy: %s", certification.Policy)
+	}
+	for minecraft, javaMajor := range java16_17VanillaCompatibility0166 {
+		if !slices.Contains(certification.VanillaVersions, minecraft) {
+			t.Fatalf("Java 16/17 Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+		}
+		_ = javaMajor
+	}
+}
+
+func TestCompatibilityCertificationJava16_17Vanilla0166RejectsMissingReleaseLine(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.6", "commit-166")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.20.2" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166"); err == nil {
+		t.Fatal("0.16.6 must reject missing Java 16/17 Vanilla release line")
+	}
+}
+
+func TestCompatibilityCertificationJava16_17Vanilla0166RejectsWrongMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.6", "commit-166")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "vanilla" && targets.Targets[i].Minecraft == "1.19.4" {
+			targets.Targets[i].JavaMajor = 16
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.6", "commit-166"); err == nil {
+		t.Fatal("0.16.6 must reject wrong Java major for 1.19.4")
 	}
 }

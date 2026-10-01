@@ -4,7 +4,11 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Managed Java II / 0.16.5**. NeverRuntime управляет exact Java 8/16/17/21/25 через проверяемые Eclipse Temurin GA archives, сохраняет bundled Java 21 bootstrap и не подменяет отсутствующие vendor platform builds фиктивными targets.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Java 16/17 Vanilla / 0.16.6**. Диапазон Vanilla 1.17.1–1.20.4 теперь проходит обязательную actual-client certification с exact Java transition: 1.17.1 = Java 16, 1.18.x–1.20.4 = Java 17; Managed Java II 8/16/17/21/25 сохраняется.
+
+## Java 16/17 Vanilla — 0.16.6
+
+`0.16.6` добавляет обязательные actual-client targets `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Vanilla materializer и NeverRuntime независимо требуют официальный Java transition: Java 16 только для 1.17.1 в сертифицируемом диапазоне, Java 17 для 1.18.x–1.20.4. Missing/mismatched `javaVersion.majorVersion` блокируется до запуска; release certification требует весь набор и actual-client evidence.
 
 ## Managed Java II — 0.16.5
 

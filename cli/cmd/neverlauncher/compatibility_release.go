@@ -115,6 +115,15 @@ var legacyVanillaPre17Compatibility0164 = []string{
 	"1.0", "1.1", "1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10",
 }
 
+var java16_17VanillaCompatibility0166 = map[string]int{
+	"1.17.1": 16,
+	"1.18.2": 17,
+	"1.19.4": 17,
+	"1.20.1": 17,
+	"1.20.2": 17,
+	"1.20.4": 17,
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -146,6 +155,10 @@ func compatibilityLegacyVanillaJava8Required(ver string) bool {
 
 func compatibilityLegacyVanillaPre17Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 4)
+}
+
+func compatibilityJava16_17VanillaRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 6)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -302,6 +315,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityJava16_17VanillaRequired(ver) {
+			for minecraft, javaMajor := range java16_17VanillaCompatibility0166 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla 0.16.6 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != javaMajor || target.Scope != "client" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 16/17 Vanilla %s mismatch: expected Java %d scope=client, got Java %d scope=%s", minecraft, javaMajor, target.JavaMajor, target.Scope)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -417,6 +441,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityLegacyVanillaPre17Required(ver) {
 		policy += ";legacy-vanilla-1.0-1.7.10-java8"
+	}
+	if compatibilityJava16_17VanillaRequired(ver) {
+		policy += ";vanilla-1.17.1-1.20.4-java16-17-exact"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

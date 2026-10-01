@@ -211,6 +211,39 @@
       "required": true
     },
     {
+      "id": "vanilla-1.19.4-linux-x64",
+      "minecraft": "1.19.4",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.20.1-linux-x64",
+      "minecraft": "1.20.1",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "vanilla-1.20.2-linux-x64",
+      "minecraft": "1.20.2",
+      "loader": "vanilla",
+      "loaderVersion": "",
+      "os": "linux",
+      "arch": "x86_64",
+      "javaMajor": 17,
+      "scope": "client",
+      "required": true
+    },
+    {
       "id": "vanilla-1.20.4-linux-x64",
       "minecraft": "1.20.4",
       "loader": "vanilla",
