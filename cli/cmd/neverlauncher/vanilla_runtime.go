@@ -61,6 +61,22 @@ var legacyVanilla0170v1ReleaseSet = func() map[string]struct{} {
 	return out
 }()
 
+// 0.17.0v2 completes the Java-transition Vanilla grid with every requested
+// release that was not already certified by 0.16.6. The map is also a runtime
+// policy: materialization/server installation rejects missing or conflicting
+// Mojang javaVersion metadata before any client/server artifact is downloaded.
+var java16_17Vanilla0170v2Releases = map[string]int{
+	"1.17":   16,
+	"1.18":   17,
+	"1.18.1": 17,
+	"1.19":   17,
+	"1.19.1": 17,
+	"1.19.2": 17,
+	"1.19.3": 17,
+	"1.20":   17,
+	"1.20.3": 17,
+}
+
 type vanillaTarget struct {
 	OS   string `json:"os"`
 	Arch string `json:"arch"`
@@ -1560,6 +1576,15 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 		}
 		return 8, nil
 	}
+	if expected, enforced := expectedJavaMajorForVanilla0170v2(minecraftVersion); enforced {
+		if metadataMajor == 0 {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v2 требует exact Java %d", minecraftVersion, expected)
+		}
+		if metadataMajor != expected {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: 0.17.0v2 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+		}
+		return metadataMajor, nil
+	}
 	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
 		if metadataMajor == 0 {
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
@@ -1599,6 +1624,11 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 func isLegacyVanillaJava8Release(version string) bool {
 	major, minor, patch, ok := parseMinecraftReleaseVersion(version)
 	return ok && major == 1 && (minor < 16 || (minor == 16 && patch <= 5))
+}
+
+func expectedJavaMajorForVanilla0170v2(version string) (int, bool) {
+	expected, ok := java16_17Vanilla0170v2Releases[strings.TrimSpace(version)]
+	return expected, ok
 }
 
 func expectedJavaMajorForVanilla0166(version string) (int, bool) {

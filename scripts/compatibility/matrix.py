@@ -50,6 +50,18 @@ JAVA16_17_VANILLA_0166: dict[str, int] = {
     "1.20.4": 17,
 }
 
+JAVA16_17_VANILLA_0170V2: dict[str, int] = {
+    "1.17": 16,
+    "1.18": 17,
+    "1.18.1": 17,
+    "1.19": 17,
+    "1.19.1": 17,
+    "1.19.2": 17,
+    "1.19.3": 17,
+    "1.20": 17,
+    "1.20.3": 17,
+}
+
 JAVA21_VANILLA_0167: tuple[str, ...] = (
     "1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3",
     "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
@@ -94,8 +106,8 @@ ACTUAL_CLIENT_E2E_II_01610: dict[str, int] = {
     "26.3": 25,
 }
 
-COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 93
-COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 98
+COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 102
+COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 107
 COMPATIBILITY_II_GA_JAVA_MAJORS = {8, 16, 17, 21, 25}
 
 
@@ -150,6 +162,10 @@ def compatibility_ii_ga_required() -> bool:
 
 
 def legacy_vanilla_0170v1_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
+
+
+def java16_17_vanilla_0170v2_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
 
 
@@ -251,6 +267,13 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Legacy Vanilla 0.17.0v1 missing required Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(f"Legacy Vanilla {minecraft}: 0.17.0v1 requires Java 8 scope=client")
+    if java16_17_vanilla_0170v2_required():
+        for minecraft, java_major in JAVA16_17_VANILLA_0170V2.items():
+            target = required_vanilla.get(minecraft)
+            if target is None:
+                die(f"Java 16/17 Vanilla 0.17.0v2 missing required Minecraft {minecraft}")
+            if target["javaMajor"] != java_major or target["scope"] != "client" or target["os"] != "linux" or target["arch"] != "x86_64":
+                die(f"Java 16/17 Vanilla {minecraft}: 0.17.0v2 requires Java {java_major} scope=client linux/x86_64")
     if compatibility_ii_ga_required():
         required_vanilla_rows = [target for target in targets if target["loader"] == "vanilla" and target["required"]]
         unique_versions = {target["minecraft"] for target in required_vanilla_rows}

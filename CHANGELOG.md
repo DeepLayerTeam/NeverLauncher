@@ -1,3 +1,11 @@
+## 0.17.0v2 — Complete Java 16/17 Vanilla grid
+
+- Added the nine requested Java-transition Vanilla releases as mandatory actual-client targets: `1.17` on exact Java 16; `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` on exact Java 17.
+- Vanilla materializer and matching-server installer now fail closed for the exact v2 grid when Mojang `javaVersion.majorVersion` is missing or conflicts, before client/server artifacts are downloaded.
+- NeverRuntime independently enforces the same v2 Java-major policy from materialized metadata, so a local metadata edit cannot downgrade/upgrade the runtime.
+- Compatibility matrix/release certification now require all nine v2 targets on Linux x86_64 client scope; the GA floor is 107 required Vanilla targets covering 102 unique release IDs.
+- Added regression gates for missing v2 releases, wrong Java majors, exact release-set integrity and real modern metadata materialization. Product semantic version remains `0.17.0`; `v2` is the compatibility maintenance revision.
+
 ## 0.17.0v1 — Complete Legacy Vanilla grid
 
 - Expanded the production Vanilla compatibility base with 53 exact Legacy Vanilla releases requested for `1.2.1`–`1.16.4`; the certified GA matrix now contains 98 required Vanilla targets covering 93 unique release IDs.

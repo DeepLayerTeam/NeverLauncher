@@ -2111,8 +2111,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.16.0 Production Delivery Release gate is not wired into preflight/CI")
 
 # 0.17.0 Minecraft Compatibility II GA binds every compatibility PASS to a
-# concrete JRE binary identity. The v1 maintenance revision additionally
-# requires the complete 53-release Legacy Vanilla grid requested for 1.2.1-1.16.4.
+# concrete JRE binary identity. Maintenance revisions keep the complete v1
+# Legacy grid and v2 additionally requires the nine requested Java 16/17 releases.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 0):
     ga_matrix_0170 = read("scripts/compatibility/matrix.py")
     ga_jre_0170 = read("scripts/compatibility/certify-jre.py")
@@ -2120,7 +2120,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ga_release_0170 = read("cli/cmd/neverlauncher/compatibility_release.go")
     ga_tests_0170 = read("scripts/compatibility/test_matrix.py") + read("scripts/compatibility/test_certify_jre.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
     ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py")
-    for required in ["LEGACY_VANILLA_0170V1", "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS", "build_ga_jre_base", "jreCertified", '"jreBase"']:
+    for required in ["LEGACY_VANILLA_0170V1", "JAVA16_17_VANILLA_0170V2", "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS", "build_ga_jre_base", "jreCertified", '"jreBase"']:
         if required not in ga_matrix_0170:
             fail(f"0.17.0 GA compatibility matrix incomplete: {required}")
     for required in ["executableSha256", "java.runtime.version", "java.vendor", "java.home", "detectedOS", "detectedArch", "certified"]:
@@ -2129,16 +2129,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["certify-jre.py", '"jreCertified"', '"jreExecutableSha256"']:
         if required not in ga_case_0170:
             fail(f"0.17.0 compatibility target JRE binding incomplete: {required}")
-    for required in ["compatibilityIIGa0170Required", "compatibilityLegacyVanilla0170v1Required", "JREBuilds", "JREExecutableSHA256", "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8", "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"]:
+    for required in ["compatibilityIIGa0170Required", "compatibilityLegacyVanilla0170v1Required", "compatibilityJava16_17Vanilla0170v2Required", "JREBuilds", "JREExecutableSHA256", "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8", "java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact", "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"]:
         if required not in ga_release_0170:
             fail(f"0.17.0 GA release certification incomplete: {required}")
-    for required in ["test_ga_matrix_contains_certified_jre_base", "test_certify_binds_binary_hash_and_runtime_identity", "test_validate_rejects_missing_complete_legacy_grid_0170v1", "TestCompatibilityCertificationGA0170BindsJREBase", "TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease"]:
+    for required in ["test_ga_matrix_contains_certified_jre_base", "test_certify_binds_binary_hash_and_runtime_identity", "test_validate_rejects_missing_complete_legacy_grid_0170v1", "test_validate_rejects_missing_java16_17_grid_0170v2", "TestCompatibilityCertificationGA0170BindsJREBase", "TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease", "TestCompatibilityCertificationGA0170v2RequiresCompleteJava16_17Grid", "TestCompatibilityCertificationGA0170v2RejectsMissingJavaTransitionRelease"]:
         if required not in ga_tests_0170:
             fail(f"0.17.0 GA regression test missing: {required}")
     if "Minecraft Compatibility II GA 0.17.0 gate: OK" not in ga_gate_0170:
         fail("0.17.0 mandatory Minecraft Compatibility II GA gate incomplete")
-    if "0.17.0v1 legacy grid" not in ga_gate_0170:
-        fail("0.17.0v1 complete Legacy Vanilla gate is missing")
+    if "0.17.0v2 Java 16/17 grid" not in ga_gate_0170:
+        fail("0.17.0v2 complete Java 16/17 Vanilla gate is missing")
     if "minecraft-compatibility-II-ga-0170.py" not in preflight or "minecraft-compatibility-II-ga-0170.py" not in ci:
         fail("0.17.0 Minecraft Compatibility II GA gate is not wired into preflight/CI")
 

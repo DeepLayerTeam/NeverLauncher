@@ -425,6 +425,7 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "Managed Java executable hash-bound cache", "status": "implemented"},
 			{"feature": "GA certified JRE binary attestation bound to every compatibility PASS", "status": "implemented"},
 			{"feature": "complete 0.17.0v1 Legacy Vanilla 53-release actual-client grid", "status": "implemented"},
+			{"feature": "complete 0.17.0v2 Java 16/17 Vanilla 9-release actual-client grid", "status": "implemented"},
 		},
 		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
 		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base",
@@ -435,7 +436,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13"},
-		"note":                "0.17.0v1 расширяет Minecraft Compatibility II GA до 98 обязательных Vanilla targets / 93 release IDs. Все 53 дополнительно заявленные Legacy Vanilla release ID от 1.2.1 до 1.16.4 сертифицируются как actual-client Java 8 targets; каждый PASS по-прежнему привязан к SHA-256 фактически запущенного JRE binary, vendor/runtime build и host OS/arch.",
+		"note":                "0.17.0v2 расширяет Minecraft Compatibility II GA до 107 обязательных Vanilla targets / 102 release IDs. Помимо полного v1 Legacy Java 8 grid, обязательны 1.17/Java 16 и 1.18, 1.18.1, 1.19, 1.19.1, 1.19.2, 1.19.3, 1.20, 1.20.3/Java 17; каждый PASS привязан к SHA-256 фактически запущенного JRE binary, vendor/runtime build и host OS/arch.",
 	}
 }
 

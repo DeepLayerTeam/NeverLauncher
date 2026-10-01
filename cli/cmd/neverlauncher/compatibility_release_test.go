@@ -284,6 +284,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityJava16_17Vanilla0170v2Required(ver) {
+		for minecraft := range java16_17VanillaCompatibility0170v2 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -298,7 +303,10 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 	for _, minecraft := range versions {
 		expected, ok := vanillaCompatibilityBaselineII[minecraft]
 		if !ok {
-			if javaMajor, modern := java16_17VanillaCompatibility0166[minecraft]; modern {
+			if javaMajor, modernV2 := java16_17VanillaCompatibility0170v2[minecraft]; modernV2 {
+				expected.JavaMajor = javaMajor
+				expected.Scope = "client"
+			} else if javaMajor, modern := java16_17VanillaCompatibility0166[minecraft]; modern {
 				expected.JavaMajor = javaMajor
 				expected.Scope = "client"
 			} else if scope, modern21 := java21VanillaCompatibility0167[minecraft]; modern21 {
@@ -808,7 +816,7 @@ func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
 	if !strings.Contains(certification.Policy, "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8") {
 		t.Fatalf("0.17.0v1 policy does not bind complete legacy grid: %s", certification.Policy)
 	}
-	if len(certification.VanillaVersions) < 93 {
+	if len(certification.VanillaVersions) < 102 {
 		t.Fatalf("0.17.0 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
 	}
 	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21 25]" {
@@ -836,6 +844,59 @@ func TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease(t *testin
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil || !strings.Contains(err.Error(), "0.17.0v1") {
 		t.Fatalf("0.17.0v1 must reject missing 1.8.8 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationGA0170v2RequiresCompleteJava16_17Grid(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v2")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2")
+	if err != nil {
+		t.Fatalf("0.17.0v2 Java 16/17 evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact") {
+		t.Fatalf("0.17.0v2 policy missing: %s", certification.Policy)
+	}
+	for minecraft := range java16_17VanillaCompatibility0170v2 {
+		if !slices.Contains(certification.VanillaVersions, minecraft) {
+			t.Fatalf("0.17.0v2 version %s missing", minecraft)
+		}
+	}
+}
+
+func TestCompatibilityCertificationGA0170v2RejectsMissingJavaTransitionRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v2")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.19.2" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2"); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
+		t.Fatalf("0.17.0v2 must reject missing 1.19.2 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationGA0170v2RejectsWrongJavaMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v2")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "vanilla" && targets.Targets[i].Minecraft == "1.17" {
+			targets.Targets[i].JavaMajor = 17
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2"); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
+		t.Fatalf("0.17.0v2 must reject Java mismatch, got %v", err)
 	}
 }
 

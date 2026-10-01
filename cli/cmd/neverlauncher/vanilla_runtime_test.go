@@ -384,6 +384,43 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 	}
 }
 
+func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
+	want := map[string]int{
+		"1.17": 16,
+		"1.18": 17, "1.18.1": 17,
+		"1.19": 17, "1.19.1": 17, "1.19.2": 17, "1.19.3": 17,
+		"1.20": 17, "1.20.3": 17,
+	}
+	if len(java16_17Vanilla0170v2Releases) != len(want) {
+		t.Fatalf("0.17.0v2 Java 16/17 release grid=%d, want %d", len(java16_17Vanilla0170v2Releases), len(want))
+	}
+	for version, major := range want {
+		expected, ok := expectedJavaMajorForVanilla0170v2(version)
+		if !ok || expected != major {
+			t.Fatalf("Minecraft %s 0.17.0v2 expected Java=%d ok=%v, want %d/true", version, expected, ok, major)
+		}
+		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
+		if err != nil || got != major {
+			t.Fatalf("Minecraft %s Java=%d err=%v, want %d", version, got, err, major)
+		}
+		if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
+			t.Fatalf("Minecraft %s accepted missing Java metadata: %v", version, err)
+		}
+		wrong := 17
+		if major == 17 {
+			wrong = 16
+		}
+		if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(wrong)}}); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
+			t.Fatalf("Minecraft %s accepted wrong Java %d: %v", version, wrong, err)
+		}
+	}
+	for _, outside := range []string{"1.17.1", "1.18.2", "1.19.4", "1.20.1", "1.20.2", "1.20.4", "1.20.5"} {
+		if _, ok := expectedJavaMajorForVanilla0170v2(outside); ok {
+			t.Fatalf("%s unexpectedly classified as newly added 0.17.0v2 release", outside)
+		}
+	}
+}
+
 func TestLegacyVanilla0170v1GridIsExactJava8(t *testing.T) {
 	if len(legacyVanilla0170v1Releases) != 53 {
 		t.Fatalf("legacy 0.17.0v1 release grid=%d, want 53", len(legacyVanilla0170v1Releases))
@@ -469,6 +506,57 @@ func TestInstallVanilla0170v1MaterializesLegacyReleaseWithoutJavaVersion(t *test
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Fatalf("missing materialized %s: %v", rel, err)
 		}
+	}
+}
+
+func TestInstallVanilla0170v2MaterializesModernJavaTransition(t *testing.T) {
+	for _, tc := range []struct {
+		version   string
+		javaMajor int
+	}{{"1.17", 16}, {"1.20.3", 17}} {
+		t.Run(tc.version, func(t *testing.T) {
+			clientJar := []byte("modern-client-" + tc.version)
+			assetIndexBytes := []byte(`{"objects":{}}`)
+			mux := http.NewServeMux()
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			base := server.URL
+			versionDoc := map[string]any{
+				"id": tc.version, "type": "release", "mainClass": "net.minecraft.client.main.Main", "assets": tc.version,
+				"assetIndex":  map[string]any{"id": tc.version, "url": base + "/assets.json", "sha1": sha1hex(assetIndexBytes), "size": len(assetIndexBytes)},
+				"downloads":   map[string]any{"client": map[string]any{"url": base + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)}},
+				"javaVersion": map[string]any{"majorVersion": tc.javaMajor},
+				"arguments": map[string]any{
+					"jvm":  []any{"-Djava.library.path=${natives_directory}", "-cp", "${classpath}"},
+					"game": []any{"--username", "${auth_player_name}", "--version", "${version_name}", "--assetsDir", "${assets_root}", "--assetIndex", "${assets_index_name}"},
+				},
+				"libraries": []any{},
+			}
+			versionBytes, _ := json.Marshal(versionDoc)
+			manifest := MojangVersionManifest{Latest: map[string]string{"release": tc.version}, Versions: []MojangManifestVersion{{ID: tc.version, Type: "release", URL: base + "/version.json", SHA1: sha1hex(versionBytes)}}}
+			manifestBytes, _ := json.Marshal(manifest)
+			mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+			mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+			mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
+			mux.HandleFunc("/assets.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
+
+			dir := t.TempDir()
+			result, err := installVanilla(context.Background(), vanillaInstallOptions{
+				MinecraftVersion: tc.version, ClientDir: dir, VersionManifest: base + "/manifest.json", AssetBaseURL: base + "/objects",
+				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, HTTPClient: server.Client(),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.MinecraftVersion != tc.version || result.JavaMajorVersion != tc.javaMajor || result.Status != "installed-and-verified" {
+				t.Fatalf("unexpected 0.17.0v2 result: %+v", result)
+			}
+			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
+				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+					t.Fatalf("missing materialized %s: %v", rel, err)
+				}
+			}
+		})
 	}
 }
 

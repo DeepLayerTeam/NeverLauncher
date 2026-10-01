@@ -606,6 +606,20 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         };
     }
 
+    if let Some(expected) = expected_java_major_for_vanilla_0170v2(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v2 expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v2 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
     if let Some(expected) = expected_java_major_for_vanilla_0166(&merged.id) {
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
@@ -649,6 +663,14 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
     }
 
     Ok(metadata_major)
+}
+
+fn expected_java_major_for_vanilla_0170v2(version: &str) -> Option<u32> {
+    match version.trim() {
+        "1.17" => Some(16),
+        "1.18" | "1.18.1" | "1.19" | "1.19.1" | "1.19.2" | "1.19.3" | "1.20" | "1.20.3" => Some(17),
+        _ => None,
+    }
 }
 
 fn expected_java_major_for_vanilla_0166(version: &str) -> Option<u32> {
@@ -1293,6 +1315,32 @@ mod tests {
         assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(8));
         merged.java_version = Some(JavaVersion { major_version: 17 });
         assert!(resolved_java_major_version(&merged).is_err());
+    }
+
+    #[test]
+    fn exact_java_policy_covers_0170v2_transition_grid() {
+        assert_eq!(expected_java_major_for_vanilla_0170v2("1.17"), Some(16));
+        for version in ["1.18", "1.18.1", "1.19", "1.19.1", "1.19.2", "1.19.3", "1.20", "1.20.3"] {
+            assert_eq!(expected_java_major_for_vanilla_0170v2(version), Some(17), "{version}");
+        }
+        for version in ["1.17.1", "1.18.2", "1.19.4", "1.20.1", "1.20.2", "1.20.4", "1.20.5"] {
+            assert_eq!(expected_java_major_for_vanilla_0170v2(version), None, "{version}");
+        }
+    }
+
+    #[test]
+    fn exact_java_policy_0170v2_rejects_missing_or_wrong_metadata() {
+        let mut merged = MergedVersion { id: "1.17".into(), ..MergedVersion::default() };
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 16 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(16));
+        merged.id = "1.20.3".into();
+        merged.java_version = Some(JavaVersion { major_version: 16 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(17));
     }
 
     #[test]
