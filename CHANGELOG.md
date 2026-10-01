@@ -1,3 +1,12 @@
+## 0.17.1 — Fabric Compatibility II
+
+- Expanded the executable Fabric compatibility line from the single 1.21.1 integration target to **48 stable Minecraft releases from 1.14 through 26.3**, with exact Java 8/16/17/21/25 binding.
+- Fabric client-scope certification now runs the production materializer against official Fabric Meta, downloads and checksum-verifies the real Fabric profile/libraries, builds and verifies the local NeverLauncher client package, and resolves `latest-stable` to a concrete immutable Loader version.
+- Added actual Fabric client launch certification through NeverRuntime using the materialized Fabric profile/main class on the exact target Java. A metadata-only or package-only result cannot satisfy the target.
+- Compatibility aggregation and release certification fail closed on a missing/duplicate Fabric release, wrong Java/scope/platform, incomplete Fabric evidence, mutable resolved Loader version, failed real-client launch, or missing JRE/platform attestation.
+- `1.21.1` keeps the full integration E2E path; the remaining Fabric releases use actual-client certification on Linux x86_64. Existing Vanilla GA, loader-family, cross-platform, matching-server and hardening requirements remain mandatory.
+- Added regression tests for the complete Fabric release grid, exact Java mapping and immutable Loader evidence.
+
 ## 0.17.0v3 — Java 21/25 Vanilla release-gap completion
 
 - Added mandatory actual-client targets `1.21.11` on exact Java 21 and `26.2` on exact Java 25 without changing the product semantic version (`VERSION` remains `0.17.0`).

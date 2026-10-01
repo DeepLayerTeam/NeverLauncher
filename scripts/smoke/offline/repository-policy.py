@@ -2164,6 +2164,51 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "minecraft-compatibility-II-ga-0170.py" not in preflight or "minecraft-compatibility-II-ga-0170.py" not in ci:
         fail("0.17.0 Minecraft Compatibility II GA gate is not wired into preflight/CI")
 
+# 0.17.1 Fabric Compatibility II requires the full stable 1.14+ line to use
+# executable materialization and actual-client evidence, not declaration-only targets.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 1):
+    fabric_matrix_0171 = read("scripts/compatibility/matrix.py")
+    fabric_case_0171 = read("e2e/scripts/run-fabric-certification-case.sh")
+    compat_case_0171 = read("e2e/scripts/run-compatibility-case.sh")
+    fabric_release_0171 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    fabric_targets_0171 = json.loads(read("compatibility/targets.json"))["targets"]
+    fabric_tests_0171 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II-0171.py")
+    compat_workflow_0171 = read(".github/workflows/compatibility.yml")
+    for required in ["FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "fabric-install.json", "fabric-certification.json", "Fabric Compatibility II 0.17.1"]:
+        if required not in fabric_matrix_0171:
+            fail(f"0.17.1 Fabric compatibility matrix incomplete: {required}")
+    for required in ["runtime fabric-package", "client verify", "fabric-install.json", "fabric-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
+        if required not in fabric_case_0171:
+            fail(f"0.17.1 Fabric actual-client execution incomplete: {required}")
+    for required in ["run-fabric-certification-case.sh", 'install_name = "fabric-install.json"', 'probe_name = "fabric-certification.json"', "resolvedLoaderVersion"]:
+        if required not in compat_case_0171:
+            fail(f"0.17.1 Fabric compatibility routing incomplete: {required}")
+    for required in ["fabricCompatibilityII0171", "compatibilityFabricII0171Required", "FabricVersions", "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client"]:
+        if required not in fabric_release_0171:
+            fail(f"0.17.1 Fabric release certification incomplete: {required}")
+    fabric_rows = [row for row in fabric_targets_0171 if row.get("required") and row.get("loader") == "fabric"]
+    if len(fabric_rows) != 48 or len({row.get("minecraft") for row in fabric_rows}) != 48:
+        fail("0.17.1 Fabric target grid must contain exactly 48 unique stable releases")
+    if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in fabric_rows}:
+        fail("0.17.1 Fabric target grid does not cover Java 8/16/17/21/25")
+    for required in [
+        "test_validate_accepts_fabric_compatibility_ii_0171_grid",
+        "test_validate_rejects_missing_fabric_release_0171",
+        "test_validate_rejects_wrong_fabric_java_0171",
+        "TestCompatibilityCertificationFabricII0171",
+        "TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader",
+    ]:
+        if required not in fabric_tests_0171:
+            fail(f"0.17.1 Fabric regression test missing: {required}")
+    for required in ["fabric-install.json", "fabric-certification.json"]:
+        if required not in compat_workflow_0171:
+            fail(f"0.17.1 Fabric raw CI evidence upload missing: {required}")
+    if "Fabric Compatibility II 0.17.1 gate: OK" not in fabric_gate_0171:
+        fail("0.17.1 mandatory Fabric Compatibility II gate incomplete")
+    if "fabric-compatibility-II-0171.py" not in preflight or "fabric-compatibility-II-0171.py" not in ci:
+        fail("0.17.1 Fabric Compatibility II gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

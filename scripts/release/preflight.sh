@@ -92,6 +92,7 @@ run_step version-alignment bash "${ROOT_DIR}/scripts/smoke/offline/version-align
 run_step contract-validation python3 "${ROOT_DIR}/scripts/contracts/validate-openapi.py"
 run_step compatibility-matrix bash "${ROOT_DIR}/scripts/smoke/offline/compatibility-matrix.sh"
 run_step minecraft-compatibility-II-ga-0170 python3 "${ROOT_DIR}/scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py"
+run_step fabric-compatibility-II-0171 python3 "${ROOT_DIR}/scripts/smoke/offline/fabric-compatibility-II-0171.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

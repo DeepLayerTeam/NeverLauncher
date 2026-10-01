@@ -37,11 +37,13 @@ class MatrixToolTests(unittest.TestCase):
                 "platformMatched": True,
                 "jreCertified": True,
             }
+            install_name = "fabric-install.json" if target["loader"] == "fabric" else "vanilla-install.json"
+            certification_name = "fabric-certification.json" if target["loader"] == "fabric" else "vanilla-certification.json"
             files = [
                 "client-package.json",
                 "materialized-client-verify.json",
-                "vanilla-install.json",
-                "vanilla-certification.json",
+                install_name,
+                certification_name,
                 "platform-runtime.json",
                 "java-runtime.json",
                 "result.json",
@@ -254,6 +256,51 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("0.17.0v3 requires Java 25", proc.stderr)
 
+    def test_validate_accepts_fabric_compatibility_ii_0171_grid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_validate_rejects_missing_fabric_release_0171(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [
+                target for target in doc["targets"]
+                if not (target["loader"] == "fabric" and target["minecraft"] == "1.14")
+            ]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Fabric Compatibility II 0.17.1", proc.stderr)
+
+    def test_validate_rejects_wrong_fabric_java_0171(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "fabric" and target["minecraft"] == "1.17":
+                    target["javaMajor"] = 17
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Fabric 1.17", proc.stderr)
+
+    def test_validate_rejects_duplicate_fabric_release_0171(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "fabric" and target["minecraft"] == "1.14")
+            duplicate["id"] = "fabric-1.14-linux-x64-duplicate"
+            doc["targets"].append(duplicate)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("exactly one required target", proc.stderr)
+
     def test_validate_rejects_missing_java16_17_release_line_0166(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
@@ -462,7 +509,7 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
 
             def mutate(target: dict, result: dict) -> None:
-                if target["loader"] == "fabric":
+                if target["loader"] == "fabric" and target["scope"] == "integration":
                     result["checks"]["paperHealthy"] = False
 
             proc = self.aggregate(tmp, doc, mutate)

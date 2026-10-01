@@ -1,10 +1,10 @@
 # NeverLauncher
 
-## Minecraft Compatibility II GA — 0.17.0
+## Fabric Compatibility II — 0.17.1
 
-NeverLauncher 0.17.0 с maintenance revision **v3** сохраняет GA и расширяет обязательную базу до **109 Vanilla targets / 104 уникальных Vanilla release IDs**. v3 добавляет `1.21.11` на exact Java 21 и `26.2` на exact Java 25 поверх полного v1 Legacy grid и v2 Java 16/17 grid. Exact Java проверяется до скачивания client/server артефактов и независимо повторяется в NeverRuntime; `VERSION` остаётся `0.17.0`.
+NeverLauncher 0.17.1 добавляет production-сертификацию **Fabric 1.14+ → current** поверх Minecraft Compatibility II GA. Обязательная Fabric-линия содержит 48 stable Minecraft release ID от `1.14` до `26.3` и exact Java 8/16/17/21/25. Для client-scope target CI использует официальный Fabric Meta, материализует настоящий Vanilla+Fabric client tree и Maven libraries, проверяет package integrity, фиксирует конкретный immutable Fabric Loader и запускает materialized Fabric profile через NeverRuntime на exact Java. `1.21.1` сохраняет полный integration E2E.
 
-GA добавляет JRE attestation к каждому compatibility PASS: фиксируются real path и SHA-256 реально запущенного `java`/`java.exe`, vendor, runtime version, VM name, `java.home`, detected OS/architecture и exact major. Aggregator строит `jreBase` только из прошедших результатов, а `COMPATIBILITY_CERTIFICATION.json` содержит concrete JRE builds с target counts. Release/RC/Production Delivery fail-closed требуют policy `minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base`. Compatibility Hardening 0.16.11, Actual Client E2E II и Managed Java II сохраняются.
+Release certification fail-closed требует всю Fabric-линейку: пропуск или дубль версии, wrong Java/scope/platform, mutable `latest-stable` в фактическом result, неполное evidence или незапущенный реальный Fabric client блокируют release. Minecraft Compatibility II GA 0.17.0, JRE attestation, Compatibility Hardening 0.16.11, Actual Client E2E II и остальные loader-family gates сохраняются без ослабления.
 
 ## Compatibility Hardening — 0.16.11
 
@@ -22,7 +22,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Minecraft Compatibility II GA / 0.17.0**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Fabric Compatibility II / 0.17.1**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

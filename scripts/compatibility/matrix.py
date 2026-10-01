@@ -115,6 +115,57 @@ COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 104
 COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 109
 COMPATIBILITY_II_GA_JAVA_MAJORS = {8, 16, 17, 21, 25}
 
+FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
+    '1.14': 8,
+    '1.14.1': 8,
+    '1.14.2': 8,
+    '1.14.3': 8,
+    '1.14.4': 8,
+    '1.15': 8,
+    '1.15.1': 8,
+    '1.15.2': 8,
+    '1.16': 8,
+    '1.16.1': 8,
+    '1.16.2': 8,
+    '1.16.3': 8,
+    '1.16.4': 8,
+    '1.16.5': 8,
+    '1.17': 16,
+    '1.17.1': 16,
+    '1.18': 17,
+    '1.18.1': 17,
+    '1.18.2': 17,
+    '1.19': 17,
+    '1.19.1': 17,
+    '1.19.2': 17,
+    '1.19.3': 17,
+    '1.19.4': 17,
+    '1.20': 17,
+    '1.20.1': 17,
+    '1.20.2': 17,
+    '1.20.3': 17,
+    '1.20.4': 17,
+    '1.20.5': 21,
+    '1.20.6': 21,
+    '1.21': 21,
+    '1.21.1': 21,
+    '1.21.2': 21,
+    '1.21.3': 21,
+    '1.21.4': 21,
+    '1.21.5': 21,
+    '1.21.6': 21,
+    '1.21.7': 21,
+    '1.21.8': 21,
+    '1.21.9': 21,
+    '1.21.10': 21,
+    '1.21.11': 21,
+    '26.1': 25,
+    '26.1.1': 25,
+    '26.1.2': 25,
+    '26.2': 25,
+    '26.3': 25,
+}
+
 
 
 def die(message: str) -> None:
@@ -176,6 +227,10 @@ def java16_17_vanilla_0170v2_required() -> bool:
 
 def java21_25_vanilla_0170v3_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
+
+
+def fabric_compatibility_ii_0171_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 1)
 
 
 def load_json(path: Path) -> Any:
@@ -300,6 +355,29 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             die(f"Minecraft Compatibility II GA requires at least {COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA} unique Vanilla releases")
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(java_majors):
             die(f"Minecraft Compatibility II GA requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
+    if fabric_compatibility_ii_0171_required():
+        required_fabric_rows = [target for target in targets if target["loader"] == "fabric" and target["required"]]
+        actual_versions = {target["minecraft"] for target in required_fabric_rows}
+        expected_versions = set(FABRIC_COMPATIBILITY_II_0171)
+        if actual_versions != expected_versions:
+            missing = sorted(expected_versions - actual_versions)
+            extra = sorted(actual_versions - expected_versions)
+            die(f"Fabric Compatibility II 0.17.1 release grid mismatch: missing={missing} extra={extra}")
+        if len(required_fabric_rows) != len(FABRIC_COMPATIBILITY_II_0171):
+            die("Fabric Compatibility II 0.17.1 requires exactly one required target per stable Minecraft release")
+        for target in required_fabric_rows:
+            minecraft = target["minecraft"]
+            expected_java = FABRIC_COMPATIBILITY_II_0171[minecraft]
+            expected_scope = "integration" if minecraft == "1.21.1" else "client"
+            if target["javaMajor"] != expected_java or target["scope"] != expected_scope:
+                die(f"Fabric {minecraft}: 0.17.1 requires Java {expected_java} scope={expected_scope}")
+            if target["os"] != "linux" or target["arch"] != "x86_64":
+                die(f"Fabric {minecraft}: 0.17.1 requires linux/x86_64 certification target")
+            if target["loaderVersion"] != "latest-stable":
+                die(f"Fabric {minecraft}: 0.17.1 requires loaderVersion=latest-stable selector with immutable resolution evidence")
+        fabric_java = {target["javaMajor"] for target in required_fabric_rows}
+        if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(fabric_java):
+            die(f"Fabric Compatibility II 0.17.1 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -356,8 +434,8 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: javaMajor must be one of {sorted(ALLOWED_JAVA_MAJORS)}")
         if scope not in ALLOWED_SCOPES:
             die(f"{target_id}: scope must be one of {sorted(ALLOWED_SCOPES)}")
-        if scope == "client" and loader != "vanilla":
-            die(f"{target_id}: client scope is allowed only for Vanilla")
+        if scope == "client" and loader not in {"vanilla", "fabric"}:
+            die(f"{target_id}: client scope is allowed only for Vanilla and Fabric")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
         if not isinstance(matching_server, bool):
@@ -538,14 +616,17 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
                 or platform_runtime.get("detectedOS") != target["os"] or platform_runtime.get("detectedArch") != target["arch"]):
             errors.append("evidence platformRuntime mismatch")
         files = evidence.get("files")
-        mandatory_files = (
-            {"client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-certification.json", "platform-runtime.json"}
-            if target["scope"] == "client"
-            else {
+        if target["scope"] == "client":
+            install_file = "fabric-install.json" if target["loader"] == "fabric" else "vanilla-install.json"
+            certification_file = "fabric-certification.json" if target["loader"] == "fabric" else "vanilla-certification.json"
+            mandatory_files = {
+                "client-package.json", "materialized-client-verify.json", install_file, certification_file, "platform-runtime.json",
+            }
+        else:
+            mandatory_files = {
                 "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
                 "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json", "platform-runtime.json",
             }
-        )
         if target.get("matchingServer") is True:
             mandatory_files = set(mandatory_files) | {"vanilla-server-install.json", "matching-server.json", "matching-server.log"}
         if compatibility_ii_ga_required():
@@ -588,7 +669,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
+        "Client scope: verified Mojang/Fabric materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Vanilla matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
         "Integration scope: canonical API upload → signed immutable release → clean NeverRuntime sync → actual client → Paper join → revoke/deny and health checks.",
         "",
     ]

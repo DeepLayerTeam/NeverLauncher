@@ -44,8 +44,8 @@ if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH"
   echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
   exit 2
 fi
-if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" ]]; then
-  echo "[compat] client scope is reserved for Vanilla baseline targets" >&2
+if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" ]]; then
+  echo "[compat] client scope is supported for Vanilla and Fabric targets" >&2
   exit 2
 fi
 
@@ -82,8 +82,10 @@ export NEVERLAUNCHER_E2E_PROFILE_ID="$LOADER"
 set +e
 if [[ "$SCOPE" == "client" && "$MATCHING_SERVER" == "true" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-matching-e2e.sh"
-elif [[ "$SCOPE" == "client" ]]; then
+elif [[ "$SCOPE" == "client" && "$LOADER" == "vanilla" ]]; then
   bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh"
+elif [[ "$SCOPE" == "client" && "$LOADER" == "fabric" ]]; then
+  bash "$ROOT/e2e/scripts/run-fabric-certification-case.sh"
 else
   bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 fi
@@ -134,14 +136,25 @@ if scope == "client":
     base = read("result.json") or {}
     package = read("client-package.json") or {}
     verify = read("materialized-client-verify.json") or {}
-    install = read("vanilla-install.json") or {}
-    probe = read("vanilla-certification.json") or {}
+    install_name = "fabric-install.json" if loader == "fabric" else "vanilla-install.json"
+    probe_name = "fabric-certification.json" if loader == "fabric" else "vanilla-certification.json"
+    install = read(install_name) or {}
+    probe = read(probe_name) or {}
     manifest_settings = package.get("manifestSettings") if isinstance(package.get("manifestSettings"), dict) else {}
     minecraft_settings = manifest_settings.get("minecraft") if isinstance(manifest_settings.get("minecraft"), dict) else {}
+    materialized = install.get("status") == "installed-and-verified" and install.get("minecraftVersion") == minecraft
+    if loader == "fabric":
+        profile_id = str(install.get("profileId") or "")
+        runtime_resolved = profile_id != "" and probe.get("minecraftVersion") == profile_id and probe.get("mainClass") == install.get("mainClass") and int(probe.get("classpathEntries") or 0) > 0
+        resolved = str(install.get("loaderVersion") or ((base.get("minecraft") or {}).get("resolvedLoaderVersion")) or "")
+        materialized = materialized and install.get("loader") == "fabric" and resolved not in ("", "latest", "latest-stable", "stable", "recommended")
+    else:
+        runtime_resolved = probe.get("minecraftVersion") == minecraft and probe.get("mainClass") not in (None, "") and int(probe.get("classpathEntries") or 0) > 0
+        resolved = ""
     checks = {
-        "materialized": install.get("status") == "installed-and-verified" and install.get("minecraftVersion") == minecraft,
+        "materialized": materialized,
         "packageVerified": verify.get("status") == "valid" and (verify.get("verify") or {}).get("valid") is True,
-        "runtimeResolved": probe.get("mainClass") not in (None, "") and int(probe.get("classpathEntries") or 0) > 0,
+        "runtimeResolved": runtime_resolved,
         "javaMatched": java_matched and probe.get("requiredJavaMajor") == java_major and probe.get("detectedJavaMajor") == java_major,
         "jreCertified": java_evidence.get("certified") is True,
         "actualClient": probe.get("status") == "passed" and (probe.get("timedOut") is True or probe.get("success") is True),
@@ -156,11 +169,10 @@ if scope == "client":
             "serverHealthy": matching.get("serverProcessAlive") is True,
             "clientJoinedServer": matching.get("clientJoinedServer") is True,
         })
-    resolved = ""
     manifest_loader = str(minecraft_settings.get("loader", ""))
     evidence_files = [name for name in [
-        "client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-server-install.json",
-        "vanilla-certification.json", "matching-server.json", "matching-server.log", "result.json"
+        "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
+        probe_name, "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
 else:
     base = read("result.json") or {}
