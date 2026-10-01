@@ -274,6 +274,43 @@ func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *
 	}
 }
 
+func TestForgeInstallV1ProcessorTokens(t *testing.T) {
+	clientDir := t.TempDir()
+	dataDir := filepath.Join(clientDir, ".neverlauncher", "installer-data")
+	if err := os.MkdirAll(filepath.Join(dataDir, "data"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	patchPath := filepath.Join(dataDir, "data", "client.lzma")
+	if err := os.WriteFile(patchPath, []byte("patch"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pc := forgeProcessorContext{
+		MinecraftVersion: "1.20.1", ClientDir: clientDir, InstallerPath: filepath.Join(clientDir, "installer.jar"), InstallerDataDir: dataDir,
+		Profile: &forgeInstallerProfile{Data: map[string]forgeDataValue{
+			"BINPATCH": {Client: "/data/client.lzma"},
+			"PATCHED":  {Client: "[net.minecraftforge:forge:1.20.1-47.4.23:client]"},
+			"HASH":     {Client: "'0123456789abcdef0123456789abcdef01234567'"},
+		}},
+	}
+	resolved, err := resolveProcessorToken(pc, "--mc={MINECRAFT_VERSION};side={SIDE};patch={BINPATCH};hash={HASH}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(resolved, "--mc=1.20.1;side=client;patch=") || !strings.Contains(resolved, patchPath) || !strings.HasSuffix(resolved, "hash=0123456789abcdef0123456789abcdef01234567") {
+		t.Fatalf("InstallV1 inline token expansion mismatch: %q", resolved)
+	}
+	artifact, err := resolveProcessorToken(pc, "{PATCHED}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(filepath.ToSlash(artifact), "libraries/net/minecraftforge/forge/1.20.1-47.4.23/forge-1.20.1-47.4.23-client.jar") {
+		t.Fatalf("InstallV1 artifact token mismatch: %q", artifact)
+	}
+	if _, err := resolveProcessorToken(pc, "{UNKNOWN}"); err == nil {
+		t.Fatal("unknown processor token accepted")
+	}
+}
+
 func TestInstallerArchiveSecurityAndCoordinateParsing(t *testing.T) {
 	if got, err := mavenCoordinatePath("net.minecraftforge:installertools:1.4.1:fatjar@jar"); err != nil || got != "net/minecraftforge/installertools/1.4.1/installertools-1.4.1-fatjar.jar" {
 		t.Fatalf("unexpected Maven path: %q %v", got, err)
@@ -313,7 +350,7 @@ func testForgeInstaller(t *testing.T, loader string, generated, processorJar []b
 	t.Helper()
 	profileID := "test-vanilla-" + loader + "-1.0.0"
 	profile := map[string]any{
-		"spec": 0, "profile": "com.example:" + loader + ":1.0.0", "version": profileID, "json": "/version.json", "minecraft": "test-vanilla",
+		"spec": 1, "profile": "com.example:" + loader + ":1.0.0", "version": profileID, "json": "/version.json", "minecraft": "test-vanilla",
 		"data": map[string]any{
 			"OUT":      map[string]any{"client": "[com.example:generated:1.0]", "server": ""},
 			"OUT_SHA":  map[string]any{"client": "'" + sha1HexLocal(generated) + "'", "server": ""},
@@ -321,7 +358,7 @@ func testForgeInstaller(t *testing.T, loader string, generated, processorJar []b
 		},
 		"processors": []any{map[string]any{
 			"sides": []any{"client"}, "jar": "com.example:processor:1.0", "classpath": []any{},
-			"args": []any{"--patch", "{BINPATCH}", "--out", "{OUT}"}, "outputs": map[string]any{"{OUT}": "{OUT_SHA}"},
+			"args": []any{"--patch", "{BINPATCH}", "--minecraft={MINECRAFT_VERSION}", "--side={SIDE}", "--out", "{OUT}"}, "outputs": map[string]any{"{OUT}": "{OUT_SHA}"},
 		}},
 		"libraries": []any{map[string]any{"name": "com.example:processor:1.0"}},
 	}

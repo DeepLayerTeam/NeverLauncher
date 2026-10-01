@@ -67,7 +67,7 @@ require(fabric_case, [
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
 require(compat_case, [
-    '"$LOADER" == "fabric"', "run-fabric-certification-case.sh", 'loader in ("fabric", "quilt")',
+    '"$LOADER" == "fabric"', "run-fabric-certification-case.sh", 'loader in ("fabric", "quilt", "forge")',
     'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"',
     "resolvedLoaderVersion", '"actualClient": probe.get("status") == "passed"',
 ], "Fabric compatibility routing/evidence")
@@ -75,7 +75,7 @@ require(compat_case, [
 matrix = read("scripts/compatibility/matrix.py")
 require(matrix, [
     "FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1",
-    'target["loader"] in {"fabric", "quilt"}', "install_file = f\"{target[\'loader\']}-install.json\"",
+    'target["loader"] in {"fabric", "quilt", "forge"}', "install_file = f\"{target[\'loader\']}-install.json\"",
     "certification_file = f\"{target[\'loader\']}-certification.json\"",
 ], "Fabric matrix enforcement")
 

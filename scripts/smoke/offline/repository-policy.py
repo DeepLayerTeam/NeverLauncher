@@ -2175,13 +2175,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     fabric_tests_0171 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
     fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II-0171.py")
     compat_workflow_0171 = read(".github/workflows/compatibility.yml")
-    for required in ["FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1", 'target["loader"] in {"fabric", "quilt"}', 'install_file = f"{target[\'loader\']}-install.json"', 'certification_file = f"{target[\'loader\']}-certification.json"']:
+    for required in ["FABRIC_COMPATIBILITY_II_0171", "fabric_compatibility_ii_0171_required", "Fabric Compatibility II 0.17.1", 'target["loader"] in {"fabric", "quilt", "forge"}', 'install_file = f"{target[\'loader\']}-install.json"', 'certification_file = f"{target[\'loader\']}-certification.json"']:
         if required not in fabric_matrix_0171:
             fail(f"0.17.1 Fabric compatibility matrix incomplete: {required}")
     for required in ["runtime fabric-package", "client verify", "fabric-install.json", "fabric-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
         if required not in fabric_case_0171:
             fail(f"0.17.1 Fabric actual-client execution incomplete: {required}")
-    for required in ["run-fabric-certification-case.sh", 'loader in ("fabric", "quilt")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+    for required in ["run-fabric-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
         if required not in compat_case_0171:
             fail(f"0.17.1 Fabric compatibility routing incomplete: {required}")
     for required in ["fabricCompatibilityII0171", "compatibilityFabricII0171Required", "FabricVersions", "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client"]:
@@ -2230,7 +2230,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["runtime quilt-package", "client verify", "quilt-install.json", "quilt-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
         if required not in quilt_case_0172:
             fail(f"0.17.2 Quilt actual-client execution incomplete: {required}")
-    for required in ["run-quilt-certification-case.sh", 'loader in ("fabric", "quilt")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+    for required in ["run-quilt-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
         if required not in compat_case_0172:
             fail(f"0.17.2 Quilt compatibility routing incomplete: {required}")
     for required in ["quiltCompatibilityII0172", "compatibilityQuiltII0172Required", "QuiltVersions", "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client"]:
@@ -2259,6 +2259,63 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.2 mandatory Quilt Compatibility II gate incomplete")
     if "quilt-compatibility-II-0172.py" not in preflight or "quilt-compatibility-II-0172.py" not in ci:
         fail("0.17.2 Quilt Compatibility II gate is not wired into preflight/CI")
+
+# 0.17.3 Forge Modern makes processor-based Forge 1.13.2+ an executable
+# compatibility line: installer processors must run, produce a verified profile,
+# resolve a concrete Forge version and launch that profile through NeverRuntime.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 3):
+    forge_matrix_0173 = read("scripts/compatibility/matrix.py")
+    forge_runtime_0173 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    forge_case_0173 = read("e2e/scripts/run-forge-certification-case.sh")
+    forge_api_0173 = read("services/api/internal/httpapi/server.go")
+    compat_case_0173 = read("e2e/scripts/run-compatibility-case.sh")
+    forge_release_0173 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    forge_targets_0173 = json.loads(read("compatibility/targets.json"))["targets"]
+    forge_tests_0173 = read("scripts/compatibility/test_matrix.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+    forge_gate_0173 = read("scripts/smoke/offline/forge-modern-0173.py")
+    compat_workflow_0173 = read(".github/workflows/compatibility.yml")
+    for required in ["FORGE_MODERN_0173", "forge_modern_0173_required", "Forge Modern 0.17.3"]:
+        if required not in forge_matrix_0173:
+            fail(f"0.17.3 Forge compatibility matrix incomplete: {required}")
+    if '"id": "forge"' not in forge_api_0173 or '"installer": "neverlauncher-forge-materializer"' not in forge_api_0173 or '"adapter": "compatibility-engine"' not in forge_api_0173:
+        fail("0.17.3 Forge loader catalog still advertises a planned adapter")
+    for required in ["runForgeProcessors", "clientProcessorCount", "processor-based modern installer format", "MINECRAFT_VERSION", "resolveProcessorNamedToken", "extractInstallerData", "installed-and-verified"]:
+        if required not in forge_runtime_0173:
+            fail(f"0.17.3 Forge processor materializer incomplete: {required}")
+    for required in ["runtime forge-package", "--java", "client verify", "forge-install.json", "forge-certification.json", "clientProcessorCount", "processorRan", "processorSkipped", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
+        if required not in forge_case_0173:
+            fail(f"0.17.3 Forge actual-client execution incomplete: {required}")
+    for required in ["run-forge-certification-case.sh", 'loader in ("fabric", "quilt", "forge")', 'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"', "resolvedLoaderVersion"]:
+        if required not in compat_case_0173:
+            fail(f"0.17.3 Forge compatibility routing incomplete: {required}")
+    for required in ["forgeModern0173", "compatibilityForgeModern0173Required", "ForgeVersions", "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"]:
+        if required not in forge_release_0173:
+            fail(f"0.17.3 Forge release certification incomplete: {required}")
+    forge_rows = [row for row in forge_targets_0173 if row.get("required") and row.get("loader") == "forge"]
+    if len(forge_rows) != 43 or len({row.get("minecraft") for row in forge_rows}) != 43:
+        fail("0.17.3 Forge target grid must contain exactly 43 unique processor-based releases")
+    if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in forge_rows}:
+        fail("0.17.3 Forge target grid does not cover Java 8/16/17/21/25")
+    if {row.get("minecraft") for row in forge_rows}.intersection({"1.13", "1.13.1"}):
+        fail("0.17.3 Forge Modern must not certify pre-processor Forge 1.13/1.13.1")
+    for required in [
+        "test_validate_accepts_forge_modern_0173_grid",
+        "test_validate_rejects_missing_forge_release_0173",
+        "test_validate_rejects_wrong_forge_java_0173",
+        "test_validate_rejects_duplicate_forge_release_0173",
+        "TestCompatibilityCertificationForgeModern0173",
+        "TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader",
+        "TestForgeInstallV1ProcessorTokens",
+    ]:
+        if required not in forge_tests_0173:
+            fail(f"0.17.3 Forge regression test missing: {required}")
+    for required in ["forge-install.json", "forge-certification.json"]:
+        if required not in compat_workflow_0173:
+            fail(f"0.17.3 Forge raw CI evidence upload missing: {required}")
+    if "Forge Modern 0.17.3 gate: OK" not in forge_gate_0173:
+        fail("0.17.3 mandatory Forge Modern gate incomplete")
+    if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
+        fail("0.17.3 Forge Modern gate is not wired into preflight/CI")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

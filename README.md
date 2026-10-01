@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Forge Modern — 0.17.3
+
+NeverLauncher 0.17.3 делает **processor-based Forge 1.13.2+ → current** отдельной production compatibility-линией. Обязательная матрица содержит 43 Forge release points `1.13.2`–`26.3` на exact Java 8/16/17/21/25. Client targets выполняют официальный Forge installer pipeline: verified installer.jar, embedded/profile Maven libraries, client processors и их outputs, generated version profile, package integrity и реальный launch через NeverRuntime. `1.21.1` сохраняет полный integration E2E.
+
+Forge installer executor поддерживает spec v1 inline tokens (`{MINECRAFT_VERSION}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}` и installer data/artifact values), требует минимум один client processor и fail-closed отклоняет legacy/non-processor installer. `latest-stable` должен разрешиться в concrete immutable Forge version до PASS.
+
 ## Quilt Compatibility II — 0.17.2
 
 NeverLauncher 0.17.2 расширяет production-сертификацию на **Quilt 1.14+ → current**. Обязательная Quilt-линия содержит 48 stable Minecraft release ID от `1.14` до `26.3` с exact Java 8/16/17/21/25. Для client-scope target CI использует официальный Quilt Meta v3, материализует настоящий Vanilla+Quilt client tree и Maven libraries, проверяет package integrity, разрешает `latest-stable` в конкретный immutable Quilt Loader и запускает materialized Quilt profile (`KnotClient`) через NeverRuntime на exact Java. `1.21.1` сохраняет полный integration E2E.
@@ -28,7 +34,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Quilt Compatibility II / 0.17.2**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Forge Modern / 0.17.3**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 
@@ -468,7 +474,7 @@ NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 
 ## Публичная CI Compatibility Matrix
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица содержит 207 targets: 109 Vanilla, широкие линии Fabric и Quilt по 48 stable releases `1.14`–`26.3`, а также Forge и NeoForge integration targets на `1.21.1`. Fabric/Quilt historical releases выполняются как Linux x86_64 actual-client targets; `1.21.1` сохраняет integration E2E. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица содержит 249 targets: 109 Vanilla, Fabric и Quilt по 48 stable releases `1.14`–`26.3`, 43 processor-based Forge releases `1.13.2`–`26.3` и NeoForge integration target на `1.21.1`. Fabric/Quilt/Forge historical releases выполняются как Linux x86_64 actual-client targets; `1.21.1` сохраняет integration E2E. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
 
 Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
 

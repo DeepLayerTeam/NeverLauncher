@@ -37,7 +37,7 @@ class MatrixToolTests(unittest.TestCase):
                 "platformMatched": True,
                 "jreCertified": True,
             }
-            if target["loader"] in {"fabric", "quilt"}:
+            if target["loader"] in {"fabric", "quilt", "forge"}:
                 install_name = f"{target['loader']}-install.json"
                 certification_name = f"{target['loader']}-certification.json"
             else:
@@ -344,6 +344,51 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
             duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "quilt" and target["minecraft"] == "1.14")
             duplicate["id"] = "quilt-1.14-linux-x64-duplicate"
+            doc["targets"].append(duplicate)
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("exactly one required target", proc.stderr)
+
+    def test_validate_accepts_forge_modern_0173_grid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_validate_rejects_missing_forge_release_0173(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [
+                target for target in doc["targets"]
+                if not (target["loader"] == "forge" and target["minecraft"] == "1.13.2")
+            ]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Forge Modern 0.17.3", proc.stderr)
+
+    def test_validate_rejects_wrong_forge_java_0173(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["loader"] == "forge" and target["minecraft"] == "1.17.1":
+                    target["javaMajor"] = 17
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Forge 1.17.1", proc.stderr)
+
+    def test_validate_rejects_duplicate_forge_release_0173(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "forge" and target["minecraft"] == "1.13.2")
+            duplicate["id"] = "forge-1.13.2-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))

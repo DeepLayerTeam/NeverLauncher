@@ -441,11 +441,44 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		}
 	}
 
+	if compatibilityForgeModern0173Required(ver) {
+		forgeVersions := make([]string, 0, len(forgeModern0173))
+		for minecraft := range forgeModern0173 {
+			forgeVersions = append(forgeVersions, minecraft)
+		}
+		sort.Strings(forgeVersions)
+		for _, minecraft := range forgeVersions {
+			javaMajor := forgeModern0173[minecraft]
+			scope := "client"
+			if minecraft == "1.21.1" {
+				scope = "integration"
+			}
+			id := "forge-" + minecraft + "-linux-x64"
+			targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+				ID: id, Minecraft: minecraft, Loader: "forge", LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, Scope: scope, Required: true,
+			})
+			checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true, "jreCertified": true}
+			if scope == "integration" {
+				checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true, "platformMatched": true, "jreCertified": true}
+			}
+			matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+				SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
+				Loader: "forge", LoaderSelector: "latest-stable", ResolvedLoaderVersion: "61.2.1", OS: "linux", Arch: "x86_64",
+				JavaMajor: javaMajor, DetectedJavaMajor: javaMajor, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: fmt.Sprintf("%d.0.0+ga", javaMajor), JREExecutableSHA256: evidence, Scope: scope, Commit: commit, RunID: "162", ExitCode: 0,
+				Checks: checks, EvidenceSHA256: evidence,
+			})
+		}
+	}
+
 	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
 		if loader == "fabric" && compatibilityFabricII0171Required(ver) {
 			continue
 		}
 		if loader == "quilt" && compatibilityQuiltII0172Required(ver) {
+			continue
+		}
+		if loader == "forge" && compatibilityForgeModern0173Required(ver) {
 			continue
 		}
 		id := loader + "-1.21.1-linux-x64"
@@ -1169,6 +1202,123 @@ func TestCompatibilityCertificationQuiltII0172RejectsMutableResolvedLoader(t *te
 	matrixRaw, _ = json.Marshal(matrix)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "immutable version") {
 		t.Fatalf("0.17.2 must reject mutable Quilt loader evidence, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationForgeModern0173(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173")
+	if err != nil {
+		t.Fatalf("0.17.3 Forge Modern evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client") {
+		t.Fatalf("0.17.3 policy does not bind Forge Modern: %s", certification.Policy)
+	}
+	if len(certification.ForgeVersions) != len(forgeModern0173) {
+		t.Fatalf("0.17.3 Forge coverage=%d, want %d", len(certification.ForgeVersions), len(forgeModern0173))
+	}
+	for _, minecraft := range []string{"1.13.2", "1.17.1", "1.20.6", "1.21.11", "26.3"} {
+		if !slices.Contains(certification.ForgeVersions, minecraft) {
+			t.Fatalf("0.17.3 Forge coverage missing %s", minecraft)
+		}
+	}
+}
+
+func TestCompatibilityCertificationForgeModern0173RejectsMissingRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "forge" && target.Minecraft == "1.13.2" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "Forge Modern 0.17.3") {
+		t.Fatalf("0.17.3 must reject missing Forge 1.13.2 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationForgeModern0173RejectsWrongJavaMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "forge" && targets.Targets[i].Minecraft == "1.17.1" {
+			targets.Targets[i].JavaMajor = 17
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "Forge 1.17.1") {
+		t.Fatalf("0.17.3 must reject Forge 1.17.1 Java mismatch, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationForgeModern0173BundleRejectsTamperedForgeCoverage(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
+	dir := t.TempDir()
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.3", "commit-173"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert releaseCompatibilityCertification
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	if len(cert.ForgeVersions) < 2 {
+		t.Fatalf("expected broad Forge coverage, got %v", cert.ForgeVersions)
+	}
+	cert.ForgeVersions = cert.ForgeVersions[:len(cert.ForgeVersions)-1]
+	raw, err = json.MarshalIndent(cert, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, '\n')
+	if err := os.WriteFile(certPath, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.3"); err == nil {
+		t.Fatal("bundle verifier must reject tampered Forge coverage")
+	}
+}
+
+func TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.3", "commit-173")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].Loader == "forge" && matrix.Targets[i].MinecraftVersion == "1.13.2" {
+			matrix.Targets[i].ResolvedLoaderVersion = "latest-stable"
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+		t.Fatalf("0.17.3 must reject mutable Forge loader evidence, got %v", err)
 	}
 }
 

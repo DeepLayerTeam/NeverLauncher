@@ -104,6 +104,7 @@ type releaseCompatibilityCertification struct {
 	VanillaVersions   []string                       `json:"vanillaVersions,omitempty"`
 	FabricVersions    []string                       `json:"fabricVersions,omitempty"`
 	QuiltVersions     []string                       `json:"quiltVersions,omitempty"`
+	ForgeVersions     []string                       `json:"forgeVersions,omitempty"`
 	JavaMajors        []int                          `json:"javaMajors,omitempty"`
 	JREBuilds         []releaseCompatibilityJREBuild `json:"jreBuilds,omitempty"`
 	Scopes            []string                       `json:"scopes,omitempty"`
@@ -217,6 +218,21 @@ var quiltCompatibilityII0172 = func() map[string]int {
 	}
 	return grid
 }()
+
+var forgeModern0173 = map[string]int{
+	"1.13.2": 8,
+	"1.14.2": 8, "1.14.3": 8, "1.14.4": 8,
+	"1.15": 8, "1.15.1": 8, "1.15.2": 8,
+	"1.16.1": 8, "1.16.2": 8, "1.16.3": 8, "1.16.4": 8, "1.16.5": 8,
+	"1.17.1": 16,
+	"1.18":   17, "1.18.1": 17, "1.18.2": 17,
+	"1.19": 17, "1.19.1": 17, "1.19.2": 17, "1.19.3": 17, "1.19.4": 17,
+	"1.20": 17, "1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
+	"1.20.6": 21,
+	"1.21":   21, "1.21.1": 21, "1.21.3": 21, "1.21.4": 21, "1.21.5": 21,
+	"1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
+	"26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25, "26.3": 25,
+}
 
 var java21VanillaCompatibility0167 = map[string]string{
 	"1.20.5":  "client",
@@ -342,6 +358,10 @@ func compatibilityQuiltII0172Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 2)
 }
 
+func compatibilityForgeModern0173Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 3)
+}
+
 func compatibilityCertificationRequired(ver string) bool {
 	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
 	if len(parts) < 2 {
@@ -440,7 +460,8 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			clientLoaderAllowed := target.Loader == "vanilla" ||
 				(compatibilityFabricII0171Required(ver) && target.Loader == "fabric") ||
-				(compatibilityQuiltII0172Required(ver) && target.Loader == "quilt")
+				(compatibilityQuiltII0172Required(ver) && target.Loader == "quilt") ||
+				(compatibilityForgeModern0173Required(ver) && target.Loader == "forge")
 			if target.Scope == "client" && !clientLoaderAllowed {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: client scope не разрешён для loader=%s в версии %s", id, target.Loader, ver)
 			}
@@ -702,6 +723,46 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityForgeModern0173Required(ver) {
+			forgeTargets := map[string]releaseCompatibilityTarget{}
+			forgeJava := map[int]bool{}
+			forgeCount := 0
+			for _, target := range targets.Targets {
+				if !target.Required || target.Loader != "forge" {
+					continue
+				}
+				forgeCount++
+				if _, exists := forgeTargets[target.Minecraft]; exists {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 duplicate required target for Minecraft %s", target.Minecraft)
+				}
+				forgeTargets[target.Minecraft] = target
+				forgeJava[target.JavaMajor] = true
+			}
+			if forgeCount != len(forgeModern0173) {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 requires exactly %d processor-based release targets; got %d", len(forgeModern0173), forgeCount)
+			}
+			for minecraft, javaMajor := range forgeModern0173 {
+				target, ok := forgeTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 missing required Minecraft %s", minecraft)
+				}
+				expectedScope := "client"
+				if minecraft == "1.21.1" {
+					expectedScope = "integration"
+				}
+				if target.JavaMajor != javaMajor || target.Scope != expectedScope || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3 mismatch: expected Java %d scope=%s linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, expectedScope, target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+				if target.LoaderVersion != "latest-stable" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge %s 0.17.3 requires loaderVersion=latest-stable selector", minecraft)
+				}
+			}
+			for _, major := range []int{8, 16, 17, 21, 25} {
+				if !forgeJava[major] {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3 missing JRE major %d", major)
+				}
+			}
+		}
 
 	}
 
@@ -728,6 +789,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	vanillaVersionSet := map[string]bool{}
 	fabricVersionSet := map[string]bool{}
 	quiltVersionSet := map[string]bool{}
+	forgeVersionSet := map[string]bool{}
 	javaMajorSet := map[int]bool{}
 	jreBuildSet := map[string]*releaseCompatibilityJREBuild{}
 	scopeSet := map[string]bool{}
@@ -814,6 +876,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			if target.Loader == "quilt" && target.Required {
 				quiltVersionSet[target.Minecraft] = true
 			}
+			if target.Loader == "forge" && target.Required {
+				forgeVersionSet[target.Minecraft] = true
+			}
 		}
 	}
 
@@ -839,6 +904,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		quiltVersions = append(quiltVersions, minecraft)
 	}
 	sort.Strings(quiltVersions)
+	forgeVersions := make([]string, 0, len(forgeVersionSet))
+	for minecraft := range forgeVersionSet {
+		forgeVersions = append(forgeVersions, minecraft)
+	}
+	sort.Strings(forgeVersions)
 	javaMajors := make([]int, 0, len(javaMajorSet))
 	for major := range javaMajorSet {
 		javaMajors = append(javaMajors, major)
@@ -920,6 +990,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityQuiltII0172Required(ver) {
 		policy += ";quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client"
 	}
+	if compatibilityForgeModern0173Required(ver) {
+		policy += ";forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",
 		ProductVersion:    ver,
@@ -935,6 +1008,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		VanillaVersions:   vanillaVersions,
 		FabricVersions:    fabricVersions,
 		QuiltVersions:     quiltVersions,
+		ForgeVersions:     forgeVersions,
 		JavaMajors:        javaMajors,
 		JREBuilds:         jreBuilds,
 		Scopes:            scopes,
@@ -973,6 +1047,9 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") ||
 		strings.Join(stored.LoaderFamilies, "\x00") != strings.Join(expected.LoaderFamilies, "\x00") ||
 		strings.Join(stored.VanillaVersions, "\x00") != strings.Join(expected.VanillaVersions, "\x00") ||
+		strings.Join(stored.FabricVersions, "\x00") != strings.Join(expected.FabricVersions, "\x00") ||
+		strings.Join(stored.QuiltVersions, "\x00") != strings.Join(expected.QuiltVersions, "\x00") ||
+		strings.Join(stored.ForgeVersions, "\x00") != strings.Join(expected.ForgeVersions, "\x00") ||
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {

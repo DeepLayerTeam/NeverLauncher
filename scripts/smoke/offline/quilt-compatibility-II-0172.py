@@ -65,7 +65,7 @@ require(quilt_case, [
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
 require(compat_case, [
-    '"$LOADER" == "quilt"', "run-quilt-certification-case.sh", 'loader in ("fabric", "quilt")',
+    '"$LOADER" == "quilt"', "run-quilt-certification-case.sh", 'loader in ("fabric", "quilt", "forge")',
     'install_name = f"{loader}-install.json"', 'probe_name = f"{loader}-certification.json"',
     "resolvedLoaderVersion", '"actualClient": probe.get("status") == "passed"',
 ], "Quilt compatibility routing/evidence")
@@ -73,7 +73,7 @@ require(compat_case, [
 matrix = read("scripts/compatibility/matrix.py")
 require(matrix, [
     "QUILT_COMPATIBILITY_II_0172", "quilt_compatibility_ii_0172_required", "Quilt Compatibility II 0.17.2",
-    'target["loader"] in {"fabric", "quilt"}', 'install_file = f"{target[\'loader\']}-install.json"',
+    'target["loader"] in {"fabric", "quilt", "forge"}', 'install_file = f"{target[\'loader\']}-install.json"',
     'certification_file = f"{target[\'loader\']}-certification.json"',
 ], "Quilt matrix enforcement")
 

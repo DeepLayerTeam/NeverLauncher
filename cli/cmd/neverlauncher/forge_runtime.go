@@ -76,30 +76,31 @@ type forgeInstallerProfile struct {
 }
 
 type forgeMaterializeResult struct {
-	SchemaVersion    string                  `json:"schemaVersion"`
-	ToolVersion      string                  `json:"toolVersion"`
-	Loader           string                  `json:"loader"`
-	MinecraftVersion string                  `json:"minecraftVersion"`
-	LoaderVersion    string                  `json:"loaderVersion"`
-	ArtifactVersion  string                  `json:"artifactVersion"`
-	ProfileID        string                  `json:"profileId"`
-	ProfilePath      string                  `json:"profilePath"`
-	MainClass        string                  `json:"mainClass"`
-	ClientDir        string                  `json:"clientDir"`
-	JavaMajorVersion int                     `json:"javaMajorVersion"`
-	InstallerSHA1    string                  `json:"installerSha1"`
-	InstallerSHA256  string                  `json:"installerSha256"`
-	ProcessorCount   int                     `json:"processorCount"`
-	ProcessorRan     int                     `json:"processorRan"`
-	ProcessorSkipped int                     `json:"processorSkipped"`
-	LibraryCount     int                     `json:"libraryCount"`
-	Downloaded       int                     `json:"downloaded"`
-	Cached           int                     `json:"cached"`
-	TotalBytes       int64                   `json:"totalBytes"`
-	ProfileSHA256    string                  `json:"profileSha256"`
-	Vanilla          vanillaInstallResult    `json:"vanilla"`
-	Files            []vanillaDownloadedFile `json:"files"`
-	Status           string                  `json:"status"`
+	SchemaVersion        string                  `json:"schemaVersion"`
+	ToolVersion          string                  `json:"toolVersion"`
+	Loader               string                  `json:"loader"`
+	MinecraftVersion     string                  `json:"minecraftVersion"`
+	LoaderVersion        string                  `json:"loaderVersion"`
+	ArtifactVersion      string                  `json:"artifactVersion"`
+	ProfileID            string                  `json:"profileId"`
+	ProfilePath          string                  `json:"profilePath"`
+	MainClass            string                  `json:"mainClass"`
+	ClientDir            string                  `json:"clientDir"`
+	JavaMajorVersion     int                     `json:"javaMajorVersion"`
+	InstallerSHA1        string                  `json:"installerSha1"`
+	InstallerSHA256      string                  `json:"installerSha256"`
+	ProcessorCount       int                     `json:"processorCount"`
+	ClientProcessorCount int                     `json:"clientProcessorCount"`
+	ProcessorRan         int                     `json:"processorRan"`
+	ProcessorSkipped     int                     `json:"processorSkipped"`
+	LibraryCount         int                     `json:"libraryCount"`
+	Downloaded           int                     `json:"downloaded"`
+	Cached               int                     `json:"cached"`
+	TotalBytes           int64                   `json:"totalBytes"`
+	ProfileSHA256        string                  `json:"profileSha256"`
+	Vanilla              vanillaInstallResult    `json:"vanilla"`
+	Files                []vanillaDownloadedFile `json:"files"`
+	Status               string                  `json:"status"`
 }
 
 type mavenMetadataXML struct {
@@ -334,6 +335,15 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err := validateLoaderProfileID(bundle.Version.ID); err != nil {
 		return forgeMaterializeResult{}, err
 	}
+	clientProcessorCount := 0
+	for _, processor := range bundle.Profile.Processors {
+		if processorAppliesToClient(processor.Sides) {
+			clientProcessorCount++
+		}
+	}
+	if clientProcessorCount == 0 {
+		return forgeMaterializeResult{}, fmt.Errorf("%s installer не содержит client processors; поддерживается только processor-based modern installer format", loader)
+	}
 
 	javaPath, err := selectInstallerJava(opts.JavaExecutable, vanilla.JavaMajorVersion)
 	if err != nil {
@@ -352,7 +362,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err := os.MkdirAll(installerDataDir, 0o755); err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("installer data create: %w", err)
 	}
-	if err := extractInstallerData(installerPath, installerDataDir); err != nil {
+	if err := extractInstallerData(installerPath, installerDataDir, &bundle.Profile); err != nil {
 		return forgeMaterializeResult{}, err
 	}
 
@@ -423,7 +433,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		"artifactVersion": artifactVersion, "profileId": bundle.Version.ID, "profilePath": profilePath,
 		"profileSha256": hex.EncodeToString(profileSHA[:]), "installerUrl": installerURL,
 		"installerSha1": installerSHA1, "installerSha256": installerFile.SHA256,
-		"mavenMetadata": metadataURL, "processorRan": stats.Ran, "processorSkipped": stats.Skipped,
+		"mavenMetadata": metadataURL, "clientProcessorCount": clientProcessorCount, "processorRan": stats.Ran, "processorSkipped": stats.Skipped,
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
@@ -441,7 +451,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		ProfileID: bundle.Version.ID, ProfilePath: profilePath, MainClass: bundle.Version.MainClass,
 		ClientDir: opts.ClientDir, JavaMajorVersion: vanilla.JavaMajorVersion,
 		InstallerSHA1: installerSHA1, InstallerSHA256: installerFile.SHA256,
-		ProcessorCount: len(bundle.Profile.Processors), ProcessorRan: stats.Ran, ProcessorSkipped: stats.Skipped,
+		ProcessorCount: len(bundle.Profile.Processors), ClientProcessorCount: clientProcessorCount, ProcessorRan: stats.Ran, ProcessorSkipped: stats.Skipped,
 		LibraryCount: len(bundle.Profile.Libraries) + len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
 		TotalBytes: total, ProfileSHA256: hex.EncodeToString(profileSHA[:]), Vanilla: vanilla, Files: files,
 		Status: "installed-and-verified",
@@ -632,16 +642,37 @@ func readZipFileLimited(zr *zip.Reader, wanted string, limit int64) ([]byte, err
 	return nil, os.ErrNotExist
 }
 
-func extractInstallerData(installerPath, targetDir string) error {
+func extractInstallerData(installerPath, targetDir string, profile *forgeInstallerProfile) error {
+	if profile == nil {
+		return errors.New("installer profile отсутствует")
+	}
+	required := map[string]bool{}
+	for key, data := range profile.Data {
+		value := strings.TrimSpace(data.Client)
+		if value == "" || (strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]")) || isQuotedInstallerLiteral(value) {
+			continue
+		}
+		rel, err := safeArchiveRelative(strings.TrimPrefix(value, "/"))
+		if err != nil {
+			return fmt.Errorf("installer data %s: %w", key, err)
+		}
+		required[rel] = false
+	}
+	if len(required) == 0 {
+		return nil
+	}
 	zr, err := zip.OpenReader(installerPath)
 	if err != nil {
 		return err
 	}
 	defer zr.Close()
 	for _, entry := range zr.File {
-		name := strings.ReplaceAll(entry.Name, "\\", "/")
-		if !strings.HasPrefix(name, "data/") || strings.HasSuffix(name, "/") {
+		name := strings.TrimPrefix(strings.ReplaceAll(entry.Name, "\\", "/"), "/")
+		if _, wanted := required[name]; !wanted {
 			continue
+		}
+		if strings.HasSuffix(name, "/") {
+			return fmt.Errorf("installer data %s является каталогом", name)
 		}
 		clean, err := safeArchiveRelative(name)
 		if err != nil {
@@ -654,8 +685,24 @@ func extractInstallerData(installerPath, targetDir string) error {
 		if err := copyZipEntryAtomic(entry, dst); err != nil {
 			return err
 		}
+		required[name] = true
+	}
+	missing := make([]string, 0)
+	for name, extracted := range required {
+		if !extracted {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return fmt.Errorf("installer не содержит client data files: %s", strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+func isQuotedInstallerLiteral(value string) bool {
+	value = strings.TrimSpace(value)
+	return len(value) >= 2 && ((value[0] == '\'' && value[len(value)-1] == '\'') || (value[0] == '"' && value[len(value)-1] == '"'))
 }
 
 func extractEmbeddedMaven(installerPath, clientDir string) ([]vanillaDownloadedFile, error) {
@@ -1032,46 +1079,66 @@ func processorOutputsMatch(pc forgeProcessorContext, processor forgeProcessor) (
 
 func resolveProcessorToken(pc forgeProcessorContext, raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
-	if len(raw) >= 2 && ((raw[0] == '\'' && raw[len(raw)-1] == '\'') || (raw[0] == '"' && raw[len(raw)-1] == '"')) {
+	if isQuotedInstallerLiteral(raw) {
 		raw = raw[1 : len(raw)-1]
 	}
 	if strings.HasPrefix(raw, "[") && strings.HasSuffix(raw, "]") {
 		return processorArtifactPath(pc.ClientDir, raw[1:len(raw)-1], false)
 	}
-	if strings.HasPrefix(raw, "{") && strings.HasSuffix(raw, "}") && strings.Count(raw, "{") == 1 {
-		key := raw[1 : len(raw)-1]
-		switch key {
-		case "ROOT":
-			return filepath.Abs(pc.ClientDir)
-		case "MINECRAFT_JAR":
-			root, _ := filepath.Abs(pc.ClientDir)
-			return filepath.Join(root, "versions", pc.MinecraftVersion, pc.MinecraftVersion+".jar"), nil
-		case "INSTALLER":
-			return filepath.Abs(pc.InstallerPath)
-		case "LIBRARY_DIR":
-			root, _ := filepath.Abs(pc.ClientDir)
-			return filepath.Join(root, "libraries"), nil
-		case "SIDE":
-			return "client", nil
-		default:
-			value, ok := pc.Profile.Data[key]
-			if !ok {
-				return "", fmt.Errorf("неизвестный installer data token {%s}", key)
-			}
-			return resolveInstallerDataValue(pc, value.Client)
+	var out strings.Builder
+	for cursor := 0; cursor < len(raw); {
+		open := strings.IndexByte(raw[cursor:], '{')
+		if open < 0 {
+			out.WriteString(raw[cursor:])
+			break
 		}
-	}
-	out := raw
-	for _, key := range []string{"ROOT", "MINECRAFT_JAR", "INSTALLER", "LIBRARY_DIR", "SIDE"} {
-		if strings.Contains(out, "{"+key+"}") {
-			value, err := resolveProcessorToken(pc, "{"+key+"}")
-			if err != nil {
-				return "", err
-			}
-			out = strings.ReplaceAll(out, "{"+key+"}", value)
+		open += cursor
+		out.WriteString(raw[cursor:open])
+		closeRel := strings.IndexByte(raw[open+1:], '}')
+		if closeRel < 0 {
+			return "", fmt.Errorf("незакрытый processor token в %q", raw)
 		}
+		close := open + 1 + closeRel
+		key := raw[open+1 : close]
+		if key == "" || strings.ContainsAny(key, "{}") {
+			return "", fmt.Errorf("некорректный processor token {%s}", key)
+		}
+		value, err := resolveProcessorNamedToken(pc, key)
+		if err != nil {
+			return "", err
+		}
+		out.WriteString(value)
+		cursor = close + 1
 	}
-	return out, nil
+	if strings.ContainsRune(out.String(), '}') {
+		return "", fmt.Errorf("лишняя закрывающая скобка processor token в %q", raw)
+	}
+	return out.String(), nil
+}
+
+func resolveProcessorNamedToken(pc forgeProcessorContext, key string) (string, error) {
+	switch key {
+	case "ROOT":
+		return filepath.Abs(pc.ClientDir)
+	case "MINECRAFT_JAR":
+		root, _ := filepath.Abs(pc.ClientDir)
+		return filepath.Join(root, "versions", pc.MinecraftVersion, pc.MinecraftVersion+".jar"), nil
+	case "MINECRAFT_VERSION":
+		return pc.MinecraftVersion, nil
+	case "INSTALLER":
+		return filepath.Abs(pc.InstallerPath)
+	case "LIBRARY_DIR":
+		root, _ := filepath.Abs(pc.ClientDir)
+		return filepath.Join(root, "libraries"), nil
+	case "SIDE":
+		return "client", nil
+	default:
+		value, ok := pc.Profile.Data[key]
+		if !ok {
+			return "", fmt.Errorf("неизвестный installer data token {%s}", key)
+		}
+		return resolveInstallerDataValue(pc, value.Client)
+	}
 }
 
 func resolveInstallerDataValue(pc forgeProcessorContext, value string) (string, error) {
@@ -1082,18 +1149,19 @@ func resolveInstallerDataValue(pc forgeProcessorContext, value string) (string, 
 	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
 		return processorArtifactPath(pc.ClientDir, value[1:len(value)-1], false)
 	}
-	if strings.HasPrefix(value, "/") {
-		rel, err := safeArchiveRelative(strings.TrimPrefix(value, "/"))
-		if err != nil {
-			return "", err
-		}
-		full := filepath.Join(pc.InstallerDataDir, filepath.FromSlash(rel))
-		if _, err := os.Stat(full); err != nil {
-			return "", fmt.Errorf("installer data %s не извлечён: %w", value, err)
-		}
-		return filepath.Abs(full)
+	if isQuotedInstallerLiteral(value) {
+		return value[1 : len(value)-1], nil
 	}
-	return value, nil
+	rel, err := safeArchiveRelative(strings.TrimPrefix(value, "/"))
+	if err != nil {
+		return "", err
+	}
+	full := filepath.Join(pc.InstallerDataDir, filepath.FromSlash(rel))
+	info, err := os.Stat(full)
+	if err != nil || info.IsDir() {
+		return "", fmt.Errorf("installer data %s не извлечён: %w", value, err)
+	}
+	return filepath.Abs(full)
 }
 
 func resolveProcessorArtifactPath(clientDir, coordinate string) (string, error) {

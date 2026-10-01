@@ -89,6 +89,7 @@ jobs:
           python3 scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py
           python3 scripts/smoke/offline/fabric-compatibility-II-0171.py
           python3 scripts/smoke/offline/quilt-compatibility-II-0172.py
+          python3 scripts/smoke/offline/forge-modern-0173.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json

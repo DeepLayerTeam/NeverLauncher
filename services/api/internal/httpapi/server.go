@@ -196,7 +196,7 @@ func loaderCatalog() []map[string]any {
 		{"id": "vanilla", "name": "Vanilla", "resolution": "mojang-version-manifest-v2", "adapter": "compatibility-engine", "installer": "neverlauncher-vanilla-materializer", "managedJava": true},
 		{"id": "fabric", "name": "Fabric", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-fabric-materializer", "managedJava": true},
 		{"id": "quilt", "name": "Quilt", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-quilt-materializer", "managedJava": true},
-		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
+		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-forge-materializer", "managedJava": true},
 		{"id": "neoforge", "name": "NeoForge", "resolution": "inherited-version-json", "adapter": "planned", "installer": "planned"},
 	}
 }

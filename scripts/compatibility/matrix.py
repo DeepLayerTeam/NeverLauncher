@@ -172,6 +172,25 @@ FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
 QUILT_COMPATIBILITY_II_0172: dict[str, int] = dict(FABRIC_COMPATIBILITY_II_0171)
 
 
+# Forge Modern 0.17.3 certifies the official processor-based Forge line.
+# Forge switched to the processor installer model at Minecraft 1.13.2;
+# release points follow the stable Forge promotions catalogue.
+FORGE_MODERN_0173: dict[str, int] = {
+    "1.13.2": 8,
+    "1.14.2": 8, "1.14.3": 8, "1.14.4": 8,
+    "1.15": 8, "1.15.1": 8, "1.15.2": 8,
+    "1.16.1": 8, "1.16.2": 8, "1.16.3": 8, "1.16.4": 8, "1.16.5": 8,
+    "1.17.1": 16,
+    "1.18": 17, "1.18.1": 17, "1.18.2": 17,
+    "1.19": 17, "1.19.1": 17, "1.19.2": 17, "1.19.3": 17, "1.19.4": 17,
+    "1.20": 17, "1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
+    "1.20.6": 21,
+    "1.21": 21, "1.21.1": 21, "1.21.3": 21, "1.21.4": 21, "1.21.5": 21,
+    "1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
+    "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25, "26.3": 25,
+}
+
+
 def die(message: str) -> None:
     raise SystemExit(message)
 
@@ -239,6 +258,10 @@ def fabric_compatibility_ii_0171_required() -> bool:
 
 def quilt_compatibility_ii_0172_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 2)
+
+
+def forge_modern_0173_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 3)
 
 
 def load_json(path: Path) -> Any:
@@ -411,6 +434,30 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(quilt_java):
             die(f"Quilt Compatibility II 0.17.2 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
 
+    if forge_modern_0173_required():
+        required_forge_rows = [target for target in targets if target["loader"] == "forge" and target["required"]]
+        actual_versions = {target["minecraft"] for target in required_forge_rows}
+        expected_versions = set(FORGE_MODERN_0173)
+        if actual_versions != expected_versions:
+            missing = sorted(expected_versions - actual_versions)
+            extra = sorted(actual_versions - expected_versions)
+            die(f"Forge Modern 0.17.3 release grid mismatch: missing={missing} extra={extra}")
+        if len(required_forge_rows) != len(FORGE_MODERN_0173):
+            die("Forge Modern 0.17.3 requires exactly one required target per processor-based Forge release")
+        for target in required_forge_rows:
+            minecraft = target["minecraft"]
+            expected_java = FORGE_MODERN_0173[minecraft]
+            expected_scope = "integration" if minecraft == "1.21.1" else "client"
+            if target["javaMajor"] != expected_java or target["scope"] != expected_scope:
+                die(f"Forge {minecraft}: 0.17.3 requires Java {expected_java} scope={expected_scope}")
+            if target["os"] != "linux" or target["arch"] != "x86_64":
+                die(f"Forge {minecraft}: 0.17.3 requires linux/x86_64 certification target")
+            if target["loaderVersion"] != "latest-stable":
+                die(f"Forge {minecraft}: 0.17.3 requires loaderVersion=latest-stable selector with immutable resolution evidence")
+        forge_java = {target["javaMajor"] for target in required_forge_rows}
+        if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(forge_java):
+            die(f"Forge Modern 0.17.3 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
+
 
 def load_targets(path: Path) -> dict[str, Any]:
     payload = load_json(path)
@@ -470,6 +517,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             loader == "vanilla"
             or (loader == "fabric" and fabric_compatibility_ii_0171_required())
             or (loader == "quilt" and quilt_compatibility_ii_0172_required())
+            or (loader == "forge" and forge_modern_0173_required())
         )
         if scope == "client" and not client_loader_allowed:
             die(f"{target_id}: client scope is not enabled for loader {loader} in VERSION={PRODUCT_VERSION}")
@@ -654,7 +702,7 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             errors.append("evidence platformRuntime mismatch")
         files = evidence.get("files")
         if target["scope"] == "client":
-            if target["loader"] in {"fabric", "quilt"}:
+            if target["loader"] in {"fabric", "quilt", "forge"}:
                 install_file = f"{target['loader']}-install.json"
                 certification_file = f"{target['loader']}-certification.json"
             else:
@@ -710,7 +758,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Client scope: verified Mojang/Fabric materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Vanilla matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
+        "Client scope: verified Mojang/Fabric/Quilt/Forge materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS). Vanilla matching-server targets additionally materialize verified Mojang server.jar for the exact same Minecraft version and require a real client join.",
         "Integration scope: canonical API upload → signed immutable release → clean NeverRuntime sync → actual client → Paper join → revoke/deny and health checks.",
         "",
     ]

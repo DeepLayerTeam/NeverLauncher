@@ -1,3 +1,11 @@
+## 0.17.3 — Forge Modern
+
+- Promoted processor-based Forge to a mandatory executable compatibility line covering **43 official Forge release points from Minecraft 1.13.2 through 26.3**, with exact Java 8/16/17/21/25 binding. Forge 1.13/1.13.1 are not advertised because the modern processor installer line starts at 1.13.2.
+- Hardened the production Forge installer executor: client processors are mandatory, Installer spec v1 inline `{TOKEN}` substitution is supported, `{MINECRAFT_VERSION}`/`{INSTALLER}`/`{LIBRARY_DIR}`/`{SIDE}` and installer data/artifact tokens resolve fail-closed, and referenced packaged data is extracted explicitly instead of treating the installer as metadata only.
+- Forge client certification now runs `forge-package` with the exact target Java, verifies the materialized package, checks concrete immutable Forge resolution plus installer/profile SHA-256 and processor execution evidence, then launches the materialized Forge profile through NeverRuntime.
+- `1.21.1` retains full integration E2E; the other Forge Modern targets use Linux x86_64 actual-client certification. Release aggregation rejects missing/duplicate releases, wrong Java/scope/platform, mutable resolved Forge versions and incomplete processor/client evidence.
+- Added raw `forge-install.json`/`forge-certification.json` CI artifacts, mandatory 0.17.3 offline/repository/preflight gates, and regression tests for the 43-release grid, processor tokens and release certification.
+
 ## 0.17.2 — Quilt Compatibility II
 
 - Expanded executable Quilt compatibility from the single 1.21.1 integration target to **48 stable Minecraft releases from 1.14 through 26.3**, bound to exact Java 8/16/17/21/25.

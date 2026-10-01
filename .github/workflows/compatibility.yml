@@ -106,6 +106,8 @@ jobs:
             e2e/runtime/fabric-certification.json
             e2e/runtime/quilt-install.json
             e2e/runtime/quilt-certification.json
+            e2e/runtime/forge-install.json
+            e2e/runtime/forge-certification.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
             e2e/runtime/manifest.json
