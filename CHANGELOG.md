@@ -1,3 +1,13 @@
+## 0.16.3 — Legacy Vanilla 1.7.10–1.16.5 / Java 8
+
+`0.16.3` превращает legacy Vanilla coverage из трёх representative anchors в исполняемый Java 8 release-line gate и исправляет два runtime-дефекта, обнаруженных на настоящем metadata старых клиентов.
+
+- Обязательная legacy-линия: `1.7.10`, `1.8.9`, `1.9.4`, `1.10.2`, `1.11.2`, `1.12.2`, `1.13.2`, `1.14.4`, `1.15.2`, `1.16.5`; каждый target использует exact Java 8, verified Mojang materialization и `NeverRuntime certify-vanilla`.
+- Vanilla materializer больше не синтезирует несуществующий classpath JAR для classifier-only библиотек (`lwjgl-platform`, `jinput-platform` и аналогов): скачиваются и распаковываются только реальные native classifiers из Mojang metadata.
+- NeverRuntime применяет ту же classifier-only семантику при построении classpath, поддерживает `${user_properties}`/`${profile_properties}` для legacy `minecraftArguments` и возвращает Java 8 как resolved runtime для release-диапазона 1.7.10–1.16.5, если `javaVersion` отсутствует.
+- Strict upstream mode остаётся fail-closed: обычная библиотека без проверяемого Mojang artifact отклоняется; Maven-coordinate fallback сохраняется только для явно non-strict/local metadata.
+- Release certification 0.16.3 не может пройти при удалении любой legacy release-line цели или при Java mismatch; Baseline II 1.17.1–1.21.1 и Fabric/Quilt/Forge/NeoForge integration coverage сохраняются.
+
 ## 0.16.2 — Vanilla Compatibility Baseline II
 
 `0.16.2` заменяет одноверсионную Vanilla certification на исполняемую многоверсионную модель без новой DB migration и без ослабления существующего integration E2E.

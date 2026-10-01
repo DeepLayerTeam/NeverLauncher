@@ -136,6 +136,16 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Baseline II", proc.stderr)
 
+    def test_validate_rejects_missing_legacy_release_line_0163(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.8.9"]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Legacy Vanilla 0.16.3", proc.stderr)
+
     def test_aggregate_accepts_bound_multiversion_java_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

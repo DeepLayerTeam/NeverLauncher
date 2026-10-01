@@ -322,11 +322,23 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			continue
 		}
 		artifact := lib.Downloads.Artifact
-		artifactPath := strings.TrimSpace(artifact.Path)
-		if artifactPath == "" && strings.TrimSpace(lib.Name) != "" {
-			artifactPath = strings.TrimPrefix(localMavenPath(lib.Name), "/")
+		hasArtifact := hasMojangDownloadDescriptor(artifact)
+		// Mojang legacy metadata contains classifier-only entries such as
+		// lwjgl-platform/jinput-platform. They are native containers, not
+		// classpath JARs. Synthesizing an artifact from the Maven coordinate
+		// creates a file that does not exist upstream and breaks 1.7.x/1.8.x.
+		if !hasArtifact && len(lib.Downloads.Classifiers) == 0 {
+			if opts.StrictUpstream {
+				return vanillaInstallResult{}, fmt.Errorf("library %s: Mojang metadata не содержит проверяемый artifact", lib.Name)
+			}
+			artifact.Path = strings.TrimPrefix(localMavenPath(lib.Name), "/")
+			hasArtifact = true
 		}
-		if artifactPath != "" {
+		if hasArtifact {
+			artifactPath := strings.TrimSpace(artifact.Path)
+			if artifactPath == "" && strings.TrimSpace(lib.Name) != "" {
+				artifactPath = strings.TrimPrefix(localMavenPath(lib.Name), "/")
+			}
 			artifactURL := strings.TrimSpace(artifact.URL)
 			if artifactURL == "" {
 				base := strings.TrimSpace(lib.URL)
@@ -971,6 +983,10 @@ func nativeArchForTarget(arch string) string {
 		return "32"
 	}
 	return "64"
+}
+
+func hasMojangDownloadDescriptor(download MojangDownload) bool {
+	return strings.TrimSpace(download.Path) != "" || strings.TrimSpace(download.URL) != "" || strings.TrimSpace(download.SHA1) != "" || download.Size > 0 || strings.TrimSpace(download.ID) != ""
 }
 
 func nativeClassifierForTarget(natives map[string]string, osName string) string {

@@ -110,7 +110,7 @@ func handleRuntime(args []string) error {
 				status = "not-found"
 			}
 		}
-		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "javaPath": javaPath, "status": status, "recommendedMajorVersion": 21, "supportedMajorVersions": []int{17, 21}, "checks": []string{"path", "major-version", "executable-bit", "launch-compatibility"}})
+		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "javaPath": javaPath, "status": status, "recommendedMajorVersion": 21, "supportedMajorVersions": []int{8, 16, 17, 21}, "checks": []string{"path", "major-version", "executable-bit", "launch-compatibility"}})
 		if status != "available" {
 			return errors.New("Java runtime не найден по указанному пути")
 		}
@@ -359,11 +359,18 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "release-bound compatibility certification", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"certificationModel": "vanilla-baseline-ii-multiversion-java-exact",
+		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines",
 		"javaMajors":         []int{8, 16, 17, 21},
 		"ciTargets": []string{
 			"vanilla-1.7.10-linux-x64",
+			"vanilla-1.8.9-linux-x64",
+			"vanilla-1.9.4-linux-x64",
+			"vanilla-1.10.2-linux-x64",
+			"vanilla-1.11.2-linux-x64",
 			"vanilla-1.12.2-linux-x64",
+			"vanilla-1.13.2-linux-x64",
+			"vanilla-1.14.4-linux-x64",
+			"vanilla-1.15.2-linux-x64",
 			"vanilla-1.16.5-linux-x64",
 			"vanilla-1.17.1-linux-x64",
 			"vanilla-1.18.2-linux-x64",
@@ -378,7 +385,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":                "0.16.2 PASS требует все Vanilla Baseline II anchors с exact Java и current 1.21.1 integration E2E; официальный publish-check повторно валидирует ту же certification для exact product version/commit.",
+		"note":                "0.16.3 PASS дополнительно требует все основные release-линии Vanilla 1.7.10-1.16.5 на exact Java 8; каждый legacy target materialize и запускает реальный Mojang client, а 1.21.1 сохраняет integration E2E.",
 	}
 }
 
@@ -781,18 +788,17 @@ func resolveLibraries(versionFile MojangVersionFile) ([]map[string]any, []map[st
 			continue
 		}
 		artifact := lib.Downloads.Artifact
-		path := artifact.Path
-		if path == "" {
-			path = artifact.ID
+		if hasMojangDownloadDescriptor(artifact) || len(lib.Downloads.Classifiers) == 0 {
+			path := artifact.Path
+			if path == "" {
+				path = artifact.ID
+			}
+			if path == "" {
+				path = localMavenPath(lib.Name)
+			}
+			libraries = append(libraries, map[string]any{"name": lib.Name, "path": filepath.ToSlash(filepath.Join("libraries", path)), "url": artifact.URL, "sha1": artifact.SHA1, "size": artifact.Size})
+			classpath = append(classpath, filepath.ToSlash(filepath.Join("libraries", path)))
 		}
-		if path == "" {
-			path = localMavenPath(lib.Name)
-		}
-		if artifact.URL == "" && artifact.SHA1 == "" && artifact.Size == 0 && lib.Downloads.Artifact.ID == "" {
-			path = localMavenPath(lib.Name)
-		}
-		libraries = append(libraries, map[string]any{"name": lib.Name, "path": filepath.ToSlash(filepath.Join("libraries", path)), "url": artifact.URL, "sha1": artifact.SHA1, "size": artifact.Size})
-		classpath = append(classpath, filepath.ToSlash(filepath.Join("libraries", path)))
 		for classifier, native := range lib.Downloads.Classifiers {
 			if nativeClassifierMatches(classifier) {
 				nativePath := native.Path

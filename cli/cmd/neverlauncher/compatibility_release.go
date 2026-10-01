@@ -106,6 +106,11 @@ var vanillaCompatibilityBaselineII = map[string]struct {
 	"1.21.1": {JavaMajor: 21, Scope: "integration"},
 }
 
+var legacyVanillaJava8Compatibility0163 = []string{
+	"1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2",
+	"1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5",
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -129,6 +134,10 @@ func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int
 
 func compatibilityVanillaBaselineIIRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 2)
+}
+
+func compatibilityLegacyVanillaJava8Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 3)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -204,6 +213,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	targetByID := map[string]releaseCompatibilityTarget{}
 	requiredIDs := []string{}
 	baselineTargets := map[string]releaseCompatibilityTarget{}
+	requiredVanillaTargets := map[string]releaseCompatibilityTarget{}
 	requiredLoaderTargets := map[string]bool{}
 	for _, target := range targets.Targets {
 		id := strings.TrimSpace(target.ID)
@@ -237,6 +247,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				requiredLoaderTargets[target.Loader] = true
 			}
 			if enhanced && target.Loader == "vanilla" {
+				requiredVanillaTargets[target.Minecraft] = target
 				if _, baseline := vanillaCompatibilityBaselineII[target.Minecraft]; baseline {
 					baselineTargets[target.Minecraft] = target
 				}
@@ -259,6 +270,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 			if target.JavaMajor != expected.JavaMajor || target.Scope != expected.Scope {
 				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla %s baseline mismatch: expected Java %d scope=%s, got Java %d scope=%s", minecraft, expected.JavaMajor, expected.Scope, target.JavaMajor, target.Scope)
+			}
+		}
+		if compatibilityLegacyVanillaJava8Required(ver) {
+			for _, minecraft := range legacyVanillaJava8Compatibility0163 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla 0.16.3 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != 8 || target.Scope != "client" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Legacy Vanilla %s mismatch: expected Java 8 scope=client, got Java %d scope=%s", minecraft, target.JavaMajor, target.Scope)
+				}
 			}
 		}
 	}
@@ -370,6 +392,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	policy := "all-required-targets-must-pass-actual-client-e2e"
 	if enhanced {
 		policy = "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact"
+	}
+	if compatibilityLegacyVanillaJava8Required(ver) {
+		policy += ";legacy-vanilla-1.7.10-1.16.5-java8"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

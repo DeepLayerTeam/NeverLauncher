@@ -340,6 +340,11 @@ pub async fn resolve_compatibility(
         ("auth_uuid".to_string(), context.uuid.clone()),
         ("auth_access_token".to_string(), context.access_token.clone()),
         ("auth_session".to_string(), context.access_token.clone()),
+        // Legacy launcher metadata (notably 1.7.x-1.12.x) passes this
+        // placeholder even for offline profiles. The official launcher uses
+        // a JSON object; an empty object is the correct offline value.
+        ("user_properties".to_string(), "{}".to_string()),
+        ("profile_properties".to_string(), "{}".to_string()),
         ("user_type".to_string(), context.user_type.clone()),
         ("version_type".to_string(), if merged.r#type.is_empty() { "release".to_string() } else { merged.r#type.clone() }),
         ("natives_directory".to_string(), context.natives_directory.clone()),
@@ -406,13 +411,14 @@ pub async fn resolve_compatibility(
 
     let metadata_paths = layers.iter().map(|(_, path, _)| path.clone()).collect::<Vec<_>>();
     let inheritance_chain = layers.iter().map(|(id, _, _)| id.clone()).collect::<Vec<_>>();
+    let java_major_version = resolved_java_major_version(&merged);
 
     Ok(CompatibilityResolution {
         requested_version: requested,
         resolved_version: merged.id,
         minecraft_type: if merged.r#type.is_empty() { "release".to_string() } else { merged.r#type },
         main_class: merged.main_class,
-        java_major_version: merged.java_version.map(|value| value.major_version).filter(|value| *value > 0),
+        java_major_version,
         client_jar,
         classpath,
         libraries,
@@ -492,27 +498,49 @@ fn resolve_libraries(
         if !rules_allow(&library.rules, environment)? {
             continue;
         }
-        let artifact = library.downloads.artifact.clone().unwrap_or_default();
-        let path = if artifact.path.trim().is_empty() {
-            maven_path(&library.name)?
-        } else {
-            normalize_relative_path(&format!("libraries/{}", artifact.path.trim_start_matches('/')))?
-        };
-        let url = if !artifact.url.trim().is_empty() {
-            artifact.url.clone()
-        } else if !library.url.trim().is_empty() {
-            format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
-        } else {
-            String::new()
-        };
-        resolved.push(ResolvedLibrary {
-            name: library.name.clone(),
-            path: path.clone(),
-            url,
-            sha1: artifact.sha1.clone(),
-            size: artifact.size,
-        });
-        classpath.push(path);
+        // Some legacy Mojang entries are classifier-only native containers
+        // (for example lwjgl-platform and jinput-platform). They must not be
+        // synthesized into ordinary classpath artifacts.
+        if let Some(artifact) = library.downloads.artifact.clone() {
+            let path = if artifact.path.trim().is_empty() {
+                maven_path(&library.name)?
+            } else {
+                normalize_relative_path(&format!("libraries/{}", artifact.path.trim_start_matches('/')))?
+            };
+            let url = if !artifact.url.trim().is_empty() {
+                artifact.url.clone()
+            } else if !library.url.trim().is_empty() {
+                format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
+            } else {
+                String::new()
+            };
+            resolved.push(ResolvedLibrary {
+                name: library.name.clone(),
+                path: path.clone(),
+                url,
+                sha1: artifact.sha1.clone(),
+                size: artifact.size,
+            });
+            classpath.push(path);
+        } else if library.downloads.classifiers.is_empty() {
+            // Keep compatibility with old local metadata that predates the
+            // downloads object. The materializer remains fail-closed in
+            // strict mode; this fallback is only for already-present trees.
+            let path = maven_path(&library.name)?;
+            let url = if !library.url.trim().is_empty() {
+                format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
+            } else {
+                String::new()
+            };
+            resolved.push(ResolvedLibrary {
+                name: library.name.clone(),
+                path: path.clone(),
+                url,
+                sha1: String::new(),
+                size: 0,
+            });
+            classpath.push(path);
+        }
 
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
@@ -549,6 +577,35 @@ fn resolve_libraries(
         }
     }
     Ok((resolved, natives, classpath))
+}
+
+fn resolved_java_major_version(merged: &MergedVersion) -> Option<u32> {
+    if let Some(java) = merged.java_version.as_ref().map(|value| value.major_version).filter(|value| *value > 0) {
+        return Some(java);
+    }
+    if is_legacy_vanilla_java8_release(&merged.id) {
+        return Some(8);
+    }
+    None
+}
+
+fn is_legacy_vanilla_java8_release(version: &str) -> bool {
+    let parts = version.split('.').collect::<Vec<_>>();
+    if parts.len() < 2 || parts.len() > 3 {
+        return false;
+    }
+    let Ok(major) = parts[0].parse::<u32>() else { return false; };
+    let Ok(minor) = parts[1].parse::<u32>() else { return false; };
+    let patch = if parts.len() == 3 {
+        let Ok(value) = parts[2].parse::<u32>() else { return false; };
+        value
+    } else {
+        0
+    };
+    if major != 1 {
+        return false;
+    }
+    (minor, patch) >= (7, 10) && (minor, patch) <= (16, 5)
 }
 
 fn native_classifier<'a>(library: &'a Library, environment: &CompatibilityEnvironment) -> Option<&'a String> {
@@ -986,7 +1043,11 @@ mod tests {
             r#"{
               "id":"1.7.10","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"1.7.10",
               "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
-              "minecraftArguments":"--username ${auth_player_name} --version ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userProperties {} --userType ${user_type}"
+              "libraries":[
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.1","downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.1/lwjgl-2.9.1.jar","sha1":"aa","size":1,"url":"https://example/lwjgl.jar"}}},
+                {"name":"org.lwjgl.lwjgl:lwjgl-platform:2.9.1","downloads":{"classifiers":{"natives-linux":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-linux.jar","sha1":"bb","size":1,"url":"https://example/native-linux.jar"},"natives-windows":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-windows.jar","sha1":"cc","size":1,"url":"https://example/native-windows.jar"},"natives-osx":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-osx.jar","sha1":"dd","size":1,"url":"https://example/native-osx.jar"}}},"natives":{"linux":"natives-linux","windows":"natives-windows","osx":"natives-osx"},"extract":{"exclude":["META-INF/"]}}
+              ],
+              "minecraftArguments":"--username ${auth_player_name} --version ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userProperties ${user_properties} --userType ${user_type}"
             }"#,
         ).unwrap();
         let ctx = CompatibilityContext {
@@ -998,7 +1059,12 @@ mod tests {
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
         assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=NeverLauncher"));
         assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
+        assert_eq!(result.java_major_version, Some(8));
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--userProperties" && pair[1] == "{}"));
+        assert!(result.classpath.iter().any(|value| value.ends_with("lwjgl-2.9.1.jar")));
+        assert!(!result.classpath.iter().any(|value| value.ends_with("lwjgl-platform-2.9.1.jar")));
+        assert_eq!(result.natives.len(), 1);
         let _ = stdfs::remove_dir_all(root);
     }
 

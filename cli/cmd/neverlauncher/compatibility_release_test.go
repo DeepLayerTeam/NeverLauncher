@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -244,8 +245,17 @@ func TestCompatibilityReleaseRequiresCertificationOnlyAtPublishGate(t *testing.T
 
 func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte, []byte) {
 	t.Helper()
-	versions := make([]string, 0, len(vanillaCompatibilityBaselineII))
+	versionsSet := map[string]struct{}{}
 	for minecraft := range vanillaCompatibilityBaselineII {
+		versionsSet[minecraft] = struct{}{}
+	}
+	if compatibilityLegacyVanillaJava8Required(ver) {
+		for _, minecraft := range legacyVanillaJava8Compatibility0163 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
+	versions := make([]string, 0, len(versionsSet))
+	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
 	}
 	sort.Strings(versions)
@@ -256,7 +266,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 	}
 	evidence := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	for _, minecraft := range versions {
-		expected := vanillaCompatibilityBaselineII[minecraft]
+		expected, ok := vanillaCompatibilityBaselineII[minecraft]
+		if !ok {
+			expected.JavaMajor = 8
+			expected.Scope = "client"
+		}
 		id := "vanilla-" + minecraft + "-linux-x64"
 		targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
 			ID: id, Minecraft: minecraft, Loader: "vanilla", OS: "linux", Arch: "x86_64",
@@ -352,5 +366,42 @@ func TestCompatibilityCertificationVanillaBaselineIIRejectsMissingAnchor(t *test
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.2", "commit-162"); err == nil {
 		t.Fatal("0.16.2 Baseline II must reject missing anchor")
+	}
+}
+
+func TestCompatibilityCertificationLegacyVanilla0163(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.3", "commit-163")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.3", "commit-163")
+	if err != nil {
+		t.Fatalf("0.16.3 Legacy Vanilla evidence must pass: %v", err)
+	}
+	wantPolicy := "all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8"
+	if certification.Policy != wantPolicy {
+		t.Fatalf("unexpected policy: %s", certification.Policy)
+	}
+	for _, minecraft := range legacyVanillaJava8Compatibility0163 {
+		if !slices.Contains(certification.VanillaVersions, minecraft) {
+			t.Fatalf("legacy Vanilla version %s missing from certification: %v", minecraft, certification.VanillaVersions)
+		}
+	}
+}
+
+func TestCompatibilityCertificationLegacyVanilla0163RejectsMissingReleaseLine(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.3", "commit-163")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.8.9" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.3", "commit-163"); err == nil {
+		t.Fatal("0.16.3 must reject missing legacy Vanilla release line")
 	}
 }

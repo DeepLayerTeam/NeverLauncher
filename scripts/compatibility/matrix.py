@@ -32,6 +32,11 @@ VANILLA_BASELINE_II: dict[str, tuple[int, str]] = {
     "1.21.1": (21, "integration"),
 }
 
+LEGACY_VANILLA_JAVA8_0163: tuple[str, ...] = (
+    "1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2",
+    "1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5",
+)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -50,6 +55,10 @@ def semver_core(value: str) -> tuple[int, int, int]:
 
 def vanilla_baseline_ii_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 2)
+
+
+def legacy_vanilla_java8_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 3)
 
 
 def load_json(path: Path) -> Any:
@@ -83,6 +92,13 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
     required_java = {8, 16, 17, 21}
     if not required_java.issubset(java_coverage):
         die(f"Vanilla Compatibility Baseline II requires Java coverage {sorted(required_java)}")
+    if legacy_vanilla_java8_required():
+        for minecraft in LEGACY_VANILLA_JAVA8_0163:
+            target = required_vanilla.get(minecraft)
+            if target is None:
+                die(f"Legacy Vanilla 0.16.3 missing required Minecraft {minecraft}")
+            if target["javaMajor"] != 8 or target["scope"] != "client":
+                die(f"Legacy Vanilla {minecraft}: 0.16.3 requires Java 8 scope=client")
 
 
 def load_targets(path: Path) -> dict[str, Any]:

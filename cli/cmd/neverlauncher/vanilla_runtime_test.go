@@ -23,6 +23,11 @@ func sha1hex(data []byte) string {
 
 func testNativeZip(t *testing.T) []byte {
 	t.Helper()
+	return testNamedNativeZip(t, "libtest-native.bin", []byte("native-binary"))
+}
+
+func testNamedNativeZip(t *testing.T, name string, payload []byte) []byte {
+	t.Helper()
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	meta, err := zw.Create("META-INF/MANIFEST.MF")
@@ -30,11 +35,11 @@ func testNativeZip(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	_, _ = meta.Write([]byte("Manifest-Version: 1.0\n"))
-	native, err := zw.Create("libtest-native.bin")
+	native, err := zw.Create(name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = native.Write([]byte("native-binary"))
+	_, _ = native.Write(payload)
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -45,6 +50,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	clientJar := []byte("fake-client-jar")
 	libraryJar := []byte("fake-library-jar")
 	nativeJar := testNativeZip(t)
+	legacyNativeJar := testNamedNativeZip(t, "liblegacy-native.bin", []byte("legacy-native-binary"))
 	logging := []byte("<Configuration/>")
 	asset := []byte("asset-object")
 	assetHash := sha1hex(asset)
@@ -86,6 +92,14 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 				"natives": map[string]any{target.OS: classifier},
 				"extract": map[string]any{"exclude": []any{"META-INF/"}},
 			},
+			map[string]any{
+				"name": "org.lwjgl.lwjgl:lwjgl-platform:2.9.1",
+				"downloads": map[string]any{
+					"classifiers": map[string]any{classifier: map[string]any{"path": "org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-" + classifier + ".jar", "url": base + "/legacy-native.jar", "sha1": sha1hex(legacyNativeJar), "size": len(legacyNativeJar)}},
+				},
+				"natives": map[string]any{target.OS: classifier},
+				"extract": map[string]any{"exclude": []any{"META-INF/"}},
+			},
 		},
 		"logging": map[string]any{"client": map[string]any{"argument": "-Dlog4j.configurationFile=${path}", "file": map[string]any{"id": "client-test.xml", "url": base + "/logging.xml", "sha1": sha1hex(logging), "size": len(logging)}}},
 	}
@@ -101,6 +115,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
 	mux.HandleFunc("/library.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(libraryJar) })
 	mux.HandleFunc("/native.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(nativeJar) })
+	mux.HandleFunc("/legacy-native.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(legacyNativeJar) })
 	mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
 	mux.HandleFunc("/logging.xml", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(logging) })
 	mux.HandleFunc(fmt.Sprintf("/assets/%s/%s", assetHash[:2], assetHash), func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
@@ -132,11 +147,18 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		"assets/objects/" + assetHash[:2] + "/" + assetHash,
 		"assets/log_configs/client-test.xml",
 		"natives/" + target.OS + "/libtest-native.bin",
+		"natives/" + target.OS + "/liblegacy-native.bin",
 		".neverlauncher/vanilla-install.json",
 	}
 	for _, rel := range required {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
 			t.Fatalf("missing %s: %v", rel, err)
+		}
+	}
+
+	for _, file := range result.Files {
+		if file.Path == "libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1.jar" {
+			t.Fatalf("classifier-only legacy library leaked into classpath materialization: %+v", file)
 		}
 	}
 

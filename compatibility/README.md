@@ -1,13 +1,20 @@
 # Публичная CI Compatibility Matrix NeverLauncher
 
-NeverLauncher 0.16.2 использует **Vanilla Compatibility Baseline II**: release compatibility формируется из фактической materialization и запуска настоящего Minecraft Java Client на нескольких поколениях Vanilla и на точной Java, а не из вручную выставленных PASS/FAIL. `compatibility/targets.json` содержит только обязательные цели; статусы появляются исключительно из CI evidence.
+NeverLauncher 0.16.3 использует **Vanilla Compatibility Baseline II + Legacy Vanilla Java 8 gate**. Release compatibility формируется только из фактической Mojang materialization, package integrity, Compatibility Engine resolution, exact Java и запуска настоящего Minecraft Java Client.
 
-Обязательная Vanilla-линия 0.16.2:
+Обязательная Vanilla-линия 0.16.3:
 
 | Minecraft | Java | scope |
 | --- | ---: | --- |
 | 1.7.10 | 8 | client |
+| 1.8.9 | 8 | client |
+| 1.9.4 | 8 | client |
+| 1.10.2 | 8 | client |
+| 1.11.2 | 8 | client |
 | 1.12.2 | 8 | client |
+| 1.13.2 | 8 | client |
+| 1.14.4 | 8 | client |
+| 1.15.2 | 8 | client |
 | 1.16.5 | 8 | client |
 | 1.17.1 | 16 | client |
 | 1.18.2 | 17 | client |
@@ -32,7 +39,7 @@ official Mojang version metadata
  -> store runtime log + machine-verifiable evidence
 ```
 
-Это не metadata-only gate: `neverruntime certify-vanilla` запускает фактический материализованный клиент. Для legacy metadata без `arguments.jvm` Compatibility Engine добавляет launcher JVM baseline (`java.library.path`, launcher identity и classpath), поэтому 1.7.10/1.12.2 проходят тем же runtime resolver, а не отдельной заглушкой.
+Это не metadata-only gate: `neverruntime certify-vanilla` запускает фактический материализованный клиент. Для legacy metadata без `arguments.jvm` Compatibility Engine добавляет launcher JVM baseline (`java.library.path`, launcher identity и classpath), поддерживает `${user_properties}`/`${profile_properties}`, а classifier-only native libraries не попадают в classpath как несуществующие JAR. Release-диапазон 1.7.10–1.16.5 получает resolved Java 8 даже при отсутствии поля `javaVersion`.
 
 `integration` сохраняет полный production E2E:
 
@@ -53,7 +60,7 @@ upstream metadata / installer
 
 Workflow `.github/workflows/compatibility.yml` устанавливает Java каждого target отдельно от Java 21 build tooling, фиксирует реальный executable и detected major, запускает target и публикует `compatibility-result.json` вместе с evidence. Агрегатор отклоняет отсутствующий/дублированный target, Java mismatch, scope mismatch, несовпадение commit/run ID, mutable loader result и неполный actual-client evidence.
 
-Для product version `>= 0.16.2` агрегатор и CLI release certification fail-closed требуют все восемь Vanilla anchors, Java coverage `8/16/17/21`, все пять loader families и exact target binding. Удалить старую Vanilla-ветку из `targets.json` и получить зелёный release невозможно.
+Для product version `>= 0.16.2` сохраняется Baseline II. Начиная с `0.16.3`, агрегатор и CLI release certification дополнительно fail-closed требуют все десять Java 8 release-line targets 1.7.10–1.16.5, Java coverage `8/16/17/21`, все пять loader families и exact target binding. Удалить любую обязательную legacy-линию из `targets.json` и получить зелёный release невозможно.
 
 Локальная проверка определения и агрегатора:
 
@@ -64,6 +71,6 @@ python3 scripts/compatibility/test_matrix.py
 
 ## Release certification
 
-При сборке официального release CLI повторно валидирует `matrix.json` вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Для 0.16.2 certification фиксирует required/passed targets, восемь Vanilla versions, Java majors, scopes, SHA-256 исходной target definition и агрегированной matrix, source commit и Actions run ID.
+При сборке официального release CLI повторно валидирует `matrix.json` вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Для 0.16.3 certification фиксирует required/passed targets, пятнадцать обязательных Vanilla versions, Java majors, scopes, SHA-256 target definition и matrix, source commit и Actions run ID.
 
-`nl release publish-check` fail-closed повторно вычисляет certification и требует policy `all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact`. Target definition, matrix и certification включаются в release signature boundary. CI bundle без compatibility matrix может существовать как build candidate, но не проходит официальный publish-check.
+`nl release publish-check` fail-closed повторно вычисляет certification и требует policy `all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8`. Target definition, matrix и certification включаются в release signature boundary. CI bundle без compatibility matrix может существовать как build candidate, но не проходит официальный publish-check.
