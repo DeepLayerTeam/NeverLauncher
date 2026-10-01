@@ -1,3 +1,14 @@
+## 0.16.7 — Java 21 Vanilla / 1.20.5–1.21.10
+
+`0.16.7` превращает Java 21 Vanilla coverage из двух Baseline II anchors в обязательную actual-client release-line certification для 1.20.5/1.20.6 и всей 1.21.x линии до 1.21.10.
+
+- Обязательные targets: `1.20.5`, `1.20.6`, `1.21`, `1.21.1`, `1.21.2`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.6`, `1.21.7`, `1.21.8`, `1.21.9`, `1.21.10` на exact Java 21.
+- Vanilla materializer проверяет официальный `javaVersion.majorVersion` до скачивания client/assets; Java 17, missing metadata и любой другой major для этого диапазона отклоняются fail-closed.
+- NeverRuntime независимо применяет ту же exact-Java 21 policy к materialized Mojang metadata, поэтому локальная подмена metadata не обходит gate.
+- `1.21.1` сохраняет integration E2E с Paper/session revoke; остальные release-line targets выполняют verified materialization, runtime resolution и реальный Minecraft client launch под Xvfb.
+- Release certification требует policy `vanilla-1.20.5-1.21.10-java21-exact` и не проходит при удалении любой обязательной версии или Java mismatch.
+- Managed Java II 8/16/17/21/25, Java 8 legacy, Java 16/17 Vanilla и Baseline II сохраняются.
+
 ## 0.16.6 — Java 16/17 Vanilla / 1.17.1–1.20.4
 
 `0.16.6` переводит переходный диапазон Vanilla 1.17.1–1.20.4 из трёх representative anchors в обязательную actual-client release-line certification и делает Java transition исполняемой runtime policy.

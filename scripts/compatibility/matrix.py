@@ -50,6 +50,11 @@ JAVA16_17_VANILLA_0166: dict[str, int] = {
     "1.20.4": 17,
 }
 
+JAVA21_VANILLA_0167: tuple[str, ...] = (
+    "1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3",
+    "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
+)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -79,6 +84,10 @@ def legacy_vanilla_pre17_required() -> bool:
 
 def java16_17_vanilla_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 6)
+
+
+def java21_vanilla_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 7)
 
 
 def load_json(path: Path) -> Any:
@@ -133,6 +142,14 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Java 16/17 Vanilla 0.16.6 missing required Minecraft {minecraft}")
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(f"Java 16/17 Vanilla {minecraft}: 0.16.6 requires Java {java_major} scope=client")
+    if java21_vanilla_required():
+        for minecraft in JAVA21_VANILLA_0167:
+            target = required_vanilla.get(minecraft)
+            if target is None:
+                die(f"Java 21 Vanilla 0.16.7 missing required Minecraft {minecraft}")
+            expected_scope = "integration" if minecraft == "1.21.1" else "client"
+            if target["javaMajor"] != 21 or target["scope"] != expected_scope:
+                die(f"Java 21 Vanilla {minecraft}: 0.16.7 requires Java 21 scope={expected_scope}")
 
 
 def load_targets(path: Path) -> dict[str, Any]:

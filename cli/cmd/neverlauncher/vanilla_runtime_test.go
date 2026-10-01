@@ -382,9 +382,31 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 	if err != nil || legacy != 8 {
 		t.Fatalf("legacy Java fallback changed: major=%d err=%v", legacy, err)
 	}
-	future, err := javaMajorFromVersion("1.20.6", MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(21)}})
-	if err != nil || future != 21 {
-		t.Fatalf("post-range metadata Java changed: major=%d err=%v", future, err)
+}
+
+func TestJavaMajorFromVersionEnforcesJava21VanillaRange(t *testing.T) {
+	versions := []string{
+		"1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4",
+		"1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
+	}
+	for _, version := range versions {
+		t.Run(version, func(t *testing.T) {
+			got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(21)}})
+			if err != nil || got != 21 {
+				t.Fatalf("Minecraft %s Java=%d err=%v, want 21", version, got, err)
+			}
+			if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(17)}}); err == nil {
+				t.Fatalf("Minecraft %s accepted Java 17", version)
+			}
+			if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil {
+				t.Fatalf("Minecraft %s accepted missing javaVersion.majorVersion", version)
+			}
+		})
+	}
+	for _, version := range []string{"1.20.4", "1.21.11", "1.22"} {
+		if _, enforced := expectedJavaMajorForVanilla0167(version); enforced {
+			t.Fatalf("Minecraft %s unexpectedly covered by 0.16.7 Java 21 policy", version)
+		}
 	}
 }
 
@@ -426,5 +448,46 @@ func TestInstallVanillaRejectsWrongJavaBeforeArtifactDownload(t *testing.T) {
 	}
 	if clientRequested {
 		t.Fatal("client artifact was downloaded before exact-Java metadata validation")
+	}
+}
+
+func TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload(t *testing.T) {
+	clientJar := []byte("must-not-download-0167")
+	clientRequested := false
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	versionDoc := map[string]any{
+		"id": "1.21.10", "type": "release", "mainClass": "net.minecraft.client.main.Main",
+		"downloads":   map[string]any{"client": map[string]any{"url": server.URL + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)}},
+		"javaVersion": map[string]any{"majorVersion": 17},
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	manifest := MojangVersionManifest{
+		Latest:   map[string]string{"release": "1.21.10", "snapshot": "1.21.10"},
+		Versions: []MojangManifestVersion{{ID: "1.21.10", Type: "release", URL: server.URL + "/1.21.10.json", SHA1: sha1hex(versionBytes)}},
+	}
+	manifestBytes, _ := json.Marshal(manifest)
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/1.21.10.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+	mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) {
+		clientRequested = true
+		_, _ = w.Write(clientJar)
+	})
+
+	_, err := installVanilla(context.Background(), vanillaInstallOptions{
+		MinecraftVersion: "1.21.10",
+		ClientDir:        t.TempDir(),
+		VersionManifest:  server.URL + "/manifest.json",
+		Targets:          []vanillaTarget{currentVanillaTarget()},
+		StrictUpstream:   true,
+		HTTPClient:       server.Client(),
+	})
+	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
+		t.Fatalf("expected 0.16.7 exact-Java rejection, got %v", err)
+	}
+	if clientRequested {
+		t.Fatal("1.21.10 client artifact was downloaded before exact-Java metadata validation")
 	}
 }

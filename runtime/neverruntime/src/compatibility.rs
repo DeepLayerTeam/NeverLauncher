@@ -604,6 +604,20 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         };
     }
 
+    if let Some(expected) = expected_java_major_for_vanilla_0167(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.7 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
     if metadata_major.is_some() {
         return Ok(metadata_major);
     }
@@ -628,6 +642,20 @@ fn expected_java_major_for_vanilla_0166(version: &str) -> Option<u32> {
         return None;
     }
     Some(17)
+}
+
+fn expected_java_major_for_vanilla_0167(version: &str) -> Option<u32> {
+    let (major, minor, patch) = parse_minecraft_release_version(version)?;
+    if major != 1 {
+        return None;
+    }
+    if minor == 20 {
+        return matches!(patch, 5 | 6).then_some(21);
+    }
+    if minor == 21 && patch <= 10 {
+        return Some(21);
+    }
+    None
 }
 
 fn parse_minecraft_release_version(version: &str) -> Option<(u32, u32, u32)> {
@@ -1212,6 +1240,19 @@ mod tests {
     }
 
     #[test]
+    fn exact_java21_policy_covers_1205_through_12110() {
+        for version in [
+            "1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4",
+            "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
+        ] {
+            assert_eq!(expected_java_major_for_vanilla_0167(version), Some(21), "{version}");
+        }
+        for version in ["1.20.4", "1.21.11", "1.22"] {
+            assert_eq!(expected_java_major_for_vanilla_0167(version), None, "{version}");
+        }
+    }
+
+    #[test]
     fn exact_java_policy_rejects_missing_or_wrong_modern_metadata() {
         let mut modern = MergedVersion {
             id: "1.17.1".into(),
@@ -1226,6 +1267,14 @@ mod tests {
         modern.id = "1.20.4".into();
         modern.java_version = Some(JavaVersion { major_version: 17 });
         assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(17));
+
+        modern.id = "1.21.10".into();
+        modern.java_version = None;
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 21 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(21));
     }
 
     #[test]

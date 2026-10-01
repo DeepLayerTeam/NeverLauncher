@@ -124,6 +124,22 @@ var java16_17VanillaCompatibility0166 = map[string]int{
 	"1.20.4": 17,
 }
 
+var java21VanillaCompatibility0167 = map[string]string{
+	"1.20.5":  "client",
+	"1.20.6":  "client",
+	"1.21":    "client",
+	"1.21.1":  "integration",
+	"1.21.2":  "client",
+	"1.21.3":  "client",
+	"1.21.4":  "client",
+	"1.21.5":  "client",
+	"1.21.6":  "client",
+	"1.21.7":  "client",
+	"1.21.8":  "client",
+	"1.21.9":  "client",
+	"1.21.10": "client",
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -159,6 +175,10 @@ func compatibilityLegacyVanillaPre17Required(ver string) bool {
 
 func compatibilityJava16_17VanillaRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 6)
+}
+
+func compatibilityJava21VanillaRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 7)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -326,6 +346,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityJava21VanillaRequired(ver) {
+			for minecraft, scope := range java21VanillaCompatibility0167 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21 Vanilla 0.16.7 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != 21 || target.Scope != scope {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21 Vanilla %s mismatch: expected Java 21 scope=%s, got Java %d scope=%s", minecraft, scope, target.JavaMajor, target.Scope)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -444,6 +475,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityJava16_17VanillaRequired(ver) {
 		policy += ";vanilla-1.17.1-1.20.4-java16-17-exact"
+	}
+	if compatibilityJava21VanillaRequired(ver) {
+		policy += ";vanilla-1.20.5-1.21.10-java21-exact"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

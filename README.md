@@ -4,7 +4,11 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Java 16/17 Vanilla / 0.16.6**. Диапазон Vanilla 1.17.1–1.20.4 теперь проходит обязательную actual-client certification с exact Java transition: 1.17.1 = Java 16, 1.18.x–1.20.4 = Java 17; Managed Java II 8/16/17/21/25 сохраняется.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Java 21 Vanilla / 0.16.7**. Диапазон Vanilla 1.20.5/1.20.6–1.21.10 теперь проходит обязательную actual-client certification на exact Java 21; Managed Java II 8/16/17/21/25 и предыдущие Java 8/16/17 compatibility gates сохраняются.
+
+## Java 21 Vanilla — 0.16.7
+
+`0.16.7` добавляет обязательную release-line certification для `1.20.5`, `1.20.6`, `1.21`, `1.21.1`, `1.21.2`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.6`, `1.21.7`, `1.21.8`, `1.21.9`, `1.21.10`. Vanilla materializer и NeverRuntime независимо требуют `javaVersion.majorVersion=21`; missing/mismatched metadata блокируется до запуска, а release certification требует весь набор actual-client evidence. `1.21.1` сохраняет полный integration E2E, остальные targets используют реальный client launch под Xvfb.
 
 ## Java 16/17 Vanilla — 0.16.6
 

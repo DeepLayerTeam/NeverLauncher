@@ -1538,6 +1538,56 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 
 
+# 0.16.7 Java 21 Vanilla must be enforced by materializer/runtime and by
+# actual-client certification for the complete 1.20.5/1.20.6 -> 1.21.10 release line.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 7):
+    vanilla_0167 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+    vanilla_tests_0167 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
+    runtime_0167 = read("runtime/neverruntime/src/compatibility.rs")
+    matrix_0167 = read("scripts/compatibility/matrix.py")
+    matrix_tests_0167 = read("scripts/compatibility/test_matrix.py")
+    targets_0167 = read("compatibility/targets.json")
+    release_0167 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    release_tests_0167 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    for required in [
+        "expectedJavaMajorForVanilla0167",
+        "0.16.7 требует exact Java",
+        "Mojang metadata Java mismatch",
+    ]:
+        if required not in vanilla_0167:
+            fail(f"0.16.7 Vanilla materializer exact-Java 21 path incomplete: {required}")
+    for required in [
+        "expected_java_major_for_vanilla_0167",
+        "0.16.7 requires exact Java",
+        "resolved_java_major_version(&merged)?",
+    ]:
+        if required not in runtime_0167:
+            fail(f"0.16.7 NeverRuntime exact-Java 21 path incomplete: {required}")
+    for version in [
+        "1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4",
+        "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
+    ]:
+        target = f"vanilla-{version}-linux-x64"
+        if target not in targets_0167:
+            fail(f"0.16.7 Java 21 actual-client target missing: {target}")
+    for required in [
+        "JAVA21_VANILLA_0167", "Java 21 Vanilla 0.16.7", "java21_vanilla_required",
+    ]:
+        if required not in matrix_0167:
+            fail(f"0.16.7 compatibility matrix Java 21 gate incomplete: {required}")
+    if "vanilla-1.20.5-1.21.10-java21-exact" not in release_0167:
+        fail("0.16.7 release certification does not bind exact Java 21 Vanilla policy")
+    for required in [
+        "TestJavaMajorFromVersionEnforcesJava21VanillaRange",
+        "TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload",
+        "TestCompatibilityCertificationJava21Vanilla0167",
+        "test_validate_rejects_missing_java21_release_line_0167",
+    ]:
+        corpus = vanilla_tests_0167 + release_tests_0167 + matrix_tests_0167
+        if required not in corpus:
+            fail(f"0.16.7 Java 21 Vanilla regression coverage missing: {required}")
+
+
 # 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
 # not a manifest-only declaration. It is used by client install/update/package-apply
 # and is self-tested on native Linux/Windows/macOS CI runners.

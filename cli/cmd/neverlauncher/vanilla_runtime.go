@@ -1144,6 +1144,15 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 		}
 		return metadataMajor, nil
 	}
+	if expected, enforced := expectedJavaMajorForVanilla0167(minecraftVersion); enforced {
+		if metadataMajor == 0 {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.7 требует exact Java %d", minecraftVersion, expected)
+		}
+		if metadataMajor != expected {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+		}
+		return metadataMajor, nil
+	}
 	if metadataMajor > 0 {
 		return metadataMajor, nil
 	}
@@ -1166,6 +1175,23 @@ func expectedJavaMajorForVanilla0166(version string) (int, bool) {
 		return 0, false
 	}
 	return 17, true
+}
+
+func expectedJavaMajorForVanilla0167(version string) (int, bool) {
+	major, minor, patch, ok := parseMinecraftReleaseVersion(version)
+	if !ok || major != 1 {
+		return 0, false
+	}
+	if minor == 20 {
+		if patch == 5 || patch == 6 {
+			return 21, true
+		}
+		return 0, false
+	}
+	if minor == 21 && patch >= 0 && patch <= 10 {
+		return 21, true
+	}
+	return 0, false
 }
 
 func parseMinecraftReleaseVersion(value string) (major, minor, patch int, ok bool) {
