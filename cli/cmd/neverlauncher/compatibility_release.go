@@ -152,6 +152,11 @@ var java16_17VanillaCompatibility0170v2 = map[string]int{
 	"1.20.3": 17,
 }
 
+var java21_25VanillaCompatibility0170v3 = map[string]int{
+	"1.21.11": 21,
+	"26.2":    25,
+}
+
 var java21VanillaCompatibility0167 = map[string]string{
 	"1.20.5":  "client",
 	"1.20.6":  "client",
@@ -261,6 +266,10 @@ func compatibilityLegacyVanilla0170v1Required(ver string) bool {
 }
 
 func compatibilityJava16_17Vanilla0170v2Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 0)
+}
+
+func compatibilityJava21_25Vanilla0170v3Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 0)
 }
 
@@ -510,6 +519,17 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityJava21_25Vanilla0170v3Required(ver) {
+			for minecraft, javaMajor := range java21_25VanillaCompatibility0170v3 {
+				target, ok := requiredVanillaTargets[minecraft]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21/25 Vanilla 0.17.0v3 missing required Minecraft %s", minecraft)
+				}
+				if target.JavaMajor != javaMajor || target.Scope != "client" || target.OS != "linux" || target.Arch != "x86_64" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Java 21/25 Vanilla %s 0.17.0v3 mismatch: expected Java %d scope=client linux/x86_64, got Java %d scope=%s %s/%s", minecraft, javaMajor, target.JavaMajor, target.Scope, target.OS, target.Arch)
+				}
+			}
+		}
 		if compatibilityIIGa0170Required(ver) {
 			vanillaTargets := 0
 			vanillaVersions := map[string]bool{}
@@ -521,8 +541,8 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					gaJava[target.JavaMajor] = true
 				}
 			}
-			if vanillaTargets < 107 || len(vanillaVersions) < 102 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA 0.17.0v2 requires >=107 required Vanilla targets and >=102 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
+			if vanillaTargets < 109 || len(vanillaVersions) < 104 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA 0.17.0v3 requires >=109 required Vanilla targets and >=104 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
 			}
 			for _, major := range []int{8, 16, 17, 21, 25} {
 				if !gaJava[major] {
@@ -716,6 +736,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityJava16_17Vanilla0170v2Required(ver) {
 		policy += ";java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact"
+	}
+	if compatibilityJava21_25Vanilla0170v3Required(ver) {
+		policy += ";java21-25-vanilla-0.17.0v3-complete-2-release-grid-exact"
 	}
 	if compatibilityIIGa0170Required(ver) {
 		policy += ";minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"

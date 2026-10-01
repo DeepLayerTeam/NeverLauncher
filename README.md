@@ -2,7 +2,7 @@
 
 ## Minecraft Compatibility II GA — 0.17.0
 
-NeverLauncher 0.17.0 с maintenance revision **v2** сохраняет GA и расширяет обязательную базу до **107 Vanilla targets / 102 уникальных Vanilla release IDs**. В v2 полностью добавлен запрошенный Java 16/17 переходный набор: `1.17` на Java 16 и `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` на Java 17. Exact Java проверяется до скачивания игровых артефактов и повторно в NeverRuntime; VERSION остаётся `0.17.0`.
+NeverLauncher 0.17.0 с maintenance revision **v3** сохраняет GA и расширяет обязательную базу до **109 Vanilla targets / 104 уникальных Vanilla release IDs**. v3 добавляет `1.21.11` на exact Java 21 и `26.2` на exact Java 25 поверх полного v1 Legacy grid и v2 Java 16/17 grid. Exact Java проверяется до скачивания client/server артефактов и независимо повторяется в NeverRuntime; `VERSION` остаётся `0.17.0`.
 
 GA добавляет JRE attestation к каждому compatibility PASS: фиксируются real path и SHA-256 реально запущенного `java`/`java.exe`, vendor, runtime version, VM name, `java.home`, detected OS/architecture и exact major. Aggregator строит `jreBase` только из прошедших результатов, а `COMPATIBILITY_CERTIFICATION.json` содержит concrete JRE builds с target counts. Release/RC/Production Delivery fail-closed требуют policy `minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base`. Compatibility Hardening 0.16.11, Actual Client E2E II и Managed Java II сохраняются.
 
@@ -36,7 +36,7 @@ NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-п
 
 `0.16.6` добавляет обязательные actual-client targets `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Vanilla materializer и NeverRuntime независимо требуют официальный Java transition: Java 16 только для 1.17.1 в сертифицируемом диапазоне, Java 17 для 1.18.x–1.20.4. Missing/mismatched `javaVersion.majorVersion` блокируется до запуска; release certification требует весь набор и actual-client evidence.
 
-Maintenance `0.17.0v2` дополняет эту линию версиями `1.17`, `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` с тем же fail-closed exact-Java enforcement.
+Maintenance `0.17.0v2` дополняет эту линию версиями `1.17`, `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` с тем же fail-closed exact-Java enforcement. Maintenance `0.17.0v3` закрывает следующие два release gap: `1.21.11` на Java 21 и `26.2` на Java 25, включая client materialization, server install и NeverRuntime exact-major validation.
 
 ## Managed Java II — 0.16.5
 

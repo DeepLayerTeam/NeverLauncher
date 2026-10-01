@@ -77,6 +77,15 @@ var java16_17Vanilla0170v2Releases = map[string]int{
 	"1.20.3": 17,
 }
 
+// 0.17.0v3 closes the two release gaps in the modern Vanilla line. These
+// releases use the same production Mojang materializer/server installer as the
+// rest of the matrix, but are pinned here so missing/tampered javaVersion
+// metadata fails before game artifacts are downloaded.
+var java21_25Vanilla0170v3Releases = map[string]int{
+	"1.21.11": 21,
+	"26.2":    25,
+}
+
 type vanillaTarget struct {
 	OS   string `json:"os"`
 	Arch string `json:"arch"`
@@ -1585,6 +1594,15 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 		}
 		return metadataMajor, nil
 	}
+	if expected, enforced := expectedJavaMajorForVanilla0170v3(minecraftVersion); enforced {
+		if metadataMajor == 0 {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v3 требует exact Java %d", minecraftVersion, expected)
+		}
+		if metadataMajor != expected {
+			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: 0.17.0v3 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+		}
+		return metadataMajor, nil
+	}
 	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
 		if metadataMajor == 0 {
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
@@ -1628,6 +1646,11 @@ func isLegacyVanillaJava8Release(version string) bool {
 
 func expectedJavaMajorForVanilla0170v2(version string) (int, bool) {
 	expected, ok := java16_17Vanilla0170v2Releases[strings.TrimSpace(version)]
+	return expected, ok
+}
+
+func expectedJavaMajorForVanilla0170v3(version string) (int, bool) {
+	expected, ok := java21_25Vanilla0170v3Releases[strings.TrimSpace(version)]
 	return expected, ok
 }
 

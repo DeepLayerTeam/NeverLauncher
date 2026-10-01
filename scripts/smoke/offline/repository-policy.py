@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -2112,15 +2113,19 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 # 0.17.0 Minecraft Compatibility II GA binds every compatibility PASS to a
 # concrete JRE binary identity. Maintenance revisions keep the complete v1
-# Legacy grid and v2 additionally requires the nine requested Java 16/17 releases.
+# Legacy grid, the v2 Java 16/17 grid, and v3 closes the 1.21.11/26.2
+# Java 21/25 release gaps with independent materializer/runtime enforcement.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 0):
     ga_matrix_0170 = read("scripts/compatibility/matrix.py")
     ga_jre_0170 = read("scripts/compatibility/certify-jre.py")
     ga_case_0170 = read("e2e/scripts/run-compatibility-case.sh")
     ga_release_0170 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    ga_vanilla_runtime_0170 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+    ga_neverruntime_0170 = read("runtime/neverruntime/src/compatibility.rs")
+    ga_targets_0170 = json.loads(read("compatibility/targets.json"))["targets"]
     ga_tests_0170 = read("scripts/compatibility/test_matrix.py") + read("scripts/compatibility/test_certify_jre.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
     ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py")
-    for required in ["LEGACY_VANILLA_0170V1", "JAVA16_17_VANILLA_0170V2", "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS", "build_ga_jre_base", "jreCertified", '"jreBase"']:
+    for required in ["LEGACY_VANILLA_0170V1", "JAVA16_17_VANILLA_0170V2", "JAVA21_25_VANILLA_0170V3", "COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS", "build_ga_jre_base", "jreCertified", '"jreBase"']:
         if required not in ga_matrix_0170:
             fail(f"0.17.0 GA compatibility matrix incomplete: {required}")
     for required in ["executableSha256", "java.runtime.version", "java.vendor", "java.home", "detectedOS", "detectedArch", "certified"]:
@@ -2129,16 +2134,33 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["certify-jre.py", '"jreCertified"', '"jreExecutableSha256"']:
         if required not in ga_case_0170:
             fail(f"0.17.0 compatibility target JRE binding incomplete: {required}")
-    for required in ["compatibilityIIGa0170Required", "compatibilityLegacyVanilla0170v1Required", "compatibilityJava16_17Vanilla0170v2Required", "JREBuilds", "JREExecutableSHA256", "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8", "java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact", "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"]:
+    for required in ["compatibilityIIGa0170Required", "compatibilityLegacyVanilla0170v1Required", "compatibilityJava16_17Vanilla0170v2Required", "compatibilityJava21_25Vanilla0170v3Required", "JREBuilds", "JREExecutableSHA256", "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8", "java16-17-vanilla-0.17.0v2-complete-9-release-grid-exact", "java21-25-vanilla-0.17.0v3-complete-2-release-grid-exact", "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"]:
         if required not in ga_release_0170:
             fail(f"0.17.0 GA release certification incomplete: {required}")
-    for required in ["test_ga_matrix_contains_certified_jre_base", "test_certify_binds_binary_hash_and_runtime_identity", "test_validate_rejects_missing_complete_legacy_grid_0170v1", "test_validate_rejects_missing_java16_17_grid_0170v2", "TestCompatibilityCertificationGA0170BindsJREBase", "TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease", "TestCompatibilityCertificationGA0170v2RequiresCompleteJava16_17Grid", "TestCompatibilityCertificationGA0170v2RejectsMissingJavaTransitionRelease"]:
+    for required in ["test_ga_matrix_contains_certified_jre_base", "test_certify_binds_binary_hash_and_runtime_identity", "test_validate_rejects_missing_complete_legacy_grid_0170v1", "test_validate_rejects_missing_java16_17_grid_0170v2", "test_validate_rejects_missing_java21_25_grid_0170v3", "test_validate_rejects_wrong_java21_25_grid_0170v3", "TestCompatibilityCertificationGA0170BindsJREBase", "TestCompatibilityCertificationGA0170v1RejectsMissingLegacyRelease", "TestCompatibilityCertificationGA0170v2RequiresCompleteJava16_17Grid", "TestCompatibilityCertificationGA0170v2RejectsMissingJavaTransitionRelease", "TestCompatibilityCertificationGA0170v3RequiresJava21And25Grid", "TestCompatibilityCertificationGA0170v3RejectsMissingRelease", "TestCompatibilityCertificationGA0170v3RejectsWrongJavaMajor"]:
         if required not in ga_tests_0170:
             fail(f"0.17.0 GA regression test missing: {required}")
     if "Minecraft Compatibility II GA 0.17.0 gate: OK" not in ga_gate_0170:
         fail("0.17.0 mandatory Minecraft Compatibility II GA gate incomplete")
-    if "0.17.0v2 Java 16/17 grid" not in ga_gate_0170:
+    if "java16_17_0170v2" not in ga_gate_0170:
         fail("0.17.0v2 complete Java 16/17 Vanilla gate is missing")
+    if "0.17.0v3 Java 21/25 grid" not in ga_gate_0170:
+        fail("0.17.0v3 complete Java 21/25 Vanilla gate is missing")
+    for required in ["java21_25Vanilla0170v3Releases", "expectedJavaMajorForVanilla0170v3", "0.17.0v3 требует exact Java"]:
+        if required not in ga_vanilla_runtime_0170:
+            fail(f"0.17.0v3 Vanilla materializer exact-Java path incomplete: {required}")
+    for required in ["expected_java_major_for_vanilla_0170v3", "0.17.0v3 requires exact Java"]:
+        if required not in ga_neverruntime_0170:
+            fail(f"0.17.0v3 NeverRuntime exact-Java path incomplete: {required}")
+    v3_targets = {
+        row["minecraft"]: row for row in ga_targets_0170
+        if row.get("required") and row.get("loader") == "vanilla" and row.get("minecraft") in {"1.21.11", "26.2"}
+        and row.get("os") == "linux" and row.get("arch") == "x86_64"
+    }
+    for minecraft, java_major in {"1.21.11": 21, "26.2": 25}.items():
+        row = v3_targets.get(minecraft)
+        if row is None or row.get("javaMajor") != java_major or row.get("scope") != "client":
+            fail(f"0.17.0v3 required target invalid or missing: {minecraft} / Java {java_major}")
     if "minecraft-compatibility-II-ga-0170.py" not in preflight or "minecraft-compatibility-II-ga-0170.py" not in ci:
         fail("0.17.0 Minecraft Compatibility II GA gate is not wired into preflight/CI")
 

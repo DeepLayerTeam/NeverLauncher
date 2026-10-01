@@ -421,6 +421,38 @@ func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
 	}
 }
 
+func TestJavaMajorFromVersionEnforces0170v3Grid(t *testing.T) {
+	want := map[string]int{"1.21.11": 21, "26.2": 25}
+	if len(java21_25Vanilla0170v3Releases) != len(want) {
+		t.Fatalf("0.17.0v3 Java 21/25 release grid=%d, want %d", len(java21_25Vanilla0170v3Releases), len(want))
+	}
+	for version, major := range want {
+		expected, ok := expectedJavaMajorForVanilla0170v3(version)
+		if !ok || expected != major {
+			t.Fatalf("Minecraft %s 0.17.0v3 expected Java=%d ok=%v, want %d/true", version, expected, ok, major)
+		}
+		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
+		if err != nil || got != major {
+			t.Fatalf("Minecraft %s Java=%d err=%v, want %d", version, got, err, major)
+		}
+		if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
+			t.Fatalf("Minecraft %s accepted missing Java metadata: %v", version, err)
+		}
+		wrong := 17
+		if major == 25 {
+			wrong = 21
+		}
+		if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(wrong)}}); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
+			t.Fatalf("Minecraft %s accepted wrong Java %d: %v", version, wrong, err)
+		}
+	}
+	for _, outside := range []string{"1.21.10", "26.1.2", "26.3"} {
+		if _, ok := expectedJavaMajorForVanilla0170v3(outside); ok {
+			t.Fatalf("%s unexpectedly classified as newly added 0.17.0v3 release", outside)
+		}
+	}
+}
+
 func TestLegacyVanilla0170v1GridIsExactJava8(t *testing.T) {
 	if len(legacyVanilla0170v1Releases) != 53 {
 		t.Fatalf("legacy 0.17.0v1 release grid=%d, want 53", len(legacyVanilla0170v1Releases))
@@ -557,6 +589,91 @@ func TestInstallVanilla0170v2MaterializesModernJavaTransition(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInstallVanilla0170v3MaterializesJava21And25Releases(t *testing.T) {
+	for _, tc := range []struct {
+		version   string
+		javaMajor int
+	}{{"1.21.11", 21}, {"26.2", 25}} {
+		t.Run(tc.version, func(t *testing.T) {
+			clientJar := []byte("modern-v3-client-" + tc.version)
+			assetIndexBytes := []byte(`{"objects":{}}`)
+			mux := http.NewServeMux()
+			server := httptest.NewServer(mux)
+			defer server.Close()
+			base := server.URL
+			versionDoc := map[string]any{
+				"id": tc.version, "type": "release", "mainClass": "net.minecraft.client.main.Main", "assets": tc.version,
+				"assetIndex":  map[string]any{"id": tc.version, "url": base + "/assets.json", "sha1": sha1hex(assetIndexBytes), "size": len(assetIndexBytes)},
+				"downloads":   map[string]any{"client": map[string]any{"url": base + "/client.jar", "sha1": sha1hex(clientJar), "size": len(clientJar)}},
+				"javaVersion": map[string]any{"majorVersion": tc.javaMajor},
+				"arguments": map[string]any{
+					"jvm":  []any{"-Djava.library.path=${natives_directory}", "-cp", "${classpath}"},
+					"game": []any{"--username", "${auth_player_name}", "--version", "${version_name}", "--assetsDir", "${assets_root}", "--assetIndex", "${assets_index_name}"},
+				},
+				"libraries": []any{},
+			}
+			versionBytes, _ := json.Marshal(versionDoc)
+			manifest := MojangVersionManifest{Latest: map[string]string{"release": tc.version}, Versions: []MojangManifestVersion{{ID: tc.version, Type: "release", URL: base + "/version.json", SHA1: sha1hex(versionBytes)}}}
+			manifestBytes, _ := json.Marshal(manifest)
+			mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+			mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+			mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
+			mux.HandleFunc("/assets.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
+
+			dir := t.TempDir()
+			result, err := installVanilla(context.Background(), vanillaInstallOptions{
+				MinecraftVersion: tc.version, ClientDir: dir, VersionManifest: base + "/manifest.json", AssetBaseURL: base + "/objects",
+				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, HTTPClient: server.Client(),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.MinecraftVersion != tc.version || result.JavaMajorVersion != tc.javaMajor || result.Status != "installed-and-verified" {
+				t.Fatalf("unexpected 0.17.0v3 result: %+v", result)
+			}
+			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
+				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+					t.Fatalf("missing materialized %s: %v", rel, err)
+				}
+			}
+		})
+	}
+}
+
+func TestInstallVanillaServer0170v3RejectsWrongJavaBeforeArtifactDownload(t *testing.T) {
+	serverJar := []byte("must-not-download-v3-server")
+	serverRequested := false
+	mux := http.NewServeMux()
+	httpServer := httptest.NewServer(mux)
+	defer httpServer.Close()
+
+	versionDoc := map[string]any{
+		"id": "26.2", "type": "release",
+		"downloads":   map[string]any{"server": map[string]any{"url": httpServer.URL + "/server.jar", "sha1": sha1hex(serverJar), "size": len(serverJar)}},
+		"javaVersion": map[string]any{"majorVersion": 21},
+	}
+	versionBytes, _ := json.Marshal(versionDoc)
+	manifest := MojangVersionManifest{
+		Latest:   map[string]string{"release": "26.2", "snapshot": "26.2"},
+		Versions: []MojangManifestVersion{{ID: "26.2", Type: "release", URL: httpServer.URL + "/26.2.json", SHA1: sha1hex(versionBytes)}},
+	}
+	manifestBytes, _ := json.Marshal(manifest)
+	mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
+	mux.HandleFunc("/26.2.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(versionBytes) })
+	mux.HandleFunc("/server.jar", func(w http.ResponseWriter, r *http.Request) {
+		serverRequested = true
+		_, _ = w.Write(serverJar)
+	})
+
+	_, err := installVanillaServer(context.Background(), "26.2", t.TempDir(), httpServer.URL+"/manifest.json", httpServer.Client())
+	if err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
+		t.Fatalf("expected 0.17.0v3 exact-Java rejection, got %v", err)
+	}
+	if serverRequested {
+		t.Fatal("26.2 server artifact was downloaded before 0.17.0v3 exact-Java metadata validation")
 	}
 }
 

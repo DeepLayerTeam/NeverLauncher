@@ -289,6 +289,11 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			versionsSet[minecraft] = struct{}{}
 		}
 	}
+	if compatibilityJava21_25Vanilla0170v3Required(ver) {
+		for minecraft := range java21_25VanillaCompatibility0170v3 {
+			versionsSet[minecraft] = struct{}{}
+		}
+	}
 	versions := make([]string, 0, len(versionsSet))
 	for minecraft := range versionsSet {
 		versions = append(versions, minecraft)
@@ -303,7 +308,10 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 	for _, minecraft := range versions {
 		expected, ok := vanillaCompatibilityBaselineII[minecraft]
 		if !ok {
-			if javaMajor, modernV2 := java16_17VanillaCompatibility0170v2[minecraft]; modernV2 {
+			if javaMajor, modernV3 := java21_25VanillaCompatibility0170v3[minecraft]; modernV3 {
+				expected.JavaMajor = javaMajor
+				expected.Scope = "client"
+			} else if javaMajor, modernV2 := java16_17VanillaCompatibility0170v2[minecraft]; modernV2 {
 				expected.JavaMajor = javaMajor
 				expected.Scope = "client"
 			} else if javaMajor, modern := java16_17VanillaCompatibility0166[minecraft]; modern {
@@ -816,8 +824,8 @@ func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
 	if !strings.Contains(certification.Policy, "legacy-vanilla-0.17.0v1-complete-53-release-grid-java8") {
 		t.Fatalf("0.17.0v1 policy does not bind complete legacy grid: %s", certification.Policy)
 	}
-	if len(certification.VanillaVersions) < 102 {
-		t.Fatalf("0.17.0 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
+	if len(certification.VanillaVersions) < 104 {
+		t.Fatalf("0.17.0v3 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
 	}
 	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21 25]" {
 		t.Fatalf("0.17.0 GA Java coverage=%s", got)
@@ -897,6 +905,59 @@ func TestCompatibilityCertificationGA0170v2RejectsWrongJavaMajor(t *testing.T) {
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v2"); err == nil || !strings.Contains(err.Error(), "0.17.0v2") {
 		t.Fatalf("0.17.0v2 must reject Java mismatch, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationGA0170v3RequiresJava21And25Grid(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v3")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3")
+	if err != nil {
+		t.Fatalf("0.17.0v3 Java 21/25 evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "java21-25-vanilla-0.17.0v3-complete-2-release-grid-exact") {
+		t.Fatalf("0.17.0v3 policy missing: %s", certification.Policy)
+	}
+	for minecraft := range java21_25VanillaCompatibility0170v3 {
+		if !slices.Contains(certification.VanillaVersions, minecraft) {
+			t.Fatalf("0.17.0v3 version %s missing", minecraft)
+		}
+	}
+}
+
+func TestCompatibilityCertificationGA0170v3RejectsMissingRelease(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v3")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "1.21.11" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3"); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
+		t.Fatalf("0.17.0v3 must reject missing 1.21.11 target, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationGA0170v3RejectsWrongJavaMajor(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170-v3")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "vanilla" && targets.Targets[i].Minecraft == "26.2" {
+			targets.Targets[i].JavaMajor = 21
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170-v3"); err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
+		t.Fatalf("0.17.0v3 must reject Java mismatch for 26.2, got %v", err)
 	}
 }
 

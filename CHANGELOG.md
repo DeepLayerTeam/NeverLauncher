@@ -1,3 +1,11 @@
+## 0.17.0v3 — Java 21/25 Vanilla release-gap completion
+
+- Added mandatory actual-client targets `1.21.11` on exact Java 21 and `26.2` on exact Java 25 without changing the product semantic version (`VERSION` remains `0.17.0`).
+- Vanilla client materialization and matching-server installation now fail closed for both v3 releases when Mojang `javaVersion.majorVersion` is missing or conflicts, before client/server JAR download.
+- NeverRuntime independently enforces the same exact Java-major mapping from materialized metadata, preventing local metadata tampering from selecting another runtime.
+- Compatibility aggregation and release certification require both v3 targets on Linux x86_64 client scope; the GA floor is now 109 required Vanilla targets covering 104 unique release IDs.
+- Added executable regression coverage for valid v3 client materialization, server-side pre-download Java rejection, missing targets, wrong Java majors, runtime enforcement and mandatory repository/release gates.
+
 ## 0.17.0v2 — Complete Java 16/17 Vanilla grid
 
 - Added the nine requested Java-transition Vanilla releases as mandatory actual-client targets: `1.17` on exact Java 16; `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` on exact Java 17.
