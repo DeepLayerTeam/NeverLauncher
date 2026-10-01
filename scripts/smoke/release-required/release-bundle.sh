@@ -33,6 +33,7 @@ for required in \
   "${BUNDLE_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip" \
   "${BUNDLE_DIR}/MANAGED_JRE_MANIFEST.json" \
   "${BUNDLE_DIR}/MANAGED_JRE_EVIDENCE.json" \
+  "${BUNDLE_DIR}/MANAGED_JAVA_II_EVIDENCE.json" \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-windows-x64-${VERSION}.zip" \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-windows-arm64-${VERSION}.zip" \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-linux-x64-${VERSION}.tar.gz" \

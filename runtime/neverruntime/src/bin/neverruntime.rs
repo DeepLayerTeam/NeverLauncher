@@ -160,7 +160,7 @@ async fn command_certify_vanilla(args: &[String]) -> Result<serde_json::Value, S
 async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
     let subcommand = args.first().map(String::as_str).unwrap_or("");
     if subcommand != "ensure" {
-        return Err("использование: neverruntime java ensure --major <8|17|21|25> [--distribution temurin] [--runtime-root PATH] [--manifest PATH|HTTPS_URL --manifest-sha256 SHA256]".to_string());
+        return Err("использование: neverruntime java ensure --major <8|16|17|21|25> [--distribution temurin] [--runtime-root PATH] [--manifest PATH|HTTPS_URL --manifest-sha256 SHA256]".to_string());
     }
     let rest = &args[1..];
     let major = required_flag(rest, "--major")?

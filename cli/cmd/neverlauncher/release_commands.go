@@ -621,6 +621,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		requiredFiles = append(requiredFiles, managedJREArtifacts0155(ver)...)
 		checks = append(checks, "managed-jre-temurin21-six-target-distribution")
 	}
+	if managedJavaIIRequired0165(ver) {
+		requiredFiles = append(requiredFiles, managedJavaIIEvidenceFile0165)
+		checks = append(checks, "managed-java-II-8-16-17-21-25")
+	}
 	if updaterVersionAtLeast0156(ver) {
 		checks = append(checks, "unified-transactional-updater-core")
 	}
@@ -1048,6 +1052,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if managedJREDistributionRequired0155(ver) {
 		artifacts = append(artifacts, managedJREArtifacts0155(ver)...)
+	}
+	if managedJavaIIRequired0165(ver) {
+		artifacts = append(artifacts, managedJavaIIEvidenceFile0165)
 	}
 	if guardCICertificationRequired(ver) {
 		for _, osName := range []string{"linux", "windows", "macos"} {

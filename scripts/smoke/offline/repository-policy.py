@@ -1414,7 +1414,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.15.5 Managed JRE production workflow incomplete: {required}")
     for required in [
         "managed-jre-production:",
-        "Managed JRE Temurin 21 six-target production delivery",
+        "Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery",
         "Upload exact-commit Managed JRE production assets",
         'name: neverlauncher-managed-jre-${{ github.sha }}',
     ]:
@@ -1441,6 +1441,48 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.5 mandatory Managed JRE Distribution gate is incomplete")
     if not (ROOT / "cli/cmd/neverlauncher/managed_jre_delivery_test.go").is_file():
         fail("0.15.5 Managed JRE regression tests are missing")
+
+
+# 0.16.5 Managed Java II must be an executable resolver/install/cache path for
+# Java 8/16/17/21/25. Java 16 must use historical GA fallback instead of a
+# current-release declaration, and the exact runtime path is exercised in CI.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 5):
+    managed_java_0165 = read("runtime/neverruntime/src/managed_java.rs")
+    managed_java_cli_0165 = read("runtime/neverruntime/src/bin/neverruntime.rs")
+    managed_java_e2e_0165 = read("e2e/scripts/run-managed-java-II-e2e.sh")
+    managed_java_gate_0165 = read("scripts/smoke/offline/managed-java-II-0165.py")
+    release_commands_0165 = read("cli/cmd/neverlauncher/release_commands.go")
+    release_builder_0165 = read("scripts/release/build-release.sh")
+    release_bundle_0165 = read("scripts/smoke/release-required/release-bundle.sh")
+    for required in [
+        "MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
+        "assets/latest/{major}/hotspot", "assets/feature_releases/{major}/ga",
+        'for image_type in ["jre", "jdk"]', "validate_managed_java_major",
+        "ensure_archive", "validate_installed_runtime",
+    ]:
+        if required not in managed_java_0165:
+            fail(f"0.16.5 Managed Java II runtime incomplete: {required}")
+    if "--major <8|16|17|21|25>" not in managed_java_cli_0165:
+        fail("0.16.5 Managed Java II CLI does not expose all certified majors")
+    for required in ["for major in 8 16 17 21 25", "java ensure", "MANAGED_JAVA_II_EVIDENCE.json"]:
+        if required not in managed_java_e2e_0165:
+            fail(f"0.16.5 Managed Java II E2E incomplete: {required}")
+    for required in [
+        "Managed Java II Java 8/16/17/21/25 production E2E",
+        "run-managed-java-II-e2e.sh", "MANAGED_JAVA_II_EVIDENCE.json",
+    ]:
+        if required not in ci:
+            fail(f"0.16.5 Managed Java II CI wiring incomplete: {required}")
+    if "managed-java-II-0165.py" not in preflight or "managed-java-II-0165.py" not in ci:
+        fail("0.16.5 Managed Java II gate is not wired into preflight/CI")
+    if "managed-java-II-8-16-17-21-25" not in release_commands_0165:
+        fail("0.16.5 release certification does not require Managed Java II")
+    if "MANAGED_JAVA_II_EVIDENCE.json" not in release_builder_0165:
+        fail("0.16.5 release bundle does not stage Managed Java II evidence")
+    if "MANAGED_JAVA_II_EVIDENCE.json" not in release_bundle_0165:
+        fail("0.16.5 release bundle required-artifact gate does not require Managed Java II evidence")
+    if "Managed Java II gate: OK" not in managed_java_gate_0165:
+        fail("0.16.5 mandatory Managed Java II gate is incomplete")
 
 
 # 0.15.6 Unified Transactional Updater Core must be an executable file-update path,

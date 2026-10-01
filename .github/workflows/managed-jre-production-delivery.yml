@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  temurin21-six-targets:
-    name: Temurin 21 Windows/Linux/macOS x64+ARM64
+  managed-java-II-and-temurin21:
+    name: Managed Java II 8/16/17/21/25 + Temurin 21 Windows/Linux/macOS x64+ARM64
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -20,6 +20,16 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build NeverRuntime for Managed Java II
+        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+
+      - name: Managed Java II Java 8/16/17/21/25 production E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash e2e/scripts/run-managed-java-II-e2e.sh
 
       - name: Build exact-vendor Managed JRE Distribution
         shell: bash
@@ -31,6 +41,7 @@ jobs:
             --out "${OUT}" \
             --version "${VERSION}" \
             --major 21
+          cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json "${OUT}/MANAGED_JAVA_II_EVIDENCE.json"
 
       - name: Verify six targets and delivery binding
         shell: bash
@@ -50,6 +61,7 @@ jobs:
           path: |
             dist/managed-jre-*/MANAGED_JRE_MANIFEST.json
             dist/managed-jre-*/MANAGED_JRE_EVIDENCE.json
+            dist/managed-jre-*/MANAGED_JAVA_II_EVIDENCE.json
             dist/managed-jre-*/DELIVERY_MANIFEST.json
             dist/managed-jre-*/neverlauncher-jre-temurin21-windows-x64-*.zip
             dist/managed-jre-*/neverlauncher-jre-temurin21-windows-arm64-*.zip

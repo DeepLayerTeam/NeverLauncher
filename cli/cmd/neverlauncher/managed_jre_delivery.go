@@ -17,6 +17,7 @@ import (
 
 const managedJREManifestFile0155 = "MANAGED_JRE_MANIFEST.json"
 const managedJREEvidenceFile0155 = "MANAGED_JRE_EVIDENCE.json"
+const managedJavaIIEvidenceFile0165 = "MANAGED_JAVA_II_EVIDENCE.json"
 const managedJREMajor0155 = 21
 const maxManagedJREEntry0155 = int64(256 * 1024 * 1024)
 
@@ -70,6 +71,18 @@ type ManagedJREEvidence0155 struct {
 	ManifestSHA256 string                         `json:"manifestSha256"`
 	GeneratedAt    string                         `json:"generatedAt"`
 	Targets        []ManagedJREEvidenceTarget0155 `json:"targets"`
+}
+
+func managedJavaIIRequired0165(ver string) bool {
+	major, minor, patch, ok := parseCoreVersion(ver)
+	if !ok {
+		return false
+	}
+	return major > 0 || (major == 0 && (minor > 16 || (minor == 16 && patch >= 5)))
+}
+
+func managedJavaIIMajors0165() []int {
+	return []int{8, 16, 17, 21, 25}
 }
 
 func managedJREDistributionRequired0155(ver string) bool {

@@ -119,7 +119,7 @@ require(
     ci,
     [
         'managed-jre-production:',
-        'Managed JRE Temurin 21 six-target production delivery',
+        'Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery',
         'Upload exact-commit Managed JRE production assets',
         'name: neverlauncher-managed-jre-${{ github.sha }}',
         'managed-jre-production]',

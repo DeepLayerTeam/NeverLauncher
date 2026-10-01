@@ -64,8 +64,8 @@ func stableProductionVersion0160(ver string) error {
 	return nil
 }
 
-func productionDeliveryReleaseRequiredGates0160() []string {
-	return []string{
+func productionDeliveryReleaseRequiredGates0160(ver string) []string {
+	gates := []string{
 		"production-release-candidate-exact-source-cohort",
 		"windows-x64-arm64-authenticode-rfc3161",
 		"linux-x64-arm64-production-packages",
@@ -79,6 +79,10 @@ func productionDeliveryReleaseRequiredGates0160() []string {
 		"stable-versioned-public-origin",
 		"production-delivery-release-boundary",
 	}
+	if managedJavaIIRequired0165(ver) {
+		gates = append(gates, "managed-java-II-8-16-17-21-25")
+	}
+	return gates
 }
 
 func productionDeliveryReleaseAnchorNames0160() []string {
@@ -255,7 +259,7 @@ func buildProductionDeliveryReleaseDocument0160(dir, ver string) (productionDeli
 		BoundarySHA256:        productionDeliveryReleaseBoundaryDigest0160(anchors, targets, ver, commit, baseURL),
 		PublishedTargets:      targets,
 		Anchors:               anchors,
-		RequiredGates:         productionDeliveryReleaseRequiredGates0160(),
+		RequiredGates:         productionDeliveryReleaseRequiredGates0160(ver),
 		PostPublishE2E:        true,
 	}, nil
 }
@@ -305,7 +309,7 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	if err != nil || !strings.EqualFold(candidateSHA, doc.CandidateSHA256) || !strings.EqualFold(candidate.CohortSHA256, doc.CandidateCohortSHA256) {
 		return "", errors.New("production delivery release candidate binding mismatch")
 	}
-	expectedGates := productionDeliveryReleaseRequiredGates0160()
+	expectedGates := productionDeliveryReleaseRequiredGates0160(ver)
 	if len(doc.RequiredGates) != len(expectedGates) {
 		return "", errors.New("production delivery release required gate set mismatch")
 	}

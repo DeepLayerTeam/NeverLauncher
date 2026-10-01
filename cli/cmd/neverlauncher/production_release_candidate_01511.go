@@ -44,8 +44,8 @@ func productionReleaseCandidateRequired01511(ver string) bool {
 	return major > 0 || (major == 0 && (minor > 15 || (minor == 15 && patch >= 11)))
 }
 
-func productionReleaseCandidateRequiredGates01511() []string {
-	return []string{
+func productionReleaseCandidateRequiredGates01511(ver string) []string {
+	gates := []string{
 		"minecraft-compatibility-certification",
 		"device-trust-certification",
 		"cross-platform-guard-ci-certification",
@@ -61,6 +61,10 @@ func productionReleaseCandidateRequiredGates01511() []string {
 		"migration-stabilization-0.15.10",
 		"exact-source-commit-cohort",
 	}
+	if managedJavaIIRequired0165(ver) {
+		gates = append(gates, "managed-java-II-8-16-17-21-25")
+	}
+	return gates
 }
 
 func normalizeSourceCommit01511(value string) (string, error) {
@@ -226,7 +230,7 @@ func writeProductionReleaseCandidateDocument01511(dir, ver, sourceCommit string)
 		CreatedAt:     time.Now().UTC().Format(time.RFC3339),
 		CohortSHA256:  productionReleaseCandidateCohortDigest01511(cohort),
 		Cohort:        cohort,
-		RequiredGates: productionReleaseCandidateRequiredGates01511(),
+		RequiredGates: productionReleaseCandidateRequiredGates01511(ver),
 	}
 	return writeJSONFile(filepath.Join(dir, productionReleaseCandidateFile01511), cert)
 }
@@ -264,7 +268,7 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 	if _, err := time.Parse(time.RFC3339, cert.CreatedAt); err != nil {
 		return "", fmt.Errorf("production release candidate createdAt invalid: %w", err)
 	}
-	expectedGates := productionReleaseCandidateRequiredGates01511()
+	expectedGates := productionReleaseCandidateRequiredGates01511(ver)
 	if len(cert.RequiredGates) != len(expectedGates) {
 		return "", errors.New("production release candidate required gate set mismatch")
 	}

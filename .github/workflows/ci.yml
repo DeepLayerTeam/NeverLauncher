@@ -68,6 +68,7 @@ jobs:
           python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
           python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+          python3 scripts/smoke/offline/managed-java-II-0165.py
           python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
           python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py
           python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py
@@ -582,7 +583,7 @@ jobs:
           docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
 
   managed-jre-production:
-    name: Managed JRE Temurin 21 six-target production delivery
+    name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery
     needs: [go-contracts]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -595,6 +596,16 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build NeverRuntime for Managed Java II
+        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Managed Java II Java 8/16/17/21/25 production E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash e2e/scripts/run-managed-java-II-e2e.sh
+          mkdir -p managed-jre-artifacts
+          cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json managed-jre-artifacts/MANAGED_JAVA_II_EVIDENCE.json
       - name: Build exact-vendor Managed JRE Distribution
         shell: bash
         run: |

@@ -1,3 +1,13 @@
+## 0.16.5 — Managed Java II / Java 8, 16, 17, 21, 25
+
+`0.16.5` переводит Managed Java из частично реализованного набора major-веток в исполняемый production lifecycle для Java 8/16/17/21/25 без подмены отсутствующих vendor binaries декларациями.
+
+- NeverRuntime принимает только сертифицированные majors `8/16/17/21/25`; Java 16 добавлена в реальный resolver, CLI и cache/install path.
+- Adoptium resolution сначала использует current `assets/latest`, затем исторический GA `assets/feature_releases/<major>/ga`; это позволяет устанавливать EOL Java 16, которая больше не присутствует в current releases UI. Предпочитается JRE, а JDK допускается только как vendor GA fallback, если JRE для конкретной major/platform отсутствует.
+- Любой on-demand runtime проходит HTTPS-only download, declared size bound, exact vendor SHA-256, безопасную распаковку, symlink/path containment, фактический `java -version` exact-major check, atomic install и повторную cache verification.
+- Bundled Temurin 21 six-platform distribution 0.15.5 сохраняется как bootstrap; Java 8/16/17/25 не притворяются универсальными six-target artifacts и разрешаются по фактической Adoptium platform availability.
+- CI собирает настоящий NeverRuntime и выполняет install → `java -version` → cache reuse для Java 8/16/17/21/25; результат фиксируется в `MANAGED_JAVA_II_EVIDENCE.json`, входит в release bundle и обязателен для 0.16.5 release/RC/Production Delivery certification.
+
 ## 0.16.4 — Legacy Vanilla 1.0.0–1.7.10 / Java 8
 
 `0.16.4` расширяет исполняемый legacy-контур до первых release-линий Vanilla и закрывает несовместимости pre-1.6 metadata/assets, которые не покрывал gate 0.16.3.

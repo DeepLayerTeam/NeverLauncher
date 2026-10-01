@@ -74,6 +74,7 @@ run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offlin
 run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"
 run_step notarized-macos-x64-arm64-0154 python3 "${ROOT_DIR}/scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"
 run_step managed-jre-distribution-0155 python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
+run_step managed-java-II-0165 python3 "${ROOT_DIR}/scripts/smoke/offline/managed-java-II-0165.py"
 run_step unified-transactional-updater-core-0156 python3 "${ROOT_DIR}/scripts/smoke/offline/unified-transactional-updater-core-0156.py"
 run_step desktop-guard-runtime-transactional-update-0157 python3 "${ROOT_DIR}/scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"
 run_step release-verification-v2-trust-lifecycle-0158 python3 "${ROOT_DIR}/scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"

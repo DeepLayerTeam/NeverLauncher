@@ -4,7 +4,13 @@
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Legacy Vanilla / 0.16.4**. Он расширяет исполняемое Java 8 compatibility-покрытие Vanilla до первых release-линий (`1.0.0` alias → `1.0`) и сохраняет gate 0.16.3 для 1.7.10–1.16.5 вместе с Baseline II для более новых Java/Minecraft.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Managed Java II / 0.16.5**. NeverRuntime управляет exact Java 8/16/17/21/25 через проверяемые Eclipse Temurin GA archives, сохраняет bundled Java 21 bootstrap и не подменяет отсутствующие vendor platform builds фиктивными targets.
+
+## Managed Java II — 0.16.5
+
+`neverruntime java ensure --major <8|16|17|21|25>` выполняет полный runtime lifecycle: ищет проверенный cache, разрешает Temurin через Adoptium current GA и historical feature-release GA fallback, скачивает только по HTTPS, сверяет vendor SHA-256/size, безопасно распаковывает archive, запускает фактический `java -version` для exact major и атомарно публикует runtime в Managed Java cache. Для Java 16 historical resolver является рабочей частью install path, а не compatibility declaration.
+
+Официальный release по-прежнему включает six-platform Temurin 21 distribution как bootstrap. Остальные majors разрешаются on-demand по реальной доступности vendor binary для текущих OS/architecture. CI 0.16.5 устанавливает Java 8/16/17/21/25 настоящим NeverRuntime, повторно читает каждую из cache и сохраняет `MANAGED_JAVA_II_EVIDENCE.json`; без этого evidence release certification не проходит.
 
 ## Legacy Vanilla — 0.16.4
 

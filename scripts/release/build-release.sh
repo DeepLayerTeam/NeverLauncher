@@ -105,6 +105,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,15,5) else '0')
 PYVER
 )"
+MANAGED_JAVA_II_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,16,5) else '0')
+PYVER
+)"
 PUBLIC_DELIVERY_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
 import sys
 parts=sys.argv[1].split('.',2)
@@ -438,6 +448,10 @@ if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
     require_file "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}"
     cp "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
   done
+  if [[ "${MANAGED_JAVA_II_REQUIRED}" == "1" ]]; then
+    require_file "${MANAGED_JRE_ARTIFACTS_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
+    cp "${MANAGED_JRE_ARTIFACTS_DIR}/MANAGED_JAVA_II_EVIDENCE.json" "${OUT_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
+  fi
   for platform in windows linux macos; do
     for arch in x64 arm64; do
       ext="tar.gz"

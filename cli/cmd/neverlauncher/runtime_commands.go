@@ -361,6 +361,8 @@ func runtimeMatrix740() map[string]any {
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
 		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla",
 		"javaMajors":         []int{8, 16, 17, 21},
+		"managedJavaMajors":  managedJavaIIMajors0165(),
+		"managedJavaMode":    "temurin-latest-ga+historical-feature-release-fallback+sha256+atomic-install+java-version",
 		"ciTargets": []string{
 			"vanilla-1.0-linux-x64",
 			"vanilla-1.1-linux-x64",
@@ -392,7 +394,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13", "cross-platform-compatibility-ci"},
-		"note":                "0.16.4 PASS дополнительно требует pre-1.7 release-линии Vanilla 1.0 (alias 1.0.0), 1.1, 1.2.5, 1.3.2, 1.4.7, 1.5.2, 1.6.4 и 1.7.10 на exact Java 8; каждый target materialize и запускает реальный Mojang client, включая legacy auth_session/game_assets path.",
+		"note":                "0.16.5 сохраняет Vanilla gates 0.16.2–0.16.4 и добавляет Managed Java II: Java 8/16/17/21/25 устанавливаются через verified Temurin GA lifecycle; Java 16 использует historical feature-release fallback.",
 	}
 }
 

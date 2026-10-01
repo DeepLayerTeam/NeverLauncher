@@ -12,6 +12,7 @@ use tokio::{fs, io::AsyncWriteExt, process::Command, time::sleep};
 
 const ADOPTIUM_API: &str = "https://api.adoptium.net/v3";
 const MAX_RUNTIME_ARCHIVE_SIZE: u64 = 1_500_000_000;
+const MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25];
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +20,7 @@ pub struct ManagedJavaResult {
     pub status: String,
     pub distribution: String,
     pub major_version: u32,
+    pub image_type: String,
     pub release_name: String,
     pub java_executable: String,
     pub install_directory: String,
@@ -33,6 +35,13 @@ struct AdoptiumAsset {
     binary: AdoptiumBinary,
     release_name: String,
     version: AdoptiumVersion,
+}
+
+#[derive(Debug, Deserialize)]
+struct AdoptiumFeatureRelease {
+    binaries: Vec<AdoptiumBinary>,
+    release_name: String,
+    version_data: AdoptiumVersion,
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,6 +105,8 @@ struct ManagedJavaRecord {
     schema_version: String,
     distribution: String,
     major_version: u32,
+    #[serde(default = "default_managed_image_type")]
+    image_type: String,
     release_name: String,
     semver: String,
     os: String,
@@ -115,11 +126,7 @@ pub async fn ensure_managed_java(
     if required_major == 0 {
         return Err("Managed Java требует majorVersion > 0".to_string());
     }
-    if !matches!(required_major, 8 | 17 | 21 | 25) {
-        return Err(format!(
-            "Managed Java {} поддерживает Java 8/17/21/25; запрошена Java {required_major}", env!("CARGO_PKG_VERSION")
-        ));
-    }
+    validate_managed_java_major(required_major)?;
     let distribution = normalize_distribution(distribution)?;
     let runtime_root = match runtime_root_override {
         Some(path) => path.to_path_buf(),
@@ -133,15 +140,20 @@ pub async fn ensure_managed_java(
         return Ok(cached);
     }
 
-    if let Some((manifest_location, manifest_sha256)) = configured_distribution_manifest()? {
-        return ensure_managed_java_from_distribution(
-            required_major,
-            &distribution,
-            Some(&runtime_root),
-            &manifest_location,
-            manifest_sha256.as_deref(),
-        )
-        .await;
+    // The release bundle still carries the six-platform Temurin 21 bootstrap JRE.
+    // Managed Java II resolves every other certified major from verified Adoptium GA
+    // archives instead of incorrectly rejecting it against the Java 21-only bundle manifest.
+    if required_major == 21 {
+        if let Some((manifest_location, manifest_sha256)) = configured_distribution_manifest()? {
+            return ensure_managed_java_from_distribution(
+                required_major,
+                &distribution,
+                Some(&runtime_root),
+                &manifest_location,
+                manifest_sha256.as_deref(),
+            )
+            .await;
+        }
     }
 
     let platform = adoptium_platform()?;
@@ -152,8 +164,8 @@ pub async fn ensure_managed_java(
             asset.version.major
         ));
     }
-    if asset.binary.image_type != "jre" || asset.binary.jvm_impl != "hotspot" {
-        return Err("Adoptium metadata не соответствует JRE/HotSpot policy".to_string());
+    if !matches!(asset.binary.image_type.as_str(), "jre" | "jdk") || asset.binary.jvm_impl != "hotspot" {
+        return Err("Adoptium metadata не соответствует JRE/JDK HotSpot policy".to_string());
     }
     if normalize_adoptium_os(&asset.binary.os) != platform.0 || normalize_adoptium_arch(&asset.binary.architecture) != platform.1 {
         return Err("Adoptium metadata platform mismatch".to_string());
@@ -169,6 +181,7 @@ pub async fn ensure_managed_java(
         ManagedJavaInstallRequest {
             distribution: &distribution,
             required_major,
+            image_type: &asset.binary.image_type,
             platform_os: &platform.0,
             platform_arch: &platform.1,
             release_name: &asset.release_name,
@@ -192,9 +205,7 @@ pub async fn ensure_managed_java_from_distribution(
     manifest_location: &str,
     manifest_sha256: Option<&str>,
 ) -> Result<ManagedJavaResult, String> {
-    if required_major == 0 {
-        return Err("Managed JRE Distribution требует majorVersion > 0".to_string());
-    }
+    validate_managed_java_major(required_major)?;
     let distribution = normalize_distribution(distribution)?;
     let runtime_root = match runtime_root_override {
         Some(path) => path.to_path_buf(),
@@ -252,6 +263,7 @@ pub async fn ensure_managed_java_from_distribution(
         ManagedJavaInstallRequest {
             distribution: &distribution,
             required_major,
+            image_type: "jre",
             platform_os: &record_os,
             platform_arch: &record_arch,
             release_name: &target.release_name,
@@ -439,6 +451,7 @@ fn configured_distribution_manifest() -> Result<Option<(String, Option<String>)>
 struct ManagedJavaInstallRequest<'a> {
     distribution: &'a str,
     required_major: u32,
+    image_type: &'a str,
     platform_os: &'a str,
     platform_arch: &'a str,
     release_name: &'a str,
@@ -458,6 +471,7 @@ async fn install_managed_java_archive(
     let ManagedJavaInstallRequest {
         distribution,
         required_major,
+        image_type,
         platform_os,
         platform_arch,
         release_name,
@@ -546,6 +560,7 @@ async fn install_managed_java_archive(
         schema_version: "1.1".to_string(),
         distribution: distribution.to_string(),
         major_version: required_major,
+        image_type: image_type.to_string(),
         release_name: release_name.to_string(),
         semver: semver.to_string(),
         os: platform_os.to_string(),
@@ -635,6 +650,7 @@ pub async fn select_java_executable(
 }
 
 async fn resolve_adoptium_asset(major: u32, os: &str, arch: &str) -> Result<AdoptiumAsset, String> {
+    validate_managed_java_major(major)?;
     let api_os = match os {
         "osx" => "mac",
         other => other,
@@ -646,32 +662,124 @@ async fn resolve_adoptium_asset(major: u32, os: &str, arch: &str) -> Result<Adop
         "arm" => "arm",
         other => return Err(format!("Adoptium не поддержан для architecture {other}")),
     };
+    let client = managed_java_http_client()?;
+
+    // Prefer compact JRE images. Java 16 is EOL and no longer appears in the
+    // current releases UI, so Managed Java II also resolves historical GA
+    // feature releases. A JDK is accepted only when Adoptium has no JRE for
+    // the requested certified major/platform; java -version is still verified
+    // after extraction before the runtime becomes usable.
+    for image_type in ["jre", "jdk"] {
+        if let Some(asset) = resolve_adoptium_latest_asset(&client, major, api_os, api_arch, image_type).await? {
+            return Ok(asset);
+        }
+        if let Some(asset) = resolve_adoptium_feature_release_asset(&client, major, api_os, api_arch, image_type).await? {
+            return Ok(asset);
+        }
+    }
+    Err(format!(
+        "Adoptium не вернул GA Temurin Java {major} для {api_os}/{api_arch} (JRE/JDK)"
+    ))
+}
+
+async fn resolve_adoptium_latest_asset(
+    client: &Client,
+    major: u32,
+    api_os: &str,
+    api_arch: &str,
+    image_type: &str,
+) -> Result<Option<AdoptiumAsset>, String> {
     let url = format!(
-        "{ADOPTIUM_API}/assets/latest/{major}/hotspot?architecture={api_arch}&heap_size=normal&image_type=jre&jvm_impl=hotspot&os={api_os}&vendor=eclipse"
+        "{ADOPTIUM_API}/assets/latest/{major}/hotspot?architecture={api_arch}&heap_size=normal&image_type={image_type}&jvm_impl=hotspot&os={api_os}&vendor=eclipse"
     );
-    let client = Client::builder()
-        .connect_timeout(Duration::from_secs(15))
-        .timeout(Duration::from_secs(60))
-        .redirect(reqwest::redirect::Policy::limited(5))
-        .build()
-        .map_err(|err| format!("Adoptium client: {err}"))?;
     let response = client
         .get(&url)
-        .header("User-Agent", format!("NeverLauncher/{} ManagedJava", env!("CARGO_PKG_VERSION")))
+        .header("User-Agent", format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")))
         .send()
         .await
-        .map_err(|err| format!("Adoptium API request: {err}"))?;
+        .map_err(|err| format!("Adoptium latest API request: {err}"))?;
+    if response.status().as_u16() == 404 {
+        return Ok(None);
+    }
     if !response.status().is_success() {
-        return Err(format!("Adoptium API вернул HTTP {} для Java {major}/{api_os}/{api_arch}", response.status()));
+        return Err(format!("Adoptium latest API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
     }
     let assets = response
         .json::<Vec<AdoptiumAsset>>()
         .await
-        .map_err(|err| format!("Adoptium API JSON: {err}"))?;
-    assets
-        .into_iter()
-        .find(|asset| asset.version.major == major && asset.binary.image_type == "jre" && asset.binary.jvm_impl == "hotspot")
-        .ok_or_else(|| format!("Adoptium API не вернул Temurin JRE {major} для {api_os}/{api_arch}"))
+        .map_err(|err| format!("Adoptium latest API JSON: {err}"))?;
+    Ok(assets.into_iter().find(|asset| {
+        asset.version.major == major
+            && asset.binary.image_type == image_type
+            && asset.binary.jvm_impl == "hotspot"
+            && normalize_adoptium_os(&asset.binary.os) == normalize_adoptium_os(api_os)
+            && normalize_adoptium_arch(&asset.binary.architecture) == normalize_adoptium_arch(api_arch)
+    }))
+}
+
+async fn resolve_adoptium_feature_release_asset(
+    client: &Client,
+    major: u32,
+    api_os: &str,
+    api_arch: &str,
+    image_type: &str,
+) -> Result<Option<AdoptiumAsset>, String> {
+    let url = format!(
+        "{ADOPTIUM_API}/assets/feature_releases/{major}/ga?architecture={api_arch}&heap_size=normal&image_type={image_type}&jvm_impl=hotspot&os={api_os}&project=jdk&vendor=eclipse&page_size=20&sort_order=DESC"
+    );
+    let response = client
+        .get(&url)
+        .header("User-Agent", format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")))
+        .send()
+        .await
+        .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
+    if response.status().as_u16() == 404 {
+        return Ok(None);
+    }
+    if !response.status().is_success() {
+        return Err(format!("Adoptium feature release API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
+    }
+    let releases = response
+        .json::<Vec<AdoptiumFeatureRelease>>()
+        .await
+        .map_err(|err| format!("Adoptium feature release API JSON: {err}"))?;
+    for release in releases {
+        if release.version_data.major != major {
+            continue;
+        }
+        for binary in release.binaries {
+            if binary.image_type == image_type
+                && binary.jvm_impl == "hotspot"
+                && normalize_adoptium_os(&binary.os) == normalize_adoptium_os(api_os)
+                && normalize_adoptium_arch(&binary.architecture) == normalize_adoptium_arch(api_arch)
+            {
+                return Ok(Some(AdoptiumAsset {
+                    binary,
+                    release_name: release.release_name.clone(),
+                    version: AdoptiumVersion {
+                        major: release.version_data.major,
+                        semver: release.version_data.semver.clone(),
+                    },
+                }));
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn validate_managed_java_major(major: u32) -> Result<(), String> {
+    if MANAGED_JAVA_MAJORS.contains(&major) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Managed Java {} поддерживает Java 8/16/17/21/25; запрошена Java {major}",
+            env!("CARGO_PKG_VERSION")
+        ))
+    }
+}
+
+fn default_managed_image_type() -> String {
+    "jre".to_string()
 }
 
 async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str, size: u64) -> Result<(), String> {
@@ -910,6 +1018,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         status: "ready".to_string(),
         distribution: distribution.to_string(),
         major_version: major,
+        image_type: record.image_type,
         release_name: record.release_name,
         java_executable: java.to_string_lossy().to_string(),
         install_directory: dir.to_string_lossy().to_string(),
@@ -1143,6 +1252,16 @@ mod tests {
         assert_eq!(normalize_distribution("any").unwrap(), "temurin");
         assert_eq!(normalize_distribution("adoptium").unwrap(), "temurin");
         assert!(normalize_distribution("oracle").is_err());
+    }
+
+    #[test]
+    fn managed_java_ii_major_policy_is_exact() {
+        for major in MANAGED_JAVA_MAJORS {
+            assert!(validate_managed_java_major(major).is_ok(), "Java {major} must be managed");
+        }
+        for major in [7, 11, 22, 26] {
+            assert!(validate_managed_java_major(major).is_err(), "Java {major} must be rejected");
+        }
     }
 
     #[test]
