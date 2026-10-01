@@ -80,6 +80,9 @@ class MatrixToolTests(unittest.TestCase):
                 "platform-runtime.json",
                 "java-runtime.json",
             ]
+        if target["loader"] != "vanilla":
+            checks.update({"loaderPinned": True, "reproducibleResolution": True})
+            files.append(f"{target['loader']}-resolution-lock.json")
         return {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
@@ -89,6 +92,9 @@ class MatrixToolTests(unittest.TestCase):
             "loader": target["loader"],
             "loaderSelector": target["loaderVersion"],
             "resolvedLoaderVersion": "" if target["loader"] == "vanilla" else "0.16.14",
+            "resolutionLockSha256": "" if target["loader"] == "vanilla" else "b" * 64,
+            "resolutionSourceSha256": "" if target["loader"] == "vanilla" else "c" * 64,
+            "reproducibilitySha256": "" if target["loader"] == "vanilla" else "d" * 64,
             "os": target["os"],
             "arch": target["arch"],
             "javaMajor": target["javaMajor"],
@@ -714,6 +720,37 @@ class MatrixToolTests(unittest.TestCase):
             proc = self.aggregate(tmp, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("paperHealthy", proc.stderr)
+
+
+    def test_0177_aggregate_rejects_missing_loader_resolution_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["loader"] == "fabric":
+                    result["resolutionLockSha256"] = ""
+                    result["checks"]["loaderPinned"] = False
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertTrue("resolutionLockSha256" in proc.stderr or "loaderPinned" in proc.stderr)
+
+    def test_0177_aggregate_rejects_missing_resolution_lock_evidence_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["loader"] == "quilt":
+                    result["evidence"]["files"] = [
+                        item for item in result["evidence"]["files"]
+                        if item != "quilt-resolution-lock.json"
+                    ]
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("evidence files are incomplete", proc.stderr)
 
 
 if __name__ == "__main__":

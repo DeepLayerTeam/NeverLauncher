@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -62,6 +63,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			}
 			profileBytes, _ := json.Marshal(profile)
 			loaderListBytes, _ := json.Marshal([]any{map[string]any{"loader": map[string]any{"version": tc.loaderVersion, "stable": true, "maven": tc.coordinate}}})
+			var metadataRequests atomic.Int32
 			mavenPath, err := strictMavenPath(tc.coordinate)
 			if err != nil {
 				t.Fatal(err)
@@ -72,7 +74,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
 			mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
 			mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
-			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(loaderListBytes) })
+			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla", func(w http.ResponseWriter, r *http.Request) { metadataRequests.Add(1); _, _ = w.Write(loaderListBytes) })
 			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla/"+tc.loaderVersion+"/profile/json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(profileBytes) })
 			mux.HandleFunc("/maven/"+mavenPath, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(loaderJar) })
 			mux.HandleFunc("/maven/"+mavenPath+".sha1", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprintln(w, loaderSHA1) })
@@ -88,6 +90,12 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			}
 			if result.Status != "installed-and-verified" || result.LoaderVersion != tc.loaderVersion || result.MainClass != tc.mainClass {
 				t.Fatalf("unexpected result: %+v", result)
+			}
+			if result.ResolutionPinned || !compatibilitySHA256RE.MatchString(result.ResolutionLockSHA256) || !compatibilitySHA256RE.MatchString(result.ReproducibilitySHA256) {
+				t.Fatalf("first materialization did not create a valid resolution lock: %+v", result)
+			}
+			if got := metadataRequests.Load(); got != 1 {
+				t.Fatalf("metadata requests after first materialization=%d, want 1", got)
 			}
 			for _, rel := range []string{
 				"versions/test-vanilla/test-vanilla.json",
@@ -117,13 +125,28 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 
 			packageManifest := filepath.Join(t.TempDir(), "package.json")
 			args := []string{
-				"--minecraft", "test-vanilla", "--loader-version", tc.loaderVersion, "--client-dir", dir,
+				"--minecraft", "test-vanilla", "--loader-version", "latest-stable", "--client-dir", dir,
 				"--version-manifest", base + "/manifest.json", "--asset-base-url", base + "/assets", "--library-base-url", base + "/libraries",
 				"--meta-base-url", metaBase, "--target", currentVanillaTarget().OS + "/" + currentVanillaTarget().Arch,
 				"--project", "test-project", "--profile", tc.loader, "--channel", "stable", "--version", "1.0.0", "--output", packageManifest,
 			}
 			if err := handleRuntimeLoaderPackage(tc.loader, args); err != nil {
 				t.Fatalf("%s-package failed: %v", tc.loader, err)
+			}
+			if got := metadataRequests.Load(); got != 1 {
+				t.Fatalf("pinned replay re-resolved mutable metadata: requests=%d, want 1", got)
+			}
+			var wrapperRaw map[string]json.RawMessage
+			rawPackage, err := os.ReadFile(packageManifest)
+			if err != nil || json.Unmarshal(rawPackage, &wrapperRaw) != nil {
+				t.Fatalf("read package wrapper: %v", err)
+			}
+			var replay loaderMaterializeResult
+			if err := json.Unmarshal(wrapperRaw[tc.loader], &replay); err != nil {
+				t.Fatalf("decode replay result: %v", err)
+			}
+			if !replay.ResolutionPinned || replay.ResolutionLockSHA256 != result.ResolutionLockSHA256 || replay.ReproducibilitySHA256 != result.ReproducibilitySHA256 {
+				t.Fatalf("pinned replay identity drift: first=%+v replay=%+v", result, replay)
 			}
 			pkg, err := readClientPackageManifest(packageManifest)
 			if err != nil {

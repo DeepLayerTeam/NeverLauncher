@@ -1,3 +1,11 @@
+## 0.17.7 — Loader Resolution & Pinning
+
+- Added a production loader resolution lock for Fabric, Quilt, Forge and NeoForge. Mutable selectors resolve once to a concrete loader/artifact version; replay reads the lock before mutable upstream resolution and cannot silently move to a newer loader.
+- Bound every lock to resolution provenance SHA-256, exact upstream Meta profile or installer SHA-256, final runtime profile SHA-256 и materialized-files SHA-256 and a deterministic reproducibility SHA-256. Lock/payload/profile tampering fails closed.
+- Fabric/Quilt resolution provenance hashes the actual Meta response; Forge/NeoForge mutable resolution hashes the actual Maven `maven-metadata.xml`, while explicit immutable selectors use a deterministic explicit-resolution identity.
+- Compatibility client and integration paths now materialize non-Vanilla loaders twice, require `resolutionPinned=true`, verify stable lock/reproducibility hashes, retain raw resolution locks, and expose machine-verifiable pin evidence in compatibility results.
+- Release certification now records sorted `loaderPins`; bundle verification recomputes the pin set from embedded matrix evidence and rejects modified or missing pin coverage. Added mandatory 0.17.7 CI/preflight/repository gates and tamper regression tests.
+
 ## 0.17.6 — NeoForge Compatibility II
 
 - Expanded NeoForge from the single 1.21.1 integration target to a mandatory 22-release production line from Minecraft 1.20.1 through current stable 26.2, with exact Java 17/21/25 binding and full integration retained for 1.21.1.

@@ -1,5 +1,7 @@
 # Minecraft compatibility
 
+NeverLauncher 0.17.7 — **Loader Resolution & Pinning**. Для каждого required Fabric/Quilt/Forge/NeoForge target PASS требует concrete immutable loader version, `resolutionLockSha256`, `resolutionSourceSha256`, `reproducibilitySha256`, проверки `loaderPinned`/`reproducibleResolution` и raw `<loader>-resolution-lock.json`. Client/integration E2E выполняет второй materialize через тот же lock: mutable selector больше не может незаметно выбрать другую версию, а изменённые upstream profile/installer/runtime profile блокируют certification.
+
 NeverLauncher 0.17.6 — **NeoForge Compatibility II** поверх Forge/Fabric/Quilt/Minecraft Compatibility II GA. Обязательная NeoForge-линия: 22 release targets `1.20.1`–`26.2`, exact Java 17/21/25, Linux x86_64; `1.21.1` остаётся `integration`, остальные — `client`. PASS требует реальный processor installer, package integrity, immutable resolved NeoForge version и actual client launch через NeverRuntime.
 
 NeverLauncher 0.17.5 — **Forge Legacy 1.7.10 LaunchWrapper/FML** поверх Forge Legacy 1.12.2 / Forge Modern / Fabric / Quilt / Minecraft Compatibility II GA. Обязательная цель: `1.7.10`, Java 8, `client`, Linux x86_64, `latest-stable` selector с concrete immutable Forge version. PASS требует V1 universal installer, SHA-verified universal JAR, `net.minecraft.launchwrapper.Launch`, `cpw.mods.fml.common.launcher.FMLTweaker`, нормализованный parent Vanilla 1.7.10 profile, package integrity и actual client launch через NeverRuntime.

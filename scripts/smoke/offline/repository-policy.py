@@ -2465,6 +2465,52 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.6 NeoForge gate is not wired into preflight/CI")
 
 
+# 0.17.7 Loader Resolution & Pinning makes every non-Vanilla loader resolution
+# replayable from an immutable cryptographic lock and release-binds the lock.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 7):
+    pin_lock_0177 = read("cli/cmd/neverlauncher/loader_resolution.go")
+    pin_meta_0177 = read("cli/cmd/neverlauncher/loader_runtime.go")
+    pin_forge_0177 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    pin_compat_0177 = read("e2e/scripts/run-compatibility-case.sh")
+    pin_integration_0177 = read("e2e/scripts/run-minecraft-e2e.sh")
+    pin_matrix_0177 = read("scripts/compatibility/matrix.py")
+    pin_release_0177 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    pin_workflow_0177 = read(".github/workflows/compatibility.yml")
+    pin_tests_0177 = read("cli/cmd/neverlauncher/loader_resolution_test.go") + read("cli/cmd/neverlauncher/loader_runtime_test.go") + read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("scripts/compatibility/test_matrix.py")
+    pin_gate_0177 = read("scripts/smoke/offline/loader-resolution-pinning-0177.py")
+    for required in ["ReproducibilitySHA256", "ResolutionSourceSHA256", "PayloadSHA256", "RuntimeProfileSHA256", "persistLoaderResolutionLock", "readLoaderResolutionLock"]:
+        if required not in pin_lock_0177:
+            fail(f"0.17.7 loader resolution lock incomplete: {required}")
+    for required in ["resolveMetaLoaderVersionWithEvidence", "ResolutionPinned", "assertPinnedPayload", "assertPinnedRuntimeProfile"]:
+        if required not in pin_meta_0177:
+            fail(f"0.17.7 Fabric/Quilt pinning incomplete: {required}")
+    for required in ["resolveForgeLikeVersionWithEvidence", "sha256HexBytes(data)", "ResolutionPinned", "assertPinnedPayloadSHA256", "assertPinnedRuntimeProfile"]:
+        if required not in pin_forge_0177:
+            fail(f"0.17.7 Forge/NeoForge pinning incomplete: {required}")
+    for required in ["resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySha256", "loaderPinned", "reproducibleResolution"]:
+        if required not in pin_compat_0177:
+            fail(f"0.17.7 compatibility pin evidence incomplete: {required}")
+    for required in ["FIRST_LOCK_SHA256", "resolutionPinned", "loaderResolution"]:
+        if required not in pin_integration_0177:
+            fail(f"0.17.7 integration replay incomplete: {required}")
+    for required in ["loader_resolution_pinning_0177_required", "resolutionLockSha256", "reproducibleResolution"]:
+        if required not in pin_matrix_0177:
+            fail(f"0.17.7 matrix pin enforcement incomplete: {required}")
+    for required in ["releaseCompatibilityLoaderPin", "LoaderPins", "compatibilityLoaderResolution0177Required", "loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay"]:
+        if required not in pin_release_0177:
+            fail(f"0.17.7 release certification pinning incomplete: {required}")
+    for loader in ["fabric", "quilt", "forge", "neoforge"]:
+        if f"e2e/runtime/{loader}-resolution-lock.json" not in pin_workflow_0177:
+            fail(f"0.17.7 compatibility workflow does not retain {loader} resolution lock")
+    for required in ["TestLoaderResolutionLockRoundTripAndTamperDetection", "TestCompatibilityCertificationLoaderResolutionPinning0177", "test_0177_aggregate_rejects_missing_loader_resolution_pin"]:
+        if required not in pin_tests_0177:
+            fail(f"0.17.7 pinning regression test missing: {required}")
+    if "Loader Resolution & Pinning 0.17.7 gate: OK" not in pin_gate_0177:
+        fail("0.17.7 mandatory loader resolution pinning gate incomplete")
+    if "loader-resolution-pinning-0177.py" not in preflight or "loader-resolution-pinning-0177.py" not in ci:
+        fail("0.17.7 loader resolution pinning gate is not wired into preflight/CI")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

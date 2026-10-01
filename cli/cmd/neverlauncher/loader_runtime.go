@@ -22,18 +22,19 @@ const (
 )
 
 type loaderMaterializeOptions struct {
-	Loader           string
-	MinecraftVersion string
-	LoaderVersion    string
-	ClientDir        string
-	VersionManifest  string
-	AssetBaseURL     string
-	LibraryBaseURL   string
-	MetaBaseURL      string
-	Targets          []vanillaTarget
-	Workers          int
-	StrictUpstream   bool
-	HTTPClient       *http.Client
+	Loader             string
+	MinecraftVersion   string
+	LoaderVersion      string
+	ClientDir          string
+	VersionManifest    string
+	AssetBaseURL       string
+	LibraryBaseURL     string
+	MetaBaseURL        string
+	Targets            []vanillaTarget
+	Workers            int
+	StrictUpstream     bool
+	ResolutionLockPath string
+	HTTPClient         *http.Client
 }
 
 type loaderMetaEntry struct {
@@ -62,24 +63,31 @@ type loaderVersionProfile struct {
 }
 
 type loaderMaterializeResult struct {
-	SchemaVersion    string                  `json:"schemaVersion"`
-	ToolVersion      string                  `json:"toolVersion"`
-	Loader           string                  `json:"loader"`
-	MinecraftVersion string                  `json:"minecraftVersion"`
-	LoaderVersion    string                  `json:"loaderVersion"`
-	ProfileID        string                  `json:"profileId"`
-	ProfilePath      string                  `json:"profilePath"`
-	MainClass        string                  `json:"mainClass"`
-	ClientDir        string                  `json:"clientDir"`
-	JavaMajorVersion int                     `json:"javaMajorVersion"`
-	LibraryCount     int                     `json:"libraryCount"`
-	Downloaded       int                     `json:"downloaded"`
-	Cached           int                     `json:"cached"`
-	TotalBytes       int64                   `json:"totalBytes"`
-	ProfileSHA256    string                  `json:"profileSha256"`
-	Vanilla          vanillaInstallResult    `json:"vanilla"`
-	Files            []vanillaDownloadedFile `json:"files"`
-	Status           string                  `json:"status"`
+	SchemaVersion          string                  `json:"schemaVersion"`
+	ToolVersion            string                  `json:"toolVersion"`
+	Loader                 string                  `json:"loader"`
+	MinecraftVersion       string                  `json:"minecraftVersion"`
+	LoaderVersion          string                  `json:"loaderVersion"`
+	ProfileID              string                  `json:"profileId"`
+	ProfilePath            string                  `json:"profilePath"`
+	MainClass              string                  `json:"mainClass"`
+	ClientDir              string                  `json:"clientDir"`
+	JavaMajorVersion       int                     `json:"javaMajorVersion"`
+	LibraryCount           int                     `json:"libraryCount"`
+	Downloaded             int                     `json:"downloaded"`
+	Cached                 int                     `json:"cached"`
+	TotalBytes             int64                   `json:"totalBytes"`
+	ProfileSHA256          string                  `json:"profileSha256"`
+	ResolutionLockPath     string                  `json:"resolutionLockPath"`
+	ResolutionLockSHA256   string                  `json:"resolutionLockSha256"`
+	ResolutionSourceURL    string                  `json:"resolutionSourceUrl"`
+	ResolutionSourceSHA256 string                  `json:"resolutionSourceSha256"`
+	MaterializationSHA256  string                  `json:"materializationSha256"`
+	ReproducibilitySHA256  string                  `json:"reproducibilitySha256"`
+	ResolutionPinned       bool                    `json:"resolutionPinned"`
+	Vanilla                vanillaInstallResult    `json:"vanilla"`
+	Files                  []vanillaDownloadedFile `json:"files"`
+	Status                 string                  `json:"status"`
 }
 
 func handleRuntimeFabricInstall(args []string) error {
@@ -181,17 +189,18 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 		return loaderMaterializeOptions{}, err
 	}
 	return loaderMaterializeOptions{
-		Loader:           loader,
-		MinecraftVersion: minecraftVersion,
-		LoaderVersion:    strings.TrimSpace(flagValue(args, "--loader-version", "latest-stable")),
-		ClientDir:        clientDir,
-		VersionManifest:  flagValue(args, "--version-manifest", defaultMojangVersionManifest),
-		AssetBaseURL:     flagValue(args, "--asset-base-url", defaultMojangAssetBase),
-		LibraryBaseURL:   flagValue(args, "--library-base-url", defaultMojangLibraryBase),
-		MetaBaseURL:      strings.TrimRight(metaBase, "/"),
-		Targets:          targets,
-		Workers:          workers,
-		StrictUpstream:   !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		Loader:             loader,
+		MinecraftVersion:   minecraftVersion,
+		LoaderVersion:      strings.TrimSpace(flagValue(args, "--loader-version", "latest-stable")),
+		ClientDir:          clientDir,
+		VersionManifest:    flagValue(args, "--version-manifest", defaultMojangVersionManifest),
+		AssetBaseURL:       flagValue(args, "--asset-base-url", defaultMojangAssetBase),
+		LibraryBaseURL:     flagValue(args, "--library-base-url", defaultMojangLibraryBase),
+		MetaBaseURL:        strings.TrimRight(metaBase, "/"),
+		Targets:            targets,
+		Workers:            workers,
+		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 	}, nil
 }
 
@@ -239,9 +248,27 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		return loaderMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
 	}
 
-	selectedEntry, err := resolveMetaLoaderVersion(ctx, opts.HTTPClient, loader, opts.MetaBaseURL, vanilla.MinecraftVersion, opts.LoaderVersion)
+	lockPath := opts.ResolutionLockPath
+	if lockPath == "" {
+		lockPath = defaultLoaderResolutionLockPath(opts.ClientDir, loader)
+	}
+	pinned, err := readLoaderResolutionLock(lockPath, loader, vanilla.MinecraftVersion, opts.LoaderVersion)
 	if err != nil {
 		return loaderMaterializeResult{}, err
+	}
+	var selectedEntry loaderMetaEntry
+	var resolutionSourceURL, resolutionSourceSHA256 string
+	if pinned != nil {
+		selectedEntry.Loader.Version = pinned.ResolvedVersion
+		selectedEntry.Loader.Maven = pinned.LoaderMaven
+		selectedEntry.Intermediary.Maven = pinned.IntermediaryMaven
+		resolutionSourceURL = pinned.ResolutionSourceURL
+		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
+	} else {
+		selectedEntry, resolutionSourceURL, resolutionSourceSHA256, err = resolveMetaLoaderVersionWithEvidence(ctx, opts.HTTPClient, loader, opts.MetaBaseURL, vanilla.MinecraftVersion, opts.LoaderVersion)
+		if err != nil {
+			return loaderMaterializeResult{}, err
+		}
 	}
 	selectedLoader := selectedEntry.Loader.Version
 	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), vanilla.MinecraftVersion, selectedLoader)
@@ -249,6 +276,10 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	if err != nil {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
 	}
+	if err := assertPinnedPayload(pinned, profileURL, profileBytes); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	upstreamProfileSHA256 := sha256HexBytes(profileBytes)
 	var profile loaderVersionProfile
 	if err := json.Unmarshal(profileBytes, &profile); err != nil {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile JSON повреждён: %w", loader, err)
@@ -299,13 +330,33 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		return loaderMaterializeResult{}, err
 	}
 	profileSHA := sha256.Sum256(profileBytes)
+	profileSHA256 := hex.EncodeToString(profileSHA[:])
+	if err := assertPinnedRuntimeProfile(pinned, profileSHA256); err != nil {
+		return loaderMaterializeResult{}, err
+	}
 	files = append(files, vanillaDownloadedFile{
-		Path:   profilePath,
-		Kind:   loader + "-profile",
-		Size:   int64(len(profileBytes)),
-		SHA256: hex.EncodeToString(profileSHA[:]),
+		Path: profilePath, Kind: loader + "-profile", Size: int64(len(profileBytes)), SHA256: profileSHA256,
 	})
+	files = dedupeDownloadedFiles(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	materializationSHA256 := loaderMaterializationSHA256(files)
+	if err := assertPinnedMaterialization(pinned, materializationSHA256); err != nil {
+		return loaderMaterializeResult{}, err
+	}
+	selectorForLock := opts.LoaderVersion
+	if pinned != nil {
+		selectorForLock = pinned.Selector
+	}
+	resolution := loaderResolutionLock{
+		SchemaVersion: loaderResolutionLockSchema, Loader: loader, MinecraftVersion: vanilla.MinecraftVersion, Selector: selectorForLock,
+		ResolvedVersion: selectedLoader, LoaderMaven: selectedEntry.Loader.Maven, IntermediaryMaven: selectedEntry.Intermediary.Maven,
+		ResolutionSourceURL: resolutionSourceURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		PayloadURL: profileURL, PayloadSHA256: upstreamProfileSHA256, RuntimeProfileSHA256: profileSHA256, MaterializationSHA256: materializationSHA256,
+	}
+	resolution, resolutionLockSHA256, err := persistLoaderResolutionLock(lockPath, resolution)
+	if err != nil {
+		return loaderMaterializeResult{}, err
+	}
 
 	downloaded, cached := 0, 0
 	var total int64
@@ -318,15 +369,22 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		total += file.Size
 	}
 	state := map[string]any{
-		"schemaVersion":    "1.0",
-		"toolVersion":      version,
-		"loader":           loader,
-		"minecraftVersion": vanilla.MinecraftVersion,
-		"loaderVersion":    selectedLoader,
-		"profileId":        profile.ID,
-		"profilePath":      profilePath,
-		"profileSha256":    hex.EncodeToString(profileSHA[:]),
-		"status":           "installed-and-verified",
+		"schemaVersion":          "1.0",
+		"toolVersion":            version,
+		"loader":                 loader,
+		"minecraftVersion":       vanilla.MinecraftVersion,
+		"loaderVersion":          selectedLoader,
+		"profileId":              profile.ID,
+		"profilePath":            profilePath,
+		"profileSha256":          profileSHA256,
+		"resolutionLockPath":     filepath.ToSlash(lockPath),
+		"resolutionLockSha256":   resolutionLockSHA256,
+		"resolutionSourceUrl":    resolutionSourceURL,
+		"resolutionSourceSha256": resolutionSourceSHA256,
+		"materializationSha256":  materializationSHA256,
+		"reproducibilitySha256":  resolution.ReproducibilitySHA256,
+		"resolutionPinned":       pinned != nil,
+		"status":                 "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
 	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", loader+"-install.json")))
@@ -338,43 +396,51 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	}
 
 	return loaderMaterializeResult{
-		SchemaVersion:    "1.0",
-		ToolVersion:      version,
-		Loader:           loader,
-		MinecraftVersion: vanilla.MinecraftVersion,
-		LoaderVersion:    selectedLoader,
-		ProfileID:        profile.ID,
-		ProfilePath:      profilePath,
-		MainClass:        profile.MainClass,
-		ClientDir:        opts.ClientDir,
-		JavaMajorVersion: vanilla.JavaMajorVersion,
-		LibraryCount:     len(profile.Libraries),
-		Downloaded:       downloaded,
-		Cached:           cached,
-		TotalBytes:       total,
-		ProfileSHA256:    hex.EncodeToString(profileSHA[:]),
-		Vanilla:          vanilla,
-		Files:            files,
-		Status:           "installed-and-verified",
+		SchemaVersion:      "1.0",
+		ToolVersion:        version,
+		Loader:             loader,
+		MinecraftVersion:   vanilla.MinecraftVersion,
+		LoaderVersion:      selectedLoader,
+		ProfileID:          profile.ID,
+		ProfilePath:        profilePath,
+		MainClass:          profile.MainClass,
+		ClientDir:          opts.ClientDir,
+		JavaMajorVersion:   vanilla.JavaMajorVersion,
+		LibraryCount:       len(profile.Libraries),
+		Downloaded:         downloaded,
+		Cached:             cached,
+		TotalBytes:         total,
+		ProfileSHA256:      profileSHA256,
+		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256,
+		ResolutionSourceURL: resolutionSourceURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		Vanilla: vanilla,
+		Files:   files,
+		Status:  "installed-and-verified",
 	}, nil
 }
 
 func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, error) {
+	entry, _, _, err := resolveMetaLoaderVersionWithEvidence(ctx, client, loader, metaBase, minecraftVersion, requested)
+	return entry, err
+}
+
+func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, string, string, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMetaEntry{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
 	}
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), minecraftVersion)
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
-		return loaderMetaEntry{}, fmt.Errorf("%s loader version metadata: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: %w", loader, err)
 	}
 	var entries []loaderMetaEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
-		return loaderMetaEntry{}, fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
 	}
 	if len(entries) == 0 {
-		return loaderMetaEntry{}, fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
 	}
 	requested = strings.TrimSpace(requested)
 	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
@@ -385,24 +451,24 @@ func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, 
 				continue
 			}
 			if entry.Loader.Stable || (loader == "quilt" && isStableQuiltLoaderVersion(version)) {
-				return entry, nil
+				return entry, url, sha256HexBytes(data), nil
 			}
 		}
 		if requested == "latest" {
 			for _, entry := range entries {
 				if strings.TrimSpace(entry.Loader.Version) != "" {
-					return entry, nil
+					return entry, url, sha256HexBytes(data), nil
 				}
 			}
 		}
-		return loaderMetaEntry{}, fmt.Errorf("Meta API не вернул стабильную %s loader version для Minecraft %s", loader, minecraftVersion)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Meta API не вернул стабильную %s loader version для Minecraft %s", loader, minecraftVersion)
 	}
 	for _, entry := range entries {
 		if entry.Loader.Version == requested {
-			return entry, nil
+			return entry, url, sha256HexBytes(data), nil
 		}
 	}
-	return loaderMetaEntry{}, fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
+	return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
 }
 
 // Quilt Meta v3 does not guarantee the Fabric-style `stable` boolean on loader rows.

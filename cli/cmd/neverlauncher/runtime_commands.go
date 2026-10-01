@@ -437,17 +437,18 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "complete 0.17.0v1 Legacy Vanilla 53-release actual-client grid", "status": "implemented"},
 			{"feature": "complete 0.17.0v2 Java 16/17 Vanilla 9-release actual-client grid", "status": "implemented"},
 			{"feature": "NeoForge Compatibility II 1.20.1 through 26.2 processor actual-client grid", "status": "implemented"},
+			{"feature": "loader resolution lock with upstream/payload/runtime-profile SHA-256 replay", "status": "implemented"},
 		},
 		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "forge-legacy-1.12.2", "forge-legacy-1.7.10", "neoforge", "managed-java-temurin"},
-		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base+neoforge-compatibility-ii",
+		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base+neoforge-compatibility-ii+loader-resolution-pinning",
 		"javaMajors":          []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":   managedJavaIIMajors0165(),
 		"managedJavaMode":     "temurin-latest-ga+historical-feature-release-fallback+bounded-retry+sha256+java-binary-sha256+quarantine+atomic-install+java-version",
 		"ciTargets":           ciTargets,
-		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
+		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "loader-resolution-lock-sha256", "upstream-resolution-source-sha256", "reproducibility-sha256", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.7.10"},
-		"note":                "0.17.6 добавляет 22 обязательных NeoForge targets 1.20.1..26.2 поверх Minecraft Compatibility II GA; client targets требуют реальный processor installer, package verify, immutable NeoForge version и actual client launch на exact Java 17/21/25.",
+		"note":                "0.17.7 добавляет immutable loader resolution locks для Fabric/Quilt/Forge/NeoForge: mutable selector разрешается один раз, replay обязан подтвердить те же source/payload/runtime-profile SHA-256 и reproducibility identity.",
 	}
 }
 

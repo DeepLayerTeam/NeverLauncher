@@ -625,12 +625,49 @@ case "$LOADER" in
     "$RUNTIME_DIR/nl" runtime vanilla-package "${PACKAGE_ARGS[@]}"
     ;;
   fabric|quilt)
-    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR"
+    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json"
     ;;
   forge|neoforge)
-    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --java "$JAVA_BIN"
+    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
     ;;
 esac
+
+RESOLUTION_LOCK_SHA256=""
+RESOLUTION_REPRO_SHA256=""
+RESOLUTION_SOURCE_SHA256=""
+if [[ "$LOADER" != "vanilla" ]]; then
+  FIRST_LOCK_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].resolutionLockSha256' "$CLIENT_PACKAGE")"
+  FIRST_REPRO_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].reproducibilitySha256' "$CLIENT_PACKAGE")"
+  case "$LOADER" in
+    fabric|quilt)
+      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json"
+      ;;
+    forge|neoforge)
+      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
+      ;;
+  esac
+  cp "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" "$RUNTIME_DIR/${LOADER}-resolution-lock.json"
+  RESOLUTION_LOCK_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].resolutionLockSha256' "$CLIENT_PACKAGE")"
+  RESOLUTION_REPRO_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].reproducibilitySha256' "$CLIENT_PACKAGE")"
+  RESOLUTION_SOURCE_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].resolutionSourceSha256' "$CLIENT_PACKAGE")"
+  jq -e --arg loader "$LOADER" --arg firstLock "$FIRST_LOCK_SHA256" --arg firstRepro "$FIRST_REPRO_SHA256"     '.[ $loader ].resolutionPinned == true and .[ $loader ].resolutionLockSha256 == $firstLock and .[ $loader ].reproducibilitySha256 == $firstRepro and (.[ $loader ].resolutionSourceSha256 | test("^[0-9a-f]{64}$"))'     "$CLIENT_PACKAGE" >/dev/null
+  python3 - "$RUNTIME_DIR/${LOADER}-resolution-lock.json" "$RESOLUTION_LOCK_SHA256" "$RESOLUTION_REPRO_SHA256" <<'PYLOCK'
+import hashlib, json, re, sys
+path, expected_lock, expected_repro = sys.argv[1:]
+raw = open(path, 'rb').read()
+lock = json.loads(raw.decode('utf-8'))
+actual = hashlib.sha256(raw).hexdigest()
+if actual != expected_lock:
+    raise SystemExit(f'loader lock SHA-256 mismatch: expected {expected_lock} got {actual}')
+if lock.get('reproducibilitySha256') != expected_repro:
+    raise SystemExit('loader lock reproducibility identity mismatch')
+if lock.get('resolvedVersion') in ('', None, 'latest', 'latest-stable', 'stable', 'recommended'):
+    raise SystemExit('loader lock does not contain an immutable resolvedVersion')
+for key in ('resolutionSourceSha256', 'payloadSha256', 'runtimeProfileSha256', 'materializationSha256', 'reproducibilitySha256'):
+    if not re.fullmatch(r'[0-9a-f]{64}', str(lock.get(key) or '')):
+        raise SystemExit(f'loader lock {key} is invalid')
+PYLOCK
+fi
 
 "$RUNTIME_DIR/nl" client verify \
   --package "$CLIENT_PACKAGE" \
@@ -924,6 +961,9 @@ jq -n \
   --arg loader "$LOADER" \
   --arg loaderSelector "$LOADER_VERSION_SELECTOR" \
   --arg resolvedLoaderVersion "$RESOLVED_LOADER_VERSION" \
+  --arg resolutionLockSha256 "$RESOLUTION_LOCK_SHA256" \
+  --arg resolutionReproSha256 "$RESOLUTION_REPRO_SHA256" \
+  --arg resolutionSourceSha256 "$RESOLUTION_SOURCE_SHA256" \
   --arg profile "$PROFILE_ID" \
   --arg velocity "$VELOCITY_HEALTH" \
   --arg bungeecord "$BUNGEECORD_HEALTH" \
@@ -934,6 +974,6 @@ jq -n \
   --arg fabric "$FABRIC_HEALTH" \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed"},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

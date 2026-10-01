@@ -110,6 +110,10 @@ jobs:
             e2e/runtime/forge-certification.json
             e2e/runtime/neoforge-install.json
             e2e/runtime/neoforge-certification.json
+            e2e/runtime/fabric-resolution-lock.json
+            e2e/runtime/quilt-resolution-lock.json
+            e2e/runtime/forge-resolution-lock.json
+            e2e/runtime/neoforge-resolution-lock.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
             e2e/runtime/manifest.json

@@ -565,6 +565,21 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			EvidenceSHA256: evidence,
 		})
 	}
+	if compatibilityLoaderResolution0177Required(ver) {
+		for i := range matrix.Targets {
+			if matrix.Targets[i].Loader == "vanilla" {
+				continue
+			}
+			matrix.Targets[i].ResolutionLockSHA256 = strings.Repeat("b", 64)
+			matrix.Targets[i].ResolutionSourceSHA256 = strings.Repeat("c", 64)
+			matrix.Targets[i].ReproducibilitySHA256 = strings.Repeat("d", 64)
+			if matrix.Targets[i].Checks == nil {
+				matrix.Targets[i].Checks = map[string]bool{}
+			}
+			matrix.Targets[i].Checks["loaderPinned"] = true
+			matrix.Targets[i].Checks["reproducibleResolution"] = true
+		}
+	}
 	targetRaw, err := json.Marshal(targets)
 	if err != nil {
 		t.Fatal(err)
@@ -1616,5 +1631,88 @@ func TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage(t
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.6"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
 		t.Fatalf("bundle verifier must reject tampered NeoForge coverage, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationLoaderResolutionPinning0177(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.7", "commit-177")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.7", "commit-177")
+	if err != nil {
+		t.Fatalf("0.17.7 loader resolution pinning evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay") {
+		t.Fatalf("0.17.7 policy does not bind loader resolution pinning: %s", certification.Policy)
+	}
+	want := 0
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for _, target := range targets.Targets {
+		if target.Loader != "vanilla" {
+			want++
+		}
+	}
+	if len(certification.LoaderPins) != want {
+		t.Fatalf("0.17.7 loader pin coverage=%d, want %d", len(certification.LoaderPins), want)
+	}
+}
+
+func TestCompatibilityCertificationLoaderResolutionPinning0177RejectsMissingPin(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.7", "commit-177")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].Loader == "fabric" {
+			matrix.Targets[i].ResolutionLockSHA256 = ""
+			matrix.Targets[i].Checks["loaderPinned"] = false
+			break
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.7", "commit-177"); err == nil {
+		t.Fatal("0.17.7 must reject missing loader resolution pin")
+	}
+}
+
+func TestCompatibilityCertificationLoaderResolutionPinning0177BundleRejectsTamperedPins(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.7", "commit-177")
+	dir := t.TempDir()
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.7", "commit-177"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert releaseCompatibilityCertification
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	if len(cert.LoaderPins) == 0 {
+		t.Fatal("fixture produced no loader pins")
+	}
+	cert.LoaderPins[0].ReproducibilitySHA256 = strings.Repeat("e", 64)
+	raw, _ = json.MarshalIndent(cert, "", "  ")
+	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.7"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+		t.Fatalf("bundle verifier must reject tampered loader pin coverage, got %v", err)
 	}
 }

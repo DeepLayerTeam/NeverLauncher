@@ -289,6 +289,9 @@ def forge_legacy_1710_0175_required() -> bool:
 def neoforge_compatibility_ii_0176_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 6)
 
+def loader_resolution_pinning_0177_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 7)
+
 
 def load_json(path: Path) -> Any:
     try:
@@ -730,6 +733,11 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             errors.append("Vanilla result must not have resolvedLoaderVersion")
     elif not resolved or resolved.lower() in MUTABLE_SELECTORS:
         errors.append("loader result did not resolve to a concrete immutable version")
+    if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
+        for key in ("resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySha256"):
+            value = str(result.get(key, "")).lower()
+            if not re.fullmatch(r"[0-9a-f]{64}", value):
+                errors.append(f"{key} is missing or invalid")
 
     checks = result.get("checks")
     mandatory = (
@@ -741,6 +749,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         mandatory = list(mandatory) + ["matchingServer", "serverVersionMatched", "serverHealthy", "clientJoinedServer"]
     if compatibility_ii_ga_required():
         mandatory = list(mandatory) + ["jreCertified"]
+    if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
+        mandatory = list(mandatory) + ["loaderPinned", "reproducibleResolution"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -804,6 +814,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             mandatory_files = set(mandatory_files) | {"vanilla-server-install.json", "matching-server.json", "matching-server.log"}
         if compatibility_ii_ga_required():
             mandatory_files = set(mandatory_files) | {"java-runtime.json"}
+        if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
+            mandatory_files = set(mandatory_files) | {f"{target['loader']}-resolution-lock.json"}
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":

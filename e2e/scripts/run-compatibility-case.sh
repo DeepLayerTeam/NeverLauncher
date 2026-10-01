@@ -100,7 +100,9 @@ set -e
 
 python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$MATCHING_SERVER" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
 from __future__ import annotations
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -132,6 +134,18 @@ def read_path(path: Path):
     except Exception:
         return None
 
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+def valid_sha256(value) -> bool:
+    return bool(SHA256_RE.fullmatch(str(value or "").lower()))
+
+def file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
 java_evidence = read_path(java_evidence_path) or {}
 platform_evidence = read_path(platform_evidence_path) or {}
 detected_java = java_evidence.get("detectedMajor")
@@ -150,6 +164,16 @@ if scope == "client":
         probe_name = "vanilla-certification.json"
     install = read(install_name) or {}
     probe = read(probe_name) or {}
+    resolution_lock_sha = str(install.get("resolutionLockSha256") or "")
+    resolution_source_sha = str(install.get("resolutionSourceSha256") or "")
+    reproducibility_sha = str(install.get("reproducibilitySha256") or "")
+    resolution_pinned = install.get("resolutionPinned") is True
+    resolution_lock_path = runtime / f"{loader}-resolution-lock.json"
+    resolution_lock_matches = loader == "vanilla" or (
+        resolution_lock_path.is_file()
+        and valid_sha256(resolution_lock_sha)
+        and file_sha256(resolution_lock_path) == resolution_lock_sha.lower()
+    )
     manifest_settings = package.get("manifestSettings") if isinstance(package.get("manifestSettings"), dict) else {}
     minecraft_settings = manifest_settings.get("minecraft") if isinstance(manifest_settings.get("minecraft"), dict) else {}
     materialized = install.get("status") == "installed-and-verified" and install.get("minecraftVersion") == minecraft
@@ -170,6 +194,11 @@ if scope == "client":
         "actualClient": probe.get("status") == "passed" and (probe.get("timedOut") is True or probe.get("success") is True),
         "platformMatched": platform_matched,
     }
+    if loader != "vanilla":
+        checks.update({
+            "loaderPinned": resolution_pinned and valid_sha256(resolution_lock_sha),
+            "reproducibleResolution": resolution_lock_matches and valid_sha256(resolution_source_sha) and valid_sha256(reproducibility_sha),
+        })
     matching = read("matching-server.json") or {}
     server_install = read("vanilla-server-install.json") or {}
     if matching_server:
@@ -182,7 +211,7 @@ if scope == "client":
     manifest_loader = str(minecraft_settings.get("loader", ""))
     evidence_files = [name for name in [
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
-        probe_name, "matching-server.json", "matching-server.log", "result.json"
+        probe_name, f"{loader}-resolution-lock.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
 else:
     base = read("result.json") or {}
@@ -193,6 +222,17 @@ else:
     launch = read("runtime-launch-minecraft.json") or {}
     health = read("health-paper.json") or {}
     resolved = str(((base.get("minecraft") or {}).get("resolvedLoaderVersion")) or ((manifest.get("minecraft") or {}).get("loaderVersion")) or "")
+    loader_resolution = ((base.get("minecraft") or {}).get("loaderResolution") or {})
+    resolution_lock_sha = str(loader_resolution.get("lockSha256") or "")
+    resolution_source_sha = str(loader_resolution.get("sourceSha256") or "")
+    reproducibility_sha = str(loader_resolution.get("reproducibilitySha256") or "")
+    resolution_pinned = loader_resolution.get("pinned") is True
+    resolution_lock_path = runtime / f"{loader}-resolution-lock.json"
+    resolution_lock_matches = loader == "vanilla" or (
+        resolution_lock_path.is_file()
+        and valid_sha256(resolution_lock_sha)
+        and file_sha256(resolution_lock_path) == resolution_lock_sha.lower()
+    )
     checks = {
         "packageVerified": verify.get("status") == "valid" and (verify.get("verify") or {}).get("valid") is True,
         "signedManifest": (runtime_verify.get("signature") or {}).get("valid") is True,
@@ -205,10 +245,16 @@ else:
         "jreCertified": java_evidence.get("certified") is True,
         "platformMatched": platform_matched,
     }
+    if loader != "vanilla":
+        checks.update({
+            "loaderPinned": resolution_pinned and valid_sha256(resolution_lock_sha),
+            "reproducibleResolution": resolution_lock_matches and valid_sha256(resolution_source_sha) and valid_sha256(reproducibility_sha),
+        })
     manifest_loader = str((manifest.get("minecraft") or {}).get("loader", ""))
     evidence_files = [name for name in [
         "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
-        "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json"
+        "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
+        f"{loader}-resolution-lock.json"
     ] if (runtime / name).is_file()]
 
 status = "passed" if rc == 0 and all(checks.values()) else "failed"
@@ -221,6 +267,9 @@ payload = {
     "loader": loader,
     "loaderSelector": selector,
     "resolvedLoaderVersion": resolved,
+    "resolutionLockSha256": resolution_lock_sha if loader != "vanilla" else "",
+    "resolutionSourceSha256": resolution_source_sha if loader != "vanilla" else "",
+    "reproducibilitySha256": reproducibility_sha if loader != "vanilla" else "",
     "os": os_name,
     "arch": arch,
     "javaMajor": java_major,

@@ -37,17 +37,50 @@ cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bi
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[forge-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
 printf '[forge-cert] materialize Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
-"$NL_BIN" runtime forge-package \
-  --minecraft "$MINECRAFT_VERSION" \
-  --loader-version "$LOADER_SELECTOR" \
-  --client-dir "$RUNTIME_DIR/materialized-client" \
-  --java "$JAVA_BIN" \
-  --target "$TARGET_OS/$TARGET_ARCH" \
-  --project compatibility-certification \
-  --profile "forge-$MINECRAFT_VERSION-$TARGET_OS-$TARGET_ARCH" \
-  --channel stable \
-  --version "$PRODUCT_VERSION-forge-$MINECRAFT_VERSION-cert" \
-  --output "$RUNTIME_DIR/client-package.json"
+materialize_loader_package() {
+  "$NL_BIN" runtime forge-package \
+    --minecraft "$MINECRAFT_VERSION" \
+    --loader-version "$LOADER_SELECTOR" \
+    --client-dir "$RUNTIME_DIR/materialized-client" \
+    --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/forge-resolution-lock.json" \
+    --java "$JAVA_BIN" \
+    --target "$TARGET_OS/$TARGET_ARCH" \
+    --project compatibility-certification \
+    --profile "forge-$MINECRAFT_VERSION-$TARGET_OS-$TARGET_ARCH" \
+    --channel stable \
+    --version "$PRODUCT_VERSION-forge-$MINECRAFT_VERSION-cert" \
+    --output "$RUNTIME_DIR/client-package.json"
+}
+
+materialize_loader_package
+FIRST_REPRODUCIBILITY_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("forge") or {}).get("reproducibilitySha256") or "")' "$RUNTIME_DIR/client-package.json")"
+FIRST_LOCK_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("forge") or {}).get("resolutionLockSha256") or "")' "$RUNTIME_DIR/client-package.json")"
+# Replay the same mutable selector through the generated lock. This must not re-resolve latest-stable.
+materialize_loader_package
+cp "$RUNTIME_DIR/materialized-client/.neverlauncher/forge-resolution-lock.json" "$RUNTIME_DIR/forge-resolution-lock.json"
+
+python3 - "$RUNTIME_DIR/client-package.json" "$RUNTIME_DIR/forge-resolution-lock.json" "$FIRST_REPRODUCIBILITY_SHA256" "$FIRST_LOCK_SHA256" <<'PY'
+import hashlib, json, re, sys
+package_p, lock_p, first_repro, first_lock = sys.argv[1:]
+package = json.load(open(package_p, encoding="utf-8"))
+install = package.get("forge") or {}
+raw = open(lock_p, "rb").read()
+lock = json.loads(raw.decode("utf-8"))
+lock_sha = hashlib.sha256(raw).hexdigest()
+for key in ("resolutionLockSha256", "resolutionSourceSha256", "reproducibilitySha256"):
+    if not re.fullmatch(r"[0-9a-f]{64}", str(install.get(key) or "")):
+        raise SystemExit(f"invalid loader pin {key}")
+if install.get("resolutionPinned") is not True:
+    raise SystemExit("second materialization did not reuse loader resolution lock")
+if lock_sha != install.get("resolutionLockSha256") or lock_sha != first_lock:
+    raise SystemExit("loader resolution lock SHA-256 changed between materializations")
+if install.get("reproducibilitySha256") != first_repro or lock.get("reproducibilitySha256") != first_repro:
+    raise SystemExit("loader reproducibility identity changed between materializations")
+if lock.get("resolvedVersion") != install.get("loaderVersion"):
+    raise SystemExit("loader lock resolvedVersion mismatch")
+if lock.get("selector") in ("", None) or lock.get("resolvedVersion") in ("latest", "latest-stable", "stable", "recommended"):
+    raise SystemExit("loader lock is not immutable")
+PY
 
 "$NL_BIN" client verify \
   --package "$RUNTIME_DIR/client-package.json" \
@@ -157,7 +190,7 @@ payload = {
   'java': {'requiredMajor': java, 'detectedMajor': cert.get('detectedJavaMajor')},
   'checks': {'materialized': True, 'packageVerified': True, 'runtimeResolved': True, 'javaMatched': True, 'actualClient': True},
   'runtimeSeconds': cert.get('runtimeSeconds'),
-  'evidence': ['client-package.json', 'materialized-client-verify.json', 'forge-install.json', 'forge-certification.json']
+  'evidence': ['client-package.json', 'materialized-client-verify.json', 'forge-install.json', 'forge-certification.json', 'forge-resolution-lock.json']
 }
 open(out, 'w', encoding='utf-8').write(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
 PY

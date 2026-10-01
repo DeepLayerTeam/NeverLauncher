@@ -1,5 +1,11 @@
 # NeverLauncher CLI
 
+## Loader Resolution & Pinning — 0.17.7
+
+Все production loader materializers поддерживают `--resolution-lock <path>`. Первый запуск разрешает mutable selector в concrete loader version и атомарно пишет lock с resolution-source SHA-256, payload/profile SHA-256, runtime-profile/materialized-files SHA-256 и общей `reproducibilitySha256`. Повторный запуск читает lock до mutable resolution, повторно скачивает только pinned concrete payload и fail-closed сравнивает его и итоговый runtime profile с lock.
+
+Пример: `nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --resolution-lock .neverlauncher/fabric.lock.json ...`. Тот же механизм работает для Quilt, Forge и NeoForge; CI выполняет replay и публикует raw lock как release evidence.
+
 ## NeoForge Compatibility II — 0.17.6
 
 `nl runtime neoforge-install` / `neoforge-package` исполняют production NeoForge processor installer для stable-линии Minecraft 1.20.1–26.2. Resolver отдельно поддерживает официальный 1.20.1 artifact `net.neoforged:forge` и современный `net.neoforged:neoforge`, проверяет соответствие loader↔Minecraft, выполняет client processors на target Java и возвращает только concrete immutable loader version.
@@ -40,7 +46,7 @@ nl runtime forge-package --minecraft 1.20.1 --loader-version latest-stable --cli
 nl runtime neoforge-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/neoforge/1.21.1 --output client-package.json
 ```
 
-Fabric использует официальный Meta API v2, Quilt — Meta API v3. Forge и NeoForge загружают проверенный official Maven installer JAR, выполняют client processors из `install_profile.json`, проверяют outputs и нормализуют дочерний `version.json`. До упаковки mutable alias `latest-stable` разрешается в конкретную loader version, а все runtime artifacts фиксируются обычным SHA-256 + signed manifest lifecycle NeverLauncher.
+Fabric использует официальный Meta API v2, Quilt — Meta API v3. Forge и NeoForge загружают проверенный official Maven installer JAR, выполняют client processors из `install_profile.json`, проверяют outputs и нормализуют дочерний `version.json`. До упаковки mutable alias `latest-stable` разрешается в concrete loader version и фиксируется resolution lock. Replay обязан воспроизвести source/payload/runtime-profile/materialized-files SHA-256; обычный package SHA-256 + signed manifest lifecycle NeverLauncher остаётся отдельным уровнем integrity.
 
 ## Операции Backend
 

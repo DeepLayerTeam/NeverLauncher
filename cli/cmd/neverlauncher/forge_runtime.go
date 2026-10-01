@@ -32,22 +32,24 @@ const (
 )
 
 type forgeMaterializeOptions struct {
-	Loader           string
-	MinecraftVersion string
-	LoaderVersion    string
-	ClientDir        string
-	JavaExecutable   string
-	InstallerURL     string
-	InstallerSHA1    string
-	MavenMetadataURL string
-	VersionManifest  string
-	AssetBaseURL     string
-	LibraryBaseURL   string
-	Targets          []vanillaTarget
-	Workers          int
-	StrictUpstream   bool
-	ProcessorTimeout time.Duration
-	HTTPClient       *http.Client
+	Loader                 string
+	MinecraftVersion       string
+	LoaderVersion          string
+	ClientDir              string
+	JavaExecutable         string
+	InstallerURL           string
+	InstallerSHA1          string
+	MavenMetadataURL       string
+	VersionManifest        string
+	AssetBaseURL           string
+	LibraryBaseURL         string
+	Targets                []vanillaTarget
+	Workers                int
+	StrictUpstream         bool
+	ResolutionLockPath     string
+	ResolutionSourceSHA256 string
+	ProcessorTimeout       time.Duration
+	HTTPClient             *http.Client
 }
 
 type forgeDataValue struct {
@@ -119,6 +121,13 @@ type forgeMaterializeResult struct {
 	Cached                  int                     `json:"cached"`
 	TotalBytes              int64                   `json:"totalBytes"`
 	ProfileSHA256           string                  `json:"profileSha256"`
+	ResolutionLockPath      string                  `json:"resolutionLockPath"`
+	ResolutionLockSHA256    string                  `json:"resolutionLockSha256"`
+	ResolutionSourceURL     string                  `json:"resolutionSourceUrl"`
+	ResolutionSourceSHA256  string                  `json:"resolutionSourceSha256"`
+	MaterializationSHA256   string                  `json:"materializationSha256"`
+	ReproducibilitySHA256   string                  `json:"reproducibilitySha256"`
+	ResolutionPinned        bool                    `json:"resolutionPinned"`
 	Vanilla                 vanillaInstallResult    `json:"vanilla"`
 	Files                   []vanillaDownloadedFile `json:"files"`
 	Status                  string                  `json:"status"`
@@ -248,21 +257,22 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		return forgeMaterializeOptions{}, errors.New("--processor-timeout должен быть от 1s до 1h")
 	}
 	return forgeMaterializeOptions{
-		Loader:           loader,
-		MinecraftVersion: minecraftVersion,
-		LoaderVersion:    strings.TrimSpace(flagValue(args, "--loader-version", "latest-stable")),
-		ClientDir:        clientDir,
-		JavaExecutable:   strings.TrimSpace(flagValue(args, "--java", "")),
-		InstallerURL:     strings.TrimSpace(flagValue(args, "--installer-url", "")),
-		InstallerSHA1:    strings.TrimSpace(flagValue(args, "--installer-sha1", "")),
-		MavenMetadataURL: strings.TrimSpace(flagValue(args, "--maven-metadata-url", "")),
-		VersionManifest:  flagValue(args, "--version-manifest", defaultMojangVersionManifest),
-		AssetBaseURL:     flagValue(args, "--asset-base-url", defaultMojangAssetBase),
-		LibraryBaseURL:   flagValue(args, "--library-base-url", defaultMojangLibraryBase),
-		Targets:          targets,
-		Workers:          workers,
-		StrictUpstream:   !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
-		ProcessorTimeout: timeout,
+		Loader:             loader,
+		MinecraftVersion:   minecraftVersion,
+		LoaderVersion:      strings.TrimSpace(flagValue(args, "--loader-version", "latest-stable")),
+		ClientDir:          clientDir,
+		JavaExecutable:     strings.TrimSpace(flagValue(args, "--java", "")),
+		InstallerURL:       strings.TrimSpace(flagValue(args, "--installer-url", "")),
+		InstallerSHA1:      strings.TrimSpace(flagValue(args, "--installer-sha1", "")),
+		MavenMetadataURL:   strings.TrimSpace(flagValue(args, "--maven-metadata-url", "")),
+		VersionManifest:    flagValue(args, "--version-manifest", defaultMojangVersionManifest),
+		AssetBaseURL:       flagValue(args, "--asset-base-url", defaultMojangAssetBase),
+		LibraryBaseURL:     flagValue(args, "--library-base-url", defaultMojangLibraryBase),
+		Targets:            targets,
+		Workers:            workers,
+		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
+		ProcessorTimeout:   timeout,
 	}, nil
 }
 
@@ -296,9 +306,28 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
 	}
 
-	loaderVersion, artifactVersion, metadataURL, err := resolveForgeLikeVersion(ctx, opts.HTTPClient, loader, vanilla.MinecraftVersion, opts.LoaderVersion, opts.MavenMetadataURL)
+	lockPath := opts.ResolutionLockPath
+	if lockPath == "" {
+		lockPath = defaultLoaderResolutionLockPath(opts.ClientDir, loader)
+	}
+	pinned, err := readLoaderResolutionLock(lockPath, loader, vanilla.MinecraftVersion, opts.LoaderVersion)
 	if err != nil {
 		return forgeMaterializeResult{}, err
+	}
+	var loaderVersion, artifactVersion, metadataURL, resolutionSourceSHA256 string
+	if pinned != nil {
+		loaderVersion = pinned.ResolvedVersion
+		artifactVersion = pinned.ArtifactVersion
+		metadataURL = pinned.ResolutionSourceURL
+		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
+		if artifactVersion == "" {
+			return forgeMaterializeResult{}, errors.New("loader resolution lock не содержит Forge/NeoForge artifactVersion")
+		}
+	} else {
+		loaderVersion, artifactVersion, metadataURL, resolutionSourceSHA256, err = resolveForgeLikeVersionWithEvidence(ctx, opts.HTTPClient, loader, vanilla.MinecraftVersion, opts.LoaderVersion, opts.MavenMetadataURL)
+		if err != nil {
+			return forgeMaterializeResult{}, err
+		}
 	}
 	installerURL := opts.InstallerURL
 	if installerURL == "" {
@@ -330,6 +359,9 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
 	}
+	if err := assertPinnedPayloadSHA256(pinned, installerURL, installerFile.SHA256); err != nil {
+		return forgeMaterializeResult{}, err
+	}
 	installerPath := filepath.Join(opts.ClientDir, filepath.FromSlash(installerRel))
 	bundle, err := inspectForgeInstaller(installerPath)
 	if err != nil {
@@ -339,7 +371,9 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		if loader != "forge" {
 			return forgeMaterializeResult{}, fmt.Errorf("%s legacy universal installer format не поддерживается", loader)
 		}
-		return installForgeLegacy(ctx, opts, vanilla, loaderVersion, artifactVersion, metadataURL, installerURL, installerSHA1, installerFile, installerPath, bundle)
+		legacyOpts := opts
+		legacyOpts.ResolutionSourceSHA256 = resolutionSourceSHA256
+		return installForgeLegacy(ctx, legacyOpts, vanilla, loaderVersion, artifactVersion, metadataURL, installerURL, installerSHA1, installerFile, installerPath, bundle)
 	}
 	// Forge uses spec=0 for the classic processor-based 1.13+ installer format;
 	// NeoForge inherited this format and may use newer spec values. The actual
@@ -444,10 +478,30 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, err
 	}
 	profileSHA := sha256.Sum256(profileBytes)
-	files = append(files, vanillaDownloadedFile{Path: profilePath, Kind: loader + "-profile", Size: int64(len(profileBytes)), SHA256: hex.EncodeToString(profileSHA[:])})
-
+	profileSHA256 := hex.EncodeToString(profileSHA[:])
+	if err := assertPinnedRuntimeProfile(pinned, profileSHA256); err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	files = append(files, vanillaDownloadedFile{Path: profilePath, Kind: loader + "-profile", Size: int64(len(profileBytes)), SHA256: profileSHA256})
 	files = dedupeDownloadedFiles(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	materializationSHA256 := loaderMaterializationSHA256(files)
+	if err := assertPinnedMaterialization(pinned, materializationSHA256); err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	selectorForLock := opts.LoaderVersion
+	if pinned != nil {
+		selectorForLock = pinned.Selector
+	}
+	resolution := loaderResolutionLock{
+		SchemaVersion: loaderResolutionLockSchema, Loader: loader, MinecraftVersion: vanilla.MinecraftVersion, Selector: selectorForLock,
+		ResolvedVersion: loaderVersion, ArtifactVersion: artifactVersion, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		PayloadURL: installerURL, PayloadSHA256: installerFile.SHA256, RuntimeProfileSHA256: profileSHA256, MaterializationSHA256: materializationSHA256,
+	}
+	resolution, resolutionLockSHA256, err := persistLoaderResolutionLock(lockPath, resolution)
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
 	downloaded, cached := 0, 0
 	var total int64
 	for _, file := range files {
@@ -462,9 +516,11 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		"schemaVersion": "1.0", "toolVersion": version, "loader": loader,
 		"minecraftVersion": vanilla.MinecraftVersion, "loaderVersion": loaderVersion,
 		"artifactVersion": artifactVersion, "profileId": bundle.Version.ID, "profilePath": profilePath,
-		"profileSha256": hex.EncodeToString(profileSHA[:]), "installerUrl": installerURL,
+		"profileSha256": profileSHA256, "installerUrl": installerURL,
 		"installerSha1": installerSHA1, "installerSha256": installerFile.SHA256, "installMode": "processors",
-		"mavenMetadata": metadataURL, "clientProcessorCount": clientProcessorCount, "processorRan": stats.Ran, "processorSkipped": stats.Skipped,
+		"mavenMetadata": metadataURL, "resolutionLockPath": filepath.ToSlash(lockPath), "resolutionLockSha256": resolutionLockSHA256,
+		"resolutionSourceUrl": metadataURL, "resolutionSourceSha256": resolutionSourceSHA256, "materializationSha256": materializationSHA256, "reproducibilitySha256": resolution.ReproducibilitySHA256, "resolutionPinned": pinned != nil,
+		"clientProcessorCount": clientProcessorCount, "processorRan": stats.Ran, "processorSkipped": stats.Skipped,
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
@@ -484,8 +540,9 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		InstallerSHA1: installerSHA1, InstallerSHA256: installerFile.SHA256, InstallMode: "processors",
 		ProcessorCount: len(bundle.Profile.Processors), ClientProcessorCount: clientProcessorCount, ProcessorRan: stats.Ran, ProcessorSkipped: stats.Skipped,
 		LibraryCount: len(bundle.Profile.Libraries) + len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
-		TotalBytes: total, ProfileSHA256: hex.EncodeToString(profileSHA[:]), Vanilla: vanilla, Files: files,
-		Status: "installed-and-verified",
+		TotalBytes: total, ProfileSHA256: profileSHA256,
+		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256, MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		Vanilla: vanilla, Files: files, Status: "installed-and-verified",
 	}, nil
 }
 
@@ -498,6 +555,20 @@ func installForgeLegacy(
 	installerPath string,
 	bundle installerBundle,
 ) (forgeMaterializeResult, error) {
+	lockPath := opts.ResolutionLockPath
+	if lockPath == "" {
+		lockPath = defaultLoaderResolutionLockPath(opts.ClientDir, "forge")
+	}
+	pinned, err := readLoaderResolutionLock(lockPath, "forge", vanilla.MinecraftVersion, opts.LoaderVersion)
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	resolutionSourceSHA256 := strings.ToLower(strings.TrimSpace(opts.ResolutionSourceSHA256))
+	if pinned != nil {
+		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
+	} else if resolutionSourceSHA256 == "" {
+		_, resolutionSourceSHA256 = explicitResolutionSource("forge", vanilla.MinecraftVersion, opts.LoaderVersion, loaderVersion, artifactVersion)
+	}
 	expectedTweaker := ""
 	allowedModes := map[string]bool{}
 	switch vanilla.MinecraftVersion {
@@ -626,10 +697,30 @@ func installForgeLegacy(
 		return forgeMaterializeResult{}, err
 	}
 	profileSHA := sha256.Sum256(profileBytes)
-	files = append(files, vanillaDownloadedFile{Path: profilePath, Kind: "forge-legacy-profile", Size: int64(len(profileBytes)), SHA256: hex.EncodeToString(profileSHA[:])})
-
+	profileSHA256 := hex.EncodeToString(profileSHA[:])
+	if err := assertPinnedRuntimeProfile(pinned, profileSHA256); err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	files = append(files, vanillaDownloadedFile{Path: profilePath, Kind: "forge-legacy-profile", Size: int64(len(profileBytes)), SHA256: profileSHA256})
 	files = dedupeDownloadedFiles(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Path < files[j].Path })
+	materializationSHA256 := loaderMaterializationSHA256(files)
+	if err := assertPinnedMaterialization(pinned, materializationSHA256); err != nil {
+		return forgeMaterializeResult{}, err
+	}
+	selectorForLock := opts.LoaderVersion
+	if pinned != nil {
+		selectorForLock = pinned.Selector
+	}
+	resolution := loaderResolutionLock{
+		SchemaVersion: loaderResolutionLockSchema, Loader: "forge", MinecraftVersion: vanilla.MinecraftVersion, Selector: selectorForLock,
+		ResolvedVersion: loaderVersion, ArtifactVersion: artifactVersion, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256,
+		PayloadURL: installerURL, PayloadSHA256: installerFile.SHA256, RuntimeProfileSHA256: profileSHA256, MaterializationSHA256: materializationSHA256,
+	}
+	resolution, resolutionLockSHA256, err := persistLoaderResolutionLock(lockPath, resolution)
+	if err != nil {
+		return forgeMaterializeResult{}, err
+	}
 	downloaded, cached := 0, 0
 	var total int64
 	for _, file := range files {
@@ -644,9 +735,11 @@ func installForgeLegacy(
 		"schemaVersion": "1.0", "toolVersion": version, "loader": "forge",
 		"minecraftVersion": vanilla.MinecraftVersion, "loaderVersion": loaderVersion,
 		"artifactVersion": artifactVersion, "profileId": bundle.Version.ID, "profilePath": profilePath,
-		"profileSha256": hex.EncodeToString(profileSHA[:]), "installerUrl": installerURL,
+		"profileSha256": profileSHA256, "installerUrl": installerURL,
 		"installerSha1": installerSHA1, "installerSha256": installerFile.SHA256,
-		"mavenMetadata": metadataURL, "installMode": bundle.LegacyMode,
+		"mavenMetadata": metadataURL, "resolutionLockPath": filepath.ToSlash(lockPath), "resolutionLockSha256": resolutionLockSHA256,
+		"resolutionSourceUrl": metadataURL, "resolutionSourceSha256": resolutionSourceSHA256, "materializationSha256": materializationSHA256, "reproducibilitySha256": resolution.ReproducibilitySHA256, "resolutionPinned": pinned != nil,
+		"installMode":         bundle.LegacyMode,
 		"legacyUniversalPath": universalDestRel, "legacyUniversalSha1": universalSHA1, "legacyUniversalSha256": universalSHA256,
 		"legacyTweaker": expectedTweaker, "legacyBaseVersion": vanilla.MinecraftVersion, "legacyProfileNormalized": profileNormalized,
 		"clientProcessorCount": 0, "processorRan": 0, "processorSkipped": 0,
@@ -671,8 +764,9 @@ func installForgeLegacy(
 		LegacyTweaker: expectedTweaker, LegacyBaseVersion: vanilla.MinecraftVersion, LegacyProfileNormalized: profileNormalized,
 		ProcessorCount: 0, ClientProcessorCount: 0, ProcessorRan: 0, ProcessorSkipped: 0,
 		LibraryCount: len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
-		TotalBytes: total, ProfileSHA256: hex.EncodeToString(profileSHA[:]), Vanilla: vanilla, Files: files,
-		Status: "installed-and-verified",
+		TotalBytes: total, ProfileSHA256: profileSHA256,
+		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256, MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		Vanilla: vanilla, Files: files, Status: "installed-and-verified",
 	}, nil
 }
 
@@ -810,6 +904,11 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 }
 
 func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, minecraftVersion, requested, metadataOverride string) (string, string, string, error) {
+	loaderVersion, artifactVersion, sourceURL, _, err := resolveForgeLikeVersionWithEvidence(ctx, client, loader, minecraftVersion, requested, metadataOverride)
+	return loaderVersion, artifactVersion, sourceURL, err
+}
+
+func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Client, loader, minecraftVersion, requested, metadataOverride string) (string, string, string, string, error) {
 	requested = strings.TrimSpace(requested)
 	if requested == "" {
 		requested = "latest-stable"
@@ -820,10 +919,6 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		if loader == "forge" {
 			metadataURL = defaultForgeMavenBase + "/net/minecraftforge/forge/maven-metadata.xml"
 		} else if legacyNeoForge1201 {
-			// NeoForge 1.20.1 predates the net.neoforged:neoforge artifact. The
-			// official fork was published as net.neoforged:forge with Forge-style
-			// versions (1.20.1-47.1.x). Treat that repository as NeoForge only for
-			// this Minecraft release; all newer releases use net.neoforged:neoforge.
 			metadataURL = defaultNeoForgeMavenBase + "/net/neoforged/forge/maven-metadata.xml"
 		} else {
 			metadataURL = defaultNeoForgeMavenBase + "/net/neoforged/neoforge/maven-metadata.xml"
@@ -835,19 +930,23 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 			if !strings.HasPrefix(artifact, minecraftVersion+"-") {
 				artifact = minecraftVersion + "-" + requested
 			}
-			return strings.TrimPrefix(artifact, minecraftVersion+"-"), artifact, metadataURL, nil
+			resolved := strings.TrimPrefix(artifact, minecraftVersion+"-")
+			sourceURL, sourceSHA := explicitResolutionSource(loader, minecraftVersion, requested, resolved, artifact)
+			return resolved, artifact, sourceURL, sourceSHA, nil
 		}
 		if legacyNeoForge1201 {
 			artifact := requested
 			if !strings.HasPrefix(artifact, minecraftVersion+"-") {
 				artifact = minecraftVersion + "-" + requested
 			}
-			return artifact, artifact, metadataURL, nil
+			sourceURL, sourceSHA := explicitResolutionSource(loader, minecraftVersion, requested, artifact, artifact)
+			return artifact, artifact, sourceURL, sourceSHA, nil
 		}
 		if !neoForgeVersionMatchesMinecraft(requested, minecraftVersion) {
-			return "", "", metadataURL, fmt.Errorf("NeoForge version %s не совместима с Minecraft %s", requested, minecraftVersion)
+			return "", "", "", "", fmt.Errorf("NeoForge version %s не совместима с Minecraft %s", requested, minecraftVersion)
 		}
-		return requested, requested, metadataURL, nil
+		sourceURL, sourceSHA := explicitResolutionSource(loader, minecraftVersion, requested, requested, requested)
+		return requested, requested, sourceURL, sourceSHA, nil
 	}
 	allowPrerelease := requested == "latest"
 	semanticAttempts := 1
@@ -862,11 +961,12 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 		}
 		data, err := fetchForgeLikeMetadata(ctx, client, fetchURL)
 		if err != nil {
-			return "", "", metadataURL, fmt.Errorf("%s Maven metadata: %w", loader, err)
+			return "", "", metadataURL, "", fmt.Errorf("%s Maven metadata: %w", loader, err)
 		}
+		sourceSHA := sha256HexBytes(data)
 		var metadata mavenMetadataXML
 		if err := xml.Unmarshal(data, &metadata); err != nil {
-			return "", "", metadataURL, fmt.Errorf("%s Maven metadata XML повреждён: %w", loader, err)
+			return "", "", metadataURL, "", fmt.Errorf("%s Maven metadata XML повреждён: %w", loader, err)
 		}
 		versions := metadata.Versioning.Versions.Version
 		if len(versions) == 0 {
@@ -881,27 +981,27 @@ func resolveForgeLikeVersion(ctx context.Context, client *http.Client, loader, m
 					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
 						continue
 					}
-					return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, nil
+					return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, sourceSHA, nil
 				}
 				if legacyNeoForge1201 {
 					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
 						continue
 					}
-					return candidate, candidate, metadataURL, nil
+					return candidate, candidate, metadataURL, sourceSHA, nil
 				}
 				if neoForgeVersionMatchesMinecraft(candidate, minecraftVersion) {
-					return candidate, candidate, metadataURL, nil
+					return candidate, candidate, metadataURL, sourceSHA, nil
 				}
 			}
 			lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
 		}
 		if attempt+1 < semanticAttempts {
 			if err := sleepContext(ctx, compatibilityRetryDelay(nil, attempt)); err != nil {
-				return "", "", metadataURL, err
+				return "", "", metadataURL, "", err
 			}
 		}
 	}
-	return "", "", metadataURL, fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
+	return "", "", metadataURL, "", fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
 }
 
 func forgeLikeMetadataRefreshURL(metadataURL string, attempt int) string {

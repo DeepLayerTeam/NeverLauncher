@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Loader Resolution & Pinning — 0.17.7
+
+NeverLauncher 0.17.7 делает разрешение Fabric/Quilt/Forge/NeoForge воспроизводимым: mutable selector (`latest-stable`/`stable`/`recommended`) используется только при первом разрешении, после чего materializer сохраняет immutable resolution lock с concrete loader version, provenance source SHA-256, SHA-256 фактического Meta profile/installer и SHA-256 итогового runtime profile. Повторный materialize с тем же selector обязан воспроизвести тот же lock и те же bytes; изменение upstream payload/profile или lock приводит к fail-closed ошибке.
+
+Compatibility E2E выполняет materialization дважды и требует `resolutionPinned=true`, совпадающие `resolutionLockSha256`/`reproducibilitySha256`, raw `<loader>-resolution-lock.json` и concrete resolved loader version. Release certification переносит эти данные в `loaderPins` и bundle verifier повторно пересчитывает их из embedded matrix/targets, поэтому reproducibility evidence нельзя подменить после сертификации.
+
 ## NeoForge Compatibility II — 0.17.6
 
 NeverLauncher 0.17.6 делает **NeoForge 1.20.1 → current stable 26.2** отдельной production compatibility-линией: 22 обязательных targets на exact Java 17/21/25, `1.21.1` остаётся полным integration E2E, остальные версии проходят actual-client certification на Linux x86_64. Для 1.20.1 используется реальная историческая публикация `net.neoforged:forge` (`1.20.1-47.x`); начиная с 1.20.2 применяется `net.neoforged:neoforge`, а 26.x разрешается по полной схеме Minecraft version (`26.2` → `26.2.0.x`).
@@ -52,7 +58,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeoForge Compatibility II / 0.17.6**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Loader Resolution & Pinning / 0.17.7**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

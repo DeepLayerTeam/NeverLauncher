@@ -43,28 +43,31 @@ type releaseCompatibilityTargets struct {
 }
 
 type releaseCompatibilityResult struct {
-	SchemaVersion         string          `json:"schemaVersion"`
-	ProductVersion        string          `json:"productVersion"`
-	TargetID              string          `json:"targetId"`
-	Status                string          `json:"status"`
-	MinecraftVersion      string          `json:"minecraftVersion"`
-	Loader                string          `json:"loader"`
-	LoaderSelector        string          `json:"loaderSelector"`
-	ResolvedLoaderVersion string          `json:"resolvedLoaderVersion"`
-	OS                    string          `json:"os"`
-	Arch                  string          `json:"arch"`
-	JavaMajor             int             `json:"javaMajor,omitempty"`
-	DetectedJavaMajor     int             `json:"detectedJavaMajor,omitempty"`
-	JREVendor             string          `json:"jreVendor,omitempty"`
-	JRERuntimeVersion     string          `json:"jreRuntimeVersion,omitempty"`
-	JREExecutableSHA256   string          `json:"jreExecutableSha256,omitempty"`
-	Scope                 string          `json:"scope,omitempty"`
-	MatchingServer        bool            `json:"matchingServer,omitempty"`
-	Commit                string          `json:"commit"`
-	RunID                 string          `json:"runId"`
-	ExitCode              int             `json:"exitCode"`
-	Checks                map[string]bool `json:"checks"`
-	EvidenceSHA256        string          `json:"evidenceSha256"`
+	SchemaVersion          string          `json:"schemaVersion"`
+	ProductVersion         string          `json:"productVersion"`
+	TargetID               string          `json:"targetId"`
+	Status                 string          `json:"status"`
+	MinecraftVersion       string          `json:"minecraftVersion"`
+	Loader                 string          `json:"loader"`
+	LoaderSelector         string          `json:"loaderSelector"`
+	ResolvedLoaderVersion  string          `json:"resolvedLoaderVersion"`
+	ResolutionLockSHA256   string          `json:"resolutionLockSha256,omitempty"`
+	ResolutionSourceSHA256 string          `json:"resolutionSourceSha256,omitempty"`
+	ReproducibilitySHA256  string          `json:"reproducibilitySha256,omitempty"`
+	OS                     string          `json:"os"`
+	Arch                   string          `json:"arch"`
+	JavaMajor              int             `json:"javaMajor,omitempty"`
+	DetectedJavaMajor      int             `json:"detectedJavaMajor,omitempty"`
+	JREVendor              string          `json:"jreVendor,omitempty"`
+	JRERuntimeVersion      string          `json:"jreRuntimeVersion,omitempty"`
+	JREExecutableSHA256    string          `json:"jreExecutableSha256,omitempty"`
+	Scope                  string          `json:"scope,omitempty"`
+	MatchingServer         bool            `json:"matchingServer,omitempty"`
+	Commit                 string          `json:"commit"`
+	RunID                  string          `json:"runId"`
+	ExitCode               int             `json:"exitCode"`
+	Checks                 map[string]bool `json:"checks"`
+	EvidenceSHA256         string          `json:"evidenceSha256"`
 }
 
 type releaseCompatibilityMatrix struct {
@@ -89,27 +92,38 @@ type releaseCompatibilityJREBuild struct {
 	TargetCount      int    `json:"targetCount"`
 }
 
+type releaseCompatibilityLoaderPin struct {
+	TargetID               string `json:"targetId"`
+	Loader                 string `json:"loader"`
+	MinecraftVersion       string `json:"minecraftVersion"`
+	ResolvedLoaderVersion  string `json:"resolvedLoaderVersion"`
+	ResolutionLockSHA256   string `json:"resolutionLockSha256"`
+	ResolutionSourceSHA256 string `json:"resolutionSourceSha256"`
+	ReproducibilitySHA256  string `json:"reproducibilitySha256"`
+}
+
 type releaseCompatibilityCertification struct {
-	SchemaVersion     string                         `json:"schemaVersion"`
-	ProductVersion    string                         `json:"productVersion"`
-	CertifiedAt       string                         `json:"certifiedAt"`
-	Repository        string                         `json:"repository"`
-	Commit            string                         `json:"commit"`
-	RunID             string                         `json:"runId"`
-	MatrixSHA256      string                         `json:"matrixSha256"`
-	TargetsSHA256     string                         `json:"targetsSha256"`
-	RequiredTargetIDs []string                       `json:"requiredTargetIds"`
-	PassedTargetIDs   []string                       `json:"passedTargetIds"`
-	LoaderFamilies    []string                       `json:"loaderFamilies"`
-	VanillaVersions   []string                       `json:"vanillaVersions,omitempty"`
-	FabricVersions    []string                       `json:"fabricVersions,omitempty"`
-	QuiltVersions     []string                       `json:"quiltVersions,omitempty"`
-	ForgeVersions     []string                       `json:"forgeVersions,omitempty"`
-	NeoForgeVersions  []string                       `json:"neoForgeVersions,omitempty"`
-	JavaMajors        []int                          `json:"javaMajors,omitempty"`
-	JREBuilds         []releaseCompatibilityJREBuild `json:"jreBuilds,omitempty"`
-	Scopes            []string                       `json:"scopes,omitempty"`
-	Policy            string                         `json:"policy"`
+	SchemaVersion     string                          `json:"schemaVersion"`
+	ProductVersion    string                          `json:"productVersion"`
+	CertifiedAt       string                          `json:"certifiedAt"`
+	Repository        string                          `json:"repository"`
+	Commit            string                          `json:"commit"`
+	RunID             string                          `json:"runId"`
+	MatrixSHA256      string                          `json:"matrixSha256"`
+	TargetsSHA256     string                          `json:"targetsSha256"`
+	RequiredTargetIDs []string                        `json:"requiredTargetIds"`
+	PassedTargetIDs   []string                        `json:"passedTargetIds"`
+	LoaderFamilies    []string                        `json:"loaderFamilies"`
+	VanillaVersions   []string                        `json:"vanillaVersions,omitempty"`
+	FabricVersions    []string                        `json:"fabricVersions,omitempty"`
+	QuiltVersions     []string                        `json:"quiltVersions,omitempty"`
+	ForgeVersions     []string                        `json:"forgeVersions,omitempty"`
+	NeoForgeVersions  []string                        `json:"neoForgeVersions,omitempty"`
+	LoaderPins        []releaseCompatibilityLoaderPin `json:"loaderPins,omitempty"`
+	JavaMajors        []int                           `json:"javaMajors,omitempty"`
+	JREBuilds         []releaseCompatibilityJREBuild  `json:"jreBuilds,omitempty"`
+	Scopes            []string                        `json:"scopes,omitempty"`
+	Policy            string                          `json:"policy"`
 }
 
 var vanillaCompatibilityBaselineII = map[string]struct {
@@ -390,6 +404,10 @@ func compatibilityForgeLegacy1710_0175Required(ver string) bool {
 
 func compatibilityNeoForgeII0176Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 6)
+}
+
+func compatibilityLoaderResolution0177Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 7)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -909,6 +927,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	quiltVersionSet := map[string]bool{}
 	forgeVersionSet := map[string]bool{}
 	neoForgeVersionSet := map[string]bool{}
+	loaderPins := []releaseCompatibilityLoaderPin{}
 	javaMajorSet := map[int]bool{}
 	jreBuildSet := map[string]*releaseCompatibilityJREBuild{}
 	scopeSet := map[string]bool{}
@@ -949,6 +968,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		if compatibilityIIGa0170Required(ver) {
 			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "jreCertified")
 		}
+		if compatibilityLoaderResolution0177Required(ver) && target.Loader != "vanilla" {
+			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "loaderPinned", "reproducibleResolution")
+		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s required check %s != true", id, check)
@@ -980,6 +1002,19 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			if resolved == "" || mutable[resolved] {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не разрешил loader в immutable version", id)
 			}
+			if compatibilityLoaderResolution0177Required(ver) {
+				lockSHA := strings.ToLower(strings.TrimSpace(result.ResolutionLockSHA256))
+				sourceSHA := strings.ToLower(strings.TrimSpace(result.ResolutionSourceSHA256))
+				reproSHA := strings.ToLower(strings.TrimSpace(result.ReproducibilitySHA256))
+				if !compatibilitySHA256RE.MatchString(lockSHA) || !compatibilitySHA256RE.MatchString(sourceSHA) || !compatibilitySHA256RE.MatchString(reproSHA) {
+					return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит полный loader resolution pinning evidence", id)
+				}
+				loaderPins = append(loaderPins, releaseCompatibilityLoaderPin{
+					TargetID: id, Loader: target.Loader, MinecraftVersion: target.Minecraft,
+					ResolvedLoaderVersion: result.ResolvedLoaderVersion,
+					ResolutionLockSHA256:  lockSHA, ResolutionSourceSHA256: sourceSHA, ReproducibilitySHA256: reproSHA,
+				})
+			}
 		}
 		passedIDs = append(passedIDs, id)
 		loaderSet[target.Loader] = true
@@ -1006,6 +1041,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 
 	sort.Strings(requiredIDs)
 	sort.Strings(passedIDs)
+	sort.Slice(loaderPins, func(i, j int) bool { return loaderPins[i].TargetID < loaderPins[j].TargetID })
 	loaderFamilies := make([]string, 0, len(loaderSet))
 	for loader := range loaderSet {
 		loaderFamilies = append(loaderFamilies, loader)
@@ -1129,6 +1165,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityNeoForgeII0176Required(ver) {
 		policy += ";neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client"
 	}
+	if compatibilityLoaderResolution0177Required(ver) {
+		policy += ";loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",
 		ProductVersion:    ver,
@@ -1146,6 +1185,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		QuiltVersions:     quiltVersions,
 		ForgeVersions:     forgeVersions,
 		NeoForgeVersions:  neoForgeVersions,
+		LoaderPins:        loaderPins,
 		JavaMajors:        javaMajors,
 		JREBuilds:         jreBuilds,
 		Scopes:            scopes,
@@ -1188,6 +1228,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		strings.Join(stored.QuiltVersions, "\x00") != strings.Join(expected.QuiltVersions, "\x00") ||
 		strings.Join(stored.ForgeVersions, "\x00") != strings.Join(expected.ForgeVersions, "\x00") ||
 		strings.Join(stored.NeoForgeVersions, "\x00") != strings.Join(expected.NeoForgeVersions, "\x00") ||
+		fmt.Sprint(stored.LoaderPins) != fmt.Sprint(expected.LoaderPins) ||
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {
