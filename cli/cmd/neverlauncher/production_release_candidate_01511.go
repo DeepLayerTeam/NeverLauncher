@@ -64,6 +64,9 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 	if managedJavaIIRequired0165(ver) {
 		gates = append(gates, "managed-java-II-8-16-17-21-25")
 	}
+	if compatibilityIIGa0170Required(ver) {
+		gates = append(gates, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
+	}
 	return gates
 }
 

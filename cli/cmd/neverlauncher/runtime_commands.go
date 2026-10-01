@@ -367,9 +367,10 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "exact-version Mojang metadata outage recovery", "status": "implemented"},
 			{"feature": "corrupt compatibility cache quarantine", "status": "implemented"},
 			{"feature": "Managed Java executable hash-bound cache", "status": "implemented"},
+			{"feature": "GA certified JRE binary attestation bound to every compatibility PASS", "status": "implemented"},
 		},
 		"materializersReady": []string{"vanilla", "fabric", "quilt", "forge-modern", "neoforge", "managed-java-temurin"},
-		"certificationModel": "vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening",
+		"certificationModel": "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base",
 		"javaMajors":         []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":  managedJavaIIMajors0165(),
 		"managedJavaMode":    "temurin-latest-ga+historical-feature-release-fallback+bounded-retry+sha256+java-binary-sha256+quarantine+atomic-install+java-version",
@@ -424,10 +425,10 @@ func runtimeMatrix740() map[string]any {
 			"forge-1.21.1-linux-x64",
 			"neoforge-1.21.1-linux-x64",
 		},
-		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "host-os-arch-exact", "actual-client-launch"},
-		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
+		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "actual-client-launch"},
+		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.13"},
-		"note":                "0.16.11 усиливает рабочий compatibility path: проверенный partial resume, corrupt-cache quarantine, exact-version metadata recovery при upstream outage, transactional native publish и hash-bound Managed Java cache; Actual Client E2E II и прежние release gates сохраняются.",
+		"note":                "0.17.0 переводит Minecraft Compatibility II в GA: 45 обязательных Vanilla targets / 40 release IDs / Java 8,16,17,21,25, а каждый PASS привязан к SHA-256 фактически запущенного JRE binary, vendor/runtime build и host OS/arch. Compatibility Hardening и Actual Client E2E II сохраняются.",
 	}
 }
 

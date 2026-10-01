@@ -76,6 +76,11 @@ ACTUAL_CLIENT_E2E_II_01610: dict[str, int] = {
     "26.3": 25,
 }
 
+COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA = 40
+COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS = 45
+COMPATIBILITY_II_GA_JAVA_MAJORS = {8, 16, 17, 21, 25}
+
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -121,6 +126,9 @@ def cross_platform_vanilla_required() -> bool:
 
 def actual_client_e2e_ii_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 10)
+
+def compatibility_ii_ga_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 0)
 
 
 def load_json(path: Path) -> Any:
@@ -214,6 +222,16 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = matching[0]
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(f"Actual Client E2E II {minecraft}: requires Java {java_major} scope=client on linux/x86_64")
+    if compatibility_ii_ga_required():
+        required_vanilla_rows = [target for target in targets if target["loader"] == "vanilla" and target["required"]]
+        unique_versions = {target["minecraft"] for target in required_vanilla_rows}
+        java_majors = {target["javaMajor"] for target in required_vanilla_rows}
+        if len(required_vanilla_rows) < COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS:
+            die(f"Minecraft Compatibility II GA requires at least {COMPATIBILITY_II_GA_MIN_REQUIRED_VANILLA_TARGETS} required Vanilla targets")
+        if len(unique_versions) < COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA:
+            die(f"Minecraft Compatibility II GA requires at least {COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA} unique Vanilla releases")
+        if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(java_majors):
+            die(f"Minecraft Compatibility II GA requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -406,6 +424,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     )
     if target.get("matchingServer") is True:
         mandatory = list(mandatory) + ["matchingServer", "serverVersionMatched", "serverHealthy", "clientJoinedServer"]
+    if compatibility_ii_ga_required():
+        mandatory = list(mandatory) + ["jreCertified"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -424,6 +444,27 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         runtime = evidence.get("javaRuntime")
         if not isinstance(runtime, dict) or runtime.get("matched") is not True or runtime.get("detectedMajor") != target["javaMajor"]:
             errors.append("evidence javaRuntime mismatch")
+        if compatibility_ii_ga_required():
+            if not isinstance(runtime, dict) or runtime.get("certified") is not True:
+                errors.append("evidence JRE certification is missing")
+            else:
+                sha = str(runtime.get("executableSha256", ""))
+                vendor = str(runtime.get("vendor", "")).strip()
+                runtime_version = str(runtime.get("runtimeVersion", "")).strip()
+                java_home = str(runtime.get("javaHome", "")).strip()
+                vm_name = str(runtime.get("vmName", "")).strip()
+                if not re.fullmatch(r"[0-9a-f]{64}", sha):
+                    errors.append("evidence JRE executableSha256 is invalid")
+                if not vendor or not runtime_version or not java_home or not vm_name:
+                    errors.append("evidence JRE identity is incomplete")
+                if runtime.get("detectedOS") != target["os"] or runtime.get("detectedArch") != target["arch"]:
+                    errors.append("evidence JRE OS/arch mismatch")
+                if str(result.get("jreVendor", "")).strip() != vendor:
+                    errors.append("jreVendor mismatch")
+                if str(result.get("jreRuntimeVersion", "")).strip() != runtime_version:
+                    errors.append("jreRuntimeVersion mismatch")
+                if str(result.get("jreExecutableSha256", "")).strip() != sha:
+                    errors.append("jreExecutableSha256 mismatch")
         platform_runtime = evidence.get("platformRuntime")
         if (not isinstance(platform_runtime, dict) or platform_runtime.get("matched") is not True
                 or platform_runtime.get("detectedOS") != target["os"] or platform_runtime.get("detectedArch") != target["arch"]):
@@ -439,6 +480,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         )
         if target.get("matchingServer") is True:
             mandatory_files = set(mandatory_files) | {"vanilla-server-install.json", "matching-server.json", "matching-server.log"}
+        if compatibility_ii_ga_required():
+            mandatory_files = set(mandatory_files) | {"java-runtime.json"}
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":
@@ -452,8 +495,8 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         "",
         "> Матрица сгенерирована автоматически из фактических E2E-результатов. Статусы PASS не хранятся и не редактируются вручную.",
         "",
-        "| Target | Minecraft | Loader | Java | Scope | Actual client | Matching server | Paper join | Result |",
-        "|---|---|---|---:|---|---:|---:|---:|---:|",
+        "| Target | Minecraft | Loader | Java | JRE build | Scope | Actual client | Matching server | Paper join | Result |",
+        "|---|---|---|---:|---|---|---:|---:|---:|---:|",
     ]
     for target in targets:
         record = records.get(target["id"], {})
@@ -461,8 +504,14 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         status = "✅ PASS" if record.get("status") == "passed" else "❌ FAIL"
         paper = "—" if target["scope"] == "client" else ("✅" if checks.get("paperJoin") is True else "❌")
         matching = "✅" if target.get("matchingServer") is True and checks.get("matchingServer") is True else ("—" if not target.get("matchingServer") else "❌")
+        runtime = (record.get("evidence") or {}).get("javaRuntime") if isinstance(record.get("evidence"), dict) else {}
+        jre_build = "—"
+        if isinstance(runtime, dict) and runtime.get("certified") is True:
+            vendor = str(runtime.get("vendor", "")).strip() or "unknown"
+            runtime_version = str(runtime.get("runtimeVersion", "")).strip() or "unknown"
+            jre_build = f"`{vendor} {runtime_version}`"
         lines.append(
-            f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{target['javaMajor']}` | `{target['scope']}` | "
+            f"| `{target['id']}` | `{target['minecraft']}` | `{target['loader']}` | `{target['javaMajor']}` | {jre_build} | `{target['scope']}` | "
             f"{'✅' if checks.get('actualClient') is True else '❌'} | {matching} | {paper} | {status} |"
         )
     lines += [
@@ -476,6 +525,30 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         "",
     ]
     return "\n".join(lines)
+
+
+def build_ga_jre_base(targets: list[dict[str, Any]], records: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if not compatibility_ii_ga_required():
+        return []
+    builds: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for target in targets:
+        if not target.get("required"):
+            continue
+        record = records.get(target["id"], {})
+        evidence = record.get("evidence") if isinstance(record.get("evidence"), dict) else {}
+        runtime = evidence.get("javaRuntime") if isinstance(evidence, dict) else {}
+        if not isinstance(runtime, dict) or runtime.get("certified") is not True:
+            continue
+        key = (
+            target["javaMajor"], target["os"], target["arch"],
+            str(runtime.get("vendor", "")), str(runtime.get("runtimeVersion", "")), str(runtime.get("executableSha256", "")),
+        )
+        row = builds.setdefault(key, {
+            "javaMajor": target["javaMajor"], "os": target["os"], "arch": target["arch"],
+            "vendor": key[3], "runtimeVersion": key[4], "executableSha256": key[5], "targetCount": 0,
+        })
+        row["targetCount"] += 1
+    return sorted(builds.values(), key=lambda row: (row["javaMajor"], row["os"], row["arch"], row["vendor"], row["runtimeVersion"], row["executableSha256"]))
 
 
 def command_aggregate(args: argparse.Namespace) -> int:
@@ -518,6 +591,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
         "runId": args.run_id,
         "status": "passed" if not errors else "failed",
         "targets": [records[target["id"]] for target in targets],
+        "jreBase": build_ga_jre_base(targets, records),
         "errors": errors,
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)

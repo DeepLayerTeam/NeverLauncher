@@ -2110,6 +2110,35 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "production-delivery-release-0160.py" not in preflight or "production-delivery-release-0160.py" not in ci:
         fail("0.16.0 Production Delivery Release gate is not wired into preflight/CI")
 
+# 0.17.0 Minecraft Compatibility II GA binds every compatibility PASS to a
+# concrete JRE binary identity and preserves a broad certified Vanilla/JRE base.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 0):
+    ga_matrix_0170 = read("scripts/compatibility/matrix.py")
+    ga_jre_0170 = read("scripts/compatibility/certify-jre.py")
+    ga_case_0170 = read("e2e/scripts/run-compatibility-case.sh")
+    ga_release_0170 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    ga_tests_0170 = read("scripts/compatibility/test_matrix.py") + read("scripts/compatibility/test_certify_jre.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py")
+    for required in ["COMPATIBILITY_II_GA_MIN_UNIQUE_VANILLA", "build_ga_jre_base", "jreCertified", '"jreBase"']:
+        if required not in ga_matrix_0170:
+            fail(f"0.17.0 GA compatibility matrix incomplete: {required}")
+    for required in ["executableSha256", "java.runtime.version", "java.vendor", "java.home", "detectedOS", "detectedArch", "certified"]:
+        if required not in ga_jre_0170:
+            fail(f"0.17.0 JRE attestation incomplete: {required}")
+    for required in ["certify-jre.py", '"jreCertified"', '"jreExecutableSha256"']:
+        if required not in ga_case_0170:
+            fail(f"0.17.0 compatibility target JRE binding incomplete: {required}")
+    for required in ["compatibilityIIGa0170Required", "JREBuilds", "JREExecutableSHA256", "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"]:
+        if required not in ga_release_0170:
+            fail(f"0.17.0 GA release certification incomplete: {required}")
+    for required in ["test_ga_matrix_contains_certified_jre_base", "test_certify_binds_binary_hash_and_runtime_identity", "TestCompatibilityCertificationGA0170BindsJREBase"]:
+        if required not in ga_tests_0170:
+            fail(f"0.17.0 GA regression test missing: {required}")
+    if "Minecraft Compatibility II GA 0.17.0 gate: OK" not in ga_gate_0170:
+        fail("0.17.0 mandatory Minecraft Compatibility II GA gate incomplete")
+    if "minecraft-compatibility-II-ga-0170.py" not in preflight or "minecraft-compatibility-II-ga-0170.py" not in ci:
+        fail("0.17.0 Minecraft Compatibility II GA gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

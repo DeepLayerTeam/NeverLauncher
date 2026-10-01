@@ -1,3 +1,13 @@
+## 0.17.0 — Minecraft Compatibility II GA
+
+- Compatibility II promoted to GA with 45 required Vanilla targets covering 40 unique release IDs and exact Java 8/16/17/21/25 requirements; existing loader-family, cross-platform, matching-server and hardening gates remain mandatory.
+- Every compatibility target now runs a reusable JRE certifier before Minecraft launch. It resolves the real `java`/`java.exe`, hashes the executable with SHA-256 and records vendor, runtime version, VM name, `java.home`, OS, architecture and exact detected major.
+- `compatibility-result.json` binds `jreVendor`, `jreRuntimeVersion` and `jreExecutableSha256` to `jreCertified=true`; aggregator rejects missing, malformed or OS/arch-mismatched JRE evidence.
+- Public `matrix.json` derives `jreBase` from actual passing target evidence instead of a hand-authored JRE table.
+- `COMPATIBILITY_CERTIFICATION.json` now carries concrete certified JRE builds and target counts; release verification recomputes and compares the JRE build set.
+- Production Release Candidate, Production Delivery Release and release manifest checks require `minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base` for 0.17.0+.
+- Added JRE attestation regression tests and mandatory 0.17.0 repository/preflight/CI gate.
+
 ## 0.16.11 — Compatibility Hardening
 
 - Vanilla artifact downloads recover interrupted `.nlpart` files with validated HTTP Range/`Content-Range`; every resumed result is still bounded by expected size and must pass the final Mojang SHA-1 before atomic publication.

@@ -654,6 +654,9 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
 		checks = append(checks, "minecraft-compatibility-certification")
+		if compatibilityIIGa0170Required(ver) {
+			checks = append(checks, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
+		}
 		compatibilityCertified = true
 	}
 	deviceTrustCertified := false

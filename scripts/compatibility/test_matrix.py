@@ -35,6 +35,7 @@ class MatrixToolTests(unittest.TestCase):
                 "javaMatched": True,
                 "actualClient": True,
                 "platformMatched": True,
+                "jreCertified": True,
             }
             files = [
                 "client-package.json",
@@ -42,6 +43,7 @@ class MatrixToolTests(unittest.TestCase):
                 "vanilla-install.json",
                 "vanilla-certification.json",
                 "platform-runtime.json",
+                "java-runtime.json",
                 "result.json",
             ]
             if target.get("matchingServer") is True:
@@ -58,6 +60,7 @@ class MatrixToolTests(unittest.TestCase):
                 "paperHealthy": True,
                 "javaMatched": True,
                 "platformMatched": True,
+                "jreCertified": True,
             }
             files = [
                 "result.json",
@@ -69,6 +72,7 @@ class MatrixToolTests(unittest.TestCase):
                 "health-paper.json",
                 "bridge-diagnostics.json",
                 "platform-runtime.json",
+                "java-runtime.json",
             ]
         return {
             "schemaVersion": "1.0",
@@ -83,6 +87,9 @@ class MatrixToolTests(unittest.TestCase):
             "arch": target["arch"],
             "javaMajor": target["javaMajor"],
             "detectedJavaMajor": target["javaMajor"],
+            "jreVendor": "Eclipse Adoptium",
+            "jreRuntimeVersion": f"{target['javaMajor']}.0.0+ga",
+            "jreExecutableSha256": "a" * 64,
             "scope": target["scope"],
             "matchingServer": target.get("matchingServer", False),
             "commit": commit,
@@ -94,7 +101,17 @@ class MatrixToolTests(unittest.TestCase):
                 "javaRuntime": {
                     "expectedMajor": target["javaMajor"],
                     "detectedMajor": target["javaMajor"],
+                    "expectedOS": target["os"],
+                    "detectedOS": target["os"],
+                    "expectedArch": target["arch"],
+                    "detectedArch": target["arch"],
                     "matched": True,
+                    "certified": True,
+                    "vendor": "Eclipse Adoptium",
+                    "runtimeVersion": f"{target['javaMajor']}.0.0+ga",
+                    "vmName": "OpenJDK 64-Bit Server VM",
+                    "javaHome": "/opt/java",
+                    "executableSha256": "a" * 64,
                 },
                 "platformRuntime": {
                     "expectedOS": target["os"],
@@ -307,6 +324,29 @@ class MatrixToolTests(unittest.TestCase):
             self.assertEqual(matrix["status"], "passed")
             self.assertEqual(len(matrix["targets"]), len(doc["targets"]))
             self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", row["evidenceSha256"]) for row in matrix["targets"]))
+
+    def test_ga_aggregate_rejects_missing_jre_attestation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            doc = self.target_doc()
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "vanilla-1.20.4-linux-x64":
+                    result["checks"]["jreCertified"] = False
+                    result["evidence"]["javaRuntime"]["certified"] = False
+            proc = self.aggregate(tmp, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("jreCertified", proc.stderr)
+
+    def test_ga_matrix_contains_certified_jre_base(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            doc = self.target_doc()
+            proc = self.aggregate(tmp, doc)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            matrix = json.loads((tmp / "out" / "matrix.json").read_text(encoding="utf-8"))
+            self.assertTrue(matrix["jreBase"])
+            self.assertEqual({row["javaMajor"] for row in matrix["jreBase"]}, {8, 16, 17, 21, 25})
+            self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", row["executableSha256"]) for row in matrix["jreBase"]))
 
     def test_aggregate_rejects_mutable_resolved_loader(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -66,31 +66,12 @@ if [[ $? -ne 0 ]]; then
   exit 2
 fi
 
-python3 - "$JAVA_BIN" "$JAVA_MAJOR" > "$JAVA_EVIDENCE" <<'PY'
-import json, re, subprocess, sys
-java, expected = sys.argv[1], int(sys.argv[2])
-proc = subprocess.run([java, "-version"], capture_output=True, text=True)
-text = (proc.stdout or "") + (proc.stderr or "")
-match = re.search(r'version\s+"([^"]+)"', text)
-detected = None
-if match:
-    parts = match.group(1).split('.')
-    try:
-        detected = int(parts[1] if parts[0] == '1' else parts[0])
-    except (ValueError, IndexError):
-        detected = None
-payload = {
-    "java": java,
-    "expectedMajor": expected,
-    "detectedMajor": detected,
-    "exitCode": proc.returncode,
-    "matched": proc.returncode == 0 and detected == expected,
-    "versionOutput": text.strip(),
-}
-print(json.dumps(payload, indent=2, ensure_ascii=False))
-if not payload["matched"]:
-    raise SystemExit(f"target Java mismatch: expected {expected}, detected {detected}")
-PY
+python3 "$ROOT/scripts/compatibility/certify-jre.py" \
+  --java "$JAVA_BIN" \
+  --major "$JAVA_MAJOR" \
+  --os "$TARGET_OS" \
+  --arch "$TARGET_ARCH" \
+  --output "$JAVA_EVIDENCE"
 if [[ $? -ne 0 ]]; then
   exit 2
 fi
@@ -162,6 +143,7 @@ if scope == "client":
         "packageVerified": verify.get("status") == "valid" and (verify.get("verify") or {}).get("valid") is True,
         "runtimeResolved": probe.get("mainClass") not in (None, "") and int(probe.get("classpathEntries") or 0) > 0,
         "javaMatched": java_matched and probe.get("requiredJavaMajor") == java_major and probe.get("detectedJavaMajor") == java_major,
+        "jreCertified": java_evidence.get("certified") is True,
         "actualClient": probe.get("status") == "passed" and (probe.get("timedOut") is True or probe.get("success") is True),
         "platformMatched": platform_matched,
     }
@@ -198,6 +180,7 @@ else:
         "sessionRevokeDeny": (base.get("checks") or {}).get("sessionRevokeDeny") is True,
         "paperHealthy": health.get("Status") == "healthy" and health.get("FailingStreak") == 0,
         "javaMatched": java_matched,
+        "jreCertified": java_evidence.get("certified") is True,
         "platformMatched": platform_matched,
     }
     manifest_loader = str((manifest.get("minecraft") or {}).get("loader", ""))
@@ -220,6 +203,9 @@ payload = {
     "arch": arch,
     "javaMajor": java_major,
     "detectedJavaMajor": detected_java,
+    "jreVendor": str(java_evidence.get("vendor") or ""),
+    "jreRuntimeVersion": str(java_evidence.get("runtimeVersion") or ""),
+    "jreExecutableSha256": str(java_evidence.get("executableSha256") or ""),
     "scope": scope,
     "matchingServer": matching_server,
     "commit": commit,
@@ -230,7 +216,7 @@ payload = {
         "manifestLoader": manifest_loader,
         "javaRuntime": java_evidence,
         "platformRuntime": platform_evidence,
-        "files": evidence_files + ["platform-runtime.json"],
+        "files": evidence_files + ["platform-runtime.json", "java-runtime.json"],
         "matchingServer": matching_server,
     },
 }

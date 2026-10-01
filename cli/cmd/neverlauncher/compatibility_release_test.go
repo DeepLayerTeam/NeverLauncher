@@ -321,9 +321,9 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			ID: id, Minecraft: minecraft, Loader: "vanilla", OS: "linux", Arch: "x86_64",
 			JavaMajor: expected.JavaMajor, Scope: expected.Scope, MatchingServer: matchingServer, Required: true,
 		})
-		checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true}
+		checks := map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "jreCertified": true, "actualClient": true}
 		if expected.Scope == "integration" {
-			checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true}
+			checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true, "jreCertified": true}
 		}
 		if compatibilityCrossPlatformVanillaRequired(ver) {
 			checks["platformMatched"] = true
@@ -337,6 +337,7 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
 			Loader: "vanilla", OS: "linux", Arch: "x86_64", JavaMajor: expected.JavaMajor, DetectedJavaMajor: expected.JavaMajor,
+			JREVendor: "Eclipse Adoptium", JRERuntimeVersion: fmt.Sprintf("%d.0.0+ga", expected.JavaMajor), JREExecutableSHA256: evidence,
 			Scope: expected.Scope, MatchingServer: matchingServer, Commit: commit, RunID: "162", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence,
 		})
 	}
@@ -354,7 +355,8 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 				SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "26.3",
 				Loader: "vanilla", OS: platform.OS, Arch: platform.Arch, JavaMajor: 25, DetectedJavaMajor: 25, Scope: "client",
 				Commit: commit, RunID: "162", ExitCode: 0,
-				Checks:         map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true},
+				Checks:    map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "jreCertified": true, "actualClient": true, "platformMatched": true},
+				JREVendor: "Eclipse Adoptium", JRERuntimeVersion: "25.0.0+ga", JREExecutableSHA256: evidence,
 				EvidenceSHA256: evidence,
 			})
 		}
@@ -365,14 +367,14 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			ID: id, Minecraft: "1.21.1", Loader: loader, LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
 			JavaMajor: 21, Scope: "integration", Required: true,
 		})
-		loaderChecks := map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true}
+		loaderChecks := map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true, "jreCertified": true}
 		if compatibilityCrossPlatformVanillaRequired(ver) {
 			loaderChecks["platformMatched"] = true
 		}
 		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "1.21.1",
 			Loader: loader, LoaderSelector: "latest-stable", ResolvedLoaderVersion: "1.0.0", OS: "linux", Arch: "x86_64",
-			JavaMajor: 21, DetectedJavaMajor: 21, Scope: "integration", Commit: commit, RunID: "162", ExitCode: 0,
+			JavaMajor: 21, DetectedJavaMajor: 21, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: "21.0.0+ga", JREExecutableSHA256: evidence, Scope: "integration", Commit: commit, RunID: "162", ExitCode: 0,
 			Checks:         loaderChecks,
 			EvidenceSHA256: evidence,
 		})
@@ -786,5 +788,43 @@ func TestCompatibilityCertificationHardening01611Policy(t *testing.T) {
 	}
 	if !strings.Contains(certification.Policy, "compatibility-hardening-cache-recovery-upstream-failure-security") {
 		t.Fatalf("0.16.11 policy does not bind compatibility hardening: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationGA0170BindsJREBase(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170")
+	if err != nil {
+		t.Fatalf("0.17.0 GA compatibility evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base") {
+		t.Fatalf("0.17.0 policy does not bind GA JRE base: %s", certification.Policy)
+	}
+	if len(certification.VanillaVersions) < 40 {
+		t.Fatalf("0.17.0 GA Vanilla coverage too small: %d", len(certification.VanillaVersions))
+	}
+	if got := fmt.Sprint(certification.JavaMajors); got != "[8 16 17 21 25]" {
+		t.Fatalf("0.17.0 GA Java coverage=%s", got)
+	}
+	if len(certification.JREBuilds) == 0 {
+		t.Fatal("0.17.0 GA certification must contain concrete JRE builds")
+	}
+}
+
+func TestCompatibilityCertificationGA0170RejectsMissingJREAttestation(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.0", "commit-170")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].TargetID == "vanilla-1.20.4-linux-x64" {
+			matrix.Targets[i].Checks["jreCertified"] = false
+			matrix.Targets[i].JREExecutableSHA256 = ""
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.0", "commit-170"); err == nil {
+		t.Fatal("0.17.0 GA must reject missing JRE attestation")
 	}
 }

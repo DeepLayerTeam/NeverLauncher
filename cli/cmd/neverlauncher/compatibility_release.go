@@ -55,6 +55,9 @@ type releaseCompatibilityResult struct {
 	Arch                  string          `json:"arch"`
 	JavaMajor             int             `json:"javaMajor,omitempty"`
 	DetectedJavaMajor     int             `json:"detectedJavaMajor,omitempty"`
+	JREVendor             string          `json:"jreVendor,omitempty"`
+	JRERuntimeVersion     string          `json:"jreRuntimeVersion,omitempty"`
+	JREExecutableSHA256   string          `json:"jreExecutableSha256,omitempty"`
 	Scope                 string          `json:"scope,omitempty"`
 	MatchingServer        bool            `json:"matchingServer,omitempty"`
 	Commit                string          `json:"commit"`
@@ -76,22 +79,33 @@ type releaseCompatibilityMatrix struct {
 	Errors         []string                     `json:"errors"`
 }
 
+type releaseCompatibilityJREBuild struct {
+	JavaMajor        int    `json:"javaMajor"`
+	OS               string `json:"os"`
+	Arch             string `json:"arch"`
+	Vendor           string `json:"vendor"`
+	RuntimeVersion   string `json:"runtimeVersion"`
+	ExecutableSHA256 string `json:"executableSha256"`
+	TargetCount      int    `json:"targetCount"`
+}
+
 type releaseCompatibilityCertification struct {
-	SchemaVersion     string   `json:"schemaVersion"`
-	ProductVersion    string   `json:"productVersion"`
-	CertifiedAt       string   `json:"certifiedAt"`
-	Repository        string   `json:"repository"`
-	Commit            string   `json:"commit"`
-	RunID             string   `json:"runId"`
-	MatrixSHA256      string   `json:"matrixSha256"`
-	TargetsSHA256     string   `json:"targetsSha256"`
-	RequiredTargetIDs []string `json:"requiredTargetIds"`
-	PassedTargetIDs   []string `json:"passedTargetIds"`
-	LoaderFamilies    []string `json:"loaderFamilies"`
-	VanillaVersions   []string `json:"vanillaVersions,omitempty"`
-	JavaMajors        []int    `json:"javaMajors,omitempty"`
-	Scopes            []string `json:"scopes,omitempty"`
-	Policy            string   `json:"policy"`
+	SchemaVersion     string                         `json:"schemaVersion"`
+	ProductVersion    string                         `json:"productVersion"`
+	CertifiedAt       string                         `json:"certifiedAt"`
+	Repository        string                         `json:"repository"`
+	Commit            string                         `json:"commit"`
+	RunID             string                         `json:"runId"`
+	MatrixSHA256      string                         `json:"matrixSha256"`
+	TargetsSHA256     string                         `json:"targetsSha256"`
+	RequiredTargetIDs []string                       `json:"requiredTargetIds"`
+	PassedTargetIDs   []string                       `json:"passedTargetIds"`
+	LoaderFamilies    []string                       `json:"loaderFamilies"`
+	VanillaVersions   []string                       `json:"vanillaVersions,omitempty"`
+	JavaMajors        []int                          `json:"javaMajors,omitempty"`
+	JREBuilds         []releaseCompatibilityJREBuild `json:"jreBuilds,omitempty"`
+	Scopes            []string                       `json:"scopes,omitempty"`
+	Policy            string                         `json:"policy"`
 }
 
 var vanillaCompatibilityBaselineII = map[string]struct {
@@ -224,6 +238,10 @@ func compatibilityActualClientE2EIIRequired(ver string) bool {
 
 func compatibilityHardening01611Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 11)
+}
+
+func compatibilityIIGa0170Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 0)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -450,6 +468,26 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityIIGa0170Required(ver) {
+			vanillaTargets := 0
+			vanillaVersions := map[string]bool{}
+			gaJava := map[int]bool{}
+			for _, target := range targets.Targets {
+				if target.Required && target.Loader == "vanilla" {
+					vanillaTargets++
+					vanillaVersions[target.Minecraft] = true
+					gaJava[target.JavaMajor] = true
+				}
+			}
+			if vanillaTargets < 45 || len(vanillaVersions) < 40 {
+				return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA requires >=45 required Vanilla targets and >=40 unique releases; got targets=%d releases=%d", vanillaTargets, len(vanillaVersions))
+			}
+			for _, major := range []int{8, 16, 17, 21, 25} {
+				if !gaJava[major] {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Minecraft Compatibility II GA missing JRE major %d", major)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -474,6 +512,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	loaderSet := map[string]bool{}
 	vanillaVersionSet := map[string]bool{}
 	javaMajorSet := map[int]bool{}
+	jreBuildSet := map[string]*releaseCompatibilityJREBuild{}
 	scopeSet := map[string]bool{}
 	mutable := map[string]bool{"latest": true, "latest-stable": true, "recommended": true, "stable": true}
 	for id, target := range targetByID {
@@ -509,6 +548,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		if compatibilityActualClientE2EIIRequired(ver) && target.MatchingServer {
 			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "matchingServer", "serverVersionMatched", "serverHealthy", "clientJoinedServer")
 		}
+		if compatibilityIIGa0170Required(ver) {
+			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "jreCertified")
+		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s required check %s != true", id, check)
@@ -516,6 +558,20 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if !compatibilitySHA256RE.MatchString(result.EvidenceSHA256) {
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит валидный evidenceSha256", id)
+		}
+		if compatibilityIIGa0170Required(ver) {
+			vendor := strings.TrimSpace(result.JREVendor)
+			runtimeVersion := strings.TrimSpace(result.JRERuntimeVersion)
+			jreSHA := strings.ToLower(strings.TrimSpace(result.JREExecutableSHA256))
+			if vendor == "" || runtimeVersion == "" || !compatibilitySHA256RE.MatchString(jreSHA) {
+				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит полную certified JRE identity", id)
+			}
+			key := fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%s\x00%s", target.JavaMajor, target.OS, target.Arch, vendor, runtimeVersion, jreSHA)
+			if row, ok := jreBuildSet[key]; ok {
+				row.TargetCount++
+			} else {
+				jreBuildSet[key] = &releaseCompatibilityJREBuild{JavaMajor: target.JavaMajor, OS: target.OS, Arch: target.Arch, Vendor: vendor, RuntimeVersion: runtimeVersion, ExecutableSHA256: jreSHA, TargetCount: 1}
+			}
 		}
 		if target.Loader == "vanilla" {
 			if strings.TrimSpace(result.ResolvedLoaderVersion) != "" {
@@ -555,6 +611,29 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		javaMajors = append(javaMajors, major)
 	}
 	sort.Ints(javaMajors)
+	jreBuilds := make([]releaseCompatibilityJREBuild, 0, len(jreBuildSet))
+	for _, row := range jreBuildSet {
+		jreBuilds = append(jreBuilds, *row)
+	}
+	sort.Slice(jreBuilds, func(i, j int) bool {
+		a, b := jreBuilds[i], jreBuilds[j]
+		if a.JavaMajor != b.JavaMajor {
+			return a.JavaMajor < b.JavaMajor
+		}
+		if a.OS != b.OS {
+			return a.OS < b.OS
+		}
+		if a.Arch != b.Arch {
+			return a.Arch < b.Arch
+		}
+		if a.Vendor != b.Vendor {
+			return a.Vendor < b.Vendor
+		}
+		if a.RuntimeVersion != b.RuntimeVersion {
+			return a.RuntimeVersion < b.RuntimeVersion
+		}
+		return a.ExecutableSHA256 < b.ExecutableSHA256
+	})
 	scopes := make([]string, 0, len(scopeSet))
 	for scope := range scopeSet {
 		scopes = append(scopes, scope)
@@ -590,6 +669,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityHardening01611Required(ver) {
 		policy += ";compatibility-hardening-cache-recovery-upstream-failure-security"
 	}
+	if compatibilityIIGa0170Required(ver) {
+		policy += ";minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",
 		ProductVersion:    ver,
@@ -604,6 +686,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		LoaderFamilies:    loaderFamilies,
 		VanillaVersions:   vanillaVersions,
 		JavaMajors:        javaMajors,
+		JREBuilds:         jreBuilds,
 		Scopes:            scopes,
 		Policy:            policy,
 	}, nil
@@ -641,6 +724,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		strings.Join(stored.LoaderFamilies, "\x00") != strings.Join(expected.LoaderFamilies, "\x00") ||
 		strings.Join(stored.VanillaVersions, "\x00") != strings.Join(expected.VanillaVersions, "\x00") ||
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
+		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {
 		return errors.New("COMPATIBILITY_CERTIFICATION target/loader/vanilla/java coverage mismatch")
 	}
