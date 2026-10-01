@@ -1,5 +1,10 @@
 # NeverLauncher
 
+## Cross-platform Vanilla — 0.16.9
+
+NeverLauncher 0.16.9 сертифицирует Vanilla 26.3 на Windows, Linux и macOS для x64 и ARM64. Materializer хранит natives в `natives/<os>/<arch>`, NeverRuntime выбирает каталог текущей архитектуры, а compatibility CI выполняет actual-client запуск на host runner той же OS/arch. Release evidence содержит отдельный `platform-runtime.json`; несовпадение host platform блокирует certification.
+
+
 [![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)

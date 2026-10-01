@@ -147,6 +147,18 @@ var java25VanillaCompatibility0168 = map[string]string{
 	"26.3":   "client",
 }
 
+var crossPlatformVanillaCompatibility0169 = []struct {
+	OS   string
+	Arch string
+}{
+	{OS: "linux", Arch: "x86_64"},
+	{OS: "linux", Arch: "aarch64"},
+	{OS: "windows", Arch: "x86_64"},
+	{OS: "windows", Arch: "aarch64"},
+	{OS: "macos", Arch: "x86_64"},
+	{OS: "macos", Arch: "aarch64"},
+}
+
 func compatibilityVersionAtLeast(ver string, wantMajor, wantMinor, wantPatch int) bool {
 	core := strings.SplitN(strings.SplitN(strings.TrimSpace(ver), "+", 2)[0], "-", 2)[0]
 	parts := strings.Split(core, ".")
@@ -190,6 +202,10 @@ func compatibilityJava21VanillaRequired(ver string) bool {
 
 func compatibilityJava25VanillaRequired(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 16, 8)
+}
+
+func compatibilityCrossPlatformVanillaRequired(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 16, 9)
 }
 
 func compatibilityCertificationRequired(ver string) bool {
@@ -379,6 +395,24 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				}
 			}
 		}
+		if compatibilityCrossPlatformVanillaRequired(ver) {
+			platformTargets := map[string]releaseCompatibilityTarget{}
+			for _, target := range targets.Targets {
+				if target.Required && target.Loader == "vanilla" && target.Minecraft == "26.3" {
+					platformTargets[target.OS+"/"+target.Arch] = target
+				}
+			}
+			for _, platform := range crossPlatformVanillaCompatibility0169 {
+				key := platform.OS + "/" + platform.Arch
+				target, ok := platformTargets[key]
+				if !ok {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Vanilla 0.16.9 missing required 26.3 target %s", key)
+				}
+				if target.JavaMajor != 25 || target.Scope != "client" {
+					return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Vanilla 26.3 %s mismatch: expected Java 25 scope=client, got Java %d scope=%s", key, target.JavaMajor, target.Scope)
+				}
+			}
+		}
 	}
 
 	resultByID := map[string]releaseCompatibilityResult{}
@@ -431,6 +465,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			} else {
 				mandatoryChecks = integrationMandatoryChecks
 			}
+		}
+		if compatibilityCrossPlatformVanillaRequired(ver) {
+			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "platformMatched")
 		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
@@ -503,6 +540,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	}
 	if compatibilityJava25VanillaRequired(ver) {
 		policy += ";vanilla-26.1.x-26.3-java25-exact"
+	}
+	if compatibilityCrossPlatformVanillaRequired(ver) {
+		policy += ";cross-platform-vanilla-windows-linux-macos-x64-arm64"
 	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:     "1.0",

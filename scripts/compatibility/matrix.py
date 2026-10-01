@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_LOADERS = {"vanilla", "fabric", "quilt", "forge", "neoforge"}
-ALLOWED_OS = {"linux"}
-ALLOWED_ARCH = {"x86_64"}
+ALLOWED_OS = {"linux", "windows", "macos"}
+ALLOWED_ARCH = {"x86_64", "aarch64"}
 ALLOWED_SCOPES = {"client", "integration"}
 ALLOWED_JAVA_MAJORS = {8, 16, 17, 21, 25}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,95}$")
@@ -59,6 +59,15 @@ JAVA25_VANILLA_0168: tuple[str, ...] = (
     "26.1", "26.1.1", "26.1.2", "26.3",
 )
 
+CROSS_PLATFORM_VANILLA_0169: tuple[tuple[str, str], ...] = (
+    ("linux", "x86_64"),
+    ("linux", "aarch64"),
+    ("windows", "x86_64"),
+    ("windows", "aarch64"),
+    ("macos", "x86_64"),
+    ("macos", "aarch64"),
+)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -96,6 +105,10 @@ def java21_vanilla_required() -> bool:
 
 def java25_vanilla_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 16, 8)
+
+
+def cross_platform_vanilla_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 16, 9)
 
 
 def load_json(path: Path) -> Any:
@@ -165,6 +178,18 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 die(f"Java 25 Vanilla 0.16.8 missing required Minecraft {minecraft}")
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(f"Java 25 Vanilla {minecraft}: 0.16.8 requires Java 25 scope=client")
+    if cross_platform_vanilla_required():
+        platform_targets = {
+            (target["os"], target["arch"]): target
+            for target in targets
+            if target["loader"] == "vanilla" and target["required"] and target["minecraft"] == "26.3"
+        }
+        for os_name, arch in CROSS_PLATFORM_VANILLA_0169:
+            target = platform_targets.get((os_name, arch))
+            if target is None:
+                die(f"Cross-platform Vanilla 0.16.9 missing required 26.3 target {os_name}/{arch}")
+            if target["javaMajor"] != 25 or target["scope"] != "client":
+                die(f"Cross-platform Vanilla 26.3 {os_name}/{arch}: 0.16.9 requires Java 25 scope=client")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -255,9 +280,39 @@ def command_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def runner_for_target(target: dict[str, Any]) -> str:
+    key = (target["os"], target["arch"])
+    runners = {
+        ("linux", "x86_64"): "ubuntu-24.04",
+        ("linux", "aarch64"): "ubuntu-24.04-arm",
+        ("windows", "x86_64"): "windows-2025",
+        ("windows", "aarch64"): "windows-11-arm",
+        ("macos", "x86_64"): "macos-15-intel",
+        ("macos", "aarch64"): "macos-15",
+    }
+    try:
+        return runners[key]
+    except KeyError:
+        die(f"no GitHub-hosted runner mapping for {key[0]}/{key[1]}")
+
+
+def java_distribution_for_target(target: dict[str, Any]) -> str:
+    # Microsoft OpenJDK publishes Windows ARM64 for Java 25; Temurin remains
+    # the default everywhere else. This affects CI certification only.
+    if target["os"] == "windows" and target["arch"] == "aarch64" and target["javaMajor"] in {21, 25}:
+        return "microsoft"
+    return "temurin"
+
+
 def command_plan(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(json.dumps({"include": payload["targets"]}, separators=(",", ":")))
+    include = []
+    for target in payload["targets"]:
+        row = dict(target)
+        row["runner"] = runner_for_target(target)
+        row["javaDistribution"] = java_distribution_for_target(target)
+        include.append(row)
+    print(json.dumps({"include": include}, separators=(",", ":")))
     return 0
 
 
@@ -314,9 +369,9 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
 
     checks = result.get("checks")
     mandatory = (
-        ["materialized", "packageVerified", "runtimeResolved", "javaMatched", "actualClient"]
+        ["materialized", "packageVerified", "runtimeResolved", "javaMatched", "platformMatched", "actualClient"]
         if target["scope"] == "client"
-        else ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "javaMatched"]
+        else ["actualClient", "packageVerified", "signedManifest", "cleanSync", "paperJoin", "sessionRevokeDeny", "paperHealthy", "javaMatched", "platformMatched"]
     )
     if not isinstance(checks, dict):
         errors.append("checks is missing")
@@ -336,13 +391,17 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         runtime = evidence.get("javaRuntime")
         if not isinstance(runtime, dict) or runtime.get("matched") is not True or runtime.get("detectedMajor") != target["javaMajor"]:
             errors.append("evidence javaRuntime mismatch")
+        platform_runtime = evidence.get("platformRuntime")
+        if (not isinstance(platform_runtime, dict) or platform_runtime.get("matched") is not True
+                or platform_runtime.get("detectedOS") != target["os"] or platform_runtime.get("detectedArch") != target["arch"]):
+            errors.append("evidence platformRuntime mismatch")
         files = evidence.get("files")
         mandatory_files = (
-            {"client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-certification.json"}
+            {"client-package.json", "materialized-client-verify.json", "vanilla-install.json", "vanilla-certification.json", "platform-runtime.json"}
             if target["scope"] == "client"
             else {
                 "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
-                "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
+                "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json", "platform-runtime.json",
             }
         )
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
@@ -376,7 +435,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         f"GitHub Actions run: `{run_id}`  ",
         f"Repository: `{repository}`",
         "",
-        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → Compatibility Engine resolution → actual Minecraft process under Xvfb.",
+        "Vanilla client scope: verified Mojang materialization → local package integrity → exact target Java → host OS/arch binding → Compatibility Engine resolution → actual Minecraft process (Xvfb on Linux; native desktop launch on Windows/macOS).",
         "Integration scope: canonical API upload → signed immutable release → clean NeverRuntime sync → actual client → Paper join → revoke/deny and health checks.",
         "",
     ]

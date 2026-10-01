@@ -316,11 +316,33 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 		if expected.Scope == "integration" {
 			checks = map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true}
 		}
+		if compatibilityCrossPlatformVanillaRequired(ver) {
+			checks["platformMatched"] = true
+		}
 		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: minecraft,
 			Loader: "vanilla", OS: "linux", Arch: "x86_64", JavaMajor: expected.JavaMajor, DetectedJavaMajor: expected.JavaMajor,
 			Scope: expected.Scope, Commit: commit, RunID: "162", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence,
 		})
+	}
+	if compatibilityCrossPlatformVanillaRequired(ver) {
+		for _, platform := range crossPlatformVanillaCompatibility0169 {
+			if platform.OS == "linux" && platform.Arch == "x86_64" {
+				continue
+			}
+			id := "vanilla-26.3-" + platform.OS + "-" + platform.Arch
+			targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+				ID: id, Minecraft: "26.3", Loader: "vanilla", OS: platform.OS, Arch: platform.Arch,
+				JavaMajor: 25, Scope: "client", Required: true,
+			})
+			matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+				SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "26.3",
+				Loader: "vanilla", OS: platform.OS, Arch: platform.Arch, JavaMajor: 25, DetectedJavaMajor: 25, Scope: "client",
+				Commit: commit, RunID: "162", ExitCode: 0,
+				Checks:         map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "actualClient": true, "platformMatched": true},
+				EvidenceSHA256: evidence,
+			})
+		}
 	}
 	for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
 		id := loader + "-1.21.1-linux-x64"
@@ -328,11 +350,15 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			ID: id, Minecraft: "1.21.1", Loader: loader, LoaderVersion: "latest-stable", OS: "linux", Arch: "x86_64",
 			JavaMajor: 21, Scope: "integration", Required: true,
 		})
+		loaderChecks := map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true}
+		if compatibilityCrossPlatformVanillaRequired(ver) {
+			loaderChecks["platformMatched"] = true
+		}
 		matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: "1.21.1",
 			Loader: loader, LoaderSelector: "latest-stable", ResolvedLoaderVersion: "1.0.0", OS: "linux", Arch: "x86_64",
 			JavaMajor: 21, DetectedJavaMajor: 21, Scope: "integration", Commit: commit, RunID: "162", ExitCode: 0,
-			Checks:         map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true, "javaMatched": true},
+			Checks:         loaderChecks,
 			EvidenceSHA256: evidence,
 		})
 	}
@@ -641,5 +667,53 @@ func TestCompatibilityCertificationJava25Vanilla0168RejectsWrongMajor(t *testing
 	targetsRaw, _ = json.Marshal(targets)
 	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.8", "commit-168"); err == nil {
 		t.Fatal("0.16.8 must reject wrong Java major for 26.1.2")
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformVanilla0169(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.9", "commit-169")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169")
+	if err != nil {
+		t.Fatalf("0.16.9 cross-platform Vanilla evidence must pass: %v", err)
+	}
+	if !strings.Contains(certification.Policy, "cross-platform-vanilla-windows-linux-macos-x64-arm64") {
+		t.Fatalf("cross-platform policy missing: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformVanilla0169RejectsMissingPlatform(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.9", "commit-169")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	filtered := targets.Targets[:0]
+	for _, target := range targets.Targets {
+		if target.Loader == "vanilla" && target.Minecraft == "26.3" && target.OS == "windows" && target.Arch == "aarch64" {
+			continue
+		}
+		filtered = append(filtered, target)
+	}
+	targets.Targets = filtered
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169"); err == nil {
+		t.Fatal("0.16.9 must reject missing Windows ARM64 Vanilla certification target")
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformVanilla0169RejectsPlatformMismatch(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.16.9", "commit-169")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].TargetID == "vanilla-26.3-macos-aarch64" {
+			matrix.Targets[i].Checks["platformMatched"] = false
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.16.9", "commit-169"); err == nil {
+		t.Fatal("0.16.9 must reject host platform mismatch evidence")
 	}
 }

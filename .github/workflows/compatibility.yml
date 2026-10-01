@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-plan.outputs.matrix) }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -50,21 +50,24 @@ jobs:
       - name: Install target Java ${{ matrix.javaMajor }}
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: ${{ matrix.javaDistribution }}
           java-version: ${{ matrix.javaMajor }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash
-        run: printf 'NEVERLAUNCHER_E2E_JAVA=%s/bin/java\n' "$JAVA_HOME" >> "$GITHUB_ENV"
+        run: printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$(command -v java)" >> "$GITHUB_ENV"
       - name: Restore Java 21 for NeverLauncher/Gradle build tooling
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: ${{ matrix.javaDistribution }}
           java-version: '21'
       - uses: dtolnay/rust-toolchain@stable
       - uses: gradle/actions/setup-gradle@v6
+        if: matrix.scope == 'integration'
         with:
           gradle-version: '9.7.1'
       - name: Install actual Minecraft E2E dependencies
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -81,6 +84,7 @@ jobs:
           NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
           NEVERLAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+        shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
       - name: Upload machine-verifiable compatibility result
         if: always()
@@ -90,6 +94,7 @@ jobs:
           path: |
             e2e/compatibility-result/compatibility-result.json
             e2e/compatibility-result/java-runtime.json
+            e2e/compatibility-result/platform-runtime.json
             e2e/runtime/result.json
             e2e/runtime/client-package.json
             e2e/runtime/materialized-client-verify.json

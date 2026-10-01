@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -318,7 +319,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	for _, lib := range metadata.Libraries {
 		applicableTargets := make([]string, 0, len(opts.Targets))
 		for _, target := range opts.Targets {
-			if rulesAllowTarget(lib.Rules, target) {
+			if rulesAllowTarget(lib.Rules, target) && libraryArtifactAppliesToTarget(lib.Name, target) {
 				applicableTargets = append(applicableTargets, target.OS)
 			}
 		}
@@ -356,7 +357,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			}
 		}
 		for _, target := range opts.Targets {
-			if !rulesAllowTarget(lib.Rules, target) {
+			if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) {
 				continue
 			}
 			classifierTemplate := nativeClassifierForTarget(lib.Natives, target.OS)
@@ -455,16 +456,16 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	// older Minecraft/loader materialization cannot leak stale native libraries into
 	// the next signed package.
 	for _, target := range opts.Targets {
-		nativeRel := filepath.ToSlash(filepath.Join("natives", target.OS))
+		nativeRel := filepath.ToSlash(filepath.Join("natives", target.OS, target.Arch))
 		nativeDir, err := secureClientDestination(opts.ClientDir, nativeRel)
 		if err != nil {
 			return vanillaInstallResult{}, err
 		}
 		if err := os.RemoveAll(nativeDir); err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("native cleanup %s: %w", target.OS, err)
+			return vanillaInstallResult{}, fmt.Errorf("native cleanup %s/%s: %w", target.OS, target.Arch, err)
 		}
 		if err := os.MkdirAll(nativeDir, 0o755); err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("native directory %s: %w", target.OS, err)
+			return vanillaInstallResult{}, fmt.Errorf("native directory %s/%s: %w", target.OS, target.Arch, err)
 		}
 	}
 	for _, task := range taskList {
@@ -474,7 +475,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	for _, task := range nativeTasks {
 		archivePath := filepath.Join(opts.ClientDir, filepath.FromSlash(task.Path))
-		targetRel := filepath.ToSlash(filepath.Join("natives", task.NativeTarget.OS))
+		targetRel := filepath.ToSlash(filepath.Join("natives", task.NativeTarget.OS, task.NativeTarget.Arch))
 		targetDir, err := secureClientDestination(opts.ClientDir, targetRel)
 		if err != nil {
 			return vanillaInstallResult{}, err
@@ -489,7 +490,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			if err != nil {
 				return vanillaInstallResult{}, err
 			}
-			downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("natives", task.NativeTarget.OS, rel)), Kind: "native", Size: size, SHA256: sum, TargetOS: []string{task.NativeTarget.OS}, Cached: false})
+			downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("natives", task.NativeTarget.OS, task.NativeTarget.Arch, rel)), Kind: "native", Size: size, SHA256: sum, TargetOS: []string{task.NativeTarget.OS}, Cached: false})
 		}
 	}
 
@@ -1060,16 +1061,15 @@ func rulesAllowTarget(rules []map[string]any, target vanillaTarget) bool {
 		matches := true
 		if osRule, ok := rule["os"].(map[string]any); ok {
 			if name, ok := osRule["name"].(string); ok && strings.TrimSpace(name) != "" {
-				normalized := strings.ToLower(name)
-				if normalized == "macos" || normalized == "darwin" {
-					normalized = "osx"
-				}
-				matches = matches && normalized == target.OS
+				matches = matches && vanillaOSRuleMatches(name, target)
 			}
 			if arch, ok := osRule["arch"].(string); ok && strings.TrimSpace(arch) != "" {
-				// Mojang arch fields are regex-like; target aliases cover the common launcher metadata.
-				normalizedArch := normalizeVanillaArch(arch)
-				matches = matches && (normalizedArch == target.Arch || arch == target.Arch)
+				re, err := regexp.Compile("^(?:" + arch + ")$")
+				if err != nil {
+					matches = false
+				} else {
+					matches = matches && (re.MatchString(target.Arch) || re.MatchString(vanillaArchAlias(target.Arch)))
+				}
 			}
 		}
 		// build-side materialization has no dynamic launcher feature state; feature-gated entries are
@@ -1090,6 +1090,67 @@ func rulesAllowTarget(rules []map[string]any, target vanillaTarget) bool {
 		}
 	}
 	return allowed
+}
+
+func vanillaArchAlias(arch string) string {
+	switch normalizeVanillaArch(arch) {
+	case "x86_64":
+		return "x64"
+	case "aarch64":
+		return "arm64"
+	default:
+		return normalizeVanillaArch(arch)
+	}
+}
+
+func vanillaOSRuleMatches(name string, target vanillaTarget) bool {
+	n := strings.ToLower(strings.TrimSpace(name))
+	aliases := map[string]string{"win": "windows", "darwin": "osx", "mac": "osx", "macos": "osx"}
+	if v, ok := aliases[n]; ok {
+		n = v
+	}
+	for _, suffix := range []struct{ token, arch string }{{"-arm64", "aarch64"}, {"-aarch64", "aarch64"}, {"-x64", "x86_64"}, {"-x86_64", "x86_64"}} {
+		if strings.HasSuffix(n, suffix.token) {
+			base := strings.TrimSuffix(n, suffix.token)
+			if base == "macos" || base == "mac" || base == "darwin" {
+				base = "osx"
+			}
+			return base == target.OS && suffix.arch == target.Arch
+		}
+	}
+	return n == target.OS
+}
+
+func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
+	parts := strings.Split(strings.TrimSpace(name), ":")
+	if len(parts) < 4 {
+		return true
+	}
+	classifier := strings.ToLower(parts[3])
+	if !strings.HasPrefix(classifier, "natives-") {
+		return true
+	}
+	osToken := target.OS
+	if osToken == "osx" {
+		osToken = "macos"
+	}
+	prefix := "natives-" + osToken
+	if !strings.HasPrefix(classifier, prefix) {
+		return true // OS rules remain authoritative for artifacts belonging to another OS.
+	}
+	suffix := strings.TrimPrefix(classifier, prefix)
+	switch suffix {
+	case "":
+		return target.Arch == "x86_64"
+	case "-arm64", "-aarch64":
+		return target.Arch == "aarch64"
+	case "-x86", "-i386", "-i686":
+		return target.Arch == "x86"
+	case "-arm32":
+		return target.Arch == "arm"
+	default:
+		return true
+	}
 }
 
 func extractExcludes(extract map[string]any) []string {

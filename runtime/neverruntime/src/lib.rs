@@ -917,9 +917,23 @@ async fn platform_natives_directory(base: &Path) -> PathBuf {
         "linux" => "linux",
         _ => return base.to_path_buf(),
     };
-    let candidate = base.join(platform);
-    if fs::metadata(&candidate).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
-        candidate
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "x86_64",
+        "aarch64" => "aarch64",
+        "x86" => "x86",
+        "arm" => "arm",
+        _ => "",
+    };
+    if !arch.is_empty() {
+        let candidate = base.join(platform).join(arch);
+        if fs::metadata(&candidate).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
+            return candidate;
+        }
+    }
+    // Backward-compatible fallback for packages materialized before 0.16.9.
+    let legacy = base.join(platform);
+    if fs::metadata(&legacy).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
+        legacy
     } else {
         base.to_path_buf()
     }
@@ -1221,6 +1235,34 @@ mod tests {
         manifest.version = "tampered".to_string();
         assert!(verify_manifest_signature(&manifest, &public_key).is_err());
         assert!(verify_manifest_signature(&manifest, "").is_err());
+    }
+
+    #[tokio::test]
+    async fn platform_natives_directory_prefers_os_arch_isolation() {
+        let root = std::env::temp_dir().join(format!(
+            "neverruntime-natives-{}-{}",
+            std::process::id(),
+            std::env::consts::ARCH
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let platform = match std::env::consts::OS {
+            "macos" => "osx",
+            "windows" => "windows",
+            "linux" => "linux",
+            _ => return,
+        };
+        let arch = match std::env::consts::ARCH {
+            "x86_64" => "x86_64",
+            "aarch64" => "aarch64",
+            "x86" => "x86",
+            "arm" => "arm",
+            _ => return,
+        };
+        let legacy = root.join(platform);
+        let isolated = legacy.join(arch);
+        std::fs::create_dir_all(&isolated).expect("mkdir natives");
+        assert_eq!(platform_natives_directory(&root).await, isolated);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

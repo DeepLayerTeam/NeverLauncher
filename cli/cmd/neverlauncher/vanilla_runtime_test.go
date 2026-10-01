@@ -146,8 +146,8 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		"assets/indexes/test-assets.json",
 		"assets/objects/" + assetHash[:2] + "/" + assetHash,
 		"assets/log_configs/client-test.xml",
-		"natives/" + target.OS + "/libtest-native.bin",
-		"natives/" + target.OS + "/liblegacy-native.bin",
+		"natives/" + target.OS + "/" + target.Arch + "/libtest-native.bin",
+		"natives/" + target.OS + "/" + target.Arch + "/liblegacy-native.bin",
 		".neverlauncher/vanilla-install.json",
 	}
 	for _, rel := range required {
@@ -162,7 +162,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		}
 	}
 
-	staleNative := filepath.Join(dir, "natives", target.OS, "stale-from-previous-run.bin")
+	staleNative := filepath.Join(dir, "natives", target.OS, target.Arch, "stale-from-previous-run.bin")
 	if err := os.WriteFile(staleNative, []byte("stale"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 			t.Fatalf("local Vanilla state leaked into client package: %s", file.Path)
 		}
 		seenLogging = seenLogging || file.Path == "assets/log_configs/client-test.xml"
-		seenNative = seenNative || file.Path == "natives/"+target.OS+"/libtest-native.bin"
+		seenNative = seenNative || file.Path == "natives/"+target.OS+"/"+target.Arch+"/libtest-native.bin"
 	}
 	if !seenLogging || !seenNative {
 		t.Fatalf("generated package missing runtime artifacts: logging=%v native=%v", seenLogging, seenNative)
@@ -553,5 +553,33 @@ func TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload(t *testing.T) 
 	}
 	if clientRequested {
 		t.Fatal("1.21.10 client artifact was downloaded before exact-Java metadata validation")
+	}
+}
+
+func TestVanillaRuleAndNativeClassifierMatchTargetArchitecture(t *testing.T) {
+	arm := vanillaTarget{OS: "windows", Arch: "aarch64"}
+	x64 := vanillaTarget{OS: "windows", Arch: "x86_64"}
+
+	rules := []map[string]any{{"action": "allow", "os": map[string]any{"name": "windows-arm64", "arch": "aarch64|arm64"}}}
+	if !rulesAllowTarget(rules, arm) {
+		t.Fatal("windows ARM64 target did not match composite Mojang OS/arch rule")
+	}
+	if rulesAllowTarget(rules, x64) {
+		t.Fatal("windows x64 target incorrectly matched ARM64 Mojang rule")
+	}
+	if !libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64", arm) {
+		t.Fatal("ARM64 native classifier was rejected for Windows ARM64")
+	}
+	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64", x64) {
+		t.Fatal("ARM64 native classifier leaked into Windows x64")
+	}
+	if !libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows", x64) {
+		t.Fatal("legacy Windows native classifier was rejected for x64")
+	}
+	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows", arm) {
+		t.Fatal("legacy x64 Windows native classifier leaked into ARM64")
+	}
+	if !libraryArtifactAppliesToTarget("com.example:plain-library:1.0.0", arm) {
+		t.Fatal("non-native library must be architecture-neutral")
 	}
 }

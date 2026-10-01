@@ -499,7 +499,7 @@ fn resolve_libraries(
     let mut classpath = Vec::new();
 
     for library in libraries {
-        if !rules_allow(&library.rules, environment)? {
+        if !rules_allow(&library.rules, environment)? || !library_artifact_matches_environment(&library.name, environment) {
             continue;
         }
         // Some legacy Mojang entries are classifier-only native containers
@@ -780,7 +780,7 @@ fn rules_allow(rules: &[Rule], environment: &CompatibilityEnvironment) -> Result
 
 fn rule_matches(rule: &Rule, environment: &CompatibilityEnvironment) -> Result<bool, String> {
     if let Some(os) = &rule.os {
-        if !os.name.trim().is_empty() && normalize_os_name(&os.name) != environment.os {
+        if !os.name.trim().is_empty() && !os_name_matches_environment(&os.name, environment) {
             return Ok(false);
         }
         if !os.arch.trim().is_empty() && !pattern_matches(&os.arch, &environment.arch)? {
@@ -1021,10 +1021,48 @@ fn normalized_current_os() -> &'static str {
 
 fn normalize_os_name(value: &str) -> String {
     match value.trim().to_ascii_lowercase().as_str() {
-        "macos" | "darwin" | "osx" => "osx".to_string(),
+        "mac" | "macos" | "darwin" | "osx" => "osx".to_string(),
         "win" | "windows" => "windows".to_string(),
         "linux" => "linux".to_string(),
         other => other.to_string(),
+    }
+}
+
+fn os_name_matches_environment(value: &str, environment: &CompatibilityEnvironment) -> bool {
+    let normalized = value.trim().to_ascii_lowercase();
+    for (suffix, arch) in [
+        ("-arm64", "aarch64"),
+        ("-aarch64", "aarch64"),
+        ("-x64", "x86_64"),
+        ("-x86_64", "x86_64"),
+    ] {
+        if let Some(base) = normalized.strip_suffix(suffix) {
+            return normalize_os_name(base) == environment.os && environment.arch == arch;
+        }
+    }
+    normalize_os_name(&normalized) == environment.os
+}
+
+fn library_artifact_matches_environment(name: &str, environment: &CompatibilityEnvironment) -> bool {
+    let parts: Vec<&str> = name.trim().split(':').collect();
+    if parts.len() < 4 {
+        return true;
+    }
+    let classifier = parts[3].to_ascii_lowercase();
+    if !classifier.starts_with("natives-") {
+        return true;
+    }
+    let os_token = if environment.os == "osx" { "macos" } else { environment.os.as_str() };
+    let prefix = format!("natives-{os_token}");
+    let Some(suffix) = classifier.strip_prefix(&prefix) else {
+        return true;
+    };
+    match suffix {
+        "" => environment.arch == "x86_64",
+        "-arm64" | "-aarch64" => environment.arch == "aarch64",
+        "-x86" | "-i386" | "-i686" => environment.arch == "x86",
+        "-arm32" => environment.arch == "arm",
+        _ => true,
     }
 }
 
@@ -1326,6 +1364,62 @@ mod tests {
           {"action":"allow","features":{"is_demo_user":false}}
         ]"#).unwrap();
         assert!(rules_allow(&rules, &env).unwrap());
+    }
+
+    #[test]
+    fn cross_platform_native_classifier_is_architecture_bound() {
+        let windows_arm = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "aarch64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        let windows_x64 = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "x86_64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        assert!(library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64",
+            &windows_arm
+        ));
+        assert!(!library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64",
+            &windows_x64
+        ));
+        assert!(library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows",
+            &windows_x64
+        ));
+        assert!(!library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows",
+            &windows_arm
+        ));
+        assert!(library_artifact_matches_environment(
+            "com.example:ordinary:1.0.0",
+            &windows_arm
+        ));
+    }
+
+    #[test]
+    fn composite_mojang_os_names_match_only_the_requested_architecture() {
+        let arm = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "aarch64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        let x64 = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "x86_64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        assert!(os_name_matches_environment("windows-arm64", &arm));
+        assert!(!os_name_matches_environment("windows-arm64", &x64));
+        assert!(os_name_matches_environment("windows-x64", &x64));
+        assert!(!os_name_matches_environment("windows-x64", &arm));
     }
 
     #[test]

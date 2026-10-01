@@ -1635,6 +1635,64 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.8 Java 25 Vanilla regression coverage missing: {required}")
 
 
+# 0.16.9 Cross-platform Vanilla must execute on matching native hosts and keep
+# OS/architecture native libraries isolated instead of merely expanding labels.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 9):
+    vanilla_0169 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
+    vanilla_tests_0169 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
+    runtime_compat_0169 = read("runtime/neverruntime/src/compatibility.rs")
+    runtime_core_0169 = read("runtime/neverruntime/src/lib.rs")
+    matrix_0169 = read("scripts/compatibility/matrix.py")
+    matrix_tests_0169 = read("scripts/compatibility/test_matrix.py")
+    targets_0169 = read("compatibility/targets.json")
+    workflow_0169 = read(".github/workflows/compatibility.yml")
+    compat_case_0169 = read("e2e/scripts/run-compatibility-case.sh")
+    vanilla_case_0169 = read("e2e/scripts/run-vanilla-certification-case.sh")
+    release_0169 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    release_tests_0169 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    for target in [
+        "vanilla-26.3-linux-x64", "vanilla-26.3-linux-arm64",
+        "vanilla-26.3-windows-x64", "vanilla-26.3-windows-arm64",
+        "vanilla-26.3-macos-x64", "vanilla-26.3-macos-arm64",
+    ]:
+        if target not in targets_0169:
+            fail(f"0.16.9 cross-platform Vanilla target missing: {target}")
+    for required in [
+        "CROSS_PLATFORM_VANILLA_0169", "ubuntu-24.04-arm", "windows-11-arm",
+        "macos-15-intel", '"macos-15"', "javaDistribution",
+    ]:
+        if required not in matrix_0169:
+            fail(f"0.16.9 compatibility host plan incomplete: {required}")
+    for required in ["runs-on: ${{ matrix.runner }}", "matrix.javaDistribution", "platform-runtime.json"]:
+        if required not in workflow_0169:
+            fail(f"0.16.9 compatibility workflow is not host-bound: {required}")
+    for required in ["platform-runtime.json", "platformMatched", "runner mismatch"]:
+        if required not in compat_case_0169:
+            fail(f"0.16.9 platform evidence incomplete: {required}")
+    for required in ['--target "$TARGET_OS/$TARGET_ARCH"', "xvfb-run", '[[ "$TARGET_OS" == "linux" ]]']:
+        if required not in vanilla_case_0169:
+            fail(f"0.16.9 Vanilla native-host certification incomplete: {required}")
+    for required in ["target.OS, target.Arch", "libraryArtifactAppliesToTarget", "vanillaOSRuleMatches"]:
+        if required not in vanilla_0169:
+            fail(f"0.16.9 Vanilla materializer architecture isolation incomplete: {required}")
+    for required in ["library_artifact_matches_environment", "os_name_matches_environment"]:
+        if required not in runtime_compat_0169:
+            fail(f"0.16.9 NeverRuntime native filtering incomplete: {required}")
+    if "base.join(platform).join(arch)" not in runtime_core_0169:
+        fail("0.16.9 NeverRuntime does not isolate natives by OS/architecture")
+    if "cross-platform-vanilla-windows-linux-macos-x64-arm64" not in release_0169:
+        fail("0.16.9 release certification does not bind cross-platform Vanilla policy")
+    for required in [
+        "TestVanillaRuleAndNativeClassifierMatchTargetArchitecture",
+        "cross_platform_native_classifier_is_architecture_bound",
+        "test_validate_rejects_missing_cross_platform_0169",
+        "TestCompatibilityCertificationCrossPlatformVanilla0169",
+    ]:
+        corpus = vanilla_tests_0169 + runtime_compat_0169 + matrix_tests_0169 + release_tests_0169
+        if required not in corpus:
+            fail(f"0.16.9 cross-platform regression coverage missing: {required}")
+
+
 # 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
 # not a manifest-only declaration. It is used by client install/update/package-apply
 # and is self-tested on native Linux/Windows/macOS CI runners.

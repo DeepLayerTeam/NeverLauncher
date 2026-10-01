@@ -34,12 +34,14 @@ class MatrixToolTests(unittest.TestCase):
                 "runtimeResolved": True,
                 "javaMatched": True,
                 "actualClient": True,
+                "platformMatched": True,
             }
             files = [
                 "client-package.json",
                 "materialized-client-verify.json",
                 "vanilla-install.json",
                 "vanilla-certification.json",
+                "platform-runtime.json",
                 "result.json",
             ]
         else:
@@ -52,6 +54,7 @@ class MatrixToolTests(unittest.TestCase):
                 "sessionRevokeDeny": True,
                 "paperHealthy": True,
                 "javaMatched": True,
+                "platformMatched": True,
             }
             files = [
                 "result.json",
@@ -62,6 +65,7 @@ class MatrixToolTests(unittest.TestCase):
                 "runtime-launch-minecraft.json",
                 "health-paper.json",
                 "bridge-diagnostics.json",
+                "platform-runtime.json",
             ]
         return {
             "schemaVersion": "1.0",
@@ -86,6 +90,13 @@ class MatrixToolTests(unittest.TestCase):
                 "javaRuntime": {
                     "expectedMajor": target["javaMajor"],
                     "detectedMajor": target["javaMajor"],
+                    "matched": True,
+                },
+                "platformRuntime": {
+                    "expectedOS": target["os"],
+                    "expectedArch": target["arch"],
+                    "detectedOS": target["os"],
+                    "detectedArch": target["arch"],
                     "matched": True,
                 },
                 "files": files,
@@ -222,6 +233,41 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("requires Java 25", proc.stderr)
+
+    def test_validate_rejects_missing_cross_platform_0169(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [t for t in doc["targets"] if t["id"] != "vanilla-26.3-windows-arm64"]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Cross-platform Vanilla 0.16.9", proc.stderr)
+
+    def test_plan_binds_hosted_runner_and_java_distribution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            path.write_text(json.dumps(self.target_doc()), encoding="utf-8")
+            proc = run("plan", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            rows = {row["id"]: row for row in json.loads(proc.stdout)["include"]}
+            self.assertEqual(rows["vanilla-26.3-linux-arm64"]["runner"], "ubuntu-24.04-arm")
+            self.assertEqual(rows["vanilla-26.3-windows-arm64"]["runner"], "windows-11-arm")
+            self.assertEqual(rows["vanilla-26.3-windows-arm64"]["javaDistribution"], "microsoft")
+            self.assertEqual(rows["vanilla-26.3-macos-x64"]["runner"], "macos-15-intel")
+            self.assertEqual(rows["vanilla-26.3-macos-arm64"]["runner"], "macos-15")
+
+    def test_aggregate_rejects_platform_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            doc = self.target_doc()
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "vanilla-26.3-macos-arm64":
+                    result["checks"]["platformMatched"] = False
+                    result["evidence"]["platformRuntime"]["matched"] = False
+            proc = self.aggregate(tmp, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("platformMatched", proc.stderr)
 
     def test_aggregate_accepts_bound_multiversion_java_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

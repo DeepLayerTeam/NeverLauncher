@@ -1,8 +1,8 @@
 # Публичная CI Compatibility Matrix NeverLauncher
 
-NeverLauncher 0.16.8 использует **Vanilla Compatibility Baseline II + Legacy Vanilla Java 8 + Java 16/17 + Java 21 + Java 25 release-line gates**. Release compatibility формируется только из фактической Mojang materialization, package integrity, Compatibility Engine resolution, exact Java и запуска настоящего Minecraft Java Client.
+NeverLauncher 0.16.9 использует **Vanilla Compatibility Baseline II + Legacy Vanilla Java 8 + Java 16/17 + Java 21 + Java 25 + Cross-platform Vanilla gates**. Release compatibility формируется только из фактической Mojang materialization, package integrity, Compatibility Engine resolution, exact Java и запуска настоящего Minecraft Java Client.
 
-Обязательная Vanilla-линия 0.16.7:
+Обязательная Vanilla release-line и cross-platform certification 0.16.9:
 
 | Minecraft | Java | scope |
 | --- | ---: | --- |
@@ -47,6 +47,17 @@ NeverLauncher 0.16.8 использует **Vanilla Compatibility Baseline II + 
 | 26.1.2 | 25 | client |
 | 26.3 | 25 | client |
 
+
+Cross-platform gate для Minecraft 26.3 дополнительно требует шесть native-host targets:
+
+| OS | x64 | ARM64 |
+| --- | --- | --- |
+| Linux | `vanilla-26.3-linux-x64` | `vanilla-26.3-linux-arm64` |
+| Windows | `vanilla-26.3-windows-x64` | `vanilla-26.3-windows-arm64` |
+| macOS | `vanilla-26.3-macos-x64` | `vanilla-26.3-macos-arm64` |
+
+Каждый target фиксирует `platform-runtime.json` с detected OS/arch. `platformMatched=false`, запуск на runner другой архитектуры или отсутствие host evidence делает matrix/release certification невалидной. Extracted natives изолируются в `natives/<os>/<arch>`.
+
 Дополнительно обязательны Fabric, Quilt, Forge и NeoForge 1.21.1 на Java 21 с `scope=integration`. Для loader targets mutable `latest-stable` разрешается до выполнения target, а опубликованный result обязан содержать конкретную версию loader.
 
 ## Исполняемые scope
@@ -59,7 +70,7 @@ official Mojang version metadata
  -> local SHA-256 package verify
  -> resolve Compatibility Engine metadata
  -> verify exact target Java major
- -> launch real Minecraft main class under Xvfb
+ -> launch real Minecraft main class on the native host (Xvfb on Linux)
  -> require process to stay healthy until certification window or exit successfully
  -> store runtime log + machine-verifiable evidence
 ```
@@ -85,7 +96,7 @@ upstream metadata / installer
 
 Workflow `.github/workflows/compatibility.yml` устанавливает Java каждого target отдельно от Java 21 build tooling, фиксирует реальный executable и detected major, запускает target и публикует `compatibility-result.json` вместе с evidence. Агрегатор отклоняет отсутствующий/дублированный target, Java mismatch, scope mismatch, несовпадение commit/run ID, mutable loader result и неполный actual-client evidence.
 
-Для product version `>= 0.16.2` сохраняется Baseline II. Начиная с `0.16.3`, агрегатор и CLI release certification fail-closed требуют десять Java 8 release-line targets 1.7.10–1.16.5. Для `>= 0.16.4` дополнительно обязательны pre-1.7 targets `1.0`, `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10`. Для `>= 0.16.6` обязательна Java 16/17 линия `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Для `>= 0.16.7` дополнительно обязательна Java 21 линия `1.20.5`, `1.20.6`, `1.21`, `1.21.1`–`1.21.10`. Для `>= 0.16.8` обязательны Java 25 targets `26.1`, `26.1.1`, `26.1.2`, `26.3`; materializer и NeverRuntime независимо отклоняют отсутствующий или неверный `javaVersion.majorVersion`. Java coverage — `8/16/17/21/25`; все пять Vanilla/loader families и exact target binding обязательны. Удалить любую обязательную release-line цель из `targets.json` и получить зелёный release невозможно.
+Для product version `>= 0.16.2` сохраняется Baseline II. Начиная с `0.16.3`, агрегатор и CLI release certification fail-closed требуют десять Java 8 release-line targets 1.7.10–1.16.5. Для `>= 0.16.4` дополнительно обязательны pre-1.7 targets `1.0`, `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10`. Для `>= 0.16.6` обязательна Java 16/17 линия `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Для `>= 0.16.7` дополнительно обязательна Java 21 линия `1.20.5`, `1.20.6`, `1.21`, `1.21.1`–`1.21.10`. Для `>= 0.16.8` обязательны Java 25 targets `26.1`, `26.1.1`, `26.1.2`, `26.3`; materializer и NeverRuntime независимо отклоняют отсутствующий или неверный `javaVersion.majorVersion`. Для `>= 0.16.9` `26.3` дополнительно обязателен на Linux/Windows/macOS x64+ARM64 с точным host-platform evidence и architecture-isolated natives. Java coverage — `8/16/17/21/25`; все пять Vanilla/loader families и exact target binding обязательны. Удалить любую обязательную release-line цель из `targets.json` и получить зелёный release невозможно.
 
 Локальная проверка определения и агрегатора:
 
@@ -96,6 +107,6 @@ python3 scripts/compatibility/test_matrix.py
 
 ## Release certification
 
-При сборке официального release CLI повторно валидирует `matrix.json` вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Для 0.16.8 certification фиксирует required/passed targets, сорок обязательных Vanilla versions, Java majors, scopes, SHA-256 target definition и matrix, source commit и Actions run ID.
+При сборке официального release CLI повторно валидирует `matrix.json` вместе с `compatibility/targets.json` и создаёт `COMPATIBILITY_CERTIFICATION.json`. Для 0.16.9 certification фиксирует required/passed targets, 45 Vanilla targets, Java majors, scopes, OS/arch coverage, SHA-256 target definition и matrix, source commit и Actions run ID.
 
-`nl release publish-check` fail-closed повторно вычисляет certification и требует policy `all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact;vanilla-1.20.5-1.21.10-java21-exact;vanilla-26.1.x-26.3-java25-exact`. Target definition, matrix и certification включаются в release signature boundary. CI bundle без compatibility matrix может существовать как build candidate, но не проходит официальный publish-check.
+`nl release publish-check` fail-closed повторно вычисляет certification и требует policy `all-required-targets-must-pass;vanilla-baseline-ii-multiversion-java-exact;legacy-vanilla-1.7.10-1.16.5-java8;legacy-vanilla-1.0-1.7.10-java8;vanilla-1.17.1-1.20.4-java16-17-exact;vanilla-1.20.5-1.21.10-java21-exact;vanilla-26.1.x-26.3-java25-exact;cross-platform-vanilla-windows-linux-macos-x64-arm64`. Target definition, matrix и certification включаются в release signature boundary. CI bundle без compatibility matrix может существовать как build candidate, но не проходит официальный publish-check.

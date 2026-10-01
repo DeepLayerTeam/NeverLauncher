@@ -19,6 +19,7 @@ RUN_ID="${GITHUB_RUN_ID:-local}"
 mkdir -p "$OUT_DIR"
 RESULT="$OUT_DIR/compatibility-result.json"
 JAVA_EVIDENCE="$OUT_DIR/java-runtime.json"
+PLATFORM_EVIDENCE="$OUT_DIR/platform-runtime.json"
 
 valid_id() { [[ "$1" =~ ^[a-z0-9][a-z0-9._-]{2,95}$ ]]; }
 valid_version() { [[ "$1" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]]; }
@@ -29,11 +30,33 @@ if ! valid_id "$TARGET_ID" || ! valid_version "$MINECRAFT"; then
 fi
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[compat] invalid loader" >&2; exit 2 ;; esac
 case "$SCOPE" in client|integration) ;; *) echo "[compat] invalid certification scope" >&2; exit 2 ;; esac
-[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[compat] unsupported runner target" >&2; exit 2; }
+case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[compat] unsupported target OS" >&2; exit 2 ;; esac
+case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] unsupported target architecture" >&2; exit 2 ;; esac
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[compat] java major is required" >&2; exit 2; }
-[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[compat] target Java executable is unavailable" >&2; exit 2; }
+[[ -n "$JAVA_BIN" ]] || { echo "[compat] target Java executable is unavailable" >&2; exit 2; }
+if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
+  echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
+  exit 2
+fi
 if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" ]]; then
   echo "[compat] client scope is reserved for Vanilla baseline targets" >&2
+  exit 2
+fi
+
+python3 - "$TARGET_OS" "$TARGET_ARCH" > "$PLATFORM_EVIDENCE" <<'PY'
+import json, platform, sys
+expected_os, expected_arch = sys.argv[1:3]
+system = platform.system().lower()
+actual_os = {"linux":"linux", "windows":"windows", "darwin":"macos"}.get(system, system)
+machine = platform.machine().lower()
+actual_arch = {"x86_64":"x86_64", "amd64":"x86_64", "aarch64":"aarch64", "arm64":"aarch64"}.get(machine, machine)
+matched = actual_os == expected_os and actual_arch == expected_arch
+payload = {"expectedOS":expected_os,"expectedArch":expected_arch,"detectedOS":actual_os,"detectedArch":actual_arch,"matched":matched}
+print(json.dumps(payload, indent=2))
+if not matched:
+    raise SystemExit(f"runner mismatch: expected {expected_os}/{expected_arch}, detected {actual_os}/{actual_arch}")
+PY
+if [[ $? -ne 0 ]]; then
   exit 2
 fi
 
@@ -78,7 +101,7 @@ fi
 rc=$?
 set -e
 
-python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
+python3 - "$ROOT" "$RESULT" "$JAVA_EVIDENCE" "$PLATFORM_EVIDENCE" "$TARGET_ID" "$PRODUCT_VERSION" "$MINECRAFT" "$LOADER" "$LOADER_SELECTOR" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_MAJOR" "$SCOPE" "$COMMIT" "$RUN_ID" "$rc" <<'PY'
 from __future__ import annotations
 import json
 import sys
@@ -87,10 +110,11 @@ from pathlib import Path
 root = Path(sys.argv[1])
 out = Path(sys.argv[2])
 java_evidence_path = Path(sys.argv[3])
-target_id, product_version, minecraft, loader, selector, os_name, arch = sys.argv[4:11]
-java_major = int(sys.argv[11])
-scope, commit, run_id = sys.argv[12:15]
-rc = int(sys.argv[15])
+platform_evidence_path = Path(sys.argv[4])
+target_id, product_version, minecraft, loader, selector, os_name, arch = sys.argv[5:12]
+java_major = int(sys.argv[12])
+scope, commit, run_id = sys.argv[13:16]
+rc = int(sys.argv[16])
 runtime = root / "e2e" / "runtime"
 
 def read(name: str):
@@ -111,8 +135,10 @@ def read_path(path: Path):
         return None
 
 java_evidence = read_path(java_evidence_path) or {}
+platform_evidence = read_path(platform_evidence_path) or {}
 detected_java = java_evidence.get("detectedMajor")
 java_matched = java_evidence.get("matched") is True and detected_java == java_major
+platform_matched = platform_evidence.get("matched") is True and platform_evidence.get("detectedOS") == os_name and platform_evidence.get("detectedArch") == arch
 
 if scope == "client":
     base = read("result.json") or {}
@@ -128,6 +154,7 @@ if scope == "client":
         "runtimeResolved": probe.get("mainClass") not in (None, "") and int(probe.get("classpathEntries") or 0) > 0,
         "javaMatched": java_matched and probe.get("requiredJavaMajor") == java_major and probe.get("detectedJavaMajor") == java_major,
         "actualClient": probe.get("status") == "passed" and (probe.get("timedOut") is True or probe.get("success") is True),
+        "platformMatched": platform_matched,
     }
     resolved = ""
     manifest_loader = str(minecraft_settings.get("loader", ""))
@@ -152,6 +179,7 @@ else:
         "sessionRevokeDeny": (base.get("checks") or {}).get("sessionRevokeDeny") is True,
         "paperHealthy": health.get("Status") == "healthy" and health.get("FailingStreak") == 0,
         "javaMatched": java_matched,
+        "platformMatched": platform_matched,
     }
     manifest_loader = str((manifest.get("minecraft") or {}).get("loader", ""))
     evidence_files = [name for name in [
@@ -181,7 +209,8 @@ payload = {
     "evidence": {
         "manifestLoader": manifest_loader,
         "javaRuntime": java_evidence,
-        "files": evidence_files,
+        "platformRuntime": platform_evidence,
+        "files": evidence_files + ["platform-runtime.json"],
     },
 }
 out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

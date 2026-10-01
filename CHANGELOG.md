@@ -1,3 +1,13 @@
+## 0.16.9 — Cross-platform Vanilla / Windows, Linux, macOS × x64, ARM64
+
+`0.16.9` делает Vanilla certification нативной для всех шести desktop OS/architecture targets вместо Linux/x64-only запуска.
+
+- Minecraft 26.3 сертифицируется отдельным actual-client target на Linux x64/ARM64, Windows x64/ARM64 и macOS x64/ARM64; каждый CI result обязан совпадать с фактически обнаруженным host OS/arch.
+- Vanilla materializer разделяет extracted natives по `natives/<os>/<arch>` и фильтрует architecture-specific Mojang/LWJGL native classifiers; x64 и ARM64 больше не используют общий native cache одной ОС.
+- NeverRuntime выбирает тот же OS+arch native directory и независимо от materializer фильтрует composite Mojang OS rules/native classifiers перед построением classpath.
+- Compatibility workflow планирует native GitHub-hosted runners и exact Java для каждого target; Linux client certification использует Xvfb, Windows/macOS запускают реальный клиент на native desktop session.
+- Release certification fail-closed требует policy `cross-platform-vanilla-windows-linux-macos-x64-arm64`, все шесть 26.3 targets и `platformMatched=true` evidence.
+
 ## 0.16.8 — Java 25 Vanilla / 26.1.x + 26.3
 
 `0.16.8` добавляет рабочую Java 25 Vanilla certification для новой календарной линии Minecraft Java Edition.
