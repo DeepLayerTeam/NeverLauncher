@@ -102,6 +102,7 @@ run_step loader-resolution-pinning-0177 python3 "${ROOT_DIR}/scripts/smoke/offli
 run_step loader-native-e2e-0178 python3 "${ROOT_DIR}/scripts/smoke/offline/loader-native-e2e-0178.py"
 run_step cross-platform-loaders-0179 python3 "${ROOT_DIR}/scripts/smoke/offline/cross-platform-loaders-0179.py"
 run_step loader-hardening-01710 python3 "${ROOT_DIR}/scripts/smoke/offline/loader-hardening-01710.py"
+run_step loader-compatibility-rc-01711 python3 "${ROOT_DIR}/scripts/smoke/offline/loader-compatibility-rc-01711.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

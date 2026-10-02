@@ -366,15 +366,16 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
 
 ### Release-bound compatibility certification
 
-Официальный publish flow использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml` и создаёт в release bundle три обязательных файла:
+Официальный publish flow использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml`. Для 0.17.11 release bundle содержит четыре обязательных compatibility-файла:
 
 ```text
 COMPATIBILITY_TARGETS.json
 COMPATIBILITY_MATRIX.json
 COMPATIBILITY_CERTIFICATION.json
+LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json
 ```
 
-Certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Все три файла входят в `SHA256SUMS` и поэтому защищены общей Ed25519 release signature.
+Базовый certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Loader Compatibility RC дополнительно строит единый SHA-256 evidence root всех 292 targets, фиксирует family/platform/Java/scopes и обязательные pinning/native-E2E/cross-platform/hardening invariants. RC SHA-256 записывается в `RELEASE_MANIFEST.json`; все четыре файла входят в `SHA256SUMS` и защищены общей Ed25519 release signature.
 
 Сборка сертифицированного bundle:
 
@@ -516,7 +517,7 @@ NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 
 ## Публичная CI Compatibility Matrix
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица содержит 249 targets: 109 Vanilla, Fabric и Quilt по 48 stable releases `1.14`–`26.3`, 43 processor-based Forge releases `1.13.2`–`26.3` и NeoForge integration target на `1.21.1`. Fabric/Quilt/Forge historical releases выполняются как Linux x86_64 actual-client targets; `1.21.1` сохраняет integration E2E. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица содержит 292 targets: 109 Vanilla, 53 Fabric, 53 Quilt, 50 Forge и 27 NeoForge. Исторические широкие loader-линии остаются Linux x86_64 regression-базой, а current-loader anchors дополнительно сертифицируются на Windows/Linux/macOS × x64/ARM64; `1.21.1` сохраняет loader-native integration E2E. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
 
 Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
 

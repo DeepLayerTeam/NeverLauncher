@@ -1,3 +1,11 @@
+## 0.17.11 — Loader Compatibility RC
+
+- Added `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json`: a complete release certificate derived from the exact embedded compatibility targets, aggregate matrix and `COMPATIBILITY_CERTIFICATION.json`.
+- The RC binds all 292 required targets with a deterministic SHA-256 evidence root, exact source commit/run, matrix/targets/certification hashes and a self-identifying `certificateId`.
+- Added per-loader family coverage for Vanilla/Fabric/Quilt/Forge/NeoForge, six OS/architecture pairs, Java 8/16/17/21/25, client/integration scopes, immutable loader pins, loader-native E2E, cross-platform loader execution and loader hardening recovery.
+- Release build fail-closes unless every RC invariant is true. The certificate is required by `RELEASE_MANIFEST.json`, its SHA-256 is recorded there, and the certificate itself is included in `SHA256SUMS`/Ed25519 signed release boundary.
+- `release publish-check` recomputes the full certificate from embedded evidence; missing or tampered certificate/root/family/platform coverage is rejected. Added mandatory 0.17.11 CI/preflight/repository-policy gates and tamper regressions.
+
 ## 0.17.10 — Loader Hardening
 
 - Added content-addressed SHA-256 loader payload cache for Fabric/Quilt Meta profiles and Forge/NeoForge installers. Immutable resolution locks can replay exact pinned bytes without mutable upstream availability; corrupt cache records/payloads are quarantined fail-closed.

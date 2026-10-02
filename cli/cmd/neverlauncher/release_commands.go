@@ -651,11 +651,30 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		checks = append(checks, "production-delivery-release-stable-six-target-ga")
 	}
 	compatibilityCertified := false
+	loaderCompatibilityReleaseCertified := false
+	loaderCompatibilityReleaseCertificateSHA256 := ""
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
 		checks = append(checks, "minecraft-compatibility-certification")
 		if compatibilityIIGa0170Required(ver) {
 			checks = append(checks, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
+		}
+		if compatibilityReleaseCertificate01711Required(ver) {
+			certificatePath := filepath.Join(out, loaderCompatibilityReleaseCertificateFile01711)
+			if _, err := os.Stat(certificatePath); err != nil {
+				return fmt.Errorf("Loader Compatibility RC 0.17.11 certificate missing: %w", err)
+			}
+			if err := verifyLoaderCompatibilityReleaseCertificate01711(out, ver); err != nil {
+				return fmt.Errorf("Loader Compatibility RC 0.17.11 self-check: %w", err)
+			}
+			var err error
+			loaderCompatibilityReleaseCertificateSHA256, _, err = hashFile(certificatePath)
+			if err != nil {
+				return err
+			}
+			requiredFiles = append(requiredFiles, loaderCompatibilityReleaseCertificateFile01711)
+			checks = append(checks, "loader-compatibility-rc-full-release-certificate")
+			loaderCompatibilityReleaseCertified = true
 		}
 		compatibilityCertified = true
 	}
@@ -672,17 +691,21 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		guardCICertified = true
 	}
 	manifest := map[string]any{
-		"schemaVersion":          cliSchemaVersion,
-		"name":                   "NeverLauncher",
-		"version":                ver,
-		"createdAt":              time.Now().UTC().Format(time.RFC3339),
-		"mode":                   "release-pipeline",
-		"artifacts":              entries,
-		"checks":                 checks,
-		"requiredFiles":          requiredFiles,
-		"compatibilityCertified": compatibilityCertified,
-		"deviceTrustCertified":   deviceTrustCertified,
-		"guardCICertified":       guardCICertified,
+		"schemaVersion":                       cliSchemaVersion,
+		"name":                                "NeverLauncher",
+		"version":                             ver,
+		"createdAt":                           time.Now().UTC().Format(time.RFC3339),
+		"mode":                                "release-pipeline",
+		"artifacts":                           entries,
+		"checks":                              checks,
+		"requiredFiles":                       requiredFiles,
+		"compatibilityCertified":              compatibilityCertified,
+		"loaderCompatibilityReleaseCertified": loaderCompatibilityReleaseCertified,
+		"deviceTrustCertified":                deviceTrustCertified,
+		"guardCICertified":                    guardCICertified,
+	}
+	if loaderCompatibilityReleaseCertified {
+		manifest["loaderCompatibilityReleaseCertificateSha256"] = loaderCompatibilityReleaseCertificateSHA256
 	}
 	if productionReleaseCandidateRequired01511(ver) {
 		commit, err := normalizeSourceCommit01511(expectedCommit)
@@ -720,6 +743,9 @@ func releaseBundleEntries(ver, out string) []map[string]any {
 	requiredNames := append([]string{}, releaseArtifacts(ver)...)
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredNames = append(requiredNames, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		if compatibilityReleaseCertificate01711Required(ver) {
+			requiredNames = append(requiredNames, loaderCompatibilityReleaseCertificateFile01711)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
 		requiredNames = append(requiredNames, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)

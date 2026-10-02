@@ -2632,6 +2632,44 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "loader-hardening-01710.py" not in preflight or "loader-hardening-01710.py" not in ci:
         fail("0.17.10 Loader Hardening gate is not wired into preflight/CI")
 
+
+# 0.17.11 Loader Compatibility RC produces one complete release certificate
+# derived from the exact compatibility cohort and signed as part of the release bundle.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 11):
+    rc_cert_01711 = read("cli/cmd/neverlauncher/compatibility_release_certificate.go")
+    rc_compat_01711 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    rc_release_01711 = read("cli/cmd/neverlauncher/release_commands.go")
+    rc_production_workflow_01711 = read(".github/workflows/production-release-candidate.yml")
+    rc_tests_01711 = read("cli/cmd/neverlauncher/compatibility_release_certificate_test.go")
+    rc_gate_01711 = read("scripts/smoke/offline/loader-compatibility-rc-01711.py")
+    rc_targets_01711 = json.loads(read("compatibility/targets.json"))["targets"]
+    for required in ["LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json", "CompatibilityCertificationSHA256", "EvidenceRootSHA256", "CertificateID", "RequiredTargetCount", "PassedTargetCount", "LoaderFamilies", "Platforms", "immutableLoaderPins", "loaderNativeE2E", "crossPlatformLoaders", "loaderHardeningRecovery", "verifyLoaderCompatibilityReleaseCertificate01711"]:
+        if required not in rc_cert_01711:
+            fail(f"0.17.11 full loader release certificate incomplete: {required}")
+    for required in ["compatibilityReleaseCertificate01711Required", "writeLoaderCompatibilityReleaseCertificate01711", "verifyLoaderCompatibilityReleaseCertificate01711"]:
+        if required not in rc_compat_01711:
+            fail(f"0.17.11 compatibility RC integration incomplete: {required}")
+    for required in ["loaderCompatibilityReleaseCertificateFile01711", "loader-compatibility-rc-full-release-certificate", "loaderCompatibilityReleaseCertified", "loaderCompatibilityReleaseCertificateSha256"]:
+        if required not in rc_release_01711:
+            fail(f"0.17.11 signed release-bundle RC integration incomplete: {required}")
+    for required in ["LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json", "requiredTargetCount == 292", "loaderCompatibilityReleaseCertified == true", "loaderCompatibilityReleaseCertificateSha256"]:
+        if required not in rc_production_workflow_01711:
+            fail(f"0.17.11 production candidate RC assertion incomplete: {required}")
+    required_rows = [row for row in rc_targets_01711 if row.get("required")]
+    if len(required_rows) != 292:
+        fail(f"0.17.11 full RC requires exactly 292 required compatibility targets, got {len(required_rows)}")
+    expected_family_counts = {"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
+    actual_family_counts = {loader: sum(1 for row in required_rows if row.get("loader") == loader) for loader in expected_family_counts}
+    if actual_family_counts != expected_family_counts:
+        fail(f"0.17.11 loader family coverage mismatch: {actual_family_counts}")
+    for required in ["TestLoaderCompatibilityReleaseCertificate01711Complete", "TestLoaderCompatibilityReleaseCertificate01711RejectsTamperedRoot", "TestLoaderCompatibilityReleaseCertificate01711RejectsMissingCertificate", "TestLoaderCompatibilityReleaseCertificate01711EvidenceRootChanges"]:
+        if required not in rc_tests_01711:
+            fail(f"0.17.11 RC regression test missing: {required}")
+    if "Loader Compatibility RC 0.17.11 gate: OK" not in rc_gate_01711:
+        fail("0.17.11 mandatory Loader Compatibility RC gate incomplete")
+    if "loader-compatibility-rc-01711.py" not in preflight or "loader-compatibility-rc-01711.py" not in ci:
+        fail("0.17.11 Loader Compatibility RC gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

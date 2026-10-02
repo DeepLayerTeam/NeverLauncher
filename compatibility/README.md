@@ -1,5 +1,13 @@
 # Minecraft compatibility
 
+## Loader Compatibility RC — 0.17.11
+
+NeverLauncher 0.17.11 формирует `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json` из точного release-bound набора `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json` и `COMPATIBILITY_CERTIFICATION.json`. Это не декларативный manifest: сборка fail-closed останавливается, если не прошли все 292 required targets или невозможно детерминированно пересчитать полный root всего target evidence.
+
+Сертификат фиксирует SHA-256 compatibility certification, matrix и targets, детерминированный root по каждому target evidence/pin/JRE/check tuple, exact source commit/run, покрытие 292/292, counts по семействам (Vanilla 109, Fabric 53, Quilt 53, Forge 50, NeoForge 27), шесть desktop OS/architecture пар, Java 8/16/17/21/25, scopes и все обязательные инварианты 0.17.7–0.17.10. Поле `certificateId` является SHA-256 полной нормализованной identity сертификата.
+
+Release bundle записывает SHA-256 RC в `RELEASE_MANIFEST.json`, помечает RC как required artifact и включает его в `SHA256SUMS`; поэтому внешняя Ed25519 release signature покрывает полный loader compatibility certificate. `nl release publish-check` пересчитывает RC из embedded compatibility evidence и отклоняет отсутствующий или изменённый сертификат.
+
 ## Loader Hardening — 0.17.10
 
 NeverLauncher 0.17.10 требует upstream-independent replay для current Fabric 26.3, Quilt 26.3, Forge 26.3 и NeoForge 26.2 Linux x64 targets. Immutable resolution lock связывается с content-addressed SHA-256 cache; cache-only materialization не имеет права обращаться к mutable resolver. Forge/NeoForge дополнительно восстанавливают pinned installer без `.sha1` sidecar и используют durable processor journal: verified crash outputs принимаются, неполные quarantined и rerun. PASS требует `loaderCacheVerified`, `loaderUpstreamRecovery`, а Forge/NeoForge также `loaderInstallerRecovery` и `loaderProcessorRecovery`; release bundle повторно проверяет четыре `loaderHardeningTargets`.

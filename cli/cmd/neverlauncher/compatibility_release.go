@@ -491,7 +491,15 @@ func embedCompatibilityCertification(out, matrixPath, targetsPath, ver, expected
 	if err := os.WriteFile(filepath.Join(out, compatibilityTargetsReleaseFile), targetsRaw, 0o644); err != nil {
 		return err
 	}
-	return writeJSONFile(filepath.Join(out, compatibilityCertificationReleaseFile), certification)
+	if err := writeJSONFile(filepath.Join(out, compatibilityCertificationReleaseFile), certification); err != nil {
+		return err
+	}
+	if compatibilityReleaseCertificate01711Required(ver) {
+		if err := writeLoaderCompatibilityReleaseCertificate01711(out, matrixRaw, targetsRaw, certification); err != nil {
+			return fmt.Errorf("Loader Compatibility RC 0.17.11: %w", err)
+		}
+	}
+	return nil
 }
 
 func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit string) (releaseCompatibilityCertification, error) {
@@ -1376,6 +1384,11 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {
 		return errors.New("COMPATIBILITY_CERTIFICATION target/loader/vanilla/java coverage mismatch")
+	}
+	if compatibilityReleaseCertificate01711Required(ver) {
+		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, ver); err != nil {
+			return fmt.Errorf("Loader Compatibility RC 0.17.11: %w", err)
+		}
 	}
 	return nil
 }

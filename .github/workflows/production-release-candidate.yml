@@ -170,6 +170,12 @@ jobs:
           test -s "${DIR}/SHA256SUMS.sig"
           test -s "${DIR}/PROVENANCE.json.sig"
           test -s "${DIR}/RELEASE_TRUST_POLICY.json"
+          test -s "${DIR}/COMPATIBILITY_TARGETS.json"
+          test -s "${DIR}/COMPATIBILITY_MATRIX.json"
+          test -s "${DIR}/COMPATIBILITY_CERTIFICATION.json"
+          test -s "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json"
+          jq -e '.status == "certified" and .requiredTargetCount == 292 and .passedTargetCount == 292 and (.certificateId | startswith("sha256:"))' "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json" >/dev/null
+          jq -e '.loaderCompatibilityReleaseCertified == true and (.loaderCompatibilityReleaseCertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
           test -s "${DIR}/neverguard-linux-amd64"
