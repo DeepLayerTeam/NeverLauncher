@@ -293,6 +293,10 @@ def loader_resolution_pinning_0177_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 7)
 
 
+def loader_native_e2e_0178_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 8)
+
+
 def load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -627,6 +631,19 @@ def load_targets(path: Path) -> dict[str, Any]:
             "required": required,
         })
     validate_baseline_ii(normalized)
+    if loader_native_e2e_0178_required():
+        for loader in ("fabric", "quilt", "forge", "neoforge"):
+            native = [
+                target for target in normalized
+                if target.get("required") is True and target.get("loader") == loader
+                and target.get("minecraft") == "1.21.1" and target.get("scope") == "integration"
+                and target.get("os") == "linux" and target.get("arch") == "x86_64"
+            ]
+            if len(native) != 1:
+                die(f"Loader-native E2E 0.17.8 requires exactly one {loader} 1.21.1 integration target on linux/x86_64")
+            if native[0].get("javaMajor") != 21 or native[0].get("loaderVersion") != "latest-stable":
+                die(f"Loader-native E2E {loader} 1.21.1 requires Java 21 and loaderVersion=latest-stable")
+
     return {"schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targets": normalized}
 
 
@@ -751,6 +768,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         mandatory = list(mandatory) + ["jreCertified"]
     if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
         mandatory = list(mandatory) + ["loaderPinned", "reproducibleResolution"]
+    if target["loader"] != "vanilla" and target["scope"] == "integration" and loader_native_e2e_0178_required():
+        mandatory = list(mandatory) + ["loaderNativeServer", "loaderVersionMatched", "loaderServerHealthy", "loaderNativeClientJoin"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -816,6 +835,11 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             mandatory_files = set(mandatory_files) | {"java-runtime.json"}
         if target["loader"] != "vanilla" and loader_resolution_pinning_0177_required():
             mandatory_files = set(mandatory_files) | {f"{target['loader']}-resolution-lock.json"}
+        if target["loader"] != "vanilla" and target["scope"] == "integration" and loader_native_e2e_0178_required():
+            mandatory_files = set(mandatory_files) | {
+                "loader-native-server.json", "loader-native-client.json", "loader-native-server.log",
+                "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
+            }
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":

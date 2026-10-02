@@ -40,7 +40,9 @@ NEVERLAUNCHER_E2E_LOADER_VERSION=<selector>
 NEVERLAUNCHER_COMPAT_TARGET_ID=<canonical target id>
 ```
 
-Для Fabric/Quilt/Forge/NeoForge используется соответствующий рабочий `nl runtime <loader>-package`; mutable selector разрешается materializer-ом до concrete loader version. После формирования package все loader families проходят одинаковую trust boundary:
+Для Fabric/Quilt/Forge/NeoForge используется соответствующий рабочий `nl runtime <loader>-package`; mutable selector разрешается materializer-ом до concrete loader version. Начиная с 0.17.8 integration anchor дополнительно запускает `run-loader-native-e2e.sh`: чистый dedicated server того же loader получает exact `resolvedLoaderVersion`, серверные loader artifacts проверяются на диске, после чего actual materialized client через NeverRuntime подключается напрямую к `127.0.0.1:25580`. PASS требует healthy server и реальный `NeverLauncherCertification joined the game` в server log; одного открытого порта или client timeout недостаточно.
+
+После этого все loader families сохраняют существующую trust boundary:
 
 ```text
 materialize

@@ -83,6 +83,17 @@ class MatrixToolTests(unittest.TestCase):
         if target["loader"] != "vanilla":
             checks.update({"loaderPinned": True, "reproducibleResolution": True})
             files.append(f"{target['loader']}-resolution-lock.json")
+        if target["loader"] != "vanilla" and target["scope"] == "integration":
+            checks.update({
+                "loaderNativeServer": True,
+                "loaderVersionMatched": True,
+                "loaderServerHealthy": True,
+                "loaderNativeClientJoin": True,
+            })
+            files.extend([
+                "loader-native-server.json", "loader-native-client.json", "loader-native-server.log",
+                "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
+            ])
         return {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
@@ -159,6 +170,20 @@ class MatrixToolTests(unittest.TestCase):
             "--run-id", "77",
             "--repository", "DeepLayerTeam/NeverLauncher",
         )
+
+
+    def test_validate_0178_requires_loader_native_integration_anchor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["id"] == "quilt-1.21.1-linux-x64":
+                    target["scope"] = "client"
+                    break
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertTrue("Loader-native E2E 0.17.8" in proc.stderr or "Quilt 1.21.1" in proc.stderr)
 
     def test_validate_rejects_manual_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -746,6 +771,35 @@ class MatrixToolTests(unittest.TestCase):
                     result["evidence"]["files"] = [
                         item for item in result["evidence"]["files"]
                         if item != "quilt-resolution-lock.json"
+                    ]
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("evidence files are incomplete", proc.stderr)
+
+    def test_0178_aggregate_rejects_missing_loader_native_join(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "fabric-1.21.1-linux-x64":
+                    result["checks"]["loaderNativeClientJoin"] = False
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("loaderNativeClientJoin", proc.stderr)
+
+    def test_0178_aggregate_rejects_missing_loader_native_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "neoforge-1.21.1-linux-x64":
+                    result["evidence"]["files"] = [
+                        item for item in result["evidence"]["files"]
+                        if item != "loader-native-server.json"
                     ]
 
             proc = self.aggregate(path, doc, mutate)

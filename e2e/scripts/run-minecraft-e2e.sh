@@ -683,6 +683,14 @@ if [[ "$LOADER" == "vanilla" ]]; then
 else
   [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] loader version was not resolved" >&2; exit 1; }
   case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] mutable loader selector leaked into release" >&2; exit 1 ;; esac
+
+  # 0.17.8: certification is no longer client-only. Start a clean dedicated
+  # server with the exact immutable loader version resolved above and require
+  # the already materialized loader client to complete a real network join.
+  LOADER_NATIVE_CLIENT_PROFILE_ID="$(jq -er --arg loader "$LOADER" '.[ $loader ].profileId' "$CLIENT_PACKAGE")"
+  export NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION="$RESOLVED_LOADER_VERSION"
+  export NEVERLAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID="$LOADER_NATIVE_CLIENT_PROFILE_ID"
+  bash "$ROOT/e2e/scripts/run-loader-native-e2e.sh"
 fi
 
 printf '[e2e] upload the full real Minecraft package through canonical /api/v1 and publish signed immutable release\n'
@@ -953,6 +961,8 @@ FOLIA_HEALTH="skipped"
 FABRIC_HEALTH="skipped"
 FORGE_HEALTH="skipped"
 NEOFORGE_HEALTH="skipped"
+LOADER_NATIVE_HEALTH="skipped"
+if [[ "$LOADER" != "vanilla" ]]; then LOADER_NATIVE_HEALTH="healthy"; fi
 if [[ "$MODE" == "full" ]]; then VELOCITY_HEALTH="healthy"; BUNGEECORD_HEALTH="healthy"; WATERFALL_HEALTH="healthy"; SPIGOT_HEALTH="healthy"; PURPUR_HEALTH="healthy"; FOLIA_HEALTH="healthy"; FABRIC_HEALTH="healthy"; FORGE_HEALTH="healthy"; NEOFORGE_HEALTH="healthy"; fi
 jq -n \
   --arg version "$VERSION" \
@@ -974,6 +984,7 @@ jq -n \
   --arg fabric "$FABRIC_HEALTH" \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"]}' \
+  --arg loaderNative "$LOADER_NATIVE_HEALTH" \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderNativeE2E:(if $loader == "vanilla" then "not-applicable" else "passed" end),loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge,loaderNative:$loaderNative},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,loaderNativeServer:($loader == "vanilla" or $loaderNative == "healthy"),loaderNativeClientJoin:($loader == "vanilla" or $loaderNative == "healthy"),loaderVersionMatched:($loader == "vanilla" or $loaderNative == "healthy"),bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:(["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"] + (if $loader == "vanilla" then [] else ["loader-native-server.json","loader-native-client.json","loader-native-server.log","loader-native-server-artifacts.txt","loader-native-server-process.txt","health-loader-native.json"] end))}' \
   > "$RUNTIME_DIR/result.json"
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

@@ -580,6 +580,19 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			matrix.Targets[i].Checks["reproducibleResolution"] = true
 		}
 	}
+	if compatibilityLoaderNativeE2E0178Required(ver) {
+		for i := range matrix.Targets {
+			if matrix.Targets[i].Loader == "vanilla" || matrix.Targets[i].Scope != "integration" {
+				continue
+			}
+			if matrix.Targets[i].Checks == nil {
+				matrix.Targets[i].Checks = map[string]bool{}
+			}
+			for _, check := range []string{"loaderNativeServer", "loaderVersionMatched", "loaderServerHealthy", "loaderNativeClientJoin"} {
+				matrix.Targets[i].Checks[check] = true
+			}
+		}
+	}
 	targetRaw, err := json.Marshal(targets)
 	if err != nil {
 		t.Fatal(err)
@@ -1714,5 +1727,75 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177BundleRejectsTampe
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.7"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
 		t.Fatalf("bundle verifier must reject tampered loader pin coverage, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationLoaderNativeE2E0178(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.8", "commit-178")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.8", "commit-178")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []string{"fabric-1.21.1-linux-x64", "forge-1.21.1-linux-x64", "neoforge-1.21.1-linux-x64", "quilt-1.21.1-linux-x64"}
+	if !slices.Equal(certification.LoaderNativeTargets, expected) {
+		t.Fatalf("loader-native coverage=%v, want %v", certification.LoaderNativeTargets, expected)
+	}
+	if !strings.Contains(certification.Policy, "loader-native-e2e-0.17.8-fabric-quilt-forge-neoforge-client-server-exact-loader-join") {
+		t.Fatalf("0.17.8 policy does not bind loader-native E2E: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationLoaderNativeE2E0178RejectsMissingJoin(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.8", "commit-178")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].TargetID == "quilt-1.21.1-linux-x64" {
+			matrix.Targets[i].Checks["loaderNativeClientJoin"] = false
+			break
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.8", "commit-178"); err == nil || !strings.Contains(err.Error(), "loaderNativeClientJoin") {
+		t.Fatalf("0.17.8 must reject missing native loader join, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationLoaderNativeE2E0178BundleRejectsTamperedCoverage(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.8", "commit-178")
+	dir := t.TempDir()
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.8", "commit-178"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert releaseCompatibilityCertification
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	cert.LoaderNativeTargets = cert.LoaderNativeTargets[:len(cert.LoaderNativeTargets)-1]
+	raw, _ = json.MarshalIndent(cert, "", "  ")
+	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.8"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+		t.Fatalf("bundle verifier must reject tampered loader-native coverage, got %v", err)
 	}
 }

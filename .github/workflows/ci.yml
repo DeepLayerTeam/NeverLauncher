@@ -94,6 +94,7 @@ jobs:
           python3 scripts/smoke/offline/forge-legacy-1710-0175.py
           python3 scripts/smoke/offline/neoforge-compatibility-II-0176.py
           python3 scripts/smoke/offline/loader-resolution-pinning-0177.py
+          python3 scripts/smoke/offline/loader-native-e2e-0178.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json

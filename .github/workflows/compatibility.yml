@@ -114,6 +114,12 @@ jobs:
             e2e/runtime/quilt-resolution-lock.json
             e2e/runtime/forge-resolution-lock.json
             e2e/runtime/neoforge-resolution-lock.json
+            e2e/runtime/loader-native-server.json
+            e2e/runtime/loader-native-client.json
+            e2e/runtime/loader-native-server.log
+            e2e/runtime/loader-native-server-artifacts.txt
+            e2e/runtime/loader-native-server-process.txt
+            e2e/runtime/health-loader-native.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
             e2e/runtime/manifest.json

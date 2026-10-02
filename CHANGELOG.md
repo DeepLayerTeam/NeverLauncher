@@ -1,3 +1,11 @@
+## 0.17.8 — Loader-native E2E
+
+- Added a real dedicated-loader E2E boundary for the four 1.21.1 integration anchors: Fabric, Quilt, Forge and NeoForge now start a clean dedicated server using the exact immutable loader version resolved for the materialized client.
+- Added `run-loader-native-e2e.sh`: it starts the exact loader server, requires healthy runtime state and exact loader artifacts, launches the actual materialized client through NeverRuntime with direct-connect, and requires the server log to prove `NeverLauncherCertification joined the game`.
+- Added raw loader-native server/client/log/process/artifact/health evidence to compatibility artifacts. Aggregate validation now fail-closes on missing server health, loader-version match or actual join evidence.
+- Release certification records the exact four `loaderNativeTargets`; bundle verification recomputes them from embedded matrix evidence and rejects tampered coverage.
+- Added mandatory 0.17.8 offline, preflight and repository-policy gates plus regression tests for missing join/evidence and certification tampering. Existing Paper integration/revoke E2E and 0.17.7 immutable resolution pinning remain required.
+
 ## 0.17.7 — Loader Resolution & Pinning
 
 - Added a production loader resolution lock for Fabric, Quilt, Forge and NeoForge. Mutable selectors resolve once to a concrete loader/artifact version; replay reads the lock before mutable upstream resolution and cannot silently move to a newer loader.

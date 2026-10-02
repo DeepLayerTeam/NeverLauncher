@@ -2511,6 +2511,48 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.7 loader resolution pinning gate is not wired into preflight/CI")
 
 
+# 0.17.8 Loader-native E2E proves a real materialized loader client can join a
+# dedicated server running the same loader family and the exact pinned version.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 8):
+    native_compose_0178 = read("e2e/docker-compose.minecraft-e2e.yml")
+    native_runner_0178 = read("e2e/scripts/run-loader-native-e2e.sh")
+    native_integration_0178 = read("e2e/scripts/run-minecraft-e2e.sh")
+    native_compat_0178 = read("e2e/scripts/run-compatibility-case.sh")
+    native_matrix_0178 = read("scripts/compatibility/matrix.py")
+    native_release_0178 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    native_workflow_0178 = read(".github/workflows/compatibility.yml")
+    native_tests_0178 = read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("scripts/compatibility/test_matrix.py")
+    native_gate_0178 = read("scripts/smoke/offline/loader-native-e2e-0178.py")
+    for required in ["loader-native:", "FABRIC_LOADER_VERSION", "QUILT_LOADER_VERSION", "FORGE_VERSION", "NEOFORGE_VERSION", '"25580:25565"']:
+        if required not in native_compose_0178:
+            fail(f"0.17.8 loader-native dedicated server incomplete: {required}")
+    for required in ["RESOLVED_LOADER_VERSION", "certify-vanilla", "NeverLauncherCertification joined the game", "loader-native-server-artifacts.txt", "actual-client-joined-dedicated-loader-server"]:
+        if required not in native_runner_0178:
+            fail(f"0.17.8 loader-native runtime incomplete: {required}")
+    for required in ["run-loader-native-e2e.sh", "NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION", "loaderNativeClientJoin"]:
+        if required not in native_integration_0178:
+            fail(f"0.17.8 integration loader-native routing incomplete: {required}")
+    for required in ["loaderNativeServer", "loaderVersionMatched", "loaderServerHealthy", "loaderNativeClientJoin", "loader-native-server.json"]:
+        if required not in native_compat_0178:
+            fail(f"0.17.8 compatibility native evidence incomplete: {required}")
+    for required in ["loader_native_e2e_0178_required", "Loader-native E2E 0.17.8 requires exactly one", "loaderNativeClientJoin"]:
+        if required not in native_matrix_0178:
+            fail(f"0.17.8 matrix native enforcement incomplete: {required}")
+    for required in ["LoaderNativeTargets", "compatibilityLoaderNativeE2E0178Required", "loader-native-e2e-0.17.8-fabric-quilt-forge-neoforge-client-server-exact-loader-join"]:
+        if required not in native_release_0178:
+            fail(f"0.17.8 release certification native enforcement incomplete: {required}")
+    for required in ["TestCompatibilityCertificationLoaderNativeE2E0178", "test_0178_aggregate_rejects_missing_loader_native_join"]:
+        if required not in native_tests_0178:
+            fail(f"0.17.8 loader-native regression test missing: {required}")
+    for evidence in ["loader-native-server.json", "loader-native-client.json", "loader-native-server.log", "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json"]:
+        if f"e2e/runtime/{evidence}" not in native_workflow_0178:
+            fail(f"0.17.8 compatibility workflow does not retain {evidence}")
+    if "Loader-native E2E 0.17.8 gate: OK" not in native_gate_0178:
+        fail("0.17.8 mandatory loader-native E2E gate incomplete")
+    if "loader-native-e2e-0178.py" not in preflight or "loader-native-e2e-0178.py" not in ci:
+        fail("0.17.8 loader-native E2E gate is not wired into preflight/CI")
+
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

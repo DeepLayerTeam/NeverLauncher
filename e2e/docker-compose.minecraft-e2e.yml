@@ -446,6 +446,36 @@ services:
       - ./runtime/node-identities/neoforge:/data/.neverlauncher-identity
       - neoforge-data:/data
 
+  loader-native:
+    image: itzg/minecraft-server:java21
+    environment:
+      EULA: "TRUE"
+      TYPE: ${NEVERLAUNCHER_E2E_NATIVE_SERVER_TYPE:-VANILLA}
+      VERSION: ${NEVERLAUNCHER_E2E_NATIVE_MINECRAFT_VERSION:-1.21.1}
+      FABRIC_LOADER_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      QUILT_LOADER_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      FORGE_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      NEOFORGE_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      ONLINE_MODE: "FALSE"
+      MEMORY: 768M
+      ENABLE_RCON: "false"
+      SPAWN_PROTECTION: "0"
+      ENABLE_AUTOPAUSE: "false"
+      ENABLE_AUTOSTOP: "false"
+      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      MOTD: "NeverLauncher loader-native E2E"
+    healthcheck:
+      test: ["CMD", "mc-health"]
+      interval: 5s
+      timeout: 5s
+      retries: 90
+      start_period: 150s
+    ports:
+      - "25580:25565"
+    volumes:
+      - ./runtime/loader-native-server:/data
+
 volumes:
   e2e-postgres: {}
   e2e-storage: {}

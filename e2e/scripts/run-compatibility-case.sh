@@ -250,11 +250,21 @@ else:
             "loaderPinned": resolution_pinned and valid_sha256(resolution_lock_sha),
             "reproducibleResolution": resolution_lock_matches and valid_sha256(resolution_source_sha) and valid_sha256(reproducibility_sha),
         })
+        native_server = read("loader-native-server.json") or {}
+        native_client = read("loader-native-client.json") or {}
+        native_health = read("health-loader-native.json") or {}
+        checks.update({
+            "loaderNativeServer": native_server.get("status") == "passed" and native_server.get("loader") == loader and native_server.get("minecraftVersion") == minecraft,
+            "loaderVersionMatched": native_server.get("resolvedLoaderVersion") == resolved and native_server.get("resolvedLoaderVersion") not in ("", "latest", "latest-stable", "stable", "recommended"),
+            "loaderServerHealthy": native_server.get("serverHealthy") is True and native_health.get("Status") == "healthy" and native_health.get("FailingStreak") == 0,
+            "loaderNativeClientJoin": native_server.get("clientJoined") is True and native_client.get("status") == "passed" and native_client.get("matchingServer") == "127.0.0.1" and int(native_client.get("matchingServerPort") or 0) > 0 and native_client.get("mainClass") == native_server.get("clientMainClass"),
+        })
     manifest_loader = str((manifest.get("minecraft") or {}).get("loader", ""))
     evidence_files = [name for name in [
         "result.json", "materialized-client-verify.json", "manifest.json", "runtime-verify.json",
         "runtime-sync.json", "runtime-launch-minecraft.json", "health-paper.json", "bridge-diagnostics.json",
-        f"{loader}-resolution-lock.json"
+        f"{loader}-resolution-lock.json", "loader-native-server.json", "loader-native-client.json",
+        "loader-native-server.log", "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json"
     ] if (runtime / name).is_file()]
 
 status = "passed" if rc == 0 and all(checks.values()) else "failed"
