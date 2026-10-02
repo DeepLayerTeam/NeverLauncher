@@ -1,3 +1,9 @@
+## Memory Integrity — 0.18.5
+
+NeverLauncher 0.18.5 расширяет `neverguard-sensor.dll` непрерывным контролем executable memory внутри защищаемой JVM. Sensor снимает `VirtualQuery` map, хеширует executable `MEM_IMAGE` code regions и на каждом heartbeat проверяет их содержимое и protection state. JVM JIT не ошибочно считается immutable code: executable `MEM_PRIVATE` regions контролируются по startup baseline и наблюдаемым `VirtualAlloc`/`VirtualProtect` transitions от Aggressive Hook Engine. Неизвестная executable private/mapped memory, потеря transition events или code-page drift переводят runtime в fail-closed.
+
+Parent принимает запуск только после двух authenticated proofs: `HOOK_READY` и `MEMORY_READY`. Runtime report содержит executable/image/dynamic/RWX counts, executable bytes, observed transition count, integrity checks, `codeSetSha256` и `executableMapSha256`.
+
 ## Aggressive Hook Engine I — 0.18.4
 
 NeverLauncher 0.18.4 добавляет в `neverguard-sensor.dll` ограниченный user-mode hook engine. До запуска Java/Minecraft main Sensor меняет выбранные IAT-импорты в разрешённых JVM/native-модулях для `LoadLibrary*`, `VirtualAlloc` и `VirtualProtect`, проверяет исходную цель как ожидаемый Windows export и отправляет NeverRuntime аутентифицированное доказательство `HOOK_READY`. Глобальные Windows hooks не устанавливаются, память чужих процессов не изменяется.

@@ -1,21 +1,16 @@
 [package]
-name = "neverguard-sensor"
+name = "neverguard-memory-probe"
 version = "0.18.5"
-description = "NeverGuard early JVM sensor for Windows"
+description = "Windows-only NeverGuard Memory Integrity adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
+publish = false
 
 [lib]
-name = "neverguard_sensor"
+name = "neverguard_memory_probe"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
-
-[dependencies]
-hex = "0.4"
-hmac = "0.12"
-sha2 = "0.10"
-zeroize = "1"
 
 [profile.release]
 panic = "abort"

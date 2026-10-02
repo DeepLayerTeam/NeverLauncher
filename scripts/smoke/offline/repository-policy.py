@@ -2949,6 +2949,83 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.4 Hook Engine lacks Windows integration/clippy CI")
 
+
+
+# 0.18.5 Memory Integrity must continuously inspect executable memory in the
+# protected JVM, hash executable image code, distinguish JIT/private code by
+# observed allocation/protection provenance and fail closed on code-page drift.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 5):
+    memory_0185 = read("runtime/neverguard-sensor/src/memory_integrity.rs")
+    memory_hooks_0185 = read("runtime/neverguard-sensor/src/hook_engine.rs")
+    memory_sensor_0185 = read("runtime/neverguard-sensor/src/lib.rs")
+    memory_parent_0185 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    memory_report_0185 = read("runtime/neverruntime/src/windows_memory_integrity.rs")
+    memory_test_0185 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    memory_probe_0185 = read("runtime/neverguard-memory-probe/src/lib.rs")
+    memory_gate_0185 = read("scripts/smoke/offline/neverguard-memory-integrity-0185.py")
+    for required in [
+        "VirtualQuery",
+        "MEM_IMAGE",
+        "MEM_PRIVATE",
+        "hash_image_region",
+        "code-page drift",
+        "record_virtual_alloc",
+        "record_virtual_protect",
+        "transition ring overflow",
+        "executable-map v1",
+        "code-set v1",
+    ]:
+        if required not in memory_0185:
+            fail(f"0.18.5 Memory Integrity backend incomplete: {required}")
+    for forbidden in ["WriteProcessMemory", "VirtualAllocEx", "CreateRemoteThread", "NtWriteVirtualMemory"]:
+        if forbidden in memory_0185:
+            fail(f"0.18.5 Memory Integrity uses forbidden cross-process primitive: {forbidden}")
+    for required in [
+        "crate::memory_integrity::record_virtual_alloc",
+        "crate::memory_integrity::record_virtual_protect",
+    ]:
+        if required not in memory_hooks_0185:
+            fail(f"0.18.5 Memory Integrity transition feed incomplete: {required}")
+    for required in [
+        "MODULE_EVENT_REASON_MEMORY_READY",
+        "MODULE_EVENT_REASON_MEMORY_HEARTBEAT",
+        "MODULE_EVENT_REASON_MEMORY_TAMPER",
+        "memory_integrity::initialize()",
+        "memory_integrity::reconcile_and_verify()",
+    ]:
+        if required not in memory_sensor_0185:
+            fail(f"0.18.5 Memory Integrity Sensor lifecycle incomplete: {required}")
+    for required in [
+        "memory_integrity: crate::WindowsMemoryIntegrityReport",
+        "expected MEMORY_READY as second event",
+        "memory_report_from_event",
+        "Memory Integrity runtime tampering detected",
+        "fail_closed",
+    ]:
+        if required not in memory_parent_0185:
+            fail(f"0.18.5 Memory Integrity parent enforcement incomplete: {required}")
+    for required in ["WindowsMemoryIntegrityReport", "NEVERGUARD_MEMORY_INTEGRITY_VERSION"]:
+        if required not in memory_report_0185:
+            fail(f"0.18.5 Memory Integrity report missing: {required}")
+    for required in [
+        "neverguard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
+        "executable image code-page drift must be fail-closed",
+        "report.memory_integrity.integrity_check_count >= 2",
+    ]:
+        if required not in memory_test_0185:
+            fail(f"0.18.5 Memory Integrity Windows integration regression missing: {required}")
+    for required in ["JNI_OnLoad", "VirtualProtect", "write_volatile", "neverguard_memory_probe_target"]:
+        if required not in memory_probe_0185:
+            fail(f"0.18.5 Memory Integrity tamper fixture incomplete: {required}")
+    if "Memory Integrity 0.18.5 gate: OK" not in memory_gate_0185:
+        fail("0.18.5 mandatory Memory Integrity gate incomplete")
+    if "neverguard-memory-integrity-0185.py" not in preflight or "neverguard-memory-integrity-0185.py" not in ci:
+        fail("0.18.5 Memory Integrity gate is not wired into preflight/CI")
+    if "runtime/neverguard-memory-probe/Cargo.toml" not in ci or "NEVERGUARD_MEMORY_PROBE_DLL" not in ci:
+        fail("0.18.5 Memory Integrity lacks adversarial Windows probe CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.5 Memory Integrity lacks real Windows integration/clippy CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

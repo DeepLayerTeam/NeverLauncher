@@ -1,6 +1,7 @@
 #![cfg(windows)]
 
 mod hook_engine;
+mod memory_integrity;
 
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -41,6 +42,9 @@ const MODULE_EVENT_REASON_SHUTDOWN: u32 = 5;
 const MODULE_EVENT_REASON_HOOK_READY: u32 = 6;
 const MODULE_EVENT_REASON_HOOK_HEARTBEAT: u32 = 7;
 const MODULE_EVENT_REASON_HOOK_TAMPER: u32 = 8;
+const MODULE_EVENT_REASON_MEMORY_READY: u32 = 9;
+const MODULE_EVENT_REASON_MEMORY_HEARTBEAT: u32 = 10;
+const MODULE_EVENT_REASON_MEMORY_TAMPER: u32 = 11;
 const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -420,6 +424,39 @@ fn hook_tamper_event(message: &str) -> RawModuleEvent {
     event
 }
 
+fn memory_event(reason: u32, snapshot: &memory_integrity::MemoryIntegritySnapshot) -> RawModuleEvent {
+    let mut event = RawModuleEvent {
+        reason,
+        flags: snapshot.executable_regions,
+        base_address: snapshot.executable_bytes,
+        size_of_image: snapshot.image_code_regions,
+        ..EMPTY_MODULE_EVENT
+    };
+    let payload = format!(
+        "{}|{}|{}|{}|{}",
+        snapshot.code_set_sha256,
+        snapshot.executable_map_sha256,
+        snapshot.dynamic_executable_regions,
+        snapshot.rwx_regions,
+        snapshot.transition_count
+    );
+    let payload = payload.encode_utf16().take(MODULE_PATH_WCHARS).collect::<Vec<_>>();
+    event.path_len = payload.len() as u16;
+    event.path[..payload.len()].copy_from_slice(&payload);
+    event
+}
+
+fn memory_tamper_event(message: &str) -> RawModuleEvent {
+    let mut event = RawModuleEvent {
+        reason: MODULE_EVENT_REASON_MEMORY_TAMPER,
+        ..EMPTY_MODULE_EVENT
+    };
+    let message = message.encode_utf16().take(MODULE_PATH_WCHARS).collect::<Vec<_>>();
+    event.path_len = message.len() as u16;
+    event.path[..message.len()].copy_from_slice(&message);
+    event
+}
+
 fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
     let mut heartbeat_at = Instant::now();
     loop {
@@ -523,6 +560,47 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
                     std::process::abort();
                 }
             }
+            match memory_integrity::reconcile_and_verify() {
+                Ok(snapshot) if snapshot.active && snapshot.healthy => {
+                    let memory_heartbeat = memory_event(MODULE_EVENT_REASON_MEMORY_HEARTBEAT, &snapshot);
+                    if write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &memory_heartbeat,
+                    )
+                    .is_err()
+                    {
+                        channel.secret.zeroize();
+                        std::process::abort();
+                    }
+                }
+                Ok(_) => {
+                    let tamper = memory_tamper_event("NeverGuard Memory Integrity became inactive/unhealthy");
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+                Err(err) => {
+                    let tamper = memory_tamper_event(&err);
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            }
             let heartbeat = RawModuleEvent {
                 reason: MODULE_EVENT_REASON_HEARTBEAT,
                 ..EMPTY_MODULE_EVENT
@@ -595,6 +673,32 @@ pub extern "system" fn Agent_OnLoad(
         channel.secret.zeroize();
         return JNI_ERR;
     }
+    let memory_snapshot = match memory_integrity::initialize() {
+        Ok(snapshot) if snapshot.active && snapshot.healthy && snapshot.executable_regions > 0 => snapshot,
+        Ok(_) | Err(_) => {
+            memory_integrity::shutdown();
+            let _ = hook_engine::shutdown_restore();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+    };
+    let memory_ready = memory_event(MODULE_EVENT_REASON_MEMORY_READY, &memory_snapshot);
+    if write_module_event(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        &mut sequence,
+        &memory_ready,
+    )
+    .is_err()
+    {
+        memory_integrity::shutdown();
+        let _ = hook_engine::shutdown_restore();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
     match thread::Builder::new()
         .name("neverguard-module-guard".to_string())
         .spawn(move || module_worker(channel, sequence))
@@ -607,12 +711,14 @@ pub extern "system" fn Agent_OnLoad(
             Err(_) => {
                 MODULE_WORKER_STOP.store(true, Ordering::Release);
                 let _ = handle.join();
+                memory_integrity::shutdown();
                 let _ = hook_engine::shutdown_restore();
                 unregister_module_notifications();
                 JNI_ERR
             }
         },
         Err(_) => {
+            memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
             unregister_module_notifications();
             JNI_ERR
@@ -632,5 +738,6 @@ pub extern "system" fn Agent_OnUnload(_vm: *mut c_void) {
     if let Some(handle) = handle {
         let _ = handle.join();
     }
+    memory_integrity::shutdown();
     let _ = hook_engine::shutdown_restore();
 }

@@ -22,6 +22,7 @@ pub struct WindowsModuleGuardReport {
     pub module_set_sha256: String,
     pub last_heartbeat_unix_ms: u64,
     pub hook_engine: crate::WindowsHookEngineReport,
+    pub memory_integrity: crate::WindowsMemoryIntegrityReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -45,6 +46,7 @@ impl Default for WindowsModuleGuardReport {
             module_set_sha256: String::new(),
             last_heartbeat_unix_ms: 0,
             hook_engine: crate::WindowsHookEngineReport::default(),
+            memory_integrity: crate::WindowsMemoryIntegrityReport::default(),
             last_violation: String::new(),
         }
     }
@@ -126,6 +128,9 @@ mod imp {
     const MODULE_EVENT_REASON_HOOK_READY: u32 = 6;
     const MODULE_EVENT_REASON_HOOK_HEARTBEAT: u32 = 7;
     const MODULE_EVENT_REASON_HOOK_TAMPER: u32 = 8;
+    const MODULE_EVENT_REASON_MEMORY_READY: u32 = 9;
+    const MODULE_EVENT_REASON_MEMORY_HEARTBEAT: u32 = 10;
+    const MODULE_EVENT_REASON_MEMORY_TAMPER: u32 = 11;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -349,6 +354,37 @@ mod imp {
         });
         ready_packet.zeroize();
 
+        // Memory Integrity must also be armed before Agent_OnLoad returns. The
+        // second authenticated stream packet is a mandatory MEMORY_READY proof.
+        let mut memory_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
+            .await
+            .map_err(|_| "NeverGuard Memory Integrity ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard Memory Integrity ready proof read failed: {err}"))?;
+        let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
+        if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
+            return Err(format!(
+                "NeverGuard Memory Integrity expected MEMORY_READY as second event, got {}",
+                memory_ready_event.reason
+            ));
+        }
+        let memory_ready = memory_report_from_event(&memory_ready_event)?;
+        if memory_ready.executable_region_count == 0 || memory_ready.image_code_region_count == 0 {
+            return Err("NeverGuard Memory Integrity armed with zero executable/image code coverage".to_string());
+        }
+        ready_chain = advance_event_chain(
+            ready_chain,
+            &memory_ready_packet,
+            &memory_ready.code_set_sha256,
+        );
+        update_counter(&state, |report| {
+            report.event_count = 2;
+            report.last_sequence = 2;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.memory_integrity = memory_ready;
+        });
+        memory_ready_packet.zeroize();
+
         let expected = baseline
             .into_iter()
             .map(|module| (module.base_address, module.normalized_path))
@@ -505,6 +541,39 @@ mod imp {
                         format!("NeverGuard Hook Engine integrity violation: {detail}")
                     })
                 }
+                MODULE_EVENT_REASON_MEMORY_READY => {
+                    Err("NeverGuard Memory Integrity emitted duplicate MEMORY_READY".to_string())
+                }
+                MODULE_EVENT_REASON_MEMORY_HEARTBEAT => {
+                    match memory_report_from_event(&event) {
+                        Err(err) => Err(err),
+                        Ok(memory) if memory.executable_region_count == 0 || memory.image_code_region_count == 0 => {
+                            Err("NeverGuard Memory Integrity heartbeat reported zero coverage".to_string())
+                        }
+                        Ok(mut memory) => {
+                            module_hash = memory.code_set_sha256.clone();
+                            update_counter(&state, |report| {
+                                memory.active = true;
+                                memory.healthy = true;
+                                memory.integrity_check_count = report
+                                    .memory_integrity
+                                    .integrity_check_count
+                                    .saturating_add(1);
+                                memory.violation_count = report.memory_integrity.violation_count;
+                                report.memory_integrity = memory;
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_MEMORY_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard Memory Integrity runtime tampering detected".to_string()
+                    } else {
+                        format!("NeverGuard Memory Integrity runtime tampering detected: {detail}")
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -542,6 +611,60 @@ mod imp {
             return Err("NeverGuard Hook Engine invalid hook-set digest".to_string());
         }
         Ok(digest.to_ascii_lowercase())
+    }
+
+    fn memory_report_from_event(event: &ParsedEvent) -> Result<crate::WindowsMemoryIntegrityReport, String> {
+        let payload = event.path.to_string_lossy();
+        let mut fields = payload.split('|');
+        let code_set_sha256 = validate_memory_digest(
+            fields.next().ok_or_else(|| "NeverGuard Memory Integrity missing code-set digest".to_string())?,
+            "code-set",
+        )?;
+        let executable_map_sha256 = validate_memory_digest(
+            fields.next().ok_or_else(|| "NeverGuard Memory Integrity missing executable-map digest".to_string())?,
+            "executable-map",
+        )?;
+        let dynamic_executable_region_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Memory Integrity missing dynamic-region count".to_string())?
+            .parse::<u32>()
+            .map_err(|_| "NeverGuard Memory Integrity invalid dynamic-region count".to_string())?;
+        let rwx_region_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Memory Integrity missing RWX-region count".to_string())?
+            .parse::<u32>()
+            .map_err(|_| "NeverGuard Memory Integrity invalid RWX-region count".to_string())?;
+        let observed_transition_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Memory Integrity missing transition count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard Memory Integrity invalid transition count".to_string())?;
+        if fields.next().is_some() {
+            return Err("NeverGuard Memory Integrity malformed evidence payload".to_string());
+        }
+        Ok(crate::WindowsMemoryIntegrityReport {
+            version: crate::NEVERGUARD_MEMORY_INTEGRITY_VERSION,
+            active: true,
+            healthy: true,
+            executable_region_count: event.flags,
+            image_code_region_count: event.size_of_image,
+            dynamic_executable_region_count,
+            rwx_region_count,
+            executable_bytes: event.base_address,
+            observed_transition_count,
+            integrity_check_count: 1,
+            violation_count: 0,
+            code_set_sha256,
+            executable_map_sha256,
+            last_violation: String::new(),
+        })
+    }
+
+    fn validate_memory_digest(value: &str, label: &str) -> Result<String, String> {
+        if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(format!("NeverGuard Memory Integrity invalid {label} digest"));
+        }
+        Ok(value.to_ascii_lowercase())
     }
 
     fn parse_event_packet(
@@ -735,6 +858,12 @@ mod imp {
                 report.hook_engine.violation_count = report.hook_engine.violation_count.saturating_add(1);
                 report.hook_engine.last_violation = reason.to_string();
             }
+            if reason.contains("Memory Integrity") {
+                report.memory_integrity.active = false;
+                report.memory_integrity.healthy = false;
+                report.memory_integrity.violation_count = report.memory_integrity.violation_count.saturating_add(1);
+                report.memory_integrity.last_violation = reason.to_string();
+            }
         });
         terminate_runtime(pid);
     }
@@ -743,6 +872,7 @@ mod imp {
         update_counter(state, |report| {
             report.active = false;
             report.hook_engine.active = false;
+            report.memory_integrity.active = false;
         });
     }
 

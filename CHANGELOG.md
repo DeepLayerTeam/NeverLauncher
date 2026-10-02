@@ -1,3 +1,12 @@
+## 0.18.5 — Memory Integrity
+
+- Добавлен production `neverguard-sensor` Memory Integrity engine: continuous `VirtualQuery` executable-memory inventory внутри защищаемой JVM без cross-process memory primitives.
+- Executable `MEM_IMAGE` regions получают SHA-256 baseline; последующие protection/content drift считаются runtime tampering и приводят к fail-closed завершению JVM.
+- JVM JIT/dynamic `MEM_PRIVATE` code отделён от immutable image code: новые executable ranges допускаются только из startup baseline либо после реально наблюдаемого успешного `VirtualAlloc`/`VirtualProtect` transition через Aggressive Hook Engine.
+- Добавлены bounded lock-free transition ring, overflow fail-closed, executable-map/code-set digests, RWX/dynamic counters и HMAC-защищённые `MEMORY_READY`/`MEMORY_HEARTBEAT`/`MEMORY_TAMPER` evidence events.
+- `Agent_OnLoad` не возвращает управление JVM, пока parent не проверит authenticated `MEMORY_READY`; Memory Integrity evidence включён в `WindowsModuleGuardReport`.
+- Добавлен Windows adversarial JVM integration fixture, который после baseline изменяет собственную executable image code page и проверяет обязательный fail-closed.
+
 ## 0.18.4 — Aggressive Hook Engine I
 
 - Added a production in-process IAT interception engine inside `neverguard-sensor.dll` for the protected JVM/native boundary. The engine parses PE import tables with strict bounds checks and intercepts `LoadLibraryA/W`, `LoadLibraryExA/W`, `VirtualAlloc` and `VirtualProtect` only in non-system modules of the current protected process.

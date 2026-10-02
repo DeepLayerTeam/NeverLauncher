@@ -769,7 +769,11 @@ unsafe extern "system" fn hook_virtual_alloc(
     }
     let function: unsafe extern "system" fn(*mut c_void, usize, u32, u32) -> *mut c_void =
         unsafe { std::mem::transmute(target) };
-    unsafe { function(address, size, allocation_type, protect) }
+    let result = unsafe { function(address, size, allocation_type, protect) };
+    if !result.is_null() {
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
+    }
+    result
 }
 
 unsafe extern "system" fn hook_virtual_protect(
@@ -785,5 +789,9 @@ unsafe extern "system" fn hook_virtual_protect(
     }
     let function: unsafe extern "system" fn(*mut c_void, usize, u32, *mut u32) -> i32 =
         unsafe { std::mem::transmute(target) };
-    unsafe { function(address, size, new_protect, old_protect) }
+    let result = unsafe { function(address, size, new_protect, old_protect) };
+    if result != 0 {
+        crate::memory_integrity::record_virtual_protect(address, size, new_protect);
+    }
+    result
 }

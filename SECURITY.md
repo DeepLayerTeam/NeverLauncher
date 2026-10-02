@@ -1,3 +1,9 @@
+## Memory Integrity / executable memory — 0.18.5
+
+В `0.18.5` NeverGuard Sensor непрерывно проверяет executable address space текущей JVM. Для loader-backed `MEM_IMAGE` executable regions сохраняется SHA-256 baseline фактических mapped code bytes; изменение байтов или protection state после baseline считается tampering. Hashing выполняется только после временного удержания loader module reference, чтобы обычная DLL unload race не превращалась в чтение освобождённой памяти.
+
+Динамический JVM/JIT code обрабатывается отдельно: существующая при arm executable private/mapped memory фиксируется как baseline, а новые executable private ranges должны иметь provenance из успешного перехваченного `VirtualAlloc`/`VirtualProtect`. Transition collection использует bounded lock-free ring; overflow fail-closed. Реализация не использует `WriteProcessMemory`, `VirtualAllocEx`, remote threads или kernel driver. Администратор/компонент уровня ядра остаётся вне trust boundary.
+
 ## Aggressive Hook Engine I / защита Windows JVM — 0.18.4
 
 В `0.18.4` ранний JVM Sensor дополнен IAT hook engine, работающим только внутри текущего защищаемого процесса. Реализация намеренно не использует `SetWindowsHookEx`, запись памяти удалённых процессов и создание удалённых потоков. Engine разбирает mapped PE imports, меняет только известные slots Windows loader/memory API в несистемных JVM/native-модулях, отказывается перезаписывать заранее изменённую неожиданную цель и сразу восстанавливает исходную защиту страницы после каждого изменения IAT.
