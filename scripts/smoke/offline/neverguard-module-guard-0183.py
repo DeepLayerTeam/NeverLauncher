@@ -42,8 +42,8 @@ def main() -> int:
             "MODULE_EVENT_REASON_HEARTBEAT",
             "MODULE_EVENT_REASON_OVERFLOW",
             "MODULE_EVENT_REASON_SHUTDOWN",
-            "NGMOD003",
-            "neverguard-module-event-v1",
+            "MODULE_EVENT_MAGIC",
+            "MODULE_EVENT_DOMAIN",
             "wait_for_module_guard_arm",
             "MODULE_WORKER_HANDLE",
             "handle.join()",
@@ -76,9 +76,9 @@ def main() -> int:
     require(
         bootstrap,
         [
-            "NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 2",
-            "b\"NGSENS03\"",
-            "b\"neverguard-sensor-startup-v2\"",
+            "NEVERGUARD_SENSOR_PROTOCOL_VERSION",
+            "SENSOR_MAGIC",
+            "SENSOR_DOMAIN",
             "policy_for_command",
             "arm_module_guard",
             "WindowsSensorSession",

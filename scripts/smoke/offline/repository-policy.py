@@ -2772,7 +2772,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     sensor_gate_0182 = read("scripts/smoke/offline/neverguard-sensor-0182.py")
     sensor_updater_0182 = read("cli/cmd/neverlauncher/component_update.go")
     sensor_signing_0182 = read("cli/cmd/neverlauncher/windows_signing.go")
-    for required in ["Agent_OnLoad", "JNI_ERR", "NGSENS03", "neverguard-sensor-startup-v2", "HmacSha256::new_from_slice", ".write_all(&packet)"]:
+    for required in ["Agent_OnLoad", "JNI_ERR", "SENSOR_MAGIC", "SENSOR_DOMAIN", "HmacSha256::new_from_slice", ".write_all(&packet)"]:
         if required not in sensor_native_0182:
             fail(f"0.18.2 NeverGuard Sensor native JVM agent incomplete: {required}")
     for required in ["-agentpath:", "create_secure_pipe_server", "verify_windows_authenticode_trust", "authenticate_sensor_or_kill", "child.start_kill()", "loaded_before_main: true", "arm_module_guard"]:
@@ -2827,8 +2827,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LdrUnregisterDllNotification",
         "MODULE_RING_CAPACITY",
         "MODULE_DROPPED_EVENTS",
-        "NGMOD003",
-        "neverguard-module-event-v1",
+        "MODULE_EVENT_MAGIC",
+        "MODULE_EVENT_DOMAIN",
         "wait_for_module_guard_arm",
         "MODULE_WORKER_HANDLE",
         "handle.join()",
@@ -2850,7 +2850,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in module_parent_0183:
             fail(f"0.18.3 Module Guard parent enforcement incomplete: {required}")
-    for required in ["NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 2", "NGSENS03", "policy_for_command", "arm_module_guard", "WindowsSensorSession"]:
+    for required in ["NEVERGUARD_SENSOR_PROTOCOL_VERSION", "SENSOR_MAGIC", "policy_for_command", "arm_module_guard", "WindowsSensorSession"]:
         if required not in module_bootstrap_0183:
             fail(f"0.18.3 Module Guard startup binding incomplete: {required}")
     for required in ["sensor_session: Option<crate::WindowsSensorSession>", "process_status_snapshot", "session.report()"]:
@@ -2872,6 +2872,82 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.3 Module Guard gate is not wired into preflight/CI")
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.3 Module Guard lacks real Windows integration/clippy CI")
+
+
+
+# 0.18.4 Aggressive Hook Engine I must be a real in-process, bounded IAT
+# interception engine with authenticated readiness, periodic self-integrity and
+# fail-closed parent evidence. Global/cross-process hook primitives are forbidden.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 4):
+    hook_engine_0184 = read("runtime/neverguard-sensor/src/hook_engine.rs")
+    hook_sensor_0184 = read("runtime/neverguard-sensor/src/lib.rs")
+    hook_parent_0184 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    hook_report_0184 = read("runtime/neverruntime/src/windows_hook_engine.rs")
+    hook_bootstrap_0184 = read("runtime/neverruntime/src/windows_sensor.rs")
+    hook_test_0184 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    hook_gate_0184 = read("scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py")
+    for required in [
+        "collect_hook_candidates",
+        "IMAGE_DIRECTORY_ENTRY_IMPORT",
+        "VirtualProtect",
+        "FlushInstructionCache",
+        "hook_load_library_w",
+        "hook_virtual_alloc",
+        "hook_virtual_protect",
+        "pre-existing IAT target drift",
+        "verify_locked",
+        "shutdown_restore",
+        "hook_set_digest",
+    ]:
+        if required not in hook_engine_0184:
+            fail(f"0.18.4 Hook Engine backend incomplete: {required}")
+    for forbidden in ["SetWindowsHookEx", "WriteProcessMemory", "CreateRemoteThread", "NtWriteVirtualMemory"]:
+        if forbidden in hook_engine_0184:
+            fail(f"0.18.4 Hook Engine uses forbidden cross/global-process primitive: {forbidden}")
+    for required in [
+        "SENSOR_PROTOCOL_VERSION: u32 = 3",
+        "NGSENS04",
+        "NGARM004",
+        "NGMOD004",
+        "MODULE_EVENT_REASON_HOOK_READY",
+        "MODULE_EVENT_REASON_HOOK_HEARTBEAT",
+        "MODULE_EVENT_REASON_HOOK_TAMPER",
+        "hook_engine::initialize()",
+        "hook_engine::reconcile_and_verify()",
+    ]:
+        if required not in hook_sensor_0184:
+            fail(f"0.18.4 Hook Engine Sensor lifecycle incomplete: {required}")
+    for required in [
+        "expected HOOK_READY as first event",
+        "hook_engine: crate::WindowsHookEngineReport",
+        "hooked_slot_count",
+        "intercepted_call_count",
+        "integrity_check_count",
+        "Hook Engine integrity violation",
+        "fail_closed",
+    ]:
+        if required not in hook_parent_0184:
+            fail(f"0.18.4 Hook Engine parent enforcement incomplete: {required}")
+    for required in ["WindowsHookEngineReport", "NEVERGUARD_HOOK_ENGINE_VERSION"]:
+        if required not in hook_report_0184:
+            fail(f"0.18.4 Hook Engine report missing: {required}")
+    for required in ["NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
+        if required not in hook_bootstrap_0184:
+            fail(f"0.18.4 protocol-v3 bootstrap incomplete: {required}")
+    for required in [
+        "report.module_guard.hook_engine.active",
+        "report.module_guard.hook_engine.hooked_slot_count > 0",
+        "report.hook_engine.integrity_check_count >= 2",
+        "report.hook_engine.intercepted_call_count >= 1",
+    ]:
+        if required not in hook_test_0184:
+            fail(f"0.18.4 real JVM hook integration regression missing: {required}")
+    if "Aggressive Hook Engine I 0.18.4 gate: OK" not in hook_gate_0184:
+        fail("0.18.4 mandatory Hook Engine gate incomplete")
+    if "neverguard-aggressive-hook-engine-0184.py" not in preflight or "neverguard-aggressive-hook-engine-0184.py" not in ci:
+        fail("0.18.4 Hook Engine gate is not wired into preflight/CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.4 Hook Engine lacks Windows integration/clippy CI")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

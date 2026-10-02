@@ -6,7 +6,7 @@ use neverruntime::{
         authenticate_sensor_or_kill, prepare_sensor_command_with_path,
         NEVERGUARD_SENSOR_PROTOCOL_VERSION,
     },
-    NEVERGUARD_MODULE_GUARD_VERSION,
+    NEVERGUARD_HOOK_ENGINE_VERSION, NEVERGUARD_MODULE_GUARD_VERSION,
 };
 use std::{
     fs,
@@ -95,6 +95,12 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     assert!(report.module_guard.healthy);
     assert!(report.module_guard.baseline_module_count > 0);
     assert_eq!(report.module_guard.violation_count, 0);
+    assert_eq!(report.module_guard.hook_engine.version, NEVERGUARD_HOOK_ENGINE_VERSION);
+    assert!(report.module_guard.hook_engine.active);
+    assert!(report.module_guard.hook_engine.healthy);
+    assert!(report.module_guard.hook_engine.hooked_module_count > 0);
+    assert!(report.module_guard.hook_engine.hooked_slot_count > 0);
+    assert_eq!(report.module_guard.hook_engine.hook_set_sha256.len(), 64);
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
@@ -138,6 +144,12 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert!(report.load_events >= 1, "expected at least one DLL load event: {report:?}");
     assert!(report.heartbeat_count >= 1, "expected continuous heartbeat: {report:?}");
     assert!(report.event_count >= report.load_events + report.heartbeat_count);
+    assert!(report.hook_engine.healthy, "Hook Engine violation: {}", report.hook_engine.last_violation);
+    assert!(report.hook_engine.hooked_module_count > 0);
+    assert!(report.hook_engine.hooked_slot_count > 0);
+    assert!(report.hook_engine.integrity_check_count >= 2);
+    assert!(report.hook_engine.intercepted_call_count >= 1, "expected real intercepted JVM/native API call: {report:?}");
+    assert_eq!(report.hook_engine.hook_set_sha256.len(), 64);
     assert_eq!(report.event_chain_sha256.len(), 64);
     assert_eq!(report.module_set_sha256.len(), 64);
 

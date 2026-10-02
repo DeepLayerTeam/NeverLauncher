@@ -21,6 +21,7 @@ pub struct WindowsModuleGuardReport {
     pub event_chain_sha256: String,
     pub module_set_sha256: String,
     pub last_heartbeat_unix_ms: u64,
+    pub hook_engine: crate::WindowsHookEngineReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -43,6 +44,7 @@ impl Default for WindowsModuleGuardReport {
             event_chain_sha256: String::new(),
             module_set_sha256: String::new(),
             last_heartbeat_unix_ms: 0,
+            hook_engine: crate::WindowsHookEngineReport::default(),
             last_violation: String::new(),
         }
     }
@@ -111,16 +113,19 @@ mod imp {
 
     type HmacSha256 = Hmac<Sha256>;
 
-    const SENSOR_PROTOCOL_VERSION: u32 = 2;
-    const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM003";
-    const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v1";
-    const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD003";
-    const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v1";
+    const SENSOR_PROTOCOL_VERSION: u32 = 3;
+    const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM004";
+    const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v2";
+    const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD004";
+    const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v2";
     const MODULE_EVENT_REASON_LOADED: u32 = 1;
     const MODULE_EVENT_REASON_UNLOADED: u32 = 2;
     const MODULE_EVENT_REASON_HEARTBEAT: u32 = 3;
     const MODULE_EVENT_REASON_OVERFLOW: u32 = 4;
     const MODULE_EVENT_REASON_SHUTDOWN: u32 = 5;
+    const MODULE_EVENT_REASON_HOOK_READY: u32 = 6;
+    const MODULE_EVENT_REASON_HOOK_HEARTBEAT: u32 = 7;
+    const MODULE_EVENT_REASON_HOOK_TAMPER: u32 = 8;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -277,7 +282,7 @@ mod imp {
             healthy: true,
             baseline_module_count: baseline.len().min(u32::MAX as usize) as u32,
             current_module_count: baseline.len().min(u32::MAX as usize) as u32,
-            event_chain_sha256: initial_chain,
+            event_chain_sha256: initial_chain.clone(),
             module_set_sha256,
             last_heartbeat_unix_ms: now_unix_ms(),
             ..WindowsModuleGuardReport::default()
@@ -304,6 +309,46 @@ mod imp {
             .map_err(|err| format!("Module Guard arm acknowledgement flush failed: {err}"))?;
         ack.zeroize();
 
+        // Agent_OnLoad is not allowed to return until the in-process aggressive
+        // hook engine proves that it is armed. The first authenticated stream
+        // packet is therefore a mandatory HOOK_READY record.
+        let mut ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
+            .await
+            .map_err(|_| "NeverGuard Hook Engine ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard Hook Engine ready proof read failed: {err}"))?;
+        let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
+        if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
+            return Err(format!(
+                "NeverGuard Hook Engine expected HOOK_READY as first event, got {}",
+                ready_event.reason
+            ));
+        }
+        let hook_digest = hook_digest_from_event(&ready_event)?;
+        if ready_event.flags == 0 || ready_event.size_of_image == 0 {
+            return Err("NeverGuard Hook Engine armed with zero hooked modules/slots".to_string());
+        }
+        let mut ready_chain = [0u8; 32];
+        if let Ok(bytes) = hex::decode(&initial_chain) {
+            if bytes.len() == ready_chain.len() {
+                ready_chain.copy_from_slice(&bytes);
+            }
+        }
+        ready_chain = advance_event_chain(ready_chain, &ready_packet, &hook_digest);
+        update_counter(&state, |report| {
+            report.event_count = 1;
+            report.last_sequence = 1;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.hook_engine.active = true;
+            report.hook_engine.healthy = true;
+            report.hook_engine.hooked_module_count = ready_event.flags;
+            report.hook_engine.hooked_slot_count = ready_event.size_of_image;
+            report.hook_engine.intercepted_call_count = ready_event.base_address;
+            report.hook_engine.integrity_check_count = 1;
+            report.hook_engine.hook_set_sha256 = hook_digest;
+        });
+        ready_packet.zeroize();
+
         let expected = baseline
             .into_iter()
             .map(|module| (module.base_address, module.normalized_path))
@@ -326,7 +371,7 @@ mod imp {
         state: Arc<Mutex<WindowsModuleGuardReport>>,
     ) {
         let mut packet = [0u8; MODULE_EVENT_PACKET_LEN];
-        let mut expected_sequence = 1u64;
+        let mut expected_sequence = lock_report(&state).last_sequence.saturating_add(1);
         let mut last_module_event = Instant::now() - RECONCILE_GRACE;
         let mut event_chain = {
             let report = lock_report(&state);
@@ -424,6 +469,42 @@ mod imp {
                         Ok(())
                     }
                 }
+                MODULE_EVENT_REASON_HOOK_READY => {
+                    Err("NeverGuard Hook Engine emitted duplicate HOOK_READY".to_string())
+                }
+                MODULE_EVENT_REASON_HOOK_HEARTBEAT => {
+                    match hook_digest_from_event(&event) {
+                        Err(err) => Err(err),
+                        Ok(digest) if event.flags == 0 || event.size_of_image == 0 => {
+                            let _ = digest;
+                            Err("NeverGuard Hook Engine heartbeat reported zero coverage".to_string())
+                        }
+                        Ok(digest) => {
+                            module_hash = digest.clone();
+                            update_counter(&state, |report| {
+                                report.hook_engine.active = true;
+                                report.hook_engine.healthy = true;
+                                report.hook_engine.hooked_module_count = event.flags;
+                                report.hook_engine.hooked_slot_count = event.size_of_image;
+                                report.hook_engine.intercepted_call_count = event.base_address;
+                                report.hook_engine.integrity_check_count = report
+                                    .hook_engine
+                                    .integrity_check_count
+                                    .saturating_add(1);
+                                report.hook_engine.hook_set_sha256 = digest;
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_HOOK_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard Hook Engine integrity violation".to_string()
+                    } else {
+                        format!("NeverGuard Hook Engine integrity violation: {detail}")
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -453,6 +534,14 @@ mod imp {
                 return;
             }
         }
+    }
+
+    fn hook_digest_from_event(event: &ParsedEvent) -> Result<String, String> {
+        let digest = event.path.to_string_lossy().to_string();
+        if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("NeverGuard Hook Engine invalid hook-set digest".to_string());
+        }
+        Ok(digest.to_ascii_lowercase())
     }
 
     fn parse_event_packet(
@@ -640,12 +729,21 @@ mod imp {
             report.violation_count = report.violation_count.saturating_add(1);
             report.dropped_event_count = report.dropped_event_count.saturating_add(dropped);
             report.last_violation = reason.to_string();
+            if reason.contains("Hook Engine") {
+                report.hook_engine.active = false;
+                report.hook_engine.healthy = false;
+                report.hook_engine.violation_count = report.hook_engine.violation_count.saturating_add(1);
+                report.hook_engine.last_violation = reason.to_string();
+            }
         });
         terminate_runtime(pid);
     }
 
     fn mark_stopped(state: &Arc<Mutex<WindowsModuleGuardReport>>) {
-        update_counter(state, |report| report.active = false);
+        update_counter(state, |report| {
+            report.active = false;
+            report.hook_engine.active = false;
+        });
     }
 
     fn update_counter(

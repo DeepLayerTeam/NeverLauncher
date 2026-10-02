@@ -1,3 +1,9 @@
+## Aggressive Hook Engine I / защита Windows JVM — 0.18.4
+
+В `0.18.4` ранний JVM Sensor дополнен IAT hook engine, работающим только внутри текущего защищаемого процесса. Реализация намеренно не использует `SetWindowsHookEx`, запись памяти удалённых процессов и создание удалённых потоков. Engine разбирает mapped PE imports, меняет только известные slots Windows loader/memory API в несистемных JVM/native-модулях, отказывается перезаписывать заранее изменённую неожиданную цель и сразу восстанавливает исходную защиту страницы после каждого изменения IAT.
+
+Sensor protocol v3 требует HMAC-аутентифицированное событие `HOOK_READY` до завершения `Agent_OnLoad`. Непрерывные `HOOK_HEARTBEAT` передают evidence покрытия/вызовов и digest набора hooks; Sensor периодически проверяет каждый установленный IAT slot и перед fail-closed завершением при drift отправляет `HOOK_TAMPER`. Это user-mode hardening, а не эквивалент kernel security boundary; компрометация administrator/kernel остаётся вне trust model.
+
 ## Module Guard / Windows JVM — 0.18.3
 
 В `0.18.3` Sensor protocol v2 держит JVM внутри `Agent_OnLoad`, пока Desktop/NeverRuntime не аутентифицирует Sensor, не снимет внешний baseline модулей и не подтвердит вооружение Module Guard. Sensor использует `LdrRegisterDllNotification` для load/unload lifecycle, фиксированный atomic ring и отдельный worker; ordered event stream и heartbeat защищены HMAC-SHA-256. Parent независимо сверяет ToolHelp module snapshots, SHA-256 event chain и policy происхождения DLL.

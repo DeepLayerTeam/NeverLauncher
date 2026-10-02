@@ -1,5 +1,7 @@
 #![cfg(windows)]
 
+mod hook_engine;
+
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::{
@@ -21,21 +23,24 @@ type HmacSha256 = Hmac<Sha256>;
 
 const JNI_OK: i32 = 0;
 const JNI_ERR: i32 = -1;
-const SENSOR_PROTOCOL_VERSION: u32 = 2;
-const SENSOR_MAGIC: &[u8; 8] = b"NGSENS03";
-const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v2";
+const SENSOR_PROTOCOL_VERSION: u32 = 3;
+const SENSOR_MAGIC: &[u8; 8] = b"NGSENS04";
+const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v3";
 const SENSOR_PIPE_ENV: &str = "NEVERGUARD_SENSOR_PIPE";
 const SENSOR_SECRET_ENV: &str = "NEVERGUARD_SENSOR_SECRET";
 
-const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM003";
-const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v1";
-const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD003";
-const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v1";
+const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM004";
+const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v2";
+const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD004";
+const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v2";
 const MODULE_EVENT_REASON_LOADED: u32 = 1;
 const MODULE_EVENT_REASON_UNLOADED: u32 = 2;
 const MODULE_EVENT_REASON_HEARTBEAT: u32 = 3;
 const MODULE_EVENT_REASON_OVERFLOW: u32 = 4;
 const MODULE_EVENT_REASON_SHUTDOWN: u32 = 5;
+const MODULE_EVENT_REASON_HOOK_READY: u32 = 6;
+const MODULE_EVENT_REASON_HOOK_HEARTBEAT: u32 = 7;
+const MODULE_EVENT_REASON_HOOK_TAMPER: u32 = 8;
 const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -389,8 +394,33 @@ fn write_module_event(
     result
 }
 
-fn module_worker(mut channel: SensorChannel) {
-    let mut sequence = 0u64;
+fn hook_event(reason: u32, snapshot: &hook_engine::HookEngineSnapshot) -> RawModuleEvent {
+    let mut event = RawModuleEvent {
+        reason,
+        flags: snapshot.hooked_modules,
+        base_address: snapshot.call_count,
+        size_of_image: snapshot.hooked_slots,
+        ..EMPTY_MODULE_EVENT
+    };
+    let digest = snapshot.hook_set_sha256.encode_utf16().collect::<Vec<_>>();
+    let to_copy = digest.len().min(MODULE_PATH_WCHARS);
+    event.path_len = to_copy as u16;
+    event.path[..to_copy].copy_from_slice(&digest[..to_copy]);
+    event
+}
+
+fn hook_tamper_event(message: &str) -> RawModuleEvent {
+    let mut event = RawModuleEvent {
+        reason: MODULE_EVENT_REASON_HOOK_TAMPER,
+        ..EMPTY_MODULE_EVENT
+    };
+    let message = message.encode_utf16().take(MODULE_PATH_WCHARS).collect::<Vec<_>>();
+    event.path_len = message.len() as u16;
+    event.path[..message.len()].copy_from_slice(&message);
+    event
+}
+
+fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
     let mut heartbeat_at = Instant::now();
     loop {
         let dropped = MODULE_DROPPED_EVENTS.swap(0, Ordering::AcqRel);
@@ -464,6 +494,35 @@ fn module_worker(mut channel: SensorChannel) {
             break;
         }
         if heartbeat_at.elapsed() >= MODULE_HEARTBEAT_INTERVAL {
+            match hook_engine::reconcile_and_verify() {
+                Ok(snapshot) => {
+                    let hook_heartbeat = hook_event(MODULE_EVENT_REASON_HOOK_HEARTBEAT, &snapshot);
+                    if write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &hook_heartbeat,
+                    )
+                    .is_err()
+                    {
+                        channel.secret.zeroize();
+                        std::process::abort();
+                    }
+                }
+                Err(err) => {
+                    let tamper = hook_tamper_event(&err);
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            }
             let heartbeat = RawModuleEvent {
                 reason: MODULE_EVENT_REASON_HEARTBEAT,
                 ..EMPTY_MODULE_EVENT
@@ -511,9 +570,34 @@ pub extern "system" fn Agent_OnLoad(
         channel.secret.zeroize();
         return JNI_ERR;
     }
+    let hook_snapshot = match hook_engine::initialize() {
+        Ok(snapshot) if snapshot.active && snapshot.healthy && snapshot.hooked_slots > 0 => snapshot,
+        Ok(_) | Err(_) => {
+            let _ = hook_engine::shutdown_restore();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+    };
+    let mut sequence = 0u64;
+    let ready = hook_event(MODULE_EVENT_REASON_HOOK_READY, &hook_snapshot);
+    if write_module_event(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        &mut sequence,
+        &ready,
+    )
+    .is_err()
+    {
+        let _ = hook_engine::shutdown_restore();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
     match thread::Builder::new()
         .name("neverguard-module-guard".to_string())
-        .spawn(move || module_worker(channel))
+        .spawn(move || module_worker(channel, sequence))
     {
         Ok(handle) => match MODULE_WORKER_HANDLE.lock() {
             Ok(mut slot) => {
@@ -523,11 +607,13 @@ pub extern "system" fn Agent_OnLoad(
             Err(_) => {
                 MODULE_WORKER_STOP.store(true, Ordering::Release);
                 let _ = handle.join();
+                let _ = hook_engine::shutdown_restore();
                 unregister_module_notifications();
                 JNI_ERR
             }
         },
         Err(_) => {
+            let _ = hook_engine::shutdown_restore();
             unregister_module_notifications();
             JNI_ERR
         }
@@ -546,4 +632,5 @@ pub extern "system" fn Agent_OnUnload(_vm: *mut c_void) {
     if let Some(handle) = handle {
         let _ = handle.join();
     }
+    let _ = hook_engine::shutdown_restore();
 }

@@ -8,6 +8,7 @@ pub mod windows_policy;
 pub mod windows_protection;
 pub mod windows_sensor;
 pub mod windows_module_guard;
+pub mod windows_hook_engine;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -50,6 +51,7 @@ pub use windows_protection::{
 };
 pub use windows_sensor::{WindowsSensorBootstrap, WindowsSensorReport, WindowsSensorSession, NEVERGUARD_SENSOR_FILE_NAME, NEVERGUARD_SENSOR_PIPE_ENV, NEVERGUARD_SENSOR_PROTOCOL_VERSION, NEVERGUARD_SENSOR_SECRET_ENV};
 pub use windows_module_guard::{WindowsModuleGuardPolicy, WindowsModuleGuardReport, WindowsModuleGuardSession, NEVERGUARD_MODULE_GUARD_VERSION};
+pub use windows_hook_engine::{WindowsHookEngineReport, NEVERGUARD_HOOK_ENGINE_VERSION};
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
 

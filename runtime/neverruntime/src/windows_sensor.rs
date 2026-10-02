@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 2;
+pub const NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 3;
 pub const NEVERGUARD_SENSOR_FILE_NAME: &str = "neverguard-sensor.dll";
 pub const NEVERGUARD_SENSOR_PIPE_ENV: &str = "NEVERGUARD_SENSOR_PIPE";
 pub const NEVERGUARD_SENSOR_SECRET_ENV: &str = "NEVERGUARD_SENSOR_SECRET";
@@ -39,8 +39,8 @@ mod imp {
     use zeroize::Zeroize;
 
     type HmacSha256 = Hmac<Sha256>;
-    const SENSOR_MAGIC: &[u8; 8] = b"NGSENS03";
-    const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v2";
+    const SENSOR_MAGIC: &[u8; 8] = b"NGSENS04";
+    const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v3";
     const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.Sensor.";
     const SENSOR_STARTUP_TIMEOUT_SECS: u64 = 12;
 

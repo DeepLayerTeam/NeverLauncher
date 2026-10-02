@@ -107,6 +107,7 @@ run_step loader-compatibility-ga-0180 python3 "${ROOT_DIR}/scripts/smoke/offline
 run_step windows-protection-core-II-0181 python3 "${ROOT_DIR}/scripts/smoke/offline/windows-protection-core-II-0181.py"
 run_step neverguard-sensor-0182 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-sensor-0182.py"
 run_step neverguard-module-guard-0183 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-module-guard-0183.py"
+run_step neverguard-aggressive-hook-engine-0184 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

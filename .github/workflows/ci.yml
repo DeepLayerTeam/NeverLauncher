@@ -323,6 +323,7 @@ jobs:
           python scripts/smoke/offline/windows-protection-core-II-0181.py
           python scripts/smoke/offline/neverguard-sensor-0182.py
           python scripts/smoke/offline/neverguard-module-guard-0183.py
+          python scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
           cargo fmt --manifest-path runtime/neverguard-sensor/Cargo.toml

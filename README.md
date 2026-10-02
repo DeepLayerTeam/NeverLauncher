@@ -1,3 +1,9 @@
+## Aggressive Hook Engine I — 0.18.4
+
+NeverLauncher 0.18.4 добавляет в `neverguard-sensor.dll` ограниченный user-mode hook engine. До запуска Java/Minecraft main Sensor меняет выбранные IAT-импорты в разрешённых JVM/native-модулях для `LoadLibrary*`, `VirtualAlloc` и `VirtualProtect`, проверяет исходную цель как ожидаемый Windows export и отправляет NeverRuntime аутентифицированное доказательство `HOOK_READY`. Глобальные Windows hooks не устанавливаются, память чужих процессов не изменяется.
+
+Покрытие hooks непрерывно пересчитывается при загрузке DLL. Каждый установленный IAT slot проверяется на drift, логический набор hooks хешируется, а tampering обрабатывается fail-closed. При штатной выгрузке Sensor исходные IAT pointers восстанавливаются. Runtime report содержит число hooked modules/slots, количество перехваченных вызовов, integrity checks, SHA-256 набора hooks и нарушения.
+
 # NeverLauncher
 
 ## Module Guard — 0.18.3

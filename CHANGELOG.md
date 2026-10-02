@@ -1,3 +1,11 @@
+## 0.18.4 — Aggressive Hook Engine I
+
+- Added a production in-process IAT interception engine inside `neverguard-sensor.dll` for the protected JVM/native boundary. The engine parses PE import tables with strict bounds checks and intercepts `LoadLibraryA/W`, `LoadLibraryExA/W`, `VirtualAlloc` and `VirtualProtect` only in non-system modules of the current protected process.
+- Hook installation is transactional: IAT pages are made writable only for the pointer update, original protection is restored immediately and `FlushInstructionCache` is issued. A pre-existing target that does not resolve to the expected Windows export is treated as a conflict and fails closed instead of being overwritten.
+- Sensor protocol v3 adds authenticated `HOOK_READY`, `HOOK_HEARTBEAT` and `HOOK_TAMPER` records. `Agent_OnLoad` cannot return until Hook Engine coverage is non-zero and the parent verifies the HMAC-bound readiness proof.
+- The Sensor continuously re-enumerates newly loaded native modules, hooks eligible imports, verifies every recorded IAT slot, maintains a hook-set SHA-256 and restores its own hooks during orderly unload. Any integrity drift is emitted to the parent and aborts the protected runtime.
+- Runtime status now exposes `WindowsHookEngineReport` with coverage, intercepted-call, integrity-check and violation evidence. Windows JVM integration tests require real hook coverage and a real intercepted loader/native call in addition to the existing Module Guard checks.
+
 ## 0.18.3 — Module Guard
 
 - Replaced point-in-time-only JVM module visibility with a continuous Sensor stream driven by `LdrRegisterDllNotification`. The loader callback is allocation-free and writes fixed records into a preallocated atomic ring; a dedicated worker emits ordered HMAC-SHA-256 load/unload events and heartbeats over the authenticated Sensor pipe.

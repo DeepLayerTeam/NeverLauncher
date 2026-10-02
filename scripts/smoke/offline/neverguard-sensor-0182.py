@@ -40,8 +40,8 @@ def main() -> int:
         [
             'pub extern "system" fn Agent_OnLoad',
             'pub extern "system" fn Agent_OnUnload',
-            'b"NGSENS03"',
-            'b"neverguard-sensor-startup-v2"',
+            'SENSOR_MAGIC',
+            'SENSOR_DOMAIN',
             'HmacSha256::new_from_slice',
             'OpenOptions::new()',
             '.write_all(&packet)',
