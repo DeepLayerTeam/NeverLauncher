@@ -41,6 +41,8 @@ NEVERLAUNCHER_COMPAT_TARGET_ID=<canonical target id>
 ```
 
 Для Fabric/Quilt/Forge/NeoForge используется соответствующий рабочий `nl runtime <loader>-package`; mutable selector разрешается materializer-ом до concrete loader version. Начиная с 0.17.8 integration anchor дополнительно запускает `run-loader-native-e2e.sh`: чистый dedicated server того же loader получает exact `resolvedLoaderVersion`, серверные loader artifacts проверяются на диске, после чего actual materialized client через NeverRuntime подключается напрямую к `127.0.0.1:25580`. PASS требует healthy server и реальный `NeverLauncherCertification joined the game` в server log; одного открытого порта или client timeout недостаточно.
+Начиная с 0.17.9 client certification для current Fabric/Quilt/Forge/NeoForge anchors выполняется на Windows/Linux/macOS x64/ARM64. Loader runner больше не требует Linux x64: Linux использует Xvfb, Windows/macOS запускают NeverRuntime нативно, а `loader-platform.json` связывает materializer target, фактически выбранный `nativesDirectory`, количество native-файлов и `nativeTreeSha256`. Несовпадение OS/arch native tree блокирует PASS.
+
 
 После этого все loader families сохраняют существующую trust boundary:
 

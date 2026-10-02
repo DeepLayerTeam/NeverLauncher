@@ -52,6 +52,7 @@ jobs:
         with:
           distribution: ${{ matrix.javaDistribution }}
           java-version: ${{ matrix.javaMajor }}
+          architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash
         run: printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$(command -v java)" >> "$GITHUB_ENV"
@@ -60,6 +61,7 @@ jobs:
         with:
           distribution: ${{ matrix.javaDistribution }}
           java-version: '21'
+          architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: gradle/actions/setup-gradle@v6
         if: matrix.scope == 'integration'
@@ -110,6 +112,7 @@ jobs:
             e2e/runtime/forge-certification.json
             e2e/runtime/neoforge-install.json
             e2e/runtime/neoforge-certification.json
+            e2e/runtime/loader-platform.json
             e2e/runtime/fabric-resolution-lock.json
             e2e/runtime/quilt-resolution-lock.json
             e2e/runtime/forge-resolution-lock.json

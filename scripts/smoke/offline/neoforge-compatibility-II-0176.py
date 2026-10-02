@@ -28,7 +28,7 @@ if len(expected) != 22 or expected.get("1.20.1") != 17 or expected.get("1.20.5")
     raise SystemExit("NeoForge Compatibility II 0.17.6 canonical stable release grid is incomplete or includes unsupported 26.3")
 
 target_doc = json.loads(read("compatibility/targets.json"))
-rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "neoforge"]
+rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(rows) != len(expected):
     raise SystemExit(f"NeoForge Compatibility II 0.17.6 requires exactly {len(expected)} required targets, got {len(rows)}")
 by_version: dict[str, dict] = {}

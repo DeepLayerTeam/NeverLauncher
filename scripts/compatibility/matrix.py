@@ -205,6 +205,18 @@ NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25,
 }
 
+# Cross-platform Loaders 0.17.9 certifies a real current client for each
+# loader family on every supported desktop OS/architecture pair.  The Linux
+# x86_64 row is the existing wide-line target; the other five rows are
+# additional required platform certifications.
+CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
+    "fabric": ("26.3", 25),
+    "quilt": ("26.3", 25),
+    "forge": ("26.3", 25),
+    "neoforge": ("26.2", 25),
+}
+CROSS_PLATFORM_LOADER_PLATFORMS_0179: tuple[tuple[str, str], ...] = CROSS_PLATFORM_VANILLA_0169
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -295,6 +307,17 @@ def loader_resolution_pinning_0177_required() -> bool:
 
 def loader_native_e2e_0178_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 8)
+
+def cross_platform_loaders_0179_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 9)
+
+
+def is_cross_platform_loader_target(target: dict[str, Any]) -> bool:
+    anchor = CROSS_PLATFORM_LOADERS_0179.get(str(target.get("loader", "")))
+    if anchor is None:
+        return False
+    minecraft, _ = anchor
+    return bool(target.get("required")) and target.get("minecraft") == minecraft and (target.get("os"), target.get("arch")) in set(CROSS_PLATFORM_LOADER_PLATFORMS_0179)
 
 
 def load_json(path: Path) -> Any:
@@ -420,7 +443,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(java_majors):
             die(f"Minecraft Compatibility II GA requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
     if fabric_compatibility_ii_0171_required():
-        required_fabric_rows = [target for target in targets if target["loader"] == "fabric" and target["required"]]
+        required_fabric_rows = [target for target in targets if target["loader"] == "fabric" and target["required"] and target["os"] == "linux" and target["arch"] == "x86_64"]
         actual_versions = {target["minecraft"] for target in required_fabric_rows}
         expected_versions = set(FABRIC_COMPATIBILITY_II_0171)
         if actual_versions != expected_versions:
@@ -444,7 +467,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             die(f"Fabric Compatibility II 0.17.1 requires JRE coverage {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}")
 
     if quilt_compatibility_ii_0172_required():
-        required_quilt_rows = [target for target in targets if target["loader"] == "quilt" and target["required"]]
+        required_quilt_rows = [target for target in targets if target["loader"] == "quilt" and target["required"] and target["os"] == "linux" and target["arch"] == "x86_64"]
         actual_versions = {target["minecraft"] for target in required_quilt_rows}
         expected_versions = set(QUILT_COMPATIBILITY_II_0172)
         if actual_versions != expected_versions:
@@ -469,7 +492,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
 
     if forge_modern_0173_required():
         all_required_forge_rows = [target for target in targets if target["loader"] == "forge" and target["required"]]
-        required_forge_rows = [target for target in all_required_forge_rows if target["minecraft"] in FORGE_MODERN_0173]
+        required_forge_rows = [target for target in all_required_forge_rows if target["minecraft"] in FORGE_MODERN_0173 and target["os"] == "linux" and target["arch"] == "x86_64"]
         actual_versions = {target["minecraft"] for target in required_forge_rows}
         expected_versions = set(FORGE_MODERN_0173)
         if actual_versions != expected_versions:
@@ -525,7 +548,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             die("Forge Legacy 1.7.10 0.17.5 requires loaderVersion=latest-stable selector with immutable resolution evidence")
 
     if neoforge_compatibility_ii_0176_required():
-        required_rows = [target for target in targets if target["loader"] == "neoforge" and target["required"]]
+        required_rows = [target for target in targets if target["loader"] == "neoforge" and target["required"] and target["os"] == "linux" and target["arch"] == "x86_64"]
         actual_versions = {target["minecraft"] for target in required_rows}
         expected_versions = set(NEOFORGE_COMPATIBILITY_II_0176)
         if actual_versions != expected_versions:
@@ -547,6 +570,23 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         if 25 not in {target["javaMajor"] for target in required_rows}:
             die("NeoForge Compatibility II 0.17.6 requires Java 25 coverage for 26.x")
 
+    if cross_platform_loaders_0179_required():
+        expected_platforms = set(CROSS_PLATFORM_LOADER_PLATFORMS_0179)
+        for loader, (minecraft, java_major) in CROSS_PLATFORM_LOADERS_0179.items():
+            rows = [
+                target for target in targets
+                if target["required"] and target["loader"] == loader and target["minecraft"] == minecraft
+            ]
+            actual_platforms = {(target["os"], target["arch"]) for target in rows}
+            if len(rows) != len(expected_platforms) or actual_platforms != expected_platforms:
+                missing = sorted(expected_platforms - actual_platforms)
+                extra = sorted(actual_platforms - expected_platforms)
+                die(f"Cross-platform Loaders 0.17.9 {loader} {minecraft} grid mismatch: missing={missing} extra={extra} rows={len(rows)}")
+            for target in rows:
+                if target["javaMajor"] != java_major or target["scope"] != "client":
+                    die(f"Cross-platform Loaders 0.17.9 {loader} {minecraft} requires Java {java_major} scope=client on every platform")
+                if target["loaderVersion"] != "latest-stable":
+                    die(f"Cross-platform Loaders 0.17.9 {loader} {minecraft} requires loaderVersion=latest-stable with immutable resolution")
 
 
 def load_targets(path: Path) -> dict[str, Any]:
@@ -770,6 +810,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         mandatory = list(mandatory) + ["loaderPinned", "reproducibleResolution"]
     if target["loader"] != "vanilla" and target["scope"] == "integration" and loader_native_e2e_0178_required():
         mandatory = list(mandatory) + ["loaderNativeServer", "loaderVersionMatched", "loaderServerHealthy", "loaderNativeClientJoin"]
+    if cross_platform_loaders_0179_required() and is_cross_platform_loader_target(target):
+        mandatory = list(mandatory) + ["loaderPlatformMaterialized", "loaderNativesResolved", "loaderPlatformLaunch"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -840,6 +882,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
                 "loader-native-server.json", "loader-native-client.json", "loader-native-server.log",
                 "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
             }
+        if cross_platform_loaders_0179_required() and is_cross_platform_loader_target(target):
+            mandatory_files = set(mandatory_files) | {"loader-platform.json"}
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":

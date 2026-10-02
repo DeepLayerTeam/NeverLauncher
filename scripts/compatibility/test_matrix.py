@@ -94,6 +94,14 @@ class MatrixToolTests(unittest.TestCase):
                 "loader-native-server.json", "loader-native-client.json", "loader-native-server.log",
                 "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
             ])
+        cross_anchors = {"fabric": "26.3", "quilt": "26.3", "forge": "26.3", "neoforge": "26.2"}
+        if target["loader"] in cross_anchors and target["minecraft"] == cross_anchors[target["loader"]] and target["scope"] == "client":
+            checks.update({
+                "loaderPlatformMaterialized": True,
+                "loaderNativesResolved": True,
+                "loaderPlatformLaunch": True,
+            })
+            files.append("loader-platform.json")
         return {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
@@ -184,6 +192,49 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
             self.assertTrue("Loader-native E2E 0.17.8" in proc.stderr or "Quilt 1.21.1" in proc.stderr)
+
+    def test_validate_0179_requires_all_loader_platforms(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            doc["targets"] = [target for target in doc["targets"] if target["id"] != "fabric-26.3-windows-arm64"]
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Cross-platform Loaders 0.17.9", proc.stderr)
+
+    def test_validate_0179_rejects_wrong_loader_platform_java(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            doc = self.target_doc()
+            for target in doc["targets"]:
+                if target["id"] == "neoforge-26.2-macos-arm64":
+                    target["javaMajor"] = 21
+                    break
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("requires Java 25", proc.stderr)
+
+    def test_aggregate_0179_requires_native_platform_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self.target_doc()
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "quilt-26.3-macos-arm64":
+                    result["checks"]["loaderNativesResolved"] = False
+            proc = self.aggregate(Path(tmp), doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("loaderNativesResolved", proc.stderr)
+
+    def test_aggregate_0179_requires_loader_platform_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self.target_doc()
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "forge-26.3-windows-x64":
+                    result["evidence"]["files"].remove("loader-platform.json")
+            proc = self.aggregate(Path(tmp), doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("evidence files", proc.stderr)
 
     def test_validate_rejects_manual_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -37,7 +37,7 @@ expected: dict[str, int] = {
 }
 
 target_doc = json.loads(read("compatibility/targets.json"))
-fabric_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "fabric"]
+fabric_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "fabric" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(fabric_rows) != len(expected):
     raise SystemExit(f"Fabric 0.17.1 requires exactly {len(expected)} required targets, got {len(fabric_rows)}")
 by_version: dict[str, dict] = {}

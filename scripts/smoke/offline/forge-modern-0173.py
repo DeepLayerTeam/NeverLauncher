@@ -31,6 +31,7 @@ target_doc = json.loads(read("compatibility/targets.json"))
 forge_rows = [
     row for row in target_doc["targets"]
     if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") in expected
+    and row.get("os") == "linux" and row.get("arch") == "x86_64"
 ]
 if len(forge_rows) != len(expected):
     raise SystemExit(f"Forge Modern 0.17.3 requires exactly {len(expected)} required targets, got {len(forge_rows)}")

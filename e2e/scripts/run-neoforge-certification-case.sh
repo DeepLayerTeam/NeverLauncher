@@ -12,21 +12,19 @@ TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
+source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[neoforge-cert] invalid Minecraft version" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[neoforge-cert] invalid NeoForge loader selector" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[neoforge-cert] invalid Java major" >&2; exit 2; }
-[[ "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ]] || { echo "[neoforge-cert] NeoForge certification requires linux/x86_64" >&2; exit 2; }
-[[ -n "$JAVA_BIN" && -f "$JAVA_BIN" ]] || { echo "[neoforge-cert] target Java executable is unavailable: $JAVA_BIN" >&2; exit 2; }
-for cmd in go cargo python3 xvfb-run; do
-  command -v "$cmd" >/dev/null 2>&1 || { echo "[neoforge-cert] required command missing: $cmd" >&2; exit 1; }
-done
+certification_platform_validate "neoforge-cert" "$TARGET_OS" "$TARGET_ARCH" "$JAVA_BIN"
 
 rm -rf "$RUNTIME_DIR"
 mkdir -p "$RUNTIME_DIR/materialized-client"
 
-NL_BIN="$RUNTIME_DIR/nl"
-NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime"
+EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
+NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
+NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime$EXE_SUFFIX"
 
 printf '[neoforge-cert] build CLI and NeverRuntime\n'
 (
@@ -132,15 +130,13 @@ case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[neofo
 printf '[neoforge-cert] launch actual NeoForge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
-export LIBGL_ALWAYS_SOFTWARE=1
-xvfb-run -a -s '-screen 0 1280x720x24' \
-  "$NEVERRUNTIME_BIN" certify-vanilla \
+certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/neoforge-certification.json" \
+  certify-vanilla \
     --root "$RUNTIME_DIR/materialized-client" \
     --version "$PROFILE_ID" \
     --java "$JAVA_BIN" \
     --required-java-major "$JAVA_MAJOR" \
-    --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
-    > "$RUNTIME_DIR/neoforge-certification.json"
+    --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
 
 python3 - "$RUNTIME_DIR/neoforge-certification.json" "$RUNTIME_DIR/neoforge-install.json" "$PROFILE_ID" "$JAVA_MAJOR" <<'PY'
 import json, sys
@@ -156,6 +152,14 @@ if cert.get('mainClass') != install.get('mainClass'):
     raise SystemExit('NeoForge launch mainClass mismatch')
 PY
 
+python3 "$ROOT/scripts/compatibility/verify-loader-platform.py" \
+  --install "$RUNTIME_DIR/neoforge-install.json" \
+  --certification "$RUNTIME_DIR/neoforge-certification.json" \
+  --loader "neoforge" \
+  --os "$TARGET_OS" \
+  --arch "$TARGET_ARCH" \
+  --output "$RUNTIME_DIR/loader-platform.json"
+
 python3 - "$RUNTIME_DIR/result.json" "$RUNTIME_DIR/neoforge-certification.json" "$PRODUCT_VERSION" "$TARGET_ID" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH" "$RESOLVED_LOADER" "$PROFILE_ID" <<'PY'
 import json, sys
 out, cert_p, version, target, mc, java, os_name, arch, loader_version, profile = sys.argv[1:]
@@ -168,7 +172,7 @@ payload = {
   'java': {'requiredMajor': java, 'detectedMajor': cert.get('detectedJavaMajor')},
   'checks': {'materialized': True, 'packageVerified': True, 'runtimeResolved': True, 'javaMatched': True, 'actualClient': True},
   'runtimeSeconds': cert.get('runtimeSeconds'),
-  'evidence': ['client-package.json', 'materialized-client-verify.json', 'neoforge-install.json', 'neoforge-certification.json', 'neoforge-resolution-lock.json']
+  'evidence': ['client-package.json', 'materialized-client-verify.json', 'neoforge-install.json', 'neoforge-certification.json', 'neoforge-resolution-lock.json', 'loader-platform.json']
 }
 open(out, 'w', encoding='utf-8').write(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
 PY

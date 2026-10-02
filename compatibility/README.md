@@ -1,5 +1,7 @@
 # Minecraft compatibility
 
+NeverLauncher 0.17.9 — **Cross-platform Loaders**. Fabric 26.3, Quilt 26.3, Forge 26.3 и NeoForge 26.2 имеют обязательную шестиплатформенную certification-сетку: Windows/Linux/macOS × x64/ARM64. PASS требует exact OS/arch JRE, target-aware materialization, native files только в `natives/<os>/<arch>`, совпадающий `nativesDirectory` из NeverRuntime, deterministic `nativeTreeSha256` и actual loader client launch. Release certification хранит 24 `crossPlatformLoaderTargets`; historical loader release grids остаются отдельными Linux x64 regression gates.
+
 NeverLauncher 0.17.7 — **Loader Resolution & Pinning**. Для каждого required Fabric/Quilt/Forge/NeoForge target PASS требует concrete immutable loader version, `resolutionLockSha256`, `resolutionSourceSha256`, `reproducibilitySha256`, проверки `loaderPinned`/`reproducibleResolution` и raw `<loader>-resolution-lock.json`. Client/integration E2E выполняет второй materialize через тот же lock: mutable selector больше не может незаметно выбрать другую версию, а изменённые upstream profile/installer/runtime profile блокируют certification.
 
 NeverLauncher 0.17.6 — **NeoForge Compatibility II** поверх Forge/Fabric/Quilt/Minecraft Compatibility II GA. Обязательная NeoForge-линия: 22 release targets `1.20.1`–`26.2`, exact Java 17/21/25, Linux x86_64; `1.21.1` остаётся `integration`, остальные — `client`. PASS требует реальный processor installer, package integrity, immutable resolved NeoForge version и actual client launch через NeverRuntime.

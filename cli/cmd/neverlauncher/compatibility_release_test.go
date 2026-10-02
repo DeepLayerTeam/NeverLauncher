@@ -593,6 +593,47 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			}
 		}
 	}
+	if compatibilityCrossPlatformLoaders0179Required(ver) {
+		suffix := map[string]string{"linux/x86_64": "linux-x64", "linux/aarch64": "linux-arm64", "windows/x86_64": "windows-x64", "windows/aarch64": "windows-arm64", "macos/x86_64": "macos-x64", "macos/aarch64": "macos-arm64"}
+		resolvedVersions := map[string]string{"fabric": "0.19.5", "quilt": "0.31.0", "forge": "61.2.1", "neoforge": "26.2.0.75"}
+		for loader, anchor := range crossPlatformLoaders0179 {
+			for _, platform := range crossPlatformVanillaCompatibility0169 {
+				if platform.OS == "linux" && platform.Arch == "x86_64" {
+					continue
+				}
+				id := fmt.Sprintf("%s-%s-%s", loader, anchor.Minecraft, suffix[platform.OS+"/"+platform.Arch])
+				targets.Targets = append(targets.Targets, releaseCompatibilityTarget{
+					ID: id, Minecraft: anchor.Minecraft, Loader: loader, LoaderVersion: "latest-stable", OS: platform.OS, Arch: platform.Arch,
+					JavaMajor: anchor.JavaMajor, Scope: "client", Required: true,
+				})
+				matrix.Targets = append(matrix.Targets, releaseCompatibilityResult{
+					SchemaVersion: "1.0", ProductVersion: ver, TargetID: id, Status: "passed", MinecraftVersion: anchor.Minecraft,
+					Loader: loader, LoaderSelector: "latest-stable", ResolvedLoaderVersion: resolvedVersions[loader], OS: platform.OS, Arch: platform.Arch,
+					JavaMajor: anchor.JavaMajor, DetectedJavaMajor: anchor.JavaMajor, JREVendor: "Eclipse Adoptium", JRERuntimeVersion: "25.0.0+ga", JREExecutableSHA256: evidence, Scope: "client", Commit: commit, RunID: "162", ExitCode: 0,
+					Checks: map[string]bool{"materialized": true, "packageVerified": true, "runtimeResolved": true, "javaMatched": true, "jreCertified": true, "actualClient": true, "platformMatched": true}, EvidenceSHA256: evidence,
+				})
+			}
+		}
+		for i := range matrix.Targets {
+			target := releaseCompatibilityTarget{Loader: matrix.Targets[i].Loader, Minecraft: matrix.Targets[i].MinecraftVersion, OS: matrix.Targets[i].OS, Arch: matrix.Targets[i].Arch, Required: true}
+			if !compatibilityCrossPlatformLoaderTarget(target) {
+				continue
+			}
+			if matrix.Targets[i].Checks == nil {
+				matrix.Targets[i].Checks = map[string]bool{}
+			}
+			for _, check := range []string{"loaderPlatformMaterialized", "loaderNativesResolved", "loaderPlatformLaunch"} {
+				matrix.Targets[i].Checks[check] = true
+			}
+			if matrix.Targets[i].Loader != "vanilla" {
+				matrix.Targets[i].ResolutionLockSHA256 = strings.Repeat("b", 64)
+				matrix.Targets[i].ResolutionSourceSHA256 = strings.Repeat("c", 64)
+				matrix.Targets[i].ReproducibilitySHA256 = strings.Repeat("d", 64)
+				matrix.Targets[i].Checks["loaderPinned"] = true
+				matrix.Targets[i].Checks["reproducibleResolution"] = true
+			}
+		}
+	}
 	targetRaw, err := json.Marshal(targets)
 	if err != nil {
 		t.Fatal(err)
@@ -1797,5 +1838,73 @@ func TestCompatibilityCertificationLoaderNativeE2E0178BundleRejectsTamperedCover
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.8"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
 		t.Fatalf("bundle verifier must reject tampered loader-native coverage, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformLoaders0179(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.9", "commit-179")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.9", "commit-179")
+	if err != nil {
+		t.Fatalf("0.17.9 cross-platform loader evidence must pass: %v", err)
+	}
+	if len(certification.CrossPlatformLoaderTargets) != 24 {
+		t.Fatalf("cross-platform loader coverage=%d, want 24: %v", len(certification.CrossPlatformLoaderTargets), certification.CrossPlatformLoaderTargets)
+	}
+	if !strings.Contains(certification.Policy, "cross-platform-loaders-0.17.9-windows-linux-macos-x64-arm64-native-client") {
+		t.Fatalf("0.17.9 policy does not bind cross-platform loaders: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsMissingNativeCheck(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.9", "commit-179")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].TargetID == "fabric-26.3-windows-arm64" {
+			matrix.Targets[i].Checks["loaderNativesResolved"] = false
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.9", "commit-179"); err == nil || !strings.Contains(err.Error(), "loaderNativesResolved") {
+		t.Fatalf("0.17.9 must reject missing native resolution check, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCoverage(t *testing.T) {
+	dir := t.TempDir()
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.9", "commit-179")
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.9", "commit-179"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	var cert releaseCompatibilityCertification
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	cert.CrossPlatformLoaderTargets = cert.CrossPlatformLoaderTargets[:len(cert.CrossPlatformLoaderTargets)-1]
+	raw, _ = json.Marshal(cert)
+	if err := os.WriteFile(certPath, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.9"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+		t.Fatalf("tampered 0.17.9 cross-platform coverage must fail closed, got %v", err)
 	}
 }

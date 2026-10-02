@@ -295,6 +295,7 @@ pub struct VanillaCompatibilityProbeResult {
     pub java_executable: String,
     pub main_class: String,
     pub classpath_entries: usize,
+    pub natives_directory: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matching_server: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -734,6 +735,7 @@ pub async fn certify_vanilla_compatibility(
         java_executable: java_path,
         main_class: plan.main_class,
         classpath_entries: plan.classpath_entries.len(),
+        natives_directory: natives_dir.to_string_lossy().to_string(),
         matching_server: normalized_matching_server,
         matching_server_port,
         success,

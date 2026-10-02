@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Cross-platform Loaders — 0.17.9
+
+NeverLauncher 0.17.9 переносит рабочий Fabric/Quilt/Forge/NeoForge client certification на **Windows, Linux и macOS в x64 и ARM64**. Для current anchors (`Fabric/Quilt/Forge 26.3`, `NeoForge 26.2`) обязательны все шесть OS/arch-пар; исторические широкие loader-линии сохраняются как Linux x64 regression-база.
+
+Materializer получает exact target и обязан создать только соответствующее `natives/<os>/<arch>` дерево (`macOS` → Mojang `osx`). NeverRuntime теперь возвращает фактически выбранный `nativesDirectory`; отдельный verifier сверяет его с materializer evidence, проверяет SHA-256 каждого native-файла и формирует `nativeTreeSha256`. PASS также требует реальный запуск loader profile на target Java/OS/arch. Release certification хранит 24 `crossPlatformLoaderTargets`, а bundle verifier повторно вычисляет coverage.
+
 ## Loader-native E2E — 0.17.8
 
 NeverLauncher 0.17.8 добавляет обязательный production E2E для **настоящей пары loader client ↔ loader server** на Fabric, Quilt, Forge и NeoForge. Для integration anchor Minecraft 1.21.1 compatibility pipeline сначала разрешает loader в concrete immutable version, затем поднимает отдельный dedicated server того же loader и **той же exact version**, проверяет loader runtime artifacts на сервере и запускает уже materialized NeverLauncher client через NeverRuntime с direct-connect на этот сервер.
@@ -64,7 +70,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Loader-native E2E / 0.17.8**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Cross-platform Loaders / 0.17.9**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

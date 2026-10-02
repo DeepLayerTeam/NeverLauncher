@@ -117,6 +117,22 @@ matching_server = matching_server_raw == "true"
 rc = int(sys.argv[17])
 runtime = root / "e2e" / "runtime"
 
+def version_at_least(value: str, want: tuple[int, int, int]) -> bool:
+    try:
+        core = value.split("-", 1)[0].split("+", 1)[0]
+        parts = tuple(int(x) for x in core.split(".")[:3])
+        return len(parts) == 3 and parts >= want
+    except (ValueError, TypeError):
+        return False
+
+cross_platform_loader_anchors = {"fabric": "26.3", "quilt": "26.3", "forge": "26.3", "neoforge": "26.2"}
+cross_platform_loader_target = (
+    version_at_least(product_version, (0, 17, 9))
+    and loader in cross_platform_loader_anchors
+    and minecraft == cross_platform_loader_anchors[loader]
+    and scope == "client"
+)
+
 def read(name: str):
     p = runtime / name
     if not p.is_file():
@@ -164,6 +180,7 @@ if scope == "client":
         probe_name = "vanilla-certification.json"
     install = read(install_name) or {}
     probe = read(probe_name) or {}
+    loader_platform = read("loader-platform.json") or {}
     resolution_lock_sha = str(install.get("resolutionLockSha256") or "")
     resolution_source_sha = str(install.get("resolutionSourceSha256") or "")
     reproducibility_sha = str(install.get("reproducibilitySha256") or "")
@@ -199,6 +216,33 @@ if scope == "client":
             "loaderPinned": resolution_pinned and valid_sha256(resolution_lock_sha),
             "reproducibleResolution": resolution_lock_matches and valid_sha256(resolution_source_sha) and valid_sha256(reproducibility_sha),
         })
+        if cross_platform_loader_target:
+            internal_os = "osx" if os_name == "macos" else os_name
+            expected_native_suffix = f"/natives/{internal_os}/{arch}"
+            actual_native_dir = str(loader_platform.get("nativeDirectory") or "").replace("\\", "/").rstrip("/").lower()
+            probe_native_dir = str(probe.get("nativesDirectory") or "").replace("\\", "/").rstrip("/").lower()
+            checks.update({
+                "loaderPlatformMaterialized": (
+                    loader_platform.get("status") == "passed"
+                    and loader_platform.get("loader") == loader
+                    and loader_platform.get("minecraftVersion") == minecraft
+                    and loader_platform.get("targetOS") == os_name
+                    and loader_platform.get("targetArch") == arch
+                    and loader_platform.get("resolvedLoaderVersion") == resolved
+                ),
+                "loaderNativesResolved": (
+                    int(loader_platform.get("nativeFileCount") or 0) > 0
+                    and valid_sha256(str(loader_platform.get("nativeTreeSha256") or ""))
+                    and actual_native_dir.endswith(expected_native_suffix.lower())
+                    and probe_native_dir == actual_native_dir
+                ),
+                "loaderPlatformLaunch": (
+                    probe.get("status") == "passed"
+                    and (probe.get("timedOut") is True or probe.get("success") is True)
+                    and int(probe.get("classpathEntries") or 0) > 0
+                    and probe.get("mainClass") == install.get("mainClass")
+                ),
+            })
     matching = read("matching-server.json") or {}
     server_install = read("vanilla-server-install.json") or {}
     if matching_server:
@@ -211,7 +255,7 @@ if scope == "client":
     manifest_loader = str(minecraft_settings.get("loader", ""))
     evidence_files = [name for name in [
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
-        probe_name, f"{loader}-resolution-lock.json", "matching-server.json", "matching-server.log", "result.json"
+        probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
 else:
     base = read("result.json") or {}
@@ -299,6 +343,7 @@ payload = {
         "platformRuntime": platform_evidence,
         "files": evidence_files + ["platform-runtime.json", "java-runtime.json"],
         "matchingServer": matching_server,
+        "loaderPlatform": loader_platform if scope == "client" and cross_platform_loader_target else None,
     },
 }
 out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

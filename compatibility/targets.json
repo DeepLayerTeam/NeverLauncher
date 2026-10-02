@@ -2997,6 +2997,226 @@
       "javaMajor": 25,
       "scope": "client",
       "required": true
+    },
+    {
+      "id": "fabric-26.3-linux-arm64",
+      "minecraft": "26.3",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "fabric-26.3-windows-x64",
+      "minecraft": "26.3",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "fabric-26.3-windows-arm64",
+      "minecraft": "26.3",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "fabric-26.3-macos-x64",
+      "minecraft": "26.3",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "fabric-26.3-macos-arm64",
+      "minecraft": "26.3",
+      "loader": "fabric",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "quilt-26.3-linux-arm64",
+      "minecraft": "26.3",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "quilt-26.3-windows-x64",
+      "minecraft": "26.3",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "quilt-26.3-windows-arm64",
+      "minecraft": "26.3",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "quilt-26.3-macos-x64",
+      "minecraft": "26.3",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "quilt-26.3-macos-arm64",
+      "minecraft": "26.3",
+      "loader": "quilt",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "forge-26.3-linux-arm64",
+      "minecraft": "26.3",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "forge-26.3-windows-x64",
+      "minecraft": "26.3",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "forge-26.3-windows-arm64",
+      "minecraft": "26.3",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "forge-26.3-macos-x64",
+      "minecraft": "26.3",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "forge-26.3-macos-arm64",
+      "minecraft": "26.3",
+      "loader": "forge",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-linux-arm64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "linux",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-windows-x64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-windows-arm64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "windows",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-macos-x64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "x86_64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
+    },
+    {
+      "id": "neoforge-26.2-macos-arm64",
+      "minecraft": "26.2",
+      "loader": "neoforge",
+      "loaderVersion": "latest-stable",
+      "os": "macos",
+      "arch": "aarch64",
+      "javaMajor": 25,
+      "scope": "client",
+      "required": true
     }
   ]
 }

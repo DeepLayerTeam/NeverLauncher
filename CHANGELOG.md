@@ -1,3 +1,10 @@
+## 0.17.9 — Cross-platform Loaders
+
+- Added required cross-platform loader certification for Fabric 26.3, Quilt 26.3, Forge 26.3 and NeoForge 26.2 on Windows/Linux/macOS × x64/ARM64 (24 loader/platform targets; 292 total compatibility targets). Historical wide loader release grids remain Linux x64 regression baselines.
+- Removed the Linux/x64-only client-certification guard from all four loader runners. Windows uses `.exe` runtime binaries, Linux uses Xvfb, and Windows/macOS launch the actual NeverRuntime client natively. CI now selects target Java architecture explicitly for x64/aarch64.
+- NeverRuntime certification now reports the actual selected native directory. `verify-loader-platform.py` fail-closes unless materializer target evidence, native files and the runtime-selected directory all match the exact `natives/<os>/<arch>` tree (`macOS` maps to Mojang `osx`). It also records a deterministic `nativeTreeSha256`.
+- Aggregate/release certification requires `loaderPlatformMaterialized`, `loaderNativesResolved` and `loaderPlatformLaunch` for all 24 targets, records `crossPlatformLoaderTargets`, and bundle verification recomputes the coverage. Added mandatory CI/preflight/repository gates and wrong-architecture/tamper regressions.
+
 ## 0.17.8 — Loader-native E2E
 
 - Added a real dedicated-loader E2E boundary for the four 1.21.1 integration anchors: Fabric, Quilt, Forge and NeoForge now start a clean dedicated server using the exact immutable loader version resolved for the materialized client.

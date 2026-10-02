@@ -28,7 +28,7 @@ if len(expected) != 48 or expected.get("1.14") != 8 or expected.get("1.17") != 1
     raise SystemExit("Quilt 0.17.2 canonical release grid is incomplete")
 
 target_doc = json.loads(read("compatibility/targets.json"))
-quilt_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "quilt"]
+quilt_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(quilt_rows) != len(expected):
     raise SystemExit(f"Quilt 0.17.2 requires exactly {len(expected)} required targets, got {len(quilt_rows)}")
 by_version: dict[str, dict] = {}

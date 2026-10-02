@@ -100,6 +100,7 @@ run_step forge-legacy-1710-0175 python3 "${ROOT_DIR}/scripts/smoke/offline/forge
 run_step neoforge-compatibility-II-0176 python3 "${ROOT_DIR}/scripts/smoke/offline/neoforge-compatibility-II-0176.py"
 run_step loader-resolution-pinning-0177 python3 "${ROOT_DIR}/scripts/smoke/offline/loader-resolution-pinning-0177.py"
 run_step loader-native-e2e-0178 python3 "${ROOT_DIR}/scripts/smoke/offline/loader-native-e2e-0178.py"
+run_step cross-platform-loaders-0179 python3 "${ROOT_DIR}/scripts/smoke/offline/cross-platform-loaders-0179.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

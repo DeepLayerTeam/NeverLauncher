@@ -2187,7 +2187,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["fabricCompatibilityII0171", "compatibilityFabricII0171Required", "FabricVersions", "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client"]:
         if required not in fabric_release_0171:
             fail(f"0.17.1 Fabric release certification incomplete: {required}")
-    fabric_rows = [row for row in fabric_targets_0171 if row.get("required") and row.get("loader") == "fabric"]
+    fabric_rows = [row for row in fabric_targets_0171 if row.get("required") and row.get("loader") == "fabric" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(fabric_rows) != 48 or len({row.get("minecraft") for row in fabric_rows}) != 48:
         fail("0.17.1 Fabric target grid must contain exactly 48 unique stable releases")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in fabric_rows}:
@@ -2236,7 +2236,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["quiltCompatibilityII0172", "compatibilityQuiltII0172Required", "QuiltVersions", "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client"]:
         if required not in quilt_release_0172:
             fail(f"0.17.2 Quilt release certification incomplete: {required}")
-    quilt_rows = [row for row in quilt_targets_0172 if row.get("required") and row.get("loader") == "quilt"]
+    quilt_rows = [row for row in quilt_targets_0172 if row.get("required") and row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(quilt_rows) != 48 or len({row.get("minecraft") for row in quilt_rows}) != 48:
         fail("0.17.2 Quilt target grid must contain exactly 48 unique stable releases")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in quilt_rows}:
@@ -2291,7 +2291,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["forgeModern0173", "compatibilityForgeModern0173Required", "ForgeVersions", "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client"]:
         if required not in forge_release_0173:
             fail(f"0.17.3 Forge release certification incomplete: {required}")
-    forge_rows = [row for row in forge_targets_0173 if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") not in {"1.7.10", "1.12.2"}]
+    forge_rows = [row for row in forge_targets_0173 if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") not in {"1.7.10", "1.12.2"} and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(forge_rows) != 43 or len({row.get("minecraft") for row in forge_rows}) != 43:
         fail("0.17.3 Forge target grid must contain exactly 43 unique processor-based releases")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in forge_rows}:
@@ -2438,7 +2438,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                     "1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21, "1.21.4": 21, "1.21.5": 21,
                     "1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
                     "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25}
-    rows = [row for row in neo_targets_0176 if row.get("required") and row.get("loader") == "neoforge"]
+    rows = [row for row in neo_targets_0176 if row.get("required") and row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(rows) != len(expected_neo):
         fail(f"0.17.6 NeoForge grid requires exactly {len(expected_neo)} targets, got {len(rows)}")
     else:
@@ -2552,6 +2552,47 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "loader-native-e2e-0178.py" not in preflight or "loader-native-e2e-0178.py" not in ci:
         fail("0.17.8 loader-native E2E gate is not wired into preflight/CI")
 
+
+# 0.17.9 Cross-platform Loaders certifies real loader clients and native trees
+# on every supported desktop OS/architecture pair, not just runner metadata.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 9):
+    platform_helper_0179 = read("e2e/scripts/lib/certification-platform.sh")
+    platform_verifier_0179 = read("scripts/compatibility/verify-loader-platform.py")
+    platform_compat_0179 = read("e2e/scripts/run-compatibility-case.sh")
+    platform_matrix_0179 = read("scripts/compatibility/matrix.py")
+    platform_release_0179 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    platform_workflow_0179 = read(".github/workflows/compatibility.yml")
+    platform_runtime_0179 = read("runtime/neverruntime/src/lib.rs")
+    platform_tests_0179 = read("scripts/compatibility/test_matrix.py") + read("scripts/compatibility/test_verify_loader_platform.py") + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    platform_gate_0179 = read("scripts/smoke/offline/cross-platform-loaders-0179.py")
+    for required in ["linux|windows|macos", "x86_64|aarch64", "certification_exe_suffix", "certification_run_client"]:
+        if required not in platform_helper_0179:
+            fail(f"0.17.9 platform-native certification helper incomplete: {required}")
+    for required in ["materializerTargets", "nativeDirectory", "nativeTreeSha256", "natives/{internal_os}/{arch}"]:
+        if required not in platform_verifier_0179:
+            fail(f"0.17.9 loader native verifier incomplete: {required}")
+    for required in ["cross_platform_loader_anchors", "loaderPlatformMaterialized", "loaderNativesResolved", "loaderPlatformLaunch", "loader-platform.json"]:
+        if required not in platform_compat_0179:
+            fail(f"0.17.9 compatibility platform evidence incomplete: {required}")
+    for required in ["CROSS_PLATFORM_LOADERS_0179", "Cross-platform Loaders 0.17.9", "loaderPlatformMaterialized", "loader-platform.json"]:
+        if required not in platform_matrix_0179:
+            fail(f"0.17.9 matrix platform enforcement incomplete: {required}")
+    for required in ["CrossPlatformLoaderTargets", "compatibilityCrossPlatformLoaders0179Required", "loaderNativesResolved", "cross-platform-loaders-0.17.9-windows-linux-macos-x64-arm64-native-client"]:
+        if required not in platform_release_0179:
+            fail(f"0.17.9 release certification platform enforcement incomplete: {required}")
+    for required in ["natives_directory: String", "natives_dir.to_string_lossy().to_string()"]:
+        if required not in platform_runtime_0179:
+            fail(f"0.17.9 NeverRuntime native-directory evidence incomplete: {required}")
+    for required in ["architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}", "e2e/runtime/loader-platform.json"]:
+        if required not in platform_workflow_0179:
+            fail(f"0.17.9 compatibility workflow platform wiring incomplete: {required}")
+    for required in ["test_validate_0179_requires_all_loader_platforms", "test_rejects_foreign_arch_native", "TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCoverage"]:
+        if required not in platform_tests_0179:
+            fail(f"0.17.9 cross-platform loader regression test missing: {required}")
+    if "Cross-platform Loaders 0.17.9 gate: OK" not in platform_gate_0179:
+        fail("0.17.9 mandatory cross-platform loader gate incomplete")
+    if "cross-platform-loaders-0179.py" not in preflight or "cross-platform-loaders-0179.py" not in ci:
+        fail("0.17.9 cross-platform loader gate is not wired into preflight/CI")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
