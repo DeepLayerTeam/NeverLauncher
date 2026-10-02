@@ -3115,6 +3115,95 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.6 Thread & Process Integrity lacks real Windows integration/clippy CI")
 
+
+# 0.18.7 Debug & Instrumentation Guard blocks unwanted JVM startup
+# instrumentation and continuously fail-closes if a user-mode debugger attaches.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 7):
+    debug_sensor_0187 = read("runtime/neverguard-sensor/src/debug_instrumentation.rs")
+    debug_stream_0187 = read("runtime/neverguard-sensor/src/lib.rs")
+    debug_launcher_0187 = read("runtime/neverruntime/src/windows_sensor.rs")
+    debug_parent_0187 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    debug_report_0187 = read("runtime/neverruntime/src/windows_debug_instrumentation.rs")
+    debug_test_0187 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    debug_probe_0187 = read("runtime/neverguard-debug-probe/src/main.rs")
+    debug_gate_0187 = read("scripts/smoke/offline/neverguard-debug-instrumentation-0187.py")
+    for required in [
+        "IsDebuggerPresent",
+        "CheckRemoteDebuggerPresent",
+        "NtQueryInformationProcess",
+        "PROCESS_DEBUG_PORT",
+        "PROCESS_DEBUG_OBJECT_HANDLE",
+        "PROCESS_DEBUG_FLAGS",
+        "STATUS_PORT_NOT_SET",
+        "reconcile_and_verify",
+    ]:
+        if required not in debug_sensor_0187:
+            fail(f"0.18.7 Debug Guard backend incomplete: {required}")
+    for forbidden in ["DebugActiveProcess(", "WriteProcessMemory", "CreateRemoteThread", "NtSetInformationThread"]:
+        if forbidden in debug_sensor_0187:
+            fail(f"0.18.7 Sensor uses forbidden anti-analysis primitive: {forbidden}")
+    for required in [
+        "MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY",
+        "MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT",
+        "MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER",
+        "DEBUG_INSTRUMENTATION_CHECK_INTERVAL",
+        "debug_instrumentation::initialize()",
+        "debug_instrumentation::reconcile_and_verify()",
+    ]:
+        if required not in debug_stream_0187:
+            fail(f"0.18.7 Debug Guard Sensor lifecycle incomplete: {required}")
+    for required in [
+        "-XX:+DisableAttachMechanism",
+        "-javaagent:",
+        "-agentlib:",
+        "-agentpath:",
+        "-Xrunjdwp:",
+        "-Xdebug",
+        "-XX:+StartAttachListener",
+        "JAVA_TOOL_OPTIONS",
+        "_JAVA_OPTIONS",
+        "JDK_JAVA_OPTIONS",
+        "validate_startup_instrumentation_boundary",
+    ]:
+        if required not in debug_launcher_0187:
+            fail(f"0.18.7 JVM instrumentation boundary incomplete: {required}")
+    for required in [
+        "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
+        "expected DEBUG_INSTRUMENTATION_READY as fourth event",
+        "debug_instrumentation_report_from_event",
+        "unwanted debug/instrumentation boundary detected",
+        "fail_closed",
+    ]:
+        if required not in debug_parent_0187:
+            fail(f"0.18.7 Debug Guard parent enforcement incomplete: {required}")
+    for required in [
+        "WindowsDebugInstrumentationReport",
+        "NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION",
+        "attach_mechanism_disabled",
+        "state_sha256",
+    ]:
+        if required not in debug_report_0187:
+            fail(f"0.18.7 Debug Guard report missing: {required}")
+    for required in [
+        "neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
+        "neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
+        "live debugger attach must be fail-closed",
+        "NEVERGUARD_DEBUG_PROBE_EXE",
+    ]:
+        if required not in debug_test_0187:
+            fail(f"0.18.7 Debug Guard Windows integration regression missing: {required}")
+    for required in ["DebugActiveProcess", "WaitForDebugEvent", "ContinueDebugEvent", "DebugSetProcessKillOnExit"]:
+        if required not in debug_probe_0187:
+            fail(f"0.18.7 debugger adversarial fixture incomplete: {required}")
+    if "Debug & Instrumentation Guard 0.18.7 gate: OK" not in debug_gate_0187:
+        fail("0.18.7 mandatory Debug & Instrumentation Guard gate incomplete")
+    if "neverguard-debug-instrumentation-0187.py" not in preflight or "neverguard-debug-instrumentation-0187.py" not in ci:
+        fail("0.18.7 Debug Guard gate is not wired into preflight/CI")
+    if "runtime/neverguard-debug-probe/Cargo.toml" not in ci or "NEVERGUARD_DEBUG_PROBE_EXE" not in ci:
+        fail("0.18.7 Debug Guard lacks adversarial debugger probe CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.7 Debug Guard lacks real Windows integration/clippy CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

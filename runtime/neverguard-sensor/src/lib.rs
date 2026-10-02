@@ -1,5 +1,6 @@
 #![cfg(windows)]
 
+mod debug_instrumentation;
 mod hook_engine;
 mod memory_integrity;
 mod thread_integrity;
@@ -49,6 +50,9 @@ const MODULE_EVENT_REASON_MEMORY_TAMPER: u32 = 11;
 const MODULE_EVENT_REASON_THREAD_PROCESS_READY: u32 = 12;
 const MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT: u32 = 13;
 const MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER: u32 = 14;
+const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY: u32 = 15;
+const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT: u32 = 16;
+const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER: u32 = 17;
 const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -57,6 +61,7 @@ const MODULE_RING_CAPACITY: usize = 512;
 const MODULE_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 const MODULE_WORKER_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const THREAD_INTEGRITY_CHECK_INTERVAL: Duration = Duration::from_millis(500);
+const DEBUG_INSTRUMENTATION_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -499,9 +504,47 @@ fn thread_process_tamper_event(message: &str) -> RawModuleEvent {
     event
 }
 
+fn debug_instrumentation_event(
+    reason: u32,
+    snapshot: &debug_instrumentation::DebugInstrumentationSnapshot,
+) -> RawModuleEvent {
+    let flags = u32::from(snapshot.debugger_present)
+        | (u32::from(snapshot.remote_debugger_present) << 1)
+        | (u32::from(snapshot.debug_port_present) << 2)
+        | (u32::from(snapshot.debug_object_present) << 3)
+        | (u32::from(snapshot.debug_flags_no_debug_inherit) << 4);
+    let mut event = RawModuleEvent {
+        reason,
+        flags,
+        base_address: snapshot.integrity_check_count,
+        size_of_image: 1,
+        ..EMPTY_MODULE_EVENT
+    };
+    let payload = snapshot
+        .state_sha256
+        .encode_utf16()
+        .take(MODULE_PATH_WCHARS)
+        .collect::<Vec<_>>();
+    event.path_len = payload.len() as u16;
+    event.path[..payload.len()].copy_from_slice(&payload);
+    event
+}
+
+fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
+    let mut event = RawModuleEvent {
+        reason: MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER,
+        ..EMPTY_MODULE_EVENT
+    };
+    let message = message.encode_utf16().take(MODULE_PATH_WCHARS).collect::<Vec<_>>();
+    event.path_len = message.len() as u16;
+    event.path[..message.len()].copy_from_slice(&message);
+    event
+}
+
 fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
     let mut heartbeat_at = Instant::now();
     let mut thread_check_at = Instant::now();
+    let mut debug_check_at = Instant::now();
     let mut latest_thread_snapshot = match thread_integrity::reconcile_and_verify() {
         Ok(snapshot) => snapshot,
         Err(err) => {
@@ -567,6 +610,39 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
                 channel.secret.zeroize();
                 std::process::abort();
             }
+        }
+
+        if debug_check_at.elapsed() >= DEBUG_INSTRUMENTATION_CHECK_INTERVAL {
+            match debug_instrumentation::reconcile_and_verify() {
+                Ok(snapshot) if snapshot.active && snapshot.healthy => {}
+                Ok(_) => {
+                    let tamper = debug_instrumentation_tamper_event(
+                        "NeverGuard Debug & Instrumentation Guard became inactive/unhealthy",
+                    );
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+                Err(err) => {
+                    let tamper = debug_instrumentation_tamper_event(&err);
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            }
+            debug_check_at = Instant::now();
         }
 
         if thread_check_at.elapsed() >= THREAD_INTEGRITY_CHECK_INTERVAL {
@@ -710,6 +786,52 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
                 channel.secret.zeroize();
                 std::process::abort();
             }
+            match debug_instrumentation::reconcile_and_verify() {
+                Ok(snapshot) if snapshot.active && snapshot.healthy => {
+                    let debug_heartbeat = debug_instrumentation_event(
+                        MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT,
+                        &snapshot,
+                    );
+                    if write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &debug_heartbeat,
+                    )
+                    .is_err()
+                    {
+                        channel.secret.zeroize();
+                        std::process::abort();
+                    }
+                }
+                Ok(_) => {
+                    let tamper = debug_instrumentation_tamper_event(
+                        "NeverGuard Debug & Instrumentation Guard became inactive/unhealthy",
+                    );
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+                Err(err) => {
+                    let tamper = debug_instrumentation_tamper_event(&err);
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            }
             let heartbeat = RawModuleEvent {
                 reason: MODULE_EVENT_REASON_HEARTBEAT,
                 ..EMPTY_MODULE_EVENT
@@ -839,6 +961,39 @@ pub extern "system" fn Agent_OnLoad(
         channel.secret.zeroize();
         return JNI_ERR;
     }
+    let debug_snapshot = match debug_instrumentation::initialize() {
+        Ok(snapshot) if snapshot.active && snapshot.healthy => snapshot,
+        Ok(_) | Err(_) => {
+            debug_instrumentation::shutdown();
+            thread_integrity::shutdown();
+            memory_integrity::shutdown();
+            let _ = hook_engine::shutdown_restore();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+    };
+    let debug_ready = debug_instrumentation_event(
+        MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY,
+        &debug_snapshot,
+    );
+    if write_module_event(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        &mut sequence,
+        &debug_ready,
+    )
+    .is_err()
+    {
+        debug_instrumentation::shutdown();
+        thread_integrity::shutdown();
+        memory_integrity::shutdown();
+        let _ = hook_engine::shutdown_restore();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
     match thread::Builder::new()
         .name("neverguard-module-guard".to_string())
         .spawn(move || module_worker(channel, sequence))
@@ -851,6 +1006,7 @@ pub extern "system" fn Agent_OnLoad(
             Err(_) => {
                 MODULE_WORKER_STOP.store(true, Ordering::Release);
                 let _ = handle.join();
+                debug_instrumentation::shutdown();
                 thread_integrity::shutdown();
                 memory_integrity::shutdown();
                 let _ = hook_engine::shutdown_restore();
@@ -859,6 +1015,7 @@ pub extern "system" fn Agent_OnLoad(
             }
         },
         Err(_) => {
+            debug_instrumentation::shutdown();
             thread_integrity::shutdown();
             memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
@@ -880,6 +1037,7 @@ pub extern "system" fn Agent_OnUnload(_vm: *mut c_void) {
     if let Some(handle) = handle {
         let _ = handle.join();
     }
+    debug_instrumentation::shutdown();
     thread_integrity::shutdown();
     memory_integrity::shutdown();
     let _ = hook_engine::shutdown_restore();

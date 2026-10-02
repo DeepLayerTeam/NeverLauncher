@@ -11,6 +11,7 @@ pub mod windows_module_guard;
 pub mod windows_hook_engine;
 pub mod windows_memory_integrity;
 pub mod windows_thread_process_integrity;
+pub mod windows_debug_instrumentation;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -58,6 +59,9 @@ pub use windows_hook_engine::{WindowsHookEngineReport, NEVERGUARD_HOOK_ENGINE_VE
 pub use windows_memory_integrity::{WindowsMemoryIntegrityReport, NEVERGUARD_MEMORY_INTEGRITY_VERSION};
 pub use windows_thread_process_integrity::{
     WindowsThreadProcessIntegrityReport, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
+};
+pub use windows_debug_instrumentation::{
+    WindowsDebugInstrumentationReport, NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION,
 };
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
@@ -718,11 +722,11 @@ pub async fn certify_vanilla_compatibility(
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
+    command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
     command
-        .args(&plan.jvm_args)
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
         .arg(&plan.main_class)
@@ -809,11 +813,11 @@ pub async fn launch_with_timeout(
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
+    command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
     command
-        .args(&plan.jvm_args)
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
         .arg(&plan.main_class)

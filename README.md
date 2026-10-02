@@ -1,3 +1,9 @@
+## Защита от отладки и instrumentation — 0.18.7
+
+NeverLauncher 0.18.7 закрывает штатные user-mode debug/instrumentation boundaries защищаемой JVM. До spawn NeverRuntime отклоняет сторонние Java/JVMTI agents, JDWP/debug options и instrumentation, пришедшую через стандартные Java option environment variables; затем сам добавляет `-XX:+DisableAttachMechanism`. Внутри JVM ранний Sensor проверяет локальный/remote debugger state и kernel-reported debug port/object/flags каждые 250 мс. Обнаружение debugger attach или противоречивого debug state приводит к fail-closed завершению runtime.
+
+`Agent_OnLoad` теперь требует четыре последовательных authenticated proofs: Hook Engine, Memory Integrity, Thread & Process Integrity и `DEBUG_INSTRUMENTATION_READY`. Runtime report содержит состояние attach hardening, независимые debug indicators, check/violation counters и `stateSha256`. Реализация не скрывает процесс от Windows/EDR и не использует kernel driver или anti-debug bypass primitives.
+
 ## Thread & Process Integrity — 0.18.6
 
 NeverLauncher 0.18.6 добавляет непрерывный контроль потоков и дерева процессов защищаемой JVM. `neverguard-sensor.dll` перечисляет live TID, получает их реальный Win32 start address через `NtQueryInformationThread`, проверяет backing memory и origin module; нормальные JVM/GC/compiler threads разрешены, но старт потока из executable `MEM_PRIVATE`/`MEM_MAPPED` memory считается suspicious runtime transition и обрабатывается fail-closed. Проверка выполняется чаще общего heartbeat, чтобы короткое окно между событиями не превращалось в единственную линию защиты.

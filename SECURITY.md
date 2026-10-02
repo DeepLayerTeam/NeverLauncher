@@ -1,3 +1,9 @@
+## Защита от отладки и instrumentation / Windows JVM — 0.18.7
+
+В `0.18.7` NeverGuard fail-closed блокирует нежелательную user-mode debugging/instrumentation boundary. Launcher отклоняет сторонние `-javaagent/-agentlib/-agentpath`, JDWP/`-Xdebug`, принудительный `StartAttachListener`, отмену `DisableAttachMechanism` и эквивалентные опции из `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`; для защищаемой JVM всегда добавляется `-XX:+DisableAttachMechanism`.
+
+Sensor не пытается скрывать debugger или вмешиваться в средства Windows security. Он только проверяет фактическое состояние через `IsDebuggerPresent`, `CheckRemoteDebuggerPresent`, `ProcessDebugPort`, `ProcessDebugObjectHandle` и `ProcessDebugFlags`, передаёт HMAC-защищённые READY/HEARTBEAT/TAMPER evidence и завершает JVM при нарушении. Administrator/kernel attacker и компонент, способный произвольно изменить весь process state до проверки, остаются вне заявленной user-mode trust boundary.
+
 ## Контроль потоков и процессов / Windows JVM — 0.18.6
 
 В `0.18.6` NeverGuard Sensor непрерывно проверяет происхождение Win32 threads текущей JVM. Для каждого live TID Sensor получает start address через `NtQueryInformationThread`, затем `VirtualQuery` подтверждает committed executable `MEM_IMAGE`; start address из executable private/mapped memory считается подозрительным переходом исполнения. Создание и завершение обычных JVM, GC, compiler и service threads не блокируется: контролируется их фактическое происхождение, а не сам факт многопоточности.

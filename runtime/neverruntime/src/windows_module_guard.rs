@@ -25,6 +25,8 @@ pub struct WindowsModuleGuardReport {
     pub memory_integrity: crate::WindowsMemoryIntegrityReport,
     #[serde(default)]
     pub thread_process_integrity: crate::WindowsThreadProcessIntegrityReport,
+    #[serde(default)]
+    pub debug_instrumentation: crate::WindowsDebugInstrumentationReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -50,6 +52,7 @@ impl Default for WindowsModuleGuardReport {
             hook_engine: crate::WindowsHookEngineReport::default(),
             memory_integrity: crate::WindowsMemoryIntegrityReport::default(),
             thread_process_integrity: crate::WindowsThreadProcessIntegrityReport::default(),
+            debug_instrumentation: crate::WindowsDebugInstrumentationReport::default(),
             last_violation: String::new(),
         }
     }
@@ -137,6 +140,9 @@ mod imp {
     const MODULE_EVENT_REASON_THREAD_PROCESS_READY: u32 = 12;
     const MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT: u32 = 13;
     const MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER: u32 = 14;
+    const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY: u32 = 15;
+    const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT: u32 = 16;
+    const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER: u32 = 17;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -434,6 +440,43 @@ mod imp {
         });
         thread_ready_packet.zeroize();
 
+        // Debug & Instrumentation Guard is the fourth mandatory startup proof.
+        // Agent_OnLoad cannot return until the Sensor proves that no debugger is
+        // attached and the JVM attach mechanism is disabled by the launcher.
+        let mut debug_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
+            .await
+            .map_err(|_| "NeverGuard Debug & Instrumentation Guard ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard Debug & Instrumentation Guard ready proof read failed: {err}"))?;
+        let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
+        if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
+            return Err(format!(
+                "NeverGuard Debug & Instrumentation Guard expected DEBUG_INSTRUMENTATION_READY as fourth event, got {}",
+                debug_ready_event.reason
+            ));
+        }
+        let debug_ready = debug_instrumentation_report_from_event(&debug_ready_event)?;
+        if debug_ready.debugger_present
+            || debug_ready.remote_debugger_present
+            || debug_ready.debug_port_present
+            || debug_ready.debug_object_present
+            || !debug_ready.debug_flags_no_debug_inherit
+        {
+            return Err("NeverGuard Debug & Instrumentation Guard armed with active debugger state".to_string());
+        }
+        ready_chain = advance_event_chain(
+            ready_chain,
+            &debug_ready_packet,
+            &debug_ready.state_sha256,
+        );
+        update_counter(&state, |report| {
+            report.event_count = 4;
+            report.last_sequence = 4;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.debug_instrumentation = debug_ready;
+        });
+        debug_ready_packet.zeroize();
+
         let expected = baseline
             .into_iter()
             .map(|module| (module.base_address, module.normalized_path))
@@ -686,6 +729,38 @@ mod imp {
                         )
                     })
                 }
+                MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY => {
+                    Err("NeverGuard Debug & Instrumentation Guard emitted duplicate DEBUG_INSTRUMENTATION_READY".to_string())
+                }
+                MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT => {
+                    match debug_instrumentation_report_from_event(&event) {
+                        Err(err) => Err(err),
+                        Ok(mut debug_report) => {
+                            module_hash = debug_report.state_sha256.clone();
+                            update_counter(&state, |report| {
+                                debug_report.active = true;
+                                debug_report.healthy = true;
+                                debug_report.attach_mechanism_disabled = true;
+                                debug_report.blocked_startup_instrumentation_count = report
+                                    .debug_instrumentation
+                                    .blocked_startup_instrumentation_count;
+                                debug_report.violation_count = report.debug_instrumentation.violation_count;
+                                report.debug_instrumentation = debug_report;
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected".to_string()
+                    } else {
+                        format!(
+                            "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected: {detail}"
+                        )
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -833,6 +908,47 @@ mod imp {
             thread_set_sha256,
             thread_origin_set_sha256,
             process_tree_sha256: String::new(),
+            last_violation: String::new(),
+        })
+    }
+
+    fn debug_instrumentation_report_from_event(
+        event: &ParsedEvent,
+    ) -> Result<crate::WindowsDebugInstrumentationReport, String> {
+        let state_sha256 = event.path.to_string_lossy().to_string();
+        if state_sha256.len() != 64 || !state_sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("NeverGuard Debug & Instrumentation Guard invalid state digest".to_string());
+        }
+        let debugger_present = event.flags & 0x01 != 0;
+        let remote_debugger_present = event.flags & 0x02 != 0;
+        let debug_port_present = event.flags & 0x04 != 0;
+        let debug_object_present = event.flags & 0x08 != 0;
+        let debug_flags_no_debug_inherit = event.flags & 0x10 != 0;
+        if debugger_present
+            || remote_debugger_present
+            || debug_port_present
+            || debug_object_present
+            || !debug_flags_no_debug_inherit
+        {
+            return Err(format!(
+                "NeverGuard Debug & Instrumentation Guard detected debugger state: flags=0x{:X}",
+                event.flags
+            ));
+        }
+        Ok(crate::WindowsDebugInstrumentationReport {
+            version: crate::NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION,
+            active: true,
+            healthy: true,
+            attach_mechanism_disabled: true,
+            debugger_present,
+            remote_debugger_present,
+            debug_port_present,
+            debug_object_present,
+            debug_flags_no_debug_inherit,
+            blocked_startup_instrumentation_count: 0,
+            integrity_check_count: event.base_address,
+            violation_count: 0,
+            state_sha256: state_sha256.to_ascii_lowercase(),
             last_violation: String::new(),
         })
     }
@@ -1059,6 +1175,15 @@ mod imp {
                     .saturating_add(1);
                 report.thread_process_integrity.last_violation = reason.to_string();
             }
+            if reason.contains("Debug & Instrumentation Guard") {
+                report.debug_instrumentation.active = false;
+                report.debug_instrumentation.healthy = false;
+                report.debug_instrumentation.violation_count = report
+                    .debug_instrumentation
+                    .violation_count
+                    .saturating_add(1);
+                report.debug_instrumentation.last_violation = reason.to_string();
+            }
         });
         terminate_runtime(pid);
     }
@@ -1069,6 +1194,7 @@ mod imp {
             report.hook_engine.active = false;
             report.memory_integrity.active = false;
             report.thread_process_integrity.active = false;
+            report.debug_instrumentation.active = false;
         });
     }
 

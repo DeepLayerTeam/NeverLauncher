@@ -1,3 +1,11 @@
+## 0.18.7 — Debug & Instrumentation Guard
+
+- Добавлен production Debug & Instrumentation Guard внутри `neverguard-sensor.dll`: каждые 250 мс Sensor проверяет `IsDebuggerPresent`, `CheckRemoteDebuggerPresent` и независимые `NtQueryInformationProcess` indicators (`ProcessDebugPort`, `ProcessDebugObjectHandle`, `ProcessDebugFlags`). Любая активная user-mode debug boundary завершает JVM fail-closed.
+- Windows JVM launch path теперь блокирует сторонние `-javaagent`, `-agentlib`, `-agentpath`, JDWP/`-Xdebug`, `StartAttachListener` и попытку отменить attach hardening; те же проверки применяются к `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS` и `JDK_JAVA_OPTIONS`.
+- NeverGuard принудительно добавляет `-XX:+DisableAttachMechanism`, а `Agent_OnLoad` не возвращает управление JVM до четвёртого HMAC-аутентифицированного startup proof `DEBUG_INSTRUMENTATION_READY`; subsequent heartbeat/tamper evidence входит в общий ordered Sensor stream.
+- Runtime status дополнен `WindowsDebugInstrumentationReport` с debug indicators, check counters и `stateSha256`; fail-closed violation отражается одновременно в Debug Guard и общем Module Guard state.
+- Добавлен adversarial Windows integration probe, который реально подключается к защищаемой JVM через `DebugActiveProcess`, обслуживает debug events и проверяет обязательное завершение runtime.
+
 ## 0.18.6 — Thread & Process Integrity
 
 - Добавлен production Thread Integrity engine внутри `neverguard-sensor.dll`: каждые 500 мс Sensor перечисляет JVM threads через ToolHelp, получает фактический Win32 start address через `NtQueryInformationThread`, проверяет committed executable backing через `VirtualQuery` и допускает thread start только из `MEM_IMAGE`. Старт потока из executable private/mapped memory считается подозрительным runtime transition и завершает JVM fail-closed.

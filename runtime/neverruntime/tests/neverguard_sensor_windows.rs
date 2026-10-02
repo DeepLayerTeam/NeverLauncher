@@ -6,8 +6,9 @@ use neverruntime::{
         authenticate_sensor_or_kill, prepare_sensor_command_with_path,
         NEVERGUARD_SENSOR_PROTOCOL_VERSION,
     },
-    NEVERGUARD_HOOK_ENGINE_VERSION, NEVERGUARD_MEMORY_INTEGRITY_VERSION,
-    NEVERGUARD_MODULE_GUARD_VERSION, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
+    NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION, NEVERGUARD_HOOK_ENGINE_VERSION,
+    NEVERGUARD_MEMORY_INTEGRITY_VERSION, NEVERGUARD_MODULE_GUARD_VERSION,
+    NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
 };
 use std::{
     fs,
@@ -50,6 +51,15 @@ fn thread_probe_path() -> PathBuf {
             .expect("NEVERGUARD_THREAD_PROBE_DLL must point to built neverguard_thread_probe.dll"),
     );
     assert!(probe.is_file(), "thread probe DLL missing: {}", probe.display());
+    probe
+}
+
+fn debug_probe_path() -> PathBuf {
+    let probe = PathBuf::from(
+        std::env::var("NEVERGUARD_DEBUG_PROBE_EXE")
+            .expect("NEVERGUARD_DEBUG_PROBE_EXE must point to built neverguard-debug-probe.exe"),
+    );
+    assert!(probe.is_file(), "debug probe EXE missing: {}", probe.display());
     probe
 }
 
@@ -132,6 +142,26 @@ fn compile_process_tree_probe(javac: &Path, directory: &Path) {
     assert!(status.success(), "Process Tree javac failed: {status}");
 }
 
+fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
+    fs::create_dir_all(directory).expect("create Debug Guard Java probe directory");
+    fs::write(
+        directory.join("DebugBoundaryProbe.java"),
+        r#"public final class DebugBoundaryProbe {
+    public static void main(String[] args) throws Exception {
+        Thread.sleep(15000L);
+    }
+}
+"#,
+    )
+    .expect("write Debug Guard Java probe");
+    let status = std::process::Command::new(javac)
+        .arg("DebugBoundaryProbe.java")
+        .current_dir(directory)
+        .status()
+        .expect("run javac for Debug Guard probe");
+    assert!(status.success(), "Debug Guard javac failed: {status}");
+}
+
 fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
     fs::create_dir_all(directory).expect("create Thread Integrity Java probe directory");
     fs::write(
@@ -207,6 +237,19 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     assert!(!report.module_guard.thread_process_integrity.breakaway_allowed);
     assert_eq!(report.module_guard.thread_process_integrity.thread_set_sha256.len(), 64);
     assert_eq!(report.module_guard.thread_process_integrity.process_tree_sha256.len(), 64);
+    assert_eq!(
+        report.module_guard.debug_instrumentation.version,
+        NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION
+    );
+    assert!(report.module_guard.debug_instrumentation.active);
+    assert!(report.module_guard.debug_instrumentation.healthy);
+    assert!(report.module_guard.debug_instrumentation.attach_mechanism_disabled);
+    assert!(!report.module_guard.debug_instrumentation.debugger_present);
+    assert!(!report.module_guard.debug_instrumentation.remote_debugger_present);
+    assert!(!report.module_guard.debug_instrumentation.debug_port_present);
+    assert!(!report.module_guard.debug_instrumentation.debug_object_present);
+    assert!(report.module_guard.debug_instrumentation.debug_flags_no_debug_inherit);
+    assert_eq!(report.module_guard.debug_instrumentation.state_sha256.len(), 64);
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
@@ -269,6 +312,10 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert_eq!(report.thread_process_integrity.thread_set_sha256.len(), 64);
     assert_eq!(report.thread_process_integrity.thread_origin_set_sha256.len(), 64);
     assert_eq!(report.thread_process_integrity.process_tree_sha256.len(), 64);
+    assert!(report.debug_instrumentation.healthy);
+    assert!(report.debug_instrumentation.attach_mechanism_disabled);
+    assert!(report.debug_instrumentation.integrity_check_count >= 2);
+    assert_eq!(report.debug_instrumentation.state_sha256.len(), 64);
     assert_eq!(report.event_chain_sha256.len(), 64);
     assert_eq!(report.module_set_sha256.len(), 64);
 
@@ -457,3 +504,102 @@ async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_st
     let _ = fs::remove_dir_all(root);
 }
 
+
+
+#[test]
+fn neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable() {
+    let (java, _) = java_tools();
+    let sensor = sensor_path();
+
+    for forbidden in [
+        "-javaagent:C:\\tmp\\agent.jar",
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005",
+        "-agentpath:C:\\tmp\\foreign-agent.dll",
+        "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005",
+        "-Xdebug",
+        "-XX:+StartAttachListener",
+        "-XX:-DisableAttachMechanism",
+    ] {
+        let mut command = Command::new(&java);
+        command.arg(forbidden);
+        let err = match prepare_sensor_command_with_path(&mut command, sensor.clone()) {
+            Ok(_) => panic!("startup instrumentation must be rejected before JVM spawn: {forbidden}"),
+            Err(err) => err,
+        };
+        assert!(
+            err.contains("Debug & Instrumentation Guard rejected"),
+            "unexpected rejection for {forbidden}: {err}"
+        );
+    }
+
+    let mut env_command = Command::new(&java);
+    env_command.env("JAVA_TOOL_OPTIONS", "-javaagent:C:\\tmp\\env-agent.jar -Xmx512m");
+    let err = match prepare_sensor_command_with_path(&mut env_command, sensor.clone()) {
+        Ok(_) => panic!("JAVA_TOOL_OPTIONS instrumentation must be rejected"),
+        Err(err) => err,
+    };
+    assert!(err.contains("JAVA_TOOL_OPTIONS"), "unexpected env rejection: {err}");
+
+    let mut clean = Command::new(java);
+    let _bootstrap = prepare_sensor_command_with_path(&mut clean, sensor)
+        .expect("clean JVM command must be accepted");
+    let args = clean
+        .as_std()
+        .get_args()
+        .map(|arg| arg.to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+    assert!(
+        args.iter().any(|arg| arg == "-XX:+DisableAttachMechanism"),
+        "NeverGuard must enforce DisableAttachMechanism: {args:?}"
+    );
+}
+
+#[tokio::test]
+async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let debugger = debug_probe_path();
+    let root = unique_test_root("debug-attach");
+    let trusted = root.join("trusted");
+    compile_debug_boundary_probe(&javac, &trusted);
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Sensor agentpath");
+    command.arg("-cp").arg(&trusted).arg("DebugBoundaryProbe");
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn Debug Guard Java probe suspended");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let pid = child.id().expect("Debug Guard Java PID");
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("arm Debug & Instrumentation Guard before Java main");
+
+    let mut debugger_child = Command::new(debugger)
+        .arg(pid.to_string())
+        .spawn()
+        .expect("attach adversarial debugger probe");
+    let status = child.wait().await.expect("wait debugger-attached JVM");
+    assert!(!status.success(), "live debugger attach must be fail-closed");
+    let _ = debugger_child.wait().await;
+    sleep(Duration::from_millis(250)).await;
+
+    let report = session.report().module_guard;
+    assert!(!report.healthy, "Module Guard must reflect debugger boundary failure");
+    assert!(!report.debug_instrumentation.healthy);
+    assert!(
+        report.debug_instrumentation.violation_count >= 1,
+        "expected Debug & Instrumentation Guard violation: {report:?}"
+    );
+    assert!(
+        report.debug_instrumentation.last_violation.contains("debugger")
+            || report.last_violation.contains("debugger"),
+        "unexpected Debug Guard violation: {}",
+        report.debug_instrumentation.last_violation
+    );
+
+    let _ = fs::remove_dir_all(root);
+}

@@ -126,11 +126,11 @@ impl ProcessSupervisor {
 
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
+        command.args(&plan.jvm_args);
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
             .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
         command
-            .args(&plan.jvm_args)
             .arg("-cp")
             .arg(join_classpath(&plan.classpath_entries))
             .arg(&plan.main_class)

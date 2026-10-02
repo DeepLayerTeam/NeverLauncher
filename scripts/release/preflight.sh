@@ -110,6 +110,7 @@ run_step neverguard-module-guard-0183 python3 "${ROOT_DIR}/scripts/smoke/offline
 run_step neverguard-aggressive-hook-engine-0184 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py"
 run_step neverguard-memory-integrity-0185 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-memory-integrity-0185.py"
 run_step neverguard-thread-process-integrity-0186 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-thread-process-integrity-0186.py"
+run_step neverguard-debug-instrumentation-0187 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-debug-instrumentation-0187.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

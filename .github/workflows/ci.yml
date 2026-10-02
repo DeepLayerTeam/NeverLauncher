@@ -326,17 +326,21 @@ jobs:
           python scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py
           python scripts/smoke/offline/neverguard-memory-integrity-0185.py
           python scripts/smoke/offline/neverguard-thread-process-integrity-0186.py
+          python scripts/smoke/offline/neverguard-debug-instrumentation-0187.py
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
           cargo fmt --manifest-path runtime/neverguard-sensor/Cargo.toml
           cargo fmt --manifest-path runtime/neverguard-memory-probe/Cargo.toml
           cargo fmt --manifest-path runtime/neverguard-thread-probe/Cargo.toml
+          cargo fmt --manifest-path runtime/neverguard-debug-probe/Cargo.toml
           cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
           cargo build --manifest-path runtime/neverguard-memory-probe/Cargo.toml
           cargo build --manifest-path runtime/neverguard-thread-probe/Cargo.toml
+          cargo build --manifest-path runtime/neverguard-debug-probe/Cargo.toml
           $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path
           $env:NEVERGUARD_MEMORY_PROBE_DLL = (Resolve-Path "runtime/neverguard-memory-probe/target/debug/neverguard_memory_probe.dll").Path
           $env:NEVERGUARD_THREAD_PROBE_DLL = (Resolve-Path "runtime/neverguard-thread-probe/target/debug/neverguard_thread_probe.dll").Path
+          $env:NEVERGUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/neverguard-debug-probe/target/debug/neverguard-debug-probe.exe").Path
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
@@ -347,6 +351,7 @@ jobs:
           cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/neverguard-memory-probe/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/neverguard-thread-probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/neverguard-debug-probe/Cargo.toml --all-targets -- -D warnings
       - name: Unified transactional updater self-test
         shell: pwsh
         run: |

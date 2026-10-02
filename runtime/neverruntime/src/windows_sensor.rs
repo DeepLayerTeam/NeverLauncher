@@ -28,7 +28,7 @@ mod imp {
     use hmac::{Hmac, Mac};
     use rand::{rngs::OsRng, RngCore};
     use sha2::Sha256;
-    use std::{ffi::OsString, path::PathBuf};
+    use std::{ffi::{OsStr, OsString}, path::PathBuf};
     use subtle::ConstantTimeEq;
     use tokio::{
         io::AsyncReadExt,
@@ -43,6 +43,8 @@ mod imp {
     const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v3";
     const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.Sensor.";
     const SENSOR_STARTUP_TIMEOUT_SECS: u64 = 12;
+    const DISABLE_ATTACH_MECHANISM_ARG: &str = "-XX:+DisableAttachMechanism";
+    const JAVA_OPTION_ENV_VARS: [&str; 3] = ["JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS"];
 
     pub struct WindowsSensorBootstrap {
         server: Option<NamedPipeServer>,
@@ -103,10 +105,80 @@ mod imp {
         format!("{SENSOR_PIPE_PREFIX}{}.{}", std::process::id(), hex::encode(nonce))
     }
 
+    fn forbidden_instrumentation_token(value: &str) -> Option<&'static str> {
+        let normalized = value.trim().to_ascii_lowercase();
+        [
+            ("-javaagent:", "-javaagent"),
+            ("-agentlib:", "-agentlib"),
+            ("-agentpath:", "-agentpath"),
+            ("-xrunjdwp:", "-Xrunjdwp:"),
+            ("-xdebug", "-Xdebug"),
+            ("-xx:+startattachlistener", "-XX:+StartAttachListener"),
+            ("-xx:-disableattachmechanism", "-XX:-DisableAttachMechanism"),
+        ]
+        .into_iter()
+        .find_map(|(prefix, label)| normalized.starts_with(prefix).then_some(label))
+    }
+
+    fn java_options_contains_forbidden(value: &OsStr) -> Option<&'static str> {
+        let text = value.to_string_lossy();
+        let mut token = String::new();
+        let mut quoted = false;
+        for ch in text.chars().chain(std::iter::once(' ')) {
+            match ch {
+                '"' => quoted = !quoted,
+                ch if ch.is_whitespace() && !quoted => {
+                    if !token.is_empty() {
+                        if let Some(label) = forbidden_instrumentation_token(&token) {
+                            return Some(label);
+                        }
+                        token.clear();
+                    }
+                }
+                _ => token.push(ch),
+            }
+        }
+        None
+    }
+
+    fn effective_command_env(command: &Command, name: &str) -> Option<OsString> {
+        let mut override_value = None;
+        for (key, value) in command.as_std().get_envs() {
+            if key.to_string_lossy().eq_ignore_ascii_case(name) {
+                override_value = Some(value.map(OsStr::to_os_string));
+            }
+        }
+        match override_value {
+            Some(value) => value,
+            None => std::env::var_os(name),
+        }
+    }
+
+    fn validate_startup_instrumentation_boundary(command: &Command) -> Result<(), String> {
+        for arg in command.as_std().get_args() {
+            if let Some(label) = forbidden_instrumentation_token(&arg.to_string_lossy()) {
+                return Err(format!(
+                    "NeverGuard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
+                ));
+            }
+        }
+        for name in JAVA_OPTION_ENV_VARS {
+            if let Some(value) = effective_command_env(command, name) {
+                if let Some(label) = java_options_contains_forbidden(&value) {
+                    return Err(format!(
+                        "NeverGuard Debug & Instrumentation Guard rejected {label} from {name}"
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn prepare_sensor_command_for_path(
         command: &mut Command,
         sensor_path: PathBuf,
     ) -> Result<WindowsSensorBootstrap, String> {
+        validate_startup_instrumentation_boundary(command)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
             format!("NeverGuard Sensor DLL is unavailable {}: {err}", sensor_path.display())
         })?;
@@ -127,6 +199,7 @@ mod imp {
         let mut agent_arg = OsString::from("-agentpath:");
         agent_arg.push(sensor_path.as_os_str());
         command.arg(agent_arg);
+        command.arg(DISABLE_ATTACH_MECHANISM_ARG);
         command.env(NEVERGUARD_SENSOR_PIPE_ENV, &endpoint);
         command.env(NEVERGUARD_SENSOR_SECRET_ENV, hex::encode(secret));
 
