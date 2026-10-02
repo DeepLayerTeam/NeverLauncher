@@ -409,7 +409,7 @@ func runtimeMatrix740() map[string]any {
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
-		"status":        "minecraft-compatibility-release",
+		"status":        "loader-compatibility-ga",
 		"title":         "NeverLauncher " + version + " Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
@@ -439,9 +439,10 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "NeoForge Compatibility II 1.20.1 through 26.2 processor actual-client grid", "status": "implemented"},
 			{"feature": "loader resolution lock with upstream/payload/runtime-profile SHA-256 replay", "status": "implemented"},
 			{"feature": "cross-platform Fabric/Quilt/Forge/NeoForge clients on Windows/Linux/macOS x64/ARM64 with native-tree verification", "status": "implemented"},
+			{"feature": "Loader Compatibility GA runtime support enforcement for Fabric/Quilt/Forge/NeoForge + Forge 1.7.10/1.12.2 legacy", "status": "implemented"},
 		},
 		"materializersReady":  []string{"vanilla", "fabric", "quilt", "forge-modern", "forge-legacy-1.12.2", "forge-legacy-1.7.10", "neoforge", "managed-java-temurin"},
-		"certificationModel":  "minecraft-compatibility-ii-ga+vanilla-baseline-ii+legacy-vanilla-java8-release-lines+pre17-legacy-vanilla+java16-17-vanilla-release-lines+java21-vanilla-release-lines+java25-26.x-release-lines+cross-platform-vanilla+actual-client-e2e-ii+compatibility-hardening+certified-jre-binary-base+neoforge-compatibility-ii+loader-resolution-pinning+loader-native-e2e+cross-platform-loaders",
+		"certificationModel":  "loader-compatibility-ga-0.18.0+fabric+quilt+forge-modern+forge-legacy-1.7.10+forge-legacy-1.12.2+neoforge+immutable-pinning+loader-native-e2e+cross-platform+hardening+full-release-certificate",
 		"javaMajors":          []int{8, 16, 17, 21, 25},
 		"managedJavaMajors":   managedJavaIIMajors0165(),
 		"managedJavaMode":     "temurin-latest-ga+historical-feature-release-fallback+bounded-retry+sha256+java-binary-sha256+quarantine+atomic-install+java-version",
@@ -449,7 +450,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "loader-resolution-lock-sha256", "upstream-resolution-source-sha256", "reproducibility-sha256", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "loader-native-tree-sha256", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.7.10"},
-		"note":                "0.17.10 добавляет production Loader Hardening: pinned Fabric/Quilt profiles и Forge/NeoForge installers восстанавливаются из content-addressed SHA-256 cache без mutable upstream; processor journal безопасно продолжает interrupted installs. Cross-platform 0.17.9 certification остаётся обязательной regression-базой.",
+		"note":                "0.18.0 переводит Fabric/Quilt/Forge/NeoForge и сертифицированные Forge legacy 1.7.10/1.12.2 в GA: materializers fail-closed отклоняют комбинации вне exact certified runtime surface, а release certificate криптографически связывает этот executable policy с полным 292-target evidence.",
 	}
 }
 
@@ -462,9 +463,9 @@ func runtimeMetadataPolicy740() map[string]any {
 			{"source": "version.json", "trust": "required", "validation": []string{"id", "mainClass", "downloads.client", "libraries", "arguments or minecraftArguments"}},
 			{"source": "asset index", "trust": "required-for-full-assets", "validation": []string{"objects hash", "objects size", "object path prefix"}},
 			{"source": "Fabric/Quilt metadata", "trust": "official-meta-then-never-pinned", "validation": []string{"minecraft compatibility", "concrete loaderVersion", "inheritsFrom", "mainClass", "selected loader artifact", "Maven SHA-1", "normalized profile SHA-256"}},
-			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "legacy V1 universal installer for Forge 1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
+			{"source": "Forge/NeoForge installer.jar", "trust": "official-maven-then-never-pinned", "validation": []string{"installer SHA-1", "legacy V1 universal installer for Forge 1.7.10/1.12.2", "processor-based install_profile (Forge 1.13.2+ / NeoForge)", "Minecraft match", "embedded Maven paths", "processor Main-Class", "processor outputs", "normalized runtime libraries"}},
 		},
-		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "Range recovery requires final pinned checksum", "corrupt cache quarantined", "latest/snapshot stale metadata fallback denied", "native zip extraction bounded", "generated natives transactionally published", "remote URL credentials/fragments denied", "hash fields preserved", "signed manifest layer remains outside resolver"},
+		"security": []string{"path traversal denied", "symlink components denied", "concurrent materialization locked", "transient upstream retry bounded", "Range recovery requires final pinned checksum", "corrupt cache quarantined", "latest/snapshot stale metadata fallback denied", "native zip extraction bounded", "generated natives transactionally published", "remote URL credentials/fragments denied", "hash fields preserved", "signed manifest layer remains outside resolver", "Loader Compatibility GA exact support surface enforced before loader install"},
 	}
 }
 

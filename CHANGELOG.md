@@ -1,3 +1,11 @@
+## 0.18.0 — Loader Compatibility GA
+
+- Promoted Fabric, Quilt, Forge, NeoForge and the certified Forge legacy paths (1.7.10 and 1.12.2) from release-certificate RC to runtime-enforced GA. Production materializer parsers reject concrete Minecraft/loader combinations outside the exact certified support surface before loader upstream/install access; `latest-release` is rechecked after Mojang resolution.
+- Added a single executable GA support policy shared by Fabric/Quilt and Forge/NeoForge materializers. The policy binds 163 unique loader/Minecraft lines to the exact certified Java major and install mode, including LaunchWrapper/FML legacy and processor-based modern installers.
+- `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json` is now `ga-certified` for 0.18.0 and binds the executable support-policy SHA-256, 163 support entries, legacy Forge versions, all 292/292 release targets and the existing immutable pinning/native-E2E/cross-platform/hardening invariants.
+- `RELEASE_MANIFEST.json` records `loaderCompatibilityGA=true` plus the GA support-policy SHA-256. `release publish-check` fail-closes on certificate hash drift, runtime support hash drift, missing GA invariants or a non-GA certificate.
+- Public loader capability output now reports the exact GA Minecraft versions, Java majors, install modes, legacy coverage and support-policy SHA-256 instead of the obsolete generic Java 17/21 constraint. Added mandatory 0.18.0 CI/preflight/repository-policy gates and GA drift regressions.
+
 ## 0.17.11 — Loader Compatibility RC
 
 - Added `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json`: a complete release certificate derived from the exact embedded compatibility targets, aggregate matrix and `COMPATIBILITY_CERTIFICATION.json`.

@@ -2670,6 +2670,46 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "loader-compatibility-rc-01711.py" not in preflight or "loader-compatibility-rc-01711.py" not in ci:
         fail("0.17.11 Loader Compatibility RC gate is not wired into preflight/CI")
 
+
+# 0.18.0 Loader Compatibility GA turns the RC evidence into an executable,
+# fail-closed runtime support surface and binds that exact policy into publish-check.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 0):
+    ga_runtime_0180 = read("cli/cmd/neverlauncher/loader_ga.go")
+    ga_meta_0180 = read("cli/cmd/neverlauncher/loader_runtime.go")
+    ga_forge_0180 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    ga_cert_0180 = read("cli/cmd/neverlauncher/compatibility_release_certificate.go")
+    ga_release_0180 = read("cli/cmd/neverlauncher/release_commands.go")
+    ga_ops_0180 = read("cli/cmd/neverlauncher/operations_commands.go")
+    ga_workflow_0180 = read(".github/workflows/production-release-candidate.yml")
+    ga_tests_0180 = read("cli/cmd/neverlauncher/loader_ga_test.go") + read("cli/cmd/neverlauncher/compatibility_release_certificate_test.go")
+    ga_gate_0180 = read("scripts/smoke/offline/loader-compatibility-ga-0180.py")
+    for required in ["loaderGASupport0180", "enforceLoaderGASupport0180", "validateLoaderGASupportPolicy0180", "loaderGASupportSHA2560180", "forgeLegacy1710_0175", "forgeLegacy1122_0174"]:
+        if required not in ga_runtime_0180:
+            fail(f"0.18.0 executable loader GA support incomplete: {required}")
+    for name, body in [("Fabric/Quilt", ga_meta_0180), ("Forge/NeoForge", ga_forge_0180)]:
+        for required in ["EnforceGASupport", "enforceLoaderGASupport0180", "compatibilityLoaderGA0180Required(version)"]:
+            if required not in body:
+                fail(f"0.18.0 {name} runtime GA enforcement incomplete: {required}")
+    for required in ["ga-certified", "RuntimeSupportSHA256", "RuntimeSupportEntries", "LegacyForgeVersions", "gaRuntimeSupportEnforced", "legacyForgeGA", "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle"]:
+        if required not in ga_cert_0180:
+            fail(f"0.18.0 GA release certificate incomplete: {required}")
+    for required in ["loaderCompatibilityGA", "loaderCompatibilityGASupportSha256", "Loader Compatibility GA 0.18.0", "loaderGASupportSHA2560180"]:
+        if required not in ga_release_0180:
+            fail(f"0.18.0 GA publish enforcement incomplete: {required}")
+    for required in ["ga-certified", "runtimeEnforced", "supportSha256", "legacyMinecraftVersions"]:
+        if required not in ga_ops_0180:
+            fail(f"0.18.0 public loader GA capability incomplete: {required}")
+    for required in ['status == "ga-certified"', "loaderCompatibilityGA == true", "loaderCompatibilityGASupportSha256"]:
+        if required not in ga_workflow_0180:
+            fail(f"0.18.0 production GA assertion incomplete: {required}")
+    for required in ["TestLoaderGASupport0180ExactCertifiedSurface", "TestLoaderGASupport0180RejectsJavaDrift", "TestLoaderGA0180ProductionParsersEnableRuntimeGuard", "TestLoaderCompatibilityGA0180CertificateBindsRuntimeSupport", "TestLoaderCompatibilityGA0180RejectsCertifiedRuntimeSurfaceDrift"]:
+        if required not in ga_tests_0180:
+            fail(f"0.18.0 GA regression test missing: {required}")
+    if "Loader Compatibility GA 0.18.0 gate: OK" not in ga_gate_0180:
+        fail("0.18.0 mandatory Loader Compatibility GA gate incomplete")
+    if "loader-compatibility-ga-0180.py" not in preflight or "loader-compatibility-ga-0180.py" not in ci:
+        fail("0.18.0 Loader Compatibility GA gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

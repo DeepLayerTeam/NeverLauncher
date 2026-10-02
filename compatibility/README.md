@@ -1,5 +1,11 @@
 # Minecraft compatibility
 
+## Loader Compatibility GA — 0.18.0
+
+NeverLauncher 0.18.0 переводит Fabric/Quilt/Forge/NeoForge compatibility в GA как исполняемую runtime-гарантию, а не только release certificate. Production materializers используют тот же support policy, который связан с release certificate: Fabric и Quilt — 48 сертифицированных Minecraft-линий каждая, Forge — 43 modern + legacy 1.7.10/1.12.2, NeoForge — 22 линии. Всего policy содержит 163 уникальные loader/Minecraft комбинации с exact Java major и install mode.
+
+Конкретная версия Minecraft вне GA surface отклоняется до обращения к loader Meta/Maven/installer. `latest-release` сначала разрешается через Mojang, затем полученная версия повторно проверяется fail-closed. `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json` для 0.18.0 имеет `status=ga-certified`, хранит `runtimeSupportSha256`, `runtimeSupportEntries=163` и legacy Forge binding; `RELEASE_MANIFEST.json` повторяет support SHA, а `release publish-check` требует совпадения с исполняемой policy текущего CLI. Полный 292-target evidence, immutable pinning, loader-native E2E, cross-platform execution и hardening остаются обязательными.
+
 ## Loader Compatibility RC — 0.17.11
 
 NeverLauncher 0.17.11 формирует `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json` из точного release-bound набора `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json` и `COMPATIBILITY_CERTIFICATION.json`. Это не декларативный manifest: сборка fail-closed останавливается, если не прошли все 292 required targets или невозможно детерминированно пересчитать полный root всего target evidence.

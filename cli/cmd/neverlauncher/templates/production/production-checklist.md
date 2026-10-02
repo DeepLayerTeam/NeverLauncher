@@ -67,6 +67,7 @@
 - [ ] Подготовлены `RELEASE_MANIFEST.json`, `SHA256SUMS`, `SHA256SUMS.sig`, `SBOM.spdx.json` и `PROVENANCE.json`.
 - [ ] Для Minecraft Compatibility Release и новее в bundle присутствуют `COMPATIBILITY_TARGETS.json`, `COMPATIBILITY_MATRIX.json`, `COMPATIBILITY_CERTIFICATION.json`, привязанные к exact source commit.
 - [ ] Для 0.17.11+ bundle также содержит `LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json`: 292/292 targets, полный evidence root, family/platform/Java coverage и все RC invariants валидны; его SHA-256 совпадает с `RELEASE_MANIFEST.json` и входит в signed `SHA256SUMS`.
+- [ ] Для 0.18.0+ loader certificate имеет `status=ga-certified`, `runtimeSupportEntries=163`, exact legacy Forge `[1.7.10, 1.12.2]`; `RELEASE_MANIFEST.json` содержит `loaderCompatibilityGA=true` и совпадающий `loaderCompatibilityGASupportSha256`, а `nl release publish-check` пересчитывает GA policy binding.
 - [ ] Для 0.13.9+ в bundle присутствуют `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json`; matrix содержит PASS Linux/Windows/macOS для exact commit/run, а bundle содержит именно сертифицированные platform artifacts.
 - [ ] Для 0.13.10+ каждый Guard target result дополнительно совпадает с aggregate matrix по `repository`; evidence из другого fork не принимается.
 - [ ] `nl release verify <release-dir> --public-key <trusted-public-key>` проходит успешно и все `required=true` artifacts имеют `status=present`.

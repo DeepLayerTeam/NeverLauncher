@@ -182,3 +182,104 @@ func TestLoaderCompatibilityReleaseCertificate01711IsRequiredReleaseEntryAndChec
 		t.Fatal("full RC is missing from SHA256SUMS inputs")
 	}
 }
+
+func TestLoaderCompatibilityGA0180CertificateBindsRuntimeSupport(t *testing.T) {
+	dir := t.TempDir()
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.18.0", "commit-180")
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.18.0", "commit-180"); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.18.0"); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(bundle, loaderCompatibilityReleaseCertificateFile01711))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert loaderCompatibilityReleaseCertificate01711
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	if cert.Status != "ga-certified" || cert.ReleaseStage != "ga" {
+		t.Fatalf("unexpected GA status/stage: %s/%s", cert.Status, cert.ReleaseStage)
+	}
+	if cert.RuntimeSupportEntries != 163 || cert.RuntimeSupportSHA256 != loaderGASupportSHA2560180() {
+		t.Fatalf("GA runtime support binding mismatch: entries=%d sha=%s", cert.RuntimeSupportEntries, cert.RuntimeSupportSHA256)
+	}
+	if strings.Join(cert.LegacyForgeVersions, ",") != "1.7.10,1.12.2" {
+		t.Fatalf("legacy Forge GA mismatch: %v", cert.LegacyForgeVersions)
+	}
+	if !cert.Invariants["gaRuntimeSupportEnforced"] || !cert.Invariants["legacyForgeGA"] {
+		t.Fatalf("GA invariants missing: %+v", cert.Invariants)
+	}
+	if cert.Policy != "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle" {
+		t.Fatalf("unexpected GA policy %s", cert.Policy)
+	}
+}
+
+func TestLoaderCompatibilityGA0180RejectsCertifiedRuntimeSurfaceDrift(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.18.0", "commit-180")
+	var targets releaseCompatibilityTargets
+	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
+		t.Fatal(err)
+	}
+	for i := range targets.Targets {
+		if targets.Targets[i].Loader == "forge" && targets.Targets[i].Minecraft == "1.12.2" {
+			targets.Targets[i].Minecraft = "1.12.1"
+			break
+		}
+	}
+	targetsRaw, _ = json.Marshal(targets)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.18.0", "commit-180"); err == nil {
+		t.Fatal("GA compatibility evidence must reject legacy Forge support drift")
+	}
+}
+
+func TestLoaderCompatibilityGA0180RejectsTamperedRuntimeSupportHash(t *testing.T) {
+	dir := t.TempDir()
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.18.0", "commit-180")
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.18.0", "commit-180"); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(bundle, loaderCompatibilityReleaseCertificateFile01711)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert loaderCompatibilityReleaseCertificate01711
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	cert.RuntimeSupportSHA256 = strings.Repeat("a", 64)
+	raw, _ = json.MarshalIndent(cert, "", "  ")
+	if err := os.WriteFile(path, append(raw, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.18.0"); err == nil {
+		t.Fatal("tampered GA runtime support hash must fail closed")
+	}
+}

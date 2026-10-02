@@ -52,6 +52,10 @@ type loaderCompatibilityReleaseCertificate01711 struct {
 	TargetsSHA256                    string                                        `json:"targetsSha256"`
 	EvidenceRootSHA256               string                                        `json:"evidenceRootSha256"`
 	CertificateID                    string                                        `json:"certificateId"`
+	ReleaseStage                     string                                        `json:"releaseStage,omitempty"`
+	RuntimeSupportSHA256             string                                        `json:"runtimeSupportSha256,omitempty"`
+	RuntimeSupportEntries            int                                           `json:"runtimeSupportEntries,omitempty"`
+	LegacyForgeVersions              []string                                      `json:"legacyForgeVersions,omitempty"`
 	RequiredTargetCount              int                                           `json:"requiredTargetCount"`
 	PassedTargetCount                int                                           `json:"passedTargetCount"`
 	LoaderFamilies                   []loaderCompatibilityFamilyCertificate01711   `json:"loaderFamilies"`
@@ -75,6 +79,10 @@ type loaderCompatibilityReleaseCertificateIdentity01711 struct {
 	MatrixSHA256                     string                                        `json:"matrixSha256"`
 	TargetsSHA256                    string                                        `json:"targetsSha256"`
 	EvidenceRootSHA256               string                                        `json:"evidenceRootSha256"`
+	ReleaseStage                     string                                        `json:"releaseStage,omitempty"`
+	RuntimeSupportSHA256             string                                        `json:"runtimeSupportSha256,omitempty"`
+	RuntimeSupportEntries            int                                           `json:"runtimeSupportEntries,omitempty"`
+	LegacyForgeVersions              []string                                      `json:"legacyForgeVersions,omitempty"`
 	RequiredTargetCount              int                                           `json:"requiredTargetCount"`
 	PassedTargetCount                int                                           `json:"passedTargetCount"`
 	LoaderFamilies                   []loaderCompatibilityFamilyCertificate01711   `json:"loaderFamilies"`
@@ -272,11 +280,42 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 		}
 	}
 
+	status := "certified"
+	policy := "loader-compatibility-rc-0.17.11-full-release-certificate-all-292-targets-evidence-root-signed-bundle"
+	releaseStage := ""
+	runtimeSupportSHA256 := ""
+	runtimeSupportEntries := 0
+	var legacyForgeVersions []string
+	if compatibilityLoaderGA0180Required(certification.ProductVersion) {
+		if err := validateLoaderGASupportPolicy0180(); err != nil {
+			return loaderCompatibilityReleaseCertificate01711{}, err
+		}
+		familyVersions := map[string][]string{}
+		for _, family := range families {
+			familyVersions[family.Loader] = family.MinecraftVersions
+		}
+		for _, loader := range []string{"fabric", "quilt", "forge", "neoforge"} {
+			want := loaderGAVersions0180(loader)
+			got := familyVersions[loader]
+			if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
+				return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Loader Compatibility GA 0.18.0 %s runtime support/certified evidence mismatch: got=%v want=%v", loader, got, want)
+			}
+		}
+		status = "ga-certified"
+		policy = "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle"
+		releaseStage = "ga"
+		runtimeSupportSHA256 = loaderGASupportSHA2560180()
+		runtimeSupportEntries = len(loaderGASupportEntries0180())
+		legacyForgeVersions = []string{"1.7.10", "1.12.2"}
+		invariants["gaRuntimeSupportEnforced"] = true
+		invariants["legacyForgeGA"] = true
+	}
+
 	cert := loaderCompatibilityReleaseCertificate01711{
 		SchemaVersion:                    "1.0",
 		Kind:                             loaderCompatibilityReleaseCertificateKind01711,
 		ProductVersion:                   certification.ProductVersion,
-		Status:                           "certified",
+		Status:                           status,
 		CertifiedAt:                      certification.CertifiedAt,
 		Repository:                       certification.Repository,
 		Commit:                           certification.Commit,
@@ -292,13 +331,18 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 		JavaMajors:                       append([]int(nil), certification.JavaMajors...),
 		Scopes:                           append([]string(nil), certification.Scopes...),
 		Invariants:                       invariants,
-		Policy:                           "loader-compatibility-rc-0.17.11-full-release-certificate-all-292-targets-evidence-root-signed-bundle",
+		Policy:                           policy,
+		ReleaseStage:                     releaseStage,
+		RuntimeSupportSHA256:             runtimeSupportSHA256,
+		RuntimeSupportEntries:            runtimeSupportEntries,
+		LegacyForgeVersions:              legacyForgeVersions,
 	}
 	identity := loaderCompatibilityReleaseCertificateIdentity01711{
 		SchemaVersion: cert.SchemaVersion, Kind: cert.Kind, ProductVersion: cert.ProductVersion, Status: cert.Status,
 		CertifiedAt: cert.CertifiedAt, Repository: cert.Repository, Commit: cert.Commit, RunID: cert.RunID,
 		CompatibilityCertificationSHA256: cert.CompatibilityCertificationSHA256, MatrixSHA256: cert.MatrixSHA256,
 		TargetsSHA256: cert.TargetsSHA256, EvidenceRootSHA256: cert.EvidenceRootSHA256,
+		ReleaseStage: cert.ReleaseStage, RuntimeSupportSHA256: cert.RuntimeSupportSHA256, RuntimeSupportEntries: cert.RuntimeSupportEntries, LegacyForgeVersions: cert.LegacyForgeVersions,
 		RequiredTargetCount: cert.RequiredTargetCount, PassedTargetCount: cert.PassedTargetCount,
 		LoaderFamilies: cert.LoaderFamilies, Platforms: cert.Platforms, JavaMajors: cert.JavaMajors, Scopes: cert.Scopes,
 		Invariants: cert.Invariants, Policy: cert.Policy,

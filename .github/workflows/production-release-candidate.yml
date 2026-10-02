@@ -174,8 +174,8 @@ jobs:
           test -s "${DIR}/COMPATIBILITY_MATRIX.json"
           test -s "${DIR}/COMPATIBILITY_CERTIFICATION.json"
           test -s "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json"
-          jq -e '.status == "certified" and .requiredTargetCount == 292 and .passedTargetCount == 292 and (.certificateId | startswith("sha256:"))' "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json" >/dev/null
-          jq -e '.loaderCompatibilityReleaseCertified == true and (.loaderCompatibilityReleaseCertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
+          jq -e '.status == "ga-certified" and .releaseStage == "ga" and .requiredTargetCount == 292 and .passedTargetCount == 292 and .runtimeSupportEntries == 163 and (.runtimeSupportSha256 | length == 64) and (.legacyForgeVersions == ["1.7.10","1.12.2"]) and .invariants.gaRuntimeSupportEnforced == true and .invariants.legacyForgeGA == true and (.certificateId | startswith("sha256:"))' "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json" >/dev/null
+          jq -e '.loaderCompatibilityReleaseCertified == true and .loaderCompatibilityGA == true and (.loaderCompatibilityReleaseCertificateSha256 | length == 64) and (.loaderCompatibilityGASupportSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
           test -s "${DIR}/neverguard-linux-amd64"

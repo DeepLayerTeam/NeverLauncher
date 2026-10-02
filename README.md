@@ -353,6 +353,8 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
 
 ## Minecraft Compatibility Release
 
+NeverLauncher **0.18.0 Loader Compatibility GA** fail-closed ограничивает production materializers точным сертифицированным support surface: Fabric/Quilt 1.14–26.3 по зафиксированным release IDs, Forge modern 1.13.2–26.3 по сертифицированным IDs плюс реальные legacy 1.7.10/1.12.2, NeoForge 1.20.1–26.2. Для каждой комбинации проверяется exact Java major; версии вне GA surface не запускают loader install.
+
 - exclusive materialization lock на каждый `clientDir` для Vanilla/Fabric/Quilt/Forge/NeoForge;
 - retry transient HTTP `408/425/429/5xx` и bounded `Retry-After`;
 - запрет symlink-компонентов внутри materialized client tree и symlink artifacts при package build;
@@ -366,7 +368,7 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
 
 ### Release-bound compatibility certification
 
-Официальный publish flow использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml`. Для 0.17.11 release bundle содержит четыре обязательных compatibility-файла:
+Официальный publish flow использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml`. Для 0.18.0 GA release bundle содержит четыре обязательных compatibility-файла:
 
 ```text
 COMPATIBILITY_TARGETS.json
@@ -375,7 +377,7 @@ COMPATIBILITY_CERTIFICATION.json
 LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json
 ```
 
-Базовый certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Loader Compatibility RC дополнительно строит единый SHA-256 evidence root всех 292 targets, фиксирует family/platform/Java/scopes и обязательные pinning/native-E2E/cross-platform/hardening invariants. RC SHA-256 записывается в `RELEASE_MANIFEST.json`; все четыре файла входят в `SHA256SUMS` и защищены общей Ed25519 release signature.
+Базовый certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Loader Compatibility GA строит единый SHA-256 evidence root всех 292 targets, фиксирует family/platform/Java/scopes и обязательные pinning/native-E2E/cross-platform/hardening invariants. Дополнительно сертификат связывает SHA-256 исполняемого GA support policy (163 loader/Minecraft линии, включая Forge legacy 1.7.10/1.12.2). `RELEASE_MANIFEST.json` требует `loaderCompatibilityGA=true` и совпадающий support SHA; все четыре файла входят в `SHA256SUMS` и защищены общей Ed25519 release signature.
 
 Сборка сертифицированного bundle:
 

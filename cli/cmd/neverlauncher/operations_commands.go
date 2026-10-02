@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -154,10 +155,10 @@ func handleLoader(args []string) error {
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
 		{"id": "vanilla", "title": "Vanilla", "status": "stable", "installer": "mojang-version-manifest", "runtime": "builtin", "metadata": "version.json"},
-		{"id": "fabric", "title": "Fabric", "status": "production-materializer", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "официальный Fabric Meta profile"},
-		{"id": "forge", "title": "Forge", "status": "production-materializer", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
-		{"id": "neoforge", "title": "NeoForge", "status": "production-materializer", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
-		{"id": "quilt", "title": "Quilt", "status": "production-materializer", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "официальный Quilt Meta profile"},
+		{"id": "fabric", "title": "Fabric", "status": "ga-certified", "installer": "fabric-meta", "runtime": "compatibility-engine", "metadata": "официальный Fabric Meta profile"},
+		{"id": "forge", "title": "Forge", "status": "ga-certified", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
+		{"id": "neoforge", "title": "NeoForge", "status": "ga-certified", "installer": "official-maven-installer", "runtime": "compatibility-engine", "metadata": "installer.jar + install_profile.json + version.json"},
+		{"id": "quilt", "title": "Quilt", "status": "ga-certified", "installer": "quilt-meta", "runtime": "compatibility-engine", "metadata": "официальный Quilt Meta profile"},
 	}
 }
 
@@ -438,13 +439,57 @@ func loaderChecks(loader string) []string {
 }
 
 func loaderCompatibility(loader string) map[string]any {
+	loader = strings.ToLower(strings.TrimSpace(loader))
+	if loader == "vanilla" {
+		return map[string]any{
+			"status":                 "stable",
+			"java":                   []int{8, 16, 17, 21, 25},
+			"minecraftRange":         "Mojang release metadata validated by the Vanilla compatibility engine",
+			"requiresInstallerMerge": false,
+			"supportsOptionalMods":   false,
+			"profileFields":          []string{"minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
+			"metadataInputs":         []string{"--version-json", "--asset-index"},
+		}
+	}
+	entries := loaderGASupportEntries0180()
+	javaSet := map[int]bool{}
+	versions := []string{}
+	installModes := map[string]bool{}
+	legacy := []string{}
+	for _, entry := range entries {
+		if entry.Loader != loader {
+			continue
+		}
+		javaSet[entry.JavaMajor] = true
+		versions = append(versions, entry.MinecraftVersion)
+		installModes[entry.InstallMode] = true
+		if entry.Legacy {
+			legacy = append(legacy, entry.MinecraftVersion)
+		}
+	}
+	javas := make([]int, 0, len(javaSet))
+	for major := range javaSet {
+		javas = append(javas, major)
+	}
+	sort.Ints(javas)
+	modes := make([]string, 0, len(installModes))
+	for mode := range installModes {
+		modes = append(modes, mode)
+	}
+	sort.Strings(modes)
 	return map[string]any{
-		"java":                   []int{17, 21},
-		"minecraftRange":         "Fabric/Quilt по официальному Meta API; Forge processor-based installers 1.13+; NeoForge processor-based installers; legacy Forge pre-1.13 пока вне текущего compatibility release",
-		"requiresInstallerMerge": loader == "forge" || loader == "neoforge",
-		"supportsOptionalMods":   loader != "vanilla",
-		"profileFields":          []string{"loader", "loaderVersion", "minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
-		"metadataInputs":         []string{"--version-json", "--metadata", "--installer-profile", "--asset-index", "runtime forge/neoforge: official installer.jar + Maven metadata"},
+		"status":                  "ga-certified",
+		"gaBaseline":              "0.18.0",
+		"java":                    javas,
+		"minecraftVersions":       versions,
+		"legacyMinecraftVersions": legacy,
+		"runtimeEnforced":         true,
+		"supportSha256":           loaderGASupportSHA2560180(),
+		"installModes":            modes,
+		"requiresInstallerMerge":  loader == "forge" || loader == "neoforge",
+		"supportsOptionalMods":    true,
+		"profileFields":           []string{"loader", "loaderVersion", "minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
+		"metadataInputs":          []string{"--version-json", "--metadata", "--installer-profile", "--asset-index", "runtime forge/neoforge: official installer.jar + Maven metadata"},
 	}
 }
 

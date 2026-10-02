@@ -50,6 +50,7 @@ type forgeMaterializeOptions struct {
 	ResolutionSourceSHA256 string
 	ProcessorTimeout       time.Duration
 	LoaderCacheOnly        bool
+	EnforceGASupport       bool
 	HTTPClient             *http.Client
 }
 
@@ -255,6 +256,11 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		return forgeMaterializeOptions{}, fmt.Errorf("installer loader %s не поддерживается", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
+	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
+		if _, err := enforceLoaderGASupport0180(loader, minecraftVersion, 0); err != nil {
+			return forgeMaterializeOptions{}, err
+		}
+	}
 	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", loader, minecraftVersion))
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
@@ -286,6 +292,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 		ProcessorTimeout:   timeout,
 		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
+		EnforceGASupport:   true,
 	}, nil
 }
 
@@ -317,6 +324,11 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	})
 	if err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
+	}
+	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
+		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
+			return forgeMaterializeResult{}, err
+		}
 	}
 
 	lockPath := opts.ResolutionLockPath

@@ -35,6 +35,7 @@ type loaderMaterializeOptions struct {
 	StrictUpstream     bool
 	ResolutionLockPath string
 	LoaderCacheOnly    bool
+	EnforceGASupport   bool
 	HTTPClient         *http.Client
 }
 
@@ -179,6 +180,11 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 		return loaderMaterializeOptions{}, fmt.Errorf("meta loader %s не поддерживается", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
+	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
+		if _, err := enforceLoaderGASupport0180(loader, minecraftVersion, 0); err != nil {
+			return loaderMaterializeOptions{}, err
+		}
+	}
 	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", loader, minecraftVersion))
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
@@ -206,6 +212,7 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
+		EnforceGASupport:   true,
 	}, nil
 }
 
@@ -251,6 +258,11 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	})
 	if err != nil {
 		return loaderMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
+	}
+	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
+		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
+			return loaderMaterializeResult{}, err
+		}
 	}
 
 	lockPath := opts.ResolutionLockPath

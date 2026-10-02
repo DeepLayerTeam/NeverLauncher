@@ -653,6 +653,8 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	compatibilityCertified := false
 	loaderCompatibilityReleaseCertified := false
 	loaderCompatibilityReleaseCertificateSHA256 := ""
+	loaderCompatibilityGA := false
+	loaderCompatibilityGASupportSHA256 := ""
 	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
 		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
 		checks = append(checks, "minecraft-compatibility-certification")
@@ -675,6 +677,22 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			requiredFiles = append(requiredFiles, loaderCompatibilityReleaseCertificateFile01711)
 			checks = append(checks, "loader-compatibility-rc-full-release-certificate")
 			loaderCompatibilityReleaseCertified = true
+			if compatibilityLoaderGA0180Required(ver) {
+				raw, err := os.ReadFile(certificatePath)
+				if err != nil {
+					return err
+				}
+				var ga loaderCompatibilityReleaseCertificate01711
+				if err := json.Unmarshal(raw, &ga); err != nil {
+					return fmt.Errorf("Loader Compatibility GA certificate invalid: %w", err)
+				}
+				if ga.Status != "ga-certified" || ga.ReleaseStage != "ga" || ga.RuntimeSupportEntries != len(loaderGASupportEntries0180()) || !compatibilitySHA256RE.MatchString(ga.RuntimeSupportSHA256) || !strings.EqualFold(ga.RuntimeSupportSHA256, loaderGASupportSHA2560180()) || !ga.Invariants["gaRuntimeSupportEnforced"] || !ga.Invariants["legacyForgeGA"] {
+					return errors.New("Loader Compatibility GA 0.18.0 certificate/runtime support binding invalid")
+				}
+				loaderCompatibilityGA = true
+				loaderCompatibilityGASupportSHA256 = ga.RuntimeSupportSHA256
+				checks = append(checks, "loader-compatibility-ga-runtime-enforced")
+			}
 		}
 		compatibilityCertified = true
 	}
@@ -701,11 +719,15 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"requiredFiles":                       requiredFiles,
 		"compatibilityCertified":              compatibilityCertified,
 		"loaderCompatibilityReleaseCertified": loaderCompatibilityReleaseCertified,
+		"loaderCompatibilityGA":               loaderCompatibilityGA,
 		"deviceTrustCertified":                deviceTrustCertified,
 		"guardCICertified":                    guardCICertified,
 	}
 	if loaderCompatibilityReleaseCertified {
 		manifest["loaderCompatibilityReleaseCertificateSha256"] = loaderCompatibilityReleaseCertificateSHA256
+	}
+	if loaderCompatibilityGA {
+		manifest["loaderCompatibilityGASupportSha256"] = loaderCompatibilityGASupportSHA256
 	}
 	if productionReleaseCandidateRequired01511(ver) {
 		commit, err := normalizeSourceCommit01511(expectedCommit)
@@ -826,12 +848,16 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		return err
 	}
 	var manifest struct {
-		Version                         string `json:"version"`
-		SourceCommit                    string `json:"sourceCommit"`
-		Channel                         string `json:"channel"`
-		ReleaseStatus                   string `json:"releaseStatus"`
-		ProductionDeliveryReleaseSHA256 string `json:"productionDeliveryReleaseSha256"`
-		Artifacts                       []struct {
+		Version                                     string `json:"version"`
+		SourceCommit                                string `json:"sourceCommit"`
+		Channel                                     string `json:"channel"`
+		ReleaseStatus                               string `json:"releaseStatus"`
+		ProductionDeliveryReleaseSHA256             string `json:"productionDeliveryReleaseSha256"`
+		LoaderCompatibilityReleaseCertified         bool   `json:"loaderCompatibilityReleaseCertified"`
+		LoaderCompatibilityReleaseCertificateSHA256 string `json:"loaderCompatibilityReleaseCertificateSha256"`
+		LoaderCompatibilityGA                       bool   `json:"loaderCompatibilityGA"`
+		LoaderCompatibilityGASupportSHA256          string `json:"loaderCompatibilityGASupportSha256"`
+		Artifacts                                   []struct {
 			Name     string `json:"name"`
 			Required bool   `json:"required"`
 			Status   string `json:"status"`
@@ -912,6 +938,25 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 		if err := verifyProductionDeliveryRelease0160(dir, manifest.Version, true); err != nil {
 			return fmt.Errorf("Production Delivery Release certification: %w", err)
+		}
+	}
+	if compatibilityLoaderGA0180Required(manifest.Version) {
+		if !manifest.LoaderCompatibilityReleaseCertified || !manifest.LoaderCompatibilityGA {
+			return errors.New("RELEASE_MANIFEST is not Loader Compatibility GA certified")
+		}
+		certificatePath := filepath.Join(dir, loaderCompatibilityReleaseCertificateFile01711)
+		actualCertHash, _, err := hashFile(certificatePath)
+		if err != nil {
+			return err
+		}
+		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityReleaseCertificateSHA256)) || !strings.EqualFold(actualCertHash, manifest.LoaderCompatibilityReleaseCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Loader Compatibility GA certificate hash mismatch")
+		}
+		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityGASupportSHA256)) || !strings.EqualFold(manifest.LoaderCompatibilityGASupportSHA256, loaderGASupportSHA2560180()) {
+			return errors.New("RELEASE_MANIFEST Loader Compatibility GA runtime support hash mismatch")
+		}
+		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Loader Compatibility GA 0.18.0: %w", err)
 		}
 	}
 	for _, name := range manifest.RequiredFiles {

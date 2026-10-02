@@ -1313,6 +1313,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityLoaderHardening01710Required(ver) {
 		policy += ";loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery"
 	}
+	if compatibilityLoaderGA0180Required(ver) {
+		policy += ";loader-compatibility-GA-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:              "1.0",
 		ProductVersion:             ver,
