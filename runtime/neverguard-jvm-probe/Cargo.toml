@@ -1,14 +1,14 @@
 [package]
-name = "neverguard-thread-probe"
+name = "neverguard-jvm-probe"
 version = "0.18.8"
-description = "Windows-only NeverGuard Thread Integrity adversarial integration fixture"
+description = "Windows-only NeverGuard JVM-Aware Protection adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "neverguard_thread_probe"
+name = "neverguard_jvm_probe"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 

@@ -771,6 +771,8 @@ unsafe extern "system" fn hook_virtual_alloc(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, allocation_type, protect) };
     if !result.is_null() {
+        let provenance = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
         crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
@@ -791,6 +793,8 @@ unsafe extern "system" fn hook_virtual_protect(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, new_protect, old_protect) };
     if result != 0 {
+        let provenance = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(address, new_protect, provenance);
         crate::memory_integrity::record_virtual_protect(address, size, new_protect);
     }
     result

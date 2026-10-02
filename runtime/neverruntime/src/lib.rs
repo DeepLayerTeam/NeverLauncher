@@ -12,6 +12,7 @@ pub mod windows_hook_engine;
 pub mod windows_memory_integrity;
 pub mod windows_thread_process_integrity;
 pub mod windows_debug_instrumentation;
+pub mod windows_jvm_aware;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -62,6 +63,10 @@ pub use windows_thread_process_integrity::{
 };
 pub use windows_debug_instrumentation::{
     WindowsDebugInstrumentationReport, NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION,
+};
+pub use windows_jvm_aware::{
+    WindowsJvmAwareProtectionReport, NEVERGUARD_CERTIFIED_JAVA_MAJORS,
+    NEVERGUARD_JVM_AWARE_PROTECTION_VERSION,
 };
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};

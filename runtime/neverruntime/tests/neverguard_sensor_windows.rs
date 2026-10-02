@@ -7,8 +7,8 @@ use neverruntime::{
         NEVERGUARD_SENSOR_PROTOCOL_VERSION,
     },
     NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION, NEVERGUARD_HOOK_ENGINE_VERSION,
-    NEVERGUARD_MEMORY_INTEGRITY_VERSION, NEVERGUARD_MODULE_GUARD_VERSION,
-    NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
+    NEVERGUARD_JVM_AWARE_PROTECTION_VERSION, NEVERGUARD_MEMORY_INTEGRITY_VERSION,
+    NEVERGUARD_MODULE_GUARD_VERSION, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
 };
 use std::{
     fs,
@@ -60,6 +60,16 @@ fn debug_probe_path() -> PathBuf {
             .expect("NEVERGUARD_DEBUG_PROBE_EXE must point to built neverguard-debug-probe.exe"),
     );
     assert!(probe.is_file(), "debug probe EXE missing: {}", probe.display());
+    probe
+}
+
+
+fn jvm_probe_path() -> PathBuf {
+    let probe = PathBuf::from(
+        std::env::var("NEVERGUARD_JVM_PROBE_DLL")
+            .expect("NEVERGUARD_JVM_PROBE_DLL must point to built neverguard_jvm_probe.dll"),
+    );
+    assert!(probe.is_file(), "JVM-aware probe DLL missing: {}", probe.display());
     probe
 }
 
@@ -184,6 +194,67 @@ fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
     assert!(status.success(), "Thread Integrity javac failed: {status}");
 }
 
+fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
+    fs::create_dir_all(directory).expect("create JVM-Aware JIT Java probe directory");
+    fs::write(
+        directory.join("JvmAwareJitProbe.java"),
+        r#"public final class JvmAwareJitProbe {
+    private static long hot(long value) {
+        long x = value;
+        x ^= (x << 13);
+        x ^= (x >>> 7);
+        x ^= (x << 17);
+        return x + 0x9E3779B97F4A7C15L;
+    }
+    public static void main(String[] args) throws Exception {
+        long value = 1L;
+        for (int outer = 0; outer < 120; outer++) {
+            for (int i = 0; i < 200000; i++) value = hot(value + i);
+        }
+        if (value == 0L) throw new AssertionError("unreachable");
+        Thread.sleep(2200L);
+    }
+}
+"#,
+    )
+    .expect("write JVM-Aware JIT probe");
+    let status = std::process::Command::new(javac)
+        .arg("JvmAwareJitProbe.java")
+        .current_dir(directory)
+        .status()
+        .expect("run javac for JVM-Aware JIT probe");
+    assert!(status.success(), "JVM-Aware JIT javac failed: {status}");
+}
+
+fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
+    fs::create_dir_all(directory).expect("create JVM-Aware foreign exec Java probe directory");
+    fs::write(
+        directory.join("JvmAwareForeignExecProbe.java"),
+        r#"public final class JvmAwareForeignExecProbe {
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        System.load(args[0]);
+        Thread.sleep(12000L);
+    }
+}
+"#,
+    )
+    .expect("write JVM-Aware foreign exec probe");
+    let status = std::process::Command::new(javac)
+        .arg("JvmAwareForeignExecProbe.java")
+        .current_dir(directory)
+        .status()
+        .expect("run javac for JVM-Aware foreign exec probe");
+    assert!(status.success(), "JVM-Aware foreign exec javac failed: {status}");
+}
+
+fn expected_java_major() -> u32 {
+    std::env::var("NEVERGUARD_EXPECTED_JAVA_MAJOR")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(21)
+}
+
 #[tokio::test]
 async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     let (java, _) = java_tools();
@@ -250,6 +321,19 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     assert!(!report.module_guard.debug_instrumentation.debug_object_present);
     assert!(report.module_guard.debug_instrumentation.debug_flags_no_debug_inherit);
     assert_eq!(report.module_guard.debug_instrumentation.state_sha256.len(), 64);
+    assert_eq!(
+        report.module_guard.jvm_aware.version,
+        NEVERGUARD_JVM_AWARE_PROTECTION_VERSION
+    );
+    assert!(report.module_guard.jvm_aware.active);
+    assert!(report.module_guard.jvm_aware.healthy);
+    assert!(report.module_guard.jvm_aware.certified_major);
+    assert!([8, 16, 17, 21, 25].contains(&report.module_guard.jvm_aware.java_major));
+    assert!(report.module_guard.jvm_aware.jvm_module_size > 0);
+    assert_eq!(report.module_guard.jvm_aware.jvm_path_sha256.len(), 64);
+    assert_eq!(report.module_guard.jvm_aware.state_sha256.len(), 64);
+    assert_eq!(report.module_guard.jvm_aware.foreign_executable_transition_count, 0);
+    assert_eq!(report.module_guard.jvm_aware.unknown_executable_transition_count, 0);
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
@@ -599,6 +683,99 @@ async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_att
             || report.last_violation.contains("debugger"),
         "unexpected Debug Guard violation: {}",
         report.debug_instrumentation.last_violation
+    );
+
+    let _ = fs::remove_dir_all(root);
+}
+
+
+#[tokio::test]
+async fn neverguard_jvm_aware_protection_accepts_certified_hotspot_jit() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let root = unique_test_root("jvm-aware-jit");
+    let trusted = root.join("trusted");
+    compile_jvm_jit_probe(&javac, &trusted);
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Sensor agentpath");
+    command
+        .arg("-Xbatch")
+        .arg("-XX:CompileThreshold=100")
+        .arg("-cp")
+        .arg(&trusted)
+        .arg("JvmAwareJitProbe");
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn JVM-aware JIT Java");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("authenticate JVM-aware Sensor");
+    let status = child.wait().await.expect("wait JVM-aware JIT Java");
+    assert!(status.success(), "certified HotSpot JIT workload must remain allowed: {status}");
+
+    let report = session.report().module_guard.jvm_aware;
+    assert!(report.healthy, "JVM-Aware Protection must remain healthy: {report:?}");
+    assert_eq!(report.java_major, expected_java_major());
+    assert!(report.certified_major);
+    assert!(report.integrity_check_count >= 2);
+    assert!(
+        report.baseline_private_executable_region_count > 0 || report.jit_transition_count > 0,
+        "expected HotSpot executable private baseline or observed JIT transitions: {report:?}"
+    );
+    assert_eq!(report.foreign_executable_transition_count, 0);
+    assert_eq!(report.unknown_executable_transition_count, 0);
+    assert_eq!(report.jvm_path_sha256.len(), 64);
+    assert_eq!(report.state_sha256.len(), 64);
+
+    let _ = fs::remove_dir_all(root);
+}
+
+#[tokio::test]
+async fn neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let probe = jvm_probe_path();
+    let root = unique_test_root("jvm-aware-foreign-exec");
+    let trusted = root.join("trusted");
+    compile_jvm_foreign_exec_probe(&javac, &trusted);
+    let probe_dll = trusted.join("jvm-aware-foreign-probe.dll");
+    fs::copy(&probe, &probe_dll).expect("copy JVM-aware adversarial probe");
+    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical JVM-aware probe");
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Sensor agentpath");
+    command
+        .arg("-cp")
+        .arg(&trusted)
+        .arg("JvmAwareForeignExecProbe")
+        .arg(&probe_dll);
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn JVM-aware adversarial Java");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("authenticate JVM-aware adversarial Sensor");
+    let status = child.wait().await.expect("wait JVM-aware adversarial Java");
+    assert!(!status.success(), "foreign executable MEM_PRIVATE allocation must be fail-closed");
+
+    let report = session.report().module_guard;
+    assert!(!report.healthy, "Module Guard must reflect JVM-aware violation");
+    assert!(!report.jvm_aware.healthy);
+    assert!(report.jvm_aware.violation_count >= 1, "expected JVM-aware violation: {report:?}");
+    assert!(
+        report.jvm_aware.last_violation.contains("outside jvm.dll provenance")
+            || report.last_violation.contains("outside jvm.dll provenance"),
+        "unexpected JVM-aware violation: {}",
+        report.jvm_aware.last_violation
     );
 
     let _ = fs::remove_dir_all(root);

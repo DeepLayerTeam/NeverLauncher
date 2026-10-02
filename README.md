@@ -1,3 +1,9 @@
+## JVM-Aware Protection — 0.18.8
+
+NeverLauncher 0.18.8 делает executable-memory policy JVM-aware вместо правила «любой перехваченный `VirtualAlloc/VirtualProtect` допустим». Ранний Sensor определяет загруженный HotSpot `jvm.dll`, извлекает его реальный Java major из Windows version resource и допускает aggressive protection только для сертифицированной базы Java `8/16/17/21/25`. Для каждого нового executable `MEM_PRIVATE` transition Hook Engine снимает native call stack без выделений памяти; JIT/Code Cache transition считается доверенным только когда stack содержит frame внутри текущего `jvm.dll`.
+
+Это не запрещает HotSpot JIT и не применяет `ProhibitDynamicCode` к Java: baseline executable private regions сохраняются как раннее JVM состояние, а subsequent JIT transitions учитываются отдельно. `MEM_IMAGE` остаётся под Memory Integrity, thread start origin — под Thread & Process Integrity. Foreign native module, который создаёт executable private memory вне `jvm.dll` provenance, получает отдельный JVM-aware violation и runtime завершается fail-closed. Windows CI проверяет ту же политику на Temurin Java 8/16/17/21/25 реальным JIT workload и adversarial DLL.
+
 ## Защита от отладки и instrumentation — 0.18.7
 
 NeverLauncher 0.18.7 закрывает штатные user-mode debug/instrumentation boundaries защищаемой JVM. До spawn NeverRuntime отклоняет сторонние Java/JVMTI agents, JDWP/debug options и instrumentation, пришедшую через стандартные Java option environment variables; затем сам добавляет `-XX:+DisableAttachMechanism`. Внутри JVM ранний Sensor проверяет локальный/remote debugger state и kernel-reported debug port/object/flags каждые 250 мс. Обнаружение debugger attach или противоречивого debug state приводит к fail-closed завершению runtime.

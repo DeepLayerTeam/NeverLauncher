@@ -27,6 +27,8 @@ pub struct WindowsModuleGuardReport {
     pub thread_process_integrity: crate::WindowsThreadProcessIntegrityReport,
     #[serde(default)]
     pub debug_instrumentation: crate::WindowsDebugInstrumentationReport,
+    #[serde(default)]
+    pub jvm_aware: crate::WindowsJvmAwareProtectionReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -53,6 +55,7 @@ impl Default for WindowsModuleGuardReport {
             memory_integrity: crate::WindowsMemoryIntegrityReport::default(),
             thread_process_integrity: crate::WindowsThreadProcessIntegrityReport::default(),
             debug_instrumentation: crate::WindowsDebugInstrumentationReport::default(),
+            jvm_aware: crate::WindowsJvmAwareProtectionReport::default(),
             last_violation: String::new(),
         }
     }
@@ -143,6 +146,9 @@ mod imp {
     const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY: u32 = 15;
     const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT: u32 = 16;
     const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER: u32 = 17;
+    const MODULE_EVENT_REASON_JVM_AWARE_READY: u32 = 18;
+    const MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT: u32 = 19;
+    const MODULE_EVENT_REASON_JVM_AWARE_TAMPER: u32 = 20;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -477,6 +483,43 @@ mod imp {
         });
         debug_ready_packet.zeroize();
 
+        // JVM-Aware Protection is the fifth mandatory startup proof. The Sensor
+        // has already resolved the loaded jvm.dll identity and certified Java
+        // major before the hook engine is armed, so post-start executable
+        // MEM_PRIVATE transitions can be attributed to HotSpot rather than merely
+        // accepted because VirtualAlloc/VirtualProtect was observed.
+        let mut jvm_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
+            .await
+            .map_err(|_| "NeverGuard JVM-Aware Protection ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard JVM-Aware Protection ready proof read failed: {err}"))?;
+        let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
+        if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
+            return Err(format!(
+                "NeverGuard JVM-Aware Protection expected JVM_AWARE_READY as fifth event, got {}",
+                jvm_ready_event.reason
+            ));
+        }
+        let jvm_ready = jvm_aware_report_from_event(&jvm_ready_event)?;
+        if !jvm_ready.certified_major || !crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&jvm_ready.java_major) {
+            return Err(format!(
+                "NeverGuard JVM-Aware Protection rejected uncertified Java major {}",
+                jvm_ready.java_major
+            ));
+        }
+        ready_chain = advance_event_chain(
+            ready_chain,
+            &jvm_ready_packet,
+            &jvm_ready.state_sha256,
+        );
+        update_counter(&state, |report| {
+            report.event_count = 5;
+            report.last_sequence = 5;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.jvm_aware = jvm_ready;
+        });
+        jvm_ready_packet.zeroize();
+
         let expected = baseline
             .into_iter()
             .map(|module| (module.base_address, module.normalized_path))
@@ -761,6 +804,34 @@ mod imp {
                         )
                     })
                 }
+                MODULE_EVENT_REASON_JVM_AWARE_READY => {
+                    Err("NeverGuard JVM-Aware Protection emitted duplicate JVM_AWARE_READY".to_string())
+                }
+                MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT => {
+                    match jvm_aware_report_from_event(&event) {
+                        Err(err) => Err(err),
+                        Ok(mut jvm_report) => {
+                            module_hash = jvm_report.state_sha256.clone();
+                            update_counter(&state, |report| {
+                                jvm_report.active = true;
+                                jvm_report.healthy = true;
+                                jvm_report.violation_count = report.jvm_aware.violation_count;
+                                report.jvm_aware = jvm_report;
+                            });
+                            Ok(())
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_JVM_AWARE_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition".to_string()
+                    } else {
+                        format!(
+                            "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition: {detail}"
+                        )
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -951,6 +1022,89 @@ mod imp {
             state_sha256: state_sha256.to_ascii_lowercase(),
             last_violation: String::new(),
         })
+    }
+
+    fn jvm_aware_report_from_event(
+        event: &ParsedEvent,
+    ) -> Result<crate::WindowsJvmAwareProtectionReport, String> {
+        let payload = event.path.to_string_lossy();
+        let mut fields = payload.split('|');
+        let jvm_path_sha256 = validate_jvm_aware_digest(
+            fields
+                .next()
+                .ok_or_else(|| "NeverGuard JVM-Aware Protection missing jvm path digest".to_string())?,
+            "jvm-path",
+        )?;
+        let state_sha256 = validate_jvm_aware_digest(
+            fields
+                .next()
+                .ok_or_else(|| "NeverGuard JVM-Aware Protection missing state digest".to_string())?,
+            "state",
+        )?;
+        let integrity_check_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing integrity-check count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard JVM-Aware Protection invalid integrity-check count".to_string())?;
+        let baseline_private_executable_region_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing baseline private executable-region count".to_string())?
+            .parse::<u32>()
+            .map_err(|_| "NeverGuard JVM-Aware Protection invalid baseline private executable-region count".to_string())?;
+        let foreign_executable_transition_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing foreign transition count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard JVM-Aware Protection invalid foreign transition count".to_string())?;
+        let unknown_executable_transition_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing unknown transition count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard JVM-Aware Protection invalid unknown transition count".to_string())?;
+        if fields.next().is_some() {
+            return Err("NeverGuard JVM-Aware Protection malformed evidence payload".to_string());
+        }
+        let java_major = event.flags;
+        let certified_major = crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&java_major);
+        if !certified_major {
+            return Err(format!(
+                "NeverGuard JVM-Aware Protection reported unsupported Java major {java_major}"
+            ));
+        }
+        if event.size_of_image == 0 {
+            return Err("NeverGuard JVM-Aware Protection reported zero jvm.dll image size".to_string());
+        }
+        if foreign_executable_transition_count != 0 || unknown_executable_transition_count != 0 {
+            return Err(format!(
+                "NeverGuard JVM-Aware Protection reported untrusted executable transitions: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
+            ));
+        }
+        Ok(crate::WindowsJvmAwareProtectionReport {
+            version: crate::NEVERGUARD_JVM_AWARE_PROTECTION_VERSION,
+            active: true,
+            healthy: true,
+            java_major,
+            certified_major,
+            jvm_module_size: event.size_of_image,
+            baseline_private_executable_region_count,
+            jit_transition_count: event.base_address,
+            foreign_executable_transition_count,
+            unknown_executable_transition_count,
+            integrity_check_count,
+            violation_count: 0,
+            jvm_path_sha256,
+            state_sha256,
+            last_violation: String::new(),
+        })
+    }
+
+    fn validate_jvm_aware_digest(value: &str, label: &str) -> Result<String, String> {
+        if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(format!(
+                "NeverGuard JVM-Aware Protection invalid {label} digest"
+            ));
+        }
+        Ok(value.to_ascii_lowercase())
     }
 
     fn validate_thread_process_digest(value: &str, label: &str) -> Result<String, String> {
@@ -1184,6 +1338,12 @@ mod imp {
                     .saturating_add(1);
                 report.debug_instrumentation.last_violation = reason.to_string();
             }
+            if reason.contains("JVM-Aware Protection") {
+                report.jvm_aware.active = false;
+                report.jvm_aware.healthy = false;
+                report.jvm_aware.violation_count = report.jvm_aware.violation_count.saturating_add(1);
+                report.jvm_aware.last_violation = reason.to_string();
+            }
         });
         terminate_runtime(pid);
     }
@@ -1195,6 +1355,7 @@ mod imp {
             report.memory_integrity.active = false;
             report.thread_process_integrity.active = false;
             report.debug_instrumentation.active = false;
+            report.jvm_aware.active = false;
         });
     }
 

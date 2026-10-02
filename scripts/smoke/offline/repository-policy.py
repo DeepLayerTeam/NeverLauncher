@@ -3204,6 +3204,94 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.7 Debug Guard lacks real Windows integration/clippy CI")
 
+
+# 0.18.8 JVM-Aware Protection binds executable MEM_PRIVATE transitions to
+# certified HotSpot jvm.dll provenance for Java 8/16/17/21/25.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 8):
+    jvm_sensor_0188 = read("runtime/neverguard-sensor/src/jvm_awareness.rs")
+    jvm_stream_0188 = read("runtime/neverguard-sensor/src/lib.rs")
+    jvm_hooks_0188 = read("runtime/neverguard-sensor/src/hook_engine.rs")
+    jvm_parent_0188 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    jvm_report_0188 = read("runtime/neverruntime/src/windows_jvm_aware.rs")
+    jvm_test_0188 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    jvm_probe_0188 = read("runtime/neverguard-jvm-probe/src/lib.rs")
+    jvm_gate_0188 = read("scripts/smoke/offline/neverguard-jvm-aware-protection-0188.py")
+    for required in [
+        "CERTIFIED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
+        "GetFileVersionInfoW",
+        "VerQueryValueW",
+        "RtlCaptureStackBackTrace",
+        "capture_transition_provenance",
+        "observe_memory_transition",
+        "MEM_PRIVATE",
+        "outside jvm.dll provenance",
+    ]:
+        if required not in jvm_sensor_0188:
+            fail(f"0.18.8 JVM-Aware Sensor backend incomplete: {required}")
+    for required in [
+        "jvm_awareness::capture_transition_provenance",
+        "jvm_awareness::observe_memory_transition",
+        "hook_virtual_alloc",
+        "hook_virtual_protect",
+    ]:
+        if required not in jvm_hooks_0188:
+            fail(f"0.18.8 JVM-Aware hook provenance incomplete: {required}")
+    for required in [
+        "MODULE_EVENT_REASON_JVM_AWARE_READY",
+        "MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT",
+        "MODULE_EVENT_REASON_JVM_AWARE_TAMPER",
+        "jvm_awareness::initialize(vm)",
+        "jvm_awareness::reconcile_and_verify()",
+    ]:
+        if required not in jvm_stream_0188:
+            fail(f"0.18.8 JVM-Aware Sensor lifecycle incomplete: {required}")
+    for required in [
+        "jvm_aware: crate::WindowsJvmAwareProtectionReport",
+        "expected JVM_AWARE_READY as fifth event",
+        "jvm_aware_report_from_event",
+        "NEVERGUARD_CERTIFIED_JAVA_MAJORS",
+        "non-JVM executable-memory transition",
+    ]:
+        if required not in jvm_parent_0188:
+            fail(f"0.18.8 JVM-Aware parent enforcement incomplete: {required}")
+    for required in [
+        "WindowsJvmAwareProtectionReport",
+        "NEVERGUARD_JVM_AWARE_PROTECTION_VERSION",
+        "baseline_private_executable_region_count",
+        "jit_transition_count",
+        "foreign_executable_transition_count",
+        "state_sha256",
+    ]:
+        if required not in jvm_report_0188:
+            fail(f"0.18.8 JVM-Aware report incomplete: {required}")
+    for required in [
+        "neverguard_jvm_aware_protection_accepts_certified_hotspot_jit",
+        "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
+        "-Xbatch",
+        "-XX:CompileThreshold=100",
+        "NEVERGUARD_EXPECTED_JAVA_MAJOR",
+        "NEVERGUARD_JVM_PROBE_DLL",
+    ]:
+        if required not in jvm_test_0188:
+            fail(f"0.18.8 JVM-Aware Windows integration regression missing: {required}")
+    for required in ["VirtualAlloc", "PAGE_EXECUTE_READWRITE", "neverguard-jvm-aware-probe"]:
+        if required not in jvm_probe_0188:
+            fail(f"0.18.8 JVM-Aware adversarial fixture incomplete: {required}")
+    if "JVM-Aware Protection 0.18.8 gate: OK" not in jvm_gate_0188:
+        fail("0.18.8 mandatory JVM-Aware Protection gate incomplete")
+    if "neverguard-jvm-aware-protection-0188.py" not in preflight or "neverguard-jvm-aware-protection-0188.py" not in ci:
+        fail("0.18.8 JVM-Aware Protection gate is not wired into preflight/CI")
+    for required in [
+        "java: [8, 16, 17, 21, 25]",
+        "runtime/neverguard-jvm-probe/Cargo.toml",
+        "NEVERGUARD_JVM_PROBE_DLL",
+        "NEVERGUARD_EXPECTED_JAVA_MAJOR",
+        "neverguard_jvm_aware_protection_accepts_certified_hotspot_jit",
+        "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
+    ]:
+        if required not in ci:
+            fail(f"0.18.8 JVM-Aware Java matrix CI incomplete: {required}")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

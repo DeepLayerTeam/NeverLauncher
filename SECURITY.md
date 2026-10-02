@@ -1,3 +1,9 @@
+## JVM-Aware защита Windows HotSpot — 0.18.8
+
+В `0.18.8` NeverGuard различает штатную HotSpot JIT/Code Cache активность и executable private memory, созданную посторонним native-кодом. Sensor идентифицирует текущий `jvm.dll`, фиксирует его image range/version identity и при каждом перехваченном executable `VirtualAlloc/VirtualProtect` проверяет native stack provenance. Только переход с caller frame внутри `jvm.dll` относится к JIT; foreign/unknown `MEM_PRIVATE` execution boundary считается нарушением и приводит к fail-closed завершению защищаемой JVM.
+
+Политика сертифицирована для Java `8/16/17/21/25` и намеренно не утверждает kernel-equivalent контроль. Existing image-code hashing, module verification, thread-origin checks и debug boundary продолжают работать независимо. Administrator/kernel attacker, подмена доверенного `jvm.dll` до package/module verification или компрометация signing chain остаются вне заявленной user-mode trust boundary.
+
 ## Защита от отладки и instrumentation / Windows JVM — 0.18.7
 
 В `0.18.7` NeverGuard fail-closed блокирует нежелательную user-mode debugging/instrumentation boundary. Launcher отклоняет сторонние `-javaagent/-agentlib/-agentpath`, JDWP/`-Xdebug`, принудительный `StartAttachListener`, отмену `DisableAttachMechanism` и эквивалентные опции из `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`; для защищаемой JVM всегда добавляется `-XX:+DisableAttachMechanism`.

@@ -1,3 +1,11 @@
+## 0.18.8 — JVM-Aware Protection
+
+- Добавлен production JVM-aware enforcement внутри `neverguard-sensor.dll`: Sensor до установки hook engine идентифицирует реально загруженный `jvm.dll`, читает Windows version resource и fail-closed допускает только сертифицированные Java major `8/16/17/21/25`.
+- Aggressive Hook Engine теперь привязывает successful `VirtualAlloc`/`VirtualProtect` transitions к фактическому native call stack через `RtlCaptureStackBackTrace`. Executable `MEM_PRIVATE` переход считается штатным JIT/Code Cache только при наличии caller frame внутри неизменного диапазона `jvm.dll`; foreign/unknown provenance завершает runtime fail-closed.
+- Existing Memory Integrity и Thread Integrity остаются независимыми слоями: `MEM_IMAGE` code-page drift по-прежнему ловится содержательным SHA-256 baseline, а private executable thread start — thread-origin monitor. JVM-aware слой анализирует именно происхождение executable private-memory transitions и не объявляет JIT immutable.
+- `Agent_OnLoad` теперь требует пятый HMAC-аутентифицированный startup proof `JVM_AWARE_READY`; continuous `JVM_AWARE_HEARTBEAT/TAMPER` передают Java major, baseline private-executable coverage, JIT transition counter, jvm.dll path digest и state digest в `WindowsJvmAwareProtectionReport`.
+- Добавлен adversarial native fixture, который после hook reconciliation выполняет `VirtualAlloc(PAGE_EXECUTE_READWRITE)` из собственного не-JVM native thread и обязан завершить JVM fail-closed. CI дополнен реальной Windows/Temurin matrix для Java `8/16/17/21/25` с JIT workload и foreign executable-memory regression.
+
 ## 0.18.7 — Debug & Instrumentation Guard
 
 - Добавлен production Debug & Instrumentation Guard внутри `neverguard-sensor.dll`: каждые 250 мс Sensor проверяет `IsDebuggerPresent`, `CheckRemoteDebuggerPresent` и независимые `NtQueryInformationProcess` indicators (`ProcessDebugPort`, `ProcessDebugObjectHandle`, `ProcessDebugFlags`). Любая активная user-mode debug boundary завершает JVM fail-closed.
