@@ -28,9 +28,15 @@ use crate::integrity::{
 };
 #[cfg(windows)]
 use crate::windows_policy::{
-    bind_guard_to_launcher_job, ensure_guard_process_policy, ensure_windows_production_hardening,
-    prepare_guard_command, GuardLifetimeJob, WindowsProductionHardeningReport, NEVERGUARD_WINDOWS_HARDENING_VERSION,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    bind_guard_to_launcher_job, ensure_windows_protection_core, prepare_guard_command,
+    validate_windows_guard_policy_report, GuardLifetimeJob, WindowsProductionHardeningReport,
+    NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+};
+#[cfg(windows)]
+use crate::windows_protection::{
+    protection_profile_from_environment, WindowsProtectionProfile,
+    NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
 };
 #[cfg(windows)]
 use std::{ffi::c_void, fs::File, io::{BufReader, Read}, mem::size_of, ptr::null_mut, time::{SystemTime, UNIX_EPOCH}};
@@ -115,6 +121,12 @@ pub struct NeverGuardStatus {
     pub process_policy_enforced: bool,
     pub hardening_version: u32,
     pub hardening_enforced: bool,
+    #[serde(default)]
+    pub windows_protection_core_version: u32,
+    #[serde(default)]
+    pub windows_capability_model_version: u32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub windows_protection_profile: String,
     pub secure_pipe_acl: bool,
     pub lifetime_job_enforced: bool,
     pub package_manifest_verified: bool,
@@ -200,6 +212,7 @@ struct GuardHandle {
     next_sequence: u64,
     _lifetime_job: GuardLifetimeJob,
     package_manifest_verified: bool,
+    protection_profile: WindowsProtectionProfile,
 }
 
 #[cfg(windows)]
@@ -215,6 +228,7 @@ pub struct NeverGuardSupervisor {
     inner: Arc<Mutex<Option<GuardHandle>>>,
     executable: Option<PathBuf>,
     require_package_manifest: bool,
+    protection_profile: Option<WindowsProtectionProfile>,
 }
 
 #[cfg(windows)]
@@ -235,6 +249,7 @@ impl NeverGuardSupervisor {
             inner: Arc::new(Mutex::new(None)),
             executable: None,
             require_package_manifest: !cfg!(debug_assertions),
+            protection_profile: None,
         }
     }
 
@@ -249,11 +264,33 @@ impl NeverGuardSupervisor {
             inner: Arc::new(Mutex::new(None)),
             executable: Some(executable),
             require_package_manifest: false,
+            protection_profile: None,
         }
     }
 
     #[cfg(not(windows))]
     pub fn with_executable(_executable: PathBuf) -> Self {
+        Self
+    }
+
+    #[cfg(windows)]
+    pub fn with_executable_and_profile(
+        executable: PathBuf,
+        protection_profile: WindowsProtectionProfile,
+    ) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(None)),
+            executable: Some(executable),
+            require_package_manifest: false,
+            protection_profile: Some(protection_profile),
+        }
+    }
+
+    #[cfg(not(windows))]
+    pub fn with_executable_and_profile(
+        _executable: PathBuf,
+        _protection_profile: crate::windows_protection::WindowsProtectionProfile,
+    ) -> Self {
         Self
     }
 
@@ -270,6 +307,7 @@ impl NeverGuardSupervisor {
             if running {
                 if let Ok(status) = send_command(handle, "status").await {
                     let mut status = parse_status(status)?;
+                    validate_status_profile(&status, handle.protection_profile)?;
                     status.lifetime_job_enforced = true;
                     status.package_manifest_verified = handle.package_manifest_verified;
                     return Ok(status);
@@ -301,6 +339,10 @@ impl NeverGuardSupervisor {
 
         let parent_pid = std::process::id();
         let endpoint = make_pipe_endpoint(parent_pid);
+        let protection_profile = match self.protection_profile {
+            Some(profile) => profile,
+            None => protection_profile_from_environment()?,
+        };
         let mut bootstrap_secret = random_bytes_32();
         let mut command = Command::new(&executable);
         command
@@ -308,6 +350,8 @@ impl NeverGuardSupervisor {
             .arg(&endpoint)
             .arg("--parent-pid")
             .arg(parent_pid.to_string())
+            .arg("--protection-profile")
+            .arg(protection_profile.as_str())
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -374,12 +418,20 @@ impl NeverGuardSupervisor {
             next_sequence: 1,
             _lifetime_job: lifetime_job,
             package_manifest_verified,
+            protection_profile,
         };
         let status_value = send_command(&mut handle, "status").await
             .map_err(|err| format!("NeverGuard release identity query failed: {err}"))?;
         let mut status = parse_status(status_value)?;
+        validate_status_profile(&status, protection_profile)?;
         status.lifetime_job_enforced = true;
         status.package_manifest_verified = package_manifest_verified;
+        let policy_value = send_command(&mut handle, "process-policy")
+            .await
+            .map_err(|err| format!("NeverGuard Windows Protection Core query failed: {err}"))?;
+        let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
+            .map_err(|err| format!("NeverGuard Windows Protection Core payload повреждён: {err}"))?;
+        validate_guard_process_policy(&handle, &policy)?;
         *state = Some(handle);
         Ok(status)
     }
@@ -480,6 +532,12 @@ impl NeverGuardSupervisor {
         let handle = state
             .as_mut()
             .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
+        if !handle.protection_profile.is_remote_attestation_eligible() {
+            return Err(format!(
+                "NeverGuard remote attestation requires aggressive Windows protection profile; active profile is {}",
+                handle.protection_profile
+            ));
+        }
         let payload = send_command_with_payload(handle, "guard-attestation", &request_payload).await?;
         let attestation: NeverGuardRemoteAttestation = serde_json::from_value(payload)
             .map_err(|err| format!("NeverGuard remote attestation payload повреждён: {err}"))?;
@@ -764,7 +822,7 @@ async fn client_authenticate(
     let status = NeverGuardStatus {
         state: "ready".to_string(),
         product_version: env!("CARGO_PKG_VERSION").to_string(),
-        platform: "windows-amd64".to_string(),
+        platform: expected_windows_platform().to_string(),
         pid: challenge.guard_pid,
         parent_pid: client_pid,
         protocol_version: NEVERGUARD_PROTOCOL_VERSION,
@@ -773,6 +831,9 @@ async fn client_authenticate(
         process_policy_enforced: ready.process_policy_enforced,
         hardening_version: ready.hardening_version,
         hardening_enforced: ready.hardening_enforced,
+        windows_protection_core_version: 0,
+        windows_capability_model_version: 0,
+        windows_protection_profile: String::new(),
         secure_pipe_acl: ready.secure_pipe_acl,
         lifetime_job_enforced: false,
         package_manifest_verified: false,
@@ -866,8 +927,17 @@ async fn send_command_inner(
 fn parse_status(value: Value) -> Result<NeverGuardStatus, String> {
     let status: NeverGuardStatus = serde_json::from_value(value)
         .map_err(|err| format!("NeverGuard status payload повреждён: {err}"))?;
-    validate_release_identity(&status, "windows-amd64")?;
+    validate_release_identity(&status, expected_windows_platform())?;
     Ok(status)
+}
+
+#[cfg(windows)]
+fn expected_windows_platform() -> &'static str {
+    if cfg!(target_arch = "aarch64") {
+        "windows-arm64"
+    } else {
+        "windows-amd64"
+    }
 }
 
 #[cfg(windows)]
@@ -890,6 +960,26 @@ fn validate_release_identity(status: &NeverGuardStatus, expected_platform: &str)
             "NeverGuard protocol mismatch: Desktop={} Guard={}",
             NEVERGUARD_PROTOCOL_VERSION,
             status.protocol_version
+        ));
+    }
+    if status.windows_protection_core_version != NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION
+        || status.windows_capability_model_version != NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
+        || status.windows_protection_profile.is_empty()
+    {
+        return Err("NeverGuard Windows Protection Core status is incomplete".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn validate_status_profile(
+    status: &NeverGuardStatus,
+    expected_profile: WindowsProtectionProfile,
+) -> Result<(), String> {
+    if status.windows_protection_profile != expected_profile.as_str() {
+        return Err(format!(
+            "NeverGuard Windows protection profile mismatch: expected {expected_profile}, got {}",
+            status.windows_protection_profile
         ));
     }
     Ok(())
@@ -964,21 +1054,10 @@ fn validate_guard_process_policy(
         .child
         .id()
         .ok_or_else(|| "NeverGuard child PID unavailable during policy validation".to_string())?;
-    if policy.schema != NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA
-        || policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
-        || policy.pid != guard_pid
-        || !policy.enforced
-        || !policy.dynamic_code_prohibited
-        || !policy.extension_points_disabled
-        || !policy.strict_handle_checks
-        || !policy.remote_images_blocked
-        || !policy.low_mandatory_label_images_blocked
-        || !policy.prefer_system32_images
-        || !policy.child_process_creation_blocked
-    {
-        return Err("NeverGuard Windows process policy verification failed".to_string());
+    if policy.pid != guard_pid {
+        return Err("NeverGuard Windows process policy PID binding mismatch".to_string());
     }
-    Ok(())
+    validate_windows_guard_policy_report(policy, handle.protection_profile)
 }
 
 #[cfg(windows)]
@@ -1111,7 +1190,9 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         return Err("NeverGuard parent PID должен быть > 0".to_string());
     }
     let guard_pid = std::process::id();
-    let hardening = ensure_windows_production_hardening()?;
+    let protection_core = ensure_windows_protection_core()?;
+    let hardening = protection_core.hardening;
+    let process_policy = protection_core.process_policy;
     if hardening.pid != guard_pid
         || hardening.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
         || !hardening.enforced
@@ -1121,10 +1202,15 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     {
         return Err("NeverGuard Windows production hardening did not bind to guard PID".to_string());
     }
-    let process_policy = ensure_guard_process_policy()?;
     if process_policy.pid != guard_pid || !process_policy.enforced {
         return Err("NeverGuard Windows process policy did not bind to guard PID".to_string());
     }
+    let server_profile = process_policy
+        .windows
+        .as_ref()
+        .map(|details| details.profile)
+        .ok_or_else(|| "NeverGuard Windows Protection Core details are missing".to_string())?;
+    validate_windows_guard_policy_report(&process_policy, server_profile)?;
     let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
     if observed_parent_pid != parent_pid {
         return Err(format!(
@@ -1360,7 +1446,7 @@ async fn serve_authenticated_session(
                 serde_json::to_value(NeverGuardStatus {
                     state: "ready".to_string(),
                     product_version: env!("CARGO_PKG_VERSION").to_string(),
-                    platform: "windows-amd64".to_string(),
+                    platform: expected_windows_platform().to_string(),
                     pid: guard_pid,
                     parent_pid,
                     protocol_version: NEVERGUARD_PROTOCOL_VERSION,
@@ -1369,6 +1455,21 @@ async fn serve_authenticated_session(
                     process_policy_enforced: process_policy.enforced,
                     hardening_version: hardening.hardening_version,
                     hardening_enforced: hardening.enforced,
+                    windows_protection_core_version: process_policy
+                        .windows
+                        .as_ref()
+                        .map(|details| details.core_version)
+                        .unwrap_or(0),
+                    windows_capability_model_version: process_policy
+                        .windows
+                        .as_ref()
+                        .map(|details| details.capability_model_version)
+                        .unwrap_or(0),
+                    windows_protection_profile: process_policy
+                        .windows
+                        .as_ref()
+                        .map(|details| details.profile.as_str().to_string())
+                        .unwrap_or_default(),
                     secure_pipe_acl: true,
                     lifetime_job_enforced: false,
                     package_manifest_verified: false,

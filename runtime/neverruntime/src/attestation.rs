@@ -205,6 +205,7 @@ mod tests {
                 child_process_creation_blocked: true,
                 linux: None,
                 macos: None,
+                windows: None,
             },
             attestation_sha256: String::new(),
             session_proof: String::new(),

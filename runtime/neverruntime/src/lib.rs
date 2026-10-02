@@ -5,6 +5,7 @@ pub mod guard_ipc;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
+pub mod windows_protection;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -30,10 +31,20 @@ pub use macos_guard::{run_macos_guard_server, NeverGuardSupervisor};
 pub use guard_ipc::NeverGuardSupervisor;
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 pub use windows_policy::{
-    ensure_guard_process_policy, ensure_windows_production_hardening, GuardProcessPolicyReport,
-    RuntimeProcessPolicyReport, RuntimeProcessPolicyGuard, WindowsProductionHardeningReport,
+    ensure_guard_process_policy, ensure_guard_process_policy_with_profile,
+    ensure_windows_production_hardening, ensure_windows_protection_core,
+    ensure_windows_protection_core_with_profile, validate_windows_guard_policy_report,
+    GuardProcessPolicyReport, RuntimeProcessPolicyReport, RuntimeProcessPolicyGuard,
+    WindowsProductionHardeningReport, WindowsProtectionCoreReport,
     NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
     NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+};
+pub use windows_protection::{
+    protection_profile_from_environment, WindowsGuardPolicyDetails,
+    WindowsMitigationCapability, WindowsMitigationRequirements, WindowsProtectionCapabilities,
+    WindowsProtectionProfile, NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+    NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
+    NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV,
 };
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};

@@ -1,3 +1,11 @@
+## 0.18.1 — Windows Protection Core II
+
+- Reworked NeverGuard Windows process protection into an executable profile engine with `audit`, `compat` and default `aggressive` profiles. Each profile maps to real `SetProcessMitigationPolicy` requirements; NeverGuard immediately reads the applied state back with `GetProcessMitigationPolicy` and fails closed when a required bit is unavailable or not active.
+- Added runtime Windows capability evidence for Dynamic Code, extension points, strict handle checks, image-load policy, child-process policy, CPU architecture and actual launcher Job Object membership. Capability evidence is authenticated over the existing HMAC IPC session and validated independently by Desktop before the Guard handle becomes ready.
+- Added explicit profile propagation from Desktop to `neverguard.exe` (`--protection-profile`) with `NEVERGUARD_WINDOWS_PROTECTION_PROFILE` as the process-level selector. `audit` measures without requiring mitigation bits, `compat` keeps JVM-independent compatible Guard restrictions, and `aggressive` retains the full existing Guard mitigation set.
+- Remote Guard Attestation remains fail-closed and is allowed only under `aggressive`; `audit`/`compat` cannot be presented as equivalent high-trust protection. Status now exposes Protection Core/capability-model/profile identity and rejects profile substitution.
+- Added real Windows integration coverage for all three profiles, capability-drift/profile-substitution regressions, mandatory 0.18.1 offline/preflight/repository-policy gates, and Windows CI execution through Rust tests plus `clippy -D warnings`.
+
 ## 0.18.0 — Loader Compatibility GA
 
 - Promoted Fabric, Quilt, Forge, NeoForge and the certified Forge legacy paths (1.7.10 and 1.12.2) from release-certificate RC to runtime-enforced GA. Production materializer parsers reject concrete Minecraft/loader combinations outside the exact certified support surface before loader upstream/install access; `latest-release` is rechecked after Mojang resolution.

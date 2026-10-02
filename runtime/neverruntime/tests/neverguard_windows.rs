@@ -4,8 +4,9 @@ use neverruntime::{
     NeverGuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION, NEVERGUARD_PROTOCOL_VERSION,
     NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION,
+    WindowsProtectionProfile, NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
     NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
-    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+    NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
 };
 use std::path::PathBuf;
 
@@ -26,6 +27,15 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
     assert!(status.process_policy_enforced);
     assert_eq!(status.hardening_version, NEVERGUARD_WINDOWS_HARDENING_VERSION);
     assert!(status.hardening_enforced);
+    assert_eq!(
+        status.windows_protection_core_version,
+        NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION
+    );
+    assert_eq!(
+        status.windows_capability_model_version,
+        NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
+    );
+    assert_eq!(status.windows_protection_profile, "aggressive");
     assert!(status.secure_pipe_acl);
     assert!(status.lifetime_job_enforced);
     assert!(!status.package_manifest_verified); // integration binary deliberately bypasses release package validation
@@ -56,6 +66,21 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
     assert!(process_policy.low_mandatory_label_images_blocked);
     assert!(process_policy.prefer_system32_images);
     assert!(process_policy.child_process_creation_blocked);
+    let windows = process_policy
+        .windows
+        .as_ref()
+        .expect("Windows Protection Core details must be authenticated");
+    assert_eq!(windows.core_version, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION);
+    assert_eq!(
+        windows.capability_model_version,
+        NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
+    );
+    assert_eq!(windows.profile, WindowsProtectionProfile::Aggressive);
+    assert!(windows.remote_attestation_eligible);
+    assert!(windows.requirements_satisfied);
+    assert!(windows.capabilities.requirements_satisfied());
+    assert!(windows.capabilities.guard_lifetime_job_bound);
+    assert!(!windows.capabilities.architecture.is_empty());
 
     let evidence = supervisor
         .integrity_evidence()
@@ -105,4 +130,63 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
 
     supervisor.shutdown().await.expect("shutdown must pass");
     supervisor.shutdown().await.expect("shutdown must be idempotent");
+}
+
+#[tokio::test]
+async fn neverguard_compat_profile_enforces_its_runtime_capabilities() {
+    let executable = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
+    let supervisor = NeverGuardSupervisor::with_executable_and_profile(
+        executable,
+        WindowsProtectionProfile::Compat,
+    );
+
+    let status = supervisor.ensure_started().await.expect("compat NeverGuard must start");
+    assert_eq!(status.windows_protection_profile, "compat");
+    let policy = supervisor
+        .process_policy()
+        .await
+        .expect("compat policy must be authenticated");
+    let windows = policy.windows.as_ref().expect("compat Windows details");
+    assert_eq!(windows.profile, WindowsProtectionProfile::Compat);
+    assert!(!windows.remote_attestation_eligible);
+    assert!(windows.requirements_satisfied);
+    assert!(windows.capabilities.requirements_satisfied());
+    assert!(windows.capabilities.guard_lifetime_job_bound);
+    assert_eq!(windows.requirements.dynamic_code, 0);
+    assert_eq!(windows.requirements.image_load, 0x3);
+    assert!(supervisor
+        .remote_attestation("compat-not-eligible", "challenge")
+        .await
+        .is_err());
+    supervisor.shutdown().await.expect("compat shutdown must pass");
+}
+
+#[tokio::test]
+async fn neverguard_audit_profile_measures_without_claiming_remote_trust() {
+    let executable = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
+    let supervisor = NeverGuardSupervisor::with_executable_and_profile(
+        executable,
+        WindowsProtectionProfile::Audit,
+    );
+
+    let status = supervisor.ensure_started().await.expect("audit NeverGuard must start");
+    assert_eq!(status.windows_protection_profile, "audit");
+    let policy = supervisor
+        .process_policy()
+        .await
+        .expect("audit capability measurement must be authenticated");
+    let windows = policy.windows.as_ref().expect("audit Windows details");
+    assert_eq!(windows.profile, WindowsProtectionProfile::Audit);
+    assert!(!windows.remote_attestation_eligible);
+    assert_eq!(windows.requirements.dynamic_code, 0);
+    assert_eq!(windows.requirements.extension_point_disable, 0);
+    assert_eq!(windows.requirements.strict_handle_check, 0);
+    assert_eq!(windows.requirements.image_load, 0);
+    assert_eq!(windows.requirements.child_process, 0);
+    assert!(windows.capabilities.guard_lifetime_job_bound);
+    assert!(supervisor
+        .remote_attestation("audit-not-eligible", "challenge")
+        .await
+        .is_err());
+    supervisor.shutdown().await.expect("audit shutdown must pass");
 }

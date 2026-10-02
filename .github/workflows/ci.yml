@@ -99,6 +99,7 @@ jobs:
           python3 scripts/smoke/offline/loader-hardening-01710.py
           python3 scripts/smoke/offline/loader-compatibility-rc-01711.py
           python3 scripts/smoke/offline/loader-compatibility-ga-0180.py
+          python3 scripts/smoke/offline/windows-protection-core-II-0181.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
@@ -314,6 +315,7 @@ jobs:
       - name: NeverGuard Windows integration test
         run: |
           python scripts/smoke/offline/windows-production-hardening-0136.py
+          python scripts/smoke/offline/windows-protection-core-II-0181.py
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture

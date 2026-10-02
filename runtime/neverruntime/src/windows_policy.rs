@@ -1,5 +1,14 @@
 use serde::{Deserialize, Serialize};
-use crate::{linux_policy::LinuxGuardPolicyDetails, macos_policy::MacOSGuardPolicyDetails};
+use crate::{
+    linux_policy::LinuxGuardPolicyDetails,
+    macos_policy::MacOSGuardPolicyDetails,
+    windows_protection::{
+        WindowsGuardPolicyDetails, WindowsMitigationRequirements,
+        WindowsProtectionCoreReport as GenericWindowsProtectionCoreReport,
+        WindowsProtectionProfile, NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+        NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
+    },
+};
 
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1;
@@ -24,6 +33,8 @@ pub struct GuardProcessPolicyReport {
     pub linux: Option<LinuxGuardPolicyDetails>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub macos: Option<MacOSGuardPolicyDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub windows: Option<WindowsGuardPolicyDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -36,6 +47,9 @@ pub struct WindowsProductionHardeningReport {
     pub current_directory_removed_from_dll_search: bool,
     pub restricted_default_dll_directories: bool,
 }
+
+pub type WindowsProtectionCoreReport =
+    GenericWindowsProtectionCoreReport<GuardProcessPolicyReport, WindowsProductionHardeningReport>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -52,9 +66,94 @@ pub struct RuntimeProcessPolicyReport {
     pub primary_thread_resumed: bool,
 }
 
+
+pub fn validate_windows_guard_policy_report(
+    policy: &GuardProcessPolicyReport,
+    expected_profile: WindowsProtectionProfile,
+) -> Result<(), String> {
+    if policy.schema != NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA
+        || policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+        || !policy.enforced
+    {
+        return Err("NeverGuard Windows process policy schema/version/enforcement mismatch".to_string());
+    }
+    let details = policy
+        .windows
+        .as_ref()
+        .ok_or_else(|| "NeverGuard Windows process policy is missing Protection Core details".to_string())?;
+    if details.core_schema != NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA
+        || details.core_version != NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION
+        || details.capability_model_version != NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
+        || details.capabilities.model_version != NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
+        || details.profile != expected_profile
+        || details.remote_attestation_eligible != expected_profile.is_remote_attestation_eligible()
+        || details.requirements != WindowsMitigationRequirements::for_profile(expected_profile)
+        || !details.requirements_satisfied
+        || !details.capabilities.requirements_satisfied()
+    {
+        return Err("NeverGuard Windows Protection Core profile/capability verification failed".to_string());
+    }
+
+    let requirements = details.requirements;
+    let direct_dynamic = u32::from(policy.dynamic_code_prohibited);
+    let direct_extension = u32::from(policy.extension_points_disabled);
+    let direct_strict = if policy.strict_handle_checks { 0x3 } else { 0 };
+    let direct_image = u32::from(policy.remote_images_blocked)
+        | (u32::from(policy.low_mandatory_label_images_blocked) << 1)
+        | (u32::from(policy.prefer_system32_images) << 2);
+    let direct_child = u32::from(policy.child_process_creation_blocked);
+    for (name, actual, required) in [
+        ("DynamicCode", direct_dynamic, requirements.dynamic_code),
+        ("ExtensionPointDisable", direct_extension, requirements.extension_point_disable),
+        ("StrictHandleCheck", direct_strict, requirements.strict_handle_check),
+        ("ImageLoad", direct_image, requirements.image_load),
+        ("ChildProcess", direct_child, requirements.child_process),
+    ] {
+        if actual & required != required {
+            return Err(format!(
+                "NeverGuard Windows {name} policy does not satisfy profile {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
+            ));
+        }
+    }
+
+    let capabilities = &details.capabilities;
+    for (name, capability, required) in [
+        ("DynamicCode", &capabilities.dynamic_code_policy, requirements.dynamic_code),
+        (
+            "ExtensionPointDisable",
+            &capabilities.extension_point_disable_policy,
+            requirements.extension_point_disable,
+        ),
+        (
+            "StrictHandleCheck",
+            &capabilities.strict_handle_check_policy,
+            requirements.strict_handle_check,
+        ),
+        ("ImageLoad", &capabilities.image_load_policy, requirements.image_load),
+        ("ChildProcess", &capabilities.child_process_policy, requirements.child_process),
+    ] {
+        if capability.required_flags != required
+            || (required != 0 && !capability.supported)
+            || !capability.satisfied
+        {
+            return Err(format!(
+                "NeverGuard Windows capability {name} does not satisfy profile {expected_profile}"
+            ));
+        }
+    }
+    if !capabilities.guard_lifetime_job_bound || capabilities.architecture.trim().is_empty() {
+        return Err("NeverGuard Windows capability model is incomplete".to_string());
+    }
+    Ok(())
+}
+
 #[cfg(windows)]
 mod windows_impl {
     use super::*;
+    use crate::windows_protection::{
+        protection_profile_from_environment, WindowsMitigationCapability,
+        WindowsProtectionCapabilities,
+    };
     use std::{
         ffi::c_void,
         mem::{size_of, zeroed},
@@ -90,11 +189,6 @@ mod windows_impl {
         },
     };
 
-    const DYNAMIC_CODE_REQUIRED: u32 = 0x0000_0001;
-    const EXTENSION_POINT_REQUIRED: u32 = 0x0000_0001;
-    const STRICT_HANDLE_REQUIRED: u32 = 0x0000_0003;
-    const IMAGE_LOAD_REQUIRED: u32 = 0x0000_0007;
-    const CHILD_PROCESS_REQUIRED: u32 = 0x0000_0001;
     const JOB_LIMITS_REQUIRED: u32 =
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION;
 
@@ -139,15 +233,77 @@ mod windows_impl {
     }
 
     pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
-        GUARD_POLICY
-            .get_or_init(apply_guard_process_policy)
-            .clone()
+        if let Some(cached) = GUARD_POLICY.get() {
+            return cached.clone();
+        }
+        let profile = protection_profile_from_environment()?;
+        ensure_guard_process_policy_with_profile(profile)
+    }
+
+    pub fn ensure_guard_process_policy_with_profile(
+        profile: WindowsProtectionProfile,
+    ) -> Result<GuardProcessPolicyReport, String> {
+        let report = GUARD_POLICY
+            .get_or_init(|| apply_guard_process_policy(profile))
+            .clone()?;
+        let actual_profile = report
+            .windows
+            .as_ref()
+            .map(|details| details.profile)
+            .ok_or_else(|| "NeverGuard Windows policy is missing Protection Core details".to_string())?;
+        if actual_profile != profile {
+            return Err(format!(
+                "NeverGuard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
+            ));
+        }
+        Ok(report)
     }
 
     pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
         PROCESS_HARDENING
             .get_or_init(apply_windows_production_hardening)
             .clone()
+    }
+
+    pub fn ensure_windows_protection_core() -> Result<WindowsProtectionCoreReport, String> {
+        if let Some(cached) = GUARD_POLICY.get() {
+            let process_policy = cached.clone()?;
+            let profile = process_policy
+                .windows
+                .as_ref()
+                .map(|details| details.profile)
+                .ok_or_else(|| "NeverGuard Windows policy is missing Protection Core details".to_string())?;
+            let hardening = ensure_windows_production_hardening()?;
+            return Ok(build_core_report(profile, process_policy, hardening));
+        }
+        let profile = protection_profile_from_environment()?;
+        ensure_windows_protection_core_with_profile(profile)
+    }
+
+    pub fn ensure_windows_protection_core_with_profile(
+        profile: WindowsProtectionProfile,
+    ) -> Result<WindowsProtectionCoreReport, String> {
+        // Apply process-global heap/DLL hardening before profile mitigations and before
+        // the Tokio runtime is constructed by neverguard.exe. This preserves the
+        // original production ordering while making mitigation requirements profile-aware.
+        let hardening = ensure_windows_production_hardening()?;
+        let process_policy = ensure_guard_process_policy_with_profile(profile)?;
+        Ok(build_core_report(profile, process_policy, hardening))
+    }
+
+    fn build_core_report(
+        profile: WindowsProtectionProfile,
+        process_policy: GuardProcessPolicyReport,
+        hardening: WindowsProductionHardeningReport,
+    ) -> WindowsProtectionCoreReport {
+        WindowsProtectionCoreReport {
+            schema: NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA.to_string(),
+            core_version: NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
+            profile,
+            capability_model_version: NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+            process_policy,
+            hardening,
+        }
     }
 
     fn apply_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
@@ -249,47 +405,82 @@ mod windows_impl {
         Ok(GuardLifetimeJob { _job: job })
     }
 
-    fn apply_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
-        set_policy(
-            "DynamicCode",
-            ProcessDynamicCodePolicy,
-            DYNAMIC_CODE_REQUIRED,
-        )?;
-        set_policy(
+    fn apply_guard_process_policy(
+        profile: WindowsProtectionProfile,
+    ) -> Result<GuardProcessPolicyReport, String> {
+        let requirements = WindowsMitigationRequirements::for_profile(profile);
+
+        apply_policy_if_required("DynamicCode", ProcessDynamicCodePolicy, requirements.dynamic_code)?;
+        apply_policy_if_required(
             "ExtensionPointDisable",
             ProcessExtensionPointDisablePolicy,
-            EXTENSION_POINT_REQUIRED,
+            requirements.extension_point_disable,
         )?;
-        set_policy(
+        apply_policy_if_required(
             "StrictHandleCheck",
             ProcessStrictHandleCheckPolicy,
-            STRICT_HANDLE_REQUIRED,
+            requirements.strict_handle_check,
         )?;
-        set_policy("ImageLoad", ProcessImageLoadPolicy, IMAGE_LOAD_REQUIRED)?;
-        set_policy(
+        apply_policy_if_required("ImageLoad", ProcessImageLoadPolicy, requirements.image_load)?;
+        apply_policy_if_required(
             "ChildProcess",
             ProcessChildProcessPolicy,
-            CHILD_PROCESS_REQUIRED,
+            requirements.child_process,
         )?;
 
-        let dynamic_code = query_policy("DynamicCode", ProcessDynamicCodePolicy)?;
-        let extension_points = query_policy(
-            "ExtensionPointDisable",
-            ProcessExtensionPointDisablePolicy,
-        )?;
-        let strict_handle = query_policy("StrictHandleCheck", ProcessStrictHandleCheckPolicy)?;
-        let image_load = query_policy("ImageLoad", ProcessImageLoadPolicy)?;
-        let child_process = query_policy("ChildProcess", ProcessChildProcessPolicy)?;
+        let capabilities = WindowsProtectionCapabilities {
+            model_version: NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+            architecture: std::env::consts::ARCH.to_string(),
+            dynamic_code_policy: mitigation_capability(
+                "DynamicCode",
+                ProcessDynamicCodePolicy,
+                requirements.dynamic_code,
+            ),
+            extension_point_disable_policy: mitigation_capability(
+                "ExtensionPointDisable",
+                ProcessExtensionPointDisablePolicy,
+                requirements.extension_point_disable,
+            ),
+            strict_handle_check_policy: mitigation_capability(
+                "StrictHandleCheck",
+                ProcessStrictHandleCheckPolicy,
+                requirements.strict_handle_check,
+            ),
+            image_load_policy: mitigation_capability(
+                "ImageLoad",
+                ProcessImageLoadPolicy,
+                requirements.image_load,
+            ),
+            child_process_policy: mitigation_capability(
+                "ChildProcess",
+                ProcessChildProcessPolicy,
+                requirements.child_process,
+            ),
+            guard_lifetime_job_bound: current_process_is_job_bound()?,
+        };
 
-        require_bits("DynamicCode", dynamic_code, DYNAMIC_CODE_REQUIRED)?;
-        require_bits(
-            "ExtensionPointDisable",
-            extension_points,
-            EXTENSION_POINT_REQUIRED,
-        )?;
-        require_bits("StrictHandleCheck", strict_handle, STRICT_HANDLE_REQUIRED)?;
-        require_bits("ImageLoad", image_load, IMAGE_LOAD_REQUIRED)?;
-        require_bits("ChildProcess", child_process, CHILD_PROCESS_REQUIRED)?;
+        if !capabilities.requirements_satisfied() {
+            return Err(format!(
+                "NeverGuard Windows protection profile {profile} cannot be enforced by this host capability set"
+            ));
+        }
+
+        let dynamic_code = capabilities.dynamic_code_policy.observed_flags;
+        let extension_points = capabilities.extension_point_disable_policy.observed_flags;
+        let strict_handle = capabilities.strict_handle_check_policy.observed_flags;
+        let image_load = capabilities.image_load_policy.observed_flags;
+        let child_process = capabilities.child_process_policy.observed_flags;
+
+        let windows = WindowsGuardPolicyDetails {
+            core_schema: NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA.to_string(),
+            core_version: NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
+            capability_model_version: NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+            profile,
+            remote_attestation_eligible: profile.is_remote_attestation_eligible(),
+            requirements,
+            requirements_satisfied: true,
+            capabilities,
+        };
 
         Ok(GuardProcessPolicyReport {
             schema: NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA.to_string(),
@@ -305,7 +496,19 @@ mod windows_impl {
             child_process_creation_blocked: child_process & 0x1 != 0,
             linux: None,
             macos: None,
+            windows: Some(windows),
         })
+    }
+
+    fn apply_policy_if_required(
+        name: &str,
+        policy: PROCESS_MITIGATION_POLICY,
+        flags: u32,
+    ) -> Result<(), String> {
+        if flags == 0 {
+            return Ok(());
+        }
+        set_policy(name, policy, flags)
     }
 
     fn set_policy(
@@ -329,6 +532,19 @@ mod windows_impl {
         Ok(())
     }
 
+    fn mitigation_capability(
+        name: &str,
+        policy: PROCESS_MITIGATION_POLICY,
+        required_flags: u32,
+    ) -> WindowsMitigationCapability {
+        match query_policy(name, policy) {
+            Ok(observed_flags) => {
+                WindowsMitigationCapability::observed(required_flags, observed_flags)
+            }
+            Err(error) => WindowsMitigationCapability::unsupported(required_flags, error),
+        }
+    }
+
     fn query_policy(name: &str, policy: PROCESS_MITIGATION_POLICY) -> Result<u32, String> {
         let mut flags = 0u32;
         let ok = unsafe {
@@ -341,20 +557,32 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to verify Windows {name} process policy: {}",
+                "NeverGuard failed to query Windows {name} process policy: {}",
                 std::io::Error::last_os_error()
             ));
         }
         Ok(flags)
     }
 
-    fn require_bits(name: &str, actual: u32, required: u32) -> Result<(), String> {
-        if actual & required != required {
+    fn current_process_is_job_bound() -> Result<bool, String> {
+        let mut in_job = 0i32;
+        let ok = unsafe {
+            IsProcessInJob(
+                windows_sys::Win32::System::Threading::GetCurrentProcess(),
+                null_mut(),
+                &mut in_job,
+            )
+        };
+        if ok == 0 {
             return Err(format!(
-                "NeverGuard Windows {name} process policy is not enforced: required=0x{required:08x}, actual=0x{actual:08x}"
+                "NeverGuard failed to query current Windows Job Object membership: {}",
+                std::io::Error::last_os_error()
             ));
         }
-        Ok(())
+        if in_job == 0 {
+            return Err("NeverGuard Windows Protection Core requires launcher Job Object lifetime binding".to_string());
+        }
+        Ok(true)
     }
 
     pub fn prepare_runtime_command(command: &mut Command) {
@@ -534,9 +762,9 @@ mod windows_impl {
 #[cfg(windows)]
 pub use windows_impl::{
     bind_guard_to_launcher_job, enforce_runtime_process, ensure_guard_process_policy,
-    ensure_windows_production_hardening, prepare_guard_command, prepare_runtime_command,
-    GuardLifetimeJob,
-    RuntimeProcessPolicyGuard,
+    ensure_guard_process_policy_with_profile, ensure_windows_production_hardening,
+    ensure_windows_protection_core, ensure_windows_protection_core_with_profile,
+    prepare_guard_command, prepare_runtime_command, GuardLifetimeJob, RuntimeProcessPolicyGuard,
 };
 
 #[cfg(not(windows))]
@@ -562,6 +790,25 @@ pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String>
 #[cfg(not(windows))]
 pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
     Err("NeverGuard 0.13.6 Windows production hardening доступен только для Windows".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn ensure_guard_process_policy_with_profile(
+    _profile: WindowsProtectionProfile,
+) -> Result<GuardProcessPolicyReport, String> {
+    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn ensure_windows_protection_core() -> Result<WindowsProtectionCoreReport, String> {
+    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
+}
+
+#[cfg(not(windows))]
+pub fn ensure_windows_protection_core_with_profile(
+    _profile: WindowsProtectionProfile,
+) -> Result<WindowsProtectionCoreReport, String> {
+    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
@@ -630,6 +877,89 @@ mod tests {
         assert_eq!(json["hardeningVersion"], NEVERGUARD_WINDOWS_HARDENING_VERSION);
         assert_eq!(json["enforced"], true);
         assert_eq!(json["restrictedDefaultDllDirectories"], true);
+    }
+
+
+    fn sample_windows_policy(profile: WindowsProtectionProfile) -> GuardProcessPolicyReport {
+        use crate::windows_protection::{
+            WindowsMitigationCapability, WindowsProtectionCapabilities,
+        };
+
+        let requirements = WindowsMitigationRequirements::for_profile(profile);
+        let capability = |required_flags| {
+            WindowsMitigationCapability::observed(required_flags, required_flags)
+        };
+        let capabilities = WindowsProtectionCapabilities {
+            model_version: NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+            architecture: "x86_64".to_string(),
+            dynamic_code_policy: capability(requirements.dynamic_code),
+            extension_point_disable_policy: capability(requirements.extension_point_disable),
+            strict_handle_check_policy: capability(requirements.strict_handle_check),
+            image_load_policy: capability(requirements.image_load),
+            child_process_policy: capability(requirements.child_process),
+            guard_lifetime_job_bound: true,
+        };
+        GuardProcessPolicyReport {
+            schema: NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA.to_string(),
+            policy_version: NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
+            pid: 42,
+            enforced: true,
+            dynamic_code_prohibited: requirements.dynamic_code & 0x1 != 0,
+            extension_points_disabled: requirements.extension_point_disable & 0x1 != 0,
+            strict_handle_checks: requirements.strict_handle_check & 0x3 == 0x3,
+            remote_images_blocked: requirements.image_load & 0x1 != 0,
+            low_mandatory_label_images_blocked: requirements.image_load & 0x2 != 0,
+            prefer_system32_images: requirements.image_load & 0x4 != 0,
+            child_process_creation_blocked: requirements.child_process & 0x1 != 0,
+            linux: None,
+            macos: None,
+            windows: Some(WindowsGuardPolicyDetails {
+                core_schema: NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA.to_string(),
+                core_version: NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
+                capability_model_version: NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
+                profile,
+                remote_attestation_eligible: profile.is_remote_attestation_eligible(),
+                requirements,
+                capabilities,
+                requirements_satisfied: true,
+            }),
+        }
+    }
+
+    #[test]
+    fn protection_profiles_validate_against_runtime_capabilities() {
+        for profile in [
+            WindowsProtectionProfile::Audit,
+            WindowsProtectionProfile::Compat,
+            WindowsProtectionProfile::Aggressive,
+        ] {
+            let report = sample_windows_policy(profile);
+            validate_windows_guard_policy_report(&report, profile)
+                .expect("valid profile capability report");
+        }
+    }
+
+    #[test]
+    fn protection_core_rejects_capability_drift() {
+        let mut report = sample_windows_policy(WindowsProtectionProfile::Aggressive);
+        let details = report.windows.as_mut().expect("Windows details");
+        details.capabilities.image_load_policy.observed_flags = 0x3;
+        details.capabilities.image_load_policy.satisfied = false;
+        assert!(validate_windows_guard_policy_report(
+            &report,
+            WindowsProtectionProfile::Aggressive
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn protection_core_rejects_profile_substitution() {
+        let report = sample_windows_policy(WindowsProtectionProfile::Compat);
+        assert!(validate_windows_guard_policy_report(
+            &report,
+            WindowsProtectionProfile::Aggressive
+        )
+        .is_err());
     }
 
     #[cfg(windows)]

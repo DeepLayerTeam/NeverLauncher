@@ -2710,6 +2710,54 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "loader-compatibility-ga-0180.py" not in preflight or "loader-compatibility-ga-0180.py" not in ci:
         fail("0.18.0 Loader Compatibility GA gate is not wired into preflight/CI")
 
+
+# 0.18.1 Windows Protection Core II makes the Windows Guard profile and host
+# capability model executable and authenticated instead of declarative.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 1):
+    windows_core_0181 = read("runtime/neverruntime/src/windows_protection.rs")
+    windows_policy_0181 = read("runtime/neverruntime/src/windows_policy.rs")
+    windows_ipc_0181 = read("runtime/neverruntime/src/guard_ipc.rs")
+    windows_test_0181 = read("runtime/neverruntime/tests/neverguard_windows.rs")
+    windows_gate_0181 = read("scripts/smoke/offline/windows-protection-core-II-0181.py")
+    for required in [
+        "WindowsProtectionProfile",
+        "WindowsProtectionCapabilities",
+        "NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2",
+        "NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1",
+    ]:
+        if required not in windows_core_0181:
+            fail(f"0.18.1 Windows Protection Core II model incomplete: {required}")
+    for required in [
+        "SetProcessMitigationPolicy",
+        "GetProcessMitigationPolicy",
+        "IsProcessInJob",
+        "ensure_windows_protection_core_with_profile",
+        "validate_windows_guard_policy_report",
+    ]:
+        if required not in windows_policy_0181:
+            fail(f"0.18.1 Windows Protection Core II enforcement incomplete: {required}")
+    for required in [
+        '.arg("--protection-profile")',
+        'send_command(&mut handle, "process-policy")',
+        "remote attestation requires aggressive Windows protection profile",
+        "validate_status_profile",
+    ]:
+        if required not in windows_ipc_0181:
+            fail(f"0.18.1 Windows Protection Core II authenticated IPC integration incomplete: {required}")
+    for required in [
+        "neverguard_compat_profile_enforces_its_runtime_capabilities",
+        "neverguard_audit_profile_measures_without_claiming_remote_trust",
+        "guard_lifetime_job_bound",
+    ]:
+        if required not in windows_test_0181:
+            fail(f"0.18.1 Windows Protection Core II integration regression missing: {required}")
+    if "Windows Protection Core II 0.18.1 gate: OK" not in windows_gate_0181:
+        fail("0.18.1 mandatory Windows Protection Core II gate incomplete")
+    if "windows-protection-core-II-0181.py" not in preflight or "windows-protection-core-II-0181.py" not in ci:
+        fail("0.18.1 Windows Protection Core II gate is not wired into preflight/CI")
+    if "--test neverguard_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.1 Windows Protection Core II lacks Windows compile/integration/clippy CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

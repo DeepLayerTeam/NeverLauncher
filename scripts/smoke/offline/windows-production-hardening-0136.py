@@ -78,10 +78,18 @@ require(desktop, [
 ], "Desktop fail-closed production hardening")
 
 binary = read("runtime/neverruntime/src/bin/neverguard.rs")
-require(binary, [
-    "ensure_windows_production_hardening",
-    "ensure_guard_process_policy",
-], "NeverGuard pre-runtime hardening")
+legacy_pre_runtime = (
+    "ensure_windows_production_hardening" in binary
+    and "ensure_guard_process_policy" in binary
+)
+core_v2_pre_runtime = (
+    "ensure_windows_protection_core_with_profile" in binary
+    and "windows_protection_profile(&args)" in binary
+)
+if not (legacy_pre_runtime or core_v2_pre_runtime):
+    raise SystemExit(
+        "NeverGuard pre-runtime hardening missing: legacy hardening/policy pair or Protection Core II initializer"
+    )
 
 release = read("scripts/release/build-windows-desktop.ps1")
 require(release, [

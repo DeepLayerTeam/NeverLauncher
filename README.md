@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Windows Protection Core II — 0.18.1
+
+NeverLauncher 0.18.1 переводит Windows NeverGuard на исполняемую profile/capability модель. Профили `audit`, `compat` и `aggressive` отличаются фактически применяемыми Windows process mitigations; после `SetProcessMitigationPolicy` Guard считывает состояние обратно через `GetProcessMitigationPolicy`, проверяет реальное membership в launcher Job Object и публикует authenticated capability report через HMAC IPC. Desktop проверяет report до перехода Guard в ready-state.
+
+По умолчанию используется `aggressive`. Профиль можно задать переменной процесса `NEVERGUARD_WINDOWS_PROTECTION_PROFILE=audit|compat|aggressive`; Desktop передаёт выбранное значение в Guard отдельным `--protection-profile`. `audit` предназначен для измерения совместимости, `compat` сохраняет совместимые hardening controls без запрета dynamic code, а `aggressive` требует полный Guard mitigation set и является единственным профилем, допускаемым к remote Guard Attestation. Ни `audit`, ни `compat` не могут выдать себя за high-trust `aggressive`: профиль, required bits, observed bits, capability-model version и Job binding проверяются после authenticated IPC handshake.
+
 ## Loader Hardening — 0.17.10
 
 NeverLauncher 0.17.10 усиливает production loader path для Fabric, Quilt, Forge и NeoForge: immutable resolution replay использует content-addressed SHA-256 cache и может восстановить pinned profile/installer без mutable upstream. Повреждённые cache entries quarantined и не принимаются как валидные.
@@ -76,7 +82,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Loader Hardening / 0.17.10**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Windows Protection Core II / 0.18.1**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 
