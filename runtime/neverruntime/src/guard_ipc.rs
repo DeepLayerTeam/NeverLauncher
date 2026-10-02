@@ -39,6 +39,8 @@ use crate::windows_protection::{
     NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
 };
 #[cfg(windows)]
+use crate::windows_sensor::NEVERGUARD_SENSOR_FILE_NAME;
+#[cfg(windows)]
 use std::{ffi::c_void, fs::File, io::{BufReader, Read}, mem::size_of, ptr::null_mut, time::{SystemTime, UNIX_EPOCH}};
 #[cfg(windows)]
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -598,7 +600,8 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     if current_dir != guard_dir {
         return Err("NeverGuard package verification failed: Guard is not adjacent to Desktop".to_string());
     }
-    for path in [&current_exe, guard_executable] {
+    let sensor_path = current_dir.join(NEVERGUARD_SENSOR_FILE_NAME);
+    for path in [&current_exe, guard_executable, &sensor_path] {
         let metadata = std::fs::symlink_metadata(path)
             .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() {
@@ -652,8 +655,10 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     }
     verify_package_artifact(&manifest, &current_exe)?;
     verify_package_artifact(&manifest, guard_executable)?;
+    verify_package_artifact(&manifest, &sensor_path)?;
     verify_windows_authenticode_trust(&current_exe)?;
     verify_windows_authenticode_trust(guard_executable)?;
+    verify_windows_authenticode_trust(&sensor_path)?;
     Ok(())
 }
 
@@ -1138,7 +1143,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
 }
 
 #[cfg(windows)]
-fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> {
+pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> {
     // Protected DACL: only LocalSystem and the exact launcher account receive access.
     // Authentication still happens at the HMAC layer, so the ACL is defense in depth.
     let user_sid = current_windows_user_sid_string()?;

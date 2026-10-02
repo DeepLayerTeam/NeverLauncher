@@ -68,7 +68,7 @@ def desired_files(version: str) -> dict[Path, str]:
         path = ROOT / rel
         result[path] = render_json(path, version)
 
-    for rel in ("runtime/neverruntime/Cargo.toml", "apps/desktop/src-tauri/Cargo.toml"):
+    for rel in ("runtime/neverruntime/Cargo.toml", "runtime/neverguard-sensor/Cargo.toml", "apps/desktop/src-tauri/Cargo.toml"):
         path = ROOT / rel
         result[path] = replace_package_version(path.read_text(encoding="utf-8"), version, path)
 

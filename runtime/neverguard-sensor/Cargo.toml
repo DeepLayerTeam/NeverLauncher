@@ -1,0 +1,24 @@
+[package]
+name = "neverguard-sensor"
+version = "0.18.2"
+description = "NeverGuard early JVM sensor for Windows"
+authors = ["Дмитрий \"SkiF4er\" Ефимов"]
+license = "Apache-2.0"
+edition = "2021"
+
+[lib]
+name = "neverguard_sensor"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+hmac = "0.12"
+sha2 = "0.10"
+zeroize = "1"
+
+[profile.release]
+panic = "abort"
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

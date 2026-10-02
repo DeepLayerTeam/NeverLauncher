@@ -249,3 +249,20 @@ func TestWindowsSigningRequiredFrom0152(t *testing.T) {
 		}
 	}
 }
+
+func TestNeverGuardSensorRequiredFrom0182(t *testing.T) {
+	for _, ver := range []string{"0.18.0", "0.18.1"} {
+		if neverguardSensorRequired0182(ver) {
+			t.Fatalf("%s must not require NeverGuard Sensor delivery", ver)
+		}
+	}
+	for _, ver := range []string{"0.18.2", "0.18.3", "0.19.0", "1.0.0"} {
+		if !neverguardSensorRequired0182(ver) {
+			t.Fatalf("%s must require NeverGuard Sensor delivery", ver)
+		}
+		artifacts := expectedWindowsSignedArtifactsForVersion0157(ver, "x64")
+		if artifacts["sensor"] != "neverguard-sensor-windows-x64.dll" {
+			t.Fatalf("%s sensor artifact mismatch: %#v", ver, artifacts)
+		}
+	}
+}

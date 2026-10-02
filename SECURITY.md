@@ -1,5 +1,11 @@
 # Политика безопасности NeverLauncher
 
+## NeverGuard Sensor / Windows JVM — 0.18.2
+
+В `0.18.2` добавлен `neverguard-sensor.dll` — подписанный native JVM agent, который загружается через `-agentpath` до Java/Minecraft main. Launcher создаёт защищённый Named Pipe на каждый запуск и случайный 256-битный secret; `Agent_OnLoad` отправляет HMAC-SHA-256 proof, привязанный к версии протокола и PID. Родительский процесс не принимает runtime до проверки proof, а ошибка аутентификации завершает JVM. Production package verification и updater связывают Sensor по SHA-256, PE architecture и Authenticode/RFC3161 вместе с Desktop, Guard и NeverRuntime.
+
+Startup proof подтверждает, что ожидаемый Sensor дошёл до `Agent_OnLoad`, но сам по себе не является непрерывной runtime attestation. Процесс того же пользователя с возможностью читать/изменять другой процесс, локальный администратор, kernel/firmware attacker или похищенный signing key остаются за пределами этой user-mode trust boundary. Непрерывная module/hook/memory integrity относится к следующим этапам NeverGuard и не должна выводиться из возможностей `0.18.2`.
+
 ## Граница доверия Production Delivery Release — 0.16.0
 
 Для `0.16.0+` production release имеет два последовательных уровня certification. `PRODUCTION_RELEASE_CANDIDATE.json` фиксирует exact pre-sign cohort, после чего `PRODUCTION_DELIVERY_RELEASE.json` промотит этот cohort в stable GA и отдельно привязывает candidate hash/cohort, six-target delivery evidence, Managed JRE, current root-signed trust policy, public matrix, Compatibility/Device Trust/Guard/ServerBridge certifications, SBOM и provenance к одному `boundarySha256`.

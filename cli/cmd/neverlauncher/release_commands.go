@@ -1112,6 +1112,9 @@ func releaseArtifacts(ver string) []string {
 		if componentTransactionalUpdateRequired0157(ver) {
 			artifacts = append(artifacts, "neverruntime-windows-x64.exe", "neverruntime-windows-arm64.exe")
 		}
+		if neverguardSensorRequired0182(ver) {
+			artifacts = append(artifacts, "neverguard-sensor-windows-x64.dll", "neverguard-sensor-windows-arm64.dll")
+		}
 		artifacts = append(artifacts,
 			"neverlauncher-desktop-"+ver+"-windows-x64.zip",
 			"neverlauncher-desktop-"+ver+"-windows-arm64.zip",

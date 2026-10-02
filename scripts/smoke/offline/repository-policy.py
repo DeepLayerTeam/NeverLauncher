@@ -2758,6 +2758,58 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "--test neverguard_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.1 Windows Protection Core II lacks Windows compile/integration/clippy CI")
 
+
+# 0.18.2 NeverGuard Sensor must be a real signed JVM native agent loaded through
+# -agentpath before Minecraft main, with authenticated fail-closed startup proof.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 2):
+    sensor_native_0182 = read("runtime/neverguard-sensor/src/lib.rs")
+    sensor_bootstrap_0182 = read("runtime/neverruntime/src/windows_sensor.rs")
+    sensor_runtime_0182 = read("runtime/neverruntime/src/lib.rs")
+    sensor_supervisor_0182 = read("runtime/neverruntime/src/supervisor.rs")
+    sensor_ipc_0182 = read("runtime/neverruntime/src/guard_ipc.rs")
+    sensor_build_0182 = read("scripts/release/build-windows-desktop.ps1")
+    sensor_test_0182 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    sensor_gate_0182 = read("scripts/smoke/offline/neverguard-sensor-0182.py")
+    sensor_updater_0182 = read("cli/cmd/neverlauncher/component_update.go")
+    sensor_signing_0182 = read("cli/cmd/neverlauncher/windows_signing.go")
+    for required in ["Agent_OnLoad", "JNI_ERR", "NGSENS02", "neverguard-sensor-startup-v1", "HmacSha256::new_from_slice", "stream.write_all(&packet)"]:
+        if required not in sensor_native_0182:
+            fail(f"0.18.2 NeverGuard Sensor native JVM agent incomplete: {required}")
+    for required in ["-agentpath:", "create_secure_pipe_server", "verify_windows_authenticode_trust", "authenticate_sensor_or_kill", "child.start_kill()", "loaded_before_main: true"]:
+        if required not in sensor_bootstrap_0182:
+            fail(f"0.18.2 NeverGuard Sensor fail-closed bootstrap incomplete: {required}")
+    if sensor_runtime_0182.count("prepare_sensor_command(&mut command)") < 2 or sensor_runtime_0182.count("authenticate_sensor_or_kill(sensor_bootstrap, &mut child)") < 2:
+        fail("0.18.2 NeverGuard Sensor is not enforced in both direct JVM launch paths")
+    for required in ["prepare_sensor_command(&mut command)", "authenticate_sensor_or_kill(sensor_bootstrap, &mut child)", "windows_sensor: Option<crate::WindowsSensorReport>"]:
+        if required not in sensor_supervisor_0182:
+            fail(f"0.18.2 NeverGuard Sensor supervised launch integration incomplete: {required}")
+    for required in ["NEVERGUARD_SENSOR_FILE_NAME", "verify_package_artifact(&manifest, &sensor_path)", "verify_windows_authenticode_trust(&sensor_path)"]:
+        if required not in sensor_ipc_0182:
+            fail(f"0.18.2 NeverGuard Sensor package trust boundary incomplete: {required}")
+    for required in ["neverguard_sensor.dll", "Sign-And-VerifyAuthenticode $SensorPackagePath", 'sensorVerification = "sha256+pe-machine+authenticode-before-agentpath"', "neverguard-sensor-windows-$Arch.dll"]:
+        if required not in sensor_build_0182:
+            fail(f"0.18.2 NeverGuard Sensor signed delivery incomplete: {required}")
+    for required in ["expected[\"sensor\"] = false"]:
+        if required not in sensor_updater_0182:
+            fail(f"0.18.2 NeverGuard Sensor updater integration incomplete: {required}")
+    for required in ["neverguardSensorRequired0182", 'packageEntries["sensor"] = "neverguard-sensor.dll"', "expectedComponentCount = 4"]:
+        if required not in sensor_signing_0182:
+            fail(f"0.18.2 NeverGuard Sensor delivery verifier incomplete: {required}")
+    for required in ["neverguard_sensor_agentpath_loads_before_jvm_startup", "authenticate_sensor_or_kill(bootstrap, &mut child)", "assert!(report.loaded_before_main)"]:
+        if required not in sensor_test_0182:
+            fail(f"0.18.2 NeverGuard Sensor Java integration regression missing: {required}")
+    if "NeverGuard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
+        fail("0.18.2 mandatory NeverGuard Sensor gate incomplete")
+    if "neverguard-sensor-0182.py" not in preflight or "neverguard-sensor-0182.py" not in ci:
+        fail("0.18.2 NeverGuard Sensor gate is not wired into preflight/CI")
+    for required in [
+        "cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml",
+        "--test neverguard_sensor_windows",
+        "cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings",
+    ]:
+        if required not in ci:
+            fail(f"0.18.2 NeverGuard Sensor lacks Windows build/integration/clippy CI: {required}")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

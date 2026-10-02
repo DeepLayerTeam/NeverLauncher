@@ -205,6 +205,8 @@ jobs:
           test -s "${DIR}/neverlauncher-desktop-windows-arm64.exe"
           test -s "${DIR}/neverguard-windows-x64.exe"
           test -s "${DIR}/neverguard-windows-arm64.exe"
+          test -s "${DIR}/neverguard-sensor-windows-x64.dll"
+          test -s "${DIR}/neverguard-sensor-windows-arm64.dll"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_X64.json"

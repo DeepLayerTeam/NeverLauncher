@@ -90,6 +90,14 @@ func windowsSigningRequired0152(ver string) bool {
 	return major > 0 || (major == 0 && (minor > 15 || (minor == 15 && patch >= 2)))
 }
 
+func neverguardSensorRequired0182(ver string) bool {
+	major, minor, patch, ok := parseCoreVersion(ver)
+	if !ok {
+		return false
+	}
+	return major > 0 || (major == 0 && (minor > 18 || (minor == 18 && patch >= 2)))
+}
+
 func windowsTargetMetadata0152(arch string) (rustTarget string, machine uint16, machineText string, err error) {
 	switch arch {
 	case "x64":
@@ -113,6 +121,9 @@ func expectedWindowsSignedArtifactsForVersion0157(ver, arch string) map[string]s
 	artifacts := expectedWindowsSignedArtifacts0152(arch)
 	if componentTransactionalUpdateRequired0157(ver) {
 		artifacts["runtime"] = "neverruntime-windows-" + arch + ".exe"
+	}
+	if neverguardSensorRequired0182(ver) {
+		artifacts["sensor"] = "neverguard-sensor-windows-" + arch + ".dll"
 	}
 	return artifacts
 }
@@ -332,6 +343,9 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 	if componentTransactionalUpdateRequired0157(ver) {
 		packageComponents = []string{"cli", "desktop-launcher", "guard", "runtime"}
 	}
+	if neverguardSensorRequired0182(ver) {
+		packageComponents = append(packageComponents, "sensor")
+	}
 	for _, component := range packageComponents {
 		evidenceArtifact, ok := artifactByComponent[component]
 		if !ok {
@@ -391,6 +405,9 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 			"runtime":          "neverruntime.exe",
 		}
 	}
+	if neverguardSensorRequired0182(ver) {
+		packageEntries["sensor"] = "neverguard-sensor.dll"
+	}
 	for component, entryName := range packageEntries {
 		data, ok := zipFiles[entryName]
 		if !ok {
@@ -422,11 +439,19 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		if requireSigned {
 			expectedTrust = "authenticode-rfc3161"
 		}
-		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
+		expectedComponentCount := 3
+		if neverguardSensorRequired0182(ver) {
+			expectedComponentCount = 4
+		}
+		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != expectedComponentCount {
 			return fmt.Errorf("Windows %s component update manifest identity mismatch", arch)
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
 		expectedEntry := map[string]string{"desktop": "neverlauncher-desktop.exe", "guard": "neverguard.exe", "runtime": "neverruntime.exe"}
+		if neverguardSensorRequired0182(ver) {
+			aliases["sensor"] = "sensor"
+			expectedEntry["sensor"] = "neverguard-sensor.dll"
+		}
 		for _, row := range update.Components {
 			component, ok := aliases[row.Component]
 			evidenceArtifact, exists := artifactByComponent[component]

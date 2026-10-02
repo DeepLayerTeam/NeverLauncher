@@ -1,5 +1,13 @@
 # NeverLauncher
 
+## NeverGuard Sensor — 0.18.2
+
+NeverLauncher 0.18.2 добавляет реальный Windows JVM sensor как отдельный native `cdylib` — `neverguard-sensor.dll`. Desktop/NeverRuntime добавляет его через `-agentpath` **до пользовательских JVM-аргументов и до Java main**, а JVM вызывает экспортированный `Agent_OnLoad` при старте VM. Sensor обязан выполнить одноразовый HMAC-SHA-256 startup proof через защищённый current-user Named Pipe; proof привязан к protocol version и PID запущенной JVM. Родитель принимает runtime только после проверки proof. При timeout, неверном PID/HMAC или отсутствии Sensor JVM принудительно завершается.
+
+В production Sensor является частью той же Windows release boundary, что Desktop/Guard/Runtime: x64 и ARM64 DLL собираются release pipeline, проходят PE architecture check, подписываются Authenticode/RFC3161 тем же production signing context, входят в `WINDOWS_PACKAGE_MANIFEST`, component-update manifest и signing evidence. Перед `-agentpath` release runtime повторно проверяет, что DLL — обычный непустой файл и её Authenticode trust валиден. `neverguard-sensor.dll` обновляется атомарно вместе с Desktop/Guard/Runtime. Windows CI отдельно собирает DLL и запускает настоящую Temurin JVM с `-agentpath`, затем требует успешный `Agent_OnLoad` handshake.
+
+Эта версия подтверждает раннюю загрузку доверенного Sensor и создаёт in-process security boundary для следующих этапов Module Guard/hooks. Она не заявляет непрерывный anti-tamper, защиту от kernel/administrator attacker или kernel-equivalent guarantees.
+
 ## Windows Protection Core II — 0.18.1
 
 NeverLauncher 0.18.1 переводит Windows NeverGuard на исполняемую profile/capability модель. Профили `audit`, `compat` и `aggressive` отличаются фактически применяемыми Windows process mitigations; после `SetProcessMitigationPolicy` Guard считывает состояние обратно через `GetProcessMitigationPolicy`, проверяет реальное membership в launcher Job Object и публикует authenticated capability report через HMAC IPC. Desktop проверяет report до перехода Guard в ready-state.
@@ -82,7 +90,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Windows Protection Core II / 0.18.1**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeverGuard Sensor / 0.18.2**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

@@ -32,6 +32,8 @@ pub struct ProcessStatus {
     pub linux_process_policy: Option<crate::LinuxRuntimeProcessPolicyReport>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub macos_process_policy: Option<crate::MacOSRuntimeProcessPolicyReport>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub windows_sensor: Option<crate::WindowsSensorReport>,
 }
 
 #[derive(Clone)]
@@ -107,6 +109,9 @@ impl ProcessSupervisor {
         let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
 
         let mut command = tokio::process::Command::new(&plan.java_executable);
+        #[cfg(windows)]
+        let sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
+            .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
         command
             .args(&plan.jvm_args)
             .arg("-cp")
@@ -129,6 +134,14 @@ impl ProcessSupervisor {
         #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
             .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+        #[cfg(windows)]
+        let windows_sensor = Some(
+            crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
+                .await
+                .map_err(|err| format!("launch заблокирован: NeverGuard Sensor authentication failed: {err}"))?,
+        );
+        #[cfg(not(windows))]
+        let windows_sensor = None;
         #[cfg(target_os = "linux")]
         let linux_runtime_policy = crate::linux_policy::runtime_policy(&mut child)
             .map_err(|err| format!("launch заблокирован: Linux runtime/process policy enforcement failed: {err}"))?;
@@ -165,6 +178,7 @@ impl ProcessSupervisor {
             windows_process_policy,
             linux_process_policy,
             macos_process_policy,
+            windows_sensor,
         };
         let child = Arc::new(Mutex::new(Some(child)));
         self.processes.lock().await.insert(id.clone(), ManagedProcess {

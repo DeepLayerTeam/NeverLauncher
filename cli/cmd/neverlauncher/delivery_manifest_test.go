@@ -141,3 +141,17 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 		t.Fatal("release delivery manifest does not contain canonical linux/x64 CLI metadata")
 	}
 }
+
+func TestDeliveryManifestClassifiesNeverGuardSensor0182(t *testing.T) {
+	name := "neverguard-sensor-windows-arm64.dll"
+	if got := deliveryArtifactComponent(name); got != "sensor" {
+		t.Fatalf("sensor component=%q", got)
+	}
+	target := deliveryArtifactTarget(name)
+	if target.Platform != "windows" || target.Architecture != "arm64" {
+		t.Fatalf("sensor target=%+v", target)
+	}
+	if got := deliveryArtifactFormat(name); got != "dll" {
+		t.Fatalf("sensor format=%q", got)
+	}
+}

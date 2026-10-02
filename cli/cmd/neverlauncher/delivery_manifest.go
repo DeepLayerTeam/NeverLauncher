@@ -174,6 +174,8 @@ func deliveryArtifactTarget(name string) DeliveryTarget {
 func deliveryArtifactComponent(name string) string {
 	lower := strings.ToLower(name)
 	switch {
+	case strings.HasPrefix(lower, "neverguard-sensor-"):
+		return "sensor"
 	case strings.HasPrefix(lower, "neverguard-"):
 		return "guard"
 	case strings.HasPrefix(lower, "neverlauncher-desktop-web-"):
@@ -220,7 +222,7 @@ func deliveryArtifactFormat(name string) string {
 }
 
 func deliveryArtifactExecutable(name, component string) bool {
-	if component == "cli" || component == "api" || component == "runtime" || component == "desktop-launcher" || component == "guard" {
+	if component == "cli" || component == "api" || component == "runtime" || component == "desktop-launcher" || component == "guard" || component == "sensor" {
 		return !strings.HasSuffix(strings.ToLower(name), ".zip")
 	}
 	return false

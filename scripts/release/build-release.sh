@@ -302,6 +302,8 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       "neverlauncher-desktop-windows-arm64.exe" \
       "neverguard-windows-x64.exe" \
       "neverguard-windows-arm64.exe" \
+      "neverguard-sensor-windows-x64.dll" \
+      "neverguard-sensor-windows-arm64.dll" \
       "neverruntime-windows-x64.exe" \
       "neverruntime-windows-arm64.exe" \
       "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
@@ -400,6 +402,8 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     "neverlauncher-desktop-windows-arm64.exe" \
     "neverguard-windows-x64.exe" \
     "neverguard-windows-arm64.exe" \
+    "neverguard-sensor-windows-x64.dll" \
+    "neverguard-sensor-windows-arm64.dll" \
     "neverruntime-windows-x64.exe" \
     "neverruntime-windows-arm64.exe" \
     "neverlauncher-desktop-${VERSION}-windows-x64.zip" \

@@ -17,6 +17,8 @@ for required in \
   "${BUNDLE_DIR}/PRODUCTION_DELIVERY_RELEASE.json" \
   "${BUNDLE_DIR}/WINDOWS_SIGNING_EVIDENCE.json" \
   "${BUNDLE_DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
+  "${BUNDLE_DIR}/neverguard-sensor-windows-x64.dll" \
+  "${BUNDLE_DIR}/neverguard-sensor-windows-arm64.dll" \
   "${BUNDLE_DIR}/neverruntime-windows-x64.exe" \
   "${BUNDLE_DIR}/neverruntime-windows-arm64.exe" \
   "${BUNDLE_DIR}/LINUX_PRODUCTION_EVIDENCE.json" \

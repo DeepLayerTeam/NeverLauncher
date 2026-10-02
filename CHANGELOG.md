@@ -1,3 +1,10 @@
+## 0.18.2 — NeverGuard Sensor
+
+- Added a real Windows JVM native agent crate that builds `neverguard-sensor.dll` and exports `Agent_OnLoad`/`Agent_OnUnload`; JVM startup fails with `JNI_ERR` if its authenticated startup channel cannot be established.
+- All Windows Java launch paths prepend a signed `-agentpath` sensor and require a PID-bound HMAC-SHA-256 proof from `Agent_OnLoad` before the runtime is accepted; failed/missing proof terminates the child JVM fail-closed.
+- Production x64/ARM64 delivery now builds, architecture-checks, Authenticode/RFC3161-signs and packages the Sensor, verifies it before launch, includes it in component transactions/signing evidence, and requires it in publish/release gates.
+- Added a real Windows/Temurin integration test that launches `java -version` through the existing suspended Job Object path and proves Sensor load before Java main, plus mandatory 0.18.2 preflight/repository-policy/CI gates and Sensor `clippy -D warnings`.
+
 ## 0.18.1 — Windows Protection Core II
 
 - Reworked NeverGuard Windows process protection into an executable profile engine with `audit`, `compat` and default `aggressive` profiles. Each profile maps to real `SetProcessMitigationPolicy` requirements; NeverGuard immediately reads the applied state back with `GetProcessMitigationPolicy` and fails closed when a required bit is unavailable or not active.

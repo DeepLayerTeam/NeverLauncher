@@ -145,10 +145,13 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 	if manifest.Layout == "macos-app-bundle" && platform != "macos" {
 		return errors.New("macos-app-bundle layout is valid only on macOS")
 	}
-	if len(manifest.Components) != 3 {
-		return errors.New("component update manifest must contain exactly Desktop, NeverGuard and NeverRuntime")
-	}
 	expected := map[string]bool{"desktop": false, "guard": false, "runtime": false}
+	if platform == "windows" && neverguardSensorRequired0182(manifest.ProductVersion) {
+		expected["sensor"] = false
+	}
+	if len(manifest.Components) != len(expected) {
+		return fmt.Errorf("component update manifest has %d required components, expected %d", len(manifest.Components), len(expected))
+	}
 	seenTargets := map[string]bool{}
 	sourceBase := manifestDir
 	if manifest.Layout == "macos-app-bundle" && filepath.Base(manifestDir) == "Resources" {
@@ -678,7 +681,11 @@ func applyAdjacentComponentUpdate0157(manifest componentUpdateManifest0157, mani
 	if err != nil {
 		return nil, err
 	}
-	report["components"] = []string{"desktop", "guard", "runtime"}
+	components := make([]string, 0, len(manifest.Components))
+	for _, item := range manifest.Components {
+		components = append(components, item.Component)
+	}
+	report["components"] = components
 	report["layout"] = manifest.Layout
 	report["restartExecutable"] = filepath.Join(root, filepath.FromSlash(componentTargetPath0157(manifest, "desktop")))
 	return report, nil

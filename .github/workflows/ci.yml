@@ -100,6 +100,7 @@ jobs:
           python3 scripts/smoke/offline/loader-compatibility-rc-01711.py
           python3 scripts/smoke/offline/loader-compatibility-ga-0180.py
           python3 scripts/smoke/offline/windows-protection-core-II-0181.py
+          python3 scripts/smoke/offline/neverguard-sensor-0182.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
@@ -308,6 +309,10 @@ jobs:
           node-version: '22.x'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
@@ -316,14 +321,20 @@ jobs:
         run: |
           python scripts/smoke/offline/windows-production-hardening-0136.py
           python scripts/smoke/offline/windows-protection-core-II-0181.py
+          python scripts/smoke/offline/neverguard-sensor-0182.py
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
+          cargo fmt --manifest-path runtime/neverguard-sensor/Cargo.toml
+          cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
+          $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings
       - name: Unified transactional updater self-test
         shell: pwsh
         run: |
@@ -359,6 +370,8 @@ jobs:
             dist/release-*/neverlauncher-desktop-windows-arm64.exe
             dist/release-*/neverguard-windows-x64.exe
             dist/release-*/neverguard-windows-arm64.exe
+            dist/release-*/neverguard-sensor-windows-x64.dll
+            dist/release-*/neverguard-sensor-windows-arm64.dll
             dist/release-*/neverruntime-windows-x64.exe
             dist/release-*/neverruntime-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-*-windows-x64.zip
