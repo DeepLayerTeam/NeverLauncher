@@ -6,7 +6,7 @@ use neverruntime::{
         authenticate_sensor_or_kill, prepare_sensor_command_with_path,
         NEVERGUARD_SENSOR_PROTOCOL_VERSION,
     },
-    NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION, NEVERGUARD_HOOK_ENGINE_VERSION,
+    NEVERGUARD_CONTINUOUS_GUARD_VERSION, NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION, NEVERGUARD_HOOK_ENGINE_VERSION,
     NEVERGUARD_JVM_AWARE_PROTECTION_VERSION, NEVERGUARD_MEMORY_INTEGRITY_VERSION,
     NEVERGUARD_MODULE_GUARD_VERSION, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
 };
@@ -334,6 +334,16 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     assert_eq!(report.module_guard.jvm_aware.state_sha256.len(), 64);
     assert_eq!(report.module_guard.jvm_aware.foreign_executable_transition_count, 0);
     assert_eq!(report.module_guard.jvm_aware.unknown_executable_transition_count, 0);
+    assert_eq!(
+        report.module_guard.continuous_guard.version,
+        NEVERGUARD_CONTINUOUS_GUARD_VERSION
+    );
+    assert!(report.module_guard.continuous_guard.active);
+    assert!(report.module_guard.continuous_guard.healthy);
+    assert!(report.module_guard.continuous_guard.cross_check_count >= 1);
+    assert_eq!(report.module_guard.continuous_guard.last_guard_sequence, 1);
+    assert_eq!(report.module_guard.continuous_guard.last_cross_check_sha256.len(), 64);
+    assert_eq!(report.module_guard.continuous_guard.sensor_event_chain_sha256.len(), 64);
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
@@ -402,6 +412,65 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert_eq!(report.debug_instrumentation.state_sha256.len(), 64);
     assert_eq!(report.event_chain_sha256.len(), 64);
     assert_eq!(report.module_set_sha256.len(), 64);
+    assert!(report.continuous_guard.healthy, "Continuous Guard violation: {}", report.continuous_guard.last_violation);
+    assert!(report.continuous_guard.sensor_heartbeat_count >= 2, "expected Sensor heartbeats: {report:?}");
+    assert!(report.continuous_guard.guard_heartbeat_count >= 2, "expected Guard heartbeats: {report:?}");
+    assert!(report.continuous_guard.cross_check_count >= 2, "expected bidirectional cross-checks: {report:?}");
+    assert_eq!(
+        report.continuous_guard.sensor_heartbeat_count,
+        report.continuous_guard.guard_heartbeat_count,
+        "every Sensor heartbeat must receive exactly one Guard ACK"
+    );
+    assert_eq!(report.continuous_guard.last_cross_check_sha256.len(), 64);
+    assert_eq!(report.continuous_guard.sensor_event_chain_sha256.len(), 64);
+    assert!(report.continuous_guard.last_guard_sequence >= 2);
+
+    let _ = fs::remove_dir_all(root);
+}
+
+#[tokio::test]
+async fn neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let root = unique_test_root("continuous-guard");
+    let trusted = root.join("trusted");
+    compile_module_probe(&javac, &trusted);
+    let probe_dll = trusted.join("continuous-probe-native.dll");
+    fs::copy(&sensor, &probe_dll).expect("copy continuous guard probe DLL");
+    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical continuous guard probe DLL");
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Continuous Guard Sensor");
+    command
+        .arg("-cp")
+        .arg(&trusted)
+        .arg("ModuleGuardProbe")
+        .arg(&probe_dll);
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn Continuous Guard Java probe");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce Continuous Guard runtime policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("Continuous Guard startup cross-check");
+    let status = child.wait().await.expect("wait Continuous Guard Java probe");
+    assert!(status.success(), "Continuous Guard healthy workload failed: {status}");
+    sleep(Duration::from_millis(250)).await;
+
+    let report = session.report().module_guard.continuous_guard;
+    assert_eq!(report.version, NEVERGUARD_CONTINUOUS_GUARD_VERSION);
+    assert!(report.healthy, "Continuous Guard violation: {}", report.last_violation);
+    assert!(report.sensor_heartbeat_count >= 3, "expected startup + runtime Sensor heartbeats: {report:?}");
+    assert_eq!(report.sensor_heartbeat_count, report.guard_heartbeat_count);
+    assert_eq!(report.sensor_heartbeat_count, report.cross_check_count);
+    assert_eq!(report.last_guard_sequence, report.guard_heartbeat_count);
+    assert!(report.last_sensor_sequence >= 6);
+    assert_eq!(report.sensor_event_chain_sha256.len(), 64);
+    assert_eq!(report.last_cross_check_sha256.len(), 64);
+    assert_eq!(report.violation_count, 0);
 
     let _ = fs::remove_dir_all(root);
 }

@@ -29,6 +29,8 @@ pub struct WindowsModuleGuardReport {
     pub debug_instrumentation: crate::WindowsDebugInstrumentationReport,
     #[serde(default)]
     pub jvm_aware: crate::WindowsJvmAwareProtectionReport,
+    #[serde(default)]
+    pub continuous_guard: crate::WindowsContinuousGuardReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -56,6 +58,7 @@ impl Default for WindowsModuleGuardReport {
             thread_process_integrity: crate::WindowsThreadProcessIntegrityReport::default(),
             debug_instrumentation: crate::WindowsDebugInstrumentationReport::default(),
             jvm_aware: crate::WindowsJvmAwareProtectionReport::default(),
+            continuous_guard: crate::WindowsContinuousGuardReport::default(),
             last_violation: String::new(),
         }
     }
@@ -149,6 +152,14 @@ mod imp {
     const MODULE_EVENT_REASON_JVM_AWARE_READY: u32 = 18;
     const MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT: u32 = 19;
     const MODULE_EVENT_REASON_JVM_AWARE_TAMPER: u32 = 20;
+    const MODULE_EVENT_REASON_CONTINUOUS_READY: u32 = 21;
+    const MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT: u32 = 22;
+    const MODULE_EVENT_REASON_CONTINUOUS_TAMPER: u32 = 23;
+    const CONTINUOUS_GUARD_VERSION: u32 = 1;
+    const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
+    const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"neverguard-continuous-guard-ack-v1";
+    const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
+    const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -358,6 +369,8 @@ mod imp {
                 ready_chain.copy_from_slice(&bytes);
             }
         }
+        let mut continuous_chain = [0u8; 32];
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &ready_packet);
         ready_chain = advance_event_chain(ready_chain, &ready_packet, &hook_digest);
         update_counter(&state, |report| {
             report.event_count = 1;
@@ -391,6 +404,7 @@ mod imp {
         if memory_ready.executable_region_count == 0 || memory_ready.image_code_region_count == 0 {
             return Err("NeverGuard Memory Integrity armed with zero executable/image code coverage".to_string());
         }
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &memory_ready_packet);
         ready_chain = advance_event_chain(
             ready_chain,
             &memory_ready_packet,
@@ -433,6 +447,7 @@ mod imp {
         thread_ready.job_bound = process_tree.job_bound;
         thread_ready.breakaway_allowed = runtime_policy.report().breakaway_allowed;
         thread_ready.process_tree_sha256 = process_tree.process_tree_sha256.clone();
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &thread_ready_packet);
         ready_chain = advance_event_chain(
             ready_chain,
             &thread_ready_packet,
@@ -470,6 +485,7 @@ mod imp {
         {
             return Err("NeverGuard Debug & Instrumentation Guard armed with active debugger state".to_string());
         }
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &debug_ready_packet);
         ready_chain = advance_event_chain(
             ready_chain,
             &debug_ready_packet,
@@ -507,6 +523,7 @@ mod imp {
                 jvm_ready.java_major
             ));
         }
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &jvm_ready_packet);
         ready_chain = advance_event_chain(
             ready_chain,
             &jvm_ready_packet,
@@ -519,6 +536,72 @@ mod imp {
             report.jvm_aware = jvm_ready;
         });
         jvm_ready_packet.zeroize();
+
+        // Continuous Guard is the sixth mandatory startup proof. It carries the
+        // Sensor's independently maintained digest of every authenticated packet
+        // emitted so far. The parent must see the exact same chain and return a
+        // signed ACK before Agent_OnLoad is allowed to complete.
+        let mut continuous_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
+            .await
+            .map_err(|_| "NeverGuard Continuous Guard ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard Continuous Guard ready proof read failed: {err}"))?;
+        let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
+        if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
+            return Err(format!(
+                "NeverGuard Continuous Guard expected CONTINUOUS_READY as sixth event, got {}",
+                continuous_ready_event.reason
+            ));
+        }
+        if continuous_ready_event.flags != CONTINUOUS_GUARD_VERSION
+            || continuous_ready_event.base_address != 0
+            || continuous_ready_event.size_of_image != 0
+        {
+            return Err("NeverGuard Continuous Guard ready metadata mismatch".to_string());
+        }
+        let continuous_pre_digest = continuous_digest_from_event(&continuous_ready_event)?;
+        if continuous_pre_digest != hex::encode(continuous_chain) {
+            return Err("NeverGuard Continuous Guard startup event-chain mismatch".to_string());
+        }
+        continuous_chain = advance_continuous_event_chain(continuous_chain, &continuous_ready_packet);
+        ready_chain = advance_event_chain(
+            ready_chain,
+            &continuous_ready_packet,
+            &continuous_pre_digest,
+        );
+        let guard_sequence = 1u64;
+        write_continuous_guard_ack(
+            &mut server,
+            &secret,
+            pid,
+            guard_sequence,
+            continuous_ready_event.sequence,
+            continuous_chain,
+        )
+        .await?;
+        let continuous_now = now_unix_ms();
+        update_counter(&state, |report| {
+            report.event_count = 6;
+            report.last_sequence = 6;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.continuous_guard = crate::WindowsContinuousGuardReport {
+                version: crate::NEVERGUARD_CONTINUOUS_GUARD_VERSION,
+                active: true,
+                healthy: true,
+                sensor_heartbeat_count: 1,
+                guard_heartbeat_count: 1,
+                cross_check_count: 1,
+                last_sensor_sequence: continuous_ready_event.sequence,
+                last_guard_sequence: guard_sequence,
+                sensor_event_chain_sha256: hex::encode(continuous_chain),
+                last_cross_check_sha256: hex::encode(continuous_chain),
+                last_sensor_heartbeat_unix_ms: continuous_now,
+                last_guard_heartbeat_unix_ms: continuous_now,
+                violation_count: 0,
+                last_violation: String::new(),
+            };
+        });
+        continuous_ready_packet.zeroize();
 
         let expected = baseline
             .into_iter()
@@ -533,6 +616,8 @@ mod imp {
                 policy,
                 runtime_policy,
                 expected,
+                continuous_chain,
+                guard_sequence,
                 task_state,
             )
             .await;
@@ -549,6 +634,8 @@ mod imp {
         policy: WindowsModuleGuardPolicy,
         runtime_policy: crate::RuntimeProcessPolicyGuard,
         mut expected: HashMap<u64, String>,
+        mut continuous_chain: [u8; 32],
+        mut guard_sequence: u64,
         state: Arc<Mutex<WindowsModuleGuardReport>>,
     ) {
         let mut packet = [0u8; MODULE_EVENT_PACKET_LEN];
@@ -602,6 +689,7 @@ mod imp {
             };
             expected_sequence = expected_sequence.saturating_add(1);
 
+            let continuous_chain_before = continuous_chain;
             let mut module_hash = String::new();
             let event_result = match event.reason {
                 MODULE_EVENT_REASON_LOADED => {
@@ -832,6 +920,38 @@ mod imp {
                         )
                     })
                 }
+                MODULE_EVENT_REASON_CONTINUOUS_READY => {
+                    Err("NeverGuard Continuous Guard emitted duplicate CONTINUOUS_READY".to_string())
+                }
+                MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT => {
+                    if event.flags != CONTINUOUS_GUARD_VERSION || event.size_of_image != 0 {
+                        Err("NeverGuard Continuous Guard heartbeat metadata mismatch".to_string())
+                    } else if event.base_address != guard_sequence {
+                        Err(format!(
+                            "NeverGuard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
+                            event.base_address
+                        ))
+                    } else {
+                        match continuous_digest_from_event(&event) {
+                            Err(err) => Err(err),
+                            Ok(digest) if digest != hex::encode(continuous_chain_before) => {
+                                Err("NeverGuard Continuous Guard event-chain cross-check mismatch".to_string())
+                            }
+                            Ok(digest) => {
+                                module_hash = digest;
+                                Ok(())
+                            }
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_CONTINUOUS_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard Continuous Guard Sensor/Guard cross-check failed".to_string()
+                    } else {
+                        format!("NeverGuard Continuous Guard Sensor/Guard cross-check failed: {detail}")
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -850,11 +970,59 @@ mod imp {
                 return;
             }
 
+            let next_continuous_chain = advance_continuous_event_chain(continuous_chain, &packet);
+            if event.reason == MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT {
+                let next_guard_sequence = match guard_sequence.checked_add(1) {
+                    Some(value) => value,
+                    None => {
+                        fail_closed(&state, pid, "NeverGuard Continuous Guard guard-sequence overflow", 0);
+                        return;
+                    }
+                };
+                if let Err(err) = write_continuous_guard_ack(
+                    server,
+                    secret,
+                    pid,
+                    next_guard_sequence,
+                    event.sequence,
+                    next_continuous_chain,
+                )
+                .await
+                {
+                    fail_closed(&state, pid, &err, 0);
+                    return;
+                }
+                guard_sequence = next_guard_sequence;
+                let now = now_unix_ms();
+                update_counter(&state, |report| {
+                    report.continuous_guard.active = true;
+                    report.continuous_guard.healthy = true;
+                    report.continuous_guard.sensor_heartbeat_count = report
+                        .continuous_guard
+                        .sensor_heartbeat_count
+                        .saturating_add(1);
+                    report.continuous_guard.guard_heartbeat_count = report
+                        .continuous_guard
+                        .guard_heartbeat_count
+                        .saturating_add(1);
+                    report.continuous_guard.cross_check_count = report
+                        .continuous_guard
+                        .cross_check_count
+                        .saturating_add(1);
+                    report.continuous_guard.last_sensor_sequence = event.sequence;
+                    report.continuous_guard.last_guard_sequence = guard_sequence;
+                    report.continuous_guard.last_cross_check_sha256 = hex::encode(next_continuous_chain);
+                    report.continuous_guard.last_sensor_heartbeat_unix_ms = now;
+                    report.continuous_guard.last_guard_heartbeat_unix_ms = now;
+                });
+            }
+            continuous_chain = next_continuous_chain;
             event_chain = advance_event_chain(event_chain, &packet, &module_hash);
             update_counter(&state, |report| {
                 report.event_count += 1;
                 report.last_sequence = event.sequence;
                 report.event_chain_sha256 = hex::encode(event_chain);
+                report.continuous_guard.sensor_event_chain_sha256 = hex::encode(continuous_chain);
             });
             if event.reason == MODULE_EVENT_REASON_SHUTDOWN {
                 mark_stopped(&state);
@@ -1283,6 +1451,59 @@ mod imp {
         hex::encode(digest.finalize())
     }
 
+    fn advance_continuous_event_chain(previous: [u8; 32], packet: &[u8]) -> [u8; 32] {
+        let mut digest = Sha256::new();
+        digest.update(b"NeverLauncher Continuous Guard sensor-event-chain v1\0");
+        digest.update(previous);
+        digest.update((packet.len() as u32).to_le_bytes());
+        digest.update(packet);
+        let output = digest.finalize();
+        let mut next = [0u8; 32];
+        next.copy_from_slice(&output);
+        next
+    }
+
+    fn continuous_digest_from_event(event: &ParsedEvent) -> Result<String, String> {
+        let digest = event.path.to_string_lossy().to_string();
+        if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("Continuous Guard received invalid event-chain digest".to_string());
+        }
+        Ok(digest.to_ascii_lowercase())
+    }
+
+    async fn write_continuous_guard_ack(
+        server: &mut NamedPipeServer,
+        secret: &[u8; 32],
+        pid: u32,
+        guard_sequence: u64,
+        sensor_sequence: u64,
+        event_chain: [u8; 32],
+    ) -> Result<(), String> {
+        let mut packet = [0u8; CONTINUOUS_GUARD_ACK_PACKET_LEN];
+        packet[..8].copy_from_slice(CONTINUOUS_GUARD_ACK_MAGIC);
+        packet[8..12].copy_from_slice(&CONTINUOUS_GUARD_VERSION.to_le_bytes());
+        packet[12..16].copy_from_slice(&pid.to_le_bytes());
+        packet[16..24].copy_from_slice(&guard_sequence.to_le_bytes());
+        packet[24..32].copy_from_slice(&sensor_sequence.to_le_bytes());
+        packet[32..64].copy_from_slice(&event_chain);
+        let mut mac = HmacSha256::new_from_slice(secret)
+            .map_err(|_| "Continuous Guard ACK HMAC initialization failed".to_string())?;
+        mac.update(CONTINUOUS_GUARD_ACK_DOMAIN);
+        mac.update(&packet[..CONTINUOUS_GUARD_ACK_PREFIX_LEN]);
+        packet[CONTINUOUS_GUARD_ACK_PREFIX_LEN..]
+            .copy_from_slice(&mac.finalize().into_bytes());
+        server
+            .write_all(&packet)
+            .await
+            .map_err(|err| format!("Continuous Guard ACK write failed: {err}"))?;
+        server
+            .flush()
+            .await
+            .map_err(|err| format!("Continuous Guard ACK flush failed: {err}"))?;
+        packet.zeroize();
+        Ok(())
+    }
+
     fn advance_event_chain(previous: [u8; 32], packet: &[u8], module_hash: &str) -> [u8; 32] {
         let mut digest = Sha256::new();
         digest.update(b"NeverLauncher Module Guard event-chain v1\0");
@@ -1344,6 +1565,13 @@ mod imp {
                 report.jvm_aware.violation_count = report.jvm_aware.violation_count.saturating_add(1);
                 report.jvm_aware.last_violation = reason.to_string();
             }
+            report.continuous_guard.active = false;
+            report.continuous_guard.healthy = false;
+            report.continuous_guard.violation_count = report
+                .continuous_guard
+                .violation_count
+                .saturating_add(1);
+            report.continuous_guard.last_violation = reason.to_string();
         });
         terminate_runtime(pid);
     }
@@ -1356,6 +1584,7 @@ mod imp {
             report.thread_process_integrity.active = false;
             report.debug_instrumentation.active = false;
             report.jvm_aware.active = false;
+            report.continuous_guard.active = false;
         });
     }
 

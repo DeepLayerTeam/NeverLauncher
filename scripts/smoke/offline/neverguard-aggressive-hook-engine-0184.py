@@ -73,7 +73,7 @@ def main() -> int:
             "hook_engine::initialize()",
             "hook_engine::reconcile_and_verify()",
             "hook_engine::shutdown_restore()",
-            "module_worker(channel, sequence)",
+            "module_worker(channel, sequence",
         ],
         "Sensor startup/continuous hook lifecycle",
     )

@@ -1,3 +1,11 @@
+## 0.18.9 — Continuous Guard
+
+- Added an independent Sensor-side rolling SHA-256 transport chain over every authenticated Module Guard event packet. The parent recomputes the same chain from received bytes instead of trusting a digest supplied by Sensor.
+- Added mandatory sixth startup proof `CONTINUOUS_READY`. `Agent_OnLoad` cannot complete until the parent verifies the pre-proof chain and returns an HMAC-bound Guard ACK covering Guard sequence, Sensor sequence and the post-proof chain root.
+- Added one-second bidirectional Continuous Guard heartbeats. Sensor sends its previous chain root and last acknowledged Guard sequence; the parent verifies both, advances its chain, returns a domain-separated HMAC ACK, and Sensor enforces a bounded `PeekNamedPipe` receive timeout.
+- Sequence drift, Guard ACK HMAC failure, chain mismatch, heartbeat loss or stream disconnect now fail closed and terminate the protected JVM. Runtime evidence exposes Sensor/Guard heartbeat counts, cross-check count, both sequences and current/last-cross-checked chain SHA-256 roots.
+- Added real Windows JVM integration assertions for startup and repeated runtime cross-checks, plus mandatory 0.18.9 offline/preflight/repository-policy/CI gates.
+
 ## 0.18.8 — JVM-Aware Protection
 
 - Добавлен production JVM-aware enforcement внутри `neverguard-sensor.dll`: Sensor до установки hook engine идентифицирует реально загруженный `jvm.dll`, читает Windows version resource и fail-closed допускает только сертифицированные Java major `8/16/17/21/25`.

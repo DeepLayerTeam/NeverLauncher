@@ -1,3 +1,9 @@
+## Continuous Guard — 0.18.9
+
+NeverLauncher 0.18.9 добавляет двусторонний runtime cross-check между ранним `neverguard-sensor.dll` и родительским NeverGuard/Runtime security boundary. Помимо существующего HMAC/sequence event stream Sensor теперь ведёт независимую transport event-chain по каждому реально переданному authenticated packet. Перед выходом из `Agent_OnLoad` Sensor отправляет шестой обязательный proof `CONTINUOUS_READY`; parent должен независимо получить тот же chain digest и вернуть HMAC-защищённый Guard ACK, привязанный к Sensor sequence, Guard sequence и текущему chain digest.
+
+После запуска Sensor выполняет cross-check раз в секунду. Каждый `CONTINUOUS_HEARTBEAT` содержит предыдущий event-chain digest и последний подтверждённый Guard sequence; parent сверяет их со своей независимой копией, включает heartbeat в chain и отвечает новым signed ACK. Sensor проверяет ACK через отдельный domain-separated HMAC и `PeekNamedPipe` timeout. Потеря parent heartbeat, sequence drift, HMAC mismatch или chain mismatch приводит к `CONTINUOUS_TAMPER`/fail-closed остановке JVM. Runtime report публикует Sensor/Guard heartbeat counters, cross-check count, sequences и последние SHA-256 chain roots.
+
 ## JVM-Aware Protection — 0.18.8
 
 NeverLauncher 0.18.8 делает executable-memory policy JVM-aware вместо правила «любой перехваченный `VirtualAlloc/VirtualProtect` допустим». Ранний Sensor определяет загруженный HotSpot `jvm.dll`, извлекает его реальный Java major из Windows version resource и допускает aggressive protection только для сертифицированной базы Java `8/16/17/21/25`. Для каждого нового executable `MEM_PRIVATE` transition Hook Engine снимает native call stack без выделений памяти; JIT/Code Cache transition считается доверенным только когда stack содержит frame внутри текущего `jvm.dll`.

@@ -1,3 +1,9 @@
+## Continuous Guard и двусторонняя целостность runtime — 0.18.9
+
+В `0.18.9` NeverGuard больше не доверяет только одностороннему Sensor→parent heartbeat. Sensor и parent независимо пересчитывают domain-separated SHA-256 chain по полным authenticated event packets. Шестой startup proof `CONTINUOUS_READY` обязан совпасть с parent chain до возврата из `Agent_OnLoad`, после чего parent возвращает отдельный HMAC-защищённый Guard ACK. В runtime такая сверка повторяется раз в секунду и привязывает Guard ACK к `guardSequence`, `sensorSequence` и текущему chain digest.
+
+Fail-closed срабатывает при heartbeat timeout, disconnect, HMAC mismatch, sequence drift или несовпадении chain root. Continuous Guard не скрывает процесс и не блокирует Windows/EDR: он проверяет живость и согласованность двух user-mode security boundaries и делает потерю/подмену authenticated stream обнаруживаемой. Administrator/kernel attacker по-прежнему находится за пределами user-mode trust model.
+
 ## JVM-Aware защита Windows HotSpot — 0.18.8
 
 В `0.18.8` NeverGuard различает штатную HotSpot JIT/Code Cache активность и executable private memory, созданную посторонним native-кодом. Sensor идентифицирует текущий `jvm.dll`, фиксирует его image range/version identity и при каждом перехваченном executable `VirtualAlloc/VirtualProtect` проверяет native stack provenance. Только переход с caller frame внутри `jvm.dll` относится к JIT; foreign/unknown `MEM_PRIVATE` execution boundary считается нарушением и приводит к fail-closed завершению защищаемой JVM.

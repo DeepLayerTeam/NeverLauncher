@@ -1,5 +1,6 @@
 #![cfg(windows)]
 
+mod continuous_guard;
 mod debug_instrumentation;
 mod hook_engine;
 mod jvm_awareness;
@@ -57,6 +58,9 @@ const MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER: u32 = 17;
 const MODULE_EVENT_REASON_JVM_AWARE_READY: u32 = 18;
 const MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT: u32 = 19;
 const MODULE_EVENT_REASON_JVM_AWARE_TAMPER: u32 = 20;
+const MODULE_EVENT_REASON_CONTINUOUS_READY: u32 = 21;
+const MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT: u32 = 22;
+const MODULE_EVENT_REASON_CONTINUOUS_TAMPER: u32 = 23;
 const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -67,6 +71,7 @@ const MODULE_WORKER_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const THREAD_INTEGRITY_CHECK_INTERVAL: Duration = Duration::from_millis(500);
 const DEBUG_INSTRUMENTATION_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 const JVM_AWARE_CHECK_INTERVAL: Duration = Duration::from_millis(500);
+const CONTINUOUS_GUARD_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(1);
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -409,6 +414,10 @@ fn write_module_event(
         .write_all(&packet)
         .and_then(|_| stream.flush())
         .map_err(|_| ());
+    if result.is_ok() && continuous_guard::advance_event_chain(&packet).is_err() {
+        packet.zeroize();
+        return Err(());
+    }
     packet.zeroize();
     result
 }
@@ -590,11 +599,12 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
     event
 }
 
-fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
+fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequence: u64) {
     let mut heartbeat_at = Instant::now();
     let mut thread_check_at = Instant::now();
     let mut debug_check_at = Instant::now();
     let mut jvm_aware_check_at = Instant::now();
+    let mut continuous_heartbeat_at = Instant::now();
     let mut latest_thread_snapshot = match thread_integrity::reconcile_and_verify() {
         Ok(snapshot) => snapshot,
         Err(err) => {
@@ -778,6 +788,102 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64) {
                 }
             }
             jvm_aware_check_at = Instant::now();
+        }
+
+        if continuous_heartbeat_at.elapsed() >= CONTINUOUS_GUARD_HEARTBEAT_INTERVAL {
+            let cross_check = match continuous_guard::cross_check_event(
+                MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT,
+                guard_sequence,
+            ) {
+                Ok(event) => event,
+                Err(err) => {
+                    let tamper = continuous_guard::tamper_event(
+                        MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
+                        &err,
+                    );
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            };
+            if write_module_event(
+                &mut channel.stream,
+                &channel.secret,
+                channel.pid,
+                &mut sequence,
+                &cross_check,
+            )
+            .is_err()
+            {
+                channel.secret.zeroize();
+                std::process::abort();
+            }
+            let event_chain = match continuous_guard::current_event_chain() {
+                Ok(chain) => chain,
+                Err(err) => {
+                    let tamper = continuous_guard::tamper_event(
+                        MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
+                        &err,
+                    );
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            };
+            let next_guard_sequence = match guard_sequence.checked_add(1) {
+                Some(value) => value,
+                None => {
+                    let tamper = continuous_guard::tamper_event(
+                        MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
+                        "Continuous Guard guard-sequence overflow",
+                    );
+                    let _ = write_module_event(
+                        &mut channel.stream,
+                        &channel.secret,
+                        channel.pid,
+                        &mut sequence,
+                        &tamper,
+                    );
+                    channel.secret.zeroize();
+                    std::process::abort();
+                }
+            };
+            if let Err(err) = continuous_guard::wait_for_guard_ack(
+                &mut channel.stream,
+                &channel.secret,
+                channel.pid,
+                next_guard_sequence,
+                sequence,
+                event_chain,
+            ) {
+                let tamper = continuous_guard::tamper_event(
+                    MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
+                    &err,
+                );
+                let _ = write_module_event(
+                    &mut channel.stream,
+                    &channel.secret,
+                    channel.pid,
+                    &mut sequence,
+                    &tamper,
+                );
+                channel.secret.zeroize();
+                std::process::abort();
+            }
+            guard_sequence = next_guard_sequence;
+            continuous_heartbeat_at = Instant::now();
         }
 
         if MODULE_WORKER_STOP.load(Ordering::Acquire) {
@@ -998,6 +1104,13 @@ pub extern "system" fn Agent_OnLoad(
             return JNI_ERR;
         }
     };
+    if continuous_guard::reset_event_chain().is_err() {
+        let _ = hook_engine::shutdown_restore();
+        jvm_awareness::shutdown();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
     let mut sequence = 0u64;
     let ready = hook_event(MODULE_EVENT_REASON_HOOK_READY, &hook_snapshot);
     if write_module_event(
@@ -1130,9 +1243,76 @@ pub extern "system" fn Agent_OnLoad(
         channel.secret.zeroize();
         return JNI_ERR;
     }
+    let continuous_ready = match continuous_guard::cross_check_event(
+        MODULE_EVENT_REASON_CONTINUOUS_READY,
+        0,
+    ) {
+        Ok(event) => event,
+        Err(_) => {
+            debug_instrumentation::shutdown();
+            thread_integrity::shutdown();
+            memory_integrity::shutdown();
+            let _ = hook_engine::shutdown_restore();
+            jvm_awareness::shutdown();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+    };
+    if write_module_event(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        &mut sequence,
+        &continuous_ready,
+    )
+    .is_err()
+    {
+        debug_instrumentation::shutdown();
+        thread_integrity::shutdown();
+        memory_integrity::shutdown();
+        let _ = hook_engine::shutdown_restore();
+        jvm_awareness::shutdown();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
+    let startup_chain = match continuous_guard::current_event_chain() {
+        Ok(chain) => chain,
+        Err(_) => {
+            debug_instrumentation::shutdown();
+            thread_integrity::shutdown();
+            memory_integrity::shutdown();
+            let _ = hook_engine::shutdown_restore();
+            jvm_awareness::shutdown();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+    };
+    let guard_sequence = 1u64;
+    if continuous_guard::wait_for_guard_ack(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        guard_sequence,
+        sequence,
+        startup_chain,
+    )
+    .is_err()
+    {
+        debug_instrumentation::shutdown();
+        thread_integrity::shutdown();
+        memory_integrity::shutdown();
+        let _ = hook_engine::shutdown_restore();
+        jvm_awareness::shutdown();
+        unregister_module_notifications();
+        channel.secret.zeroize();
+        return JNI_ERR;
+    }
     match thread::Builder::new()
         .name("neverguard-module-guard".to_string())
-        .spawn(move || module_worker(channel, sequence))
+        .spawn(move || module_worker(channel, sequence, guard_sequence))
     {
         Ok(handle) => match MODULE_WORKER_HANDLE.lock() {
             Ok(mut slot) => {

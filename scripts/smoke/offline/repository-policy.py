@@ -3292,6 +3292,71 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ci:
             fail(f"0.18.8 JVM-Aware Java matrix CI incomplete: {required}")
 
+
+# 0.18.9 Continuous Guard requires an independent bidirectional Sensor/Guard
+# heartbeat and a rolling transport event chain cross-checked on both sides.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 9):
+    continuous_sensor_0189 = read("runtime/neverguard-sensor/src/continuous_guard.rs")
+    continuous_stream_0189 = read("runtime/neverguard-sensor/src/lib.rs")
+    continuous_parent_0189 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    continuous_report_0189 = read("runtime/neverruntime/src/windows_continuous_guard.rs")
+    continuous_test_0189 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    continuous_gate_0189 = read("scripts/smoke/offline/neverguard-continuous-guard-0189.py")
+    for required in [
+        "NeverLauncher Continuous Guard sensor-event-chain v1",
+        "NGCGAK01",
+        "PeekNamedPipe",
+        "advance_event_chain",
+        "wait_for_guard_ack",
+        "Guard-ACK HMAC mismatch",
+    ]:
+        if required not in continuous_sensor_0189:
+            fail(f"0.18.9 Continuous Guard Sensor backend incomplete: {required}")
+    for required in [
+        "MODULE_EVENT_REASON_CONTINUOUS_READY",
+        "MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT",
+        "MODULE_EVENT_REASON_CONTINUOUS_TAMPER",
+        "CONTINUOUS_GUARD_HEARTBEAT_INTERVAL",
+        "continuous_guard::wait_for_guard_ack",
+    ]:
+        if required not in continuous_stream_0189:
+            fail(f"0.18.9 Continuous Guard Sensor lifecycle incomplete: {required}")
+    for required in [
+        "expected CONTINUOUS_READY as sixth event",
+        "advance_continuous_event_chain",
+        "write_continuous_guard_ack",
+        "event-chain cross-check mismatch",
+        "guard-sequence mismatch",
+        "last_cross_check_sha256",
+    ]:
+        if required not in continuous_parent_0189:
+            fail(f"0.18.9 Continuous Guard parent cross-check incomplete: {required}")
+    for required in [
+        "WindowsContinuousGuardReport",
+        "sensor_heartbeat_count",
+        "guard_heartbeat_count",
+        "cross_check_count",
+        "sensor_event_chain_sha256",
+        "last_cross_check_sha256",
+    ]:
+        if required not in continuous_report_0189:
+            fail(f"0.18.9 Continuous Guard report incomplete: {required}")
+    for required in [
+        "neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat",
+        "every Sensor heartbeat must receive exactly one Guard ACK",
+        "NEVERGUARD_CONTINUOUS_GUARD_VERSION",
+    ]:
+        if required not in continuous_test_0189:
+            fail(f"0.18.9 Continuous Guard Windows integration regression missing: {required}")
+    if "Continuous Guard 0.18.9 gate: OK" not in continuous_gate_0189:
+        fail("0.18.9 mandatory Continuous Guard gate incomplete")
+    if "neverguard-continuous-guard-0189.py" not in preflight or "neverguard-continuous-guard-0189.py" not in ci:
+        fail("0.18.9 Continuous Guard gate is not wired into preflight/CI")
+    if "neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat" not in ci:
+        fail("0.18.9 Continuous Guard lacks real Windows heartbeat integration CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.9 Continuous Guard lacks real Windows integration/clippy CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:
