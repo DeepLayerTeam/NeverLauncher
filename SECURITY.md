@@ -1,3 +1,9 @@
+## Module Guard / Windows JVM — 0.18.3
+
+В `0.18.3` Sensor protocol v2 держит JVM внутри `Agent_OnLoad`, пока Desktop/NeverRuntime не аутентифицирует Sensor, не снимет внешний baseline модулей и не подтвердит вооружение Module Guard. Sensor использует `LdrRegisterDllNotification` для load/unload lifecycle, фиксированный atomic ring и отдельный worker; ordered event stream и heartbeat защищены HMAC-SHA-256. Parent независимо сверяет ToolHelp module snapshots, SHA-256 event chain и policy происхождения DLL.
+
+По умолчанию module load разрешён из canonical Windows, выбранного Java runtime, launcher/Sensor package и конкретного JVM working directory. DLL вне этих roots обязана пройти WinVerifyTrust/Authenticode; нарушение, overflow, потеря heartbeat, event sequence/MAC drift или расхождение с внешним snapshot завершают JVM. Это user-mode fail-closed control, а не kernel-equivalent protection: administrator/kernel attacker, компрометация signing keys и противник с произвольной записью памяти процесса остаются вне заявленной границы доверия.
+
 # Политика безопасности NeverLauncher
 
 ## NeverGuard Sensor / Windows JVM — 0.18.2

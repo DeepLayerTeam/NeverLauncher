@@ -2772,10 +2772,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     sensor_gate_0182 = read("scripts/smoke/offline/neverguard-sensor-0182.py")
     sensor_updater_0182 = read("cli/cmd/neverlauncher/component_update.go")
     sensor_signing_0182 = read("cli/cmd/neverlauncher/windows_signing.go")
-    for required in ["Agent_OnLoad", "JNI_ERR", "NGSENS02", "neverguard-sensor-startup-v1", "HmacSha256::new_from_slice", "stream.write_all(&packet)"]:
+    for required in ["Agent_OnLoad", "JNI_ERR", "NGSENS03", "neverguard-sensor-startup-v2", "HmacSha256::new_from_slice", ".write_all(&packet)"]:
         if required not in sensor_native_0182:
             fail(f"0.18.2 NeverGuard Sensor native JVM agent incomplete: {required}")
-    for required in ["-agentpath:", "create_secure_pipe_server", "verify_windows_authenticode_trust", "authenticate_sensor_or_kill", "child.start_kill()", "loaded_before_main: true"]:
+    for required in ["-agentpath:", "create_secure_pipe_server", "verify_windows_authenticode_trust", "authenticate_sensor_or_kill", "child.start_kill()", "loaded_before_main: true", "arm_module_guard"]:
         if required not in sensor_bootstrap_0182:
             fail(f"0.18.2 NeverGuard Sensor fail-closed bootstrap incomplete: {required}")
     if sensor_runtime_0182.count("prepare_sensor_command(&mut command)") < 2 or sensor_runtime_0182.count("authenticate_sensor_or_kill(sensor_bootstrap, &mut child)") < 2:
@@ -2795,7 +2795,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["neverguardSensorRequired0182", 'packageEntries["sensor"] = "neverguard-sensor.dll"', "expectedComponentCount = 4"]:
         if required not in sensor_signing_0182:
             fail(f"0.18.2 NeverGuard Sensor delivery verifier incomplete: {required}")
-    for required in ["neverguard_sensor_agentpath_loads_before_jvm_startup", "authenticate_sensor_or_kill(bootstrap, &mut child)", "assert!(report.loaded_before_main)"]:
+    for required in ["neverguard_sensor_agentpath_loads_before_jvm_startup", "authenticate_sensor_or_kill(bootstrap, &mut child)", "let report = session.report()", "assert!(report.loaded_before_main)"]:
         if required not in sensor_test_0182:
             fail(f"0.18.2 NeverGuard Sensor Java integration regression missing: {required}")
     if "NeverGuard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
@@ -2809,6 +2809,69 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in ci:
             fail(f"0.18.2 NeverGuard Sensor lacks Windows build/integration/clippy CI: {required}")
+
+
+
+# 0.18.3 Module Guard must continuously observe native module lifecycle in the
+# JVM, authenticate the ordered event stream and fail closed on policy/snapshot
+# drift instead of relying on point-in-time module snapshots alone.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 3):
+    module_sensor_0183 = read("runtime/neverguard-sensor/src/lib.rs")
+    module_parent_0183 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    module_bootstrap_0183 = read("runtime/neverruntime/src/windows_sensor.rs")
+    module_supervisor_0183 = read("runtime/neverruntime/src/supervisor.rs")
+    module_test_0183 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    module_gate_0183 = read("scripts/smoke/offline/neverguard-module-guard-0183.py")
+    for required in [
+        "LdrRegisterDllNotification",
+        "LdrUnregisterDllNotification",
+        "MODULE_RING_CAPACITY",
+        "MODULE_DROPPED_EVENTS",
+        "NGMOD003",
+        "neverguard-module-event-v1",
+        "wait_for_module_guard_arm",
+        "MODULE_WORKER_HANDLE",
+        "handle.join()",
+    ]:
+        if required not in module_sensor_0183:
+            fail(f"0.18.3 Module Guard sensor event stream incomplete: {required}")
+    for required in [
+        "WindowsModuleGuardReport",
+        "arm_module_guard",
+        "expected_sequence",
+        "ct_eq",
+        "MODULE_STREAM_TIMEOUT",
+        "reconcile_snapshot",
+        "external snapshot drift",
+        "verify_windows_authenticode_trust",
+        "advance_event_chain",
+        "TerminateProcess",
+        "fail_closed",
+    ]:
+        if required not in module_parent_0183:
+            fail(f"0.18.3 Module Guard parent enforcement incomplete: {required}")
+    for required in ["NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 2", "NGSENS03", "policy_for_command", "arm_module_guard", "WindowsSensorSession"]:
+        if required not in module_bootstrap_0183:
+            fail(f"0.18.3 Module Guard startup binding incomplete: {required}")
+    for required in ["sensor_session: Option<crate::WindowsSensorSession>", "process_status_snapshot", "session.report()"]:
+        if required not in module_supervisor_0183:
+            fail(f"0.18.3 Module Guard live status evidence incomplete: {required}")
+    for required in [
+        "neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat",
+        "report.load_events >= 1",
+        "report.heartbeat_count >= 1",
+        "neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
+        "unsigned module outside trusted roots must be fail-closed",
+        "report.violation_count >= 1",
+    ]:
+        if required not in module_test_0183:
+            fail(f"0.18.3 Module Guard Windows integration regression missing: {required}")
+    if "Module Guard 0.18.3 gate: OK" not in module_gate_0183:
+        fail("0.18.3 mandatory Module Guard gate incomplete")
+    if "neverguard-module-guard-0183.py" not in preflight or "neverguard-module-guard-0183.py" not in ci:
+        fail("0.18.3 Module Guard gate is not wired into preflight/CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.3 Module Guard lacks real Windows integration/clippy CI")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

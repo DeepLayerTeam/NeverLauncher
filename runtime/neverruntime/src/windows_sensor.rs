@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 1;
+pub const NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 2;
 pub const NEVERGUARD_SENSOR_FILE_NAME: &str = "neverguard-sensor.dll";
 pub const NEVERGUARD_SENSOR_PIPE_ENV: &str = "NEVERGUARD_SENSOR_PIPE";
 pub const NEVERGUARD_SENSOR_SECRET_ENV: &str = "NEVERGUARD_SENSOR_SECRET";
@@ -13,12 +13,16 @@ pub struct WindowsSensorReport {
     pub sensor_path: String,
     pub authenticated: bool,
     pub loaded_before_main: bool,
+    pub module_guard: crate::WindowsModuleGuardReport,
 }
 
 #[cfg(windows)]
 mod imp {
     use super::*;
-    use crate::guard_ipc::create_secure_pipe_server;
+    use crate::{
+        guard_ipc::create_secure_pipe_server,
+        windows_module_guard::{arm_module_guard, policy_for_command, WindowsModuleGuardPolicy},
+    };
     #[cfg(not(debug_assertions))]
     use crate::verify_windows_authenticode_trust;
     use hmac::{Hmac, Mac};
@@ -35,20 +39,44 @@ mod imp {
     use zeroize::Zeroize;
 
     type HmacSha256 = Hmac<Sha256>;
-    const SENSOR_MAGIC: &[u8; 8] = b"NGSENS02";
-    const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v1";
+    const SENSOR_MAGIC: &[u8; 8] = b"NGSENS03";
+    const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v2";
     const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.Sensor.";
     const SENSOR_STARTUP_TIMEOUT_SECS: u64 = 12;
 
     pub struct WindowsSensorBootstrap {
-        server: NamedPipeServer,
+        server: Option<NamedPipeServer>,
         secret: [u8; 32],
         sensor_path: PathBuf,
+        module_guard_policy: WindowsModuleGuardPolicy,
     }
 
     impl Drop for WindowsSensorBootstrap {
         fn drop(&mut self) {
             self.secret.zeroize();
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct WindowsSensorSession {
+        protocol_version: u32,
+        pid: u32,
+        sensor_path: String,
+        authenticated: bool,
+        loaded_before_main: bool,
+        module_guard: crate::WindowsModuleGuardSession,
+    }
+
+    impl WindowsSensorSession {
+        pub fn report(&self) -> WindowsSensorReport {
+            WindowsSensorReport {
+                protocol_version: self.protocol_version,
+                pid: self.pid,
+                sensor_path: self.sensor_path.clone(),
+                authenticated: self.authenticated,
+                loaded_before_main: self.loaded_before_main,
+                module_guard: self.module_guard.report(),
+            }
         }
     }
 
@@ -88,6 +116,7 @@ mod imp {
         verify_windows_authenticode_trust(&sensor_path)
             .map_err(|err| format!("NeverGuard Sensor Authenticode verification failed: {err}"))?;
 
+        let module_guard_policy = policy_for_command(command, &sensor_path)?;
         let endpoint = sensor_endpoint();
         let server = create_secure_pipe_server(&endpoint)
             .map_err(|err| format!("NeverGuard Sensor startup pipe creation failed: {err}"))?;
@@ -100,7 +129,12 @@ mod imp {
         command.env(NEVERGUARD_SENSOR_PIPE_ENV, &endpoint);
         command.env(NEVERGUARD_SENSOR_SECRET_ENV, hex::encode(secret));
 
-        Ok(WindowsSensorBootstrap { server, secret, sensor_path })
+        Ok(WindowsSensorBootstrap {
+            server: Some(server),
+            secret,
+            sensor_path,
+            module_guard_policy,
+        })
     }
 
     pub fn prepare_sensor_command(command: &mut Command) -> Result<WindowsSensorBootstrap, String> {
@@ -115,14 +149,18 @@ mod imp {
     }
 
     impl WindowsSensorBootstrap {
-        pub async fn authenticate(mut self, expected_pid: u32) -> Result<WindowsSensorReport, String> {
-            timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), self.server.connect())
+        pub async fn authenticate(mut self, expected_pid: u32) -> Result<WindowsSensorSession, String> {
+            let mut server = self
+                .server
+                .take()
+                .ok_or_else(|| "NeverGuard Sensor startup pipe already consumed".to_string())?;
+            timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
                 .map_err(|_| "NeverGuard Sensor did not load before JVM startup timeout".to_string())?
                 .map_err(|err| format!("NeverGuard Sensor startup pipe connect failed: {err}"))?;
 
             let mut packet = [0u8; 48];
-            timeout(Duration::from_secs(3), self.server.read_exact(&mut packet))
+            timeout(Duration::from_secs(3), server.read_exact(&mut packet))
                 .await
                 .map_err(|_| "NeverGuard Sensor startup authentication timed out".to_string())?
                 .map_err(|err| format!("NeverGuard Sensor startup packet read failed: {err}"))?;
@@ -146,28 +184,38 @@ mod imp {
             let expected = mac.finalize().into_bytes();
             let authenticated = expected[..].ct_eq(&packet[16..]).into();
             packet.zeroize();
-            self.secret.zeroize();
             if !authenticated {
                 return Err("NeverGuard Sensor startup authentication failed".to_string());
             }
 
-            Ok(WindowsSensorReport {
+            let mut module_secret = [0u8; 32];
+            std::mem::swap(&mut module_secret, &mut self.secret);
+            let module_guard = arm_module_guard(
+                server,
+                module_secret,
+                pid,
+                self.module_guard_policy.clone(),
+            )
+            .await
+            .map_err(|err| format!("NeverGuard Module Guard arm failed: {err}"))?;
+
+            Ok(WindowsSensorSession {
                 protocol_version: protocol,
                 pid,
                 sensor_path: self.sensor_path.to_string_lossy().to_string(),
                 authenticated: true,
                 loaded_before_main: true,
+                module_guard,
             })
         }
     }
 
-    /// Authenticates the early JVM sensor and terminates the JVM if the startup
-    /// proof is missing or invalid. This keeps sensor enforcement fail-closed
-    /// even when the parent-side verification fails after the VM has resumed.
+    /// Authenticates the early JVM sensor, arms continuous Module Guard before
+    /// Agent_OnLoad returns and terminates the JVM if either stage fails.
     pub async fn authenticate_sensor_or_kill(
         bootstrap: WindowsSensorBootstrap,
         child: &mut tokio::process::Child,
-    ) -> Result<WindowsSensorReport, String> {
+    ) -> Result<WindowsSensorSession, String> {
         let pid = match child.id() {
             Some(pid) => pid,
             None => {
@@ -177,7 +225,7 @@ mod imp {
             }
         };
         match bootstrap.authenticate(pid).await {
-            Ok(report) => Ok(report),
+            Ok(session) => Ok(session),
             Err(err) => {
                 let _ = child.start_kill();
                 let _ = timeout(Duration::from_secs(3), child.wait()).await;
@@ -190,9 +238,13 @@ mod imp {
 #[cfg(windows)]
 pub use imp::{
     authenticate_sensor_or_kill, prepare_sensor_command, prepare_sensor_command_with_path,
-    WindowsSensorBootstrap,
+    WindowsSensorBootstrap, WindowsSensorSession,
 };
 
 #[cfg(not(windows))]
 #[derive(Debug, Clone, Default)]
 pub struct WindowsSensorBootstrap;
+
+#[cfg(not(windows))]
+#[derive(Debug, Clone, Default)]
+pub struct WindowsSensorSession;

@@ -1,5 +1,13 @@
 # NeverLauncher
 
+## Module Guard — 0.18.3
+
+NeverLauncher 0.18.3 переводит Windows NeverGuard с одних периодических module snapshots на непрерывный контроль DLL внутри JVM. `neverguard-sensor.dll` регистрирует `LdrRegisterDllNotification` до выхода из `Agent_OnLoad`; loader callback не выполняет файловый I/O и не аллоцирует память, а пишет load/unload records в фиксированный atomic ring. Отдельный Sensor worker передаёт ordered HMAC-SHA-256 event stream и heartbeat по уже защищённому Named Pipe. JVM не получает управление Java/Minecraft main, пока parent не снимет внешний ToolHelp baseline и не вернёт authenticated Module Guard arm acknowledgement.
+
+Parent сверяет строгую последовательность и MAC каждого события, хэширует принятые загрузки в rolling event chain и регулярно сопоставляет event-derived module set с независимым ToolHelp snapshot. Windows/Java/runtime roots считаются доверенными runtime boundaries; DLL вне этих roots должна пройти Authenticode. Потеря heartbeat, overflow event ring, sequence/MAC mismatch, неизвестный unload, неподписанная DLL вне roots или snapshot drift завершают JVM fail-closed. Supervised status отдаёт живой `moduleGuard` report с baseline/current module count, load/unload/heartbeat counters, `eventChainSha256`, `moduleSetSha256` и violation state.
+
+0.18.3 остаётся user-mode boundary: administrator/kernel attacker и уже получивший полный arbitrary in-process memory-write примитив противник не объявляются нейтрализованными этим слоем. Module Guard усиливает раннее обнаружение/остановку DLL/module tampering, а memory/hook integrity относятся к следующим этапам NeverGuard.
+
 ## NeverGuard Sensor — 0.18.2
 
 NeverLauncher 0.18.2 добавляет реальный Windows JVM sensor как отдельный native `cdylib` — `neverguard-sensor.dll`. Desktop/NeverRuntime добавляет его через `-agentpath` **до пользовательских JVM-аргументов и до Java main**, а JVM вызывает экспортированный `Agent_OnLoad` при старте VM. Sensor обязан выполнить одноразовый HMAC-SHA-256 startup proof через защищённый current-user Named Pipe; proof привязан к protocol version и PID запущенной JVM. Родитель принимает runtime только после проверки proof. При timeout, неверном PID/HMAC или отсутствии Sensor JVM принудительно завершается.
@@ -90,7 +98,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **NeverGuard Sensor / 0.18.2**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Module Guard / 0.18.3**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

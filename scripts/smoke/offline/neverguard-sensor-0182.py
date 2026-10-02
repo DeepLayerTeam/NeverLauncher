@@ -40,12 +40,12 @@ def main() -> int:
         [
             'pub extern "system" fn Agent_OnLoad',
             'pub extern "system" fn Agent_OnUnload',
-            'b"NGSENS02"',
-            'b"neverguard-sensor-startup-v1"',
+            'b"NGSENS03"',
+            'b"neverguard-sensor-startup-v2"',
             'HmacSha256::new_from_slice',
             'OpenOptions::new()',
-            'stream.write_all(&packet)',
-            'Err(()) => JNI_ERR',
+            '.write_all(&packet)',
+            'return JNI_ERR',
         ],
         "real JVM agent/HMAC startup proof",
     )
@@ -61,6 +61,7 @@ def main() -> int:
             'pub async fn authenticate_sensor_or_kill',
             'child.start_kill()',
             'loaded_before_main: true',
+            'arm_module_guard',
         ],
         "launcher-side fail-closed bootstrap",
     )
@@ -115,6 +116,7 @@ def main() -> int:
             'prepare_sensor_command_with_path',
             'enforce_runtime_process(&mut child)',
             'authenticate_sensor_or_kill(bootstrap, &mut child)',
+            'let report = session.report()',
             'assert!(report.loaded_before_main)',
         ],
         "real Java integration test",

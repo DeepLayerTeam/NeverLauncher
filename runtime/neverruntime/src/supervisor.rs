@@ -42,11 +42,27 @@ struct ManagedProcess {
     child: Arc<Mutex<Option<Child>>>,
     #[cfg(windows)]
     runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
+    #[cfg(windows)]
+    sensor_session: Option<crate::WindowsSensorSession>,
 }
 
 #[derive(Clone, Default)]
 pub struct ProcessSupervisor {
     processes: Arc<Mutex<HashMap<String, ManagedProcess>>>,
+}
+
+#[cfg(windows)]
+fn process_status_snapshot(process: &ManagedProcess) -> ProcessStatus {
+    let mut status = process.status.clone();
+    if let Some(session) = process.sensor_session.as_ref() {
+        status.windows_sensor = Some(session.report());
+    }
+    status
+}
+
+#[cfg(not(windows))]
+fn process_status_snapshot(process: &ManagedProcess) -> ProcessStatus {
+    process.status.clone()
 }
 
 impl ProcessSupervisor {
@@ -109,6 +125,7 @@ impl ProcessSupervisor {
         let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
 
         let mut command = tokio::process::Command::new(&plan.java_executable);
+        command.current_dir(Path::new(&plan.working_directory));
         #[cfg(windows)]
         let sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
             .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
@@ -118,7 +135,6 @@ impl ProcessSupervisor {
             .arg(join_classpath(&plan.classpath_entries))
             .arg(&plan.main_class)
             .args(&plan.game_args)
-            .current_dir(Path::new(&plan.working_directory))
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(log_file));
@@ -135,11 +151,13 @@ impl ProcessSupervisor {
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
             .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
         #[cfg(windows)]
-        let windows_sensor = Some(
+        let windows_sensor_session = Some(
             crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
                 .await
-                .map_err(|err| format!("launch заблокирован: NeverGuard Sensor authentication failed: {err}"))?,
+                .map_err(|err| format!("launch заблокирован: NeverGuard Sensor/Module Guard authentication failed: {err}"))?,
         );
+        #[cfg(windows)]
+        let windows_sensor = windows_sensor_session.as_ref().map(|session| session.report());
         #[cfg(not(windows))]
         let windows_sensor = None;
         #[cfg(target_os = "linux")]
@@ -186,6 +204,8 @@ impl ProcessSupervisor {
             child: child.clone(),
             #[cfg(windows)]
             runtime_policy: Some(runtime_policy),
+            #[cfg(windows)]
+            sensor_session: windows_sensor_session,
         });
 
         let processes = self.processes.clone();
@@ -232,6 +252,9 @@ impl ProcessSupervisor {
                         process.status.message = message.clone();
                         #[cfg(windows)]
                         {
+                            if let Some(session) = process.sensor_session.as_ref() {
+                                process.status.windows_sensor = Some(session.report());
+                            }
                             process.runtime_policy = None;
                         }
                     }
@@ -249,12 +272,15 @@ impl ProcessSupervisor {
     }
 
     pub async fn status(&self, id: &str) -> Result<ProcessStatus, String> {
-        self.processes.lock().await.get(id).map(|p| p.status.clone())
+        let map = self.processes.lock().await;
+        map.get(id)
+            .map(process_status_snapshot)
             .ok_or_else(|| format!("runtime process {id} не найден"))
     }
 
     pub async fn list(&self) -> Vec<ProcessStatus> {
-        let mut items = self.processes.lock().await.values().map(|p| p.status.clone()).collect::<Vec<_>>();
+        let map = self.processes.lock().await;
+        let mut items = map.values().map(process_status_snapshot).collect::<Vec<_>>();
         items.sort_by(|a, b| b.started_at.cmp(&a.started_at));
         items
     }

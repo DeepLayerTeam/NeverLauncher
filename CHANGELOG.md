@@ -1,3 +1,10 @@
+## 0.18.3 — Module Guard
+
+- Replaced point-in-time-only JVM module visibility with a continuous Sensor stream driven by `LdrRegisterDllNotification`. The loader callback is allocation-free and writes fixed records into a preallocated atomic ring; a dedicated worker emits ordered HMAC-SHA-256 load/unload events and heartbeats over the authenticated Sensor pipe.
+- `Agent_OnLoad` now stays fail-closed until the parent authenticates Sensor protocol v2, captures an external ToolHelp module baseline and returns an HMAC-bound Module Guard arm acknowledgement. Ring overflow, event MAC/sequence failure or heartbeat loss invalidates the runtime.
+- Added parent-side module policy and continuous reconciliation: trusted Windows/Java/runtime roots are accepted, modules outside them require valid Authenticode, every accepted load is SHA-256 bound into a rolling event chain, and periodic external snapshots must exactly match the event-derived base/path set. Policy or snapshot drift terminates the JVM.
+- Supervised runtime status now exposes live Module Guard evidence (baseline/current counts, load/unload/heartbeat counters, event-chain/module-set hashes and violations). Windows CI includes real Java probes that exercise an allowed DLL load and a fail-closed unsigned DLL outside trusted roots.
+
 ## 0.18.2 — NeverGuard Sensor
 
 - Added a real Windows JVM native agent crate that builds `neverguard-sensor.dll` and exports `Agent_OnLoad`/`Agent_OnUnload`; JVM startup fails with `JNI_ERR` if its authenticated startup channel cannot be established.

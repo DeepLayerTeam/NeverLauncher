@@ -7,6 +7,7 @@ pub mod supervisor;
 pub mod windows_policy;
 pub mod windows_protection;
 pub mod windows_sensor;
+pub mod windows_module_guard;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -47,7 +48,8 @@ pub use windows_protection::{
     NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA, NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION,
     NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV,
 };
-pub use windows_sensor::{WindowsSensorBootstrap, WindowsSensorReport, NEVERGUARD_SENSOR_FILE_NAME, NEVERGUARD_SENSOR_PIPE_ENV, NEVERGUARD_SENSOR_PROTOCOL_VERSION, NEVERGUARD_SENSOR_SECRET_ENV};
+pub use windows_sensor::{WindowsSensorBootstrap, WindowsSensorReport, WindowsSensorSession, NEVERGUARD_SENSOR_FILE_NAME, NEVERGUARD_SENSOR_PIPE_ENV, NEVERGUARD_SENSOR_PROTOCOL_VERSION, NEVERGUARD_SENSOR_SECRET_ENV};
+pub use windows_module_guard::{WindowsModuleGuardPolicy, WindowsModuleGuardReport, WindowsModuleGuardSession, NEVERGUARD_MODULE_GUARD_VERSION};
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
 
@@ -706,6 +708,7 @@ pub async fn certify_vanilla_compatibility(
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
+    command.current_dir(Path::new(&plan.working_directory));
     #[cfg(windows)]
     let sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
@@ -715,7 +718,6 @@ pub async fn certify_vanilla_compatibility(
         .arg(join_classpath(&plan.classpath_entries))
         .arg(&plan.main_class)
         .args(&plan.game_args)
-        .current_dir(Path::new(&plan.working_directory))
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
@@ -724,7 +726,7 @@ pub async fn certify_vanilla_compatibility(
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
         .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
     #[cfg(windows)]
-    let _sensor_report = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
+    let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
         .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
@@ -795,6 +797,7 @@ pub async fn launch_with_timeout(
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
+    command.current_dir(Path::new(&plan.working_directory));
     #[cfg(windows)]
     let sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
@@ -804,7 +807,6 @@ pub async fn launch_with_timeout(
         .arg(join_classpath(&plan.classpath_entries))
         .arg(&plan.main_class)
         .args(&plan.game_args)
-        .current_dir(Path::new(&plan.working_directory))
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
@@ -815,7 +817,7 @@ pub async fn launch_with_timeout(
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
         .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
     #[cfg(windows)]
-    let _sensor_report = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
+    let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
         .map_err(|err| format!("launch заблокирован: NeverGuard Sensor authentication failed: {err}"))?;
 
