@@ -53,6 +53,8 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/attest/complete", s.authDeviceAttestationComplete0124)
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/guard-attest/begin", s.authGuardAttestationBegin0134)
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/guard-attest/complete", s.authGuardAttestationComplete0134)
+	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/guard-attest-v2/begin", s.authGuardAttestationV2Begin01810)
+	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/guard-attest-v2/complete", s.authGuardAttestationV2Complete01810)
 	mux.HandleFunc("PATCH /api/v1/auth/devices/{deviceId}", s.authDeviceRename0121)
 	mux.HandleFunc("DELETE /api/v1/auth/devices/{deviceId}", s.authDeviceRevoke0125)
 	mux.HandleFunc("POST /api/v1/auth/devices/{deviceId}/revoke", s.authDeviceRevoke0125)

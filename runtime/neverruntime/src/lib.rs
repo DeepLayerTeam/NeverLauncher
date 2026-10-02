@@ -14,6 +14,7 @@ pub mod windows_thread_process_integrity;
 pub mod windows_debug_instrumentation;
 pub mod windows_jvm_aware;
 pub mod windows_continuous_guard;
+pub mod windows_attestation_v2;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -71,6 +72,14 @@ pub use windows_jvm_aware::{
 };
 pub use windows_continuous_guard::{
     WindowsContinuousGuardReport, NEVERGUARD_CONTINUOUS_GUARD_VERSION,
+};
+pub use windows_attestation_v2::{
+    build_windows_attestation_v2, collect_windows_continuous_evidence_v2,
+    recompute_continuous_evidence_sha256, recompute_windows_attestation_v2_sha256,
+    validate_continuous_evidence_v2, NeverGuardRemoteAttestationV2,
+    WindowsContinuousEvidenceV2, NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_SCHEMA,
+    NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_VERSION, NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_SCHEMA,
+    NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_VERSION,
 };
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};

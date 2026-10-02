@@ -1,3 +1,9 @@
+## Attestation v2 — 0.18.10
+
+NeverLauncher 0.18.10 переводит Windows remote attestation с одного pre-launch snapshot на двухфазную модель. Guard Attestation v1 остаётся bootstrap-границей для выдачи Minecraft session, затем защищённая JVM запускается с Sensor/Module Guard/Continuous Guard, и Desktop формирует `neverguard/windows-guard-attestation/v2` уже из фактического live `ProcessSupervisor` state.
+
+Attestation v2 включает свежие Module/Hook/Memory/Thread/Debug/JVM-aware/Continuous evidence, runtime PID, heartbeat/cross-check counters, Sensor/Guard sequences и rolling event-chain hashes. Backend независимо пересчитывает canonical SHA-256, проверяет freshness и component versions, затем проверяет hardware-bound P-256 device signature. Успешная проверка выдаёт одноразовый 45-секундный Continuous Guard ticket; Windows ServerBridge join при обязательной Guard policy принимает его только один раз и дополнительно связывает с launcher version и Guard/Desktop hashes той же integrity-verified Minecraft session. Ошибка v2 или последующего join приводит к остановке уже запущенной JVM.
+
 ## Continuous Guard — 0.18.9
 
 NeverLauncher 0.18.9 добавляет двусторонний runtime cross-check между ранним `neverguard-sensor.dll` и родительским NeverGuard/Runtime security boundary. Помимо существующего HMAC/sequence event stream Sensor теперь ведёт независимую transport event-chain по каждому реально переданному authenticated packet. Перед выходом из `Agent_OnLoad` Sensor отправляет шестой обязательный proof `CONTINUOUS_READY`; parent должен независимо получить тот же chain digest и вернуть HMAC-защищённый Guard ACK, привязанный к Sensor sequence, Guard sequence и текущему chain digest.

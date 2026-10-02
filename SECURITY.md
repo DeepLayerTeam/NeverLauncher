@@ -1,3 +1,9 @@
+## Attestation v2 и server-verified continuous evidence — 0.18.10
+
+В `0.18.10` server-side trust boundary получает evidence после реального запуска JVM. Pre-launch Guard Attestation v1 по-прежнему проверяет Guard/Desktop release boundary и используется для bootstrap Minecraft session, но не считается доказательством состояния уже работающего Sensor. После запуска Desktop собирает live report и формирует Attestation v2, содержащую health/digests всех Windows protection layers и двусторонний Continuous Guard state. Backend ограничивает freshness пятью секундами, проверяет версии компонентов, heartbeat/cross-check parity, rolling hashes и hardware-bound device signature.
+
+После успешной проверки Backend выпускает одноразовый краткоживущий ticket только для ServerBridge join. Ticket привязан к Never session/trusted device и дополнительно сверяется с launcher version и точными Guard/Desktop SHA-256 текущей integrity-verified Minecraft session; ошибка repository/device policy обрабатывается fail-closed. Attestation v2 не превращает user-mode NeverGuard в kernel trust anchor: administrator/kernel compromise и компрометация hardware/device signing или release signing keys остаются отдельными границами угроз.
+
 ## Continuous Guard и двусторонняя целостность runtime — 0.18.9
 
 В `0.18.9` NeverGuard больше не доверяет только одностороннему Sensor→parent heartbeat. Sensor и parent независимо пересчитывают domain-separated SHA-256 chain по полным authenticated event packets. Шестой startup proof `CONTINUOUS_READY` обязан совпасть с parent chain до возврата из `Agent_OnLoad`, после чего parent возвращает отдельный HMAC-защищённый Guard ACK. В runtime такая сверка повторяется раз в секунду и привязывает Guard ACK к `guardSequence`, `sensorSequence` и текущему chain digest.

@@ -3,7 +3,7 @@ mod device_keys;
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, GuardProcessPolicyReport, JavaInfoResult,
     LaunchHistoryEntry, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
-    NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardStatus, NeverGuardSupervisor,
+    NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardRemoteAttestationV2, NeverGuardStatus, NeverGuardSupervisor,
     ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 #[cfg(target_os = "linux")]
@@ -44,6 +44,35 @@ struct GuardAttestationSubmission {
     key_binding: String,
     hardware_provider: String,
     hardware_bound: bool,
+}
+
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GuardAttestationV2Submission {
+    launcher_version: String,
+    attestation: NeverGuardRemoteAttestationV2,
+    signature: String,
+    fingerprint: String,
+    key_algorithm: String,
+    key_binding: String,
+    hardware_provider: String,
+    hardware_bound: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GuardAttestationV2Request {
+    backend_url: String,
+    user_id: String,
+    device_id: String,
+    session_id: String,
+    binding_epoch: i64,
+    launcher_version: String,
+    challenge_id: String,
+    challenge: String,
+    challenge_expires_at: String,
+    process_id: String,
 }
 
 #[derive(Deserialize)]
@@ -470,6 +499,71 @@ async fn neverguard_guard_attestation(
 }
 
 
+#[tauri::command]
+async fn neverguard_guard_attestation_v2(
+    request: GuardAttestationV2Request,
+    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    supervisor: tauri::State<'_, ProcessSupervisor>,
+) -> Result<GuardAttestationV2Submission, String> {
+    #[cfg(not(windows))]
+    {
+        let _ = (request, neverguard, supervisor);
+        return Err("Guard Attestation v2 continuous evidence доступна только для Windows".to_string());
+    }
+    #[cfg(windows)]
+    {
+        let GuardAttestationV2Request {
+            backend_url, user_id, device_id, session_id, binding_epoch, launcher_version,
+            challenge_id, challenge, challenge_expires_at, process_id,
+        } = request;
+        let process_status = supervisor.status(&process_id).await
+            .map_err(|err| format!("Guard Attestation v2 runtime status недоступен: {err}"))?;
+        let continuous_evidence = neverruntime::collect_windows_continuous_evidence_v2(&process_id, &process_status)?;
+        let base_attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
+        let attestation = neverruntime::build_windows_attestation_v2(
+            challenge_id.clone(),
+            &challenge,
+            base_attestation,
+            continuous_evidence,
+        )?;
+        let continuous_evidence_sha256 = attestation.continuous_evidence.evidence_sha256.clone();
+        let base_attestation_sha256 = attestation.base_attestation.attestation_sha256.clone();
+        let runtime_pid = attestation.continuous_evidence.runtime_pid;
+        let attestation_sha256 = attestation.attestation_sha256.clone();
+        let submission_launcher_version = launcher_version.clone();
+        let signing = tokio::task::spawn_blocking(move || {
+            device_keys::sign_guard_attestation_v2(device_keys::GuardAttestationV2SignRequest {
+                backend_url,
+                user_id,
+                device_id,
+                session_id,
+                binding_epoch,
+                launcher_version,
+                challenge_id,
+                challenge,
+                challenge_expires_at,
+                attestation_sha256,
+                continuous_evidence_sha256,
+                base_attestation_sha256,
+                runtime_pid,
+            })
+        })
+        .await
+        .map_err(|e| format!("Guard Attestation v2 device signing task завершилась ошибкой: {e}"))??;
+        Ok(GuardAttestationV2Submission {
+            launcher_version: submission_launcher_version,
+            attestation,
+            signature: signing.signature,
+            fingerprint: signing.fingerprint,
+            key_algorithm: signing.key_algorithm,
+            key_binding: signing.key_binding,
+            hardware_provider: signing.hardware_provider,
+            hardware_bound: signing.hardware_bound,
+        })
+    }
+}
+
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct LauncherUpdateScheduleResult {
@@ -636,6 +730,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

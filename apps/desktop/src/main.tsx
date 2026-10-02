@@ -59,7 +59,7 @@ type JavaInfoResult = {
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; failedFiles?: string[]; messages: string[] };
 type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; classpathEntries: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string };
-type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string };
+type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string; windowsSensor?: any };
 type RepairResult = { status: string; before: FileCheckResult[]; download: DownloadResult; after: FileCheckResult[]; repaired: number; message: string };
 type CleanUnusedResult = { moved: number; preserved: number; quarantineDir: string; messages: string[] };
 type LaunchHistoryEntry = { startedAt: string; projectId: string; profileId: string; version: string; success: boolean; exitCode?: number; logPath: string; message: string };
@@ -1042,6 +1042,59 @@ function App() {
     return data.launchTicket;
   }
 
+  async function createContinuousGuardTicket(processId: string): Promise<string> {
+    if (!authSession?.accessToken) throw new Error('Guard Attestation v2 требует активную Never session.');
+    const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
+    const deviceId = accessTokenDeviceId(authSession.accessToken);
+    if (!userId || !deviceId) throw new Error('Guard Attestation v2 требует trusted-device binding.');
+    const key = deviceKey ?? await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
+    if (!key?.deviceId || key.deviceId !== deviceId || key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256' || !key.hardwareBound) {
+      throw new Error('Guard Attestation v2 требует hardware-bound P-256 device key текущего trusted device.');
+    }
+    const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest-v2/begin`, authSession.accessToken, {
+      launcherVersion: DESKTOP_VERSION,
+    });
+    const beginPayload = await beginResponse.json().catch(() => null);
+    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Guard Attestation v2 begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    const begin = beginPayload?.data ?? beginPayload;
+    if (!begin?.challengeId || !begin?.challenge || !begin?.expiresAt || begin.attestationSchema !== 'neverguard/windows-guard-attestation/v2') {
+      throw new Error('Backend вернул неполный или несовместимый Guard Attestation v2 challenge.');
+    }
+    const submission = await callTauri<GuardAttestationSubmission>('neverguard_guard_attestation_v2', {
+      request: {
+        backendUrl: settings.backendUrl,
+        userId,
+        deviceId,
+        sessionId: authSession.sessionId,
+        bindingEpoch: accessTokenBindingEpoch(authSession.accessToken),
+        launcherVersion: DESKTOP_VERSION,
+        challengeId: begin.challengeId,
+        challenge: begin.challenge,
+        challengeExpiresAt: begin.expiresAt,
+        processId,
+      },
+    });
+    if (submission.launcherVersion !== DESKTOP_VERSION || submission.fingerprint !== key.fingerprint || submission.keyAlgorithm !== 'p256' || submission.keyBinding !== 'hardware' || !submission.hardwareBound) {
+      throw new Error('Native Guard Attestation v2 signer вернул неожиданную release/device identity.');
+    }
+    const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest-v2/complete`, authSession.accessToken, {
+      challengeId: begin.challengeId,
+      challenge: begin.challenge,
+      challengeExpiresAt: begin.expiresAt,
+      launcherVersion: DESKTOP_VERSION,
+      attestation: submission.attestation,
+      signature: submission.signature,
+    });
+    const completePayload = await completeResponse.json().catch(() => null);
+    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Guard Attestation v2 complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    const data = completePayload?.data ?? completePayload;
+    if (!data?.verified || data.attestationVersion !== 2 || !data?.continuousGuardTicket || !data?.oneTime) {
+      throw new Error('Backend не подтвердил Continuous Guard Attestation v2.');
+    }
+    log(`Continuous Guard Attestation v2 подтверждена: evidence=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
+    return data.continuousGuardTicket;
+  }
+
   async function createMinecraftLaunchSession(guardAttestationTicket: string): Promise<MinecraftLaunchCredentials> {
     if (!authSession?.accessToken) throw new Error('Для запуска Minecraft требуется активная Never session.');
     const response = await fetch(endpoint('/api/v1/minecraft/session'), {
@@ -1056,7 +1109,7 @@ function App() {
     return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
   }
 
-  async function createServerJoinBeforeLaunch(username: string, minecraftAccessToken: string) {
+  async function createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string) {
     if (!authSession?.accessToken || !settings.serverId) {
       log('Создание сессии входа ServerBridge пропущено: нет активной сессии или serverId. Для защищённого сервера заполните serverId в настройках.');
       return;
@@ -1064,7 +1117,7 @@ function App() {
     const response = await fetch(endpoint('/api/v1/session/join'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel, minecraftAccessToken }),
+      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel, minecraftAccessToken, continuousGuardTicket }),
     });
     if (!response.ok) throw new Error(`Не удалось создать сессию входа ServerBridge: ${response.status} ${response.statusText}`);
     const payload = await response.json();
@@ -1080,7 +1133,6 @@ function App() {
     try {
       const guardAttestationTicket = await createGuardLaunchTicket();
       const minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
-      await createServerJoinBeforeLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         request: {
           manifest,
@@ -1091,6 +1143,21 @@ function App() {
           pinnedPublicKey: settings.pinnedPublicKey,
         },
       });
+      let continuousGuardTicket: string | undefined;
+      if (result.windowsSensor) {
+        try {
+          continuousGuardTicket = await createContinuousGuardTicket(result.id);
+        } catch (attestationError) {
+          await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
+          throw new Error(`Windows runtime остановлен: Continuous Guard Attestation v2 не подтверждена: ${String(attestationError)}`);
+        }
+      }
+      try {
+        await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket);
+      } catch (joinError) {
+        await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
+        throw new Error(`Runtime остановлен: ServerBridge join после Attestation v2 не подтверждён: ${String(joinError)}`);
+      }
       setLaunchResult(result);
       setStage('running');
       log(`${result.message}: PID ${result.pid ?? 'unknown'}, process ${result.id}.`);

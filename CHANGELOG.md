@@ -1,3 +1,11 @@
+## 0.18.10 — Attestation v2
+
+- Добавлен post-launch `neverguard/windows-guard-attestation/v2`: Backend получает свежий continuous Windows evidence уже после запуска защищённой JVM, а не только pre-launch snapshot Guard/Desktop.
+- Evidence v2 включает состояние Module Guard, Aggressive Hook Engine, Memory Integrity, Thread & Process Integrity, Debug & Instrumentation Guard, JVM-Aware Protection и Continuous Guard с heartbeat/cross-check counters, sequences и rolling chain hashes.
+- Desktop подписывает Attestation v2 тем же hardware-bound P-256 device key; challenge, release, runtime PID, base attestation и continuous evidence cryptographically bound в один digest/signature payload.
+- Backend проверяет freshness, component versions, все health/fail-closed indicators и digest parity, после чего выпускает 45-секундный одноразовый Continuous Guard join ticket. Windows ServerBridge join при включённой Guard policy требует этот ticket и связывает его с той же Never session, trusted device, launcher version и точными Guard/Desktop artifact hashes текущей integrity-verified Minecraft session.
+- Post-launch failure теперь снова fail-closed: ошибка Attestation v2 или ServerBridge join останавливает уже поднятую JVM. Добавлены migration `0032`, Go/Rust tests и обязательные 0.18.10 offline/preflight/Windows CI gates.
+
 ## 0.18.9 — Continuous Guard
 
 - Added an independent Sensor-side rolling SHA-256 transport chain over every authenticated Module Guard event packet. The parent recomputes the same chain from received bytes instead of trusting a digest supplied by Sensor.

@@ -553,6 +553,98 @@ pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<De
     })
 }
 
+
+#[derive(Debug, Clone)]
+pub struct GuardAttestationV2SignRequest {
+    pub backend_url: String,
+    pub user_id: String,
+    pub device_id: String,
+    pub session_id: String,
+    pub binding_epoch: i64,
+    pub launcher_version: String,
+    pub challenge_id: String,
+    pub challenge: String,
+    pub challenge_expires_at: String,
+    pub attestation_sha256: String,
+    pub continuous_evidence_sha256: String,
+    pub base_attestation_sha256: String,
+    pub runtime_pid: u32,
+}
+
+fn guard_attestation_v2_device_payload(
+    user_id: &str,
+    record: &SecureDeviceKeyRecord,
+    request: &GuardAttestationV2SignRequest,
+) -> Result<String, String> {
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" {
+        return Err("Guard Attestation v2 требует hardware-bound P-256 device key".into());
+    }
+    let registered_device = record.device_id.as_deref().unwrap_or("").trim();
+    if registered_device.is_empty() || registered_device != request.device_id.trim() {
+        return Err("Guard Attestation v2 запрошена не для локально зарегистрированного device key".into());
+    }
+    let session_id = request.session_id.trim();
+    let launcher_version = request.launcher_version.trim();
+    let challenge_id = request.challenge_id.trim();
+    let challenge = request.challenge.trim();
+    let challenge_expires_at = request.challenge_expires_at.trim();
+    if session_id.is_empty() || session_id.len() > 256 || request.binding_epoch < 1
+        || launcher_version.is_empty() || launcher_version.len() > 64
+        || challenge_id.is_empty() || challenge_id.len() > 160
+        || challenge.is_empty() || challenge.len() > 4096
+        || challenge_expires_at.is_empty() || challenge_expires_at.len() > 80
+        || request.runtime_pid == 0
+    {
+        return Err("Guard Attestation v2 challenge/runtime metadata недействительны".into());
+    }
+    let attestation_sha256 = require_hex_sha256("attestationSha256", &request.attestation_sha256)?;
+    let continuous_evidence_sha256 = require_hex_sha256("continuousEvidenceSha256", &request.continuous_evidence_sha256)?;
+    let base_attestation_sha256 = require_hex_sha256("baseAttestationSha256", &request.base_attestation_sha256)?;
+    Ok(format!(
+        concat!(
+            "NeverLauncher Guard Attestation Device Binding v2\n",
+            "purpose=guard-attest-v2\n",
+            "challenge={}\n",
+            "challenge-id={}\n",
+            "user={}\n",
+            "device={}\n",
+            "session={}\n",
+            "binding-epoch={}\n",
+            "launcher-version={}\n",
+            "fingerprint={}\n",
+            "attestation-sha256={}\n",
+            "continuous-evidence-sha256={}\n",
+            "base-attestation-sha256={}\n",
+            "runtime-pid={}\n",
+            "challenge-expires-at={}\n"
+        ),
+        challenge, challenge_id, user_id, registered_device, session_id, request.binding_epoch,
+        launcher_version, record.fingerprint, attestation_sha256, continuous_evidence_sha256,
+        base_attestation_sha256, request.runtime_pid, challenge_expires_at,
+    ))
+}
+
+pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Result<DeviceSignatureResult, String> {
+    let user = normalize_user_id(&request.user_id)?;
+    let mut record = load_record(&request.backend_url, &user)?
+        .ok_or_else(|| "device key отсутствует".to_string())?;
+    validate_record(&mut record)?;
+    let payload = guard_attestation_v2_device_payload(&user, &record, &request)?;
+    let (signer, _) = validate_hardware_record(&record)?;
+    let der = signer.sign(&record.hardware_label, payload.as_bytes())
+        .map_err(|e| format!("hardware Guard Attestation v2 signing failed: {e}"))?;
+    let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
+    Ok(DeviceSignatureResult {
+        fingerprint: record.fingerprint.clone(),
+        public_key: record.public_key.clone(),
+        signature,
+        key_algorithm: record.key_algorithm.clone(),
+        key_binding: record.key_binding.clone(),
+        hardware_provider: record.hardware_provider.clone(),
+        hardware_bound: true,
+    })
+}
+
 fn der_ecdsa_to_p1363(der: &[u8]) -> Result<[u8; 64], String> {
     let sig = P256Signature::from_der(der).map_err(|_| "hardware ECDSA signature DER повреждена".to_string())?;
     let bytes = sig.to_bytes();

@@ -89,7 +89,7 @@ if "neverguard-macos:\n    name: NeverGuard macOS production implementation\n   
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
 require(migration_tests, [
-    'st.Current != "0031_guard_attestation_challenge_purposes_0161"',
+    'st.Current != "0032_guard_attestation_v2_01810"',
     "TestGuardMigrationCompatibilityStabilization01310",
 ], "Backend migration catalog tests")
 cli_migration_tests = read("cli/internal/dbmigrate/migrate_test.go")

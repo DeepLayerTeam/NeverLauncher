@@ -111,12 +111,13 @@ type rotateBridgeIdentityRequest struct {
 }
 
 type bridgeJoinRequest struct {
-	Username             string `json:"username,omitempty"`
-	ServerID             string `json:"serverId"`
-	ProjectID            string `json:"projectId"`
-	ProfileID            string `json:"profileId"`
-	Channel              string `json:"channel"`
-	MinecraftAccessToken string `json:"minecraftAccessToken,omitempty"`
+	Username              string `json:"username,omitempty"`
+	ServerID              string `json:"serverId"`
+	ProjectID             string `json:"projectId"`
+	ProfileID             string `json:"profileId"`
+	Channel               string `json:"channel"`
+	MinecraftAccessToken  string `json:"minecraftAccessToken,omitempty"`
+	ContinuousGuardTicket string `json:"continuousGuardTicket,omitempty"`
 }
 
 type bridgeHasJoinedRequest struct {
@@ -231,6 +232,22 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusPreconditionFailed, err.Error())
 		return
+	}
+	continuousRequired, err := s.continuousGuardRequiredForJoin01810(claims.Sub, trust.TrustedDeviceID)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 policy unavailable: "+err.Error())
+		return
+	}
+	if continuousRequired {
+		continuousTicket, err := s.consumeGuardContinuousJoinTicket01810(r, claims, req.ContinuousGuardTicket)
+		if err != nil {
+			writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 required: "+err.Error())
+			return
+		}
+		if err := validateContinuousGuardTicketForMinecraftSession01810(continuousTicket, minecraftSession); err != nil {
+			writeError(w, http.StatusPreconditionFailed, err.Error())
+			return
+		}
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
 	if err != nil {

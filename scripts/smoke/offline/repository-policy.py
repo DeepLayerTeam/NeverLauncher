@@ -1106,6 +1106,39 @@ for required in [
     if required not in guard_attestation_backend_0161:
         fail(f"0.16.1 Guard Attestation timestamp canonicalization missing: {required}")
 
+
+# 0.18.10 Guard Attestation v2 — post-launch continuous Windows evidence must
+# have sealed challenge/ticket purposes and be enforced before ServerBridge join.
+guard_v2_migration_api = read("services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
+guard_v2_migration_cli = read("cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
+if guard_v2_migration_api != guard_v2_migration_cli:
+    fail("0.18.10 API/CLI Guard Attestation v2 migration 0032 differs")
+for required in ["guard-attest-v2", "guard-continuous-join-v2", "guard-attest-v1", "guard-launch-v1"]:
+    if required not in guard_v2_migration_api:
+        fail(f"0.18.10 Guard Attestation v2 migration missing invariant: {required}")
+for required in ["0032_guard_attestation_v2_01810", "dtmig-guard-attest-v2", "guard-attest-v2", "dtmig-guard-continuous-v2", "guard-continuous-join-v2", "guardAttestationV2MigrationSealed:true"]:
+    if required not in guard_migration_e2e:
+        fail(f"0.18.10 Guard Attestation v2 PostgreSQL E2E missing: {required}")
+attestation_v2_backend = read("services/api/internal/httpapi/guard_attestation_v2_01810.go")
+for required in [
+    "validateGuardContinuousEvidence01810", "consumeGuardContinuousJoinTicket01810",
+    "validateContinuousGuardTicketForMinecraftSession01810",
+    "SensorHeartbeatCount != e.GuardHeartbeatCount", "guardContinuousMaxStaleness01810",
+    '"guardSha256"', '"launcherSha256"',
+]:
+    if required not in attestation_v2_backend:
+        fail(f"0.18.10 Guard Attestation v2 backend invariant missing: {required}")
+attestation_v2_bridge = read("services/api/internal/httpapi/server_bridge.go")
+for required in ["continuousGuardRequiredForJoin01810", "validateContinuousGuardTicketForMinecraftSession01810", "Continuous Guard Attestation v2 policy unavailable"]:
+    if required not in attestation_v2_bridge:
+        fail(f"0.18.10 ServerBridge continuous evidence binding missing: {required}")
+attestation_v2_runtime = read("runtime/neverruntime/src/windows_attestation_v2.rs")
+for required in ["collect_windows_continuous_evidence_v2", "neverguard/windows-continuous-evidence/v2", "build_windows_attestation_v2"]:
+    if required not in attestation_v2_runtime:
+        fail(f"0.18.10 Guard Attestation v2 runtime invariant missing: {required}")
+if "neverguard-attestation-v2-01810.py" not in preflight or "neverguard-attestation-v2-01810.py" not in ci:
+    fail("0.18.10 Guard Attestation v2 mandatory gate is not wired into preflight/CI")
+
 # 0.13.2 NeverGuard Windows Integrity Evidence v1. Evidence is collected by the
 # separate guard process and authenticated over the existing local IPC session.
 integrity_0132 = read("runtime/neverruntime/src/integrity.rs")

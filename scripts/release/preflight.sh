@@ -113,6 +113,7 @@ run_step neverguard-thread-process-integrity-0186 python3 "${ROOT_DIR}/scripts/s
 run_step neverguard-debug-instrumentation-0187 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-debug-instrumentation-0187.py"
 run_step neverguard-jvm-aware-protection-0188 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-jvm-aware-protection-0188.py"
 run_step neverguard-continuous-guard-0189 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-continuous-guard-0189.py"
+run_step neverguard-attestation-v2-01810 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-attestation-v2-01810.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 
