@@ -49,6 +49,7 @@ mod imp {
         secret: [u8; 32],
         sensor_path: PathBuf,
         module_guard_policy: WindowsModuleGuardPolicy,
+        runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
     }
 
     impl Drop for WindowsSensorBootstrap {
@@ -134,6 +135,7 @@ mod imp {
             secret,
             sensor_path,
             module_guard_policy,
+            runtime_policy: None,
         })
     }
 
@@ -149,6 +151,10 @@ mod imp {
     }
 
     impl WindowsSensorBootstrap {
+        pub fn bind_runtime_policy(&mut self, runtime_policy: &crate::RuntimeProcessPolicyGuard) {
+            self.runtime_policy = Some(runtime_policy.clone());
+        }
+
         pub async fn authenticate(mut self, expected_pid: u32) -> Result<WindowsSensorSession, String> {
             let mut server = self
                 .server
@@ -188,6 +194,10 @@ mod imp {
                 return Err("NeverGuard Sensor startup authentication failed".to_string());
             }
 
+            let runtime_policy = self
+                .runtime_policy
+                .take()
+                .ok_or_else(|| "NeverGuard Thread & Process Integrity requires runtime Job Object policy binding".to_string())?;
             let mut module_secret = [0u8; 32];
             std::mem::swap(&mut module_secret, &mut self.secret);
             let module_guard = arm_module_guard(
@@ -195,6 +205,7 @@ mod imp {
                 module_secret,
                 pid,
                 self.module_guard_policy.clone(),
+                runtime_policy,
             )
             .await
             .map_err(|err| format!("NeverGuard Module Guard arm failed: {err}"))?;

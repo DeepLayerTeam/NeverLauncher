@@ -1,3 +1,9 @@
+## Контроль потоков и процессов / Windows JVM — 0.18.6
+
+В `0.18.6` NeverGuard Sensor непрерывно проверяет происхождение Win32 threads текущей JVM. Для каждого live TID Sensor получает start address через `NtQueryInformationThread`, затем `VirtualQuery` подтверждает committed executable `MEM_IMAGE`; start address из executable private/mapped memory считается подозрительным переходом исполнения. Создание и завершение обычных JVM, GC, compiler и service threads не блокируется: контролируется их фактическое происхождение, а не сам факт многопоточности.
+
+Process boundary остаётся user-mode и опирается на Job Object, созданный до resume JVM: breakaway flags запрещены, а NeverRuntime на authenticated heartbeat перечисляет descendants и проверяет `IsProcessInJob` для каждого живого PID. Это не объявляется защитой от kernel/administrator attacker; слой предназначен для обнаружения и fail-closed остановки нарушений внутри заявленной Windows user-mode trust boundary.
+
 ## Memory Integrity / executable memory — 0.18.5
 
 В `0.18.5` NeverGuard Sensor непрерывно проверяет executable address space текущей JVM. Для loader-backed `MEM_IMAGE` executable regions сохраняется SHA-256 baseline фактических mapped code bytes; изменение байтов или protection state после baseline считается tampering. Hashing выполняется только после временного удержания loader module reference, чтобы обычная DLL unload race не превращалась в чтение освобождённой памяти.

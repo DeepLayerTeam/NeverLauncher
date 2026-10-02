@@ -1,3 +1,9 @@
+## Thread & Process Integrity — 0.18.6
+
+NeverLauncher 0.18.6 добавляет непрерывный контроль потоков и дерева процессов защищаемой JVM. `neverguard-sensor.dll` перечисляет live TID, получает их реальный Win32 start address через `NtQueryInformationThread`, проверяет backing memory и origin module; нормальные JVM/GC/compiler threads разрешены, но старт потока из executable `MEM_PRIVATE`/`MEM_MAPPED` memory считается suspicious runtime transition и обрабатывается fail-closed. Проверка выполняется чаще общего heartbeat, чтобы короткое окно между событиями не превращалось в единственную линию защиты.
+
+Внешний NeverRuntime одновременно использует уже обязательный non-breakaway Job Object как process-tree boundary: JVM root и все наблюдаемые descendants должны оставаться членами того же Job Object. Evidence содержит thread/process counts, lifecycle transitions, descendant peak, `threadSetSha256`, `threadOriginSetSha256` и `processTreeSha256`. `Agent_OnLoad` не возвращает управление JVM до третьего authenticated startup proof `THREAD_PROCESS_READY`.
+
 ## Memory Integrity — 0.18.5
 
 NeverLauncher 0.18.5 расширяет `neverguard-sensor.dll` непрерывным контролем executable memory внутри защищаемой JVM. Sensor снимает `VirtualQuery` map, хеширует executable `MEM_IMAGE` code regions и на каждом heartbeat проверяет их содержимое и protection state. JVM JIT не ошибочно считается immutable code: executable `MEM_PRIVATE` regions контролируются по startup baseline и наблюдаемым `VirtualAlloc`/`VirtualProtect` transitions от Aggressive Hook Engine. Неизвестная executable private/mapped memory, потеря transition events или code-page drift переводят runtime в fail-closed.

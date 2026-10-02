@@ -53,6 +53,16 @@ pub type WindowsProtectionCoreReport =
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct RuntimeProcessTreeSnapshot {
+    pub root_pid: u32,
+    pub process_count: u32,
+    pub descendant_count: u32,
+    pub job_bound: bool,
+    pub process_tree_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct RuntimeProcessPolicyReport {
     pub schema: String,
     pub policy_version: u32,
@@ -154,7 +164,9 @@ mod windows_impl {
         protection_profile_from_environment, WindowsMitigationCapability,
         WindowsProtectionCapabilities,
     };
+    use sha2::{Digest, Sha256};
     use std::{
+        collections::{HashMap, HashSet, VecDeque},
         ffi::c_void,
         mem::{size_of, zeroed},
         ptr::{null, null_mut},
@@ -165,13 +177,15 @@ mod windows_impl {
         Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
         System::{
             Diagnostics::ToolHelp::{
-                CreateToolhelp32Snapshot, Thread32First, Thread32Next, THREADENTRY32,
+                CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, Thread32First,
+                Thread32Next, PROCESSENTRY32W, THREADENTRY32, TH32CS_SNAPPROCESS,
                 TH32CS_SNAPTHREAD,
             },
             JobObjects::{
                 AssignProcessToJobObject, CreateJobObjectW, IsProcessInJob,
                 QueryInformationJobObject, SetInformationJobObject,
-                JobObjectExtendedLimitInformation, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+                JobObjectBasicProcessIdList, JobObjectExtendedLimitInformation,
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
                 JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
             },
             LibraryLoader::{
@@ -180,17 +194,18 @@ mod windows_impl {
             },
             Memory::{HeapSetInformation, HeapEnableTerminationOnCorruption},
             Threading::{
-                GetProcessMitigationPolicy, OpenThread, ResumeThread,
+                GetProcessMitigationPolicy, OpenProcess, OpenThread, ResumeThread,
                 SetProcessMitigationPolicy, ProcessChildProcessPolicy, ProcessDynamicCodePolicy,
                 ProcessExtensionPointDisablePolicy, ProcessImageLoadPolicy,
                 ProcessStrictHandleCheckPolicy, CREATE_SUSPENDED, PROCESS_MITIGATION_POLICY,
-                THREAD_SUSPEND_RESUME,
+                PROCESS_QUERY_LIMITED_INFORMATION, THREAD_SUSPEND_RESUME,
             },
         },
     };
 
     const JOB_LIMITS_REQUIRED: u32 =
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION;
+    const MAX_JOB_PROCESS_IDS: usize = 4096;
 
     static GUARD_POLICY: OnceLock<Result<GuardProcessPolicyReport, String>> = OnceLock::new();
     static PROCESS_HARDENING: OnceLock<Result<WindowsProductionHardeningReport, String>> = OnceLock::new();
@@ -229,6 +244,19 @@ mod windows_impl {
     impl RuntimeProcessPolicyGuard {
         pub fn report(&self) -> &RuntimeProcessPolicyReport {
             &self.report
+        }
+
+        pub fn verify_process_tree(&self, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
+            if root_pid != self.report.pid {
+                return Err(format!(
+                    "NeverGuard process-tree root mismatch: policy={}, requested={root_pid}",
+                    self.report.pid
+                ));
+            }
+            if self.report.breakaway_allowed || !self.report.assigned_to_job {
+                return Err("NeverGuard process-tree verification requires a non-breakaway Job Object".to_string());
+            }
+            verify_process_tree_for_job(self._job.raw(), root_pid)
         }
     }
 
@@ -583,6 +611,155 @@ mod windows_impl {
             return Err("NeverGuard Windows Protection Core requires launcher Job Object lifetime binding".to_string());
         }
         Ok(true)
+    }
+
+    fn job_process_ids(job: HANDLE) -> Result<HashSet<u32>, String> {
+        let mut buffer = vec![0u8; 8 + MAX_JOB_PROCESS_IDS * size_of::<usize>()];
+        let ok = unsafe {
+            QueryInformationJobObject(
+                job,
+                JobObjectBasicProcessIdList,
+                buffer.as_mut_ptr() as *mut c_void,
+                buffer.len().min(u32::MAX as usize) as u32,
+                null_mut(),
+            )
+        };
+        if ok == 0 {
+            return Err(format!(
+                "NeverGuard cannot enumerate runtime Job Object members: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let assigned = u32::from_ne_bytes(buffer[0..4].try_into().expect("fixed header")) as usize;
+        let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("fixed header")) as usize;
+        if assigned > listed || listed > MAX_JOB_PROCESS_IDS {
+            return Err(format!(
+                "NeverGuard Job Object process list is incomplete: assigned={assigned}, listed={listed}"
+            ));
+        }
+        let required = 8usize
+            .checked_add(listed.saturating_mul(size_of::<usize>()))
+            .ok_or_else(|| "NeverGuard Job Object process-list size overflow".to_string())?;
+        if required > buffer.len() {
+            return Err("NeverGuard Job Object process list exceeds verification buffer".to_string());
+        }
+        let mut result = HashSet::with_capacity(listed);
+        for index in 0..listed {
+            let offset = 8 + index * size_of::<usize>();
+            let raw = unsafe {
+                std::ptr::read_unaligned(buffer.as_ptr().add(offset) as *const usize)
+            };
+            let pid = u32::try_from(raw)
+                .map_err(|_| format!("NeverGuard Job Object PID does not fit u32: {raw}"))?;
+            if pid == 0 || !result.insert(pid) {
+                return Err(format!("NeverGuard Job Object process list contains invalid/duplicate PID {pid}"));
+            }
+        }
+        Ok(result)
+    }
+
+    fn verify_process_tree_for_job(job: HANDLE, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
+        let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+        if snapshot == INVALID_HANDLE_VALUE {
+            return Err(format!(
+                "NeverGuard process-tree snapshot failed: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        struct Snapshot(HANDLE);
+        impl Drop for Snapshot {
+            fn drop(&mut self) {
+                if !self.0.is_null() && self.0 != INVALID_HANDLE_VALUE {
+                    unsafe { let _ = CloseHandle(self.0); }
+                }
+            }
+        }
+        let snapshot = Snapshot(snapshot);
+        let mut entry = PROCESSENTRY32W {
+            dwSize: size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
+        let mut parent_by_pid = HashMap::<u32, u32>::new();
+        let mut has_entry = unsafe { Process32FirstW(snapshot.0, &mut entry) } != 0;
+        while has_entry {
+            parent_by_pid.insert(entry.th32ProcessID, entry.th32ParentProcessID);
+            has_entry = unsafe { Process32NextW(snapshot.0, &mut entry) } != 0;
+        }
+        if !parent_by_pid.contains_key(&root_pid) {
+            return Err(format!("NeverGuard runtime root PID {root_pid} disappeared from process snapshot"));
+        }
+        let job_members = job_process_ids(job)?;
+        if !job_members.contains(&root_pid) {
+            return Err(format!(
+                "NeverGuard process-tree integrity violation: runtime root PID {root_pid} is missing from Job Object"
+            ));
+        }
+
+        let mut descendants = HashSet::new();
+        let mut queue = VecDeque::from([root_pid]);
+        while let Some(parent) = queue.pop_front() {
+            for (&pid, &observed_parent) in &parent_by_pid {
+                if pid != root_pid && observed_parent == parent && descendants.insert(pid) {
+                    queue.push_back(pid);
+                }
+            }
+        }
+
+        for pid in &descendants {
+            if !job_members.contains(pid) {
+                return Err(format!(
+                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                ));
+            }
+        }
+
+        for pid in std::iter::once(root_pid).chain(descendants.iter().copied()) {
+            let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+            if process.is_null() {
+                if pid == root_pid {
+                    return Err(format!(
+                        "NeverGuard cannot open runtime root PID {pid} for Job Object verification: {}",
+                        std::io::Error::last_os_error()
+                    ));
+                }
+                // A short-lived child can exit after the process snapshot. It is no
+                // longer part of the live tree and cannot violate the current boundary.
+                continue;
+            }
+            let mut in_job = 0i32;
+            let ok = unsafe { IsProcessInJob(process, job, &mut in_job) };
+            unsafe { let _ = CloseHandle(process); }
+            if ok == 0 {
+                return Err(format!(
+                    "NeverGuard Job Object membership query failed for PID {pid}: {}",
+                    std::io::Error::last_os_error()
+                ));
+            }
+            if in_job == 0 {
+                return Err(format!(
+                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                ));
+            }
+        }
+
+        let mut records = Vec::with_capacity(job_members.len());
+        for pid in &job_members {
+            records.push((*pid, *parent_by_pid.get(pid).unwrap_or(&0)));
+        }
+        records.sort_unstable();
+        let mut digest = Sha256::new();
+        digest.update(b"NeverLauncher Thread & Process Integrity process-tree v1\0");
+        for (pid, parent) in records {
+            digest.update(pid.to_le_bytes());
+            digest.update(parent.to_le_bytes());
+        }
+        Ok(RuntimeProcessTreeSnapshot {
+            root_pid,
+            process_count: job_members.len().min(u32::MAX as usize) as u32,
+            descendant_count: job_members.len().saturating_sub(1).min(u32::MAX as usize) as u32,
+            job_bound: true,
+            process_tree_sha256: hex::encode(digest.finalize()),
+        })
     }
 
     pub fn prepare_runtime_command(command: &mut Command) {

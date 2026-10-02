@@ -3026,6 +3026,95 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.5 Memory Integrity lacks real Windows integration/clippy CI")
 
+
+# 0.18.6 Thread & Process Integrity continuously validates Win32 thread start
+# origins and the full runtime process tree against the non-breakaway Job Object.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 6):
+    thread_sensor_0186 = read("runtime/neverguard-sensor/src/thread_integrity.rs")
+    thread_stream_0186 = read("runtime/neverguard-sensor/src/lib.rs")
+    thread_policy_0186 = read("runtime/neverruntime/src/windows_policy.rs")
+    thread_parent_0186 = read("runtime/neverruntime/src/windows_module_guard.rs")
+    thread_report_0186 = read("runtime/neverruntime/src/windows_thread_process_integrity.rs")
+    thread_test_0186 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    thread_probe_0186 = read("runtime/neverguard-thread-probe/src/lib.rs")
+    thread_gate_0186 = read("scripts/smoke/offline/neverguard-thread-process-integrity-0186.py")
+    for required in [
+        "NtQueryInformationThread",
+        "THREAD_QUERY_SET_WIN32_START_ADDRESS",
+        "VirtualQuery",
+        "MEM_IMAGE",
+        "non-image executable memory",
+        "thread-set v1",
+        "origin-set v1",
+        "reconcile_and_verify",
+    ]:
+        if required not in thread_sensor_0186:
+            fail(f"0.18.6 Thread Integrity backend incomplete: {required}")
+    for forbidden in ["CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx", "NtWriteVirtualMemory"]:
+        if forbidden in thread_sensor_0186:
+            fail(f"0.18.6 Thread Integrity uses forbidden cross-process primitive: {forbidden}")
+    for required in [
+        "MODULE_EVENT_REASON_THREAD_PROCESS_READY",
+        "MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT",
+        "MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER",
+        "THREAD_INTEGRITY_CHECK_INTERVAL",
+        "thread_integrity::initialize()",
+        "thread_integrity::reconcile_and_verify()",
+    ]:
+        if required not in thread_stream_0186:
+            fail(f"0.18.6 Thread Integrity Sensor lifecycle incomplete: {required}")
+    for required in [
+        "pub struct RuntimeProcessTreeSnapshot",
+        "verify_process_tree",
+        "TH32CS_SNAPPROCESS",
+        "Process32FirstW",
+        "Process32NextW",
+        "IsProcessInJob",
+        "escaped runtime Job Object",
+        "process-tree v1",
+    ]:
+        if required not in thread_policy_0186:
+            fail(f"0.18.6 Process Integrity backend incomplete: {required}")
+    for required in [
+        "thread_process_integrity: crate::WindowsThreadProcessIntegrityReport",
+        "expected THREAD_PROCESS_READY as third event",
+        "thread_process_report_from_event",
+        "runtime_policy.verify_process_tree(pid)",
+        "Thread & Process Integrity suspicious runtime transition detected",
+        "fail_closed",
+    ]:
+        if required not in thread_parent_0186:
+            fail(f"0.18.6 Thread & Process Integrity parent enforcement incomplete: {required}")
+    for required in [
+        "WindowsThreadProcessIntegrityReport",
+        "NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION",
+        "descendant_process_peak",
+        "process_transition_count",
+        "thread_set_sha256",
+        "process_tree_sha256",
+    ]:
+        if required not in thread_report_0186:
+            fail(f"0.18.6 Thread & Process Integrity report missing: {required}")
+    for required in [
+        "neverguard_thread_process_integrity_tracks_job_bound_descendant_processes",
+        "descendant_process_peak >= 1",
+        "neverguard_thread_integrity_fail_closed_on_private_executable_thread_start",
+        "private executable thread start must be fail-closed",
+    ]:
+        if required not in thread_test_0186:
+            fail(f"0.18.6 Thread & Process Integrity Windows integration regression missing: {required}")
+    for required in ["JNI_OnLoad", "VirtualAlloc", "CreateThread", "PAGE_EXECUTE_READWRITE"]:
+        if required not in thread_probe_0186:
+            fail(f"0.18.6 Thread Integrity adversarial fixture incomplete: {required}")
+    if "Thread & Process Integrity 0.18.6 gate: OK" not in thread_gate_0186:
+        fail("0.18.6 mandatory Thread & Process Integrity gate incomplete")
+    if "neverguard-thread-process-integrity-0186.py" not in preflight or "neverguard-thread-process-integrity-0186.py" not in ci:
+        fail("0.18.6 Thread & Process Integrity gate is not wired into preflight/CI")
+    if "runtime/neverguard-thread-probe/Cargo.toml" not in ci or "NEVERGUARD_THREAD_PROBE_DLL" not in ci:
+        fail("0.18.6 Thread Integrity lacks adversarial Windows probe CI")
+    if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
+        fail("0.18.6 Thread & Process Integrity lacks real Windows integration/clippy CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

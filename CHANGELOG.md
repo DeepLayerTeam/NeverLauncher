@@ -1,3 +1,11 @@
+## 0.18.6 — Thread & Process Integrity
+
+- Добавлен production Thread Integrity engine внутри `neverguard-sensor.dll`: каждые 500 мс Sensor перечисляет JVM threads через ToolHelp, получает фактический Win32 start address через `NtQueryInformationThread`, проверяет committed executable backing через `VirtualQuery` и допускает thread start только из `MEM_IMAGE`. Старт потока из executable private/mapped memory считается подозрительным runtime transition и завершает JVM fail-closed.
+- Thread lifecycle допускает нормальные JVM/GC/compiler thread create/retire transitions, ведёт baseline/current/new/retired counters, `threadSetSha256` и `threadOriginSetSha256` без запрета штатной многопоточности JVM.
+- Existing runtime Job Object стал непрерывной process-tree enforcement boundary: внешний NeverRuntime перечисляет descendants JVM, проверяет каждый живой PID через `IsProcessInJob` и отклоняет breakaway/escaped descendants. Состояние дерева фиксируется в `processTreeSha256`, transition count и descendant peak.
+- `Agent_OnLoad` теперь требует третий HMAC-аутентифицированный startup proof `THREAD_PROCESS_READY` после `HOOK_READY` и `MEMORY_READY`; heartbeat/tamper evidence входит в общий ordered Sensor stream и `WindowsModuleGuardReport`.
+- Добавлены реальные Windows JVM regressions: наблюдение дочернего `cmd.exe` внутри Job Object и adversarial native fixture, создающий поток с start address в `MEM_PRIVATE` executable memory, который обязан завершить runtime fail-closed.
+
 ## 0.18.5 — Memory Integrity
 
 - Добавлен production `neverguard-sensor` Memory Integrity engine: continuous `VirtualQuery` executable-memory inventory внутри защищаемой JVM без cross-process memory primitives.

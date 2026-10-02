@@ -23,6 +23,8 @@ pub struct WindowsModuleGuardReport {
     pub last_heartbeat_unix_ms: u64,
     pub hook_engine: crate::WindowsHookEngineReport,
     pub memory_integrity: crate::WindowsMemoryIntegrityReport,
+    #[serde(default)]
+    pub thread_process_integrity: crate::WindowsThreadProcessIntegrityReport,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_violation: String,
 }
@@ -47,6 +49,7 @@ impl Default for WindowsModuleGuardReport {
             last_heartbeat_unix_ms: 0,
             hook_engine: crate::WindowsHookEngineReport::default(),
             memory_integrity: crate::WindowsMemoryIntegrityReport::default(),
+            thread_process_integrity: crate::WindowsThreadProcessIntegrityReport::default(),
             last_violation: String::new(),
         }
     }
@@ -131,6 +134,9 @@ mod imp {
     const MODULE_EVENT_REASON_MEMORY_READY: u32 = 9;
     const MODULE_EVENT_REASON_MEMORY_HEARTBEAT: u32 = 10;
     const MODULE_EVENT_REASON_MEMORY_TAMPER: u32 = 11;
+    const MODULE_EVENT_REASON_THREAD_PROCESS_READY: u32 = 12;
+    const MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT: u32 = 13;
+    const MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER: u32 = 14;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
@@ -257,6 +263,7 @@ mod imp {
         mut secret: [u8; 32],
         pid: u32,
         policy: WindowsModuleGuardPolicy,
+        runtime_policy: crate::RuntimeProcessPolicyGuard,
     ) -> Result<WindowsModuleGuardSession, String> {
         let baseline = module_snapshot(pid)?;
         let mut baseline_hashes = Vec::with_capacity(baseline.len());
@@ -385,13 +392,64 @@ mod imp {
         });
         memory_ready_packet.zeroize();
 
+        // Thread & Process Integrity is the third mandatory startup proof. The
+        // Sensor validates thread origins in-process while the parent validates
+        // the complete descendant tree against the non-breakaway Job Object.
+        let mut thread_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
+        timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
+            .await
+            .map_err(|_| "NeverGuard Thread & Process Integrity ready proof timed out".to_string())?
+            .map_err(|err| format!("NeverGuard Thread & Process Integrity ready proof read failed: {err}"))?;
+        let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
+        if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
+            return Err(format!(
+                "NeverGuard Thread & Process Integrity expected THREAD_PROCESS_READY as third event, got {}",
+                thread_ready_event.reason
+            ));
+        }
+        let process_tree = runtime_policy.verify_process_tree(pid)?;
+        let mut thread_ready = thread_process_report_from_event(&thread_ready_event)?;
+        if thread_ready.current_thread_count == 0 || thread_ready.baseline_thread_count == 0 {
+            return Err("NeverGuard Thread & Process Integrity armed with zero thread coverage".to_string());
+        }
+        thread_ready.active = true;
+        thread_ready.healthy = true;
+        thread_ready.baseline_process_count = process_tree.process_count;
+        thread_ready.current_process_count = process_tree.process_count;
+        thread_ready.descendant_process_count = process_tree.descendant_count;
+        thread_ready.descendant_process_peak = process_tree.descendant_count;
+        thread_ready.job_bound = process_tree.job_bound;
+        thread_ready.breakaway_allowed = runtime_policy.report().breakaway_allowed;
+        thread_ready.process_tree_sha256 = process_tree.process_tree_sha256.clone();
+        ready_chain = advance_event_chain(
+            ready_chain,
+            &thread_ready_packet,
+            &thread_ready.thread_set_sha256,
+        );
+        update_counter(&state, |report| {
+            report.event_count = 3;
+            report.last_sequence = 3;
+            report.event_chain_sha256 = hex::encode(ready_chain);
+            report.thread_process_integrity = thread_ready;
+        });
+        thread_ready_packet.zeroize();
+
         let expected = baseline
             .into_iter()
             .map(|module| (module.base_address, module.normalized_path))
             .collect::<HashMap<_, _>>();
         let task_state = state.clone();
         tokio::spawn(async move {
-            monitor_loop(&mut server, &mut secret, pid, policy, expected, task_state).await;
+            monitor_loop(
+                &mut server,
+                &mut secret,
+                pid,
+                policy,
+                runtime_policy,
+                expected,
+                task_state,
+            )
+            .await;
             secret.zeroize();
         });
 
@@ -403,6 +461,7 @@ mod imp {
         secret: &mut [u8; 32],
         pid: u32,
         policy: WindowsModuleGuardPolicy,
+        runtime_policy: crate::RuntimeProcessPolicyGuard,
         mut expected: HashMap<u64, String>,
         state: Arc<Mutex<WindowsModuleGuardReport>>,
     ) {
@@ -574,6 +633,59 @@ mod imp {
                         format!("NeverGuard Memory Integrity runtime tampering detected: {detail}")
                     })
                 }
+                MODULE_EVENT_REASON_THREAD_PROCESS_READY => {
+                    Err("NeverGuard Thread & Process Integrity emitted duplicate THREAD_PROCESS_READY".to_string())
+                }
+                MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT => {
+                    match thread_process_report_from_event(&event) {
+                        Err(err) => Err(err),
+                        Ok(thread_report) if thread_report.current_thread_count == 0 => {
+                            Err("NeverGuard Thread & Process Integrity heartbeat reported zero live threads".to_string())
+                        }
+                        Ok(mut thread_report) => {
+                            match runtime_policy.verify_process_tree(pid) {
+                                Err(err) => Err(format!(
+                                    "NeverGuard Thread & Process Integrity process-tree verification failed: {err}"
+                                )),
+                                Ok(tree) => {
+                                    module_hash = thread_report.thread_set_sha256.clone();
+                                    update_counter(&state, |report| {
+                                        let previous = &report.thread_process_integrity;
+                                        let process_changed = !previous.process_tree_sha256.is_empty()
+                                            && previous.process_tree_sha256 != tree.process_tree_sha256;
+                                        thread_report.active = true;
+                                        thread_report.healthy = true;
+                                        thread_report.baseline_process_count = previous.baseline_process_count;
+                                        thread_report.current_process_count = tree.process_count;
+                                        thread_report.descendant_process_count = tree.descendant_count;
+                                        thread_report.descendant_process_peak = previous
+                                            .descendant_process_peak
+                                            .max(tree.descendant_count);
+                                        thread_report.process_transition_count = previous
+                                            .process_transition_count
+                                            .saturating_add(u64::from(process_changed));
+                                        thread_report.violation_count = previous.violation_count;
+                                        thread_report.job_bound = tree.job_bound;
+                                        thread_report.breakaway_allowed = runtime_policy.report().breakaway_allowed;
+                                        thread_report.process_tree_sha256 = tree.process_tree_sha256;
+                                        report.thread_process_integrity = thread_report;
+                                    });
+                                    Ok(())
+                                }
+                            }
+                        }
+                    }
+                }
+                MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER => {
+                    let detail = event.path.to_string_lossy();
+                    Err(if detail.is_empty() {
+                        "NeverGuard Thread & Process Integrity suspicious runtime transition detected".to_string()
+                    } else {
+                        format!(
+                            "NeverGuard Thread & Process Integrity suspicious runtime transition detected: {detail}"
+                        )
+                    })
+                }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
                     Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
@@ -658,6 +770,80 @@ mod imp {
             executable_map_sha256,
             last_violation: String::new(),
         })
+    }
+
+    fn thread_process_report_from_event(
+        event: &ParsedEvent,
+    ) -> Result<crate::WindowsThreadProcessIntegrityReport, String> {
+        let payload = event.path.to_string_lossy();
+        let mut fields = payload.split('|');
+        let thread_set_sha256 = validate_thread_process_digest(
+            fields
+                .next()
+                .ok_or_else(|| "NeverGuard Thread & Process Integrity missing thread-set digest".to_string())?,
+            "thread-set",
+        )?;
+        let thread_origin_set_sha256 = validate_thread_process_digest(
+            fields
+                .next()
+                .ok_or_else(|| "NeverGuard Thread & Process Integrity missing origin-set digest".to_string())?,
+            "origin-set",
+        )?;
+        let retired_thread_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing retired-thread count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard Thread & Process Integrity invalid retired-thread count".to_string())?;
+        let suspicious_thread_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing suspicious-thread count".to_string())?
+            .parse::<u32>()
+            .map_err(|_| "NeverGuard Thread & Process Integrity invalid suspicious-thread count".to_string())?;
+        let integrity_check_count = fields
+            .next()
+            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing check count".to_string())?
+            .parse::<u64>()
+            .map_err(|_| "NeverGuard Thread & Process Integrity invalid check count".to_string())?;
+        if fields.next().is_some() {
+            return Err("NeverGuard Thread & Process Integrity malformed evidence payload".to_string());
+        }
+        if suspicious_thread_count != 0 {
+            return Err(format!(
+                "NeverGuard Thread & Process Integrity reported {suspicious_thread_count} suspicious threads"
+            ));
+        }
+        Ok(crate::WindowsThreadProcessIntegrityReport {
+            version: crate::NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
+            active: true,
+            healthy: true,
+            baseline_thread_count: event.size_of_image,
+            current_thread_count: event.flags,
+            new_thread_count: event.base_address,
+            retired_thread_count,
+            suspicious_thread_count,
+            baseline_process_count: 0,
+            current_process_count: 0,
+            descendant_process_count: 0,
+            descendant_process_peak: 0,
+            process_transition_count: 0,
+            integrity_check_count,
+            violation_count: 0,
+            job_bound: false,
+            breakaway_allowed: true,
+            thread_set_sha256,
+            thread_origin_set_sha256,
+            process_tree_sha256: String::new(),
+            last_violation: String::new(),
+        })
+    }
+
+    fn validate_thread_process_digest(value: &str, label: &str) -> Result<String, String> {
+        if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(format!(
+                "NeverGuard Thread & Process Integrity invalid {label} digest"
+            ));
+        }
+        Ok(value.to_ascii_lowercase())
     }
 
     fn validate_memory_digest(value: &str, label: &str) -> Result<String, String> {
@@ -864,6 +1050,15 @@ mod imp {
                 report.memory_integrity.violation_count = report.memory_integrity.violation_count.saturating_add(1);
                 report.memory_integrity.last_violation = reason.to_string();
             }
+            if reason.contains("Thread & Process Integrity") {
+                report.thread_process_integrity.active = false;
+                report.thread_process_integrity.healthy = false;
+                report.thread_process_integrity.violation_count = report
+                    .thread_process_integrity
+                    .violation_count
+                    .saturating_add(1);
+                report.thread_process_integrity.last_violation = reason.to_string();
+            }
         });
         terminate_runtime(pid);
     }
@@ -873,6 +1068,7 @@ mod imp {
             report.active = false;
             report.hook_engine.active = false;
             report.memory_integrity.active = false;
+            report.thread_process_integrity.active = false;
         });
     }
 

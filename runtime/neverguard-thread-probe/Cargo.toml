@@ -1,14 +1,14 @@
 [package]
-name = "neverguard-memory-probe"
+name = "neverguard-thread-probe"
 version = "0.18.6"
-description = "Windows-only NeverGuard Memory Integrity adversarial integration fixture"
+description = "Windows-only NeverGuard Thread Integrity adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "neverguard_memory_probe"
+name = "neverguard_thread_probe"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 

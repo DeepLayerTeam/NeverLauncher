@@ -10,6 +10,7 @@ pub mod windows_sensor;
 pub mod windows_module_guard;
 pub mod windows_hook_engine;
 pub mod windows_memory_integrity;
+pub mod windows_thread_process_integrity;
 pub mod linux_policy;
 pub mod macos_policy;
 #[cfg(target_os = "linux")]
@@ -39,6 +40,7 @@ pub use windows_policy::{
     ensure_windows_production_hardening, ensure_windows_protection_core,
     ensure_windows_protection_core_with_profile, validate_windows_guard_policy_report,
     GuardProcessPolicyReport, RuntimeProcessPolicyReport, RuntimeProcessPolicyGuard,
+    RuntimeProcessTreeSnapshot,
     WindowsProductionHardeningReport, WindowsProtectionCoreReport,
     NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
     NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION,
@@ -54,6 +56,9 @@ pub use windows_sensor::{WindowsSensorBootstrap, WindowsSensorReport, WindowsSen
 pub use windows_module_guard::{WindowsModuleGuardPolicy, WindowsModuleGuardReport, WindowsModuleGuardSession, NEVERGUARD_MODULE_GUARD_VERSION};
 pub use windows_hook_engine::{WindowsHookEngineReport, NEVERGUARD_HOOK_ENGINE_VERSION};
 pub use windows_memory_integrity::{WindowsMemoryIntegrityReport, NEVERGUARD_MEMORY_INTEGRITY_VERSION};
+pub use windows_thread_process_integrity::{
+    WindowsThreadProcessIntegrityReport, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
+};
 pub use linux_policy::{LinuxGuardPolicyDetails, LinuxProductionHardeningReport, LinuxRuntimeProcessPolicyReport, NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
 pub use macos_policy::{MacOSCodeSignatureState, MacOSGuardPolicyDetails, MacOSProductionHardeningReport, MacOSRuntimeProcessPolicyReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
 
@@ -714,7 +719,7 @@ pub async fn certify_vanilla_compatibility(
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     #[cfg(windows)]
-    let sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
+    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
     command
         .args(&plan.jvm_args)
@@ -729,6 +734,8 @@ pub async fn certify_vanilla_compatibility(
     let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
         .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
+    #[cfg(windows)]
+    sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
@@ -803,7 +810,7 @@ pub async fn launch_with_timeout(
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     #[cfg(windows)]
-    let sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
+    let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
     command
         .args(&plan.jvm_args)
@@ -820,6 +827,8 @@ pub async fn launch_with_timeout(
         .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
         .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+    #[cfg(windows)]
+    sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await

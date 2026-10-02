@@ -7,7 +7,7 @@ use neverruntime::{
         NEVERGUARD_SENSOR_PROTOCOL_VERSION,
     },
     NEVERGUARD_HOOK_ENGINE_VERSION, NEVERGUARD_MEMORY_INTEGRITY_VERSION,
-    NEVERGUARD_MODULE_GUARD_VERSION,
+    NEVERGUARD_MODULE_GUARD_VERSION, NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION,
 };
 use std::{
     fs,
@@ -41,6 +41,15 @@ fn memory_probe_path() -> PathBuf {
             .expect("NEVERGUARD_MEMORY_PROBE_DLL must point to built neverguard_memory_probe.dll"),
     );
     assert!(probe.is_file(), "memory probe DLL missing: {}", probe.display());
+    probe
+}
+
+fn thread_probe_path() -> PathBuf {
+    let probe = PathBuf::from(
+        std::env::var("NEVERGUARD_THREAD_PROBE_DLL")
+            .expect("NEVERGUARD_THREAD_PROBE_DLL must point to built neverguard_thread_probe.dll"),
+    );
+    assert!(probe.is_file(), "thread probe DLL missing: {}", probe.display());
     probe
 }
 
@@ -99,6 +108,52 @@ fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
     assert!(status.success(), "Memory Integrity javac failed: {status}");
 }
 
+fn compile_process_tree_probe(javac: &Path, directory: &Path) {
+    fs::create_dir_all(directory).expect("create Process Tree Java probe directory");
+    fs::write(
+        directory.join("ProcessTreeProbe.java"),
+        r#"public final class ProcessTreeProbe {
+    public static void main(String[] args) throws Exception {
+        Process child = new ProcessBuilder("cmd.exe", "/c", "ping -n 6 127.0.0.1 >NUL").start();
+        Thread.sleep(3500L);
+        if (child.isAlive()) child.destroyForcibly();
+        child.waitFor();
+        Thread.sleep(1200L);
+    }
+}
+"#,
+    )
+    .expect("write Process Tree Java probe");
+    let status = std::process::Command::new(javac)
+        .arg("ProcessTreeProbe.java")
+        .current_dir(directory)
+        .status()
+        .expect("run javac for Process Tree probe");
+    assert!(status.success(), "Process Tree javac failed: {status}");
+}
+
+fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
+    fs::create_dir_all(directory).expect("create Thread Integrity Java probe directory");
+    fs::write(
+        directory.join("ThreadIntegrityProbe.java"),
+        r#"public final class ThreadIntegrityProbe {
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) throw new IllegalArgumentException("native DLL path required");
+        System.load(args[0]);
+        Thread.sleep(12000L);
+    }
+}
+"#,
+    )
+    .expect("write Thread Integrity Java probe");
+    let status = std::process::Command::new(javac)
+        .arg("ThreadIntegrityProbe.java")
+        .current_dir(directory)
+        .status()
+        .expect("run javac for Thread Integrity probe");
+    assert!(status.success(), "Thread Integrity javac failed: {status}");
+}
+
 #[tokio::test]
 async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     let (java, _) = java_tools();
@@ -106,13 +161,14 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
 
     let mut command = Command::new(java);
     command.current_dir(std::env::current_dir().expect("current dir"));
-    let bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
         .expect("prepare NeverGuard Sensor agentpath");
     command.arg("-version");
     prepare_runtime_command(&mut command);
 
     let mut child = command.spawn().expect("spawn Java suspended");
     let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
     let pid = child.id().expect("Java PID");
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
@@ -140,6 +196,17 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
     assert!(report.module_guard.memory_integrity.image_code_region_count > 0);
     assert_eq!(report.module_guard.memory_integrity.code_set_sha256.len(), 64);
     assert_eq!(report.module_guard.memory_integrity.executable_map_sha256.len(), 64);
+    assert_eq!(
+        report.module_guard.thread_process_integrity.version,
+        NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION
+    );
+    assert!(report.module_guard.thread_process_integrity.active);
+    assert!(report.module_guard.thread_process_integrity.healthy);
+    assert!(report.module_guard.thread_process_integrity.current_thread_count > 0);
+    assert!(report.module_guard.thread_process_integrity.job_bound);
+    assert!(!report.module_guard.thread_process_integrity.breakaway_allowed);
+    assert_eq!(report.module_guard.thread_process_integrity.thread_set_sha256.len(), 64);
+    assert_eq!(report.module_guard.thread_process_integrity.process_tree_sha256.len(), 64);
     assert!(runtime_policy.report().enforced);
 
     let status = child.wait().await.expect("wait Java");
@@ -159,7 +226,7 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
-    let bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
         .expect("prepare NeverGuard Sensor agentpath");
     command
         .arg("-cp")
@@ -169,7 +236,8 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     prepare_runtime_command(&mut command);
 
     let mut child = command.spawn().expect("spawn Java probe suspended");
-    let _runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
         .expect("arm Module Guard before Java main");
@@ -195,6 +263,12 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert!(report.memory_integrity.image_code_region_count > 0);
     assert_eq!(report.memory_integrity.code_set_sha256.len(), 64);
     assert_eq!(report.memory_integrity.executable_map_sha256.len(), 64);
+    assert!(report.thread_process_integrity.healthy);
+    assert!(report.thread_process_integrity.integrity_check_count >= 2);
+    assert!(report.thread_process_integrity.current_thread_count > 0);
+    assert_eq!(report.thread_process_integrity.thread_set_sha256.len(), 64);
+    assert_eq!(report.thread_process_integrity.thread_origin_set_sha256.len(), 64);
+    assert_eq!(report.thread_process_integrity.process_tree_sha256.len(), 64);
     assert_eq!(report.event_chain_sha256.len(), 64);
     assert_eq!(report.module_set_sha256.len(), 64);
 
@@ -216,7 +290,7 @@ async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roo
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
-    let bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
         .expect("prepare NeverGuard Sensor agentpath");
     command
         .arg("-cp")
@@ -226,7 +300,8 @@ async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roo
     prepare_runtime_command(&mut command);
 
     let mut child = command.spawn().expect("spawn Java probe suspended");
-    let _runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
         .expect("arm Module Guard before Java main");
@@ -262,7 +337,7 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
-    let bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
         .expect("prepare NeverGuard Sensor agentpath");
     command
         .arg("-cp")
@@ -272,7 +347,8 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
     prepare_runtime_command(&mut command);
 
     let mut child = command.spawn().expect("spawn Memory Integrity Java probe suspended");
-    let _runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
     let session = authenticate_sensor_or_kill(bootstrap, &mut child)
         .await
         .expect("arm Memory Integrity before Java main");
@@ -293,3 +369,91 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
 
     let _ = fs::remove_dir_all(root);
 }
+
+#[tokio::test]
+async fn neverguard_thread_process_integrity_tracks_job_bound_descendant_processes() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let root = unique_test_root("process-tree");
+    let trusted = root.join("trusted");
+    compile_process_tree_probe(&javac, &trusted);
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Sensor agentpath");
+    command.arg("-cp").arg(&trusted).arg("ProcessTreeProbe");
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn Process Tree Java probe suspended");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("arm Thread & Process Integrity before Java main");
+    let status = child.wait().await.expect("wait Process Tree Java probe");
+    assert!(status.success(), "Process Tree probe failed: {status}");
+    sleep(Duration::from_millis(250)).await;
+
+    let report = session.report().module_guard.thread_process_integrity;
+    assert!(report.healthy, "Thread & Process Integrity violation: {}", report.last_violation);
+    assert!(report.job_bound);
+    assert!(!report.breakaway_allowed);
+    assert!(report.descendant_process_peak >= 1, "expected observed job-bound descendant: {report:?}");
+    assert!(report.process_transition_count >= 1, "expected process-tree transition: {report:?}");
+    assert!(report.integrity_check_count >= 2);
+    assert_eq!(report.process_tree_sha256.len(), 64);
+
+    let _ = fs::remove_dir_all(root);
+}
+
+#[tokio::test]
+async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_start() {
+    let (java, javac) = java_tools();
+    let sensor = sensor_path();
+    let thread_probe = thread_probe_path();
+    let root = unique_test_root("private-thread");
+    let trusted = root.join("trusted");
+    compile_thread_integrity_probe(&javac, &trusted);
+    let probe_dll = trusted.join("thread-tamper-probe.dll");
+    fs::copy(&thread_probe, &probe_dll).expect("copy Thread Integrity tamper probe");
+    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical Thread Integrity probe DLL");
+
+    let mut command = Command::new(java);
+    command.current_dir(&trusted);
+    let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
+        .expect("prepare NeverGuard Sensor agentpath");
+    command
+        .arg("-cp")
+        .arg(&trusted)
+        .arg("ThreadIntegrityProbe")
+        .arg(&probe_dll);
+    prepare_runtime_command(&mut command);
+
+    let mut child = command.spawn().expect("spawn Thread Integrity Java probe suspended");
+    let runtime_policy = enforce_runtime_process(&mut child).expect("enforce runtime process policy");
+    bootstrap.bind_runtime_policy(&runtime_policy);
+    let session = authenticate_sensor_or_kill(bootstrap, &mut child)
+        .await
+        .expect("arm Thread & Process Integrity before Java main");
+    let status = child.wait().await.expect("wait Thread Integrity tamper probe");
+    assert!(!status.success(), "private executable thread start must be fail-closed");
+    sleep(Duration::from_millis(250)).await;
+
+    let report = session.report().module_guard;
+    assert!(!report.healthy, "Module Guard must reflect Thread Integrity failure");
+    assert!(!report.thread_process_integrity.healthy);
+    assert!(
+        report.thread_process_integrity.violation_count >= 1,
+        "expected Thread & Process Integrity violation: {report:?}"
+    );
+    assert!(
+        report.thread_process_integrity.last_violation.contains("non-image executable memory")
+            || report.last_violation.contains("non-image executable memory"),
+        "unexpected Thread Integrity violation: {}",
+        report.thread_process_integrity.last_violation
+    );
+
+    let _ = fs::remove_dir_all(root);
+}
+

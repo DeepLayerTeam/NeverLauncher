@@ -127,7 +127,7 @@ impl ProcessSupervisor {
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
         #[cfg(windows)]
-        let sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
+        let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
             .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
         command
             .args(&plan.jvm_args)
@@ -150,6 +150,8 @@ impl ProcessSupervisor {
         #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
             .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
+        #[cfg(windows)]
+        sensor_bootstrap.bind_runtime_policy(&runtime_policy);
         #[cfg(windows)]
         let windows_sensor_session = Some(
             crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
