@@ -1,3 +1,11 @@
+## 0.17.10 — Loader Hardening
+
+- Added content-addressed SHA-256 loader payload cache for Fabric/Quilt Meta profiles and Forge/NeoForge installers. Immutable resolution locks can replay exact pinned bytes without mutable upstream availability; corrupt cache records/payloads are quarantined fail-closed.
+- Forge/NeoForge pinned installer replay no longer depends on mutable `.sha1` sidecars. Verified installers are restored from the local SHA-256 cache, while first-time unpinned installs retain upstream checksum verification before cache commit.
+- Added a durable processor recovery journal with `running`/`failed`/`completed` states, processor identity, attempts and installer binding. After interruption, verified completed outputs are adopted without rerun; incomplete or corrupt outputs are quarantined and the processor is executed again.
+- Added cache-only recovery E2E for current Fabric/Quilt/Forge/NeoForge Linux x64 anchors. Aggregate/release certification requires upstream-independent recovery and, for Forge/NeoForge, installer + processor recovery; bundle verification recomputes the four hardening targets.
+- Added mandatory 0.17.10 CI/preflight/repository-policy gates and raw `loader-hardening.json` / recovery package evidence.
+
 ## 0.17.9 — Cross-platform Loaders
 
 - Added required cross-platform loader certification for Fabric 26.3, Quilt 26.3, Forge 26.3 and NeoForge 26.2 on Windows/Linux/macOS × x64/ARM64 (24 loader/platform targets; 292 total compatibility targets). Historical wide loader release grids remain Linux x64 regression baselines.

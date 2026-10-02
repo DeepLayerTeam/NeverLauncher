@@ -79,6 +79,8 @@ if lock.get("selector") in ("", None) or lock.get("resolvedVersion") in ("latest
     raise SystemExit("loader lock is not immutable")
 PY
 
+bash "$ROOT/e2e/scripts/run-loader-hardening-probe.sh" "fabric" "$NL_BIN" "$RUNTIME_DIR"
+
 "$NL_BIN" client verify \
   --package "$RUNTIME_DIR/client-package.json" \
   --client-dir "$RUNTIME_DIR/materialized-client" \

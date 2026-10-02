@@ -217,6 +217,11 @@ CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
 }
 CROSS_PLATFORM_LOADER_PLATFORMS_0179: tuple[tuple[str, str], ...] = CROSS_PLATFORM_VANILLA_0169
 
+# Loader Hardening 0.17.10 reuses the current-loader anchors but binds a
+# deterministic Linux/x86_64 recovery probe to each family. No duplicate target
+# rows are added: the existing cross-platform anchor is strengthened in place.
+LOADER_HARDENING_01710: dict[str, tuple[str, int]] = dict(CROSS_PLATFORM_LOADERS_0179)
+
 
 def die(message: str) -> None:
     raise SystemExit(message)
@@ -310,6 +315,20 @@ def loader_native_e2e_0178_required() -> bool:
 
 def cross_platform_loaders_0179_required() -> bool:
     return semver_core(PRODUCT_VERSION) >= (0, 17, 9)
+
+
+def loader_hardening_01710_required() -> bool:
+    return semver_core(PRODUCT_VERSION) >= (0, 17, 10)
+
+
+def is_loader_hardening_target(target: dict[str, Any]) -> bool:
+    anchor = LOADER_HARDENING_01710.get(str(target.get("loader", "")))
+    if anchor is None:
+        return False
+    minecraft, java_major = anchor
+    return (bool(target.get("required")) and target.get("minecraft") == minecraft
+            and target.get("javaMajor") == java_major and target.get("scope") == "client"
+            and target.get("os") == "linux" and target.get("arch") == "x86_64")
 
 
 def is_cross_platform_loader_target(target: dict[str, Any]) -> bool:
@@ -812,6 +831,10 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
         mandatory = list(mandatory) + ["loaderNativeServer", "loaderVersionMatched", "loaderServerHealthy", "loaderNativeClientJoin"]
     if cross_platform_loaders_0179_required() and is_cross_platform_loader_target(target):
         mandatory = list(mandatory) + ["loaderPlatformMaterialized", "loaderNativesResolved", "loaderPlatformLaunch"]
+    if loader_hardening_01710_required() and is_loader_hardening_target(target):
+        mandatory = list(mandatory) + ["loaderCacheVerified", "loaderUpstreamRecovery"]
+        if target["loader"] in {"forge", "neoforge"}:
+            mandatory = list(mandatory) + ["loaderInstallerRecovery", "loaderProcessorRecovery"]
     if not isinstance(checks, dict):
         errors.append("checks is missing")
     else:
@@ -884,6 +907,8 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             }
         if cross_platform_loaders_0179_required() and is_cross_platform_loader_target(target):
             mandatory_files = set(mandatory_files) | {"loader-platform.json"}
+        if loader_hardening_01710_required() and is_loader_hardening_target(target):
+            mandatory_files = set(mandatory_files) | {"loader-hardening.json", "loader-hardening-package.json"}
         if not isinstance(files, list) or not mandatory_files.issubset({str(value) for value in files}):
             errors.append("evidence files are incomplete")
     if result.get("status") != "passed":

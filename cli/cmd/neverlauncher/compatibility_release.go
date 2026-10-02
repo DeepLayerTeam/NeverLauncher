@@ -122,6 +122,7 @@ type releaseCompatibilityCertification struct {
 	LoaderPins                 []releaseCompatibilityLoaderPin `json:"loaderPins,omitempty"`
 	LoaderNativeTargets        []string                        `json:"loaderNativeTargets,omitempty"`
 	CrossPlatformLoaderTargets []string                        `json:"crossPlatformLoaderTargets,omitempty"`
+	LoaderHardeningTargets     []string                        `json:"loaderHardeningTargets,omitempty"`
 	JavaMajors                 []int                           `json:"javaMajors,omitempty"`
 	JREBuilds                  []releaseCompatibilityJREBuild  `json:"jreBuilds,omitempty"`
 	Scopes                     []string                        `json:"scopes,omitempty"`
@@ -428,6 +429,15 @@ func compatibilityLoaderNativeE2E0178Required(ver string) bool {
 
 func compatibilityCrossPlatformLoaders0179Required(ver string) bool {
 	return compatibilityVersionAtLeast(ver, 0, 17, 9)
+}
+
+func compatibilityLoaderHardening01710Required(ver string) bool {
+	return compatibilityVersionAtLeast(ver, 0, 17, 10)
+}
+
+func compatibilityLoaderHardeningTarget(target releaseCompatibilityTarget) bool {
+	anchor, ok := crossPlatformLoaders0179[target.Loader]
+	return ok && target.Required && target.Minecraft == anchor.Minecraft && target.JavaMajor == anchor.JavaMajor && target.Scope == "client" && target.OS == "linux" && target.Arch == "x86_64"
 }
 
 func compatibilityCrossPlatformLoaderTarget(target releaseCompatibilityTarget) bool {
@@ -996,6 +1006,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	loaderPins := []releaseCompatibilityLoaderPin{}
 	loaderNativeTargets := []string{}
 	crossPlatformLoaderTargets := []string{}
+	loaderHardeningTargets := []string{}
 	javaMajorSet := map[int]bool{}
 	jreBuildSet := map[string]*releaseCompatibilityJREBuild{}
 	scopeSet := map[string]bool{}
@@ -1045,6 +1056,12 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		if compatibilityCrossPlatformLoaders0179Required(ver) && compatibilityCrossPlatformLoaderTarget(target) {
 			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "loaderPlatformMaterialized", "loaderNativesResolved", "loaderPlatformLaunch")
 		}
+		if compatibilityLoaderHardening01710Required(ver) && compatibilityLoaderHardeningTarget(target) {
+			mandatoryChecks = append(append([]string{}, mandatoryChecks...), "loaderCacheVerified", "loaderUpstreamRecovery")
+			if target.Loader == "forge" || target.Loader == "neoforge" {
+				mandatoryChecks = append(mandatoryChecks, "loaderInstallerRecovery", "loaderProcessorRecovery")
+			}
+		}
 		for _, check := range mandatoryChecks {
 			if result.Checks == nil || result.Checks[check] != true {
 				return releaseCompatibilityCertification{}, fmt.Errorf("target %s required check %s != true", id, check)
@@ -1055,6 +1072,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if compatibilityCrossPlatformLoaders0179Required(ver) && compatibilityCrossPlatformLoaderTarget(target) {
 			crossPlatformLoaderTargets = append(crossPlatformLoaderTargets, id)
+		}
+		if compatibilityLoaderHardening01710Required(ver) && compatibilityLoaderHardeningTarget(target) {
+			loaderHardeningTargets = append(loaderHardeningTargets, id)
 		}
 		if !compatibilitySHA256RE.MatchString(result.EvidenceSHA256) {
 			return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит валидный evidenceSha256", id)
@@ -1124,6 +1144,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	sort.Slice(loaderPins, func(i, j int) bool { return loaderPins[i].TargetID < loaderPins[j].TargetID })
 	sort.Strings(loaderNativeTargets)
 	sort.Strings(crossPlatformLoaderTargets)
+	sort.Strings(loaderHardeningTargets)
 	loaderFamilies := make([]string, 0, len(loaderSet))
 	for loader := range loaderSet {
 		loaderFamilies = append(loaderFamilies, loader)
@@ -1206,6 +1227,12 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, fmt.Errorf("Cross-platform Loaders 0.17.9 coverage mismatch: got=%v expected=%v", crossPlatformLoaderTargets, expectedCross)
 		}
 	}
+	if compatibilityLoaderHardening01710Required(ver) {
+		expectedHardening := []string{"fabric-26.3-linux-x64", "forge-26.3-linux-x64", "neoforge-26.2-linux-x64", "quilt-26.3-linux-x64"}
+		if strings.Join(loaderHardeningTargets, "\x00") != strings.Join(expectedHardening, "\x00") {
+			return releaseCompatibilityCertification{}, fmt.Errorf("Loader Hardening 0.17.10 coverage mismatch: got=%v expected=%v", loaderHardeningTargets, expectedHardening)
+		}
+	}
 	matrixHash := sha256.Sum256(matrixRaw)
 	targetsHash := sha256.Sum256(targetsRaw)
 	policy := "all-required-targets-must-pass-actual-client-e2e"
@@ -1275,6 +1302,9 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	if compatibilityCrossPlatformLoaders0179Required(ver) {
 		policy += ";cross-platform-loaders-0.17.9-windows-linux-macos-x64-arm64-native-client"
 	}
+	if compatibilityLoaderHardening01710Required(ver) {
+		policy += ";loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery"
+	}
 	return releaseCompatibilityCertification{
 		SchemaVersion:              "1.0",
 		ProductVersion:             ver,
@@ -1295,6 +1325,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		LoaderPins:                 loaderPins,
 		LoaderNativeTargets:        loaderNativeTargets,
 		CrossPlatformLoaderTargets: crossPlatformLoaderTargets,
+		LoaderHardeningTargets:     loaderHardeningTargets,
 		JavaMajors:                 javaMajors,
 		JREBuilds:                  jreBuilds,
 		Scopes:                     scopes,
@@ -1340,6 +1371,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		fmt.Sprint(stored.LoaderPins) != fmt.Sprint(expected.LoaderPins) ||
 		strings.Join(stored.LoaderNativeTargets, "\x00") != strings.Join(expected.LoaderNativeTargets, "\x00") ||
 		strings.Join(stored.CrossPlatformLoaderTargets, "\x00") != strings.Join(expected.CrossPlatformLoaderTargets, "\x00") ||
+		strings.Join(stored.LoaderHardeningTargets, "\x00") != strings.Join(expected.LoaderHardeningTargets, "\x00") ||
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {

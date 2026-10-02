@@ -449,7 +449,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "loader-resolution-lock-sha256", "upstream-resolution-source-sha256", "reproducibility-sha256", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "loader-native-tree-sha256", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.7.10"},
-		"note":                "0.17.9 сертифицирует Fabric/Quilt/Forge/NeoForge на Windows/Linux/macOS x64/ARM64: target-aware materialization обязана дать exact natives/<os>/<arch> tree, NeverRuntime обязан выбрать тот же каталог, а release evidence связывает nativeTreeSha256 с actual-client launch.",
+		"note":                "0.17.10 добавляет production Loader Hardening: pinned Fabric/Quilt profiles и Forge/NeoForge installers восстанавливаются из content-addressed SHA-256 cache без mutable upstream; processor journal безопасно продолжает interrupted installs. Cross-platform 0.17.9 certification остаётся обязательной regression-базой.",
 	}
 }
 

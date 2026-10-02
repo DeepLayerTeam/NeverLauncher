@@ -34,6 +34,7 @@ type loaderMaterializeOptions struct {
 	Workers            int
 	StrictUpstream     bool
 	ResolutionLockPath string
+	LoaderCacheOnly    bool
 	HTTPClient         *http.Client
 }
 
@@ -85,6 +86,9 @@ type loaderMaterializeResult struct {
 	MaterializationSHA256  string                  `json:"materializationSha256"`
 	ReproducibilitySHA256  string                  `json:"reproducibilitySha256"`
 	ResolutionPinned       bool                    `json:"resolutionPinned"`
+	LoaderCacheOnly        bool                    `json:"loaderCacheOnly"`
+	PayloadCacheHit        bool                    `json:"payloadCacheHit"`
+	UpstreamRecoveryUsed   bool                    `json:"upstreamRecoveryUsed"`
 	Vanilla                vanillaInstallResult    `json:"vanilla"`
 	Files                  []vanillaDownloadedFile `json:"files"`
 	Status                 string                  `json:"status"`
@@ -201,6 +205,7 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 		Workers:            workers,
 		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
+		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
 	}, nil
 }
 
@@ -272,7 +277,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	}
 	selectedLoader := selectedEntry.Loader.Version
 	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), vanilla.MinecraftVersion, selectedLoader)
-	profileBytes, err := fetchJSONBytes(ctx, opts.HTTPClient, profileURL, 16<<20)
+	profileBytes, payloadCacheHit, upstreamRecoveryUsed, err := fetchLoaderProfileWithCache(ctx, opts.HTTPClient, opts.ClientDir, loader, vanilla.MinecraftVersion, profileURL, pinned, opts.LoaderCacheOnly, 16<<20)
 	if err != nil {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
 	}
@@ -384,6 +389,9 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		"materializationSha256":  materializationSHA256,
 		"reproducibilitySha256":  resolution.ReproducibilitySHA256,
 		"resolutionPinned":       pinned != nil,
+		"loaderCacheOnly":        opts.LoaderCacheOnly,
+		"payloadCacheHit":        payloadCacheHit,
+		"upstreamRecoveryUsed":   upstreamRecoveryUsed,
 		"status":                 "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
@@ -414,6 +422,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256,
 		ResolutionSourceURL: resolutionSourceURL, ResolutionSourceSHA256: resolutionSourceSHA256,
 		MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		LoaderCacheOnly: opts.LoaderCacheOnly, PayloadCacheHit: payloadCacheHit, UpstreamRecoveryUsed: upstreamRecoveryUsed,
 		Vanilla: vanilla,
 		Files:   files,
 		Status:  "installed-and-verified",

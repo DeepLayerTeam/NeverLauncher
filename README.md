@@ -1,5 +1,11 @@
 # NeverLauncher
 
+## Loader Hardening — 0.17.10
+
+NeverLauncher 0.17.10 усиливает production loader path для Fabric, Quilt, Forge и NeoForge: immutable resolution replay использует content-addressed SHA-256 cache и может восстановить pinned profile/installer без mutable upstream. Повреждённые cache entries quarantined и не принимаются как валидные.
+
+Forge/NeoForge processors ведут durable recovery journal (`running` / `failed` / `completed`) с identity каждого processor и SHA-256 installer. После crash verified outputs восстанавливаются без повторного запуска, а неполные/повреждённые outputs quarantined и processor выполняется заново. Release certification требует cache-only/upstream-independent recovery на четырёх current Linux x64 anchors; Forge/NeoForge дополнительно обязаны доказать installer и processor recovery.
+
 ## Cross-platform Loaders — 0.17.9
 
 NeverLauncher 0.17.9 переносит рабочий Fabric/Quilt/Forge/NeoForge client certification на **Windows, Linux и macOS в x64 и ARM64**. Для current anchors (`Fabric/Quilt/Forge 26.3`, `NeoForge 26.2`) обязательны все шесть OS/arch-пар; исторические широкие loader-линии сохраняются как Linux x64 regression-база.
@@ -70,7 +76,7 @@ Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает 
 [![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
 [![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Cross-platform Loaders / 0.17.9**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Loader Hardening / 0.17.10**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
 
 ## Java 25 Vanilla — 0.16.8
 

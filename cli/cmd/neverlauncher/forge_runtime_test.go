@@ -57,12 +57,20 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 
 			installer := testForgeInstaller(t, loader, minecraftVersion, loaderVersion, generated, processorJar)
 			installerSHA1 := sha1HexLocal(installer)
+			var installerUp atomic.Bool
+			installerUp.Store(true)
 			mux.HandleFunc("/manifest.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(manifestBytes) })
 			mux.HandleFunc("/version.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(vanillaVersionBytes) })
 			mux.HandleFunc("/client.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(clientJar) })
 			mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
 			mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
-			mux.HandleFunc("/installer.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(installer) })
+			mux.HandleFunc("/installer.jar", func(w http.ResponseWriter, r *http.Request) {
+				if !installerUp.Load() {
+					http.Error(w, "installer upstream unavailable", http.StatusServiceUnavailable)
+					return
+				}
+				_, _ = w.Write(installer)
+			})
 			mux.HandleFunc("/installer.jar.sha1", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprintln(w, installerSHA1) })
 
 			javaPath := testFakeJava(t, generated)
@@ -108,8 +116,45 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if second.ProcessorSkipped != 1 || second.ProcessorRan != 0 {
-				t.Fatalf("expected processor cache hit: %+v", second)
+			if second.ProcessorSkipped != 1 || second.ProcessorRan != 0 || !compatibilitySHA256RE.MatchString(second.ProcessorJournalSHA256) {
+				t.Fatalf("expected processor journal cache hit: %+v", second)
+			}
+
+			// Simulate a crash after the processor produced a verified output but before
+			// its durable journal could be committed. The next cache-only materialization
+			// must recover that running entry without executing the processor again.
+			journalRaw, err := os.ReadFile(filepath.FromSlash(second.ProcessorJournalPath))
+			if err != nil {
+				t.Fatalf("read processor journal: %v", err)
+			}
+			var journal forgeProcessorJournal
+			if err := json.Unmarshal(journalRaw, &journal); err != nil {
+				t.Fatalf("decode processor journal: %v", err)
+			}
+			entry := journal.Entries["0"]
+			entry.State = "running"
+			entry.Recovered = false
+			journal.Entries["0"] = entry
+			journalRaw, _ = json.MarshalIndent(journal, "", "  ")
+			if err := writeAtomicBytes(filepath.FromSlash(second.ProcessorJournalPath), append(journalRaw, '\n'), 0o600); err != nil {
+				t.Fatalf("write simulated crash journal: %v", err)
+			}
+			installerPath := filepath.Join(dir, ".neverlauncher", "installers", loader, sanitizeVersionToken(second.ArtifactVersion), "installer.jar")
+			if err := os.Remove(installerPath); err != nil {
+				t.Fatalf("remove local installer before cache recovery: %v", err)
+			}
+			installerUp.Store(false)
+			third, err := installForgeLike(context.Background(), forgeMaterializeOptions{
+				Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, ClientDir: dir,
+				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar",
+				VersionManifest: base + "/manifest.json", AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries",
+				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, LoaderCacheOnly: true, HTTPClient: server.Client(),
+			})
+			if err != nil {
+				t.Fatalf("cache-only installer/processor recovery failed: %v", err)
+			}
+			if !third.ResolutionPinned || !third.LoaderCacheOnly || !third.InstallerCacheHit || !third.UpstreamRecoveryUsed || third.ProcessorRan != 0 || third.ProcessorSkipped != 1 || third.ProcessorRecovered != 1 || !compatibilitySHA256RE.MatchString(third.ProcessorJournalSHA256) {
+				t.Fatalf("invalid installer/processor recovery evidence: %+v", third)
 			}
 
 			packagePath := filepath.Join(t.TempDir(), "package.json")

@@ -132,6 +132,14 @@ cross_platform_loader_target = (
     and minecraft == cross_platform_loader_anchors[loader]
     and scope == "client"
 )
+loader_hardening_target = (
+    version_at_least(product_version, (0, 17, 10))
+    and loader in cross_platform_loader_anchors
+    and minecraft == cross_platform_loader_anchors[loader]
+    and scope == "client"
+    and os_name == "linux"
+    and arch == "x86_64"
+)
 
 def read(name: str):
     p = runtime / name
@@ -181,6 +189,7 @@ if scope == "client":
     install = read(install_name) or {}
     probe = read(probe_name) or {}
     loader_platform = read("loader-platform.json") or {}
+    loader_hardening = read("loader-hardening.json") or {}
     resolution_lock_sha = str(install.get("resolutionLockSha256") or "")
     resolution_source_sha = str(install.get("resolutionSourceSha256") or "")
     reproducibility_sha = str(install.get("reproducibilitySha256") or "")
@@ -216,6 +225,29 @@ if scope == "client":
             "loaderPinned": resolution_pinned and valid_sha256(resolution_lock_sha),
             "reproducibleResolution": resolution_lock_matches and valid_sha256(resolution_source_sha) and valid_sha256(reproducibility_sha),
         })
+        if loader_hardening_target:
+            hardening_cache_sha = str(loader_hardening.get("cachePayloadSha256") or "").lower()
+            checks.update({
+                "loaderCacheVerified": (
+                    loader_hardening.get("status") == "passed"
+                    and loader_hardening.get("loader") == loader
+                    and loader_hardening.get("minecraftVersion") == minecraft
+                    and loader_hardening.get("cacheOnly") is True
+                    and loader_hardening.get("contentAddressedCache") is True
+                    and loader_hardening.get("cacheHit") is True
+                    and valid_sha256(hardening_cache_sha)
+                ),
+                "loaderUpstreamRecovery": loader_hardening.get("upstreamIndependentRecovery") is True,
+            })
+            if loader in ("forge", "neoforge"):
+                checks.update({
+                    "loaderInstallerRecovery": loader_hardening.get("installerRecovered") is True,
+                    "loaderProcessorRecovery": (
+                        loader_hardening.get("processorRecoveryVerified") is True
+                        and int(loader_hardening.get("processorRecovered") or 0) > 0
+                        and valid_sha256(str(loader_hardening.get("processorJournalSha256") or ""))
+                    ),
+                })
         if cross_platform_loader_target:
             internal_os = "osx" if os_name == "macos" else os_name
             expected_native_suffix = f"/natives/{internal_os}/{arch}"
@@ -255,7 +287,7 @@ if scope == "client":
     manifest_loader = str(minecraft_settings.get("loader", ""))
     evidence_files = [name for name in [
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
-        probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "matching-server.json", "matching-server.log", "result.json"
+        probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "loader-hardening.json", "loader-hardening-package.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
 else:
     base = read("result.json") or {}
@@ -344,6 +376,7 @@ payload = {
         "files": evidence_files + ["platform-runtime.json", "java-runtime.json"],
         "matchingServer": matching_server,
         "loaderPlatform": loader_platform if scope == "client" and cross_platform_loader_target else None,
+        "loaderHardening": loader_hardening if scope == "client" and loader_hardening_target else None,
     },
 }
 out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

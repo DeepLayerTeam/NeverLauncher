@@ -64,6 +64,9 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			profileBytes, _ := json.Marshal(profile)
 			loaderListBytes, _ := json.Marshal([]any{map[string]any{"loader": map[string]any{"version": tc.loaderVersion, "stable": true, "maven": tc.coordinate}}})
 			var metadataRequests atomic.Int32
+			var profileRequests atomic.Int32
+			var profileUp atomic.Bool
+			profileUp.Store(true)
 			mavenPath, err := strictMavenPath(tc.coordinate)
 			if err != nil {
 				t.Fatal(err)
@@ -75,7 +78,14 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
 			mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
 			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla", func(w http.ResponseWriter, r *http.Request) { metadataRequests.Add(1); _, _ = w.Write(loaderListBytes) })
-			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla/"+tc.loaderVersion+"/profile/json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(profileBytes) })
+			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla/"+tc.loaderVersion+"/profile/json", func(w http.ResponseWriter, r *http.Request) {
+				profileRequests.Add(1)
+				if !profileUp.Load() {
+					http.Error(w, "profile upstream unavailable", http.StatusServiceUnavailable)
+					return
+				}
+				_, _ = w.Write(profileBytes)
+			})
 			mux.HandleFunc("/maven/"+mavenPath, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(loaderJar) })
 			mux.HandleFunc("/maven/"+mavenPath+".sha1", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprintln(w, loaderSHA1) })
 
@@ -147,6 +157,27 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			}
 			if !replay.ResolutionPinned || replay.ResolutionLockSHA256 != result.ResolutionLockSHA256 || replay.ReproducibilitySHA256 != result.ReproducibilitySHA256 {
 				t.Fatalf("pinned replay identity drift: first=%+v replay=%+v", result, replay)
+			}
+			if !replay.PayloadCacheHit {
+				t.Fatalf("pinned replay did not use content-addressed loader profile cache: %+v", replay)
+			}
+			profileUp.Store(false)
+			if err := os.Remove(filepath.Join(dir, filepath.FromSlash(result.ProfilePath))); err != nil {
+				t.Fatalf("remove generated runtime profile before recovery: %v", err)
+			}
+			recovered, err := installMetaLoader(context.Background(), loaderMaterializeOptions{
+				Loader: tc.loader, MinecraftVersion: "test-vanilla", LoaderVersion: "latest-stable", ClientDir: dir,
+				VersionManifest: base + "/manifest.json", AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries", MetaBaseURL: metaBase,
+				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, LoaderCacheOnly: true, HTTPClient: server.Client(),
+			})
+			if err != nil {
+				t.Fatalf("cache-only loader recovery failed: %v", err)
+			}
+			if !recovered.ResolutionPinned || !recovered.LoaderCacheOnly || !recovered.PayloadCacheHit || !recovered.UpstreamRecoveryUsed || recovered.ReproducibilitySHA256 != result.ReproducibilitySHA256 {
+				t.Fatalf("invalid cache-only recovery evidence: %+v", recovered)
+			}
+			if got := profileRequests.Load(); got != 1 {
+				t.Fatalf("pinned/cache-only replay contacted profile upstream: requests=%d, want 1", got)
 			}
 			pkg, err := readClientPackageManifest(packageManifest)
 			if err != nil {

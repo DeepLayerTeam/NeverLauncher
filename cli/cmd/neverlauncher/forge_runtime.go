@@ -49,6 +49,7 @@ type forgeMaterializeOptions struct {
 	ResolutionLockPath     string
 	ResolutionSourceSHA256 string
 	ProcessorTimeout       time.Duration
+	LoaderCacheOnly        bool
 	HTTPClient             *http.Client
 }
 
@@ -116,6 +117,10 @@ type forgeMaterializeResult struct {
 	ClientProcessorCount    int                     `json:"clientProcessorCount"`
 	ProcessorRan            int                     `json:"processorRan"`
 	ProcessorSkipped        int                     `json:"processorSkipped"`
+	ProcessorRecovered      int                     `json:"processorRecovered"`
+	ProcessorJournalPath    string                  `json:"processorJournalPath,omitempty"`
+	ProcessorJournalSHA256  string                  `json:"processorJournalSha256,omitempty"`
+	ProcessorJournalRebuilt bool                    `json:"processorJournalRebuilt,omitempty"`
 	LibraryCount            int                     `json:"libraryCount"`
 	Downloaded              int                     `json:"downloaded"`
 	Cached                  int                     `json:"cached"`
@@ -128,6 +133,9 @@ type forgeMaterializeResult struct {
 	MaterializationSHA256   string                  `json:"materializationSha256"`
 	ReproducibilitySHA256   string                  `json:"reproducibilitySha256"`
 	ResolutionPinned        bool                    `json:"resolutionPinned"`
+	LoaderCacheOnly         bool                    `json:"loaderCacheOnly"`
+	InstallerCacheHit       bool                    `json:"installerCacheHit"`
+	UpstreamRecoveryUsed    bool                    `json:"upstreamRecoveryUsed"`
 	Vanilla                 vanillaInstallResult    `json:"vanilla"`
 	Files                   []vanillaDownloadedFile `json:"files"`
 	Status                  string                  `json:"status"`
@@ -154,8 +162,12 @@ type installerBundle struct {
 }
 
 type processorStats struct {
-	Ran     int
-	Skipped int
+	Ran            int
+	Skipped        int
+	Recovered      int
+	JournalPath    string
+	JournalSHA256  string
+	JournalRebuilt bool
 }
 
 func handleRuntimeForgeInstall(args []string) error {
@@ -273,6 +285,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 		ProcessorTimeout:   timeout,
+		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
 	}, nil
 }
 
@@ -336,33 +349,85 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err := validateRemoteURL(installerURL); err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("installer URL: %w", err)
 	}
-	installerSHA1 := strings.ToLower(strings.TrimSpace(opts.InstallerSHA1))
-	if installerSHA1 == "" {
-		shaBytes, shaErr := fetchLimitedBytes(ctx, opts.HTTPClient, installerURL+".sha1", 64<<10)
-		if shaErr != nil {
-			if opts.StrictUpstream {
-				return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1: %w", loader, shaErr)
-			}
-		} else {
-			installerSHA1 = parseSHA1Sidecar(string(shaBytes))
-		}
-	}
-	if opts.StrictUpstream && !validSHA1Hex(installerSHA1) {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer не имеет корректного upstream SHA-1", loader)
-	}
-	if installerSHA1 != "" && !validSHA1Hex(installerSHA1) {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1 некорректен", loader)
-	}
-
 	installerRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "installer.jar"))
-	installerFile, err := downloadVanillaArtifact(ctx, opts.HTTPClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
+	installerPath, err := secureClientDestination(opts.ClientDir, installerRel)
 	if err != nil {
-		return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
+		return forgeMaterializeResult{}, err
+	}
+	installerSHA1 := strings.ToLower(strings.TrimSpace(opts.InstallerSHA1))
+	installerCacheHit := false
+	upstreamRecoveryUsed := false
+	var installerFile vanillaDownloadedFile
+
+	if pinned != nil {
+		if pinned.PayloadURL != installerURL {
+			return forgeMaterializeResult{}, fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", pinned.PayloadURL, installerURL)
+		}
+		if ok, sha256sum, size := existingFileMatchesSHA256(installerPath, pinned.PayloadSHA256); ok {
+			sha1sum, _, _, hashErr := hashFileSHA1SHA256(installerPath)
+			if hashErr != nil {
+				return forgeMaterializeResult{}, hashErr
+			}
+			installerFile = vanillaDownloadedFile{Path: installerRel, Kind: loader + "-installer", Size: size, SHA1: sha1sum, SHA256: sha256sum, Cached: true}
+			installerCacheHit = true
+		} else {
+			if _, statErr := os.Lstat(installerPath); statErr == nil {
+				if _, qErr := quarantineCompatibilityArtifact(opts.ClientDir, installerRel, "pinned installer failed resolution-lock SHA-256 verification"); qErr != nil {
+					return forgeMaterializeResult{}, qErr
+				}
+			} else if !errors.Is(statErr, os.ErrNotExist) {
+				return forgeMaterializeResult{}, statErr
+			}
+			if restored, restoreErr := restorePinnedInstallerFromCache(opts.ClientDir, loader, vanilla.MinecraftVersion, installerURL, pinned.PayloadSHA256, installerPath); restoreErr == nil {
+				installerFile = restored
+				installerCacheHit = true
+				upstreamRecoveryUsed = true
+			} else {
+				if opts.LoaderCacheOnly {
+					return forgeMaterializeResult{}, fmt.Errorf("%s cache-only installer recovery: %w", loader, restoreErr)
+				}
+				downloaded, downloadErr := downloadPinnedSHA256Artifact(ctx, opts.HTTPClient, opts.ClientDir, installerRel, installerURL, pinned.PayloadSHA256, loader+"-installer", maxCompatibilityArtifact)
+				if downloadErr != nil {
+					return forgeMaterializeResult{}, fmt.Errorf("%s pinned installer download: %w", loader, downloadErr)
+				}
+				if _, cacheErr := storeLoaderPayloadCacheFile(opts.ClientDir, loader, vanilla.MinecraftVersion, installerURL, installerPath, pinned.PayloadSHA256); cacheErr != nil {
+					return forgeMaterializeResult{}, fmt.Errorf("%s pinned installer cache commit: %w", loader, cacheErr)
+				}
+				installerFile = downloaded
+			}
+		}
+		installerSHA1 = installerFile.SHA1
+	} else {
+		if opts.LoaderCacheOnly {
+			return forgeMaterializeResult{}, errors.New("loader cache-only mode требует существующий immutable resolution lock")
+		}
+		if installerSHA1 == "" {
+			shaBytes, shaErr := fetchLimitedBytes(ctx, opts.HTTPClient, installerURL+".sha1", 64<<10)
+			if shaErr != nil {
+				if opts.StrictUpstream {
+					return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1: %w", loader, shaErr)
+				}
+			} else {
+				installerSHA1 = parseSHA1Sidecar(string(shaBytes))
+			}
+		}
+		if opts.StrictUpstream && !validSHA1Hex(installerSHA1) {
+			return forgeMaterializeResult{}, fmt.Errorf("%s installer не имеет корректного upstream SHA-1", loader)
+		}
+		if installerSHA1 != "" && !validSHA1Hex(installerSHA1) {
+			return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1 некорректен", loader)
+		}
+		installerFile, err = downloadVanillaArtifact(ctx, opts.HTTPClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
+		if err != nil {
+			return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
+		}
+		if _, err := storeLoaderPayloadCacheFile(opts.ClientDir, loader, vanilla.MinecraftVersion, installerURL, installerPath, installerFile.SHA256); err != nil {
+			return forgeMaterializeResult{}, fmt.Errorf("%s installer cache commit: %w", loader, err)
+		}
 	}
 	if err := assertPinnedPayloadSHA256(pinned, installerURL, installerFile.SHA256); err != nil {
 		return forgeMaterializeResult{}, err
 	}
-	installerPath := filepath.Join(opts.ClientDir, filepath.FromSlash(installerRel))
 	bundle, err := inspectForgeInstaller(installerPath)
 	if err != nil {
 		return forgeMaterializeResult{}, err
@@ -373,7 +438,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		}
 		legacyOpts := opts
 		legacyOpts.ResolutionSourceSHA256 = resolutionSourceSHA256
-		return installForgeLegacy(ctx, legacyOpts, vanilla, loaderVersion, artifactVersion, metadataURL, installerURL, installerSHA1, installerFile, installerPath, bundle)
+		return installForgeLegacy(ctx, legacyOpts, vanilla, loaderVersion, artifactVersion, metadataURL, installerURL, installerSHA1, installerFile, installerPath, bundle, installerCacheHit, upstreamRecoveryUsed)
 	}
 	// Forge uses spec=0 for the classic processor-based 1.13+ installer format;
 	// NeoForge inherited this format and may use newer spec values. The actual
@@ -521,6 +586,8 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		"mavenMetadata": metadataURL, "resolutionLockPath": filepath.ToSlash(lockPath), "resolutionLockSha256": resolutionLockSHA256,
 		"resolutionSourceUrl": metadataURL, "resolutionSourceSha256": resolutionSourceSHA256, "materializationSha256": materializationSHA256, "reproducibilitySha256": resolution.ReproducibilitySHA256, "resolutionPinned": pinned != nil,
 		"clientProcessorCount": clientProcessorCount, "processorRan": stats.Ran, "processorSkipped": stats.Skipped,
+		"processorRecovered": stats.Recovered, "processorJournalPath": stats.JournalPath, "processorJournalSha256": stats.JournalSHA256, "processorJournalRebuilt": stats.JournalRebuilt,
+		"loaderCacheOnly": opts.LoaderCacheOnly, "installerCacheHit": installerCacheHit, "upstreamRecoveryUsed": upstreamRecoveryUsed,
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
@@ -539,9 +606,11 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		ClientDir: opts.ClientDir, JavaMajorVersion: vanilla.JavaMajorVersion,
 		InstallerSHA1: installerSHA1, InstallerSHA256: installerFile.SHA256, InstallMode: "processors",
 		ProcessorCount: len(bundle.Profile.Processors), ClientProcessorCount: clientProcessorCount, ProcessorRan: stats.Ran, ProcessorSkipped: stats.Skipped,
+		ProcessorRecovered: stats.Recovered, ProcessorJournalPath: stats.JournalPath, ProcessorJournalSHA256: stats.JournalSHA256, ProcessorJournalRebuilt: stats.JournalRebuilt,
 		LibraryCount: len(bundle.Profile.Libraries) + len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
 		TotalBytes: total, ProfileSHA256: profileSHA256,
 		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256, MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		LoaderCacheOnly: opts.LoaderCacheOnly, InstallerCacheHit: installerCacheHit, UpstreamRecoveryUsed: upstreamRecoveryUsed,
 		Vanilla: vanilla, Files: files, Status: "installed-and-verified",
 	}, nil
 }
@@ -554,7 +623,10 @@ func installForgeLegacy(
 	installerFile vanillaDownloadedFile,
 	installerPath string,
 	bundle installerBundle,
+	hardening ...bool,
 ) (forgeMaterializeResult, error) {
+	installerCacheHit := len(hardening) > 0 && hardening[0]
+	upstreamRecoveryUsed := len(hardening) > 1 && hardening[1]
 	lockPath := opts.ResolutionLockPath
 	if lockPath == "" {
 		lockPath = defaultLoaderResolutionLockPath(opts.ClientDir, "forge")
@@ -743,6 +815,7 @@ func installForgeLegacy(
 		"legacyUniversalPath": universalDestRel, "legacyUniversalSha1": universalSHA1, "legacyUniversalSha256": universalSHA256,
 		"legacyTweaker": expectedTweaker, "legacyBaseVersion": vanilla.MinecraftVersion, "legacyProfileNormalized": profileNormalized,
 		"clientProcessorCount": 0, "processorRan": 0, "processorSkipped": 0,
+		"loaderCacheOnly": opts.LoaderCacheOnly, "installerCacheHit": installerCacheHit, "upstreamRecoveryUsed": upstreamRecoveryUsed,
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
@@ -766,6 +839,7 @@ func installForgeLegacy(
 		LibraryCount: len(bundle.Version.Libraries), Downloaded: downloaded, Cached: cached,
 		TotalBytes: total, ProfileSHA256: profileSHA256,
 		ResolutionLockPath: filepath.ToSlash(lockPath), ResolutionLockSHA256: resolutionLockSHA256, ResolutionSourceURL: metadataURL, ResolutionSourceSHA256: resolutionSourceSHA256, MaterializationSHA256: materializationSHA256, ReproducibilitySHA256: resolution.ReproducibilitySHA256, ResolutionPinned: pinned != nil,
+		LoaderCacheOnly: opts.LoaderCacheOnly, InstallerCacheHit: installerCacheHit, UpstreamRecoveryUsed: upstreamRecoveryUsed,
 		Vanilla: vanilla, Files: files, Status: "installed-and-verified",
 	}, nil
 }
@@ -1553,7 +1627,11 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 	if pc.Profile == nil {
 		return processorStats{}, errors.New("processor profile отсутствует")
 	}
-	stats := processorStats{}
+	journal, rebuilt, err := loadForgeProcessorJournal(pc)
+	if err != nil {
+		return processorStats{}, err
+	}
+	stats := processorStats{JournalPath: filepath.ToSlash(forgeProcessorJournalPath(pc)), JournalRebuilt: rebuilt}
 	for index, processor := range pc.Profile.Processors {
 		if !processorAppliesToClient(processor.Sides) {
 			continue
@@ -1561,13 +1639,29 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		if strings.TrimSpace(processor.Jar) == "" {
 			return stats, fmt.Errorf("processor[%d] не содержит jar", index)
 		}
+		identity := forgeProcessorIdentity(pc, index, processor)
+		key := processorJournalKey(index)
+		entry, hasEntry := journal.Entries[key]
+		entryMatches := hasEntry && entry.IdentitySHA256 == identity
 		allReady, err := processorOutputsMatch(pc, processor)
 		if err != nil {
 			return stats, fmt.Errorf("processor[%d] outputs: %w", index, err)
 		}
 		if allReady && len(processor.Outputs) > 0 {
+			recovered := entryMatches && (entry.State == "running" || entry.State == "failed")
+			if _, err := markProcessorJournal(pc, &journal, index, identity, "completed", recovered, ""); err != nil {
+				return stats, fmt.Errorf("processor[%d] journal completion: %w", index, err)
+			}
 			stats.Skipped++
+			if recovered {
+				stats.Recovered++
+			}
 			continue
+		}
+		if entryMatches && entry.State != "" && len(processor.Outputs) > 0 {
+			if err := quarantineProcessorOutputs(pc, processor, fmt.Sprintf("processor[%d] journal recovery found incomplete or corrupt outputs", index)); err != nil {
+				return stats, fmt.Errorf("processor[%d] recovery cleanup: %w", index, err)
+			}
 		}
 		procJar, err := resolveProcessorArtifactPath(pc.ClientDir, processor.Jar)
 		if err != nil {
@@ -1593,6 +1687,9 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			}
 			args = append(args, resolved)
 		}
+		if _, err := markProcessorJournal(pc, &journal, index, identity, "running", false, ""); err != nil {
+			return stats, fmt.Errorf("processor[%d] journal start: %w", index, err)
+		}
 		timeout := pc.Timeout
 		if timeout <= 0 {
 			timeout = 10 * time.Minute
@@ -1608,19 +1705,35 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		runErr := cmd.Run()
 		cancel()
 		if procCtx.Err() == context.DeadlineExceeded {
+			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, "timeout: "+timeout.String())
 			return stats, fmt.Errorf("processor[%d] превысил timeout %s", index, timeout)
 		}
 		if runErr != nil {
+			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, output.String())
 			return stats, fmt.Errorf("processor[%d] завершился с ошибкой: %w\n%s", index, runErr, output.String())
 		}
 		allReady, err = processorOutputsMatch(pc, processor)
 		if err != nil {
+			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, err.Error())
 			return stats, fmt.Errorf("processor[%d] output verification: %w", index, err)
 		}
 		if len(processor.Outputs) > 0 && !allReady {
+			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, "expected outputs were not produced")
 			return stats, fmt.Errorf("processor[%d] не создал ожидаемые outputs", index)
 		}
+		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, "completed", false, "")
+		if err != nil {
+			return stats, fmt.Errorf("processor[%d] journal commit: %w", index, err)
+		}
+		stats.JournalSHA256 = journalSHA
 		stats.Ran++
+	}
+	if stats.JournalSHA256 == "" {
+		sha, err := persistForgeProcessorJournal(pc, journal)
+		if err != nil {
+			return stats, err
+		}
+		stats.JournalSHA256 = sha
 	}
 	return stats, nil
 }

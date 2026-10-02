@@ -1,5 +1,9 @@
 # Minecraft compatibility
 
+## Loader Hardening — 0.17.10
+
+NeverLauncher 0.17.10 требует upstream-independent replay для current Fabric 26.3, Quilt 26.3, Forge 26.3 и NeoForge 26.2 Linux x64 targets. Immutable resolution lock связывается с content-addressed SHA-256 cache; cache-only materialization не имеет права обращаться к mutable resolver. Forge/NeoForge дополнительно восстанавливают pinned installer без `.sha1` sidecar и используют durable processor journal: verified crash outputs принимаются, неполные quarantined и rerun. PASS требует `loaderCacheVerified`, `loaderUpstreamRecovery`, а Forge/NeoForge также `loaderInstallerRecovery` и `loaderProcessorRecovery`; release bundle повторно проверяет четыре `loaderHardeningTargets`.
+
 NeverLauncher 0.17.9 — **Cross-platform Loaders**. Fabric 26.3, Quilt 26.3, Forge 26.3 и NeoForge 26.2 имеют обязательную шестиплатформенную certification-сетку: Windows/Linux/macOS × x64/ARM64. PASS требует exact OS/arch JRE, target-aware materialization, native files только в `natives/<os>/<arch>`, совпадающий `nativesDirectory` из NeverRuntime, deterministic `nativeTreeSha256` и actual loader client launch. Release certification хранит 24 `crossPlatformLoaderTargets`; historical loader release grids остаются отдельными Linux x64 regression gates.
 
 NeverLauncher 0.17.7 — **Loader Resolution & Pinning**. Для каждого required Fabric/Quilt/Forge/NeoForge target PASS требует concrete immutable loader version, `resolutionLockSha256`, `resolutionSourceSha256`, `reproducibilitySha256`, проверки `loaderPinned`/`reproducibleResolution` и raw `<loader>-resolution-lock.json`. Client/integration E2E выполняет второй materialize через тот же lock: mutable selector больше не может незаметно выбрать другую версию, а изменённые upstream profile/installer/runtime profile блокируют certification.

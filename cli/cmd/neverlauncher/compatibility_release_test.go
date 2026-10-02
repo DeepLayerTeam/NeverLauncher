@@ -634,6 +634,24 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 			}
 		}
 	}
+	if compatibilityLoaderHardening01710Required(ver) {
+		for i := range matrix.Targets {
+			target := releaseCompatibilityTarget{Loader: matrix.Targets[i].Loader, Minecraft: matrix.Targets[i].MinecraftVersion, OS: matrix.Targets[i].OS, Arch: matrix.Targets[i].Arch, JavaMajor: matrix.Targets[i].JavaMajor, Scope: matrix.Targets[i].Scope, Required: true}
+			if !compatibilityLoaderHardeningTarget(target) {
+				continue
+			}
+			if matrix.Targets[i].Checks == nil {
+				matrix.Targets[i].Checks = map[string]bool{}
+			}
+			matrix.Targets[i].Checks["loaderCacheVerified"] = true
+			matrix.Targets[i].Checks["loaderUpstreamRecovery"] = true
+			if matrix.Targets[i].Loader == "forge" || matrix.Targets[i].Loader == "neoforge" {
+				matrix.Targets[i].Checks["loaderInstallerRecovery"] = true
+				matrix.Targets[i].Checks["loaderProcessorRecovery"] = true
+			}
+		}
+	}
+
 	targetRaw, err := json.Marshal(targets)
 	if err != nil {
 		t.Fatal(err)
@@ -1906,5 +1924,74 @@ func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCovera
 	}
 	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.9"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
 		t.Fatalf("tampered 0.17.9 cross-platform coverage must fail closed, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationLoaderHardening01710(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.10", "commit-1710")
+	certification, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.10", "commit-1710")
+	if err != nil {
+		t.Fatalf("0.17.10 Loader Hardening evidence must pass: %v", err)
+	}
+	want := []string{"fabric-26.3-linux-x64", "forge-26.3-linux-x64", "neoforge-26.2-linux-x64", "quilt-26.3-linux-x64"}
+	if strings.Join(certification.LoaderHardeningTargets, "\x00") != strings.Join(want, "\x00") {
+		t.Fatalf("hardening coverage=%v want=%v", certification.LoaderHardeningTargets, want)
+	}
+	if !strings.Contains(certification.Policy, "loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery") {
+		t.Fatalf("0.17.10 policy does not bind hardening: %s", certification.Policy)
+	}
+}
+
+func TestCompatibilityCertificationLoaderHardening01710RejectsMissingProcessorRecovery(t *testing.T) {
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.10", "commit-1710")
+	var matrix releaseCompatibilityMatrix
+	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
+		t.Fatal(err)
+	}
+	for i := range matrix.Targets {
+		if matrix.Targets[i].TargetID == "forge-26.3-linux-x64" {
+			matrix.Targets[i].Checks["loaderProcessorRecovery"] = false
+		}
+	}
+	matrixRaw, _ = json.Marshal(matrix)
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.10", "commit-1710"); err == nil || !strings.Contains(err.Error(), "loaderProcessorRecovery") {
+		t.Fatalf("0.17.10 must reject missing processor recovery, got %v", err)
+	}
+}
+
+func TestCompatibilityCertificationLoaderHardening01710RejectsTamperedCoverage(t *testing.T) {
+	dir := t.TempDir()
+	matrixRaw, targetsRaw := vanillaBaselineIIEvidenceFixture(t, "0.17.10", "commit-1710")
+	matrixPath := filepath.Join(dir, "matrix.json")
+	targetsPath := filepath.Join(dir, "targets.json")
+	if err := os.WriteFile(matrixPath, matrixRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetsPath, targetsRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Join(dir, "bundle")
+	if err := os.MkdirAll(bundle, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := embedCompatibilityCertification(bundle, matrixPath, targetsPath, "0.17.10", "commit-1710"); err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(bundle, compatibilityCertificationReleaseFile)
+	raw, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cert releaseCompatibilityCertification
+	if err := json.Unmarshal(raw, &cert); err != nil {
+		t.Fatal(err)
+	}
+	cert.LoaderHardeningTargets = cert.LoaderHardeningTargets[:len(cert.LoaderHardeningTargets)-1]
+	raw, _ = json.Marshal(cert)
+	if err := os.WriteFile(certPath, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.10"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+		t.Fatalf("tampered 0.17.10 hardening coverage must fail closed, got %v", err)
 	}
 }

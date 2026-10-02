@@ -102,6 +102,14 @@ class MatrixToolTests(unittest.TestCase):
                 "loaderPlatformLaunch": True,
             })
             files.append("loader-platform.json")
+            if target["os"] == "linux" and target["arch"] == "x86_64":
+                checks.update({
+                    "loaderCacheVerified": True,
+                    "loaderUpstreamRecovery": True,
+                })
+                if target["loader"] in {"forge", "neoforge"}:
+                    checks.update({"loaderInstallerRecovery": True, "loaderProcessorRecovery": True})
+                files.extend(["loader-hardening.json", "loader-hardening-package.json"])
         return {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
@@ -857,6 +865,45 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("evidence files are incomplete", proc.stderr)
 
+
+    def test_01710_aggregate_rejects_missing_loader_cache_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "fabric-26.3-linux-x64":
+                    result["checks"]["loaderCacheVerified"] = False
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("loaderCacheVerified", proc.stderr)
+
+    def test_01710_aggregate_rejects_missing_processor_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "forge-26.3-linux-x64":
+                    result["checks"]["loaderProcessorRecovery"] = False
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("loaderProcessorRecovery", proc.stderr)
+
+    def test_01710_aggregate_requires_hardening_evidence_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            doc = self.target_doc()
+
+            def mutate(target: dict, result: dict) -> None:
+                if target["id"] == "neoforge-26.2-linux-x64":
+                    result["evidence"]["files"] = [x for x in result["evidence"]["files"] if x != "loader-hardening.json"]
+
+            proc = self.aggregate(path, doc, mutate)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("evidence files are incomplete", proc.stderr)
 
 if __name__ == "__main__":
     unittest.main()

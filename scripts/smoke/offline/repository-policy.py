@@ -2594,6 +2594,44 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "cross-platform-loaders-0179.py" not in preflight or "cross-platform-loaders-0179.py" not in ci:
         fail("0.17.9 cross-platform loader gate is not wired into preflight/CI")
 
+
+# 0.17.10 Loader Hardening proves immutable loader replay survives mutable/upstream
+# failures and interrupted Forge/NeoForge processor installation.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 10):
+    hardening_cache_01710 = read("cli/cmd/neverlauncher/loader_hardening.go")
+    hardening_processors_01710 = read("cli/cmd/neverlauncher/forge_processor_recovery.go")
+    hardening_compat_01710 = read("e2e/scripts/run-compatibility-case.sh")
+    hardening_matrix_01710 = read("scripts/compatibility/matrix.py")
+    hardening_release_01710 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    hardening_workflow_01710 = read(".github/workflows/compatibility.yml")
+    hardening_tests_01710 = read("cli/cmd/neverlauncher/loader_runtime_test.go") + read("cli/cmd/neverlauncher/forge_runtime_test.go") + read("cli/cmd/neverlauncher/compatibility_release_test.go") + read("scripts/compatibility/test_matrix.py")
+    hardening_gate_01710 = read("scripts/smoke/offline/loader-hardening-01710.py")
+    for required in ["loaderPayloadCacheRecord", "loader-cache", "fetchLoaderProfileWithCache", "restorePinnedInstallerFromCache", "downloadPinnedSHA256Artifact"]:
+        if required not in hardening_cache_01710:
+            fail(f"0.17.10 content-addressed loader cache incomplete: {required}")
+    for required in ["processor-journal.json", 'state == "running"', "markProcessorJournal", "InstallerSHA256", "quarantineProcessorOutputs"]:
+        if required not in hardening_processors_01710:
+            fail(f"0.17.10 processor crash recovery incomplete: {required}")
+    for required in ["loaderCacheVerified", "loaderUpstreamRecovery", "loaderInstallerRecovery", "loaderProcessorRecovery", "loader-hardening.json"]:
+        if required not in hardening_compat_01710:
+            fail(f"0.17.10 compatibility recovery evidence incomplete: {required}")
+    for required in ["LOADER_HARDENING_01710", "loader_hardening_01710_required", "loaderCacheVerified", "loader-hardening.json"]:
+        if required not in hardening_matrix_01710:
+            fail(f"0.17.10 matrix hardening enforcement incomplete: {required}")
+    for required in ["LoaderHardeningTargets", "compatibilityLoaderHardening01710Required", "loaderProcessorRecovery", "loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery"]:
+        if required not in hardening_release_01710:
+            fail(f"0.17.10 release hardening certification incomplete: {required}")
+    for required in ["e2e/runtime/loader-hardening.json", "e2e/runtime/loader-hardening-package.json", "processor-journal.json"]:
+        if required not in hardening_workflow_01710:
+            fail(f"0.17.10 hardening workflow evidence incomplete: {required}")
+    for required in ["LoaderCacheOnly", "ProcessorRecovered", "TestCompatibilityCertificationLoaderHardening01710RejectsTamperedCoverage", "test_01710_aggregate_rejects_missing_processor_recovery"]:
+        if required not in hardening_tests_01710:
+            fail(f"0.17.10 loader hardening regression test missing: {required}")
+    if "Loader Hardening 0.17.10 gate: OK" not in hardening_gate_01710:
+        fail("0.17.10 mandatory Loader Hardening gate incomplete")
+    if "loader-hardening-01710.py" not in preflight or "loader-hardening-01710.py" not in ci:
+        fail("0.17.10 Loader Hardening gate is not wired into preflight/CI")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:
