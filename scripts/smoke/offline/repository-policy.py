@@ -3249,6 +3249,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     jvm_test_0188 = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
     jvm_probe_0188 = read("runtime/neverguard-jvm-probe/src/lib.rs")
     jvm_gate_0188 = read("scripts/smoke/offline/neverguard-jvm-aware-protection-0188.py")
+    jvm_adversarial_ci_0188 = read("scripts/guard_ci/windows_adversarial.py")
     for required in [
         "CERTIFIED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
         "GetFileVersionInfoW",
@@ -3317,13 +3318,18 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "java: [8, 16, 17, 21, 25]",
         "runtime/neverguard-jvm-probe/Cargo.toml",
+        "scripts/guard_ci/windows_adversarial.py run",
+    ]:
+        if required not in ci:
+            fail(f"0.18.8 JVM-Aware Java matrix CI incomplete: {required}")
+    for required in [
         "NEVERGUARD_JVM_PROBE_DLL",
         "NEVERGUARD_EXPECTED_JAVA_MAJOR",
         "neverguard_jvm_aware_protection_accepts_certified_hotspot_jit",
         "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
     ]:
-        if required not in ci:
-            fail(f"0.18.8 JVM-Aware Java matrix CI incomplete: {required}")
+        if required not in jvm_adversarial_ci_0188:
+            fail(f"0.18.8 JVM-Aware adversarial runner incomplete: {required}")
 
 
 # 0.18.9 Continuous Guard requires an independent bidirectional Sensor/Guard
@@ -3389,6 +3395,50 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.9 Continuous Guard lacks real Windows heartbeat integration CI")
     if "--test neverguard_sensor_windows" not in ci or "-D warnings" not in ci:
         fail("0.18.9 Continuous Guard lacks real Windows integration/clippy CI")
+
+
+# 0.18.11 Windows Adversarial CI — real Windows/JVM attack simulation must run
+# for every certified Java major and issue one exact-cohort machine certificate.
+adversarial_runner_01811 = read("scripts/guard_ci/windows_adversarial.py")
+adversarial_tests_01811 = read("scripts/guard_ci/test_windows_adversarial.py")
+adversarial_gate_01811 = read("scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py")
+for required in [
+    "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
+    'Scenario("sensor-early-load", "compatibility"',
+    'Scenario("hotspot-jit", "compatibility"',
+    'Scenario("unsigned-module", "adversarial"',
+    'Scenario("code-page-drift", "adversarial"',
+    'Scenario("private-exec-thread", "adversarial"',
+    'Scenario("startup-instrumentation", "adversarial"',
+    'Scenario("live-debugger", "adversarial"',
+    'Scenario("foreign-executable-allocation", "adversarial"',
+    '"cargo", "test", "--manifest-path", "runtime/neverruntime/Cargo.toml"',
+    'WINDOWS_ADVERSARIAL_CERTIFICATE.json',
+    '"allAdversarialScenariosDetected": True',
+    '"allCompatibilityScenariosPassed": True',
+    '"sensorAndFixtureHashesBound": True',
+]:
+    if required not in adversarial_runner_01811:
+        fail(f"0.18.11 Windows Adversarial CI runner missing invariant: {required}")
+for required in [
+    "test_valid_result_is_accepted", "test_tampered_scenario_is_rejected",
+    "test_aggregate_requires_every_certified_java_major",
+]:
+    if required not in adversarial_tests_01811:
+        fail(f"0.18.11 Windows Adversarial CI self-test missing: {required}")
+for required in [
+    "neverguard-windows-adversarial:", "java: [8, 16, 17, 21, 25]",
+    "scripts/guard_ci/windows_adversarial.py run",
+    "neverguard-windows-adversarial-certificate:",
+    "scripts/guard_ci/windows_adversarial.py aggregate",
+    "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
+]:
+    if required not in ci:
+        fail(f"0.18.11 Windows Adversarial CI workflow missing: {required}")
+if "neverguard-windows-adversarial-ci-01811.py" not in preflight or "test_windows_adversarial.py" not in preflight or "neverguard-windows-adversarial-ci-01811.py" not in ci:
+    fail("0.18.11 Windows Adversarial CI mandatory gate/self-tests are not wired into preflight/CI")
+if "Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK" not in adversarial_gate_01811:
+    fail("0.18.11 mandatory Windows Adversarial CI gate incomplete")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

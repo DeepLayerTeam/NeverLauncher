@@ -1,3 +1,11 @@
+## 0.18.11 — Windows Adversarial CI
+
+- Добавлен исполняемый `scripts/guard_ci/windows_adversarial.py`: для каждой сертифицированной Java `8/16/17/21/25` он запускает 11 реальных Windows/JVM сценариев как отдельные `cargo test` процессы и фиксирует exit status, timeout, SHA-256 stdout/stderr и SHA-256 всех Sensor/adversarial fixture binaries.
+- Compatibility-positive набор проверяет раннюю загрузку Sensor, trusted native module lifecycle, Continuous Guard cross-check, Job-bound process tree и штатный HotSpot JIT без false positive. Adversarial-negative набор проверяет unsigned DLL вне trusted roots, executable code-page drift, private executable thread start, startup instrumentation/JDWP, live debugger attach и foreign executable allocation.
+- Результат каждой JVM привязан к exact repository/commit/run-id и получает собственный `evidenceRootSha256`. Aggregate job требует все пять Java majors и exact scenario set; отсутствие/подмена одного результата или digest делает certification fail-closed.
+- Добавлен machine-verifiable `WINDOWS_ADVERSARIAL_CERTIFICATE.json`: 55 обязательных live scenario executions, Java evidence roots, общий evidence root и invariants `allCompatibilityScenariosPassed`/`allAdversarialScenariosDetected`.
+- Узкая JVM-aware matrix 0.18.8 заменена полноценным Windows adversarial matrix; validator имеет отдельные unit/regression tests и обязательные 0.18.11 offline/preflight/repository-policy gates.
+
 ## 0.18.10 — Attestation v2
 
 - Добавлен post-launch `neverguard/windows-guard-attestation/v2`: Backend получает свежий continuous Windows evidence уже после запуска защищённой JVM, а не только pre-launch snapshot Guard/Desktop.

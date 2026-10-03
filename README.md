@@ -1,3 +1,9 @@
+## Windows Adversarial CI — 0.18.11
+
+NeverLauncher `0.18.11` превращает накопленные Windows Guard fixtures в единый исполняемый adversarial certification pipeline. На `windows-2022` для Java `8/16/17/21/25` запускаются пять compatibility-positive и шесть adversarial-negative сценариев: Sensor startup, trusted module/Continuous Guard/process tree/HotSpot JIT, а также unsigned DLL, code-page drift, private executable thread, startup instrumentation, live debugger attach и foreign executable allocation.
+
+Каждый сценарий выполняется отдельно и сохраняет проверяемый result с exit code, timeout и SHA-256 вывода; result дополнительно связан с SHA-256 `neverguard-sensor.dll` и четырёх adversarial fixtures, Git commit и GitHub run. Aggregate job выпускает `WINDOWS_ADVERSARIAL_CERTIFICATE.json` только при полном покрытии всех пяти JVM и всех 55 обязательных executions. Это operational CI certification поверх реального Guard/Sensor кода, а не декларативная compatibility table.
+
 ## Attestation v2 — 0.18.10
 
 NeverLauncher 0.18.10 переводит Windows remote attestation с одного pre-launch snapshot на двухфазную модель. Guard Attestation v1 остаётся bootstrap-границей для выдачи Minecraft session, затем защищённая JVM запускается с Sensor/Module Guard/Continuous Guard, и Desktop формирует `neverguard/windows-guard-attestation/v2` уже из фактического live `ProcessSupervisor` state.

@@ -869,42 +869,100 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  neverguard-jvm-aware-windows:
-    name: NeverGuard JVM-aware Java ${{ matrix.java }}
+  neverguard-windows-adversarial:
+    name: NeverGuard Windows adversarial Java ${{ matrix.java }}
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         java: [8, 16, 17, 21, 25]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
+          architecture: x64
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
           targets: x86_64-pc-windows-msvc
-      - name: Build JVM-aware Sensor and adversarial fixture
+      - name: Build NeverGuard Sensor and adversarial fixtures
         shell: pwsh
         run: |
           cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
+          cargo build --manifest-path runtime/neverguard-memory-probe/Cargo.toml
+          cargo build --manifest-path runtime/neverguard-thread-probe/Cargo.toml
+          cargo build --manifest-path runtime/neverguard-debug-probe/Cargo.toml
           cargo build --manifest-path runtime/neverguard-jvm-probe/Cargo.toml
           cargo build --manifest-path runtime/neverruntime/Cargo.toml --tests
-      - name: JVM-aware JIT and foreign executable-memory enforcement
+      - name: Execute live Windows attack simulation and compatibility certification
         shell: pwsh
         run: |
-          $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path
-          $env:NEVERGUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/neverguard-jvm-probe/target/debug/neverguard_jvm_probe.dll").Path
-          $env:NEVERGUARD_EXPECTED_JAVA_MAJOR = "${{ matrix.java }}"
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows neverguard_jvm_aware_protection_accepts_certified_hotspot_jit -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation -- --nocapture
-      - name: JVM-aware production gate
+          $out = "guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json"
+          python scripts/guard_ci/windows_adversarial.py run `
+            --java-major "${{ matrix.java }}" `
+            --sensor (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path `
+            --memory-probe (Resolve-Path "runtime/neverguard-memory-probe/target/debug/neverguard_memory_probe.dll").Path `
+            --thread-probe (Resolve-Path "runtime/neverguard-thread-probe/target/debug/neverguard_thread_probe.dll").Path `
+            --debug-probe (Resolve-Path "runtime/neverguard-debug-probe/target/debug/neverguard-debug-probe.exe").Path `
+            --jvm-probe (Resolve-Path "runtime/neverguard-jvm-probe/target/debug/neverguard_jvm_probe.dll").Path `
+            --repository "$env:GITHUB_REPOSITORY" `
+            --commit "$env:GITHUB_SHA" `
+            --run-id "$env:GITHUB_RUN_ID" `
+            --output $out
+      - name: Validate 0.18.11 adversarial CI production gate
         shell: pwsh
         run: |
-          python scripts/smoke/offline/neverguard-jvm-aware-protection-0188.py
-          cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-jvm-probe/Cargo.toml --all-targets -- -D warnings
+          python scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py
+          python scripts/guard_ci/test_windows_adversarial.py
+      - name: Upload per-Java adversarial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverguard-windows-adversarial-java-${{ matrix.java }}-${{ github.sha }}
+          path: guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json
+          if-no-files-found: error
+          retention-days: 30
 
+  neverguard-windows-adversarial-certificate:
+    name: NeverGuard Windows adversarial certification
+    if: always()
+    needs: [neverguard-windows-adversarial]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download per-Java adversarial evidence
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: neverguard-windows-adversarial-java-*
+          path: guard-ci-result/windows-adversarial/results
+      - name: Aggregate and certify Windows adversarial matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/guard_ci/windows_adversarial.py aggregate \
+            --results-root guard-ci-result/windows-adversarial/results \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --output-dir guard-ci-result/windows-adversarial/certificate
+          cat guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Windows adversarial certificate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
+          path: |
+            guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
+            guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md
+          if-no-files-found: error
+          retention-days: 30

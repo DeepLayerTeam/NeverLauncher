@@ -74,6 +74,7 @@ def desired_files(version: str) -> dict[Path, str]:
         "runtime/neverguard-memory-probe/Cargo.toml",
         "runtime/neverguard-thread-probe/Cargo.toml",
         "runtime/neverguard-debug-probe/Cargo.toml",
+        "runtime/neverguard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel

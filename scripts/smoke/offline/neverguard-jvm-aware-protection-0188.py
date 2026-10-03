@@ -32,6 +32,7 @@ integration = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
 probe = read("runtime/neverguard-jvm-probe/src/lib.rs")
 managed_java = read("runtime/neverruntime/src/managed_java.rs")
 ci = read(".github/workflows/ci.yml")
+adversarial_ci = read("scripts/guard_ci/windows_adversarial.py")
 preflight = read("scripts/release/preflight.sh")
 
 require(sensor, "runtime/neverguard-sensor/src/jvm_awareness.rs", [
@@ -97,9 +98,12 @@ require(managed_java, "runtime/neverruntime/src/managed_java.rs", [
 require(ci, ".github/workflows/ci.yml", [
     "neverguard-jvm-aware-protection-0188.py",
     "runtime/neverguard-jvm-probe/Cargo.toml",
+    "java: [8, 16, 17, 21, 25]",
+    "scripts/guard_ci/windows_adversarial.py run",
+])
+require(adversarial_ci, "scripts/guard_ci/windows_adversarial.py", [
     "NEVERGUARD_JVM_PROBE_DLL",
     "NEVERGUARD_EXPECTED_JAVA_MAJOR",
-    "java: [8, 16, 17, 21, 25]",
     "neverguard_jvm_aware_protection_accepts_certified_hotspot_jit",
     "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
 ])

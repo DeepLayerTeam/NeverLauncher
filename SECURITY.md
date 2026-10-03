@@ -1,3 +1,9 @@
+## Windows Adversarial CI boundary — 0.18.11
+
+`0.18.11` добавляет повторяемую attack-simulation границу для Windows user-mode NeverGuard. CI реально запускает защищённую JVM и использует существующие native fixtures для попыток загрузки неподписанной DLL, изменения executable image page, старта потока из private executable memory, live debugger attach и foreign executable allocation; отдельная проверка блокирует startup instrumentation/JDWP до spawn. Параллельно positive cases подтверждают отсутствие ложных срабатываний на раннем Sensor startup, trusted native module lifecycle, Continuous Guard, Job-bound child process и штатный HotSpot JIT.
+
+Certification действует только для exact CI cohort: Windows Server 2022 x64, Java `8/16/17/21/25`, конкретного Git commit/run и конкретных SHA-256 Sensor/probe binaries. `WINDOWS_ADVERSARIAL_CERTIFICATE.json` не является доказательством неуязвимости, не заменяет production Authenticode, не сертифицирует kernel/administrator attacker и не распространяется автоматически на неизвестные JDK/JVM implementations. Любой отсутствующий Java result, failed scenario, altered output digest или artifact hash делает aggregate certification fail-closed.
+
 ## Attestation v2 и server-verified continuous evidence — 0.18.10
 
 В `0.18.10` server-side trust boundary получает evidence после реального запуска JVM. Pre-launch Guard Attestation v1 по-прежнему проверяет Guard/Desktop release boundary и используется для bootstrap Minecraft session, но не считается доказательством состояния уже работающего Sensor. После запуска Desktop собирает live report и формирует Attestation v2, содержащую health/digests всех Windows protection layers и двусторонний Continuous Guard state. Backend ограничивает freshness пятью секундами, проверяет версии компонентов, heartbeat/cross-check parity, rolling hashes и hardware-bound device signature.
