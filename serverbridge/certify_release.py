@@ -20,6 +20,9 @@ HASH_FIELDS = {
 COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/NeverLauncherApiClient.class',
     'ru/neverlauncher/bridge/common/BridgeProtocolNegotiation.class',
+    'ru/neverlauncher/bridge/common/BridgeRuntimeDescriptor.class',
+    'ru/neverlauncher/bridge/common/BridgeRuntimeIdentity.class',
+    'ru/neverlauncher/bridge/common/BridgeRuntimeProbe.class',
 ]
 REQUIRED_ENTRIES = {
     'velocity':['velocity-plugin.json','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class'],
@@ -152,6 +155,8 @@ def main() -> int:
         'schemaVersion': '1.0', 'release': 'ServerBridge 3', 'version': VERSION,
         'protocolVersion': 3, 'status': 'certified', 'targetCount': len(evidence),
         'zeroPatch': True, 'nodeIdentity': 'Ed25519', 'oneTimeJoin': True,
+        'nodeDiscovery': True, 'runtimeIdentity': 'Ed25519 node-bound process identity',
+        'runtimeReplacementDetection': True,
         'artifacts': evidence,
     }
     out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')

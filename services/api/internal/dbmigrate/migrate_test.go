@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0032_guard_attestation_v2_01810" {
+	if st.Current != "0033_serverbridge_runtime_identity_0192" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0032_guard_attestation_v2_01810" {
+		if k != "0033_serverbridge_runtime_identity_0192" {
 			pending[k] = v
 		}
 	}
@@ -370,6 +370,29 @@ func TestServerBridgeMigrationStabilization01410(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.14.10 migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeRuntimeIdentityMigration0192(t *testing.T) {
+	b, err := os.ReadFile("sql/0033_serverbridge_runtime_identity_0192.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"runtime_id",
+		"runtime_epoch",
+		"runtime_identity_signature",
+		"runtime_process_id",
+		"minecraft_version",
+		"runtime_capabilities",
+		"server_bridge_runtime_instances_v3",
+		"replacement_detected",
+		"node_key_fingerprint",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.19.2 ServerBridge runtime identity migration missing %q", required)
 		}
 	}
 }

@@ -31,11 +31,33 @@ func bridgeContextV2() (context.Context, context.CancelFunc) {
 }
 
 func bridgeServerToModelV2(v bridgeServerRecord) model.ServerBridgeNode {
-	return model.ServerBridgeNode{ID: v.ID, Name: v.Name, Kind: v.Kind, ProjectID: v.ProjectID, ProfileID: v.ProfileID, Fingerprint: v.Fingerprint, TokenHash: v.TokenHash, TokenPrefix: v.TokenPrefix, KeyAlgorithm: v.KeyAlgorithm, PublicKey: v.PublicKey, KeyFingerprint: v.KeyFingerprint, IdentityEpoch: v.IdentityEpoch, IdentityRotatedAt: v.IdentityRotatedAt, Status: v.Status, ProtocolVersion: firstNonZeroV2(v.ProtocolVersion, 2), PluginVersion: v.PluginVersion, PluginSHA256: v.PluginSHA256, IntegrityStatus: v.IntegrityStatus, IntegrityVerifiedAt: v.IntegrityVerifiedAt, LastHeartbeatAt: v.LastHeartbeatAt, CreatedAt: v.CreatedAt, RotatedAt: v.RotatedAt}
+	return model.ServerBridgeNode{
+		ID: v.ID, Name: v.Name, Kind: v.Kind, ProjectID: v.ProjectID, ProfileID: v.ProfileID, Fingerprint: v.Fingerprint,
+		TokenHash: v.TokenHash, TokenPrefix: v.TokenPrefix, KeyAlgorithm: v.KeyAlgorithm, PublicKey: v.PublicKey, KeyFingerprint: v.KeyFingerprint,
+		IdentityEpoch: v.IdentityEpoch, IdentityRotatedAt: v.IdentityRotatedAt, Status: v.Status, ProtocolVersion: firstNonZeroV2(v.ProtocolVersion, 2),
+		PluginVersion: v.PluginVersion, PluginSHA256: v.PluginSHA256, IntegrityStatus: v.IntegrityStatus, IntegrityVerifiedAt: v.IntegrityVerifiedAt,
+		LastHeartbeatAt: v.LastHeartbeatAt, CreatedAt: v.CreatedAt, RotatedAt: v.RotatedAt, RuntimeID: v.RuntimeID, RuntimeEpoch: v.RuntimeEpoch,
+		RuntimePreviousID: v.RuntimePreviousID, RuntimeTransition: v.RuntimeTransition, RuntimeReplacementDetected: v.RuntimeReplacementDetected,
+		RuntimeStartedAt: v.RuntimeStartedAt, RuntimeFirstSeenAt: v.RuntimeFirstSeenAt, RuntimeLastSeenAt: v.RuntimeLastSeenAt, RuntimeUptimeSeconds: v.RuntimeUptimeSeconds,
+		RuntimeProcessID: v.RuntimeProcessID, Hostname: v.Hostname, NodeName: v.NodeName, MinecraftVersion: v.MinecraftVersion, JavaVersion: v.JavaVersion,
+		JavaVendor: v.JavaVendor, JavaVMName: v.JavaVMName, RuntimePlatform: v.RuntimePlatform, LoaderName: v.LoaderName, LoaderVersion: v.LoaderVersion,
+		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest,
+	}
 }
 func bridgeServerFromModelV2(v model.ServerBridgeNode) bridgeServerRecord {
-	return bridgeServerRecord{ID: v.ID, Name: v.Name, Kind: v.Kind, ProjectID: v.ProjectID, ProfileID: v.ProfileID, Fingerprint: v.Fingerprint, TokenHash: v.TokenHash, TokenPrefix: v.TokenPrefix, KeyAlgorithm: v.KeyAlgorithm, PublicKey: v.PublicKey, KeyFingerprint: v.KeyFingerprint, IdentityEpoch: v.IdentityEpoch, IdentityRotatedAt: v.IdentityRotatedAt, Status: v.Status, ProtocolVersion: v.ProtocolVersion, PluginVersion: v.PluginVersion, PluginSHA256: v.PluginSHA256, IntegrityStatus: v.IntegrityStatus, IntegrityVerifiedAt: v.IntegrityVerifiedAt, LastHeartbeatAt: v.LastHeartbeatAt, CreatedAt: v.CreatedAt, RotatedAt: v.RotatedAt}
+	return bridgeServerRecord{
+		ID: v.ID, Name: v.Name, Kind: v.Kind, ProjectID: v.ProjectID, ProfileID: v.ProfileID, Fingerprint: v.Fingerprint, TokenHash: v.TokenHash, TokenPrefix: v.TokenPrefix,
+		KeyAlgorithm: v.KeyAlgorithm, PublicKey: v.PublicKey, KeyFingerprint: v.KeyFingerprint, IdentityEpoch: v.IdentityEpoch, IdentityRotatedAt: v.IdentityRotatedAt,
+		Status: v.Status, ProtocolVersion: v.ProtocolVersion, PluginVersion: v.PluginVersion, PluginSHA256: v.PluginSHA256, IntegrityStatus: v.IntegrityStatus,
+		IntegrityVerifiedAt: v.IntegrityVerifiedAt, LastHeartbeatAt: v.LastHeartbeatAt, CreatedAt: v.CreatedAt, RotatedAt: v.RotatedAt, RuntimeID: v.RuntimeID,
+		RuntimeEpoch: v.RuntimeEpoch, RuntimePreviousID: v.RuntimePreviousID, RuntimeTransition: v.RuntimeTransition, RuntimeReplacementDetected: v.RuntimeReplacementDetected,
+		RuntimeStartedAt: v.RuntimeStartedAt, RuntimeFirstSeenAt: v.RuntimeFirstSeenAt, RuntimeLastSeenAt: v.RuntimeLastSeenAt, RuntimeUptimeSeconds: v.RuntimeUptimeSeconds,
+		RuntimeProcessID: v.RuntimeProcessID, Hostname: v.Hostname, NodeName: v.NodeName, MinecraftVersion: v.MinecraftVersion, JavaVersion: v.JavaVersion,
+		JavaVendor: v.JavaVendor, JavaVMName: v.JavaVMName, RuntimePlatform: v.RuntimePlatform, LoaderName: v.LoaderName, LoaderVersion: v.LoaderVersion,
+		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest,
+	}
 }
+
 func bridgeJoinToModelV2(v bridgeJoinRecord) model.ServerBridgeJoinTicket {
 	return model.ServerBridgeJoinTicket{ID: v.ID, TicketVersion: firstNonZeroV2(v.TicketVersion, 2), Username: v.Username, UsernameNormalized: strings.ToLower(strings.TrimSpace(v.Username)), UUID: v.UUID, UserID: v.UserID, SessionID: v.SessionID, ServerID: v.ServerID, ProjectID: v.ProjectID, ProfileID: v.ProfileID, Channel: v.Channel, AccessTokenHash: v.AccessTokenHash, TrustedDeviceID: v.TrustedDeviceID, BindingEpoch: v.BindingEpoch, MinecraftSessionID: v.MinecraftSessionID, ProtocolVersion: firstNonZeroV2(v.ProtocolVersion, 2), IssuedIdentityEpoch: v.IssuedIdentityEpoch, IssuedKeyFingerprint: v.IssuedKeyFingerprint, Status: v.Status, CreatedAt: v.CreatedAt, ExpiresAt: v.ExpiresAt, ConsumedAt: v.ConsumedAt, RedeemedIdentityEpoch: v.RedeemedIdentityEpoch, RedeemedKeyFingerprint: v.RedeemedKeyFingerprint, RedeemedNonceHash: v.RedeemedNonceHash, RedeemedByIP: v.RedeemedByIP}
 }

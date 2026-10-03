@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -8879,6 +8879,129 @@
         },
         "additionalProperties": false
       },
+      "ServerBridgeRuntimeIdentityV3": {
+        "type": "object",
+        "required": [
+          "runtimeId",
+          "startedAt",
+          "startedAtUnixMillis",
+          "uptimeSeconds",
+          "processId",
+          "hostname",
+          "nodeName",
+          "minecraftVersion",
+          "javaVersion",
+          "javaVendor",
+          "javaVmName",
+          "platform",
+          "loaderName",
+          "loaderVersion",
+          "serverBrand",
+          "capabilities",
+          "nodeKeyFingerprint",
+          "identitySignature"
+        ],
+        "properties": {
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAtUnixMillis": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uptimeSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "processId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "hostname": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "nodeName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "minecraftVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "javaVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "javaVendor": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "javaVmName": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "velocity",
+              "bungeecord",
+              "waterfall",
+              "bukkit",
+              "spigot",
+              "paper",
+              "purpur",
+              "folia",
+              "fabric",
+              "forge",
+              "neoforge"
+            ]
+          },
+          "loaderName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "loaderVersion": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "serverBrand": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          },
+          "nodeKeyFingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "identitySignature": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "HeartbeatRequestV3": {
         "type": "object",
         "required": [
@@ -8928,6 +9051,9 @@
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$",
             "description": "SHA-256 of the running ServerBridge JAR"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/ServerBridgeRuntimeIdentityV3"
           },
           "hostname": {
             "type": "string"

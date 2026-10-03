@@ -13,6 +13,8 @@ public final class BridgeDefaults {
     public static final String FEATURE_ONE_TIME_JOIN = "join.one-time";
     public static final String FEATURE_ONE_TIME_HANDOFF = "handoff.one-time";
     public static final String FEATURE_RUNTIME_TOPOLOGY = "topology.runtime-learned";
+    public static final String FEATURE_RUNTIME_DISCOVERY = "runtime.node-discovery-v1";
+    public static final String FEATURE_RUNTIME_IDENTITY = "security.runtime-identity-ed25519";
     public static final String VELOCITY_ID = "neverlauncher-velocity-bridge";
     public static final String BUNGEECORD_ID = "neverlauncher-bungeecord-bridge";
     public static final String WATERFALL_ID = "neverlauncher-waterfall-bridge";

@@ -20,28 +20,50 @@ import (
 const serverBridgeSchema910 = apiContractVersion
 
 type bridgeServerRecord struct {
-	ID                  string    `json:"id"`
-	Name                string    `json:"name"`
-	Kind                string    `json:"kind"`
-	ProjectID           string    `json:"projectId"`
-	ProfileID           string    `json:"profileId,omitempty"`
-	Fingerprint         string    `json:"fingerprint,omitempty"`
-	TokenHash           string    `json:"-"`
-	TokenPrefix         string    `json:"-"`
-	KeyAlgorithm        string    `json:"keyAlgorithm"`
-	PublicKey           string    `json:"-"`
-	KeyFingerprint      string    `json:"keyFingerprint"`
-	IdentityEpoch       int64     `json:"identityEpoch"`
-	IdentityRotatedAt   time.Time `json:"identityRotatedAt,omitempty"`
-	Status              string    `json:"status"`
-	PluginVersion       string    `json:"pluginVersion,omitempty"`
-	PluginSHA256        string    `json:"pluginSha256,omitempty"`
-	IntegrityStatus     string    `json:"integrityStatus,omitempty"`
-	IntegrityVerifiedAt time.Time `json:"integrityVerifiedAt,omitempty"`
-	LastHeartbeatAt     time.Time `json:"lastHeartbeatAt,omitempty"`
-	ProtocolVersion     int       `json:"protocolVersion"`
-	CreatedAt           time.Time `json:"createdAt"`
-	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
+	ID                         string    `json:"id"`
+	Name                       string    `json:"name"`
+	Kind                       string    `json:"kind"`
+	ProjectID                  string    `json:"projectId"`
+	ProfileID                  string    `json:"profileId,omitempty"`
+	Fingerprint                string    `json:"fingerprint,omitempty"`
+	TokenHash                  string    `json:"-"`
+	TokenPrefix                string    `json:"-"`
+	KeyAlgorithm               string    `json:"keyAlgorithm"`
+	PublicKey                  string    `json:"-"`
+	KeyFingerprint             string    `json:"keyFingerprint"`
+	IdentityEpoch              int64     `json:"identityEpoch"`
+	IdentityRotatedAt          time.Time `json:"identityRotatedAt,omitempty"`
+	Status                     string    `json:"status"`
+	PluginVersion              string    `json:"pluginVersion,omitempty"`
+	PluginSHA256               string    `json:"pluginSha256,omitempty"`
+	IntegrityStatus            string    `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt        time.Time `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt            time.Time `json:"lastHeartbeatAt,omitempty"`
+	ProtocolVersion            int       `json:"protocolVersion"`
+	CreatedAt                  time.Time `json:"createdAt"`
+	RotatedAt                  time.Time `json:"rotatedAt,omitempty"`
+	RuntimeID                  string    `json:"runtimeId,omitempty"`
+	RuntimeEpoch               int64     `json:"runtimeEpoch,omitempty"`
+	RuntimePreviousID          string    `json:"runtimePreviousId,omitempty"`
+	RuntimeTransition          string    `json:"runtimeTransition,omitempty"`
+	RuntimeReplacementDetected bool      `json:"runtimeReplacementDetected,omitempty"`
+	RuntimeStartedAt           time.Time `json:"runtimeStartedAt,omitempty"`
+	RuntimeFirstSeenAt         time.Time `json:"runtimeFirstSeenAt,omitempty"`
+	RuntimeLastSeenAt          time.Time `json:"runtimeLastSeenAt,omitempty"`
+	RuntimeUptimeSeconds       int64     `json:"runtimeUptimeSeconds,omitempty"`
+	RuntimeProcessID           int64     `json:"runtimeProcessId,omitempty"`
+	Hostname                   string    `json:"hostname,omitempty"`
+	NodeName                   string    `json:"nodeName,omitempty"`
+	MinecraftVersion           string    `json:"minecraftVersion,omitempty"`
+	JavaVersion                string    `json:"javaVersion,omitempty"`
+	JavaVendor                 string    `json:"javaVendor,omitempty"`
+	JavaVMName                 string    `json:"javaVmName,omitempty"`
+	RuntimePlatform            string    `json:"runtimePlatform,omitempty"`
+	LoaderName                 string    `json:"loaderName,omitempty"`
+	LoaderVersion              string    `json:"loaderVersion,omitempty"`
+	ServerBrand                string    `json:"serverBrand,omitempty"`
+	RuntimeCapabilities        []string  `json:"runtimeCapabilities,omitempty"`
+	RuntimeIdentityDigest      string    `json:"runtimeIdentityDigest,omitempty"`
 }
 
 type bridgeJoinRecord struct {
@@ -423,7 +445,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.1 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.2 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -452,14 +474,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-rolling-upgrade", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-rolling-upgrade", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}

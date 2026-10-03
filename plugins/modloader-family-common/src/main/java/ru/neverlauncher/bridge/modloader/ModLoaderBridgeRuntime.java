@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
@@ -29,6 +30,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private final Class<?> artifactAnchor;
     private final Supplier<Path> artifactPathSupplier;
     private final Logger logger;
+    private final Supplier<BridgeRuntimeDescriptor> runtimeDescriptorSupplier;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final ScheduledExecutorService heartbeatExecutor;
     private final ThreadPoolExecutor validationExecutor;
@@ -37,12 +39,21 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private volatile Instant lastHeartbeatAt;
 
     public ModLoaderBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Supplier<Path> artifactPathSupplier, Logger logger) {
+        this(platformId, displayName, configPath, artifactAnchor, artifactPathSupplier, logger,
+            () -> BridgeRuntimeDescriptor.of(
+                "", platformId, displayName, "", displayName,
+                java.util.List.of("heartbeat.signed", "join.modloader-gate", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation")
+            ));
+    }
+
+    public ModLoaderBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Supplier<Path> artifactPathSupplier, Logger logger, Supplier<BridgeRuntimeDescriptor> runtimeDescriptorSupplier) {
         this.platformId = requireText(platformId, "platformId").toLowerCase(Locale.ROOT);
         this.displayName = requireText(displayName, "displayName");
         this.configPath = Objects.requireNonNull(configPath, "configPath").toAbsolutePath().normalize();
         this.artifactAnchor = Objects.requireNonNull(artifactAnchor, "artifactAnchor");
         this.artifactPathSupplier = Objects.requireNonNull(artifactPathSupplier, "artifactPathSupplier");
         this.logger = Objects.requireNonNull(logger, "logger");
+        this.runtimeDescriptorSupplier = Objects.requireNonNull(runtimeDescriptorSupplier, "runtimeDescriptorSupplier");
         this.heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(task -> daemonThread(task, "heartbeat"));
         this.validationExecutor = new ThreadPoolExecutor(
             2, 8, 60L, TimeUnit.SECONDS,
@@ -59,9 +70,9 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         state = loadState();
         scheduleHeartbeat(0);
         RuntimeState current = state;
-        logger.info("NeverLauncher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
+        logger.info("NeverLauncher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
             displayName, BridgeDefaults.VERSION, current.config.serverId, current.identity.fingerprint(),
-            current.identity.publicKeyBase64Url(), shortHash(current.pluginSha256));
+            current.identity.publicKeyBase64Url(), shortHash(current.pluginSha256), current.api.runtimeId());
     }
 
     public CompletableFuture<JoinValidationResult> validateJoinAsync(String username, String uuid, String ip) {
@@ -122,7 +133,8 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             throw new IllegalStateException("cannot measure running " + displayName + " bridge JAR SHA-256");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256);
+        BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");
+        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 

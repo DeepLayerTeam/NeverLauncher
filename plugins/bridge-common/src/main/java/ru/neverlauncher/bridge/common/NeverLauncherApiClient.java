@@ -28,7 +28,9 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_ARTIFACT_INTEGRITY,
         BridgeDefaults.FEATURE_ONE_TIME_JOIN,
         BridgeDefaults.FEATURE_ONE_TIME_HANDOFF,
-        BridgeDefaults.FEATURE_RUNTIME_TOPOLOGY
+        BridgeDefaults.FEATURE_RUNTIME_TOPOLOGY,
+        BridgeDefaults.FEATURE_RUNTIME_DISCOVERY,
+        BridgeDefaults.FEATURE_RUNTIME_IDENTITY
     );
 
     private final BridgeConfig config;
@@ -37,15 +39,26 @@ public final class NeverLauncherApiClient {
     private final String serverType;
     private final String pluginVersion;
     private final String pluginSha256;
+    private final BridgeRuntimeIdentity runtimeIdentity;
     private volatile BridgeProtocolNegotiation negotiation;
 
     public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
+        this(config, identity, serverType, pluginVersion, pluginSha256,
+            BridgeRuntimeDescriptor.of("", serverType, serverType, "", serverType, List.of("heartbeat.signed", "join.validation")));
+    }
+
+    public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256, BridgeRuntimeDescriptor runtimeDescriptor) {
         this.config = config;
         this.identity = identity;
         this.serverType = normalized(serverType);
         this.pluginVersion = normalized(pluginVersion);
         this.pluginSha256 = normalized(pluginSha256).toLowerCase();
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(config.timeoutMs)).build();
+        try {
+            this.runtimeIdentity = identity == null ? null : BridgeRuntimeIdentity.capture(config, identity, runtimeDescriptor);
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("cannot create ServerBridge runtime identity", e);
+        }
     }
 
     public boolean heartbeat(String serverType, String pluginVersion) {
@@ -54,11 +67,13 @@ public final class NeverLauncherApiClient {
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) return false;
         try {
             BridgeProtocolNegotiation protocol = negotiateProtocol();
+            String runtime = runtimeFields(protocol);
             String json = "{" + protocolFields(protocol) +
                 ",\"serverId\":" + quote(config.serverId) +
                 ",\"serverType\":" + quote(actualType) +
                 ",\"pluginVersion\":" + quote(actualVersion) +
-                ",\"pluginSha256\":" + quote(pluginSha256) + "}";
+                ",\"pluginSha256\":" + quote(pluginSha256) +
+                runtime + "}";
             HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
@@ -205,6 +220,22 @@ public final class NeverLauncherApiClient {
             negotiation = current;
             return current;
         }
+    }
+
+
+    private String runtimeFields(BridgeProtocolNegotiation protocol) {
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || runtimeIdentity == null) return "";
+        boolean discovery = protocol.features().contains(BridgeDefaults.FEATURE_RUNTIME_DISCOVERY);
+        boolean identityFeature = protocol.features().contains(BridgeDefaults.FEATURE_RUNTIME_IDENTITY);
+        if (!discovery && !identityFeature) return "";
+        if (!(discovery && identityFeature)) {
+            throw new IllegalStateException("ServerBridge runtime discovery requires the runtime identity feature pair");
+        }
+        return ",\"runtime\":" + runtimeIdentity.toJson();
+    }
+
+    public String runtimeId() {
+        return runtimeIdentity == null ? "" : runtimeIdentity.runtimeId();
     }
 
     private static String protocolFields(BridgeProtocolNegotiation protocol) {

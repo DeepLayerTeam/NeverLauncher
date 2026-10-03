@@ -9,6 +9,8 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import net.kyori.adventure.text.Component;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 
@@ -28,7 +30,23 @@ public final class NeverLauncherVelocityBridge {
                 "Velocity",
                 Path.of("plugins", "neverlauncher-velocity", "config.yml"),
                 NeverLauncherVelocityBridge.class,
-                logger
+                logger,
+                () -> {
+                    String velocityVersion = BridgeRuntimeProbe.packageVersion("com.velocitypowered.api.proxy.ProxyServer");
+                    return BridgeRuntimeDescriptor.of(
+                        "proxy-multi-version", "velocity", "Velocity", velocityVersion,
+                        velocityVersion.isBlank() ? "Velocity" : "Velocity " + velocityVersion,
+                        java.util.List.of(
+                            "heartbeat.signed",
+                            "join.proxy-prelogin-gate",
+                            "handoff.one-time",
+                            "artifact.sha256",
+                            "runtime.discovery",
+                            "runtime.ed25519-attestation",
+                            "proxy.velocity-api"
+                        )
+                    );
+                }
             );
             next.start();
             runtime = next;

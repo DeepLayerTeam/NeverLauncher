@@ -69,6 +69,7 @@ run_step serverbridge-zero-patch-topology-handoff-0148 python3 "${ROOT_DIR}/scri
 run_step serverbridge-public-matrix-ha-hardening-0149 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py"
 run_step serverbridge-migration-stabilization-01410 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-migration-stabilization-01410.py"
 run_step serverbridge-release-0150 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-release-0150.py"
+run_step serverbridge-runtime-identity-0192 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-runtime-identity-0192.py"
 run_step delivery-manifest-platform-architecture-0151 python3 "${ROOT_DIR}/scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
 run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offline/signed-windows-x64-arm64-0152.py"
 run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"

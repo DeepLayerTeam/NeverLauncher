@@ -387,28 +387,85 @@ type MinecraftJoin struct {
 // key material never crosses the node/backend boundary. Legacy token fields remain
 // internal only so the 0.14.1 schema can be migrated safely.
 type ServerBridgeNode struct {
-	ID                  string    `json:"id"`
-	Name                string    `json:"name"`
-	Kind                string    `json:"kind"`
-	ProjectID           string    `json:"projectId"`
-	ProfileID           string    `json:"profileId,omitempty"`
-	Fingerprint         string    `json:"fingerprint,omitempty"`
-	TokenHash           string    `json:"-"` // legacy 0.14.1 credential, never used by 0.14.2 auth
-	TokenPrefix         string    `json:"-"`
-	KeyAlgorithm        string    `json:"keyAlgorithm"`
-	PublicKey           string    `json:"-"`
-	KeyFingerprint      string    `json:"keyFingerprint"`
-	IdentityEpoch       int64     `json:"identityEpoch"`
-	IdentityRotatedAt   time.Time `json:"identityRotatedAt,omitempty"`
-	Status              string    `json:"status"`
-	ProtocolVersion     int       `json:"protocolVersion"`
-	PluginVersion       string    `json:"pluginVersion,omitempty"`
-	PluginSHA256        string    `json:"pluginSha256,omitempty"`
-	IntegrityStatus     string    `json:"integrityStatus,omitempty"`
-	IntegrityVerifiedAt time.Time `json:"integrityVerifiedAt,omitempty"`
-	LastHeartbeatAt     time.Time `json:"lastHeartbeatAt,omitempty"`
-	CreatedAt           time.Time `json:"createdAt"`
-	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
+	ID                         string    `json:"id"`
+	Name                       string    `json:"name"`
+	Kind                       string    `json:"kind"`
+	ProjectID                  string    `json:"projectId"`
+	ProfileID                  string    `json:"profileId,omitempty"`
+	Fingerprint                string    `json:"fingerprint,omitempty"`
+	TokenHash                  string    `json:"-"` // legacy 0.14.1 credential, never used by 0.14.2 auth
+	TokenPrefix                string    `json:"-"`
+	KeyAlgorithm               string    `json:"keyAlgorithm"`
+	PublicKey                  string    `json:"-"`
+	KeyFingerprint             string    `json:"keyFingerprint"`
+	IdentityEpoch              int64     `json:"identityEpoch"`
+	IdentityRotatedAt          time.Time `json:"identityRotatedAt,omitempty"`
+	Status                     string    `json:"status"`
+	ProtocolVersion            int       `json:"protocolVersion"`
+	PluginVersion              string    `json:"pluginVersion,omitempty"`
+	PluginSHA256               string    `json:"pluginSha256,omitempty"`
+	IntegrityStatus            string    `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt        time.Time `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt            time.Time `json:"lastHeartbeatAt,omitempty"`
+	CreatedAt                  time.Time `json:"createdAt"`
+	RotatedAt                  time.Time `json:"rotatedAt,omitempty"`
+	RuntimeID                  string    `json:"runtimeId,omitempty"`
+	RuntimeEpoch               int64     `json:"runtimeEpoch,omitempty"`
+	RuntimePreviousID          string    `json:"runtimePreviousId,omitempty"`
+	RuntimeTransition          string    `json:"runtimeTransition,omitempty"`
+	RuntimeReplacementDetected bool      `json:"runtimeReplacementDetected,omitempty"`
+	RuntimeStartedAt           time.Time `json:"runtimeStartedAt,omitempty"`
+	RuntimeFirstSeenAt         time.Time `json:"runtimeFirstSeenAt,omitempty"`
+	RuntimeLastSeenAt          time.Time `json:"runtimeLastSeenAt,omitempty"`
+	RuntimeUptimeSeconds       int64     `json:"runtimeUptimeSeconds,omitempty"`
+	RuntimeProcessID           int64     `json:"runtimeProcessId,omitempty"`
+	Hostname                   string    `json:"hostname,omitempty"`
+	NodeName                   string    `json:"nodeName,omitempty"`
+	MinecraftVersion           string    `json:"minecraftVersion,omitempty"`
+	JavaVersion                string    `json:"javaVersion,omitempty"`
+	JavaVendor                 string    `json:"javaVendor,omitempty"`
+	JavaVMName                 string    `json:"javaVmName,omitempty"`
+	RuntimePlatform            string    `json:"runtimePlatform,omitempty"`
+	LoaderName                 string    `json:"loaderName,omitempty"`
+	LoaderVersion              string    `json:"loaderVersion,omitempty"`
+	ServerBrand                string    `json:"serverBrand,omitempty"`
+	RuntimeCapabilities        []string  `json:"runtimeCapabilities,omitempty"`
+	RuntimeIdentityDigest      string    `json:"runtimeIdentityDigest,omitempty"`
+}
+
+// ServerBridgeRuntimeIdentity is the immutable process identity attested by the node Ed25519 key.
+type ServerBridgeRuntimeIdentity struct {
+	RuntimeID           string
+	StartedAt           time.Time
+	StartedAtUnixMillis int64
+	UptimeSeconds       int64
+	ProcessID           int64
+	Hostname            string
+	NodeName            string
+	MinecraftVersion    string
+	JavaVersion         string
+	JavaVendor          string
+	JavaVMName          string
+	Platform            string
+	LoaderName          string
+	LoaderVersion       string
+	ServerBrand         string
+	Capabilities        []string
+	NodeKeyFingerprint  string
+	IdentitySignature   string
+	IdentityDigest      string
+}
+
+// ServerBridgeRuntimeTransition describes what changed when a signed runtime heartbeat was persisted.
+type ServerBridgeRuntimeTransition struct {
+	RuntimeID           string    `json:"runtimeId"`
+	RuntimeEpoch        int64     `json:"runtimeEpoch"`
+	PreviousRuntimeID   string    `json:"previousRuntimeId,omitempty"`
+	Transition          string    `json:"transition"`
+	ReplacementDetected bool      `json:"replacementDetected"`
+	StartedAt           time.Time `json:"startedAt"`
+	FirstSeenAt         time.Time `json:"firstSeenAt"`
+	LastSeenAt          time.Time `json:"lastSeenAt"`
 }
 
 // ServerBridgeJoinTicket is a short-lived one-time ServerBridge authorization bound to the negotiated v2/v3 node protocol.

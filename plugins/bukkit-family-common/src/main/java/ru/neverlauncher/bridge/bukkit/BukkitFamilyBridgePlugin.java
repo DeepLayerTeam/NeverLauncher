@@ -11,12 +11,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -77,6 +80,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             " enabled; serverId=" + state.config.serverId +
             "; nodeKeyFingerprint=" + state.identity.fingerprint() +
             "; sha256=" + shortHash(state.pluginSha256) +
+            "; runtimeId=" + state.api.runtimeId() +
             "; foliaSafeIO=true");
     }
 
@@ -165,6 +169,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     ", requireIntegrity=" + state.config.requireIntegrity +
                     ", project=" + state.config.projectId + "/" + state.config.profileId + "/" + state.config.channel +
                     ", heartbeatIntervalSeconds=" + state.config.heartbeatIntervalSeconds +
+                    ", runtimeId=" + state.api.runtimeId() +
                     ", heartbeat=" + heartbeatStatus());
                 return true;
             }
@@ -183,8 +188,35 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             throw new IllegalStateException("cannot measure running plugin JAR SHA-256");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256);
+        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256, runtimeDescriptor());
         return new RuntimeState(config, identity, api, pluginSha256);
+    }
+
+    private BridgeRuntimeDescriptor runtimeDescriptor() {
+        List<String> capabilities = new ArrayList<>(List.of(
+            "heartbeat.signed",
+            "join.async-prelogin-gate",
+            "artifact.sha256",
+            "runtime.discovery",
+            "runtime.ed25519-attestation",
+            "plugin.bukkit-api"
+        ));
+        if (expectedPlatform == BukkitFamilyPlatform.FOLIA) capabilities.add("scheduler.folia-safe-io");
+        if (expectedPlatform == BukkitFamilyPlatform.PAPER || expectedPlatform == BukkitFamilyPlatform.PURPUR || expectedPlatform == BukkitFamilyPlatform.FOLIA) {
+            capabilities.add("server.paper-api-family");
+        }
+        String bukkitVersion = safe(Bukkit.getBukkitVersion());
+        String minecraftVersion = bukkitVersion;
+        int apiSuffix = minecraftVersion.indexOf("-R");
+        if (apiSuffix > 0) minecraftVersion = minecraftVersion.substring(0, apiSuffix);
+        String serverVersion = safe(Bukkit.getVersion());
+        String brand = safe(Bukkit.getName());
+        if (!serverVersion.isBlank()) brand = brand.isBlank() ? serverVersion : brand + " " + serverVersion;
+        return BridgeRuntimeDescriptor.of(minecraftVersion, expectedPlatform.id(), expectedPlatform.displayName(), serverVersion, brand, capabilities);
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').trim();
     }
 
     private void scheduleHeartbeat(long delaySeconds) {

@@ -20,6 +20,8 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.config.ConfigurationTaskContext;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 
@@ -42,7 +44,26 @@ public final class NeverLauncherForgeBridge {
             .resolve("neverlauncher-forge-bridge")
             .resolve("config.yml");
         this.runtime = new ModLoaderBridgeRuntime(
-            "forge", "Forge", configPath, NeverLauncherForgeBridge.class, NeverLauncherForgeBridge::loadedArtifactPath, LOGGER
+            "forge", "Forge", configPath, NeverLauncherForgeBridge.class, NeverLauncherForgeBridge::loadedArtifactPath, LOGGER,
+            () -> {
+                String loaderVersion = BridgeRuntimeProbe.nestedStaticString("net.minecraftforge.fml.loading.FMLLoader", "versionInfo", "forgeVersion");
+                if (loaderVersion.isBlank()) loaderVersion = BridgeRuntimeProbe.packageVersion("net.minecraftforge.fml.loading.FMLLoader");
+                String minecraftVersion = BridgeRuntimeProbe.nestedStaticString("net.minecraftforge.fml.loading.FMLLoader", "versionInfo", "mcVersion");
+                if (minecraftVersion.isBlank()) minecraftVersion = BridgeRuntimeProbe.minecraftVersion();
+                return BridgeRuntimeDescriptor.of(
+                    minecraftVersion, "forge", "Forge", loaderVersion,
+                    loaderVersion.isBlank() ? "Forge" : "Forge " + loaderVersion,
+                    java.util.List.of(
+                        "heartbeat.signed",
+                        "join.configuration-task-gate",
+                        "artifact.sha256",
+                        "artifact.loader-owned",
+                        "runtime.discovery",
+                        "runtime.ed25519-attestation",
+                        "loader.forge"
+                    )
+                );
+            }
         );
         MinecraftForge.EVENT_BUS.register(this);
     }

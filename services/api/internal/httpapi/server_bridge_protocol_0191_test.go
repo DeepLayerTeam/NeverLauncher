@@ -10,14 +10,14 @@ import (
 func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 	handler := testServer(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/server-bridge/capabilities?protocols=3,2&features=protocol.capability-negotiation,protocol.feature-flags,protocol.rolling-upgrade-v2,security.ed25519-node-requests,security.single-use-node-nonce,integrity.sha256,join.one-time,handoff.one-time,topology.runtime-learned", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/server-bridge/capabilities?protocols=3,2&features=protocol.capability-negotiation,protocol.feature-flags,protocol.rolling-upgrade-v2,security.ed25519-node-requests,security.single-use-node-nonce,integrity.sha256,join.one-time,handoff.one-time,topology.runtime-learned,runtime.node-discovery-v1,security.runtime-identity-ed25519", nil)
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
 		t.Fatalf("capabilities v3 => %d %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, want := range []string{`"release":"ServerBridge 3"`, `"negotiatedProtocolVersion":3`, `"legacyProtocolV2Supported":true`, `"protocol.capability-negotiation":true`, `"protocol.feature-flags":true`} {
+	for _, want := range []string{`"release":"ServerBridge 3"`, `"negotiatedProtocolVersion":3`, `"legacyProtocolV2Supported":true`, `"protocol.capability-negotiation":true`, `"protocol.feature-flags":true`, `"runtime.node-discovery-v1":true`, `"security.runtime-identity-ed25519":true`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("capabilities v3 missing %s: %s", want, body)
 		}

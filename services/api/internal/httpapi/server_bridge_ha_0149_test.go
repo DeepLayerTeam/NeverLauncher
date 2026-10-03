@@ -10,7 +10,7 @@ import (
 )
 
 func TestServerBridgePublicMatrix0149IsCompleteAndHonestAboutCoverage(t *testing.T) {
-	rows := serverBridgeMatrixPlatforms0149("0.19.1")
+	rows := serverBridgeMatrixPlatforms0149("0.19.2")
 	if len(rows) != 11 {
 		t.Fatalf("expected 11 ServerBridge matrix rows, got %d", len(rows))
 	}

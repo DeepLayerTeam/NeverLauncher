@@ -13,6 +13,7 @@ require(cert,[
     "EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge']",
     'BRIDGE_RELEASE_ALLOWLIST.json','PLUGIN_MANIFEST.json','SHA256SUMS','SERVERBRIDGE3_CERTIFICATION.json',
     'NeverLauncherApiClient.class','BridgeProtocolNegotiation.class',
+    'BridgeRuntimeDescriptor.class','BridgeRuntimeIdentity.class','BridgeRuntimeProbe.class',
     'platform-matched release required','folia-supported: true','clientModRequired'
 ],'ServerBridge 3 certification')
 build=read('scripts/build/bridge-plugins.sh')
@@ -22,7 +23,7 @@ require(release,['SERVERBRIDGE3_CERTIFICATION.json','BRIDGE_RELEASE_ALLOWLIST.js
 required=read('scripts/smoke/release-required/release-bundle.sh')
 require(required,['SERVERBRIDGE3_CERTIFICATION.json','BRIDGE_RELEASE_ALLOWLIST.json','BRIDGE_PLUGIN_MANIFEST.json'],'publish gate')
 status=read('services/api/internal/httpapi/bridge_plugins.go')
-require(status,['NeverLauncher 0.19.1 ServerBridge 3'],'runtime release status')
+require(status,[f'NeverLauncher {version} ServerBridge 3'],'runtime release status')
 import json
 targets=json.loads(read('serverbridge/targets.json'))
 if targets.get('productVersion') != version or targets.get('protocolVersion') != 3: raise SystemExit('ServerBridge matrix version/protocol mismatch')

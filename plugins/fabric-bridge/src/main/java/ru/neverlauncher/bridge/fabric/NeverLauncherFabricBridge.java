@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
@@ -74,7 +76,7 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
             current.config.serverId,
             current.identity.fingerprint(),
             current.identity.publicKeyBase64Url(),
-            shortHash(current.pluginSha256));
+            shortHash(current.pluginSha256) + "; runtimeId=" + current.api.runtimeId());
     }
 
     private void onLoginQueryStart(ServerLoginNetworkHandler handler, MinecraftServer server,
@@ -144,7 +146,26 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
             throw new IllegalStateException("cannot measure running Fabric bridge JAR SHA-256");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, PLATFORM, BridgeDefaults.VERSION, pluginSha256);
+        String loaderVersion = FabricLoader.getInstance().getModContainer("fabricloader")
+            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+            .orElse(BridgeRuntimeProbe.packageVersion("net.fabricmc.loader.api.FabricLoader"));
+        String minecraftVersion = FabricLoader.getInstance().getModContainer("minecraft")
+            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+            .orElseGet(BridgeRuntimeProbe::minecraftVersion);
+        BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of(
+            minecraftVersion, PLATFORM, "Fabric Loader", loaderVersion,
+            loaderVersion.isBlank() ? "Fabric" : "Fabric " + loaderVersion,
+            java.util.List.of(
+                "heartbeat.signed",
+                "join.fabric-login-query-gate",
+                "artifact.sha256",
+                "artifact.loader-owned",
+                "runtime.discovery",
+                "runtime.ed25519-attestation",
+                "loader.fabric"
+            )
+        );
+        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, PLATFORM, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 

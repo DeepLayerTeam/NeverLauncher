@@ -21,6 +21,8 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 
@@ -43,7 +45,26 @@ public final class NeverLauncherNeoForgeBridge {
             .resolve("neverlauncher-neoforge-bridge")
             .resolve("config.yml");
         this.runtime = new ModLoaderBridgeRuntime(
-            "neoforge", "NeoForge", configPath, NeverLauncherNeoForgeBridge.class, NeverLauncherNeoForgeBridge::loadedArtifactPath, LOGGER
+            "neoforge", "NeoForge", configPath, NeverLauncherNeoForgeBridge.class, NeverLauncherNeoForgeBridge::loadedArtifactPath, LOGGER,
+            () -> {
+                String loaderVersion = BridgeRuntimeProbe.nestedStaticString("net.neoforged.fml.loading.FMLLoader", "versionInfo", "neoForgeVersion");
+                if (loaderVersion.isBlank()) loaderVersion = BridgeRuntimeProbe.packageVersion("net.neoforged.fml.loading.FMLLoader");
+                String minecraftVersion = BridgeRuntimeProbe.nestedStaticString("net.neoforged.fml.loading.FMLLoader", "versionInfo", "mcVersion");
+                if (minecraftVersion.isBlank()) minecraftVersion = BridgeRuntimeProbe.minecraftVersion();
+                return BridgeRuntimeDescriptor.of(
+                    minecraftVersion, "neoforge", "NeoForge", loaderVersion,
+                    loaderVersion.isBlank() ? "NeoForge" : "NeoForge " + loaderVersion,
+                    java.util.List.of(
+                        "heartbeat.signed",
+                        "join.configuration-task-gate",
+                        "artifact.sha256",
+                        "artifact.loader-owned",
+                        "runtime.discovery",
+                        "runtime.ed25519-attestation",
+                        "loader.neoforge"
+                    )
+                );
+            }
         );
         modEventBus.addListener(this::onRegisterConfigurationTasks);
         NeoForge.EVENT_BUS.register(this);

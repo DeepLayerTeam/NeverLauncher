@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.19.1 → 0.19.2 — Node Discovery & Runtime Identity
+
+Перед rollout создайте backup и примените `0033_serverbridge_runtime_identity_0192`, затем выполните `nl db migrate verify`. Migration добавляет current runtime state и append-style runtime history; существующие Ed25519 node identities, Protocol v2/v3 join tickets и topology state не сбрасываются.
+
+Сначала обновите Backend до 0.19.2. Bridge 0.19.1 продолжит работать по Protocol v3 без runtime feature pair. Затем обновляйте platform-matched bridge JAR до 0.19.2 по одному: capabilities negotiation включит `runtime.node-discovery-v1` и `security.runtime-identity-ed25519`, после чего heartbeat начнёт отправлять node-bound signed runtime descriptor. Проверьте в node diagnostics `runtimeId`, `runtimeEpoch`, Minecraft/Java/loader/brand metadata и transition `started`/`unchanged`. При штатном JVM restart после истечения freshness ожидается `restart`; одновременный новый JVM при свежем предыдущем heartbeat фиксируется как `replacement` и audit event.
+
 ### Upgrade 0.19.0 → 0.19.1 — ServerBridge 3
 
 Примените migration `0031_serverbridge_protocol_v3_0191`, затем выполните `nl db migrate verify`. Она расширяет существующие node/join constraints до Protocol v2/v3 и не сбрасывает Ed25519 identities: старые 0.19.0 bridge продолжают работать по v2 во время rolling upgrade.

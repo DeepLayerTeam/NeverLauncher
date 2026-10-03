@@ -11,6 +11,7 @@ import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 
@@ -41,7 +42,25 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         }
         try {
             Path configPath = getDataFolder().toPath().resolve("config.yml");
-            ProxyBridgeRuntime next = new ProxyBridgeRuntime(expectedPlatform.id(), expectedPlatform.displayName(), configPath, getClass(), getLogger());
+            ProxyBridgeRuntime next = new ProxyBridgeRuntime(
+                expectedPlatform.id(), expectedPlatform.displayName(), configPath, getClass(), getLogger(),
+                () -> BridgeRuntimeDescriptor.of(
+                    "proxy-multi-version",
+                    expectedPlatform.id(),
+                    expectedPlatform.displayName(),
+                    safe(proxy.getVersion()),
+                    (safe(proxy.getName()) + " " + safe(proxy.getVersion())).trim(),
+                    java.util.List.of(
+                        "heartbeat.signed",
+                        "join.proxy-prelogin-gate",
+                        "handoff.one-time",
+                        "artifact.sha256",
+                        "runtime.discovery",
+                        "runtime.ed25519-attestation",
+                        "proxy.bungee-api"
+                    )
+                )
+            );
             next.start();
             runtime = next;
         } catch (Exception e) {
@@ -121,6 +140,10 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 }, reason),
                 0L, TimeUnit.MILLISECONDS);
         });
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').trim();
     }
 
     private static String remoteIP(SocketAddress address) {

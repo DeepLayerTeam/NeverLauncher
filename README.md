@@ -1,3 +1,9 @@
+## ServerBridge 3 Node Discovery & Runtime Identity — 0.19.2
+
+`0.19.2` добавляет рабочую runtime discovery/identity цепочку поверх Protocol v3. Каждый platform bridge автоматически определяет Minecraft version, Java runtime, platform/loader, server brand, hostname/node name и фактические bridge capabilities. JVM instance получает детерминированный `runtimeId`, связанный с node ID, Ed25519 key fingerprint, JVM start time, PID и hostname; весь immutable runtime descriptor отдельно подписывается зарегистрированным Ed25519 node key.
+
+Backend независимо пересчитывает runtime ID, проверяет runtime signature и node fingerprint, атомарно сохраняет current runtime и историю `runtime_epoch` в PostgreSQL. Новый runtime ID после stale predecessor фиксируется как `restart`, а новый runtime ID при ещё свежем predecessor — как overlapping `replacement`; одинаковый runtime ID допускает только неизменный identity digest. Runtime discovery включается согласованной парой feature flags `runtime.node-discovery-v1` + `security.runtime-identity-ed25519`, поэтому bridge 0.19.2 сохраняет rolling compatibility с backend 0.19.1, а backend 0.19.2 продолжает принимать 0.19.1/v3 и 0.19.0/v2 clients без runtime attestation.
+
 ## ServerBridge 3 — 0.19.1
 
 `0.19.1` переводит рабочий ServerBridge runtime на Protocol v3 с реальным capability negotiation через `GET /api/v1/server-bridge/capabilities`. Backend и bridge имеют отдельные v2/v3 wire contracts; v3 требует negotiated feature flags, а v2 остаётся рабочим для rolling upgrade. Bridge 0.19.1 кэширует negotiation на 5 минут и откатывается на v2 только если capabilities route отсутствует (`404`), поэтому backend failures не маскируются downgrade.

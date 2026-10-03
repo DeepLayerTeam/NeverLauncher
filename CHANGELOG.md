@@ -1,3 +1,13 @@
+## [0.19.2] - 2026-10-03
+
+### ServerBridge 3 — Node Discovery & Runtime Identity
+- Added real platform discovery for Minecraft version, Java runtime, platform/loader version, server brand, hostname/node name and bridge plugin/mod capabilities across all eleven ServerBridge artifacts.
+- Added deterministic per-JVM `runtimeId` derived from node identity + JVM start time + PID + hostname and an independent Ed25519 runtime attestation signed by the registered node key.
+- Backend now independently recomputes runtime IDs, verifies runtime signatures, rejects mutated discovery facts and persists current runtime metadata plus runtime instance history in PostgreSQL.
+- Added runtime epochs and restart/replacement detection: stale predecessor -> restart; overlapping fresh predecessor -> replacement; same runtime ID must retain the same signed identity digest.
+- Added Protocol v3 runtime feature negotiation (`runtime.node-discovery-v1`, `security.runtime-identity-ed25519`) with 0.19.1 v3 and 0.19.0 v2 rolling compatibility.
+- Added migration `0033_serverbridge_runtime_identity_0192`, OpenAPI runtime schema, release-certification checks for runtime classes, and executable runtime identity/transition tests.
+
 ## [0.19.1] - 2026-10-03
 
 ### ServerBridge 3
