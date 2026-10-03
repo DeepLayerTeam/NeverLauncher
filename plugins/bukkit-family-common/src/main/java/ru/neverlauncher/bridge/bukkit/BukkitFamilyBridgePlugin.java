@@ -7,6 +7,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
@@ -23,6 +28,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -75,13 +81,19 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         networkExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
             Thread thread = new Thread(task, "neverlauncher-bridge-io-" + expectedPlatform.id());
             thread.setDaemon(true);
-            thread.setUncaughtExceptionHandler((t, error) -> getLogger().severe("NeverLauncher bridge I/O worker failed: " + error.getMessage()));
+            thread.setUncaughtExceptionHandler((t, error) -> {
+                RuntimeState state = runtime;
+                if (state != null) state.api.publishEvent("server.error", Map.of("component", "io", "message", safeError(error)));
+                getLogger().severe("NeverLauncher bridge I/O worker failed: " + error.getMessage());
+            });
             return thread;
         });
         startTelemetrySampling();
         scheduleHeartbeat(0);
 
         RuntimeState state = runtime;
+        state.api.publishEvent("server.startup", Map.of("platform", expectedPlatform.id()));
+        state.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id()));
         getLogger().info("NeverLauncher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
             " enabled; serverId=" + state.config.serverId +
             "; nodeKeyFingerprint=" + state.identity.fingerprint() +
@@ -93,6 +105,12 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     @Override
     public final void onDisable() {
         stopping.set(true);
+        RuntimeState state = runtime;
+        if (state != null) {
+            state.api.publishEvent("server.shutdown", Map.of("platform", expectedPlatform.id()));
+            state.api.flushEventsNow();
+            state.api.closeEventStreamCleanly();
+        }
         stopTelemetrySampling();
         ScheduledExecutorService executor = networkExecutor;
         if (executor != null) {
@@ -117,12 +135,48 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         }
         String ip = event.getAddress() == null ? "" : event.getAddress().getHostAddress();
         JoinValidationResult result = state.api.validateJoin(event.getName(), String.valueOf(event.getUniqueId()), ip);
+        state.api.publishEvent("player.login", Map.of(
+            "username", event.getName(),
+            "uuid", String.valueOf(event.getUniqueId()),
+            "allowed", Boolean.toString(result.allowed),
+            "reason", result.reason == null ? "" : result.reason
+        ));
         if (!result.allowed) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, result.userMessage());
             getLogger().info("neverlauncher.join.denied username=" + event.getName() + " reason=" + result.reason + " platform=" + expectedPlatform.id());
             return;
         }
         getLogger().info("neverlauncher.join.allowed username=" + event.getName() + " serverId=" + state.config.serverId + " platform=" + expectedPlatform.id());
+    }
+
+    @EventHandler
+    public final void onPlayerJoin(PlayerJoinEvent event) {
+        RuntimeState state = runtime;
+        if (state != null) state.api.publishEvent("player.join", Map.of("username", event.getPlayer().getName(), "uuid", String.valueOf(event.getPlayer().getUniqueId())));
+    }
+
+    @EventHandler
+    public final void onPlayerQuit(PlayerQuitEvent event) {
+        RuntimeState state = runtime;
+        if (state != null) state.api.publishEvent("player.quit", Map.of("username", event.getPlayer().getName(), "uuid", String.valueOf(event.getPlayer().getUniqueId())));
+    }
+
+    @EventHandler
+    public final void onPlayerKick(PlayerKickEvent event) {
+        RuntimeState state = runtime;
+        if (state != null) state.api.publishEvent("player.kick", Map.of("username", event.getPlayer().getName(), "uuid", String.valueOf(event.getPlayer().getUniqueId()), "reason", safe(String.valueOf(event.getReason()))));
+    }
+
+    @EventHandler
+    public final void onWorldLoad(WorldLoadEvent event) {
+        RuntimeState state = runtime;
+        if (state != null) state.api.publishEvent("world.load", Map.of("world", event.getWorld().getName(), "uuid", String.valueOf(event.getWorld().getUID())));
+    }
+
+    @EventHandler
+    public final void onWorldUnload(WorldUnloadEvent event) {
+        RuntimeState state = runtime;
+        if (state != null) state.api.publishEvent("world.unload", Map.of("world", event.getWorld().getName(), "uuid", String.valueOf(event.getWorld().getUID())));
     }
 
     @Override
@@ -155,8 +209,11 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     return true;
                 }
                 try {
+                    RuntimeState previous = runtime;
                     RuntimeState next = loadRuntime();
                     runtime = next;
+                    if (previous != null) previous.api.closeEventStreamCleanly();
+                    next.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id(), "reason", "reload"));
                     triggerHeartbeat();
                     sender.sendMessage("NeverLauncher bridge configuration reloaded; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
                 } catch (Exception e) {
@@ -207,6 +264,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             "runtime.discovery",
             "runtime.ed25519-attestation",
             "telemetry.server-v1",
+                        "events.ordered-stream-v1",
             "plugin.bukkit-api"
         ));
         if (expectedPlatform == BukkitFamilyPlatform.FOLIA) capabilities.add("scheduler.folia-safe-io");
@@ -393,6 +451,13 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             return null;
         }
+    }
+
+    private static String safeError(Throwable error) {
+        if (error == null) return "unknown";
+        String value = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+        value = value.replace('\r', ' ').replace('\n', ' ').trim();
+        return value.length() > 512 ? value.substring(0, 512) : value;
     }
 
     private static String safe(String value) {

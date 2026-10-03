@@ -1,3 +1,9 @@
+## ServerBridge 3 Server Event Stream — 0.19.4
+
+`0.19.4` добавляет production ordered event stream поверх ServerBridge Protocol v3. Каждый event получает монотонную sequence внутри конкретного verified runtime epoch, SHA-256 payload digest и отдельную Ed25519 подпись node identity; HTTP batch дополнительно проходит существующую signed-node nonce/replay protection. Bridge хранит high-water sequence и неподтверждённые events в bounded append-only journal, поэтому reconnect/plugin reload повторяет тот же batch до подтверждённого ACK без генерации новой sequence.
+
+Backend принимает batches до 64 events, требует непрерывную последовательность, связывает event с active `runtimeId/runtimeEpoch`, идемпотентно принимает повтор уже сохранённого `(sequence,eventId,digest,signature)` и fail-closed отклоняет gap либо conflicting replay. PostgreSQL сохраняет event row, contiguous ACK cursor и `audit_events` в одной transaction. Raw delivery rows очищаются bounded maintenance после 30 дней; audit trail остаётся отдельной постоянной записью. Platform hooks публикуют startup/ready/shutdown/error/crash, player login/join/quit/kick, world load/unload и proxy connect/switch там, где соответствующее API существует.
+
 ## ServerBridge 3 Server Telemetry — 0.19.3
 
 `0.19.3` добавляет production telemetry непосредственно в подписанный Protocol v3 heartbeat. JVM-метрики снимаются через MXBeans (heap/non-heap, GC totals/deltas, thread/daemon/peak counts), а игровые метрики публикуются platform adapter-ом только с разрешённого server/proxy thread и передаются HTTP heartbeat через immutable bounded snapshot.

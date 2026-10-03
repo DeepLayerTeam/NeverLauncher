@@ -13,6 +13,7 @@ import ru.neverlauncher.bridge.common.NodeIdentity;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -71,6 +72,8 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         state = loadState();
         scheduleHeartbeat(0);
         RuntimeState current = state;
+        current.api.publishEvent("server.startup", Map.of("platform", platformId));
+        current.api.publishEvent("server.ready", Map.of("platform", platformId));
         logger.info("NeverLauncher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
             displayName, BridgeDefaults.VERSION, current.config.serverId, current.identity.fingerprint(),
             current.identity.publicKeyBase64Url(), shortHash(current.pluginSha256), current.api.runtimeId());
@@ -105,6 +108,11 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         if (current != null && !stopping.get()) current.api.recordPlatformTelemetry(sample);
     }
 
+    public boolean publishEvent(String type, Map<String, String> payload) {
+        RuntimeState current = state;
+        return current != null && !stopping.get() && current.api.publishEvent(type, payload);
+    }
+
     public int telemetrySampleIntervalSeconds() {
         RuntimeState current = state;
         return current == null ? 10 : current.config.telemetrySampleIntervalSeconds;
@@ -124,6 +132,12 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     @Override
     public void close() {
         if (!stopping.compareAndSet(false, true)) return;
+        RuntimeState current = state;
+        if (current != null) {
+            current.api.publishEvent("server.shutdown", Map.of("platform", platformId));
+            current.api.flushEventsNow();
+            current.api.closeEventStreamCleanly();
+        }
         heartbeatExecutor.shutdownNow();
         validationExecutor.shutdownNow();
         try {
@@ -192,13 +206,23 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private Thread daemonThread(Runnable task, String role) {
         Thread thread = new Thread(task, "neverlauncher-" + platformId + "-bridge-" + role);
         thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler((t, error) ->
-            logger.error("NeverLauncher {} Server Bridge {} worker failed", displayName, role, error));
+        thread.setUncaughtExceptionHandler((t, error) -> {
+            RuntimeState current = state;
+            if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
+            logger.error("NeverLauncher {} Server Bridge {} worker failed", displayName, role, error);
+        });
         return thread;
     }
 
     private static String shortHash(String hash) {
         return BridgeIntegrity.isSha256(hash) ? hash.substring(0, 12) : "unavailable";
+    }
+
+    private static String safeError(Throwable error) {
+        if (error == null) return "unknown";
+        String value = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+        value = value.replace('\r', ' ').replace('\n', ' ').trim();
+        return value.length() > 512 ? value.substring(0, 512) : value;
     }
 
     private static String requireText(String value, String label) {

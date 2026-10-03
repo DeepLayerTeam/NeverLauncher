@@ -4,7 +4,9 @@ import com.mojang.authlib.GameProfile;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
@@ -29,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -73,12 +76,21 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
         }
 
         ServerLoginConnectionEvents.QUERY_START.register(this::onLoginQueryStart);
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> scheduleHeartbeat(0));
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> onPlayerJoin(handler));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> onPlayerQuit(handler));
+        ServerWorldEvents.LOAD.register((server, world) -> publishWorldEvent("world.load", world));
+        ServerWorldEvents.UNLOAD.register((server, world) -> publishWorldEvent("world.unload", world));
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            RuntimeState active = state;
+            if (active != null) active.api.publishEvent("server.ready", Map.of("platform", PLATFORM));
+            scheduleHeartbeat(0);
+        });
         ServerTickEvents.START_SERVER_TICK.register(server -> tickSampler.onTickStart());
         ServerTickEvents.END_SERVER_TICK.register(this::onServerTickEnd);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> close());
 
         RuntimeState current = state;
+        current.api.publishEvent("server.startup", Map.of("platform", PLATFORM));
         LOGGER.info("NeverLauncher Fabric Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
             BridgeDefaults.VERSION,
             current.config.serverId,
@@ -119,6 +131,13 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
             }
             return result;
         }).thenCompose(decision -> {
+            RuntimeState active = state;
+            if (active != null) active.api.publishEvent("player.login", Map.of(
+                "username", login.username,
+                "uuid", login.uuid,
+                "allowed", Boolean.toString(decision.allowed),
+                "reason", decision.reason == null ? "" : decision.reason
+            ));
             if (decision.allowed) {
                 LOGGER.info("neverlauncher.join.allowed username={} serverId={} platform=fabric", login.username, serverId());
                 return CompletableFuture.completedFuture(null);
@@ -171,6 +190,7 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
                 "runtime.discovery",
                 "runtime.ed25519-attestation",
                 "telemetry.server-v1",
+                        "events.ordered-stream-v1",
                 "loader.fabric"
             )
         );
@@ -241,6 +261,30 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
         ));
     }
 
+    private void onPlayerJoin(net.minecraft.server.network.ServerPlayNetworkHandler handler) {
+        RuntimeState current = state;
+        if (current == null || handler == null || handler.getPlayer() == null) return;
+        var profile = handler.getPlayer().getGameProfile();
+        String username = profile == null || profile.getName() == null ? "" : profile.getName();
+        String uuid = profile == null || profile.getId() == null ? "" : profile.getId().toString();
+        current.api.publishEvent("player.join", Map.of("username", username, "uuid", uuid));
+    }
+
+    private void onPlayerQuit(net.minecraft.server.network.ServerPlayNetworkHandler handler) {
+        RuntimeState current = state;
+        if (current == null || handler == null || handler.getPlayer() == null) return;
+        var profile = handler.getPlayer().getGameProfile();
+        String username = profile == null || profile.getName() == null ? "" : profile.getName();
+        String uuid = profile == null || profile.getId() == null ? "" : profile.getId().toString();
+        current.api.publishEvent("player.quit", Map.of("username", username, "uuid", uuid));
+    }
+
+    private void publishWorldEvent(String type, ServerWorld world) {
+        RuntimeState current = state;
+        if (current == null || world == null) return;
+        current.api.publishEvent(type, Map.of("world", world.getRegistryKey().getValue().toString()));
+    }
+
     private void scheduleHeartbeat(long delaySeconds) {
         if (stopping.get() || heartbeatExecutor.isShutdown()) return;
         heartbeatExecutor.schedule(() -> {
@@ -270,6 +314,12 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
 
     private void close() {
         if (!stopping.compareAndSet(false, true)) return;
+        RuntimeState current = state;
+        if (current != null) {
+            current.api.publishEvent("server.shutdown", Map.of("platform", PLATFORM));
+            current.api.flushEventsNow();
+            current.api.closeEventStreamCleanly();
+        }
         heartbeatExecutor.shutdownNow();
         validationExecutor.shutdownNow();
         try {
@@ -311,11 +361,22 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
         return address == null ? "" : address.toString();
     }
 
-    private static Thread daemonThread(Runnable task, String role) {
+    private Thread daemonThread(Runnable task, String role) {
         Thread thread = new Thread(task, "neverlauncher-fabric-bridge-" + role);
         thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler((t, error) -> LOGGER.error("NeverLauncher Fabric bridge {} worker failed", role, error));
+        thread.setUncaughtExceptionHandler((t, error) -> {
+            RuntimeState current = state;
+            if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
+            LOGGER.error("NeverLauncher Fabric bridge {} worker failed", role, error);
+        });
         return thread;
+    }
+
+    private static String safeError(Throwable error) {
+        if (error == null) return "unknown";
+        String value = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+        value = value.replace('\r', ' ').replace('\n', ' ').trim();
+        return value.length() > 512 ? value.substring(0, 512) : value;
     }
 
     private static String shortHash(String hash) {

@@ -1,3 +1,11 @@
+## [0.19.4] - 2026-10-03
+
+- Added a production Protocol v3 ordered Server Event Stream with per-event Ed25519 signatures, runtime-bound monotonic sequence numbers, contiguous ACKs, batch delivery and signed request nonce replay protection.
+- Added a bounded durable bridge journal with reconnect/plugin-reload resume, idempotent resend and clean/unclean runtime markers used to publish crash evidence after an unexpected JVM termination.
+- Added real platform event hooks for server lifecycle/error, player login/join/quit/kick, world lifecycle and proxy connect/switch across the supported Bukkit/proxy/Fabric/Forge/NeoForge families.
+- Added PostgreSQL migration `0035_serverbridge_event_stream_0194`: event rows, per-runtime ACK cursors and transactional insertion into the common `audit_events` trail. Conflicting replay and sequence gaps fail closed.
+- Added 30-day bounded raw event retention, OpenAPI event/ACK schemas, repository/API tests, PostgreSQL integration coverage, release certification requirements and the 0.19.4 CI production gate.
+
 ## [0.19.3] - 2026-10-03
 
 ### ServerBridge 3 — Server Telemetry

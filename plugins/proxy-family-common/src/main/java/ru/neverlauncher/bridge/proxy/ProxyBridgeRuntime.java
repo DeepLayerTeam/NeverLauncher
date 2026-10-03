@@ -12,6 +12,7 @@ import ru.neverlauncher.bridge.common.NodeIdentity;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -80,6 +81,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         state = loadState();
         scheduleHeartbeat(0);
         RuntimeState current = state;
+        current.api.publishEvent("server.startup", Map.of("platform", platformId));
+        current.api.publishEvent("server.ready", Map.of("platform", platformId));
         logger.info("NeverLauncher " + displayName + " Bridge " + BridgeDefaults.VERSION +
             " enabled; serverId=" + current.config.serverId +
             "; nodeKeyFingerprint=" + current.identity.fingerprint() +
@@ -91,8 +94,11 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
 
     public synchronized void reload() throws Exception {
         ensureRunning();
+        RuntimeState previous = state;
         RuntimeState next = loadState();
         state = next;
+        if (previous != null) previous.api.closeEventStreamCleanly();
+        next.api.publishEvent("server.ready", Map.of("platform", platformId, "reason", "reload"));
         triggerHeartbeat();
         logger.info("NeverLauncher " + displayName + " Bridge configuration reloaded; serverId=" + next.config.serverId +
             "; nodeKeyFingerprint=" + next.identity.fingerprint());
@@ -143,6 +149,11 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         if (current != null && !stopping.get()) current.api.recordPlatformTelemetry(sample);
     }
 
+    public boolean publishEvent(String type, Map<String, String> payload) {
+        RuntimeState current = state;
+        return current != null && !stopping.get() && current.api.publishEvent(type, payload);
+    }
+
     public void triggerHeartbeat() {
         if (stopping.get() || heartbeatExecutor.isShutdown()) return;
         heartbeatExecutor.execute(this::heartbeatOnce);
@@ -190,6 +201,12 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     @Override
     public void close() {
         if (!stopping.compareAndSet(false, true)) return;
+        RuntimeState current = state;
+        if (current != null) {
+            current.api.publishEvent("server.shutdown", Map.of("platform", platformId));
+            current.api.flushEventsNow();
+            current.api.closeEventStreamCleanly();
+        }
         heartbeatExecutor.shutdownNow();
         validationExecutor.shutdownNow();
         try {
@@ -247,12 +264,23 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     private Thread daemonThread(Runnable task, String role) {
         Thread thread = new Thread(task, "neverlauncher-proxy-bridge-" + role + "-" + platformId);
         thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler((t, error) -> logger.severe("NeverLauncher proxy bridge " + role + " worker failed: " + error.getMessage()));
+        thread.setUncaughtExceptionHandler((t, error) -> {
+            RuntimeState current = state;
+            if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
+            logger.severe("NeverLauncher proxy bridge " + role + " worker failed: " + error.getMessage());
+        });
         return thread;
     }
 
     private static String shortHash(String hash) {
         return BridgeIntegrity.isSha256(hash) ? hash.substring(0, 12) : "unavailable";
+    }
+
+    private static String safeError(Throwable error) {
+        if (error == null) return "unknown";
+        String value = error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage());
+        value = value.replace('\r', ' ').replace('\n', ' ').trim();
+        return value.length() > 512 ? value.substring(0, 512) : value;
     }
 
     private static String requireText(String value, String label) {

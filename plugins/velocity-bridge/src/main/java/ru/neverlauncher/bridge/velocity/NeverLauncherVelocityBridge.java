@@ -20,6 +20,7 @@ import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import java.util.Map;
 import java.util.logging.Logger;
 
 @Plugin(id = BridgeDefaults.VELOCITY_ID, name = "NeverLauncher Velocity Bridge", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
@@ -56,6 +57,7 @@ public final class NeverLauncherVelocityBridge {
                             "runtime.discovery",
                             "runtime.ed25519-attestation",
                             "telemetry.server-v1",
+                        "events.ordered-stream-v1",
                             "proxy.velocity-api"
                         )
                     );
@@ -103,6 +105,11 @@ public final class NeverLauncherVelocityBridge {
                 ? ""
                 : event.getConnection().getRemoteAddress().getAddress().getHostAddress();
             JoinValidationResult result = current.validateJoin(username, "", ip);
+            current.publishEvent("player.login", Map.of(
+                "username", username,
+                "allowed", Boolean.toString(result.allowed),
+                "reason", result.reason == null ? "" : result.reason
+            ));
             if (!result.allowed) {
                 event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text(result.userMessage())));
                 logger.info("neverlauncher.join.denied username=" + username + " reason=" + result.reason + " platform=velocity");
@@ -122,12 +129,18 @@ public final class NeverLauncherVelocityBridge {
             }
             String username = event.getPlayer().getUsername();
             String target = event.getOriginalServer().getServerInfo().getName();
+            String source = event.getPlayer().getCurrentServer().map(connection -> connection.getServerInfo().getName()).orElse("");
             JoinValidationResult result = current.createHandoff(username, target);
             if (!result.allowed) {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
                 logger.info("neverlauncher.handoff.denied username=" + username + " target=" + target + " reason=" + result.reason + " platform=velocity");
                 return;
             }
+            current.publishEvent(source.isBlank() ? "proxy.connect" : "proxy.switch", Map.of(
+                "username", username,
+                "source", source,
+                "target", target
+            ));
             logger.info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=velocity");
         });
     }

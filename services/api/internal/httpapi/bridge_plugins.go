@@ -40,7 +40,7 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
 		"status":                    "compatible",
 		"platforms":                 serverBridgeMatrixPlatforms0149(s.Version),
-		"requiredBackendEndpoints":  []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
+		"requiredBackendEndpoints":  []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event"},
 		"trustPolicy":               gameplayTrustPolicy0127,
 		"trustEnforcement":          "required",
 		"integrityPolicy":           serverBridgeIntegrityPolicy0135,
@@ -421,7 +421,7 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.19.3 ServerBridge 3",
+		"release":         "NeverLauncher 0.19.4 ServerBridge 3",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion": serverBridgeProtocolCurrent,
@@ -456,7 +456,7 @@ func bridgePluginsManifest940(version string) map[string]any {
 		"configExamples":   []string{"plugins/velocity-bridge/config.example.yml", "plugins/bungeecord-bridge/config.example.yml", "plugins/waterfall-bridge/config.example.yml", "plugins/bukkit-bridge/config.example.yml", "plugins/spigot-bridge/config.example.yml", "plugins/paper-bridge/config.example.yml", "plugins/purpur-bridge/config.example.yml", "plugins/folia-bridge/config.example.yml", "plugins/fabric-bridge/config.example.yml", "plugins/forge-bridge/config.example.yml", "plugins/neoforge-bridge/config.example.yml"},
 		"releaseAllowlist": "artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json",
 		"integrityPolicy":  serverBridgeIntegrityPolicy0135,
-		"backendEndpoints": []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
+		"backendEndpoints": []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
 	}
 }
 

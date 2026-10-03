@@ -82,7 +82,11 @@ func readAndRestoreNodeRequestBody0142(r *http.Request) ([]byte, error) {
 	if r.Body == nil {
 		return []byte{}, nil
 	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, serverBridgeNodeMaxBody0142+1))
+	maxBody := int64(serverBridgeNodeMaxBody0142)
+	if strings.HasSuffix(r.URL.Path, "/events") {
+		maxBody = int64(serverBridgeNodeEventMaxBody0194)
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
@@ -90,7 +94,7 @@ func readAndRestoreNodeRequestBody0142(r *http.Request) ([]byte, error) {
 		}
 		return nil, err
 	}
-	if len(body) > serverBridgeNodeMaxBody0142 {
+	if int64(len(body)) > maxBody {
 		return nil, &bridgeNodeAuthError0142{Status: http.StatusRequestEntityTooLarge, Reason: "serverbridge_node_request_too_large"}
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))

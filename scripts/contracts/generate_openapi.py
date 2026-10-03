@@ -22,7 +22,7 @@ public_prefixes = (
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
 public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/server-bridge/capabilities", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
-node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/session/has-joined"}
+node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/server-bridge/servers/{serverId}/events", "/api/v1/session/has-joined"}
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
 def is_public(method, path):
@@ -117,7 +117,7 @@ def body_schema(path):
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
-      "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest",
+      "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
       "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
       "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
       "/api/v1/minecraft/session":"MinecraftSessionRequest",
@@ -185,6 +185,7 @@ def response_schema(path, method):
     if path.endswith("/publish") and method=="post":return ref("ReleaseVersion")
     if path == "/api/v1/admin/login":return ref("AdminSession")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
+    if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
     return {"type":"object","additionalProperties":True}
 
 paths={}
@@ -216,7 +217,7 @@ for method,path in routes:
         op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
         if method != "get":
             op["responses"]["413"]={"$ref":"#/components/responses/PayloadTooLarge"}
-    if path in ("/api/v1/server-bridge/capabilities", "/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff") or path.endswith("/heartbeat"):
+    if path in ("/api/v1/server-bridge/capabilities", "/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/servers/{serverId}/events") or path.endswith("/heartbeat"):
         op["responses"]["426"]={"$ref":"#/components/responses/UpgradeRequired"}
     paths.setdefault(path,{})[method]=op
 
@@ -264,6 +265,9 @@ schemas={
 "ServerBridgeTelemetryV3":{"type":"object","required":["sequence","sampledAtUnixMillis","windowMillis","runtimeId","tickHealth","playersOnline","playersMax","heapUsedBytes","heapCommittedBytes","heapMaxBytes","nonHeapUsedBytes","nonHeapCommittedBytes","gcCollections","gcCollectionTimeMillis","gcCollectionsDelta","gcCollectionTimeDeltaMillis","threadCount","daemonThreadCount","peakThreadCount","samplingBudgetExceeded","metrics"],"properties":{"sequence":{"type":"integer","minimum":1},"sampledAtUnixMillis":{"type":"integer","minimum":1},"windowMillis":{"type":"integer","minimum":0,"maximum":600000},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"tps":{"type":"number","minimum":0,"maximum":1000},"mspt":{"type":"number","minimum":0,"maximum":600000},"tickHealth":{"type":"string","enum":["unavailable","healthy","degraded","overloaded"]},"playersOnline":{"type":"integer","minimum":0,"maximum":1000000},"playersMax":{"type":"integer","minimum":0,"maximum":1000000},"heapUsedBytes":{"type":"integer","minimum":0},"heapCommittedBytes":{"type":"integer","minimum":0},"heapMaxBytes":{"type":"integer","minimum":0},"nonHeapUsedBytes":{"type":"integer","minimum":0},"nonHeapCommittedBytes":{"type":"integer","minimum":0},"gcCollections":{"type":"integer","minimum":0},"gcCollectionTimeMillis":{"type":"integer","minimum":0},"gcCollectionsDelta":{"type":"integer","minimum":0},"gcCollectionTimeDeltaMillis":{"type":"integer","minimum":0},"threadCount":{"type":"integer","minimum":0,"maximum":1000000},"daemonThreadCount":{"type":"integer","minimum":0,"maximum":1000000},"peakThreadCount":{"type":"integer","minimum":0,"maximum":1000000},"loadedWorlds":{"type":"integer","minimum":0,"maximum":100000},"loadedDimensions":{"type":"integer","minimum":0,"maximum":100000},"loadedChunks":{"type":"integer","minimum":0},"entityCount":{"type":"integer","minimum":0},"samplingBudgetExceeded":{"type":"boolean"},"metrics":{"type":"array","items":{"type":"string","minLength":1,"maxLength":96},"minItems":1,"maxItems":64,"uniqueItems":True}},"additionalProperties":False},
 "HeartbeatRequestV3":{"type":"object","required":["protocolVersion","features","serverId","serverType","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":2,"uniqueItems":True},"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","forge","neoforge"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"},"runtime":ref("ServerBridgeRuntimeIdentityV3"),"telemetry":ref("ServerBridgeTelemetryV3"),"hostname":{"type":"string"},"playersOnline":{"type":"integer","minimum":0}},"additionalProperties":False},
 "HeartbeatRequest":{"oneOf":[ref("HeartbeatRequestV2"),ref("HeartbeatRequestV3")]},
+"ServerBridgeEventV3":{"type":"object","required":["sequence","eventId","runtimeId","type","occurredAtUnixMillis","payload","payloadSha256","signature"],"properties":{"sequence":{"type":"integer","minimum":1},"eventId":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9._:-]+$"},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"type":{"type":"string","enum":["server.startup","server.ready","server.shutdown","server.crash","server.error","player.login","player.join","player.quit","player.kick","world.load","world.unload","proxy.connect","proxy.switch"]},"occurredAtUnixMillis":{"type":"integer","minimum":1},"payload":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","maxLength":1024}},"payloadSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"signature":{"type":"string","minLength":1}},"additionalProperties":False},
+"ServerBridgeEventBatchV3":{"type":"object","required":["protocolVersion","features","serverId","runtimeId","events"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":3,"uniqueItems":True},"serverId":{"type":"string","minLength":1},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"events":{"type":"array","minItems":1,"maxItems":64,"items":ref("ServerBridgeEventV3")}},"additionalProperties":False},
+"ServerBridgeEventAckV3":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["protocolVersion","status","serverId","runtimeId","runtimeEpoch","ackSequence","inserted"],"properties":{"protocolVersion":{"const":3},"status":{"const":"events-acknowledged"},"serverId":{"type":"string"},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"runtimeEpoch":{"type":"integer","minimum":1},"ackSequence":{"type":"integer","minimum":0},"inserted":{"type":"integer","minimum":0,"maximum":64}},"additionalProperties":True}},"additionalProperties":True},
 "BridgeHandoffRequestV2":{"type":"object","required":["protocolVersion","username","targetServer"],"properties":{"protocolVersion":{"type":"integer","const":2},"username":{"type":"string","minLength":1},"targetServer":{"type":"string","minLength":1}},"additionalProperties":False},
 "BridgeHandoffRequestV3":{"type":"object","required":["protocolVersion","features","username","targetServer"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":2,"uniqueItems":True},"username":{"type":"string","minLength":1},"targetServer":{"type":"string","minLength":1}},"additionalProperties":False},
 "BridgeHandoffRequest":{"oneOf":[ref("BridgeHandoffRequestV2"),ref("BridgeHandoffRequestV3")]},

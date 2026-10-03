@@ -1,19 +1,19 @@
-# NeverLauncher 0.19.3 — Public ServerBridge Matrix
+# NeverLauncher 0.19.4 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.
 
-| Platform | Family | Role | Minecraft | Coverage | Protocol | Zero-patch | Node identity | One-time join | Handoff | Telemetry |
-|---|---|---|---|---|---:|---:|---:|---:|---:|---|
-| `velocity` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source  players + JVM |
-| `bungeecord` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source  players + JVM |
-| `waterfall` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source  players + JVM |
-| `bukkit` | `bukkit` | `backend` | `1.21.1` | `build-compatibility` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `spigot` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `paper` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `purpur` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `folia` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds; region-safe counters |
-| `fabric` | `fabric` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `forge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
-| `neoforge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target  TPS/MSPT + players + worlds + bounded chunks/entities |
+| Platform | Family | Role | Minecraft | Coverage | Protocol | Zero-patch | Node identity | One-time join | Handoff | Telemetry | Ordered events |
+|---|---|---|---|---|---:|---:|---:|---:|---|---|---|
+| `velocity` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source | players + JVM | lifecycle + login + connect/switch |
+| `bungeecord` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source | players + JVM | lifecycle + login + connect/switch |
+| `waterfall` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | source | players + JVM | lifecycle + login + connect/switch |
+| `bukkit` | `bukkit` | `backend` | `1.21.1` | `build-compatibility` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `spigot` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `paper` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `purpur` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `folia` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds; region-safe counters | lifecycle + player + world |
+| `fabric` | `fabric` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `forge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
+| `neoforge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
 
 Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.

@@ -12,6 +12,8 @@ import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -32,6 +34,7 @@ import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Mod(NeverLauncherForgeBridge.MOD_ID)
@@ -67,6 +70,7 @@ public final class NeverLauncherForgeBridge {
                         "runtime.discovery",
                         "runtime.ed25519-attestation",
                         "telemetry.server-v1",
+                        "events.ordered-stream-v1",
                         "loader.forge"
                     )
                 );
@@ -87,6 +91,36 @@ public final class NeverLauncherForgeBridge {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         runtime.close();
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() == null) return;
+        var profile = event.getEntity().getGameProfile();
+        runtime.publishEvent("player.join", Map.of(
+            "username", profile == null || profile.getName() == null ? "" : profile.getName(),
+            "uuid", profile == null || profile.getId() == null ? "" : profile.getId().toString()
+        ));
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() == null) return;
+        var profile = event.getEntity().getGameProfile();
+        runtime.publishEvent("player.quit", Map.of(
+            "username", profile == null || profile.getName() == null ? "" : profile.getName(),
+            "uuid", profile == null || profile.getId() == null ? "" : profile.getId().toString()
+        ));
+    }
+
+    @SubscribeEvent
+    public void onLevelLoad(LevelEvent.Load event) {
+        runtime.publishEvent("world.load", Map.of("world", String.valueOf(event.getLevel())));
+    }
+
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        runtime.publishEvent("world.unload", Map.of("world", String.valueOf(event.getLevel())));
     }
 
     @SubscribeEvent
@@ -206,6 +240,12 @@ public final class NeverLauncherForgeBridge {
                 if (!ctx.getConnection().isConnected()) {
                     return;
                 }
+                runtime.publishEvent("player.login", Map.of(
+                    "username", username,
+                    "uuid", uuid,
+                    "allowed", Boolean.toString(decision.allowed),
+                    "reason", decision.reason == null ? "" : decision.reason
+                ));
                 if (decision.allowed) {
                     LOGGER.info(
                         "neverlauncher.join.allowed username={} serverId={} platform=forge",

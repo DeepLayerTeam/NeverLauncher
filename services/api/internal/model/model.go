@@ -466,6 +466,24 @@ type ServerBridgeTelemetry struct {
 	Metrics                     []string `json:"metrics"`
 }
 
+// ServerBridgeEvent is one ordered, individually signed event bound to a verified runtime epoch.
+type ServerBridgeEvent struct {
+	Sequence             int64             `json:"sequence"`
+	EventID              string            `json:"eventId"`
+	RuntimeID            string            `json:"runtimeId"`
+	Type                 string            `json:"type"`
+	OccurredAtUnixMillis int64             `json:"occurredAtUnixMillis"`
+	Payload              map[string]string `json:"payload"`
+	PayloadSHA256        string            `json:"payloadSha256"`
+	Signature            string            `json:"signature"`
+}
+
+// ServerBridgeEventAppendResult is the durable contiguous ACK returned by PostgreSQL.
+type ServerBridgeEventAppendResult struct {
+	AckSequence int64 `json:"ackSequence"`
+	Inserted    int   `json:"inserted"`
+}
+
 // ServerBridgeRuntimeIdentity is the immutable process identity attested by the node Ed25519 key.
 type ServerBridgeRuntimeIdentity struct {
 	RuntimeID           string
@@ -602,6 +620,7 @@ type ServerBridgeMaintenanceResult struct {
 	TerminalJoinTicketsPurged int64     `json:"terminalJoinTicketsPurged"`
 	TerminalHandoffsPurged    int64     `json:"terminalHandoffsPurged"`
 	TelemetrySamplesPurged    int64     `json:"telemetrySamplesPurged"`
+	EventStreamRowsPurged     int64     `json:"eventStreamRowsPurged"`
 	CompletedAt               time.Time `json:"completedAt"`
 }
 

@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6742,6 +6742,75 @@
         }
       }
     },
+    "/api/v1/server-bridge/servers/{serverId}/events": {
+      "post": {
+        "operationId": "post_server_bridge_servers_by_serverId_events",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "POST /api/v1/server-bridge/servers/{serverId}/events",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeEventAckV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "426": {
+            "$ref": "#/components/responses/UpgradeRequired"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerBridgeEventBatchV3"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/server-bridge/servers/{serverId}/heartbeat": {
       "post": {
         "operationId": "post_server_bridge_servers_by_serverId_heartbeat",
@@ -9235,6 +9304,169 @@
             "$ref": "#/components/schemas/HeartbeatRequestV3"
           }
         ]
+      },
+      "ServerBridgeEventV3": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "eventId",
+          "runtimeId",
+          "type",
+          "occurredAtUnixMillis",
+          "payload",
+          "payloadSha256",
+          "signature"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "server.startup",
+              "server.ready",
+              "server.shutdown",
+              "server.crash",
+              "server.error",
+              "player.login",
+              "player.join",
+              "player.quit",
+              "player.kick",
+              "world.load",
+              "world.unload",
+              "proxy.connect",
+              "proxy.switch"
+            ]
+          },
+          "occurredAtUnixMillis": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "payload": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          },
+          "payloadSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ServerBridgeEventBatchV3": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "features",
+          "serverId",
+          "runtimeId",
+          "events"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 3
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 3,
+            "uniqueItems": true
+          },
+          "serverId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "$ref": "#/components/schemas/ServerBridgeEventV3"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ServerBridgeEventAckV3": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "data"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "protocolVersion",
+              "status",
+              "serverId",
+              "runtimeId",
+              "runtimeEpoch",
+              "ackSequence",
+              "inserted"
+            ],
+            "properties": {
+              "protocolVersion": {
+                "const": 3
+              },
+              "status": {
+                "const": "events-acknowledged"
+              },
+              "serverId": {
+                "type": "string"
+              },
+              "runtimeId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "runtimeEpoch": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "ackSequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inserted": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 64
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
       },
       "BridgeHandoffRequestV2": {
         "type": "object",

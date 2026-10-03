@@ -418,3 +418,24 @@ func TestServerBridgeTelemetryMigration0193(t *testing.T) {
 		}
 	}
 }
+
+func TestServerBridgeEventStreamMigration0194(t *testing.T) {
+	b, err := os.ReadFile("sql/0035_serverbridge_event_stream_0194.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"server_bridge_event_cursors_v3",
+		"server_bridge_events_v3",
+		"ack_sequence",
+		"runtime_epoch",
+		"payload_sha256",
+		"signature",
+		"UNIQUE (server_id, runtime_epoch, event_id)",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.19.4 ServerBridge event stream migration missing %q", required)
+		}
+	}
+}

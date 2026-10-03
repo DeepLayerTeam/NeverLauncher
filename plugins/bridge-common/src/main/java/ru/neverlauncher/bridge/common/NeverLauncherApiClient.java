@@ -15,6 +15,11 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class NeverLauncherApiClient {
     private static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-Node-v1";
@@ -31,7 +36,8 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_RUNTIME_TOPOLOGY,
         BridgeDefaults.FEATURE_RUNTIME_DISCOVERY,
         BridgeDefaults.FEATURE_RUNTIME_IDENTITY,
-        BridgeDefaults.FEATURE_SERVER_TELEMETRY
+        BridgeDefaults.FEATURE_SERVER_TELEMETRY,
+        BridgeDefaults.FEATURE_EVENT_STREAM
     );
 
     private final BridgeConfig config;
@@ -42,6 +48,10 @@ public final class NeverLauncherApiClient {
     private final String pluginSha256;
     private final BridgeRuntimeIdentity runtimeIdentity;
     private final BridgeTelemetrySampler telemetrySampler = new BridgeTelemetrySampler();
+    private final BridgeEventJournal eventJournal;
+    private final ExecutorService eventExecutor;
+    private final AtomicBoolean eventFlushScheduled = new AtomicBoolean(false);
+    private final AtomicBoolean eventClosed = new AtomicBoolean(false);
     private volatile BridgeProtocolNegotiation negotiation;
 
     public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
@@ -58,8 +68,28 @@ public final class NeverLauncherApiClient {
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(config.timeoutMs)).build();
         try {
             this.runtimeIdentity = identity == null ? null : BridgeRuntimeIdentity.capture(config, identity, runtimeDescriptor);
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("cannot create ServerBridge runtime identity", e);
+            if (this.runtimeIdentity != null && identity != null) {
+                this.eventJournal = new BridgeEventJournal(
+                    config.identityFile.resolveSibling("event-stream.journal"),
+                    config.serverId,
+                    this.runtimeIdentity.runtimeId(),
+                    identity
+                );
+                this.eventExecutor = Executors.newSingleThreadExecutor(task -> {
+                    Thread thread = new Thread(task, "neverlauncher-serverbridge-event-stream");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+                String crashedRuntime = this.eventJournal.previousUncleanRuntimeId();
+                if (!crashedRuntime.isBlank()) {
+                    publishEvent("server.crash", Map.of("previousRuntimeId", crashedRuntime, "detectedBy", "journal-recovery"));
+                }
+            } else {
+                this.eventJournal = null;
+                this.eventExecutor = null;
+            }
+        } catch (GeneralSecurityException | IOException e) {
+            throw new IllegalStateException("cannot create ServerBridge runtime identity/event journal", e);
         }
     }
 
@@ -246,6 +276,97 @@ public final class NeverLauncherApiClient {
         telemetrySampler.recordPlatformSample(sample);
     }
 
+    /** Enqueue an individually signed event without blocking the game/proxy thread on HTTP. */
+    public boolean publishEvent(String type, Map<String, String> payload) {
+        BridgeEventJournal journal = eventJournal;
+        if (journal == null || eventClosed.get()) return false;
+        try {
+            journal.append(type, payload == null ? Map.of() : payload);
+            scheduleEventFlush();
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public void flushEventsNow() {
+        if (eventJournal == null || eventClosed.get()) return;
+        flushEventStream();
+    }
+
+    /** Best-effort final flush; the journal remains authoritative if the backend is unavailable. */
+    public void closeEventStreamCleanly() {
+        if (!eventClosed.compareAndSet(false, true)) return;
+        try { flushEventStream(); } catch (RuntimeException ignored) {}
+        try { if (eventJournal != null) eventJournal.markClean(); } catch (IOException ignored) {}
+        if (eventExecutor != null) {
+            eventExecutor.shutdown();
+            try { eventExecutor.awaitTermination(1500, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+    }
+
+    private void scheduleEventFlush() {
+        ExecutorService executor = eventExecutor;
+        if (executor == null || executor.isShutdown() || eventClosed.get()) return;
+        if (!eventFlushScheduled.compareAndSet(false, true)) return;
+        executor.execute(() -> {
+            try { flushEventStream(); }
+            finally { eventFlushScheduled.set(false); }
+        });
+    }
+
+    private void flushEventStream() {
+        BridgeEventJournal journal = eventJournal;
+        if (journal == null) return;
+        for (int drain = 0; drain < 4; drain++) {
+            List<BridgeEventRecord> batch = journal.nextBatch(64);
+            if (batch.isEmpty()) return;
+            long ack;
+            try {
+                ack = sendEventBatch(batch);
+            } catch (Exception ignored) {
+                return;
+            }
+            if (ack < batch.get(0).sequence()) return;
+            try { journal.acknowledge(ack); } catch (IOException ignored) { return; }
+            if (ack < batch.get(batch.size() - 1).sequence()) return;
+        }
+    }
+
+    private long sendEventBatch(List<BridgeEventRecord> batch) throws IOException, InterruptedException, GeneralSecurityException {
+        BridgeProtocolNegotiation protocol = negotiateProtocol();
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
+            return batch.get(batch.size() - 1).sequence(); // rolling-upgrade backend: bounded local queue, feature unavailable
+        }
+        StringBuilder events = new StringBuilder("[");
+        for (int i = 0; i < batch.size(); i++) {
+            if (i > 0) events.append(',');
+            events.append(batch.get(i).toJson());
+        }
+        events.append(']');
+        String body = "{" + protocolFields(protocol) +
+            ",\"serverId\":" + quote(config.serverId) +
+            ",\"runtimeId\":" + quote(runtimeIdentity.runtimeId()) +
+            ",\"events\":" + events + "}";
+        IOException last = null;
+        for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
+            try {
+                HttpRequest request = signedRequest("POST", URI.create(config.eventStreamUrl()), body);
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    if (response.statusCode() >= 500) { last = new IOException("event stream backend HTTP " + response.statusCode()); continue; }
+                    throw new IOException("event stream rejected with HTTP " + response.statusCode());
+                }
+                long ack = extractJsonLong(response.body() == null ? "" : response.body(), "ackSequence");
+                if (ack < 0) throw new IOException("event stream response missing ACK");
+                return ack;
+            } catch (IOException e) {
+                last = e;
+            }
+        }
+        throw last == null ? new IOException("event stream delivery failed") : last;
+    }
+
     private String telemetryFields(BridgeProtocolNegotiation protocol) {
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || runtimeIdentity == null) return "";
         if (!protocol.features().contains(BridgeDefaults.FEATURE_SERVER_TELEMETRY)) return "";
@@ -311,6 +432,18 @@ public final class NeverLauncherApiClient {
         if (!reason.isBlank()) return reason;
         String message = extractJsonString(raw, "message");
         return message.isBlank() ? "session_denied" : message;
+    }
+
+    private static long extractJsonLong(String raw, String field) {
+        String marker = "\"" + field + "\":";
+        int idx = raw.indexOf(marker);
+        if (idx < 0) return -1L;
+        int start = idx + marker.length();
+        while (start < raw.length() && Character.isWhitespace(raw.charAt(start))) start++;
+        int end = start;
+        while (end < raw.length() && Character.isDigit(raw.charAt(end))) end++;
+        if (end == start) return -1L;
+        try { return Long.parseLong(raw.substring(start, end)); } catch (NumberFormatException ignored) { return -1L; }
     }
 
     private static int extractJsonInt(String raw, String field) {

@@ -83,6 +83,7 @@ public final class BridgeConfig {
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
     public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
     public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
+    public String eventStreamUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/events"; }
     public String statusUrl() { return backendUrl + "/api/v1/status"; }
 
     private static void ensureZeroPatchConfig(Path configPath, String defaultServerId) {

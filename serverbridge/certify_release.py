@@ -27,6 +27,8 @@ COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/BridgeTelemetrySnapshot.class',
     'ru/neverlauncher/bridge/common/BridgePlatformTelemetry.class',
     'ru/neverlauncher/bridge/common/BridgeTickSampler.class',
+    'ru/neverlauncher/bridge/common/BridgeEventRecord.class',
+    'ru/neverlauncher/bridge/common/BridgeEventJournal.class',
 ]
 REQUIRED_ENTRIES = {
     'velocity':['velocity-plugin.json','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class'],
@@ -162,6 +164,8 @@ def main() -> int:
         'nodeDiscovery': True, 'runtimeIdentity': 'Ed25519 node-bound process identity',
         'runtimeReplacementDetection': True,
         'serverTelemetry': True, 'boundedTelemetrySampling': True,
+        'serverEventStream': True, 'orderedEventAck': True,
+        'eventReplayProtection': True, 'eventReconnectResume': True,
         'artifacts': evidence,
     }
     out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')

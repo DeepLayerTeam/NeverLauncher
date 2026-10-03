@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +62,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         "runtime.discovery",
                         "runtime.ed25519-attestation",
                         "telemetry.server-v1",
+                        "events.ordered-stream-v1",
                         "proxy.bungee-api"
                     )
                 )
@@ -136,6 +138,11 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 JoinValidationResult finalResult = error == null && result != null
                     ? result
                     : new JoinValidationResult(false, error instanceof CompletionException ? "backend_unavailable" : "bridge_runtime_unavailable", "{}");
+                current.publishEvent("player.login", Map.of(
+                    "username", username,
+                    "allowed", Boolean.toString(finalResult.allowed),
+                    "reason", finalResult.reason == null ? "" : finalResult.reason
+                ));
                 if (!finalResult.allowed) {
                     event.setCancelled(true);
                     event.setCancelReason(TextComponent.fromLegacyText(finalResult.userMessage()));
@@ -155,6 +162,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         if (current == null || event.isCancelled() || event.getTarget() == null) return;
         String username = event.getPlayer().getName();
         String target = event.getTarget().getName();
+        String source = event.getPlayer().getServer() == null || event.getPlayer().getServer().getInfo() == null ? "" : event.getPlayer().getServer().getInfo().getName();
         String key = username.toLowerCase(Locale.ROOT) + "\u0000" + target.toLowerCase(Locale.ROOT);
         long now = System.currentTimeMillis();
         Long preparedUntil = preparedHandoffs.remove(key);
@@ -172,6 +180,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 return;
             }
             preparedHandoffs.put(key, System.currentTimeMillis() + 10_000L);
+            current.publishEvent(source.isBlank() ? "proxy.connect" : "proxy.switch", Map.of("username", username, "source", source, "target", target));
             getLogger().info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=" + expectedPlatform.id());
             getProxy().getScheduler().schedule(this,
                 () -> event.getPlayer().connect(event.getTarget(), (success, throwable) -> {

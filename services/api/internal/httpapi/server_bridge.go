@@ -114,6 +114,9 @@ type serverBridgeStore struct {
 	nextMaintenanceAt  time.Time
 	lastMaintenance    model.ServerBridgeMaintenanceResult
 	lastMaintenanceErr string
+	eventAck           map[string]int64
+	eventDigests       map[string]string
+	eventIDs           map[string]string
 }
 
 type registerBridgeServerRequest struct {
@@ -446,7 +449,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.3 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.4 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -459,6 +462,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 			"GET /api/v1/server-bridge/matrix",
 			"GET /api/v1/server-bridge/diagnostics",
 			"POST /api/v1/server-bridge/servers/{serverId}/heartbeat",
+			"POST /api/v1/server-bridge/servers/{serverId}/events",
 			"POST /api/v1/server-bridge/validate-join",
 			"POST /api/v1/server-bridge/handoff",
 			"POST /api/v1/server-bridge/servers/register",

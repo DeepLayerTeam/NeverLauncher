@@ -25,6 +25,7 @@ type ServerBridgeRepository interface {
 	TouchServerBridgeNodeHeartbeat(context.Context, string, string, string, int, time.Time) error
 	TouchServerBridgeNodeRuntimeHeartbeat(context.Context, string, string, string, int, model.ServerBridgeRuntimeIdentity, time.Time) (model.ServerBridgeRuntimeTransition, error)
 	SaveServerBridgeTelemetry(context.Context, string, int64, model.ServerBridgeTelemetry, time.Time) error
+	AppendServerBridgeEvents(context.Context, string, int64, string, []model.ServerBridgeEvent, time.Time) (model.ServerBridgeEventAppendResult, error)
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
 	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
@@ -516,6 +517,107 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 		}
 	}
 	return tx.Commit()
+}
+
+// AppendServerBridgeEvents atomically advances a contiguous per-runtime cursor and
+// writes the event row plus the global audit row in the same PostgreSQL transaction.
+// Resending an already-ACKed sequence is idempotent only when its digest/event id match.
+func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, events []model.ServerBridgeEvent, now time.Time) (model.ServerBridgeEventAppendResult, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	serverID = strings.TrimSpace(serverID)
+	runtimeID = strings.ToLower(strings.TrimSpace(runtimeID))
+	if serverID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 || len(events) == 0 || len(events) > 64 {
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: invalid server bridge event batch", ErrConflict)
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(194, hashtext($1))`, serverID); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	var status, currentRuntimeID string
+	var currentRuntimeEpoch int64
+	if err = tx.QueryRowContext(ctx, `SELECT status,runtime_id,runtime_epoch FROM server_bridge_nodes_v2 WHERE id=$1 FOR UPDATE`, serverID).Scan(&status, &currentRuntimeID, &currentRuntimeEpoch); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeEventAppendResult{}, ErrNotFound
+		}
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntimeID), runtimeID) {
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event runtime is not active", ErrConflict)
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_event_cursors_v3(server_id,runtime_epoch,runtime_id,ack_sequence,updated_at)
+		VALUES($1,$2,$3,0,$4) ON CONFLICT(server_id,runtime_epoch) DO NOTHING`, serverID, runtimeEpoch, runtimeID, now.UTC()); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	var ack int64
+	var cursorRuntime string
+	if err = tx.QueryRowContext(ctx, `SELECT runtime_id,ack_sequence FROM server_bridge_event_cursors_v3 WHERE server_id=$1 AND runtime_epoch=$2 FOR UPDATE`, serverID, runtimeEpoch).Scan(&cursorRuntime, &ack); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	if !strings.EqualFold(strings.TrimSpace(cursorRuntime), runtimeID) {
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event cursor runtime mismatch", ErrConflict)
+	}
+	inserted := 0
+	var previousBatchSequence int64
+	for i, event := range events {
+		if event.Sequence < 1 || event.RuntimeID == "" || !strings.EqualFold(event.RuntimeID, runtimeID) || event.EventID == "" || event.PayloadSHA256 == "" {
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: invalid event record", ErrConflict)
+		}
+		if i > 0 && event.Sequence != previousBatchSequence+1 {
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event batch sequence gap", ErrConflict)
+		}
+		previousBatchSequence = event.Sequence
+		if event.Sequence <= ack {
+			var storedDigest, storedEventID, storedType, storedSignature string
+			err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature)
+			if err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+			}
+			continue
+		}
+		if event.Sequence != ack+1 {
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event sequence gap", ErrConflict)
+		}
+		payload, marshalErr := json.Marshal(event.Payload)
+		if marshalErr != nil {
+			return model.ServerBridgeEventAppendResult{}, marshalErr
+		}
+		occurredAt := time.UnixMilli(event.OccurredAtUnixMillis).UTC()
+		res, execErr := tx.ExecContext(ctx, `INSERT INTO server_bridge_events_v3(server_id,runtime_epoch,runtime_id,sequence,event_id,event_type,occurred_at,payload,payload_sha256,signature,received_at)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11) ON CONFLICT(server_id,runtime_epoch,sequence) DO NOTHING`,
+			serverID, runtimeEpoch, runtimeID, event.Sequence, event.EventID, event.Type, occurredAt, string(payload), strings.ToLower(event.PayloadSHA256), event.Signature, now.UTC())
+		if execErr != nil {
+			return model.ServerBridgeEventAppendResult{}, execErr
+		}
+		rows, _ := res.RowsAffected()
+		if rows != 1 {
+			var storedDigest, storedEventID, storedType, storedSignature string
+			if err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature); err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+			}
+		} else {
+			inserted++
+			auditID := fmt.Sprintf("serverbridge-event-%s-%d-%d", serverID, runtimeEpoch, event.Sequence)
+			target := fmt.Sprintf("%s:%s:%d:%s", serverID, runtimeID, event.Sequence, event.EventID)
+			if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge event stream',$5) ON CONFLICT(id) DO NOTHING`,
+				auditID, serverID, "serverbridge:event:"+event.Type, target, now.UTC()); err != nil {
+				return model.ServerBridgeEventAppendResult{}, err
+			}
+		}
+		ack = event.Sequence
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_event_cursors_v3 SET ack_sequence=$3,runtime_id=$4,updated_at=$5 WHERE server_id=$1 AND runtime_epoch=$2`, serverID, runtimeEpoch, ack, runtimeID, now.UTC()); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeEventAppendResult{}, err
+	}
+	return model.ServerBridgeEventAppendResult{AckSequence: ack, Inserted: inserted}, nil
 }
 
 func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoinTicket, error) {
@@ -1031,6 +1133,14 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, execErr
 	} else {
 		result.TelemetrySamplesPurged, _ = res.RowsAffected()
+	}
+	// Raw delivery rows are retained for bounded diagnostics only. Permanent event
+	// evidence lives in audit_events, which is written in the same transaction as
+	// the ACK cursor. Keep cursor rows so a reconnect cannot reuse an old sequence.
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_events_v3 e USING (SELECT server_id,runtime_epoch,sequence FROM server_bridge_events_v3 WHERE received_at <= $1::timestamptz - interval '30 days' ORDER BY received_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.server_id=q.server_id AND e.runtime_epoch=q.runtime_epoch AND e.sequence=q.sequence`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.EventStreamRowsPurged, _ = res.RowsAffected()
 	}
 	if err = tx.Commit(); err != nil {
 		return result, err

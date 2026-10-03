@@ -58,7 +58,7 @@ for rel, needles in checks.items():
         if needle not in text:
             raise SystemExit(f"{rel}: missing {needle!r}")
 
-if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.19.3":
-    raise SystemExit("VERSION is not 0.19.3")
+if (ROOT / "VERSION").read_text(encoding="utf-8").strip() not in {"0.19.3", "0.19.4"}:
+    raise SystemExit("VERSION is not a telemetry-compatible 0.19.3/0.19.4 release")
 
 print("ServerBridge 0.19.3 telemetry production gate: PASS")

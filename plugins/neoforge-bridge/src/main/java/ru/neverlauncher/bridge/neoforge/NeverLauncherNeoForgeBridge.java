@@ -18,6 +18,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
@@ -33,6 +35,7 @@ import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Mod(NeverLauncherNeoForgeBridge.MOD_ID)
@@ -68,6 +71,7 @@ public final class NeverLauncherNeoForgeBridge {
                         "runtime.discovery",
                         "runtime.ed25519-attestation",
                         "telemetry.server-v1",
+                        "events.ordered-stream-v1",
                         "loader.neoforge"
                     )
                 );
@@ -89,6 +93,36 @@ public final class NeverLauncherNeoForgeBridge {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         runtime.close();
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() == null) return;
+        var profile = event.getEntity().getGameProfile();
+        runtime.publishEvent("player.join", Map.of(
+            "username", profile == null || profile.getName() == null ? "" : profile.getName(),
+            "uuid", profile == null || profile.getId() == null ? "" : profile.getId().toString()
+        ));
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() == null) return;
+        var profile = event.getEntity().getGameProfile();
+        runtime.publishEvent("player.quit", Map.of(
+            "username", profile == null || profile.getName() == null ? "" : profile.getName(),
+            "uuid", profile == null || profile.getId() == null ? "" : profile.getId().toString()
+        ));
+    }
+
+    @SubscribeEvent
+    public void onLevelLoad(LevelEvent.Load event) {
+        runtime.publishEvent("world.load", Map.of("world", String.valueOf(event.getLevel())));
+    }
+
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        runtime.publishEvent("world.unload", Map.of("world", String.valueOf(event.getLevel())));
     }
 
     @SubscribeEvent
@@ -210,6 +244,12 @@ public final class NeverLauncherNeoForgeBridge {
                 if (!connection.isConnected()) {
                     return;
                 }
+                runtime.publishEvent("player.login", Map.of(
+                    "username", username,
+                    "uuid", uuid,
+                    "allowed", Boolean.toString(decision.allowed),
+                    "reason", decision.reason == null ? "" : decision.reason
+                ));
                 if (decision.allowed) {
                     LOGGER.info(
                         "neverlauncher.join.allowed username={} serverId={} platform=neoforge",

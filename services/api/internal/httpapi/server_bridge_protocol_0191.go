@@ -31,6 +31,7 @@ const (
 	serverBridgeFeatureRuntimeDiscovery      = "runtime.node-discovery-v1"
 	serverBridgeFeatureRuntimeIdentity       = "security.runtime-identity-ed25519"
 	serverBridgeFeatureServerTelemetry       = "telemetry.server-v1"
+	serverBridgeFeatureEventStream           = "events.ordered-stream-v1"
 )
 
 var serverBridgeSupportedProtocols0191 = []int{serverBridgeProtocolV3, serverBridgeProtocolV2}
@@ -61,6 +62,7 @@ var serverBridgeV3Features0191 = []string{
 	serverBridgeFeatureRuntimeDiscovery,
 	serverBridgeFeatureRuntimeIdentity,
 	serverBridgeFeatureServerTelemetry,
+	serverBridgeFeatureEventStream,
 }
 
 type bridgeProtocolEnvelope0191 struct {

@@ -16,6 +16,7 @@ public final class BridgeDefaults {
     public static final String FEATURE_RUNTIME_DISCOVERY = "runtime.node-discovery-v1";
     public static final String FEATURE_RUNTIME_IDENTITY = "security.runtime-identity-ed25519";
     public static final String FEATURE_SERVER_TELEMETRY = "telemetry.server-v1";
+    public static final String FEATURE_EVENT_STREAM = "events.ordered-stream-v1";
     public static final String VELOCITY_ID = "neverlauncher-velocity-bridge";
     public static final String BUNGEECORD_ID = "neverlauncher-bungeecord-bridge";
     public static final String WATERFALL_ID = "neverlauncher-waterfall-bridge";
