@@ -67,6 +67,9 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 	if compatibilityIIGa0170Required(ver) {
 		gates = append(gates, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
 	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		gates = append(gates, "windows-protection-rc-adversarial-signed-production-boundary")
+	}
 	return gates
 }
 
@@ -193,6 +196,11 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, strict); err != nil {
 		return fmt.Errorf("Windows production signing: %w", err)
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
+			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
 		return fmt.Errorf("Linux production packages: %w", err)

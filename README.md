@@ -1,3 +1,9 @@
+## Windows Protection RC — 0.18.12
+
+NeverLauncher `0.18.12` делает Windows protection certification частью официальной release boundary. После полного 0.18.11 adversarial matrix production pipeline импортирует exact-commit `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, повторно проверяет Authenticode/RFC3161 для Windows x64/ARM64 и хэширует фактические CLI/Desktop/NeverGuard/Sensor/NeverRuntime binaries, package ZIP, package manifests, signing evidence и allowlist. На основе этих bytes создаётся `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` с aggressive profile, обязательным capability set и детерминированным `boundarySha256`/`certificateId`.
+
+`nl release windows-protection-verify` и `nl release publish-check` заново строят ожидаемую границу из содержимого release bundle, поэтому сертификат нельзя сохранить валидным после замены DLL/EXE/package manifest/adversarial evidence. RC certificate входит в exact `PRODUCTION_RELEASE_CANDIDATE.json` cohort, а stable `PRODUCTION_DELIVERY_RELEASE.json` якорит и сам RC, и adversarial certificate. Это release certification для заявленной user-mode Windows boundary; она не превращает NeverGuard в kernel/administrator-equivalent protection.
+
 ## Windows Adversarial CI — 0.18.11
 
 NeverLauncher `0.18.11` превращает накопленные Windows Guard fixtures в единый исполняемый adversarial certification pipeline. На `windows-2022` для Java `8/16/17/21/25` запускаются пять compatibility-positive и шесть adversarial-negative сценариев: Sensor startup, trusted module/Continuous Guard/process tree/HotSpot JIT, а также unsigned DLL, code-page drift, private executable thread, startup instrumentation, live debugger attach и foreign executable allocation.

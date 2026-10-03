@@ -1,3 +1,11 @@
+## Windows Protection RC / граница доверия релиза — 0.18.12
+
+В `0.18.12` Windows protection считается production-certified только когда один release bundle одновременно содержит exact-commit adversarial certification и те же Authenticode-signed x64/ARM64 bytes, которые публикуются пользователям. `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` повторно связывает repository/source commit/run, Java `8/16/17/21/25`, 55 adversarial/compatibility executions, aggressive profile и SHA-256 Windows CLI/Desktop/Guard/Sensor/Runtime/package artifacts.
+
+Сертификат не доверяется как декларация: verifier заново проверяет production Windows signing evidence, хэширует release artifacts и пересчитывает `boundarySha256`. Затем Windows Protection RC включается в pre-sign Production Release Candidate cohort и stable Production Delivery Release anchors. Подмена certificate/evidence или одного из связанных Windows artifacts после certification нарушает cohort/signature boundary и блокирует publish-check.
+
+Эта сертификация подтверждает конкретный протестированный user-mode release cohort и не заявляет защиту от локального administrator/kernel/firmware attacker, компрометации CI/signing credentials или подмены доверенного root key. Эти угрозы остаются за пределами NeverGuard user-mode boundary и требуют независимого key/release/host security.
+
 ## Windows Adversarial CI boundary — 0.18.11
 
 `0.18.11` добавляет повторяемую attack-simulation границу для Windows user-mode NeverGuard. CI реально запускает защищённую JVM и использует существующие native fixtures для попыток загрузки неподписанной DLL, изменения executable image page, старта потока из private executable memory, live debugger attach и foreign executable allocation; отдельная проверка блокирует startup instrumentation/JDWP до spawn. Параллельно positive cases подтверждают отсутствие ложных срабатываний на раннем Sensor startup, trusted native module lifecycle, Continuous Guard, Job-bound child process и штатный HotSpot JIT.

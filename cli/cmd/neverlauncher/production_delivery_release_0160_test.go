@@ -11,7 +11,7 @@ const testSourceCommit0160 = "0123456789abcdef0123456789abcdef01234567"
 
 func writeProductionReleaseFixture0160(t *testing.T, dir, ver, baseURL string) {
 	t.Helper()
-	for _, name := range productionDeliveryReleaseAnchorNames0160() {
+	for _, name := range productionDeliveryReleaseAnchorNames0160(ver) {
 		if name == productionReleaseCandidateFile01511 || name == publicProductionDeliveryMatrixFile0159 {
 			continue
 		}

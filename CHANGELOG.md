@@ -1,3 +1,11 @@
+## 0.18.12 — Windows Protection RC
+
+- Добавлен production `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json`, который строится не из ручных флагов, а из проверенного `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, production Authenticode/RFC3161 evidence и фактических x64/ARM64 Windows release bytes.
+- RC certificate привязан к exact source commit/repository/run-id, 55 live adversarial/compatibility executions на Java `8/16/17/21/25`, aggressive protection profile, обязательному capability set и SHA-256 каждого CLI/Desktop/Guard/Sensor/Runtime/package artifact.
+- `nl release windows-protection-verify` и `release publish-check` повторно вычисляют Windows protection boundary и fail-closed отклоняют подменённый adversarial certificate, package manifest, signed binary, capability cohort или `certificateId`.
+- `PRODUCTION_RELEASE_CANDIDATE.json` включает Windows Protection RC в exact pre-sign cohort, а `PRODUCTION_DELIVERY_RELEASE.json` дополнительно якорит и RC certificate, и adversarial certificate в stable GA boundary.
+- Production workflow скачивает exact-commit adversarial certificate из того же GitHub Actions run, передаёт его в `build-release.sh`, требует RC certificate в release bundle и проверяет соответствующие `RELEASE_MANIFEST.json` hashes. Добавлены Go tests и обязательные 0.18.12 preflight/repository-policy/CI gates.
+
 ## 0.18.11 — Windows Adversarial CI
 
 - Добавлен исполняемый `scripts/guard_ci/windows_adversarial.py`: для каждой сертифицированной Java `8/16/17/21/25` он запускает 11 реальных Windows/JVM сценариев как отдельные `cargo test` процессы и фиксирует exit status, timeout, SHA-256 stdout/stderr и SHA-256 всех Sensor/adversarial fixture binaries.

@@ -25,6 +25,7 @@ WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
 LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
 MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
 MANAGED_JRE_ARTIFACTS_DIR="${NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
+WINDOWS_ADVERSARIAL_CERTIFICATE="${NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}}"
 export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
@@ -145,6 +146,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,16,0) else '0')
 PYVER
 )"
+WINDOWS_PROTECTION_RC_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,18,12) else '0')
+PYVER
+)"
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require git
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
@@ -179,6 +190,13 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
     echo "Ошибка: Production Release Candidate запрещает staged изменения относительно HEAD" >&2
     exit 1
   }
+fi
+if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
+  [[ -n "${WINDOWS_ADVERSARIAL_CERTIFICATE}" ]] || {
+    echo "Ошибка: ${VERSION} Windows Protection RC требует NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
+    exit 1
+  }
+  require_file "${WINDOWS_ADVERSARIAL_CERTIFICATE}"
 fi
 if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
   [[ "${VERSION}" != *-* && "${VERSION}" != *+* ]] || {
@@ -315,6 +333,10 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       require_file "${windows_delivery_source}/${artifact}"
       cp "${windows_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
     done
+  fi
+  if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
+    log "Импорт Windows adversarial certificate exact commit"
+    cp "${WINDOWS_ADVERSARIAL_CERTIFICATE}" "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
   fi
   if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     linux_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
@@ -526,6 +548,10 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
 fi
 
+if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
+fi
+
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
@@ -547,6 +573,11 @@ fi
 if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json"
   "${RELEASE_CLI}" delivery verify-public-matrix --bundle "${OUT_DIR}" --version "${VERSION}"
+fi
+if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
+  log "Проверка Windows Protection RC certificate до release signing"
+  "${RELEASE_CLI}" release windows-protection-verify "${OUT_DIR}"
 fi
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_RELEASE_CANDIDATE.json"

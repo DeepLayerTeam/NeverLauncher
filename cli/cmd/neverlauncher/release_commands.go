@@ -17,7 +17,7 @@ import (
 
 func handleRelease(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, publish-plan, publish-check")
+		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, publish-plan, publish-check")
 	}
 	switch args[0] {
 	case "doctor":
@@ -106,6 +106,11 @@ func handleRelease(args []string) error {
 			if windowsSigningRequired0152(manifestVersion) {
 				if err := verifyWindowsSigningEvidence0152(args[1], manifestVersion, true); err != nil {
 					return fmt.Errorf("Windows x64/ARM64 Authenticode signing: %w", err)
+				}
+			}
+			if windowsProtectionReleaseRequired01812(manifestVersion) {
+				if err := verifyWindowsProtectionRelease01812(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Windows Protection RC certification: %w", err)
 				}
 			}
 			if linuxProductionRequired0153(manifestVersion) {
@@ -197,6 +202,22 @@ func handleRelease(args []string) error {
 		}
 		fmt.Println("Production Delivery Release certification пройдена: stable six-target GA boundary + immutable versioned public origin")
 		return nil
+	case "windows-protection-verify":
+		if len(args) < 2 {
+			return errors.New("release windows-protection-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !windowsProtectionReleaseRequired01812(manifestVersion) {
+			return fmt.Errorf("Windows Protection RC certification требуется только для 0.18.12+, bundle=%s", manifestVersion)
+		}
+		if err := verifyWindowsProtectionRelease01812(args[1], manifestVersion); err != nil {
+			return err
+		}
+		fmt.Println("Windows Protection RC certification пройдена: adversarial CI + signed x64/ARM64 production bytes + exact source commit")
+		return nil
 	case "sign":
 		if len(args) < 2 {
 			return errors.New("release sign требует путь к каталогу релиза")
@@ -282,6 +303,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/migration-stabilization-01510.py",
 		"scripts/smoke/offline/production-release-candidate-01511.py",
 		"scripts/smoke/offline/production-delivery-release-0160.py",
+		"scripts/smoke/offline/neverguard-windows-protection-rc-01812.py",
 		".github/workflows/public-production-delivery.yml",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
@@ -342,6 +364,7 @@ func releaseDoctor() error {
 		"migration-stabilization":        {"python3", "scripts/smoke/offline/migration-stabilization-01510.py"},
 		"production-release-candidate":   {"python3", "scripts/smoke/offline/production-release-candidate-01511.py"},
 		"production-delivery-release":    {"python3", "scripts/smoke/offline/production-delivery-release-0160.py"},
+		"windows-protection-rc":          {"python3", "scripts/smoke/offline/neverguard-windows-protection-rc-01812.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -374,7 +397,7 @@ func releasePlan(ver string) map[string]any {
 		"createdAt":     time.Now().UTC().Format(time.RFC3339),
 		"mode":          "production-release-automation",
 		"artifacts":     releaseArtifacts(ver),
-		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify", "release production-verify"},
+		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify", "release production-verify", "release windows-protection-verify"},
 	}
 }
 
@@ -566,6 +589,14 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
 		}
 	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		if err := writeWindowsProtectionRelease01812(out, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
+		if err := verifyWindowsProtectionRelease01812(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection RC self-check: %w", err)
+		}
+	}
 	if linuxProductionRequired0153(ver) {
 		if err := verifyLinuxProductionEvidence0153(out, ver, true); err != nil {
 			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
@@ -608,6 +639,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if windowsSigningRequired0152(ver) {
 		requiredFiles = append(requiredFiles, windowsSigningEvidenceFile0152)
 		checks = append(checks, "windows-x64-arm64-authenticode-evidence")
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		requiredFiles = append(requiredFiles, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+		checks = append(checks, "windows-protection-rc-adversarial-signed-production-boundary")
 	}
 	if linuxProductionRequired0153(ver) {
 		requiredFiles = append(requiredFiles, linuxProductionEvidenceFile0153, linuxDeliveryAllowlistFile0153, "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json")
@@ -722,12 +757,25 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"loaderCompatibilityGA":               loaderCompatibilityGA,
 		"deviceTrustCertified":                deviceTrustCertified,
 		"guardCICertified":                    guardCICertified,
+		"windowsProtectionReleaseCertified":   windowsProtectionReleaseRequired01812(ver),
 	}
 	if loaderCompatibilityReleaseCertified {
 		manifest["loaderCompatibilityReleaseCertificateSha256"] = loaderCompatibilityReleaseCertificateSHA256
 	}
 	if loaderCompatibilityGA {
 		manifest["loaderCompatibilityGASupportSha256"] = loaderCompatibilityGASupportSHA256
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		certHash, _, err := hashFile(filepath.Join(out, windowsProtectionReleaseFile01812))
+		if err != nil {
+			return err
+		}
+		adversarialHash, _, err := hashFile(filepath.Join(out, windowsAdversarialCertificateFile01811))
+		if err != nil {
+			return err
+		}
+		manifest["windowsProtectionReleaseCertificateSha256"] = certHash
+		manifest["windowsAdversarialCertificateSha256"] = adversarialHash
 	}
 	if productionReleaseCandidateRequired01511(ver) {
 		commit, err := normalizeSourceCommit01511(expectedCommit)
@@ -857,6 +905,9 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		LoaderCompatibilityReleaseCertificateSHA256 string `json:"loaderCompatibilityReleaseCertificateSha256"`
 		LoaderCompatibilityGA                       bool   `json:"loaderCompatibilityGA"`
 		LoaderCompatibilityGASupportSHA256          string `json:"loaderCompatibilityGASupportSha256"`
+		WindowsProtectionReleaseCertified           bool   `json:"windowsProtectionReleaseCertified"`
+		WindowsProtectionReleaseCertificateSHA256   string `json:"windowsProtectionReleaseCertificateSha256"`
+		WindowsAdversarialCertificateSHA256         string `json:"windowsAdversarialCertificateSha256"`
 		Artifacts                                   []struct {
 			Name     string `json:"name"`
 			Required bool   `json:"required"`
@@ -880,6 +931,28 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if windowsSigningRequired0152(manifest.Version) {
 		if err := verifyWindowsSigningEvidence0152(dir, manifest.Version, false); err != nil {
 			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
+		}
+	}
+	if windowsProtectionReleaseRequired01812(manifest.Version) {
+		if !manifest.WindowsProtectionReleaseCertified {
+			return errors.New("RELEASE_MANIFEST is not Windows Protection RC certified")
+		}
+		certHash, _, err := hashFile(filepath.Join(dir, windowsProtectionReleaseFile01812))
+		if err != nil {
+			return err
+		}
+		adversarialHash, _, err := hashFile(filepath.Join(dir, windowsAdversarialCertificateFile01811))
+		if err != nil {
+			return err
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionReleaseCertificateSHA256)) || !strings.EqualFold(certHash, manifest.WindowsProtectionReleaseCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows Protection RC certificate hash mismatch")
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsAdversarialCertificateSHA256)) || !strings.EqualFold(adversarialHash, manifest.WindowsAdversarialCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows adversarial certificate hash mismatch")
+		}
+		if err := verifyWindowsProtectionRelease01812(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Windows Protection RC certification: %w", err)
 		}
 	}
 	if linuxProductionRequired0153(manifest.Version) {
@@ -1099,6 +1172,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if productionDeliveryReleaseRequired0160(ver) {
 		artifacts = append(artifacts, productionDeliveryReleaseFile0160)
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		artifacts = append(artifacts, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
 	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,

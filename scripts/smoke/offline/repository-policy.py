@@ -3440,6 +3440,74 @@ if "neverguard-windows-adversarial-ci-01811.py" not in preflight or "test_window
 if "Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK" not in adversarial_gate_01811:
     fail("0.18.11 mandatory Windows Adversarial CI gate incomplete")
 
+
+# 0.18.12 Windows Protection RC — release certificate must bind the exact adversarial
+# certification and the Authenticode-signed x64/ARM64 bytes that are published.
+windows_protection_rc_01812 = read("cli/cmd/neverlauncher/windows_protection_release_01812.go")
+windows_protection_rc_tests_01812 = read("cli/cmd/neverlauncher/windows_protection_release_01812_test.go")
+windows_protection_gate_01812 = read("scripts/smoke/offline/neverguard-windows-protection-rc-01812.py")
+release_commands_01812 = read("cli/cmd/neverlauncher/release_commands.go")
+build_release_01812 = read("scripts/release/build-release.sh")
+production_candidate_01812 = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
+production_delivery_01812 = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
+for required in [
+    'WINDOWS_ADVERSARIAL_CERTIFICATE.json',
+    'WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json',
+    'windowsProtectionRepository01812       = "DeepLayerTeam/NeverLauncher"',
+    'cert.ScenarioExecutions != 55',
+    'expectedJava := []int{8, 16, 17, 21, 25}',
+    'verifyWindowsSigningEvidence0152(dir, ver, true)',
+    'expectedWindowsSignedArtifactsForVersion0157',
+    'func windowsProtectionBoundaryDigest01812',
+    'ProtectionProfile: "aggressive"',
+    '"continuous-attestation-v2"',
+    '"publishedWindowsBytesBound"',
+    'func verifyWindowsProtectionRelease01812',
+]:
+    if required not in windows_protection_rc_01812:
+        fail(f"0.18.12 Windows Protection RC implementation missing invariant: {required}")
+for required in [
+    'TestWindowsProtectionReleaseRequired01812',
+    'TestValidateWindowsAdversarialCertificate01812',
+    'TestWindowsProtectionBoundaryDigest01812BindsArtifactsAndCapabilities',
+]:
+    if required not in windows_protection_rc_tests_01812:
+        fail(f"0.18.12 Windows Protection RC tests missing: {required}")
+for required in [
+    'case "windows-protection-verify":',
+    'writeWindowsProtectionRelease01812(out, ver, expectedCommit)',
+    'verifyWindowsProtectionRelease01812(args[1], manifestVersion)',
+    '"windowsProtectionReleaseCertified"',
+    '"windowsProtectionReleaseCertificateSha256"',
+    '"windowsAdversarialCertificateSha256"',
+]:
+    if required not in release_commands_01812:
+        fail(f"0.18.12 release CLI Windows Protection RC wiring missing: {required}")
+for required in [
+    'NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE',
+    'WINDOWS_PROTECTION_RC_REQUIRED',
+    'WINDOWS_ADVERSARIAL_CERTIFICATE.json',
+    'release windows-protection-verify "${OUT_DIR}"',
+]:
+    if required not in build_release_01812:
+        fail(f"0.18.12 build-release Windows Protection RC wiring missing: {required}")
+if 'windows-protection-rc-adversarial-signed-production-boundary' not in production_candidate_01812 or 'verifyWindowsProtectionRelease01812(dir, ver)' not in production_candidate_01812:
+    fail("0.18.12 Production Release Candidate does not require/verify Windows Protection RC")
+if 'windows-protection-rc-adversarial-signed-production-boundary' not in production_delivery_01812 or 'windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812' not in production_delivery_01812:
+    fail("0.18.12 Production Delivery Release does not anchor Windows Protection RC")
+for required in [
+    'neverguard-windows-adversarial-certificate-${{ github.sha }}',
+    'NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE',
+    'WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json',
+    '.windowsProtectionReleaseCertified == true',
+]:
+    if required not in production_release_workflow:
+        fail(f"0.18.12 production release workflow Windows Protection RC wiring missing: {required}")
+if 'neverguard-windows-protection-rc-01812.py' not in preflight or 'neverguard-windows-protection-rc-01812.py' not in ci or 'TestWindowsProtection' not in ci:
+    fail("0.18.12 Windows Protection RC mandatory gate/Go tests are not wired into preflight/CI")
+if "Windows Protection RC release certificate + production gates 0.18.12 gate: OK" not in windows_protection_gate_01812:
+    fail("0.18.12 mandatory Windows Protection RC gate incomplete")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

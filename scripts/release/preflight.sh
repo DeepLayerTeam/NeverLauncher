@@ -116,6 +116,7 @@ run_step neverguard-continuous-guard-0189 python3 "${ROOT_DIR}/scripts/smoke/off
 run_step neverguard-attestation-v2-01810 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-attestation-v2-01810.py"
 run_step neverguard-windows-adversarial-ci-01811 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py"
 run_step neverguard-windows-adversarial-ci-tests python3 "${ROOT_DIR}/scripts/guard_ci/test_windows_adversarial.py"
+run_step neverguard-windows-protection-rc-01812 python3 "${ROOT_DIR}/scripts/smoke/offline/neverguard-windows-protection-rc-01812.py"
 run_step release-scripts bash "${ROOT_DIR}/scripts/smoke/offline/release-scripts.sh"
 run_step bridge-build bash "${ROOT_DIR}/scripts/smoke/offline/bridge-build.sh"
 

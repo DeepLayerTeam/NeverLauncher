@@ -85,11 +85,14 @@ func productionDeliveryReleaseRequiredGates0160(ver string) []string {
 	if compatibilityIIGa0170Required(ver) {
 		gates = append(gates, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
 	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		gates = append(gates, "windows-protection-rc-adversarial-signed-production-boundary")
+	}
 	return gates
 }
 
-func productionDeliveryReleaseAnchorNames0160() []string {
-	return []string{
+func productionDeliveryReleaseAnchorNames0160(ver string) []string {
+	names := []string{
 		productionReleaseCandidateFile01511,
 		deliveryManifestFile0151,
 		publicProductionDeliveryMatrixFile0159,
@@ -106,10 +109,14 @@ func productionDeliveryReleaseAnchorNames0160() []string {
 		"SBOM.spdx.json",
 		"PROVENANCE.json",
 	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		names = append(names, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+	}
+	return names
 }
 
-func productionDeliveryReleaseAnchors0160(dir string) ([]productionDeliveryReleaseAnchor0160, error) {
-	names := append([]string(nil), productionDeliveryReleaseAnchorNames0160()...)
+func productionDeliveryReleaseAnchors0160(dir, ver string) ([]productionDeliveryReleaseAnchor0160, error) {
+	names := append([]string(nil), productionDeliveryReleaseAnchorNames0160(ver)...)
 	sort.Strings(names)
 	anchors := make([]productionDeliveryReleaseAnchor0160, 0, len(names))
 	for _, name := range names {
@@ -240,7 +247,7 @@ func buildProductionDeliveryReleaseDocument0160(dir, ver string) (productionDeli
 		}
 		return targets[i].Platform < targets[j].Platform
 	})
-	anchors, err := productionDeliveryReleaseAnchors0160(dir)
+	anchors, err := productionDeliveryReleaseAnchors0160(dir, ver)
 	if err != nil {
 		return productionDeliveryRelease0160{}, err
 	}
@@ -324,7 +331,7 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	if err := validateProductionTargets0160(doc.PublishedTargets); err != nil {
 		return "", err
 	}
-	anchors, err := productionDeliveryReleaseAnchors0160(dir)
+	anchors, err := productionDeliveryReleaseAnchors0160(dir, ver)
 	if err != nil {
 		return "", err
 	}

@@ -90,6 +90,11 @@ jobs:
         with:
           name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
+      - name: Download exact-commit Windows adversarial certificate
+        uses: actions/download-artifact@v4
+        with:
+          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
+          path: windows-adversarial-certificate
       - name: Wait for exact-commit Compatibility + Device Trust certifications
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -161,6 +166,7 @@ jobs:
           NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
           NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
           NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
+          NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
@@ -213,6 +219,10 @@ jobs:
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_ARM64.json"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json"
           test -s "${DIR}/WINDOWS_SIGNING_EVIDENCE.json"
+          test -s "${DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
+          test -s "${DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
+          jq -e '.status == "windows-protection-release-candidate" and .protectionProfile == "aggressive" and .scenarioExecutions == 55 and (.javaMajors == [8,16,17,21,25]) and (.boundarySha256 | length == 64) and (.certificateId | startswith("sha256:")) and .invariants.publishedWindowsBytesBound == true and .invariants.x64Arm64AuthenticodeCertified == true' "${DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json" >/dev/null
+          jq -e '.windowsProtectionReleaseCertified == true and (.windowsProtectionReleaseCertificateSha256 | length == 64) and (.windowsAdversarialCertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
           test -s "${DIR}/neverguard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
