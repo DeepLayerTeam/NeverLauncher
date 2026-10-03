@@ -88,6 +88,9 @@ func productionDeliveryReleaseRequiredGates0160(ver string) []string {
 	if windowsProtectionReleaseRequired01812(ver) {
 		gates = append(gates, "windows-protection-rc-adversarial-signed-production-boundary")
 	}
+	if windowsProtectionGARequired0190(ver) {
+		gates = append(gates, "windows-protection-ga-fail-closed-user-mode-boundary")
+	}
 	return gates
 }
 
@@ -111,6 +114,9 @@ func productionDeliveryReleaseAnchorNames0160(ver string) []string {
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		names = append(names, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+	}
+	if windowsProtectionGARequired0190(ver) {
+		names = append(names, windowsProtectionGAFile0190)
 	}
 	return names
 }

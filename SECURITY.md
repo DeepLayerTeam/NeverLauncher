@@ -1,3 +1,9 @@
+## NeverGuard Windows Protection GA / граница доверия production-релиза — 0.19.0
+
+В `0.19.0` Windows protection GA остаётся строго user-mode. `WINDOWS_PROTECTION_GA_CERTIFICATE.json` требует проверенный 0.18.12 RC boundary, exact source commit, 55 adversarial/compatibility executions на Java 8/16/17/21/25, Authenticode/RFC3161 x64+ARM64 artifacts и полный fail-closed protection stack. GA verifier дополнительно проверяет package manifests и содержимое Windows ZIP и отклоняет kernel-driver (`.sys`) payload. Administrator/kernel attacker по-прежнему находится вне заявленной trust model.
+
+Production remote trust требует aggressive profile и свежий post-launch Attestation v2 continuous evidence. Backend выдаёт одноразовый continuous Guard ticket, привязанный к текущей Minecraft integrity session; ServerBridge join без валидного ticket при enforced Windows policy отклоняется. Любое нарушение Sensor/Module/Hook/Memory/Thread/Debug/JVM/Continuous state переводит runtime в fail-closed path.
+
 ## Windows Protection RC / граница доверия релиза — 0.18.12
 
 В `0.18.12` Windows protection считается production-certified только когда один release bundle одновременно содержит exact-commit adversarial certification и те же Authenticode-signed x64/ARM64 bytes, которые публикуются пользователям. `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` повторно связывает repository/source commit/run, Java `8/16/17/21/25`, 55 adversarial/compatibility executions, aggressive profile и SHA-256 Windows CLI/Desktop/Guard/Sensor/Runtime/package artifacts.

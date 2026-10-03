@@ -17,7 +17,7 @@ import (
 
 func handleRelease(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, publish-plan, publish-check")
+		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, windows-protection-ga-verify, publish-plan, publish-check")
 	}
 	switch args[0] {
 	case "doctor":
@@ -165,7 +165,7 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("0.16.0 Production Delivery Release certification: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release certification")
+			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release + Windows Protection GA certification")
 			return nil
 		}
 		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
@@ -217,6 +217,22 @@ func handleRelease(args []string) error {
 			return err
 		}
 		fmt.Println("Windows Protection RC certification пройдена: adversarial CI + signed x64/ARM64 production bytes + exact source commit")
+		return nil
+	case "windows-protection-ga-verify":
+		if len(args) < 2 {
+			return errors.New("release windows-protection-ga-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !windowsProtectionGARequired0190(manifestVersion) {
+			return fmt.Errorf("Windows Protection GA certification требуется только для 0.19.0+, bundle=%s", manifestVersion)
+		}
+		if err := verifyWindowsProtectionGA0190(args[1], manifestVersion); err != nil {
+			return err
+		}
+		fmt.Println("Windows Protection GA certification пройдена: fail-closed user-mode boundary + RC/adversarial/signed x64/ARM64 binding")
 		return nil
 	case "sign":
 		if len(args) < 2 {
@@ -397,7 +413,7 @@ func releasePlan(ver string) map[string]any {
 		"createdAt":     time.Now().UTC().Format(time.RFC3339),
 		"mode":          "production-release-automation",
 		"artifacts":     releaseArtifacts(ver),
-		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify", "release production-verify", "release windows-protection-verify"},
+		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify", "release production-verify", "release windows-protection-verify", "release windows-protection-ga-verify"},
 	}
 }
 
@@ -597,6 +613,14 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			return fmt.Errorf("Windows Protection RC self-check: %w", err)
 		}
 	}
+	if windowsProtectionGARequired0190(ver) {
+		if err := writeWindowsProtectionGA0190(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection GA certification: %w", err)
+		}
+		if err := verifyWindowsProtectionGA0190(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection GA self-check: %w", err)
+		}
+	}
 	if linuxProductionRequired0153(ver) {
 		if err := verifyLinuxProductionEvidence0153(out, ver, true); err != nil {
 			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
@@ -643,6 +667,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if windowsProtectionReleaseRequired01812(ver) {
 		requiredFiles = append(requiredFiles, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
 		checks = append(checks, "windows-protection-rc-adversarial-signed-production-boundary")
+	}
+	if windowsProtectionGARequired0190(ver) {
+		requiredFiles = append(requiredFiles, windowsProtectionGAFile0190)
+		checks = append(checks, "windows-protection-ga-fail-closed-user-mode-boundary")
 	}
 	if linuxProductionRequired0153(ver) {
 		requiredFiles = append(requiredFiles, linuxProductionEvidenceFile0153, linuxDeliveryAllowlistFile0153, "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json")
@@ -758,6 +786,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		"deviceTrustCertified":                deviceTrustCertified,
 		"guardCICertified":                    guardCICertified,
 		"windowsProtectionReleaseCertified":   windowsProtectionReleaseRequired01812(ver),
+		"windowsProtectionGACertified":        windowsProtectionGARequired0190(ver),
 	}
 	if loaderCompatibilityReleaseCertified {
 		manifest["loaderCompatibilityReleaseCertificateSha256"] = loaderCompatibilityReleaseCertificateSHA256
@@ -776,6 +805,13 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 		manifest["windowsProtectionReleaseCertificateSha256"] = certHash
 		manifest["windowsAdversarialCertificateSha256"] = adversarialHash
+	}
+	if windowsProtectionGARequired0190(ver) {
+		gaHash, _, err := hashFile(filepath.Join(out, windowsProtectionGAFile0190))
+		if err != nil {
+			return err
+		}
+		manifest["windowsProtectionGACertificateSha256"] = gaHash
 	}
 	if productionReleaseCandidateRequired01511(ver) {
 		commit, err := normalizeSourceCommit01511(expectedCommit)
@@ -908,6 +944,8 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		WindowsProtectionReleaseCertified           bool   `json:"windowsProtectionReleaseCertified"`
 		WindowsProtectionReleaseCertificateSHA256   string `json:"windowsProtectionReleaseCertificateSha256"`
 		WindowsAdversarialCertificateSHA256         string `json:"windowsAdversarialCertificateSha256"`
+		WindowsProtectionGACertified                bool   `json:"windowsProtectionGACertified"`
+		WindowsProtectionGACertificateSHA256        string `json:"windowsProtectionGACertificateSha256"`
 		Artifacts                                   []struct {
 			Name     string `json:"name"`
 			Required bool   `json:"required"`
@@ -953,6 +991,21 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 		if err := verifyWindowsProtectionRelease01812(dir, manifest.Version); err != nil {
 			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
+	}
+	if windowsProtectionGARequired0190(manifest.Version) {
+		if !manifest.WindowsProtectionGACertified {
+			return errors.New("RELEASE_MANIFEST is not Windows Protection GA certified")
+		}
+		gaHash, _, err := hashFile(filepath.Join(dir, windowsProtectionGAFile0190))
+		if err != nil {
+			return err
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionGACertificateSHA256)) || !strings.EqualFold(gaHash, manifest.WindowsProtectionGACertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows Protection GA certificate hash mismatch")
+		}
+		if err := verifyWindowsProtectionGA0190(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Windows Protection GA certification: %w", err)
 		}
 	}
 	if linuxProductionRequired0153(manifest.Version) {
@@ -1175,6 +1228,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		artifacts = append(artifacts, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+	}
+	if windowsProtectionGARequired0190(ver) {
+		artifacts = append(artifacts, windowsProtectionGAFile0190)
 	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,

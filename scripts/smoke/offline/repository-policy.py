@@ -3508,6 +3508,78 @@ if 'neverguard-windows-protection-rc-01812.py' not in preflight or 'neverguard-w
 if "Windows Protection RC release certificate + production gates 0.18.12 gate: OK" not in windows_protection_gate_01812:
     fail("0.18.12 mandatory Windows Protection RC gate incomplete")
 
+
+# 0.19.0 NeverGuard Windows Protection GA — production fail-closed user-mode boundary
+# must promote the verified RC cohort without introducing a kernel driver payload.
+windows_protection_ga_0190 = read("cli/cmd/neverlauncher/windows_protection_ga_0190.go")
+windows_protection_ga_tests_0190 = read("cli/cmd/neverlauncher/windows_protection_ga_0190_test.go")
+windows_protection_ga_gate_0190 = read("scripts/smoke/offline/neverguard-windows-protection-ga-0190.py")
+attestation_v2_0190 = read("services/api/internal/httpapi/guard_attestation_v2_01810.go")
+server_bridge_0190 = read("services/api/internal/httpapi/server_bridge.go")
+for required in [
+    'WINDOWS_PROTECTION_GA_CERTIFICATE.json',
+    'windowsProtectionGAStatus0190',
+    '"windows-protection-ga"',
+    'windowsProtectionGAModel0190',
+    '"user-mode"',
+    'windowsProtectionGAEnforcement0190',
+    '"fail-closed"',
+    'func verifyWindowsUserModeOnlyPackages0190',
+    'strings.HasSuffix(clean, ".sys")',
+    'verifyWindowsProtectionRelease01812(dir, ver)',
+    '"server-enforced-continuous-attestation-v2-join-ticket"',
+    '"kernel-driver-free-production-package"',
+    '"kernelDriverAbsent"',
+    'func verifyWindowsProtectionGA0190',
+]:
+    if required not in windows_protection_ga_0190:
+        fail(f"0.19.0 Windows Protection GA implementation missing invariant: {required}")
+for required in [
+    'TestWindowsProtectionGARequired0190',
+    'TestWindowsProtectionGABoundaryBindsRCAndArtifacts0190',
+    'TestWindowsProtectionGACapabilities0190',
+]:
+    if required not in windows_protection_ga_tests_0190:
+        fail(f"0.19.0 Windows Protection GA tests missing: {required}")
+for required in [
+    'case "windows-protection-ga-verify":',
+    'writeWindowsProtectionGA0190(out, ver)',
+    'verifyWindowsProtectionGA0190(out, ver)',
+    '"windowsProtectionGACertified"',
+    '"windowsProtectionGACertificateSha256"',
+    '"windows-protection-ga-fail-closed-user-mode-boundary"',
+]:
+    if required not in release_commands_01812:
+        fail(f"0.19.0 release CLI Windows Protection GA wiring missing: {required}")
+for required in [
+    'WINDOWS_PROTECTION_GA_REQUIRED',
+    'WINDOWS_PROTECTION_GA_CERTIFICATE.json',
+    'release windows-protection-ga-verify "${OUT_DIR}"',
+]:
+    if required not in build_release_01812:
+        fail(f"0.19.0 build-release Windows Protection GA wiring missing: {required}")
+if 'windows-protection-ga-fail-closed-user-mode-boundary' not in production_candidate_01812 or 'verifyWindowsProtectionGA0190(dir, ver)' not in production_candidate_01812:
+    fail("0.19.0 Production Release Candidate does not require/verify Windows Protection GA")
+if 'windows-protection-ga-fail-closed-user-mode-boundary' not in production_delivery_01812 or 'windowsProtectionGAFile0190' not in production_delivery_01812:
+    fail("0.19.0 Production Delivery Release does not anchor Windows Protection GA")
+for required in [
+    'WINDOWS_PROTECTION_GA_CERTIFICATE.json',
+    'windowsProtectionGACertified',
+    'windows-protection-ga',
+]:
+    if required not in production_release_workflow:
+        fail(f"0.19.0 production release workflow Windows Protection GA wiring missing: {required}")
+for required in ['guardContinuousJoinPurpose01810', 'ContinuousGuardHealthy', 'consumeGuardContinuousJoinTicket01810']:
+    if required not in attestation_v2_0190:
+        fail(f"0.19.0 server Attestation v2 enforcement missing: {required}")
+for required in ['ContinuousGuardTicket', 'consumeGuardContinuousJoinTicket01810', 'validateContinuousGuardTicketForMinecraftSession01810']:
+    if required not in server_bridge_0190:
+        fail(f"0.19.0 ServerBridge continuous ticket enforcement missing: {required}")
+if 'neverguard-windows-protection-ga-0190.py' not in preflight or 'neverguard-windows-protection-ga-0190.py' not in ci or 'TestWindowsProtectionGA' not in ci:
+    fail("0.19.0 Windows Protection GA mandatory gate/Go tests are not wired into preflight/CI")
+if "NeverGuard Windows Protection GA 0.19.0 production gate: OK" not in windows_protection_ga_gate_0190:
+    fail("0.19.0 mandatory Windows Protection GA gate incomplete")
+
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
     for item in errors:

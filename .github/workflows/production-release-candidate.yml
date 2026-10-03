@@ -223,6 +223,9 @@ jobs:
           test -s "${DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
           jq -e '.status == "windows-protection-release-candidate" and .protectionProfile == "aggressive" and .scenarioExecutions == 55 and (.javaMajors == [8,16,17,21,25]) and (.boundarySha256 | length == 64) and (.certificateId | startswith("sha256:")) and .invariants.publishedWindowsBytesBound == true and .invariants.x64Arm64AuthenticodeCertified == true' "${DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json" >/dev/null
           jq -e '.windowsProtectionReleaseCertified == true and (.windowsProtectionReleaseCertificateSha256 | length == 64) and (.windowsAdversarialCertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
+          test -s "${DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json"
+          jq -e '.status == "windows-protection-ga" and .releaseStage == "ga" and .protectionModel == "user-mode" and .protectionProfile == "aggressive" and .enforcementMode == "fail-closed" and .scenarioExecutions == 55 and (.javaMajors == [8,16,17,21,25]) and (.boundarySha256 | length == 64) and (.certificateId | startswith("sha256:")) and .invariants.kernelDriverAbsent == true and .invariants.userModeProtectionBoundary == true and .invariants.continuousAttestationV2Required == true and .invariants.oneTimeServerJoinTicketRequired == true' "${DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json" >/dev/null
+          jq -e '.windowsProtectionGACertified == true and (.windowsProtectionGACertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
           test -s "${DIR}/neverguard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"

@@ -1,3 +1,11 @@
+## 0.19.0 — NeverGuard Windows Protection GA
+
+- Windows protection переведён из RC в GA отдельным machine-verifiable `WINDOWS_PROTECTION_GA_CERTIFICATE.json`: GA строится только поверх успешно перепроверенного `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json`, exact adversarial cohort из 55 Windows/JVM executions и тех же Authenticode/RFC3161 x64/ARM64 bytes.
+- GA boundary фиксирует `user-mode + aggressive + fail-closed`, полный capability set Sensor/Module Guard/Hook Engine/Memory/Thread+Process/Debug/JVM-aware/Continuous Guard/Attestation v2 и deterministic `boundarySha256`/`certificateId`.
+- Production verifier открывает x64/ARM64 package manifests и ZIP и fail-closed отклоняет `.sys`/driver payload: 0.19.0 сертифицирует именно user-mode protection без kernel driver.
+- Production Candidate, Production Delivery Release, `RELEASE_MANIFEST.json`, `publish-check`, release CLI, build script и GitHub production workflow теперь обязаны включать/проверять GA certificate. Server-side continuous Attestation v2 + one-time ServerBridge join ticket остаются обязательной production границей.
+- Добавлены targeted Go tests и обязательный `neverguard-windows-protection-ga-0190.py` gate в CI/preflight/repository-policy.
+
 ## 0.18.12 — Windows Protection RC
 
 - Добавлен production `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json`, который строится не из ручных флагов, а из проверенного `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, production Authenticode/RFC3161 evidence и фактических x64/ARM64 Windows release bytes.

@@ -966,6 +966,12 @@ jobs:
           set -euo pipefail
           python3 scripts/smoke/offline/neverguard-windows-protection-rc-01812.py
           (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtection' -count=1)
+      - name: Validate 0.19.0 Windows Protection GA production gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/smoke/offline/neverguard-windows-protection-ga-0190.py
+          (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtectionGA' -count=1)
       - name: Upload Windows adversarial certificate
         if: always()
         uses: actions/upload-artifact@v4

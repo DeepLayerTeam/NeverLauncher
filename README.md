@@ -1,3 +1,9 @@
+## NeverGuard Windows Protection GA — 0.19.0
+
+NeverLauncher `0.19.0` переводит накопленный Windows protection stack `0.18.1–0.18.12` в production GA. Официальный Windows release считается GA только при aggressive/fail-closed user-mode boundary: подписанный ранний Sensor, Continuous Module Guard, IAT Hook Engine, executable-memory integrity, Thread & Process Integrity, Debug & Instrumentation Guard, JVM-aware enforcement для Java 8/16/17/21/25, Sensor↔Guard Continuous Guard и post-launch Attestation v2 с одноразовым ServerBridge join ticket.
+
+`WINDOWS_PROTECTION_GA_CERTIFICATE.json` не является декларацией: CLI сначала заново проверяет RC certificate, adversarial evidence и Authenticode production boundary, затем хэширует exact Windows release cohort и проверяет package manifests/ZIP на отсутствие kernel `.sys` payload. GA certificate включается в Production Release Candidate и Production Delivery Release, якорится в `RELEASE_MANIFEST.json` и обязателен для `release publish-check`. Audit/compat остаются диагностическими профилями, но remote production attestation допустима только для `aggressive`.
+
 ## Windows Protection RC — 0.18.12
 
 NeverLauncher `0.18.12` делает Windows protection certification частью официальной release boundary. После полного 0.18.11 adversarial matrix production pipeline импортирует exact-commit `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, повторно проверяет Authenticode/RFC3161 для Windows x64/ARM64 и хэширует фактические CLI/Desktop/NeverGuard/Sensor/NeverRuntime binaries, package ZIP, package manifests, signing evidence и allowlist. На основе этих bytes создаётся `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` с aggressive profile, обязательным capability set и детерминированным `boundarySha256`/`certificateId`.

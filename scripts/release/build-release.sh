@@ -156,6 +156,16 @@ except Exception:
 print('1' if (major,minor,patch) >= (0,18,12) else '0')
 PYVER
 )"
+WINDOWS_PROTECTION_GA_REQUIRED="$(python3 - "${VERSION}" <<'PYVER'
+import sys
+parts=sys.argv[1].split('.',2)
+try:
+    major,minor,patch=int(parts[0]),int(parts[1]),int(parts[2].split('-',1)[0].split('+',1)[0])
+except Exception:
+    print('0'); raise SystemExit
+print('1' if (major,minor,patch) >= (0,19,0) else '0')
+PYVER
+)"
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require git
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
@@ -551,6 +561,9 @@ fi
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
 fi
+if [[ "${WINDOWS_PROTECTION_GA_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
+fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
@@ -578,6 +591,11 @@ if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
   log "Проверка Windows Protection RC certificate до release signing"
   "${RELEASE_CLI}" release windows-protection-verify "${OUT_DIR}"
+fi
+if [[ "${WINDOWS_PROTECTION_GA_REQUIRED}" == "1" ]]; then
+  require_file "${OUT_DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json"
+  log "Проверка Windows Protection GA certificate до release signing"
+  "${RELEASE_CLI}" release windows-protection-ga-verify "${OUT_DIR}"
 fi
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_RELEASE_CANDIDATE.json"

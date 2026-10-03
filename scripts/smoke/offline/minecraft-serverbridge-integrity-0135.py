@@ -74,7 +74,7 @@ for platform, cls, expected in [("bukkit", "NeverLauncherBukkitBridge", "BUKKIT"
     require(source, ["extends BukkitFamilyBridgePlugin", f"BukkitFamilyPlatform.{expected}"], f"{platform} Bukkit-family adapter")
 
 frontend = read("apps/desktop/src/main.tsx")
-require(frontend, ["createServerJoinBeforeLaunch(username: string, minecraftAccessToken: string)", "minecraftAccessToken", "minecraftCredentials.accessToken"], "Desktop Minecraft→ServerBridge binding")
+require(frontend, ["createContinuousGuardTicket(processId: string)", "createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string)", "continuousGuardTicket", "stop_runtime_process", "minecraftCredentials.accessToken"], "Desktop Minecraft→ServerBridge post-launch integrity binding")
 
 config = read("services/api/internal/config/config.go")
 require(config, ["BridgeReleaseAllowlistJSON", "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", "velocitySha256", "paperSha256", "purpurSha256"], "production ServerBridge release policy")

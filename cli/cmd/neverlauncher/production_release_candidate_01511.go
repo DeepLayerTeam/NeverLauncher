@@ -70,6 +70,9 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 	if windowsProtectionReleaseRequired01812(ver) {
 		gates = append(gates, "windows-protection-rc-adversarial-signed-production-boundary")
 	}
+	if windowsProtectionGARequired0190(ver) {
+		gates = append(gates, "windows-protection-ga-fail-closed-user-mode-boundary")
+	}
 	return gates
 }
 
@@ -200,6 +203,11 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	if windowsProtectionReleaseRequired01812(ver) {
 		if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
 			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
+	}
+	if windowsProtectionGARequired0190(ver) {
+		if err := verifyWindowsProtectionGA0190(dir, ver); err != nil {
+			return fmt.Errorf("Windows Protection GA certification: %w", err)
 		}
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
