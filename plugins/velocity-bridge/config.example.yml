@@ -14,3 +14,7 @@ profile:
   projectId: "default"
   profileId: "vanilla"
   channel: "stable"
+
+telemetry:
+  sampleIntervalSeconds: 10
+  samplingBudgetMs: 20

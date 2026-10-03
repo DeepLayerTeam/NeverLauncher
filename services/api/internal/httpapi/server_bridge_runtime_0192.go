@@ -268,6 +268,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	server.ServerBrand = runtime.ServerBrand
 	server.RuntimeCapabilities = append([]string(nil), runtime.Capabilities...)
 	server.RuntimeIdentityDigest = runtime.IdentityDigest
+	server.Telemetry = nil
 	server.ProtocolVersion = protocolVersion
 	server.LastHeartbeatAt = now
 	server.Fingerprint = firstNonEmpty(server.Fingerprint, "plugin:"+pluginVersion)

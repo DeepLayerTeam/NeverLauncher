@@ -15,3 +15,7 @@ security:
   failMode: "closed"
   requireLauncherSession: true
   requireIntegrity: true
+
+telemetry:
+  sampleIntervalSeconds: 10
+  samplingBudgetMs: 20

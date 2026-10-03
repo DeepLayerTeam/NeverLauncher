@@ -387,50 +387,83 @@ type MinecraftJoin struct {
 // key material never crosses the node/backend boundary. Legacy token fields remain
 // internal only so the 0.14.1 schema can be migrated safely.
 type ServerBridgeNode struct {
-	ID                         string    `json:"id"`
-	Name                       string    `json:"name"`
-	Kind                       string    `json:"kind"`
-	ProjectID                  string    `json:"projectId"`
-	ProfileID                  string    `json:"profileId,omitempty"`
-	Fingerprint                string    `json:"fingerprint,omitempty"`
-	TokenHash                  string    `json:"-"` // legacy 0.14.1 credential, never used by 0.14.2 auth
-	TokenPrefix                string    `json:"-"`
-	KeyAlgorithm               string    `json:"keyAlgorithm"`
-	PublicKey                  string    `json:"-"`
-	KeyFingerprint             string    `json:"keyFingerprint"`
-	IdentityEpoch              int64     `json:"identityEpoch"`
-	IdentityRotatedAt          time.Time `json:"identityRotatedAt,omitempty"`
-	Status                     string    `json:"status"`
-	ProtocolVersion            int       `json:"protocolVersion"`
-	PluginVersion              string    `json:"pluginVersion,omitempty"`
-	PluginSHA256               string    `json:"pluginSha256,omitempty"`
-	IntegrityStatus            string    `json:"integrityStatus,omitempty"`
-	IntegrityVerifiedAt        time.Time `json:"integrityVerifiedAt,omitempty"`
-	LastHeartbeatAt            time.Time `json:"lastHeartbeatAt,omitempty"`
-	CreatedAt                  time.Time `json:"createdAt"`
-	RotatedAt                  time.Time `json:"rotatedAt,omitempty"`
-	RuntimeID                  string    `json:"runtimeId,omitempty"`
-	RuntimeEpoch               int64     `json:"runtimeEpoch,omitempty"`
-	RuntimePreviousID          string    `json:"runtimePreviousId,omitempty"`
-	RuntimeTransition          string    `json:"runtimeTransition,omitempty"`
-	RuntimeReplacementDetected bool      `json:"runtimeReplacementDetected,omitempty"`
-	RuntimeStartedAt           time.Time `json:"runtimeStartedAt,omitempty"`
-	RuntimeFirstSeenAt         time.Time `json:"runtimeFirstSeenAt,omitempty"`
-	RuntimeLastSeenAt          time.Time `json:"runtimeLastSeenAt,omitempty"`
-	RuntimeUptimeSeconds       int64     `json:"runtimeUptimeSeconds,omitempty"`
-	RuntimeProcessID           int64     `json:"runtimeProcessId,omitempty"`
-	Hostname                   string    `json:"hostname,omitempty"`
-	NodeName                   string    `json:"nodeName,omitempty"`
-	MinecraftVersion           string    `json:"minecraftVersion,omitempty"`
-	JavaVersion                string    `json:"javaVersion,omitempty"`
-	JavaVendor                 string    `json:"javaVendor,omitempty"`
-	JavaVMName                 string    `json:"javaVmName,omitempty"`
-	RuntimePlatform            string    `json:"runtimePlatform,omitempty"`
-	LoaderName                 string    `json:"loaderName,omitempty"`
-	LoaderVersion              string    `json:"loaderVersion,omitempty"`
-	ServerBrand                string    `json:"serverBrand,omitempty"`
-	RuntimeCapabilities        []string  `json:"runtimeCapabilities,omitempty"`
-	RuntimeIdentityDigest      string    `json:"runtimeIdentityDigest,omitempty"`
+	ID                         string                 `json:"id"`
+	Name                       string                 `json:"name"`
+	Kind                       string                 `json:"kind"`
+	ProjectID                  string                 `json:"projectId"`
+	ProfileID                  string                 `json:"profileId,omitempty"`
+	Fingerprint                string                 `json:"fingerprint,omitempty"`
+	TokenHash                  string                 `json:"-"` // legacy 0.14.1 credential, never used by 0.14.2 auth
+	TokenPrefix                string                 `json:"-"`
+	KeyAlgorithm               string                 `json:"keyAlgorithm"`
+	PublicKey                  string                 `json:"-"`
+	KeyFingerprint             string                 `json:"keyFingerprint"`
+	IdentityEpoch              int64                  `json:"identityEpoch"`
+	IdentityRotatedAt          time.Time              `json:"identityRotatedAt,omitempty"`
+	Status                     string                 `json:"status"`
+	ProtocolVersion            int                    `json:"protocolVersion"`
+	PluginVersion              string                 `json:"pluginVersion,omitempty"`
+	PluginSHA256               string                 `json:"pluginSha256,omitempty"`
+	IntegrityStatus            string                 `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt        time.Time              `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt            time.Time              `json:"lastHeartbeatAt,omitempty"`
+	CreatedAt                  time.Time              `json:"createdAt"`
+	RotatedAt                  time.Time              `json:"rotatedAt,omitempty"`
+	RuntimeID                  string                 `json:"runtimeId,omitempty"`
+	RuntimeEpoch               int64                  `json:"runtimeEpoch,omitempty"`
+	RuntimePreviousID          string                 `json:"runtimePreviousId,omitempty"`
+	RuntimeTransition          string                 `json:"runtimeTransition,omitempty"`
+	RuntimeReplacementDetected bool                   `json:"runtimeReplacementDetected,omitempty"`
+	RuntimeStartedAt           time.Time              `json:"runtimeStartedAt,omitempty"`
+	RuntimeFirstSeenAt         time.Time              `json:"runtimeFirstSeenAt,omitempty"`
+	RuntimeLastSeenAt          time.Time              `json:"runtimeLastSeenAt,omitempty"`
+	RuntimeUptimeSeconds       int64                  `json:"runtimeUptimeSeconds,omitempty"`
+	RuntimeProcessID           int64                  `json:"runtimeProcessId,omitempty"`
+	Hostname                   string                 `json:"hostname,omitempty"`
+	NodeName                   string                 `json:"nodeName,omitempty"`
+	MinecraftVersion           string                 `json:"minecraftVersion,omitempty"`
+	JavaVersion                string                 `json:"javaVersion,omitempty"`
+	JavaVendor                 string                 `json:"javaVendor,omitempty"`
+	JavaVMName                 string                 `json:"javaVmName,omitempty"`
+	RuntimePlatform            string                 `json:"runtimePlatform,omitempty"`
+	LoaderName                 string                 `json:"loaderName,omitempty"`
+	LoaderVersion              string                 `json:"loaderVersion,omitempty"`
+	ServerBrand                string                 `json:"serverBrand,omitempty"`
+	RuntimeCapabilities        []string               `json:"runtimeCapabilities,omitempty"`
+	RuntimeIdentityDigest      string                 `json:"runtimeIdentityDigest,omitempty"`
+	Telemetry                  *ServerBridgeTelemetry `json:"telemetry,omitempty"`
+}
+
+// ServerBridgeTelemetry is one bounded telemetry snapshot bound to one verified JVM runtime.
+type ServerBridgeTelemetry struct {
+	Sequence                    int64    `json:"sequence"`
+	SampledAtUnixMillis         int64    `json:"sampledAtUnixMillis"`
+	WindowMillis                int64    `json:"windowMillis"`
+	RuntimeID                   string   `json:"runtimeId"`
+	RuntimeEpoch                int64    `json:"runtimeEpoch"`
+	TPS                         *float64 `json:"tps,omitempty"`
+	MSPT                        *float64 `json:"mspt,omitempty"`
+	TickHealth                  string   `json:"tickHealth"`
+	PlayersOnline               int      `json:"playersOnline"`
+	PlayersMax                  int      `json:"playersMax"`
+	HeapUsedBytes               int64    `json:"heapUsedBytes"`
+	HeapCommittedBytes          int64    `json:"heapCommittedBytes"`
+	HeapMaxBytes                int64    `json:"heapMaxBytes"`
+	NonHeapUsedBytes            int64    `json:"nonHeapUsedBytes"`
+	NonHeapCommittedBytes       int64    `json:"nonHeapCommittedBytes"`
+	GCCollections               int64    `json:"gcCollections"`
+	GCCollectionTimeMillis      int64    `json:"gcCollectionTimeMillis"`
+	GCCollectionsDelta          int64    `json:"gcCollectionsDelta"`
+	GCCollectionTimeDeltaMillis int64    `json:"gcCollectionTimeDeltaMillis"`
+	ThreadCount                 int      `json:"threadCount"`
+	DaemonThreadCount           int      `json:"daemonThreadCount"`
+	PeakThreadCount             int      `json:"peakThreadCount"`
+	LoadedWorlds                *int     `json:"loadedWorlds,omitempty"`
+	LoadedDimensions            *int     `json:"loadedDimensions,omitempty"`
+	LoadedChunks                *int64   `json:"loadedChunks,omitempty"`
+	EntityCount                 *int64   `json:"entityCount,omitempty"`
+	SamplingBudgetExceeded      bool     `json:"samplingBudgetExceeded"`
+	Metrics                     []string `json:"metrics"`
 }
 
 // ServerBridgeRuntimeIdentity is the immutable process identity attested by the node Ed25519 key.
@@ -568,6 +601,7 @@ type ServerBridgeMaintenanceResult struct {
 	TopologyEdgesDisabled     int64     `json:"topologyEdgesDisabled"`
 	TerminalJoinTicketsPurged int64     `json:"terminalJoinTicketsPurged"`
 	TerminalHandoffsPurged    int64     `json:"terminalHandoffsPurged"`
+	TelemetrySamplesPurged    int64     `json:"telemetrySamplesPurged"`
 	CompletedAt               time.Time `json:"completedAt"`
 }
 

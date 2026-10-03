@@ -12,11 +12,13 @@ import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /**
  * Production Bukkit-family ServerBridge runtime shared by CraftBukkit, Spigot,
@@ -42,6 +45,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
     private ScheduledExecutorService networkExecutor;
+    private volatile Object telemetryTask;
+    private volatile Object foliaTelemetryTask;
 
     protected BukkitFamilyBridgePlugin(BukkitFamilyPlatform expectedPlatform) {
         this.expectedPlatform = expectedPlatform;
@@ -73,6 +78,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             thread.setUncaughtExceptionHandler((t, error) -> getLogger().severe("NeverLauncher bridge I/O worker failed: " + error.getMessage()));
             return thread;
         });
+        startTelemetrySampling();
         scheduleHeartbeat(0);
 
         RuntimeState state = runtime;
@@ -87,6 +93,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     @Override
     public final void onDisable() {
         stopping.set(true);
+        stopTelemetrySampling();
         ScheduledExecutorService executor = networkExecutor;
         if (executor != null) {
             executor.shutdownNow();
@@ -199,6 +206,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             "artifact.sha256",
             "runtime.discovery",
             "runtime.ed25519-attestation",
+            "telemetry.server-v1",
             "plugin.bukkit-api"
         ));
         if (expectedPlatform == BukkitFamilyPlatform.FOLIA) capabilities.add("scheduler.folia-safe-io");
@@ -213,6 +221,178 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         String brand = safe(Bukkit.getName());
         if (!serverVersion.isBlank()) brand = brand.isBlank() ? serverVersion : brand + " " + serverVersion;
         return BridgeRuntimeDescriptor.of(minecraftVersion, expectedPlatform.id(), expectedPlatform.displayName(), serverVersion, brand, capabilities);
+    }
+
+
+    private void startTelemetrySampling() {
+        RuntimeState state = runtime;
+        if (state == null || stopping.get()) return;
+        long periodTicks = Math.max(100L, state.config.telemetrySampleIntervalSeconds * 20L);
+        if (expectedPlatform != BukkitFamilyPlatform.FOLIA) {
+            try {
+                Object scheduler = Bukkit.class.getMethod("getScheduler").invoke(null);
+                Method runTaskTimer = scheduler.getClass().getMethod(
+                    "runTaskTimer", org.bukkit.plugin.Plugin.class, Runnable.class, long.class, long.class
+                );
+                telemetryTask = runTaskTimer.invoke(scheduler, this, (Runnable) this::collectTelemetry, 1L, periodTicks);
+            } catch (ReflectiveOperationException e) {
+                getLogger().warning("NeverLauncher telemetry: Bukkit scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+            }
+            return;
+        }
+        // Folia does not permit a classic Bukkit scheduler task. Use the global
+        // region scheduler reflectively so bridge-common keeps a Spigot API
+        // compile surface while the dedicated Folia artifact remains region-safe.
+        try {
+            Method getter = Bukkit.class.getMethod("getGlobalRegionScheduler");
+            Object scheduler = getter.invoke(null);
+            Method run = null;
+            for (Method candidate : scheduler.getClass().getMethods()) {
+                if (candidate.getName().equals("runAtFixedRate") && candidate.getParameterCount() == 4) {
+                    run = candidate;
+                    break;
+                }
+            }
+            if (run == null) throw new NoSuchMethodException("GlobalRegionScheduler.runAtFixedRate");
+            Consumer<Object> task = ignored -> collectTelemetry();
+            foliaTelemetryTask = run.invoke(scheduler, this, task, 1L, periodTicks);
+        } catch (ReflectiveOperationException e) {
+            getLogger().warning("NeverLauncher telemetry: Folia global scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+        }
+    }
+
+    private void stopTelemetrySampling() {
+        Object task = telemetryTask;
+        telemetryTask = null;
+        if (task != null) {
+            try { task.getClass().getMethod("cancel").invoke(task); } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        }
+        Object folia = foliaTelemetryTask;
+        foliaTelemetryTask = null;
+        if (folia != null) {
+            try { folia.getClass().getMethod("cancel").invoke(folia); } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        }
+    }
+
+    private void collectTelemetry() {
+        RuntimeState state = runtime;
+        if (state == null || stopping.get()) return;
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(state.config.telemetrySamplingBudgetMs);
+        List<String> metrics = new ArrayList<>();
+        int playersOnline = Bukkit.getOnlinePlayers().size();
+        int playersMax = Math.max(playersOnline, Bukkit.getMaxPlayers());
+        metrics.add("players");
+
+        Double tps = reflectDoubleArrayFirst(Bukkit.class, "getTPS");
+        if (tps != null) metrics.add("tps");
+        Double mspt = reflectDouble(Bukkit.class, "getAverageTickTime");
+        if (mspt == null) mspt = averageTickTimes();
+        if (mspt != null) metrics.add("mspt");
+
+        Integer worlds = null;
+        Integer dimensions = null;
+        Long chunks = null;
+        Long entities = null;
+        boolean budgetExceeded = false;
+
+        try {
+            List<org.bukkit.World> loaded = Bukkit.getWorlds();
+            worlds = loaded.size();
+            dimensions = loaded.size();
+            metrics.add("worlds");
+            metrics.add("dimensions");
+
+            // Paper/Purpur expose constant-time world counters. Bukkit/Spigot
+            // only expose APIs that materialize loaded-chunk/entity collections,
+            // which can violate the telemetry sampling budget on large worlds.
+            // Folia also requires region ownership for arbitrary world state, so
+            // those platforms intentionally report these counters as unsupported.
+            if ((expectedPlatform == BukkitFamilyPlatform.PAPER || expectedPlatform == BukkitFamilyPlatform.PURPUR) && loaded.size() <= 64) {
+                long chunkTotal = 0L;
+                long entityTotal = 0L;
+                boolean complete = true;
+                for (org.bukkit.World world : loaded) {
+                    if (System.nanoTime() > deadline) {
+                        complete = false;
+                        budgetExceeded = true;
+                        break;
+                    }
+                    Integer worldChunks = reflectInt(world, "getChunkCount");
+                    Integer worldEntities = reflectInt(world, "getEntityCount");
+                    if (worldChunks == null || worldEntities == null) {
+                        complete = false;
+                        break;
+                    }
+                    chunkTotal += worldChunks;
+                    entityTotal += worldEntities;
+                }
+                if (complete) {
+                    chunks = chunkTotal;
+                    entities = entityTotal;
+                    metrics.add("chunks");
+                    metrics.add("entities");
+                }
+            } else if (loaded.size() > 64) {
+                budgetExceeded = true;
+            }
+        } catch (RuntimeException e) {
+            // Metrics are best-effort and never allowed to affect login/auth.
+            budgetExceeded = true;
+        }
+
+        state.api.recordPlatformTelemetry(BridgePlatformTelemetry.server(
+            tps, mspt, playersOnline, playersMax,
+            worlds, dimensions, chunks, entities, budgetExceeded, metrics
+        ));
+    }
+
+    private static Integer reflectInt(Object target, String method) {
+        try {
+            Object value = target.getClass().getMethod(method).invoke(target);
+            if (value instanceof Number number) {
+                long result = number.longValue();
+                return result >= 0L && result <= Integer.MAX_VALUE ? (int) result : null;
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        return null;
+    }
+
+    private static Double reflectDouble(Class<?> type, String method) {
+        try {
+            Object value = type.getMethod(method).invoke(null);
+            if (value instanceof Number number) {
+                double result = number.doubleValue();
+                return Double.isFinite(result) && result >= 0.0d ? result : null;
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        return null;
+    }
+
+    private static Double reflectDoubleArrayFirst(Class<?> type, String method) {
+        try {
+            Object value = type.getMethod(method).invoke(null);
+            if (value instanceof double[] array && array.length > 0 && Double.isFinite(array[0])) {
+                return Math.max(0.0d, array[0]);
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        return null;
+    }
+
+    private static Double averageTickTimes() {
+        try {
+            Object value = Bukkit.class.getMethod("getTickTimes").invoke(null);
+            if (!(value instanceof long[] ticks) || ticks.length == 0) return null;
+            long total = 0L;
+            int count = 0;
+            for (long tick : ticks) {
+                if (tick < 0L) continue;
+                total += tick;
+                count++;
+            }
+            return count == 0 ? null : (total / (double) count) / 1_000_000.0d;
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
     }
 
     private static String safe(String value) {

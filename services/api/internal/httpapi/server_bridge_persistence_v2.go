@@ -41,7 +41,7 @@ func bridgeServerToModelV2(v bridgeServerRecord) model.ServerBridgeNode {
 		RuntimeStartedAt: v.RuntimeStartedAt, RuntimeFirstSeenAt: v.RuntimeFirstSeenAt, RuntimeLastSeenAt: v.RuntimeLastSeenAt, RuntimeUptimeSeconds: v.RuntimeUptimeSeconds,
 		RuntimeProcessID: v.RuntimeProcessID, Hostname: v.Hostname, NodeName: v.NodeName, MinecraftVersion: v.MinecraftVersion, JavaVersion: v.JavaVersion,
 		JavaVendor: v.JavaVendor, JavaVMName: v.JavaVMName, RuntimePlatform: v.RuntimePlatform, LoaderName: v.LoaderName, LoaderVersion: v.LoaderVersion,
-		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest,
+		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest, Telemetry: v.Telemetry,
 	}
 }
 func bridgeServerFromModelV2(v model.ServerBridgeNode) bridgeServerRecord {
@@ -54,7 +54,7 @@ func bridgeServerFromModelV2(v model.ServerBridgeNode) bridgeServerRecord {
 		RuntimeStartedAt: v.RuntimeStartedAt, RuntimeFirstSeenAt: v.RuntimeFirstSeenAt, RuntimeLastSeenAt: v.RuntimeLastSeenAt, RuntimeUptimeSeconds: v.RuntimeUptimeSeconds,
 		RuntimeProcessID: v.RuntimeProcessID, Hostname: v.Hostname, NodeName: v.NodeName, MinecraftVersion: v.MinecraftVersion, JavaVersion: v.JavaVersion,
 		JavaVendor: v.JavaVendor, JavaVMName: v.JavaVMName, RuntimePlatform: v.RuntimePlatform, LoaderName: v.LoaderName, LoaderVersion: v.LoaderVersion,
-		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest,
+		ServerBrand: v.ServerBrand, RuntimeCapabilities: append([]string(nil), v.RuntimeCapabilities...), RuntimeIdentityDigest: v.RuntimeIdentityDigest, Telemetry: v.Telemetry,
 	}
 }
 

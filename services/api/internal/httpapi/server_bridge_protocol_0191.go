@@ -30,6 +30,7 @@ const (
 	serverBridgeFeatureRuntimeTopology       = "topology.runtime-learned"
 	serverBridgeFeatureRuntimeDiscovery      = "runtime.node-discovery-v1"
 	serverBridgeFeatureRuntimeIdentity       = "security.runtime-identity-ed25519"
+	serverBridgeFeatureServerTelemetry       = "telemetry.server-v1"
 )
 
 var serverBridgeSupportedProtocols0191 = []int{serverBridgeProtocolV3, serverBridgeProtocolV2}
@@ -59,6 +60,7 @@ var serverBridgeV3Features0191 = []string{
 	serverBridgeFeatureRuntimeTopology,
 	serverBridgeFeatureRuntimeDiscovery,
 	serverBridgeFeatureRuntimeIdentity,
+	serverBridgeFeatureServerTelemetry,
 }
 
 type bridgeProtocolEnvelope0191 struct {
@@ -88,6 +90,7 @@ type bridgeHeartbeatV3Contract0191 struct {
 	Hostname        string                               `json:"hostname,omitempty"`
 	PlayersOnline   int                                  `json:"playersOnline,omitempty"`
 	Runtime         *bridgeRuntimeIdentityV3Contract0192 `json:"runtime,omitempty"`
+	Telemetry       *bridgeServerTelemetryV3Contract0193 `json:"telemetry,omitempty"`
 }
 
 type bridgeValidateJoinV2Contract0191 struct {
@@ -142,6 +145,7 @@ type bridgePluginHeartbeatRequest940 struct {
 	Hostname        string
 	PlayersOnline   int
 	Runtime         *bridgeRuntimeIdentityV3Contract0192
+	Telemetry       *bridgeServerTelemetryV3Contract0193
 }
 
 type bridgeValidateJoinRequest940 struct {
@@ -213,7 +217,7 @@ func decodeBridgeHeartbeat0191(r io.Reader) (bridgePluginHeartbeatRequest940, er
 		if err := decodeBridgeContract0191(body, &req); err != nil {
 			return bridgePluginHeartbeatRequest940{}, err
 		}
-		return bridgePluginHeartbeatRequest940{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), ServerID: req.ServerID, ServerType: req.ServerType, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256, Hostname: req.Hostname, PlayersOnline: req.PlayersOnline, Runtime: req.Runtime}, nil
+		return bridgePluginHeartbeatRequest940{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), ServerID: req.ServerID, ServerType: req.ServerType, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256, Hostname: req.Hostname, PlayersOnline: req.PlayersOnline, Runtime: req.Runtime, Telemetry: req.Telemetry}, nil
 	default:
 		return bridgePluginHeartbeatRequest940{ProtocolVersion: envelope.ProtocolVersion}, nil
 	}

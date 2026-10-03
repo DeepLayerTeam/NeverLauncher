@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0033_serverbridge_runtime_identity_0192" {
+	if st.Current != "0034_serverbridge_telemetry_0193" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0033_serverbridge_runtime_identity_0192" {
+		if k != "0034_serverbridge_telemetry_0193" {
 			pending[k] = v
 		}
 	}
@@ -393,6 +393,28 @@ func TestServerBridgeRuntimeIdentityMigration0192(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.19.2 ServerBridge runtime identity migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeTelemetryMigration0193(t *testing.T) {
+	b, err := os.ReadFile("sql/0034_serverbridge_telemetry_0193.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"telemetry_latest",
+		"telemetry_sampled_at",
+		"server_bridge_telemetry_samples_v3",
+		"sample_id",
+		"sample_sequence",
+		"runtime_epoch",
+		"payload JSONB",
+		"idx_server_bridge_telemetry_server_sampled",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.19.3 ServerBridge telemetry migration missing %q", required)
 		}
 	}
 }

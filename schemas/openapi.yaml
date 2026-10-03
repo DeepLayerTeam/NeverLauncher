@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9002,6 +9002,164 @@
         },
         "additionalProperties": false
       },
+      "ServerBridgeTelemetryV3": {
+        "type": "object",
+        "required": [
+          "sequence",
+          "sampledAtUnixMillis",
+          "windowMillis",
+          "runtimeId",
+          "tickHealth",
+          "playersOnline",
+          "playersMax",
+          "heapUsedBytes",
+          "heapCommittedBytes",
+          "heapMaxBytes",
+          "nonHeapUsedBytes",
+          "nonHeapCommittedBytes",
+          "gcCollections",
+          "gcCollectionTimeMillis",
+          "gcCollectionsDelta",
+          "gcCollectionTimeDeltaMillis",
+          "threadCount",
+          "daemonThreadCount",
+          "peakThreadCount",
+          "samplingBudgetExceeded",
+          "metrics"
+        ],
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sampledAtUnixMillis": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "windowMillis": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600000
+          },
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "tps": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "mspt": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 600000
+          },
+          "tickHealth": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "healthy",
+              "degraded",
+              "overloaded"
+            ]
+          },
+          "playersOnline": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "playersMax": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "heapUsedBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "heapCommittedBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "heapMaxBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nonHeapUsedBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nonHeapCommittedBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gcCollections": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gcCollectionTimeMillis": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gcCollectionsDelta": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gcCollectionTimeDeltaMillis": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "threadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "daemonThreadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "peakThreadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "loadedWorlds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "loadedDimensions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "loadedChunks": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entityCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "samplingBudgetExceeded": {
+            "type": "boolean"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
       "HeartbeatRequestV3": {
         "type": "object",
         "required": [
@@ -9054,6 +9212,9 @@
           },
           "runtime": {
             "$ref": "#/components/schemas/ServerBridgeRuntimeIdentityV3"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/ServerBridgeTelemetryV3"
           },
           "hostname": {
             "type": "string"

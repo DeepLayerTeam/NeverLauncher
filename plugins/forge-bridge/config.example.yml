@@ -14,3 +14,7 @@ security:
   identityFile: "config/neverlauncher-forge-bridge/node-identity.properties"
 heartbeat:
   intervalSeconds: 30
+
+telemetry:
+  sampleIntervalSeconds: 10
+  samplingBudgetMs: 20

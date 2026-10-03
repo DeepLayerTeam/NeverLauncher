@@ -3,11 +3,13 @@ package ru.neverlauncher.bridge.fabric;
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +18,8 @@ import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
+import ru.neverlauncher.bridge.common.BridgeTickSampler;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
@@ -50,6 +54,8 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
         new ThreadPoolExecutor.AbortPolicy()
     );
 
+    private final BridgeTickSampler tickSampler = new BridgeTickSampler();
+    private volatile long lastTelemetrySampleAt;
     private volatile RuntimeState state;
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
@@ -68,6 +74,8 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
 
         ServerLoginConnectionEvents.QUERY_START.register(this::onLoginQueryStart);
         ServerLifecycleEvents.SERVER_STARTED.register(server -> scheduleHeartbeat(0));
+        ServerTickEvents.START_SERVER_TICK.register(server -> tickSampler.onTickStart());
+        ServerTickEvents.END_SERVER_TICK.register(this::onServerTickEnd);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> close());
 
         RuntimeState current = state;
@@ -162,11 +170,75 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
                 "artifact.loader-owned",
                 "runtime.discovery",
                 "runtime.ed25519-attestation",
+                "telemetry.server-v1",
                 "loader.fabric"
             )
         );
         NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, PLATFORM, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
+    }
+
+
+    private void onServerTickEnd(MinecraftServer server) {
+        tickSampler.onTickEnd();
+        RuntimeState current = state;
+        if (current == null || stopping.get()) return;
+        long now = System.currentTimeMillis();
+        long interval = Math.max(5L, current.config.telemetrySampleIntervalSeconds) * 1000L;
+        if (now - lastTelemetrySampleAt < interval) return;
+        lastTelemetrySampleAt = now;
+        collectTelemetry(server, current);
+    }
+
+    private void collectTelemetry(MinecraftServer server, RuntimeState current) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(current.config.telemetrySamplingBudgetMs);
+        BridgeTickSampler.TickMetrics tick = tickSampler.snapshot();
+        int online = Math.max(0, server.getPlayerManager().getCurrentPlayerCount());
+        int max = Math.max(online, server.getPlayerManager().getMaxPlayerCount());
+        int worlds = 0;
+        long chunks = 0L;
+        long entities = 0L;
+        boolean complete = true;
+        boolean budgetExceeded = false;
+        int entityProbe = 0;
+
+        for (ServerWorld world : server.getWorlds()) {
+            worlds++;
+            if (worlds > 64 || System.nanoTime() > deadline) {
+                complete = false;
+                budgetExceeded = true;
+                break;
+            }
+            chunks += Math.max(0, world.getChunkManager().getLoadedChunkCount());
+            for (net.minecraft.entity.Entity ignored : world.iterateEntities()) {
+                entities++;
+                if ((++entityProbe & 255) == 0 && System.nanoTime() > deadline) {
+                    complete = false;
+                    budgetExceeded = true;
+                    break;
+                }
+            }
+            if (!complete) break;
+        }
+
+        java.util.ArrayList<String> metrics = new java.util.ArrayList<>();
+        metrics.add("players");
+        if (tick.tps() != null) metrics.add("tps");
+        if (tick.mspt() != null) metrics.add("mspt");
+        metrics.add("worlds");
+        metrics.add("dimensions");
+        if (complete) {
+            metrics.add("chunks");
+            metrics.add("entities");
+        }
+        current.api.recordPlatformTelemetry(BridgePlatformTelemetry.server(
+            tick.tps(), tick.mspt(), online, max,
+            worlds, worlds,
+            complete ? chunks : null,
+            complete ? entities : null,
+            budgetExceeded,
+            metrics
+        ));
     }
 
     private void scheduleHeartbeat(long delaySeconds) {

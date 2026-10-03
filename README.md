@@ -1,3 +1,9 @@
+## ServerBridge 3 Server Telemetry — 0.19.3
+
+`0.19.3` добавляет production telemetry непосредственно в подписанный Protocol v3 heartbeat. JVM-метрики снимаются через MXBeans (heap/non-heap, GC totals/deltas, thread/daemon/peak counts), а игровые метрики публикуются platform adapter-ом только с разрешённого server/proxy thread и передаются HTTP heartbeat через immutable bounded snapshot.
+
+Paper/Spigot/Bukkit/Purpur собирают TPS/MSPT, players, worlds/dimensions и bounded chunk/entity counters; Folia намеренно не обходит region-owned chunks/entities из global scheduler и помечает их unsupported. Fabric/Forge/NeoForge используют tick hooks и bounded entity enumeration, Velocity/BungeeCord/Waterfall публикуют proxy player capacity. Backend принимает telemetry только при negotiated `telemetry.server-v1`, связывает snapshot с уже проверенным Ed25519 runtime identity, хранит latest snapshot на node и bounded history в PostgreSQL (`0034_serverbridge_telemetry_0193`): hot-path cap около 4096 samples/node плюс HA-retention старше 7 дней.
+
 ## ServerBridge 3 Node Discovery & Runtime Identity — 0.19.2
 
 `0.19.2` добавляет рабочую runtime discovery/identity цепочку поверх Protocol v3. Каждый platform bridge автоматически определяет Minecraft version, Java runtime, platform/loader, server brand, hostname/node name и фактические bridge capabilities. JVM instance получает детерминированный `runtimeId`, связанный с node ID, Ed25519 key fingerprint, JVM start time, PID и hostname; весь immutable runtime descriptor отдельно подписывается зарегистрированным Ed25519 node key.

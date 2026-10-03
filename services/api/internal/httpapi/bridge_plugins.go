@@ -78,8 +78,17 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolCurrent, "status": "heartbeat-rejected", "reason": runtimeFeatureReason}})
 		return
 	}
+	telemetryEnabled, telemetryFeatureReason := bridgeTelemetryFeatureMode0193(req.Features)
+	if telemetryFeatureReason != "" {
+		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolCurrent, "status": "heartbeat-rejected", "reason": telemetryFeatureReason}})
+		return
+	}
 	if req.Runtime != nil && !runtimeEnabled {
 		writeError(w, http.StatusBadRequest, "serverbridge_runtime_identity_not_negotiated")
+		return
+	}
+	if req.Telemetry != nil && !telemetryEnabled {
+		writeError(w, http.StatusBadRequest, "serverbridge_telemetry_not_negotiated")
 		return
 	}
 	req.ServerType = strings.ToLower(strings.TrimSpace(req.ServerType))
@@ -104,6 +113,20 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		if runtimeErr != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("runtime-identity-denied"), Actor: server.ID, Action: "serverbridge:runtime:identity-denied", Target: runtimeErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 			writeError(w, http.StatusUnauthorized, runtimeErr.Error())
+			return
+		}
+	}
+	var telemetry model.ServerBridgeTelemetry
+	if telemetryEnabled {
+		if !runtimeEnabled {
+			writeError(w, http.StatusBadRequest, "serverbridge_telemetry_requires_runtime_identity")
+			return
+		}
+		var telemetryErr error
+		telemetry, telemetryErr = validateBridgeTelemetry0193(req.Telemetry, runtimeIdentity, 1, time.Now().UTC())
+		if telemetryErr != nil {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("telemetry-denied"), Actor: server.ID, Action: "serverbridge:telemetry:denied", Target: telemetryErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+			writeError(w, http.StatusBadRequest, telemetryErr.Error())
 			return
 		}
 	}
@@ -133,6 +156,18 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge heartbeat/runtime state не сохранён")
 		return
 	}
+	if telemetryEnabled {
+		telemetry.RuntimeEpoch = runtimeTransition.RuntimeEpoch
+		if err := s.State.ServerBridge.saveTelemetry0193(serverID, runtimeTransition.RuntimeEpoch, telemetry); err != nil {
+			if errors.Is(err, repository.ErrConflict) {
+				s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("telemetry-conflict"), Actor: server.ID, Action: "serverbridge:telemetry:conflict", Target: err.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+				writeError(w, http.StatusConflict, "serverbridge_telemetry_conflict")
+				return
+			}
+			writeError(w, http.StatusServiceUnavailable, "ServerBridge telemetry state не сохранён")
+			return
+		}
+	}
 	// Maintenance is opportunistic and never makes an otherwise valid heartbeat fail.
 	// PostgreSQL serializes the actual cleanup across active/active API replicas.
 	s.State.ServerBridge.maybeMaintain0149()
@@ -145,6 +180,9 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": req.ProtocolVersion, "features": bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2), "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}
 	if runtimeEnabled {
 		data["runtime"] = bridgeRuntimeResponse0192(runtimeIdentity, runtimeTransition)
+	}
+	if telemetryEnabled {
+		data["telemetry"] = telemetry
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": data})
 }
@@ -383,11 +421,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.19.2 ServerBridge 3",
+		"release":         "NeverLauncher 0.19.3 ServerBridge 3",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion": serverBridgeProtocolCurrent,
-		"implemented":     []string{"Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "bounded JVM/server telemetry", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}

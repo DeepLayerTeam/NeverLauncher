@@ -5,6 +5,7 @@ import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
@@ -42,7 +43,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         this(platformId, displayName, configPath, artifactAnchor, artifactPathSupplier, logger,
             () -> BridgeRuntimeDescriptor.of(
                 "", platformId, displayName, "", displayName,
-                java.util.List.of("heartbeat.signed", "join.modloader-gate", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation")
+                java.util.List.of("heartbeat.signed", "join.modloader-gate", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1")
             ));
     }
 
@@ -99,6 +100,21 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         RuntimeState current = state;
         return current == null ? "" : current.config.serverId;
     }
+    public void recordPlatformTelemetry(BridgePlatformTelemetry sample) {
+        RuntimeState current = state;
+        if (current != null && !stopping.get()) current.api.recordPlatformTelemetry(sample);
+    }
+
+    public int telemetrySampleIntervalSeconds() {
+        RuntimeState current = state;
+        return current == null ? 10 : current.config.telemetrySampleIntervalSeconds;
+    }
+
+    public int telemetrySamplingBudgetMs() {
+        RuntimeState current = state;
+        return current == null ? 20 : current.config.telemetrySamplingBudgetMs;
+    }
+
 
     public void triggerHeartbeat() {
         if (stopping.get() || heartbeatExecutor.isShutdown()) return;

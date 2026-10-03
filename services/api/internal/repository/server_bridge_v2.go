@@ -24,6 +24,7 @@ type ServerBridgeRepository interface {
 	SetServerBridgeNodeIntegrity(context.Context, string, string, string, string, time.Time) error
 	TouchServerBridgeNodeHeartbeat(context.Context, string, string, string, int, time.Time) error
 	TouchServerBridgeNodeRuntimeHeartbeat(context.Context, string, string, string, int, model.ServerBridgeRuntimeIdentity, time.Time) (model.ServerBridgeRuntimeTransition, error)
+	SaveServerBridgeTelemetry(context.Context, string, int64, model.ServerBridgeTelemetry, time.Time) error
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
 	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
@@ -47,6 +48,7 @@ func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBrid
 	var verifiedAt, heartbeatAt, rotatedAt, identityRotatedAt sql.NullTime
 	var runtimeStartedAt, runtimeFirstSeenAt, runtimeLastSeenAt sql.NullTime
 	var runtimeCapabilities []byte
+	var telemetryLatest []byte
 	err := row.Scan(
 		&n.ID, &n.Name, &n.Kind, &n.ProjectID, &n.ProfileID, &n.Fingerprint, &n.TokenHash, &n.TokenPrefix,
 		&n.KeyAlgorithm, &n.PublicKey, &n.KeyFingerprint, &n.IdentityEpoch, &identityRotatedAt, &n.Status,
@@ -55,7 +57,7 @@ func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBrid
 		&n.RuntimeID, &n.RuntimeEpoch, &n.RuntimePreviousID, &n.RuntimeTransition, &n.RuntimeReplacementDetected,
 		&runtimeStartedAt, &runtimeFirstSeenAt, &runtimeLastSeenAt, &n.RuntimeUptimeSeconds, &n.RuntimeProcessID,
 		&n.Hostname, &n.NodeName, &n.MinecraftVersion, &n.JavaVersion, &n.JavaVendor, &n.JavaVMName,
-		&n.RuntimePlatform, &n.LoaderName, &n.LoaderVersion, &n.ServerBrand, &runtimeCapabilities, &n.RuntimeIdentityDigest,
+		&n.RuntimePlatform, &n.LoaderName, &n.LoaderVersion, &n.ServerBrand, &runtimeCapabilities, &n.RuntimeIdentityDigest, &telemetryLatest,
 	)
 	if err != nil {
 		return model.ServerBridgeNode{}, err
@@ -86,10 +88,19 @@ func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBrid
 			return model.ServerBridgeNode{}, fmt.Errorf("decode server bridge runtime capabilities: %w", err)
 		}
 	}
+	if len(telemetryLatest) > 0 && string(telemetryLatest) != "{}" {
+		var telemetry model.ServerBridgeTelemetry
+		if err := json.Unmarshal(telemetryLatest, &telemetry); err != nil {
+			return model.ServerBridgeNode{}, fmt.Errorf("decode server bridge telemetry: %w", err)
+		}
+		if telemetry.RuntimeID != "" {
+			n.Telemetry = &telemetry
+		}
+	}
 	return n, nil
 }
 
-const bridgeNodeSelectV2 = `SELECT id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at,runtime_id,runtime_epoch,runtime_previous_id,runtime_transition,runtime_replacement_detected,runtime_started_at,runtime_first_seen_at,runtime_last_seen_at,runtime_uptime_seconds,runtime_process_id,hostname,node_name,minecraft_version,java_version,java_vendor,java_vm_name,runtime_platform,loader_name,loader_version,server_brand,runtime_capabilities,runtime_identity_digest FROM server_bridge_nodes_v2`
+const bridgeNodeSelectV2 = `SELECT id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,identity_rotated_at,status,protocol_version,plugin_version,plugin_sha256,integrity_status,integrity_verified_at,last_heartbeat_at,created_at,rotated_at,runtime_id,runtime_epoch,runtime_previous_id,runtime_transition,runtime_replacement_detected,runtime_started_at,runtime_first_seen_at,runtime_last_seen_at,runtime_uptime_seconds,runtime_process_id,hostname,node_name,minecraft_version,java_version,java_vendor,java_vm_name,runtime_platform,loader_name,loader_version,server_brand,runtime_capabilities,runtime_identity_digest,telemetry_latest FROM server_bridge_nodes_v2`
 
 func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.ServerBridgeNode) (model.ServerBridgeNode, error) {
 	if err := r.check(); err != nil {
@@ -212,7 +223,7 @@ func (r *SQLRepository) RotateServerBridgeNodeIdentity(ctx context.Context, id, 
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_runtime_instances_v3 SET ended_at=COALESCE(ended_at,$2),last_seen_at=GREATEST(last_seen_at,$2) WHERE server_id=$1 AND ended_at IS NULL`, id, now.UTC()); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash='',token_prefix='',key_algorithm=$2,public_key=$3,key_fingerprint=$4,identity_epoch=GREATEST(identity_epoch,0)+1,identity_rotated_at=$5,status='active',protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL,runtime_previous_id=runtime_id,runtime_id='',runtime_transition='identity-rotated',runtime_replacement_detected=FALSE,runtime_started_at=NULL,runtime_first_seen_at=NULL,runtime_last_seen_at=NULL,runtime_uptime_seconds=0,runtime_identity_digest='',runtime_identity_signature='',runtime_process_id=0,hostname='',node_name='',minecraft_version='',java_version='',java_vendor='',java_vm_name='',runtime_platform='',loader_name='',loader_version='',server_brand='',runtime_capabilities='[]'::jsonb WHERE id=$1`, id, algorithm, publicKey, fingerprint, now.UTC())
+	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash='',token_prefix='',key_algorithm=$2,public_key=$3,key_fingerprint=$4,identity_epoch=GREATEST(identity_epoch,0)+1,identity_rotated_at=$5,status='active',protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL,runtime_previous_id=runtime_id,runtime_id='',runtime_transition='identity-rotated',runtime_replacement_detected=FALSE,runtime_started_at=NULL,runtime_first_seen_at=NULL,runtime_last_seen_at=NULL,runtime_uptime_seconds=0,runtime_identity_digest='',runtime_identity_signature='',runtime_process_id=0,hostname='',node_name='',minecraft_version='',java_version='',java_vendor='',java_vm_name='',runtime_platform='',loader_name='',loader_version='',server_brand='',runtime_capabilities='[]'::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL WHERE id=$1`, id, algorithm, publicKey, fingerprint, now.UTC())
 	if err != nil {
 		return model.ServerBridgeNode{}, err
 	}
@@ -410,7 +421,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		runtime_previous_id=$6,runtime_id=$7,runtime_epoch=$8,runtime_transition=$9,runtime_replacement_detected=$10,
 		runtime_started_at=$11,runtime_first_seen_at=$5,runtime_last_seen_at=$5,runtime_uptime_seconds=$12,runtime_identity_digest=$13,
 		runtime_identity_signature=$14,runtime_process_id=$15,hostname=$16,node_name=$17,minecraft_version=$18,java_version=$19,
-		java_vendor=$20,java_vm_name=$21,runtime_platform=$22,loader_name=$23,loader_version=$24,server_brand=$25,runtime_capabilities=$26::jsonb
+		java_vendor=$20,java_vm_name=$21,runtime_platform=$22,loader_name=$23,loader_version=$24,server_brand=$25,runtime_capabilities=$26::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL
 		WHERE id=$1 AND status='active' AND kind=lower(btrim($2)) AND identity_epoch=$27 AND key_fingerprint=$28`,
 		id, kind, pluginVersion, protocolVersion, now, previousRuntimeID, runtime.RuntimeID, newEpoch, transition, replacementDetected,
 		runtime.StartedAt.UTC(), runtime.UptimeSeconds, strings.ToLower(runtime.IdentityDigest), runtime.IdentitySignature, runtime.ProcessID,
@@ -430,6 +441,81 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		RuntimeID: runtime.RuntimeID, RuntimeEpoch: newEpoch, PreviousRuntimeID: previousRuntimeID, Transition: transition,
 		ReplacementDetected: replacementDetected, StartedAt: runtime.StartedAt.UTC(), FirstSeenAt: now, LastSeenAt: now,
 	}, nil
+}
+
+func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID string, runtimeEpoch int64, telemetry model.ServerBridgeTelemetry, now time.Time) error {
+	if err := r.check(); err != nil {
+		return err
+	}
+	serverID = strings.TrimSpace(serverID)
+	if serverID == "" || runtimeEpoch < 1 || telemetry.Sequence < 1 || telemetry.RuntimeID == "" {
+		return ErrConflict
+	}
+	payload, err := json.Marshal(telemetry)
+	if err != nil {
+		return err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1930, hashtext($1))`, serverID); err != nil {
+		return err
+	}
+	var status, currentRuntimeID string
+	var currentRuntimeEpoch int64
+	err = tx.QueryRowContext(ctx, `SELECT status,runtime_id,runtime_epoch FROM server_bridge_nodes_v2 WHERE id=$1 FOR UPDATE`, serverID).
+		Scan(&status, &currentRuntimeID, &currentRuntimeEpoch)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, telemetry.RuntimeID) {
+		return fmt.Errorf("%w: telemetry runtime is not active", ErrConflict)
+	}
+	telemetry.RuntimeEpoch = runtimeEpoch
+	payload, err = json.Marshal(telemetry)
+	if err != nil {
+		return err
+	}
+	sampledAt := time.UnixMilli(telemetry.SampledAtUnixMillis).UTC()
+	res, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_telemetry_samples_v3(server_id,runtime_epoch,runtime_id,sample_sequence,sampled_at,received_at,payload)
+		VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)
+		ON CONFLICT(server_id,runtime_epoch,sampled_at,sample_sequence) DO NOTHING`,
+		serverID, runtimeEpoch, strings.ToLower(telemetry.RuntimeID), telemetry.Sequence, sampledAt, now.UTC(), string(payload))
+	if err != nil {
+		return err
+	}
+	inserted, _ := res.RowsAffected()
+	if inserted != 1 {
+		return fmt.Errorf("%w: duplicate telemetry sample", ErrConflict)
+	}
+	res, err = tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET telemetry_latest=$4::jsonb,telemetry_sampled_at=$5
+		WHERE id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND (telemetry_sampled_at IS NULL OR telemetry_sampled_at < $5)`,
+		serverID, runtimeEpoch, strings.ToLower(telemetry.RuntimeID), string(payload), sampledAt)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return fmt.Errorf("%w: active runtime changed or telemetry sample is stale", ErrConflict)
+	}
+	// Keep per-node history bounded even if global maintenance is delayed.
+	if telemetry.Sequence%64 == 0 {
+		if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_telemetry_samples_v3 t
+			USING (
+				SELECT ctid FROM server_bridge_telemetry_samples_v3
+				WHERE server_id=$1
+				ORDER BY sampled_at DESC, runtime_epoch DESC, sample_sequence DESC
+				OFFSET 4096 LIMIT 512
+			) old
+			WHERE t.ctid=old.ctid`, serverID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoinTicket, error) {
@@ -940,6 +1026,11 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, execErr
 	} else {
 		result.TerminalHandoffsPurged, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_telemetry_samples_v3 t USING (SELECT sample_id FROM server_bridge_telemetry_samples_v3 WHERE sampled_at <= $1::timestamptz - interval '7 days' ORDER BY sampled_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE t.sample_id=q.sample_id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.TelemetrySamplesPurged, _ = res.RowsAffected()
 	}
 	if err = tx.Commit(); err != nil {
 		return result, err

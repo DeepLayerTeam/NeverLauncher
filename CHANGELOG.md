@@ -1,3 +1,13 @@
+## [0.19.3] - 2026-10-03
+
+### ServerBridge 3 — Server Telemetry
+- Added signed Protocol v3 telemetry bound to the verified Ed25519 runtime identity and negotiated through `telemetry.server-v1`.
+- Added bounded JVM telemetry for heap/non-heap memory, GC totals/deltas, thread counts and derived tick health.
+- Added platform-safe TPS/MSPT, player capacity, worlds/dimensions and bounded chunk/entity sampling across Bukkit/Paper/Purpur/Folia, Fabric, Forge, NeoForge, Velocity, BungeeCord and Waterfall.
+- Platform adapters never enumerate game state from the heartbeat HTTP thread; unsupported or budget-exceeded counters remain absent instead of being reported as false zeroes.
+- Added PostgreSQL migration `0034_serverbridge_telemetry_0193`, latest telemetry on node state, runtime-bound history, per-node history cap and seven-day HA retention.
+- Added strict telemetry validation, OpenAPI schema, release certification classes, regression tests and the 0.19.3 telemetry CI gate.
+
 ## [0.19.2] - 2026-10-03
 
 ### ServerBridge 3 — Node Discovery & Runtime Identity

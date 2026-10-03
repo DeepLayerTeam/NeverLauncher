@@ -20,50 +20,51 @@ import (
 const serverBridgeSchema910 = apiContractVersion
 
 type bridgeServerRecord struct {
-	ID                         string    `json:"id"`
-	Name                       string    `json:"name"`
-	Kind                       string    `json:"kind"`
-	ProjectID                  string    `json:"projectId"`
-	ProfileID                  string    `json:"profileId,omitempty"`
-	Fingerprint                string    `json:"fingerprint,omitempty"`
-	TokenHash                  string    `json:"-"`
-	TokenPrefix                string    `json:"-"`
-	KeyAlgorithm               string    `json:"keyAlgorithm"`
-	PublicKey                  string    `json:"-"`
-	KeyFingerprint             string    `json:"keyFingerprint"`
-	IdentityEpoch              int64     `json:"identityEpoch"`
-	IdentityRotatedAt          time.Time `json:"identityRotatedAt,omitempty"`
-	Status                     string    `json:"status"`
-	PluginVersion              string    `json:"pluginVersion,omitempty"`
-	PluginSHA256               string    `json:"pluginSha256,omitempty"`
-	IntegrityStatus            string    `json:"integrityStatus,omitempty"`
-	IntegrityVerifiedAt        time.Time `json:"integrityVerifiedAt,omitempty"`
-	LastHeartbeatAt            time.Time `json:"lastHeartbeatAt,omitempty"`
-	ProtocolVersion            int       `json:"protocolVersion"`
-	CreatedAt                  time.Time `json:"createdAt"`
-	RotatedAt                  time.Time `json:"rotatedAt,omitempty"`
-	RuntimeID                  string    `json:"runtimeId,omitempty"`
-	RuntimeEpoch               int64     `json:"runtimeEpoch,omitempty"`
-	RuntimePreviousID          string    `json:"runtimePreviousId,omitempty"`
-	RuntimeTransition          string    `json:"runtimeTransition,omitempty"`
-	RuntimeReplacementDetected bool      `json:"runtimeReplacementDetected,omitempty"`
-	RuntimeStartedAt           time.Time `json:"runtimeStartedAt,omitempty"`
-	RuntimeFirstSeenAt         time.Time `json:"runtimeFirstSeenAt,omitempty"`
-	RuntimeLastSeenAt          time.Time `json:"runtimeLastSeenAt,omitempty"`
-	RuntimeUptimeSeconds       int64     `json:"runtimeUptimeSeconds,omitempty"`
-	RuntimeProcessID           int64     `json:"runtimeProcessId,omitempty"`
-	Hostname                   string    `json:"hostname,omitempty"`
-	NodeName                   string    `json:"nodeName,omitempty"`
-	MinecraftVersion           string    `json:"minecraftVersion,omitempty"`
-	JavaVersion                string    `json:"javaVersion,omitempty"`
-	JavaVendor                 string    `json:"javaVendor,omitempty"`
-	JavaVMName                 string    `json:"javaVmName,omitempty"`
-	RuntimePlatform            string    `json:"runtimePlatform,omitempty"`
-	LoaderName                 string    `json:"loaderName,omitempty"`
-	LoaderVersion              string    `json:"loaderVersion,omitempty"`
-	ServerBrand                string    `json:"serverBrand,omitempty"`
-	RuntimeCapabilities        []string  `json:"runtimeCapabilities,omitempty"`
-	RuntimeIdentityDigest      string    `json:"runtimeIdentityDigest,omitempty"`
+	ID                         string                       `json:"id"`
+	Name                       string                       `json:"name"`
+	Kind                       string                       `json:"kind"`
+	ProjectID                  string                       `json:"projectId"`
+	ProfileID                  string                       `json:"profileId,omitempty"`
+	Fingerprint                string                       `json:"fingerprint,omitempty"`
+	TokenHash                  string                       `json:"-"`
+	TokenPrefix                string                       `json:"-"`
+	KeyAlgorithm               string                       `json:"keyAlgorithm"`
+	PublicKey                  string                       `json:"-"`
+	KeyFingerprint             string                       `json:"keyFingerprint"`
+	IdentityEpoch              int64                        `json:"identityEpoch"`
+	IdentityRotatedAt          time.Time                    `json:"identityRotatedAt,omitempty"`
+	Status                     string                       `json:"status"`
+	PluginVersion              string                       `json:"pluginVersion,omitempty"`
+	PluginSHA256               string                       `json:"pluginSha256,omitempty"`
+	IntegrityStatus            string                       `json:"integrityStatus,omitempty"`
+	IntegrityVerifiedAt        time.Time                    `json:"integrityVerifiedAt,omitempty"`
+	LastHeartbeatAt            time.Time                    `json:"lastHeartbeatAt,omitempty"`
+	ProtocolVersion            int                          `json:"protocolVersion"`
+	CreatedAt                  time.Time                    `json:"createdAt"`
+	RotatedAt                  time.Time                    `json:"rotatedAt,omitempty"`
+	RuntimeID                  string                       `json:"runtimeId,omitempty"`
+	RuntimeEpoch               int64                        `json:"runtimeEpoch,omitempty"`
+	RuntimePreviousID          string                       `json:"runtimePreviousId,omitempty"`
+	RuntimeTransition          string                       `json:"runtimeTransition,omitempty"`
+	RuntimeReplacementDetected bool                         `json:"runtimeReplacementDetected,omitempty"`
+	RuntimeStartedAt           time.Time                    `json:"runtimeStartedAt,omitempty"`
+	RuntimeFirstSeenAt         time.Time                    `json:"runtimeFirstSeenAt,omitempty"`
+	RuntimeLastSeenAt          time.Time                    `json:"runtimeLastSeenAt,omitempty"`
+	RuntimeUptimeSeconds       int64                        `json:"runtimeUptimeSeconds,omitempty"`
+	RuntimeProcessID           int64                        `json:"runtimeProcessId,omitempty"`
+	Hostname                   string                       `json:"hostname,omitempty"`
+	NodeName                   string                       `json:"nodeName,omitempty"`
+	MinecraftVersion           string                       `json:"minecraftVersion,omitempty"`
+	JavaVersion                string                       `json:"javaVersion,omitempty"`
+	JavaVendor                 string                       `json:"javaVendor,omitempty"`
+	JavaVMName                 string                       `json:"javaVmName,omitempty"`
+	RuntimePlatform            string                       `json:"runtimePlatform,omitempty"`
+	LoaderName                 string                       `json:"loaderName,omitempty"`
+	LoaderVersion              string                       `json:"loaderVersion,omitempty"`
+	ServerBrand                string                       `json:"serverBrand,omitempty"`
+	RuntimeCapabilities        []string                     `json:"runtimeCapabilities,omitempty"`
+	RuntimeIdentityDigest      string                       `json:"runtimeIdentityDigest,omitempty"`
+	Telemetry                  *model.ServerBridgeTelemetry `json:"telemetry,omitempty"`
 }
 
 type bridgeJoinRecord struct {
@@ -445,7 +446,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.2 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.3 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,

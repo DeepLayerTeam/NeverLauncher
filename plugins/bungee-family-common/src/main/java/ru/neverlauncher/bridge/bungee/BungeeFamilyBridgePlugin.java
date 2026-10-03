@@ -8,10 +8,12 @@ import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.api.scheduler.ScheduledTask;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 
@@ -28,6 +30,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
     private final BungeeFamilyPlatform expectedPlatform;
     private final ConcurrentHashMap<String, Long> preparedHandoffs = new ConcurrentHashMap<>();
     private volatile ProxyBridgeRuntime runtime;
+    private volatile ScheduledTask telemetryTask;
 
     protected BungeeFamilyBridgePlugin(BungeeFamilyPlatform expectedPlatform) {
         this.expectedPlatform = expectedPlatform;
@@ -57,12 +60,14 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         "artifact.sha256",
                         "runtime.discovery",
                         "runtime.ed25519-attestation",
+                        "telemetry.server-v1",
                         "proxy.bungee-api"
                     )
                 )
             );
             next.start();
             runtime = next;
+            scheduleTelemetry(proxy, next);
         } catch (Exception e) {
             throw new IllegalStateException("NeverLauncher ServerBridge initialization failed: " + e.getMessage(), e);
         }
@@ -72,12 +77,46 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
 
     @Override
     public final void onDisable() {
+        ScheduledTask task = telemetryTask;
+        telemetryTask = null;
+        if (task != null) task.cancel();
         ProxyBridgeRuntime current = runtime;
         runtime = null;
         if (current != null) current.close();
         preparedHandoffs.clear();
         getProxy().getPluginManager().unregisterListeners(this);
         getProxy().getPluginManager().unregisterCommands(this);
+    }
+
+
+    private void scheduleTelemetry(ProxyServer proxy, ProxyBridgeRuntime current) {
+        collectTelemetry(proxy, current);
+        telemetryTask = proxy.getScheduler().schedule(
+            this,
+            () -> {
+                ProxyBridgeRuntime active = runtime;
+                if (active != null) collectTelemetry(proxy, active);
+            },
+            Math.max(5, current.telemetrySampleIntervalSeconds()),
+            Math.max(5, current.telemetrySampleIntervalSeconds()),
+            TimeUnit.SECONDS
+        );
+    }
+
+    private void collectTelemetry(ProxyServer proxy, ProxyBridgeRuntime current) {
+        int online = Math.max(0, proxy.getOnlineCount());
+        int max = online;
+        try {
+            Object config = proxy.getConfig();
+            Object value = config.getClass().getMethod("getPlayerLimit").invoke(config);
+            if (value instanceof Number number) max = Math.max(online, number.intValue());
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Player limit is optional on custom Bungee-family implementations.
+        }
+        current.recordPlatformTelemetry(BridgePlatformTelemetry.proxy(
+            online, Math.max(0, max),
+            java.util.List.of("players", "proxy.bungee")
+        ));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

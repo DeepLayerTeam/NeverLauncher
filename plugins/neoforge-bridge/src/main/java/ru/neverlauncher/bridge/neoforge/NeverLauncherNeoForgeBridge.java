@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.configuration.ServerConfigurationPacketListener;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.neoforged.bus.api.IEventBus;
@@ -17,12 +18,15 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
+import ru.neverlauncher.bridge.common.BridgeTickSampler;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
 
@@ -39,6 +43,8 @@ public final class NeverLauncherNeoForgeBridge {
         new ConfigurationTask.Type(ResourceLocation.fromNamespaceAndPath(MOD_ID, "join_validation"));
 
     private final ModLoaderBridgeRuntime runtime;
+    private final BridgeTickSampler tickSampler = new BridgeTickSampler();
+    private long lastTelemetrySampleAt;
 
     public NeverLauncherNeoForgeBridge(IEventBus modEventBus, ModContainer modContainer) {
         Path configPath = FMLPaths.CONFIGDIR.get()
@@ -61,6 +67,7 @@ public final class NeverLauncherNeoForgeBridge {
                         "artifact.loader-owned",
                         "runtime.discovery",
                         "runtime.ed25519-attestation",
+                        "telemetry.server-v1",
                         "loader.neoforge"
                     )
                 );
@@ -82,6 +89,64 @@ public final class NeverLauncherNeoForgeBridge {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         runtime.close();
+    }
+
+    @SubscribeEvent
+    public void onServerTickPre(ServerTickEvent.Pre event) {
+        tickSampler.onTickStart();
+    }
+
+    @SubscribeEvent
+    public void onServerTickPost(ServerTickEvent.Post event) {
+        tickSampler.onTickEnd();
+        long now = System.currentTimeMillis();
+        if (now - lastTelemetrySampleAt < runtime.telemetrySampleIntervalSeconds() * 1000L) return;
+        lastTelemetrySampleAt = now;
+        collectTelemetry(event.getServer(), now);
+    }
+
+    private void collectTelemetry(net.minecraft.server.MinecraftServer server, long sampledAt) {
+        BridgeTickSampler.TickMetrics tick = tickSampler.snapshot();
+        long deadline = System.nanoTime() + runtime.telemetrySamplingBudgetMs() * 1_000_000L;
+        int worlds = 0;
+        long chunks = 0L;
+        long entities = 0L;
+        boolean budgetExceeded = false;
+
+        for (ServerLevel level : server.getAllLevels()) {
+            if (++worlds > 64) {
+                budgetExceeded = true;
+                break;
+            }
+            chunks += Math.max(0, level.getChunkSource().getLoadedChunksCount());
+            int checked = 0;
+            for (var ignored : level.getAllEntities()) {
+                entities++;
+                if ((++checked & 255) == 0 && System.nanoTime() >= deadline) {
+                    budgetExceeded = true;
+                    break;
+                }
+            }
+            if (budgetExceeded || System.nanoTime() >= deadline) {
+                budgetExceeded = true;
+                break;
+            }
+        }
+        java.util.ArrayList<String> metrics = new java.util.ArrayList<>();
+        if (tick.tps() != null) metrics.add("tps");
+        if (tick.mspt() != null) metrics.add("mspt");
+        metrics.add("players");
+        metrics.add("worlds");
+        metrics.add("dimensions");
+        if (!budgetExceeded) {
+            metrics.add("chunks");
+            metrics.add("entities");
+        }
+        runtime.recordPlatformTelemetry(BridgePlatformTelemetry.server(
+            tick.tps(), tick.mspt(), server.getPlayerCount(), server.getMaxPlayers(),
+            worlds, worlds, budgetExceeded ? null : chunks, budgetExceeded ? null : entities,
+            budgetExceeded, metrics
+        ));
     }
 
     private void onRegisterConfigurationTasks(RegisterConfigurationTasksEvent event) {

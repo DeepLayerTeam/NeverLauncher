@@ -4,6 +4,7 @@ import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
+import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
 import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
 import ru.neverlauncher.bridge.common.NodeIdentity;
@@ -49,7 +50,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     public ProxyBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Logger logger) {
         this(platformId, displayName, configPath, artifactAnchor, logger, () -> BridgeRuntimeDescriptor.of(
             "proxy-multi-version", platformId, displayName, "", displayName,
-            List.of("heartbeat.signed", "join.proxy-prelogin-gate", "handoff.one-time", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation")
+            List.of("heartbeat.signed", "join.proxy-prelogin-gate", "handoff.one-time", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1")
         ));
     }
 
@@ -137,6 +138,11 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         }
     }
 
+    public void recordPlatformTelemetry(BridgePlatformTelemetry sample) {
+        RuntimeState current = state;
+        if (current != null && !stopping.get()) current.api.recordPlatformTelemetry(sample);
+    }
+
     public void triggerHeartbeat() {
         if (stopping.get() || heartbeatExecutor.isShutdown()) return;
         heartbeatExecutor.execute(this::heartbeatOnce);
@@ -151,6 +157,11 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         RuntimeState current = state;
         return current == null ? "" : current.config.backendUrl;
     }
+    public int telemetrySampleIntervalSeconds() {
+        RuntimeState current = state;
+        return current == null ? 10 : current.config.telemetrySampleIntervalSeconds;
+    }
+
 
     public String fingerprint() {
         RuntimeState current = state;

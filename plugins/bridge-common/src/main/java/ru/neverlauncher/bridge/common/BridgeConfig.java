@@ -19,6 +19,8 @@ public final class BridgeConfig {
     public final int timeoutMs;
     public final int retries;
     public final int heartbeatIntervalSeconds;
+    public final int telemetrySampleIntervalSeconds;
+    public final int telemetrySamplingBudgetMs;
 
     private BridgeConfig(Map<String, String> values, Path configPath, String defaultServerId) {
         this.backendUrl = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
@@ -38,6 +40,8 @@ public final class BridgeConfig {
         this.timeoutMs = parseInt(first(values, "backend.timeoutMs", "NEVERLAUNCHER_TIMEOUT_MS", "5000"), 5000);
         this.retries = boundedInt(first(values, "backend.retries", "NEVERLAUNCHER_RETRIES", "2"), 2, 0, 5);
         this.heartbeatIntervalSeconds = boundedInt(first(values, "backend.heartbeatIntervalSeconds", "NEVERLAUNCHER_HEARTBEAT_INTERVAL_SECONDS", "30"), 30, 10, 300);
+        this.telemetrySampleIntervalSeconds = boundedInt(first(values, "telemetry.sampleIntervalSeconds", "NEVERLAUNCHER_TELEMETRY_SAMPLE_INTERVAL_SECONDS", "10"), 10, 5, 60);
+        this.telemetrySamplingBudgetMs = boundedInt(first(values, "telemetry.samplingBudgetMs", "NEVERLAUNCHER_TELEMETRY_SAMPLING_BUDGET_MS", "20"), 20, 5, 100);
     }
 
     public static BridgeConfig load(Path configPath) throws IOException {

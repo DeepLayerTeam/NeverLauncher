@@ -30,7 +30,8 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_ONE_TIME_HANDOFF,
         BridgeDefaults.FEATURE_RUNTIME_TOPOLOGY,
         BridgeDefaults.FEATURE_RUNTIME_DISCOVERY,
-        BridgeDefaults.FEATURE_RUNTIME_IDENTITY
+        BridgeDefaults.FEATURE_RUNTIME_IDENTITY,
+        BridgeDefaults.FEATURE_SERVER_TELEMETRY
     );
 
     private final BridgeConfig config;
@@ -40,6 +41,7 @@ public final class NeverLauncherApiClient {
     private final String pluginVersion;
     private final String pluginSha256;
     private final BridgeRuntimeIdentity runtimeIdentity;
+    private final BridgeTelemetrySampler telemetrySampler = new BridgeTelemetrySampler();
     private volatile BridgeProtocolNegotiation negotiation;
 
     public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
@@ -68,12 +70,13 @@ public final class NeverLauncherApiClient {
         try {
             BridgeProtocolNegotiation protocol = negotiateProtocol();
             String runtime = runtimeFields(protocol);
+            String telemetry = telemetryFields(protocol);
             String json = "{" + protocolFields(protocol) +
                 ",\"serverId\":" + quote(config.serverId) +
                 ",\"serverType\":" + quote(actualType) +
                 ",\"pluginVersion\":" + quote(actualVersion) +
                 ",\"pluginSha256\":" + quote(pluginSha256) +
-                runtime + "}";
+                runtime + telemetry + "}";
             HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
@@ -236,6 +239,18 @@ public final class NeverLauncherApiClient {
 
     public String runtimeId() {
         return runtimeIdentity == null ? "" : runtimeIdentity.runtimeId();
+    }
+
+
+    public void recordPlatformTelemetry(BridgePlatformTelemetry sample) {
+        telemetrySampler.recordPlatformSample(sample);
+    }
+
+    private String telemetryFields(BridgeProtocolNegotiation protocol) {
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || runtimeIdentity == null) return "";
+        if (!protocol.features().contains(BridgeDefaults.FEATURE_SERVER_TELEMETRY)) return "";
+        BridgeTelemetrySnapshot snapshot = telemetrySampler.sample(runtimeIdentity.runtimeId());
+        return ",\"telemetry\":" + snapshot.toJson();
     }
 
     private static String protocolFields(BridgeProtocolNegotiation protocol) {
