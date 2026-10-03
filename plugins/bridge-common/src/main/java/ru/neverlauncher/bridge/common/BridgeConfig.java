@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public final class BridgeConfig {
     public final String backendUrl;
@@ -21,6 +23,9 @@ public final class BridgeConfig {
     public final int heartbeatIntervalSeconds;
     public final int telemetrySampleIntervalSeconds;
     public final int telemetrySamplingBudgetMs;
+    public final int controlPollIntervalSeconds;
+    public final String controlBackendPublicKey;
+    public final Set<String> controlConsoleAllowlist;
 
     private BridgeConfig(Map<String, String> values, Path configPath, String defaultServerId) {
         this.backendUrl = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
@@ -42,6 +47,9 @@ public final class BridgeConfig {
         this.heartbeatIntervalSeconds = boundedInt(first(values, "backend.heartbeatIntervalSeconds", "NEVERLAUNCHER_HEARTBEAT_INTERVAL_SECONDS", "30"), 30, 10, 300);
         this.telemetrySampleIntervalSeconds = boundedInt(first(values, "telemetry.sampleIntervalSeconds", "NEVERLAUNCHER_TELEMETRY_SAMPLE_INTERVAL_SECONDS", "10"), 10, 5, 60);
         this.telemetrySamplingBudgetMs = boundedInt(first(values, "telemetry.samplingBudgetMs", "NEVERLAUNCHER_TELEMETRY_SAMPLING_BUDGET_MS", "20"), 20, 5, 100);
+        this.controlPollIntervalSeconds = boundedInt(first(values, "control.pollIntervalSeconds", "NEVERLAUNCHER_CONTROL_POLL_INTERVAL_SECONDS", "2"), 2, 1, 30);
+        this.controlBackendPublicKey = first(values, "control.backendPublicKey", "NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY", "");
+        this.controlConsoleAllowlist = parseAllowlist(first(values, "control.consoleAllowlist", "NEVERLAUNCHER_CONTROL_CONSOLE_ALLOWLIST", "say,list,whitelist,ban,ban-ip,pardon,pardon-ip,save-all,save-off,save-on,kick,time,weather,difficulty,gamerule,title,tellraw"));
     }
 
     public static BridgeConfig load(Path configPath) throws IOException {
@@ -84,6 +92,15 @@ public final class BridgeConfig {
     public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
     public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
     public String eventStreamUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/events"; }
+    public String controlPollUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/control/poll"; }
+    public String controlAckUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/control/ack"; }
+    public boolean isConsoleCommandAllowed(String command) {
+        if (command == null || command.isBlank()) return false;
+        String root = command.trim();
+        if (root.startsWith("/")) root = root.substring(1);
+        int space = root.indexOf(' '); if (space >= 0) root = root.substring(0, space);
+        return controlConsoleAllowlist.contains(root.toLowerCase(java.util.Locale.ROOT));
+    }
     public String statusUrl() { return backendUrl + "/api/v1/status"; }
 
     private static void ensureZeroPatchConfig(Path configPath, String defaultServerId) {
@@ -133,6 +150,18 @@ public final class BridgeConfig {
     private static String strip(String value) {
         if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) return value.substring(1, value.length() - 1);
         return value;
+    }
+
+
+    private static Set<String> parseAllowlist(String raw) {
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        if (raw != null) {
+            for (String item : raw.split(",")) {
+                String value = item.trim().toLowerCase(java.util.Locale.ROOT);
+                if (!value.isEmpty() && value.matches("[a-z0-9:_-]{1,64}")) out.add(value);
+            }
+        }
+        return Set.copyOf(out);
     }
 
     private static String trimSlash(String value) {

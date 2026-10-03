@@ -22,7 +22,7 @@ public_prefixes = (
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
 public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/server-bridge/capabilities", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
-node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/server-bridge/servers/{serverId}/events", "/api/v1/session/has-joined"}
+node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/server-bridge/servers/{serverId}/events", "/api/v1/server-bridge/servers/{serverId}/control/poll", "/api/v1/server-bridge/servers/{serverId}/control/ack", "/api/v1/session/has-joined"}
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
 def is_public(method, path):
@@ -66,6 +66,8 @@ def path_parameters(path):
           {"name":"protocols","in":"query","required":False,"description":"Comma-separated protocol versions offered by the bridge, highest preference first.","schema":{"type":"string","example":"3,2"}},
           {"name":"features","in":"query","required":False,"description":"Comma-separated Protocol v3 feature identifiers supported by the bridge.","schema":{"type":"string","example":"protocol.capability-negotiation,protocol.feature-flags"}},
         ]
+    if path == "/api/v1/server-bridge/servers/{serverId}/control/poll":
+        out += [{"name":"runtimeId","in":"query","required":True,"schema":{"type":"string","pattern":"^[0-9a-f]{64}$"}}]
     if path == "/sessionserver/session/minecraft/hasJoined":
         out += [{"name":"username","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"serverId","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"ip","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/start"):
@@ -118,6 +120,7 @@ def body_schema(path):
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
+      "/api/v1/server-bridge/servers/{serverId}/control":"ServerBridgeControlCreateV3", "/api/v1/server-bridge/servers/{serverId}/control/ack":"ServerBridgeControlAckRequestV3",
       "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
       "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
       "/api/v1/minecraft/session":"MinecraftSessionRequest",
@@ -169,7 +172,7 @@ def success_status(method,path):
     if path in {"/api/v1/telemetry/events","/api/v1/crash-reports"}: return "202"
     created={
       "/api/v1/install/bootstrap-admin","/api/v1/install/first-project","/api/v1/admin/users","/api/v1/admin/projects",
-      "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff",
+      "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff","/api/v1/server-bridge/servers/{serverId}/control",
     }
     if path in created or (method=="post" and (path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish"))):
         return "201"
@@ -186,6 +189,10 @@ def response_schema(path, method):
     if path == "/api/v1/admin/login":return ref("AdminSession")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
     if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":return ref("ServerBridgeControlCommandResponseV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/control/{commandId}" and method == "get":return ref("ServerBridgeControlCommandResponseV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":return ref("ServerBridgeControlDeliveryV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/control/ack" and method == "post":return ref("ServerBridgeControlAckResponseV3")
     return {"type":"object","additionalProperties":True}
 
 paths={}
@@ -207,6 +214,10 @@ for method,path in routes:
     success=success_status(method,path)
     ctype="text/plain" if path=="/metrics" else ("application/octet-stream" if path.startswith("/api/v1/files/") else "application/json")
     op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
+    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
+        op["responses"]["200"]={"description":"Idempotent replay of the same queued command","content":{"application/json":{"schema":ref("ServerBridgeControlCommandResponseV3")}}}
+    if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":
+        op["responses"]["204"]={"description":"No command currently available for this runtime"}
     if sec:
         op["responses"]["401"]={"$ref":"#/components/responses/Unauthorized"}
     if method in ("post","put","patch"):

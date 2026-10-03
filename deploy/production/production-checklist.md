@@ -76,3 +76,8 @@
 - [ ] Для 0.13.10+ каждый Guard target result дополнительно совпадает с aggregate matrix по `repository`; evidence из другого fork не принимается.
 - [ ] `nl release verify <release-dir> --public-key <trusted-public-key>` проходит успешно и все `required=true` artifacts имеют `status=present`.
 - [ ] `nl release publish-check <release-dir> --public-key <trusted-public-key>` проходит Compatibility + Device Trust + Cross-platform Guard certification gates.
+
+## ServerBridge 0.19.5 Control API
+
+- [ ] ServerBridge 0.19.5 control signing key is configured, `serverbridge:control` / `serverbridge:console` assignments are reviewed, and each Bridge has a local console allowlist.
+- [ ] Control commands are tested through native platform APIs; OS shell/process execution remains disabled.

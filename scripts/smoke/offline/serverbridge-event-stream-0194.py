@@ -3,8 +3,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
-if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != "0.19.4":
-    raise SystemExit("VERSION is not 0.19.4")
+version = tuple(map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3]))
+if version < (0, 19, 4):
+    raise SystemExit("VERSION is older than the event-stream 0.19.4 release")
 
 required_files = [
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeEventRecord.java",

@@ -25,6 +25,8 @@ import net.minecraftforge.network.config.ConfigurationTaskContext;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
+import ru.neverlauncher.bridge.common.BridgeControlCommand;
+import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.BridgeTickSampler;
@@ -35,6 +37,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 @Mod(NeverLauncherForgeBridge.MOD_ID)
@@ -71,6 +75,7 @@ public final class NeverLauncherForgeBridge {
                         "runtime.ed25519-attestation",
                         "telemetry.server-v1",
                         "events.ordered-stream-v1",
+                        "control.secure-channel-v1",
                         "loader.forge"
                     )
                 );
@@ -83,6 +88,7 @@ public final class NeverLauncherForgeBridge {
     public void onServerStarted(ServerStartedEvent event) {
         try {
             runtime.start();
+            runtime.startControlChannel(command -> executeControl(event.getServer(), command));
         } catch (Exception e) {
             throw new IllegalStateException("NeverLauncher Forge ServerBridge failed to start", e);
         }
@@ -266,6 +272,95 @@ public final class NeverLauncherForgeBridge {
         }
     }
 
+
+    private BridgeControlResult executeControl(net.minecraft.server.MinecraftServer server, BridgeControlCommand command) throws Exception {
+        if (server == null) return BridgeControlResult.failed("minecraft_server_unavailable");
+        if ("server.shutdown".equals(command.type())) {
+            String reason = safeLine(command.payload().getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+            Thread thread = new Thread(() -> {
+                try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+                server.execute(() -> {
+                    runtime.publishEvent("server.shutdown", Map.of("reason", reason, "source", "control-api"));
+                    server.halt(false);
+                });
+            }, "neverlauncher-control-shutdown");
+            thread.setDaemon(true);
+            thread.start();
+            return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+        }
+        CompletableFuture<BridgeControlResult> future = new CompletableFuture<>();
+        server.execute(() -> {
+            try { future.complete(executeControlOnServerThread(server, command)); }
+            catch (Throwable t) { future.completeExceptionally(t); }
+        });
+        try { return future.get(10, TimeUnit.SECONDS); }
+        catch (java.util.concurrent.TimeoutException e) { return BridgeControlResult.indeterminate("platform_control_timeout"); }
+    }
+
+    private BridgeControlResult executeControlOnServerThread(net.minecraft.server.MinecraftServer server, BridgeControlCommand command) {
+        Map<String,String> payload = command.payload();
+        switch (command.type()) {
+            case "player.kick" -> {
+                String username = safeUsername(payload.get("username"));
+                var player = server.getPlayerList().getPlayerByName(username);
+                if (player == null) return BridgeControlResult.failed("player_not_online");
+                player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512)));
+                return BridgeControlResult.ok(Map.of("username", username));
+            }
+            case "message.broadcast" -> {
+                String message = safeLine(payload.getOrDefault("message", ""), 1024);
+                int recipients = server.getPlayerCount();
+                server.getPlayerList().broadcastSystemMessage(Component.literal(message), false);
+                return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
+            }
+            case "whitelist.add", "whitelist.remove" -> {
+                String username = safeUsername(payload.get("username"));
+                boolean add = command.type().endsWith(".add");
+                int code = executeMinecraftCommand(server, "whitelist " + (add ? "add " : "remove ") + username);
+                return code >= 0 ? BridgeControlResult.ok(Map.of("username", username, "whitelisted", Boolean.toString(add))) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            case "whitelist.enable", "whitelist.disable" -> {
+                boolean enabled = command.type().endsWith(".enable");
+                int code = executeMinecraftCommand(server, "whitelist " + (enabled ? "on" : "off"));
+                return code >= 0 ? BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled))) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            case "ban.add", "ban.remove" -> {
+                String username = safeUsername(payload.get("username"));
+                boolean add = command.type().endsWith(".add");
+                String reason = add ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
+                int code = executeMinecraftCommand(server, (add ? "ban " : "pardon ") + username + (reason.isBlank() ? "" : " " + reason));
+                return code >= 0 ? BridgeControlResult.ok(Map.of("username", username, "banned", Boolean.toString(add))) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            case "server.save" -> {
+                int code = executeMinecraftCommand(server, "save-all flush");
+                return code >= 0 ? BridgeControlResult.ok(Map.of("saved", "true")) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            case "server.console" -> {
+                String raw = payload.getOrDefault("command", "").trim();
+                if (raw.startsWith("/")) raw = raw.substring(1);
+                if (!runtime.isConsoleCommandAllowed(raw)) return BridgeControlResult.failed("console_command_not_allowlisted");
+                if (raw.isBlank() || raw.indexOf('\n') >= 0 || raw.indexOf('\r') >= 0 || raw.indexOf('\0') >= 0) return BridgeControlResult.failed("console_command_invalid");
+                int code = executeMinecraftCommand(server, raw);
+                return code >= 0 ? BridgeControlResult.ok(Map.of("accepted", "true", "resultCode", Integer.toString(code))) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            default -> { return BridgeControlResult.unsupported("unsupported_control_type"); }
+        }
+    }
+
+    private static int executeMinecraftCommand(net.minecraft.server.MinecraftServer server, String command) {
+        return server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command);
+    }
+
+    private static String safeUsername(String value) {
+        String username = value == null ? "" : value.trim();
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        return username;
+    }
+
+    private static String safeLine(String value, int max) {
+        String out = value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').replace('\0', ' ').trim();
+        return out.length() > max ? out.substring(0, max) : out;
+    }
 
     private static Path loadedArtifactPath() {
         ModList modList = ModList.get();

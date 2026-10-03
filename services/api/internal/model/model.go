@@ -484,6 +484,30 @@ type ServerBridgeEventAppendResult struct {
 	Inserted    int   `json:"inserted"`
 }
 
+// ServerBridgeControlCommand is a durable Backend->Bridge command bound to the active runtime.
+// Payload contains only validated platform arguments; no shell program/argv is ever stored or executed.
+type ServerBridgeControlCommand struct {
+	ID             string            `json:"id"`
+	ServerID       string            `json:"serverId"`
+	RuntimeEpoch   int64             `json:"runtimeEpoch"`
+	RuntimeID      string            `json:"runtimeId"`
+	Type           string            `json:"type"`
+	Payload        map[string]string `json:"payload"`
+	PayloadSHA256  string            `json:"payloadSha256"`
+	RequestDigest  string            `json:"requestDigest"`
+	RequestedBy    string            `json:"requestedBy"`
+	IdempotencyKey string            `json:"idempotencyKey"`
+	Status         string            `json:"status"`
+	Attempt        int               `json:"attempt"`
+	CreatedAt      time.Time         `json:"createdAt"`
+	UpdatedAt      time.Time         `json:"updatedAt"`
+	ExpiresAt      time.Time         `json:"expiresAt"`
+	LeaseUntil     time.Time         `json:"leaseUntil,omitempty"`
+	CompletedAt    time.Time         `json:"completedAt,omitempty"`
+	Result         map[string]string `json:"result,omitempty"`
+	Error          string            `json:"error,omitempty"`
+}
+
 // ServerBridgeRuntimeIdentity is the immutable process identity attested by the node Ed25519 key.
 type ServerBridgeRuntimeIdentity struct {
 	RuntimeID           string
@@ -621,6 +645,7 @@ type ServerBridgeMaintenanceResult struct {
 	TerminalHandoffsPurged    int64     `json:"terminalHandoffsPurged"`
 	TelemetrySamplesPurged    int64     `json:"telemetrySamplesPurged"`
 	EventStreamRowsPurged     int64     `json:"eventStreamRowsPurged"`
+	ControlCommandsPurged     int64     `json:"controlCommandsPurged"`
 	CompletedAt               time.Time `json:"completedAt"`
 }
 

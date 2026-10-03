@@ -753,6 +753,8 @@ jobs:
         run: python3 scripts/smoke/offline/serverbridge-telemetry-0193.py
       - name: ServerBridge 3 Server Event Stream 0.19.4 gate
         run: python3 scripts/smoke/offline/serverbridge-event-stream-0194.py
+      - name: ServerBridge 3 Control API 0.19.5 gate
+        run: python3 scripts/smoke/offline/serverbridge-control-api-0195.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

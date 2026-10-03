@@ -12,6 +12,8 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeControlCommand;
+import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
@@ -57,7 +59,8 @@ public final class NeverLauncherVelocityBridge {
                             "runtime.discovery",
                             "runtime.ed25519-attestation",
                             "telemetry.server-v1",
-                        "events.ordered-stream-v1",
+                            "events.ordered-stream-v1",
+                            "control.secure-channel-v1",
                             "proxy.velocity-api"
                         )
                     );
@@ -65,6 +68,7 @@ public final class NeverLauncherVelocityBridge {
             );
             next.start();
             runtime = next;
+            next.startControlChannel(this::executeControl);
             scheduleTelemetry(next);
         } catch (Exception e) {
             logger.severe("NeverLauncher Velocity Bridge initialization failed: " + e.getMessage());
@@ -143,6 +147,54 @@ public final class NeverLauncherVelocityBridge {
             ));
             logger.info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=velocity");
         });
+    }
+
+    private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
+        Map<String,String> payload = command.payload();
+        switch (command.type()) {
+            case "player.kick" -> {
+                String username = safeUsername(payload.get("username"));
+                var player = proxy.getPlayer(username).orElse(null);
+                if (player == null) return BridgeControlResult.failed("player_not_online");
+                player.disconnect(Component.text(safeLine(payload.getOrDefault("reason", "Disconnected by proxy operator"), 512)));
+                return BridgeControlResult.ok(Map.of("username", username));
+            }
+            case "message.broadcast" -> {
+                Component message = Component.text(safeLine(payload.getOrDefault("message", ""), 1024));
+                int recipients = proxy.getPlayerCount();
+                for (var player : proxy.getAllPlayers()) player.sendMessage(message);
+                return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
+            }
+            case "server.shutdown" -> {
+                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+                proxy.getScheduler().buildTask(this, () -> proxy.shutdown(Component.text(reason))).delay(1500, TimeUnit.MILLISECONDS).schedule();
+                return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+            }
+            case "server.console" -> {
+                String raw = payload.getOrDefault("command", "").trim();
+                if (raw.startsWith("/")) raw = raw.substring(1);
+                ProxyBridgeRuntime current = runtime;
+                if (current == null || !current.isConsoleCommandAllowed(raw)) return BridgeControlResult.failed("console_command_not_allowlisted");
+                if (raw.isBlank() || raw.indexOf('\n') >= 0 || raw.indexOf('\r') >= 0 || raw.indexOf('\0') >= 0) return BridgeControlResult.failed("console_command_invalid");
+                proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), raw).get(10, TimeUnit.SECONDS);
+                return BridgeControlResult.ok(Map.of("accepted", "true"));
+            }
+            case "whitelist.add", "whitelist.remove", "whitelist.enable", "whitelist.disable", "ban.add", "ban.remove", "server.save" -> {
+                return BridgeControlResult.unsupported("operation_not_supported_by_velocity_core");
+            }
+            default -> { return BridgeControlResult.unsupported("unsupported_control_type"); }
+        }
+    }
+
+    private static String safeUsername(String value) {
+        String username = value == null ? "" : value.trim();
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        return username;
+    }
+
+    private static String safeLine(String value, int max) {
+        String out = value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').replace('\0', ' ').trim();
+        return out.length() > max ? out.substring(0, max) : out;
     }
 
     @Subscribe

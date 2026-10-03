@@ -117,6 +117,8 @@ type serverBridgeStore struct {
 	eventAck           map[string]int64
 	eventDigests       map[string]string
 	eventIDs           map[string]string
+	controlCommands    map[string]model.ServerBridgeControlCommand
+	controlIdempotency map[string]string
 }
 
 type registerBridgeServerRequest struct {
@@ -449,7 +451,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.4 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.5 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -463,6 +465,10 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 			"GET /api/v1/server-bridge/diagnostics",
 			"POST /api/v1/server-bridge/servers/{serverId}/heartbeat",
 			"POST /api/v1/server-bridge/servers/{serverId}/events",
+			"POST /api/v1/server-bridge/servers/{serverId}/control",
+			"GET /api/v1/server-bridge/servers/{serverId}/control/{commandId}",
+			"GET /api/v1/server-bridge/servers/{serverId}/control/poll",
+			"POST /api/v1/server-bridge/servers/{serverId}/control/ack",
 			"POST /api/v1/server-bridge/validate-join",
 			"POST /api/v1/server-bridge/handoff",
 			"POST /api/v1/server-bridge/servers/register",
@@ -479,7 +485,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}

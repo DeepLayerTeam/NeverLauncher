@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6740,6 +6740,246 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/server-bridge/servers/{serverId}/control": {
+      "post": {
+        "operationId": "post_server_bridge_servers_by_serverId_control",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "POST /api/v1/server-bridge/servers/{serverId}/control",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeControlCommandResponseV3"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Idempotent replay of the same queued command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeControlCommandResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerBridgeControlCreateV3"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/server-bridge/servers/{serverId}/control/ack": {
+      "post": {
+        "operationId": "post_server_bridge_servers_by_serverId_control_ack",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "POST /api/v1/server-bridge/servers/{serverId}/control/ack",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeControlAckResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerBridgeControlAckRequestV3"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/server-bridge/servers/{serverId}/control/poll": {
+      "get": {
+        "operationId": "get_server_bridge_servers_by_serverId_control_poll",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/servers/{serverId}/control/poll",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeControlDeliveryV3"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No command currently available for this runtime"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "runtimeId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
+          }
+        ]
+      }
+    },
+    "/api/v1/server-bridge/servers/{serverId}/control/{commandId}": {
+      "get": {
+        "operationId": "get_server_bridge_servers_by_serverId_control_by_commandId",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/servers/{serverId}/control/{commandId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeControlCommandResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "commandId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/server-bridge/servers/{serverId}/events": {

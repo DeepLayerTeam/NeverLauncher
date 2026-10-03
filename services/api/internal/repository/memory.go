@@ -159,7 +159,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		},
 		roles: []model.Role{
 			{ID: "owner", Name: "Владелец", Description: "Полный доступ к проекту", Permissions: []string{"*"}},
-			{ID: "admin", Name: "Администратор", Description: "Управление проектами, версиями, файлами, пользователями и аудитом", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "roles:manage", "audit:read", "diagnostics:read", "storage:manage", "settings:manage", "security:read", "extension:manage"}},
+			{ID: "admin", Name: "Администратор", Description: "Управление проектами, версиями, файлами, пользователями и аудитом", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "roles:manage", "audit:read", "diagnostics:read", "storage:manage", "settings:manage", "security:read", "extension:manage", "serverbridge:control", "serverbridge:console"}},
 			{ID: "release-manager", Name: "Release Manager", Description: "Подготовка, публикация и откат релизов", Permissions: []string{"project:read", "release:prepare", "release:publish", "audit:read"}},
 			{ID: "support", Name: "Поддержка", Description: "Диагностика, чтение проекта и отзыв проблемных сессий", Permissions: []string{"project:read", "diagnostics:read", "sessions:revoke", "audit:read"}},
 			{ID: "developer", Name: "Разработчик", Description: "Подготовка версий и загрузка файлов", Permissions: []string{"project:read", "release:prepare", "file:write"}},

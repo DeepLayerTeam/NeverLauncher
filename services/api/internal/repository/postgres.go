@@ -705,7 +705,7 @@ func (r *SQLRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error)
 }
 
 func (r *SQLRepository) ListRoles() []model.Role {
-	fallback := []model.Role{{ID: "owner", Name: "Владелец", Permissions: []string{"*"}}, {ID: "admin", Name: "Администратор", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "audit:read"}}, {ID: "developer", Name: "Разработчик", Permissions: []string{"project:read", "release:prepare", "file:write"}}, {ID: "viewer", Name: "Наблюдатель", Permissions: []string{"project:read"}}}
+	fallback := []model.Role{{ID: "owner", Name: "Владелец", Permissions: []string{"*"}}, {ID: "admin", Name: "Администратор", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "audit:read", "serverbridge:control", "serverbridge:console"}}, {ID: "developer", Name: "Разработчик", Permissions: []string{"project:read", "release:prepare", "file:write"}}, {ID: "viewer", Name: "Наблюдатель", Permissions: []string{"project:read"}}}
 	if err := r.check(); err != nil {
 		return fallback
 	}

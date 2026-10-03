@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,7 +38,8 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_RUNTIME_DISCOVERY,
         BridgeDefaults.FEATURE_RUNTIME_IDENTITY,
         BridgeDefaults.FEATURE_SERVER_TELEMETRY,
-        BridgeDefaults.FEATURE_EVENT_STREAM
+        BridgeDefaults.FEATURE_EVENT_STREAM,
+        BridgeDefaults.FEATURE_CONTROL_API
     );
 
     private final BridgeConfig config;
@@ -52,6 +54,11 @@ public final class NeverLauncherApiClient {
     private final ExecutorService eventExecutor;
     private final AtomicBoolean eventFlushScheduled = new AtomicBoolean(false);
     private final AtomicBoolean eventClosed = new AtomicBoolean(false);
+    private final BridgeControlJournal controlJournal;
+    private final BridgeControlTrust controlTrust;
+    private final AtomicBoolean controlClosed = new AtomicBoolean(false);
+    private volatile ScheduledExecutorService controlExecutor;
+    private volatile BridgeControlExecutor controlHandler;
     private volatile BridgeProtocolNegotiation negotiation;
 
     public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
@@ -80,6 +87,8 @@ public final class NeverLauncherApiClient {
                     thread.setDaemon(true);
                     return thread;
                 });
+                this.controlJournal = new BridgeControlJournal(config.identityFile.resolveSibling("control-channel.journal"));
+                this.controlTrust = new BridgeControlTrust(config);
                 String crashedRuntime = this.eventJournal.previousUncleanRuntimeId();
                 if (!crashedRuntime.isBlank()) {
                     publishEvent("server.crash", Map.of("previousRuntimeId", crashedRuntime, "detectedBy", "journal-recovery"));
@@ -87,6 +96,8 @@ public final class NeverLauncherApiClient {
             } else {
                 this.eventJournal = null;
                 this.eventExecutor = null;
+                this.controlJournal = null;
+                this.controlTrust = null;
             }
         } catch (GeneralSecurityException | IOException e) {
             throw new IllegalStateException("cannot create ServerBridge runtime identity/event journal", e);
@@ -294,8 +305,111 @@ public final class NeverLauncherApiClient {
         flushEventStream();
     }
 
+    /** Start the authenticated Backend -> Bridge control worker. Execution is serialized and at-most-once per command journal. */
+    public synchronized void startControlChannel(BridgeControlExecutor executor) {
+        if (executor == null) throw new IllegalArgumentException("control executor is required");
+        if (runtimeIdentity == null || identity == null || controlJournal == null || controlTrust == null) return;
+        this.controlHandler = executor;
+        if (controlExecutor != null && !controlExecutor.isShutdown()) return;
+        controlClosed.set(false);
+        controlExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
+            Thread thread = new Thread(task, "neverlauncher-serverbridge-control");
+            thread.setDaemon(true);
+            return thread;
+        });
+        controlExecutor.scheduleWithFixedDelay(this::pollControlSafely, 0L, Math.max(1, config.controlPollIntervalSeconds), TimeUnit.SECONDS);
+    }
+
+    public synchronized void closeControlChannel() {
+        if (!controlClosed.compareAndSet(false, true)) return;
+        ScheduledExecutorService executor = controlExecutor;
+        controlExecutor = null;
+        if (executor != null) {
+            executor.shutdownNow();
+            try { executor.awaitTermination(1500, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+    }
+
+    private void pollControlSafely() {
+        if (controlClosed.get()) return;
+        try { pollControlOnce(); } catch (Exception ignored) { /* heartbeat/events surface backend health; control retries next interval */ }
+    }
+
+    private void pollControlOnce() throws Exception {
+        BridgeProtocolNegotiation protocol = negotiateProtocol();
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_CONTROL_API)) return;
+        BridgeControlExecutor executor = controlHandler;
+        if (executor == null) return;
+        URI uri = URI.create(config.controlPollUrl() + "?runtimeId=" + URLEncoder.encode(runtimeIdentity.runtimeId(), StandardCharsets.UTF_8));
+        HttpResponse<String> response = client.send(signedRequest("GET", uri, ""), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 204) return;
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            if (response.statusCode() >= 500) return;
+            throw new IOException("control poll rejected with HTTP " + response.statusCode());
+        }
+        String raw = response.body() == null ? "" : response.body();
+        String serverId = extractJsonString(raw, "serverId");
+        String commandId = extractJsonString(raw, "commandId");
+        String runtimeId = extractJsonString(raw, "runtimeId");
+        long runtimeEpoch = extractJsonLong(raw, "runtimeEpoch");
+        String type = extractJsonString(raw, "type");
+        String payloadEncoded = extractJsonString(raw, "payload");
+        String payloadSha256 = extractJsonString(raw, "payloadSha256");
+        int attempt = extractJsonInt(raw, "attempt");
+        long issuedAt = extractJsonLong(raw, "issuedAtUnixMillis");
+        long expiresAt = extractJsonLong(raw, "expiresAtUnixMillis");
+        String signingPublicKey = extractJsonString(raw, "signingPublicKey");
+        String signature = extractJsonString(raw, "signature");
+        if (!config.serverId.equals(serverId) || !runtimeIdentity.runtimeId().equalsIgnoreCase(runtimeId) || commandId.isBlank() || type.isBlank()) {
+            throw new IOException("control command binding mismatch");
+        }
+        long now = System.currentTimeMillis();
+        if (issuedAt <= 0 || expiresAt <= now || issuedAt > now + 120_000L || expiresAt - issuedAt > 660_000L) {
+            throw new IOException("control command outside accepted time window");
+        }
+        byte[] payloadRaw = payloadEncoded.isBlank() ? "{}".getBytes(StandardCharsets.UTF_8) : Base64.getUrlDecoder().decode(payloadEncoded);
+        if (payloadRaw.length > 4096) throw new IOException("control payload too large");
+        String actualPayloadHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payloadRaw));
+        if (!MessageDigest.isEqual(actualPayloadHash.getBytes(StandardCharsets.US_ASCII), payloadSha256.toLowerCase().getBytes(StandardCharsets.US_ASCII))) {
+            throw new GeneralSecurityException("control payload digest mismatch");
+        }
+        Map<String,String> payload = BridgeControlCommand.decodePayload(payloadEncoded);
+        BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, type, payload, payloadSha256, attempt, issuedAt, expiresAt, signingPublicKey, signature);
+        if (!controlTrust.verify(command)) throw new GeneralSecurityException("control command signature or backend trust failed");
+
+        BridgeControlJournal.State state = controlJournal.state(command);
+        BridgeControlResult result;
+        if (state == null) {
+            controlJournal.begin(command);
+            try { result = executor.execute(command); }
+            catch (Exception e) { result = BridgeControlResult.failed(e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
+            if (result == null) result = BridgeControlResult.failed("platform executor returned no result");
+            controlJournal.complete(command, result);
+        } else if ("executing".equals(state.phase())) {
+            result = BridgeControlResult.indeterminate("previous bridge process/reload stopped after execution began; command was not re-executed");
+            controlJournal.complete(command, result);
+        } else {
+            result = state.result();
+            if (result == null) result = BridgeControlResult.indeterminate("control journal result unavailable");
+        }
+        sendControlAck(command, result);
+    }
+
+    private void sendControlAck(BridgeControlCommand command, BridgeControlResult result) throws Exception {
+        String body = "{" + protocolFields(negotiateProtocol()) +
+            ",\"serverId\":" + quote(config.serverId) +
+            ",\"runtimeId\":" + quote(runtimeIdentity.runtimeId()) +
+            ",\"commandId\":" + quote(command.commandId()) +
+            ",\"status\":" + quote(result.status()) +
+            ",\"result\":" + quote(BridgeControlCommand.encodeMap(result.result())) +
+            ",\"error\":" + quote(result.error()) + "}";
+        HttpResponse<String> response = client.send(signedRequest("POST", URI.create(config.controlAckUrl()), body), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IOException("control ACK rejected with HTTP " + response.statusCode());
+    }
+
     /** Best-effort final flush; the journal remains authoritative if the backend is unavailable. */
     public void closeEventStreamCleanly() {
+        closeControlChannel();
         if (!eventClosed.compareAndSet(false, true)) return;
         try { flushEventStream(); } catch (RuntimeException ignored) {}
         try { if (eventJournal != null) eventJournal.markClean(); } catch (IOException ignored) {}
@@ -415,7 +529,24 @@ public final class NeverLauncherApiClient {
 
     private static String quote(String value) {
         if (value == null) value = "";
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        StringBuilder out = new StringBuilder(value.length() + 2).append('"');
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\b' -> out.append("\\b");
+                case '\f' -> out.append("\\f");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+                    else out.append(c);
+                }
+            }
+        }
+        return out.append('"').toString();
     }
 
     private static String jsonArray(List<String> values) {

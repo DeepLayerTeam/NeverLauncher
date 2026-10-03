@@ -1,6 +1,9 @@
 package ru.neverlauncher.bridge.proxy;
 
 import ru.neverlauncher.bridge.common.BridgeConfig;
+import ru.neverlauncher.bridge.common.BridgeControlCommand;
+import ru.neverlauncher.bridge.common.BridgeControlExecutor;
+import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
@@ -41,17 +44,20 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     private final Logger logger;
     private final Supplier<BridgeRuntimeDescriptor> runtimeDescriptorSupplier;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
+    private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
+    private final AtomicBoolean drainMode = new AtomicBoolean(false);
     private final ScheduledExecutorService heartbeatExecutor;
     private final ThreadPoolExecutor validationExecutor;
 
     private volatile RuntimeState state;
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
+    private volatile BridgeControlExecutor platformControlExecutor;
 
     public ProxyBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Logger logger) {
         this(platformId, displayName, configPath, artifactAnchor, logger, () -> BridgeRuntimeDescriptor.of(
             "proxy-multi-version", platformId, displayName, "", displayName,
-            List.of("heartbeat.signed", "join.proxy-prelogin-gate", "handoff.one-time", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1")
+            List.of("heartbeat.signed", "join.proxy-prelogin-gate", "handoff.one-time", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1", "events.ordered-stream-v1", BridgeDefaults.FEATURE_CONTROL_API)
         ));
     }
 
@@ -98,6 +104,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         RuntimeState next = loadState();
         state = next;
         if (previous != null) previous.api.closeEventStreamCleanly();
+        if (platformControlExecutor != null) next.api.startControlChannel(this::executeControl);
         next.api.publishEvent("server.ready", Map.of("platform", platformId, "reason", "reload"));
         triggerHeartbeat();
         logger.info("NeverLauncher " + displayName + " Bridge configuration reloaded; serverId=" + next.config.serverId +
@@ -109,6 +116,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         if (current == null || stopping.get()) {
             return new JoinValidationResult(false, "bridge_runtime_unavailable", "{}");
         }
+        if (maintenanceMode.get()) return new JoinValidationResult(false, "server_maintenance", "{}");
+        if (drainMode.get()) return new JoinValidationResult(false, "server_draining", "{}");
         return current.api.validateJoin(username, uuid, ip);
     }
 
@@ -117,6 +126,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         if (current == null || stopping.get()) {
             return new JoinValidationResult(false, "bridge_runtime_unavailable", "{}");
         }
+        if (maintenanceMode.get()) return new JoinValidationResult(false, "server_maintenance", "{}");
+        if (drainMode.get()) return new JoinValidationResult(false, "server_draining", "{}");
         return current.api.createHandoff(username, targetServer);
     }
 
@@ -152,6 +163,32 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     public boolean publishEvent(String type, Map<String, String> payload) {
         RuntimeState current = state;
         return current != null && !stopping.get() && current.api.publishEvent(type, payload);
+    }
+
+    public synchronized void startControlChannel(BridgeControlExecutor executor) {
+        this.platformControlExecutor = Objects.requireNonNull(executor, "executor");
+        RuntimeState current = state;
+        if (current != null && !stopping.get()) current.api.startControlChannel(this::executeControl);
+    }
+
+    private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
+        if ("server.maintenance".equals(command.type())) {
+            boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
+            maintenanceMode.set(enabled);
+            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
+        }
+        if ("server.drain".equals(command.type())) {
+            boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
+            drainMode.set(enabled);
+            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
+        }
+        BridgeControlExecutor executor = platformControlExecutor;
+        return executor == null ? BridgeControlResult.unsupported("platform_control_unavailable") : executor.execute(command);
+    }
+
+    public boolean isConsoleCommandAllowed(String command) {
+        RuntimeState current = state;
+        return current != null && current.config.isConsoleCommandAllowed(command);
     }
 
     public void triggerHeartbeat() {

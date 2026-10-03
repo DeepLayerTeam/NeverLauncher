@@ -1,3 +1,9 @@
+## ServerBridge 3 Control API — 0.19.5
+
+`0.19.5` добавляет production Backend→Bridge control channel поверх Protocol v3. Команды создаются только через RBAC (`serverbridge:control`, отдельно `serverbridge:console`), привязываются к активному `runtimeId/runtimeEpoch`, имеют обязательный idempotency key и durable PostgreSQL lifecycle. Bridge получает команды signed-node polling, проверяет отдельную Ed25519 подпись Backend, фиксирует локальный execution journal до side effect и отправляет signed ACK. Повторная доставка не повторяет завершённый side effect; неопределённое выполнение после crash/reload помечается `indeterminate`.
+
+Поддерживаются `kick`, `broadcast`, whitelist/ban, save, maintenance/drain, graceful shutdown и platform console commands. Console проходит двойной allowlist — Backend и локальный Bridge config. Выполнение идёт только через native Minecraft/proxy APIs/schedulers; произвольный OS shell execution не используется. Все queue/delivery/completion transitions пишутся в audit trail, а terminal delivery rows очищаются bounded maintenance без удаления `audit_events`.
+
 ## ServerBridge 3 Server Event Stream — 0.19.4
 
 `0.19.4` добавляет production ordered event stream поверх ServerBridge Protocol v3. Каждый event получает монотонную sequence внутри конкретного verified runtime epoch, SHA-256 payload digest и отдельную Ed25519 подпись node identity; HTTP batch дополнительно проходит существующую signed-node nonce/replay protection. Bridge хранит high-water sequence и неподтверждённые events в bounded append-only journal, поэтому reconnect/plugin reload повторяет тот же batch до подтверждённого ACK без генерации новой sequence.

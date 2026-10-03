@@ -26,6 +26,10 @@ type ServerBridgeRepository interface {
 	TouchServerBridgeNodeRuntimeHeartbeat(context.Context, string, string, string, int, model.ServerBridgeRuntimeIdentity, time.Time) (model.ServerBridgeRuntimeTransition, error)
 	SaveServerBridgeTelemetry(context.Context, string, int64, model.ServerBridgeTelemetry, time.Time) error
 	AppendServerBridgeEvents(context.Context, string, int64, string, []model.ServerBridgeEvent, time.Time) (model.ServerBridgeEventAppendResult, error)
+	CreateServerBridgeControlCommand(context.Context, model.ServerBridgeControlCommand, time.Time) (model.ServerBridgeControlCommand, bool, error)
+	LeaseServerBridgeControlCommand(context.Context, string, int64, string, time.Time, time.Duration) (model.ServerBridgeControlCommand, error)
+	CompleteServerBridgeControlCommand(context.Context, string, int64, string, string, string, map[string]string, string, time.Time) (model.ServerBridgeControlCommand, error)
+	GetServerBridgeControlCommand(context.Context, string, string) (model.ServerBridgeControlCommand, error)
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
 	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
@@ -1142,6 +1146,13 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.EventStreamRowsPurged, _ = res.RowsAffected()
 	}
+	// Control commands are transient delivery state. Permanent evidence remains in
+	// audit_events; retain terminal/expired rows for 30 days for diagnostics.
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 c USING (SELECT id FROM server_bridge_control_commands_v3 WHERE status IN ('succeeded','failed','unsupported','indeterminate','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE c.id=q.id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.ControlCommandsPurged, _ = res.RowsAffected()
+	}
 	if err = tx.Commit(); err != nil {
 		return result, err
 	}
@@ -1170,4 +1181,219 @@ func (r *SQLRepository) ServerBridgeHAStatus(ctx context.Context, now time.Time)
 		return status, err
 	}
 	return status, nil
+}
+
+func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.ServerBridgeControlCommand, error) {
+	var c model.ServerBridgeControlCommand
+	var payloadRaw, resultRaw []byte
+	var leaseUntil, completedAt sql.NullTime
+	err := row.Scan(&c.ID, &c.ServerID, &c.RuntimeEpoch, &c.RuntimeID, &c.Type, &payloadRaw, &c.PayloadSHA256, &c.RequestDigest,
+		&c.RequestedBy, &c.IdempotencyKey, &c.Status, &c.Attempt, &c.CreatedAt, &c.UpdatedAt, &c.ExpiresAt, &leaseUntil, &completedAt, &resultRaw, &c.Error)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if len(payloadRaw) > 0 {
+		if err := json.Unmarshal(payloadRaw, &c.Payload); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+	}
+	if c.Payload == nil {
+		c.Payload = map[string]string{}
+	}
+	if len(resultRaw) > 0 {
+		if err := json.Unmarshal(resultRaw, &c.Result); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+	}
+	if c.Result == nil {
+		c.Result = map[string]string{}
+	}
+	if leaseUntil.Valid {
+		c.LeaseUntil = leaseUntil.Time
+	}
+	if completedAt.Valid {
+		c.CompletedAt = completedAt.Time
+	}
+	return c, nil
+}
+
+const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
+
+// CreateServerBridgeControlCommand is idempotent per (server, actor, idempotency key).
+// Reuse with a different request digest is rejected rather than mutating the original command.
+func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c model.ServerBridgeControlCommand, now time.Time) (model.ServerBridgeControlCommand, bool, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	if c.ID == "" || c.ServerID == "" || c.RuntimeEpoch < 1 || len(c.RuntimeID) != 64 || c.Type == "" || len(c.PayloadSHA256) != 64 || len(c.RequestDigest) != 64 || c.RequestedBy == "" || len(c.IdempotencyKey) < 8 || c.ExpiresAt.Before(now) {
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: invalid control command", ErrConflict)
+	}
+	payload, err := json.Marshal(c.Payload)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(195, hashtext($1 || ':' || $2 || ':' || $3))`, c.ServerID, c.RequestedBy, c.IdempotencyKey); err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	var status, activeRuntime string
+	var activeEpoch int64
+	if err = tx.QueryRowContext(ctx, `SELECT status,runtime_id,runtime_epoch FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, c.ServerID).Scan(&status, &activeRuntime, &activeEpoch); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeControlCommand{}, false, ErrNotFound
+		}
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	if status != "active" || activeEpoch != c.RuntimeEpoch || !strings.EqualFold(strings.TrimSpace(activeRuntime), c.RuntimeID) {
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: control runtime is not active", ErrConflict)
+	}
+	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND requested_by=$2 AND idempotency_key=$3`, c.ServerID, c.RequestedBy, c.IdempotencyKey)); scanErr == nil {
+		if !strings.EqualFold(existing.RequestDigest, c.RequestDigest) {
+			return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: idempotency key reused with different request", ErrConflict)
+		}
+		return existing, true, nil
+	} else if !errors.Is(scanErr, sql.ErrNoRows) {
+		return model.ServerBridgeControlCommand{}, false, scanErr
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_control_commands_v3(id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,result,error) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,'pending',0,$11,$11,$12,'{}'::jsonb,'')`, c.ID, c.ServerID, c.RuntimeEpoch, c.RuntimeID, c.Type, string(payload), c.PayloadSHA256, c.RequestDigest, c.RequestedBy, c.IdempotencyKey, now.UTC(), c.ExpiresAt.UTC())
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO NOTHING`, "serverbridge-control-queued-"+c.ID, c.RequestedBy, "serverbridge:control:queued:"+c.Type, c.ServerID+":"+c.ID, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeControlCommand{}, false, err
+	}
+	created, err := scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, c.ID))
+	return created, false, err
+}
+
+func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if lease < 5*time.Second {
+		lease = 5 * time.Second
+	}
+	if lease > 2*time.Minute {
+		lease = 2 * time.Minute
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	defer tx.Rollback()
+	var status, currentRuntime string
+	var currentEpoch int64
+	if err = tx.QueryRowContext(ctx, `SELECT status,runtime_id,runtime_epoch FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, serverID).Scan(&status, &currentRuntime, &currentEpoch); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeControlCommand{}, ErrNotFound
+		}
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
+	}
+	// Expired commands never execute.
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery' WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	var id string
+	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND expires_at>$4 AND (status='pending' OR (status='leased' AND lease_until<=$4)) ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`, serverID, runtimeEpoch, runtimeID, now.UTC()).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeControlCommand{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	leaseUntil := now.Add(lease).UTC()
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased',attempt=attempt+1,lease_until=$2,updated_at=$3 WHERE id=$1`, id, leaseUntil, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'serverbridge:control:delivered',$3,'','ServerBridge Control API',$4) ON CONFLICT(id) DO NOTHING`, `serverbridge-control-delivered-`+id+`-`+fmt.Sprint(now.UnixNano()), serverID, serverID+":"+id, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
+}
+
+func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	allowed := map[string]bool{"succeeded": true, "failed": true, "unsupported": true, "indeterminate": true}
+	if !allowed[status] {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
+	}
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	defer tx.Rollback()
+	current, err := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1 FOR UPDATE`, commandID))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ServerBridgeControlCommand{}, ErrNotFound
+		}
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement runtime mismatch", ErrConflict)
+	}
+	if current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
+		if current.Status != status || !serverBridgeControlStringMapEqual0195(current.Result, result) || current.Error != failure {
+			return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: conflicting control acknowledgement", ErrConflict)
+		}
+		return current, nil
+	}
+	if current.Status != "leased" {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command is not leased", ErrConflict)
+	}
+	if len(failure) > 1024 {
+		failure = failure[:1024]
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO NOTHING`, `serverbridge-control-complete-`+commandID, serverID, "serverbridge:control:"+status, current.Type+":"+commandID, now.UTC()); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, commandID))
+}
+
+func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, value := range a {
+		if b[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serverID, commandID string) (model.ServerBridgeControlCommand, error) {
+	if err := r.check(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	c, err := scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND id=$2`, serverID, commandID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ServerBridgeControlCommand{}, ErrNotFound
+	}
+	return c, err
 }

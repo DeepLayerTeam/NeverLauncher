@@ -29,6 +29,10 @@ COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/BridgeTickSampler.class',
     'ru/neverlauncher/bridge/common/BridgeEventRecord.class',
     'ru/neverlauncher/bridge/common/BridgeEventJournal.class',
+    'ru/neverlauncher/bridge/common/BridgeControlCommand.class',
+    'ru/neverlauncher/bridge/common/BridgeControlExecutor.class',
+    'ru/neverlauncher/bridge/common/BridgeControlJournal.class',
+    'ru/neverlauncher/bridge/common/BridgeControlTrust.class',
 ]
 REQUIRED_ENTRIES = {
     'velocity':['velocity-plugin.json','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class'],
@@ -166,6 +170,8 @@ def main() -> int:
         'serverTelemetry': True, 'boundedTelemetrySampling': True,
         'serverEventStream': True, 'orderedEventAck': True,
         'eventReplayProtection': True, 'eventReconnectResume': True,
+        'controlAPI': True, 'controlRBAC': True, 'controlIdempotency': True,
+        'controlAudit': True, 'controlCommandAllowlist': True, 'controlShellExecution': False,
         'artifacts': evidence,
     }
     out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')

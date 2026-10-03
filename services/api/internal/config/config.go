@@ -14,59 +14,60 @@ import (
 
 // Config содержит настройки Backend API.
 type Config struct {
-	HTTPAddr                           string
-	PublicURL                          string
-	DatabaseDSN                        string
-	RepositoryDriver                   string
-	SQLDriver                          string
-	RedisAddr                          string
-	RedisURL                           string
-	TrustedProxyCIDRs                  []string
-	RateLimitEnabled                   bool
-	RateLimitGlobalPerMinute           int
-	RateLimitAuthPerMinute             int
-	RateLimitServerBridgePerMinute     int
-	RateLimitFailClosed                bool
-	StorageDriver                      string
-	StorageLocalPath                   string
-	StorageS3Endpoint                  string
-	StorageS3Bucket                    string
-	StorageS3Region                    string
-	StorageS3AccessKey                 string
-	StorageS3SecretKey                 string
-	StorageS3PublicURL                 string
-	StorageS3PathStyle                 bool
-	StorageDeliveryMode                string
-	StorageCDNOrigin                   string
-	StorageMaxUploadBytes              int64
-	BackupRoot                         string
-	CORSAllowedOrigins                 []string
-	Environment                        string
-	AuthTokenSecret                    string
-	AuthTokenTTLHours                  int
-	AuthTokenIssuer                    string
-	AuthTokenAudience                  string
-	AuthTokenActiveKID                 string
-	AuthTokenKeysJSON                  string
-	GuardReleaseAllowlistJSON          string
-	BridgeReleaseAllowlistJSON         string
-	MetricsEnabled                     bool
-	PersistentSessions                 bool
-	RequirePersistentStoreInProduction bool
-	DatabaseAutoMigrate                bool
-	BootstrapToken                     string
-	ManifestSigningPrivateKey          string
-	AuthSQLProvidersJSON               string
-	AuthSQLProvidersFile               string
-	AuthHTTPProvidersJSON              string
-	AuthHTTPProvidersFile              string
-	AuthOIDCProvidersJSON              string
-	AuthOIDCProvidersFile              string
-	AuthMicrosoftProvidersJSON         string
-	AuthMicrosoftProvidersFile         string
-	WebAuthnRPID                       string
-	WebAuthnRPName                     string
-	WebAuthnOrigins                    []string
+	HTTPAddr                             string
+	PublicURL                            string
+	DatabaseDSN                          string
+	RepositoryDriver                     string
+	SQLDriver                            string
+	RedisAddr                            string
+	RedisURL                             string
+	TrustedProxyCIDRs                    []string
+	RateLimitEnabled                     bool
+	RateLimitGlobalPerMinute             int
+	RateLimitAuthPerMinute               int
+	RateLimitServerBridgePerMinute       int
+	RateLimitFailClosed                  bool
+	StorageDriver                        string
+	StorageLocalPath                     string
+	StorageS3Endpoint                    string
+	StorageS3Bucket                      string
+	StorageS3Region                      string
+	StorageS3AccessKey                   string
+	StorageS3SecretKey                   string
+	StorageS3PublicURL                   string
+	StorageS3PathStyle                   bool
+	StorageDeliveryMode                  string
+	StorageCDNOrigin                     string
+	StorageMaxUploadBytes                int64
+	BackupRoot                           string
+	CORSAllowedOrigins                   []string
+	Environment                          string
+	AuthTokenSecret                      string
+	AuthTokenTTLHours                    int
+	AuthTokenIssuer                      string
+	AuthTokenAudience                    string
+	AuthTokenActiveKID                   string
+	AuthTokenKeysJSON                    string
+	GuardReleaseAllowlistJSON            string
+	BridgeReleaseAllowlistJSON           string
+	MetricsEnabled                       bool
+	PersistentSessions                   bool
+	RequirePersistentStoreInProduction   bool
+	DatabaseAutoMigrate                  bool
+	BootstrapToken                       string
+	ManifestSigningPrivateKey            string
+	ServerBridgeControlSigningPrivateKey string
+	AuthSQLProvidersJSON                 string
+	AuthSQLProvidersFile                 string
+	AuthHTTPProvidersJSON                string
+	AuthHTTPProvidersFile                string
+	AuthOIDCProvidersJSON                string
+	AuthOIDCProvidersFile                string
+	AuthMicrosoftProvidersJSON           string
+	AuthMicrosoftProvidersFile           string
+	WebAuthnRPID                         string
+	WebAuthnRPName                       string
+	WebAuthnOrigins                      []string
 }
 
 func bridgeReleaseRequiresBukkitFamily0144(version string) bool {
@@ -134,6 +135,8 @@ func Load() Config {
 		redisURL = "redis://" + redisAddr + "/0"
 	}
 	production := IsProductionEnvironment(environment)
+	manifestSigningPrivateKey := env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", "")
+	serverBridgeControlSigningPrivateKey := env("NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", manifestSigningPrivateKey)
 	publicURL := env("NEVERLAUNCHER_PUBLIC_URL", "http://localhost:8080")
 	webauthnRPID, webauthnOrigin := defaultWebAuthnScope(publicURL)
 	corsFallback := "http://localhost:5173,http://127.0.0.1:5173"
@@ -141,59 +144,60 @@ func Load() Config {
 		corsFallback = ""
 	}
 	return Config{
-		HTTPAddr:                           env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
-		PublicURL:                          publicURL,
-		DatabaseDSN:                        env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
-		RepositoryDriver:                   env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
-		SQLDriver:                          env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
-		RedisAddr:                          redisAddr,
-		RedisURL:                           redisURL,
-		TrustedProxyCIDRs:                  envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
-		RateLimitEnabled:                   envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
-		RateLimitGlobalPerMinute:           envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
-		RateLimitAuthPerMinute:             envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
-		RateLimitServerBridgePerMinute:     envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
-		RateLimitFailClosed:                envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
-		StorageDriver:                      env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
-		StorageLocalPath:                   env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
-		StorageS3Endpoint:                  env("NEVERLAUNCHER_STORAGE_S3_ENDPOINT", ""),
-		StorageS3Bucket:                    env("NEVERLAUNCHER_STORAGE_S3_BUCKET", ""),
-		StorageS3Region:                    env("NEVERLAUNCHER_STORAGE_S3_REGION", "ru-central1"),
-		StorageS3AccessKey:                 env("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
-		StorageS3SecretKey:                 env("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY", ""),
-		StorageS3PublicURL:                 env("NEVERLAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
-		StorageS3PathStyle:                 envBool("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", true),
-		StorageDeliveryMode:                env("NEVERLAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
-		StorageCDNOrigin:                   env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
-		StorageMaxUploadBytes:              envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
-		BackupRoot:                         env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
-		CORSAllowedOrigins:                 envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
-		Environment:                        environment,
-		AuthTokenSecret:                    env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
-		AuthTokenTTLHours:                  envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
-		AuthTokenIssuer:                    env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
-		AuthTokenAudience:                  env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
-		AuthTokenActiveKID:                 env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
-		AuthTokenKeysJSON:                  env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
-		GuardReleaseAllowlistJSON:          env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
-		BridgeReleaseAllowlistJSON:         env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
-		MetricsEnabled:                     envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
-		PersistentSessions:                 envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
-		RequirePersistentStoreInProduction: envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
-		DatabaseAutoMigrate:                envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
-		BootstrapToken:                     env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
-		ManifestSigningPrivateKey:          env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", ""),
-		AuthSQLProvidersJSON:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
-		AuthSQLProvidersFile:               env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
-		AuthHTTPProvidersJSON:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
-		AuthHTTPProvidersFile:              env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
-		AuthOIDCProvidersJSON:              env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
-		AuthOIDCProvidersFile:              env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
-		AuthMicrosoftProvidersJSON:         env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
-		AuthMicrosoftProvidersFile:         env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
-		WebAuthnRPID:                       env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
-		WebAuthnRPName:                     env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
-		WebAuthnOrigins:                    envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
+		HTTPAddr:                             env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
+		PublicURL:                            publicURL,
+		DatabaseDSN:                          env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
+		RepositoryDriver:                     env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
+		SQLDriver:                            env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
+		RedisAddr:                            redisAddr,
+		RedisURL:                             redisURL,
+		TrustedProxyCIDRs:                    envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
+		RateLimitEnabled:                     envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
+		RateLimitGlobalPerMinute:             envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
+		RateLimitAuthPerMinute:               envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
+		RateLimitServerBridgePerMinute:       envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
+		RateLimitFailClosed:                  envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
+		StorageDriver:                        env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
+		StorageLocalPath:                     env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
+		StorageS3Endpoint:                    env("NEVERLAUNCHER_STORAGE_S3_ENDPOINT", ""),
+		StorageS3Bucket:                      env("NEVERLAUNCHER_STORAGE_S3_BUCKET", ""),
+		StorageS3Region:                      env("NEVERLAUNCHER_STORAGE_S3_REGION", "ru-central1"),
+		StorageS3AccessKey:                   env("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
+		StorageS3SecretKey:                   env("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY", ""),
+		StorageS3PublicURL:                   env("NEVERLAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
+		StorageS3PathStyle:                   envBool("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", true),
+		StorageDeliveryMode:                  env("NEVERLAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
+		StorageCDNOrigin:                     env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
+		StorageMaxUploadBytes:                envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
+		BackupRoot:                           env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
+		CORSAllowedOrigins:                   envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
+		Environment:                          environment,
+		AuthTokenSecret:                      env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
+		AuthTokenTTLHours:                    envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
+		AuthTokenIssuer:                      env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
+		AuthTokenAudience:                    env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
+		AuthTokenActiveKID:                   env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
+		AuthTokenKeysJSON:                    env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
+		GuardReleaseAllowlistJSON:            env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
+		BridgeReleaseAllowlistJSON:           env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
+		MetricsEnabled:                       envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
+		PersistentSessions:                   envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
+		RequirePersistentStoreInProduction:   envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
+		DatabaseAutoMigrate:                  envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
+		BootstrapToken:                       env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
+		ManifestSigningPrivateKey:            manifestSigningPrivateKey,
+		ServerBridgeControlSigningPrivateKey: serverBridgeControlSigningPrivateKey,
+		AuthSQLProvidersJSON:                 env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
+		AuthSQLProvidersFile:                 env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
+		AuthHTTPProvidersJSON:                env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
+		AuthHTTPProvidersFile:                env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
+		AuthOIDCProvidersJSON:                env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
+		AuthOIDCProvidersFile:                env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
+		AuthMicrosoftProvidersJSON:           env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
+		AuthMicrosoftProvidersFile:           env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
+		WebAuthnRPID:                         env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
+		WebAuthnRPName:                       env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
+		WebAuthnOrigins:                      envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
 	}
 }
 
@@ -235,6 +239,12 @@ func ValidateProduction(cfg Config) error {
 	secret := strings.TrimSpace(cfg.AuthTokenSecret)
 	if len(secret) < 32 || secret == "dev-only-change-me" || strings.Contains(strings.ToUpper(secret), "CHANGE_ME") {
 		problems = append(problems, "NEVERLAUNCHER_AUTH_TOKEN_SECRET должен содержать не менее 32 случайных символов и не быть значением по умолчанию")
+	}
+	if controlKey := strings.TrimSpace(cfg.ServerBridgeControlSigningPrivateKey); controlKey != "" {
+		decoded, err := hex.DecodeString(controlKey)
+		if err != nil || len(decoded) != 32 {
+			problems = append(problems, "NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
+		}
 	}
 	if raw := strings.TrimSpace(cfg.AuthTokenKeysJSON); raw != "" {
 		keys := map[string]string{}

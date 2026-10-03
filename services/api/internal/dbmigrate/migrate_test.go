@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0034_serverbridge_telemetry_0193" {
+	if st.Current != "0036_serverbridge_control_api_0195" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0034_serverbridge_telemetry_0193" {
+		if k != "0036_serverbridge_control_api_0195" {
 			pending[k] = v
 		}
 	}
@@ -436,6 +436,27 @@ func TestServerBridgeEventStreamMigration0194(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.19.4 ServerBridge event stream migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeControlAPIMigration0195(t *testing.T) {
+	b, err := os.ReadFile("sql/0036_serverbridge_control_api_0195.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	for _, required := range []string{
+		"server_bridge_control_commands_v3",
+		"idempotency_key",
+		"request_digest",
+		"runtime_epoch",
+		"lease_until",
+		"serverbridge:control",
+		"serverbridge:console",
+	} {
+		if !strings.Contains(s, required) {
+			t.Fatalf("0.19.5 ServerBridge control migration missing %q", required)
 		}
 	}
 }

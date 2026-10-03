@@ -1,4 +1,4 @@
-# NeverLauncher 0.19.4 — Public ServerBridge Matrix
+# NeverLauncher 0.19.5 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.
 
@@ -17,3 +17,8 @@
 | `neoforge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 (v2 rolling) | yes | Ed25519 | yes | target | TPS/MSPT + players + worlds + bounded chunks/entities | lifecycle + player + world |
 
 Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.
+
+
+## 0.19.5 Control API
+
+Все target-платформы используют Protocol v3 feature `control.secure-channel-v1`: signed node poll/ACK, Backend Ed25519 command signatures, runtime-bound leases, local idempotency journal и platform-native execution. OS shell execution не используется. Proxy cores честно возвращают `unsupported` для whitelist/ban/save, которыми они не управляют.

@@ -2,6 +2,9 @@ package ru.neverlauncher.bridge.modloader;
 
 import org.slf4j.Logger;
 import ru.neverlauncher.bridge.common.BridgeConfig;
+import ru.neverlauncher.bridge.common.BridgeControlCommand;
+import ru.neverlauncher.bridge.common.BridgeControlExecutor;
+import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
 import ru.neverlauncher.bridge.common.BridgeIntegrity;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
@@ -34,17 +37,20 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     private final Logger logger;
     private final Supplier<BridgeRuntimeDescriptor> runtimeDescriptorSupplier;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
+    private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
+    private final AtomicBoolean drainMode = new AtomicBoolean(false);
     private final ScheduledExecutorService heartbeatExecutor;
     private final ThreadPoolExecutor validationExecutor;
     private volatile RuntimeState state;
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
+    private volatile BridgeControlExecutor platformControlExecutor;
 
     public ModLoaderBridgeRuntime(String platformId, String displayName, Path configPath, Class<?> artifactAnchor, Supplier<Path> artifactPathSupplier, Logger logger) {
         this(platformId, displayName, configPath, artifactAnchor, artifactPathSupplier, logger,
             () -> BridgeRuntimeDescriptor.of(
                 "", platformId, displayName, "", displayName,
-                java.util.List.of("heartbeat.signed", "join.modloader-gate", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1")
+                java.util.List.of("heartbeat.signed", "join.modloader-gate", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1", "events.ordered-stream-v1", BridgeDefaults.FEATURE_CONTROL_API)
             ));
     }
 
@@ -96,6 +102,8 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         if (current == null || stopping.get()) {
             return new JoinValidationResult(false, "bridge_runtime_unavailable", "{}");
         }
+        if (maintenanceMode.get()) return new JoinValidationResult(false, "server_maintenance", "{}");
+        if (drainMode.get()) return new JoinValidationResult(false, "server_draining", "{}");
         return current.api.validateJoin(username, uuid, ip);
     }
 
@@ -123,6 +131,32 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         return current == null ? 20 : current.config.telemetrySamplingBudgetMs;
     }
 
+
+    public synchronized void startControlChannel(BridgeControlExecutor executor) {
+        this.platformControlExecutor = Objects.requireNonNull(executor, "executor");
+        RuntimeState current = state;
+        if (current != null && !stopping.get()) current.api.startControlChannel(this::executeControl);
+    }
+
+    private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
+        if ("server.maintenance".equals(command.type())) {
+            boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
+            maintenanceMode.set(enabled);
+            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
+        }
+        if ("server.drain".equals(command.type())) {
+            boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
+            drainMode.set(enabled);
+            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
+        }
+        BridgeControlExecutor executor = platformControlExecutor;
+        return executor == null ? BridgeControlResult.unsupported("platform_control_unavailable") : executor.execute(command);
+    }
+
+    public boolean isConsoleCommandAllowed(String command) {
+        RuntimeState current = state;
+        return current != null && current.config.isConsoleCommandAllowed(command);
+    }
 
     public void triggerHeartbeat() {
         if (stopping.get() || heartbeatExecutor.isShutdown()) return;

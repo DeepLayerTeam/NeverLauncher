@@ -1,3 +1,10 @@
+## [0.19.5] - 2026-10-03
+
+- Added production ServerBridge 3 Backend→Bridge control channel with runtime-bound durable command leasing, signed node poll/ACK and dedicated Backend Ed25519 command signatures.
+- Added native platform execution for kick, broadcast, whitelist/ban operations, save, maintenance/drain, graceful shutdown and allowlisted console commands; no OS shell execution is used.
+- Added RBAC (`serverbridge:control` / `serverbridge:console`), mandatory idempotency keys, local at-most-once execution journal, reconnect/reload safety, full PostgreSQL audit transitions and bounded terminal-command retention.
+- Added migration `0036_serverbridge_control_api_0195`, OpenAPI schemas/routes, release certification requirements, common Java runtime tests and the 0.19.5 CI production gate.
+
 ## [0.19.4] - 2026-10-03
 
 - Added a production Protocol v3 ordered Server Event Stream with per-event Ed25519 signatures, runtime-bound monotonic sequence numbers, contiguous ACKs, batch delivery and signed request nonce replay protection.

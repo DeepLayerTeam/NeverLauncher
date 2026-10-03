@@ -12,6 +12,8 @@ import net.md_5.bungee.api.scheduler.ScheduledTask;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
+import ru.neverlauncher.bridge.common.BridgeControlCommand;
+import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.JoinValidationResult;
@@ -63,12 +65,14 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         "runtime.ed25519-attestation",
                         "telemetry.server-v1",
                         "events.ordered-stream-v1",
+                        "control.secure-channel-v1",
                         "proxy.bungee-api"
                     )
                 )
             );
             next.start();
             runtime = next;
+            next.startControlChannel(this::executeControl);
             scheduleTelemetry(proxy, next);
         } catch (Exception e) {
             throw new IllegalStateException("NeverLauncher ServerBridge initialization failed: " + e.getMessage(), e);
@@ -188,6 +192,53 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 }, reason),
                 0L, TimeUnit.MILLISECONDS);
         });
+    }
+
+    private BridgeControlResult executeControl(BridgeControlCommand command) {
+        Map<String,String> payload = command.payload();
+        switch (command.type()) {
+            case "player.kick" -> {
+                String username = safeUsername(payload.get("username"));
+                var player = getProxy().getPlayer(username);
+                if (player == null) return BridgeControlResult.failed("player_not_online");
+                player.disconnect(TextComponent.fromLegacyText(safeLine(payload.getOrDefault("reason", "Disconnected by proxy operator"), 512)));
+                return BridgeControlResult.ok(Map.of("username", username));
+            }
+            case "message.broadcast" -> {
+                int recipients = getProxy().getOnlineCount();
+                getProxy().broadcast(TextComponent.fromLegacyText(safeLine(payload.getOrDefault("message", ""), 1024)));
+                return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
+            }
+            case "server.shutdown" -> {
+                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+                getProxy().getScheduler().schedule(this, () -> getProxy().stop(reason), 1500L, TimeUnit.MILLISECONDS);
+                return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+            }
+            case "server.console" -> {
+                String raw = payload.getOrDefault("command", "").trim();
+                if (raw.startsWith("/")) raw = raw.substring(1);
+                ProxyBridgeRuntime current = runtime;
+                if (current == null || !current.isConsoleCommandAllowed(raw)) return BridgeControlResult.failed("console_command_not_allowlisted");
+                if (raw.isBlank() || raw.indexOf('\n') >= 0 || raw.indexOf('\r') >= 0 || raw.indexOf('\0') >= 0) return BridgeControlResult.failed("console_command_invalid");
+                boolean accepted = getProxy().getPluginManager().dispatchCommand(getProxy().getConsole(), raw);
+                return accepted ? BridgeControlResult.ok(Map.of("accepted", "true")) : BridgeControlResult.failed("platform_command_rejected");
+            }
+            case "whitelist.add", "whitelist.remove", "whitelist.enable", "whitelist.disable", "ban.add", "ban.remove", "server.save" -> {
+                return BridgeControlResult.unsupported("operation_not_supported_by_bungee_core");
+            }
+            default -> { return BridgeControlResult.unsupported("unsupported_control_type"); }
+        }
+    }
+
+    private static String safeUsername(String value) {
+        String username = value == null ? "" : value.trim();
+        if (!username.matches("[A-Za-z0-9_]{1,16}")) throw new IllegalArgumentException("invalid Minecraft username");
+        return username;
+    }
+
+    private static String safeLine(String value, int max) {
+        String out = value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').replace('\0', ' ').trim();
+        return out.length() > max ? out.substring(0, max) : out;
     }
 
     private static String safe(String value) {
