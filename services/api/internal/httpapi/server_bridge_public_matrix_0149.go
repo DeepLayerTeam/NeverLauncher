@@ -3,24 +3,25 @@ package httpapi
 import "net/http"
 
 type serverBridgeMatrixPlatform0149 struct {
-	ID                    string `json:"id"`
-	Family                string `json:"family"`
-	Role                  string `json:"role"`
-	MinVersion            string `json:"minVersion,omitempty"`
-	MinMinecraft          string `json:"minMinecraft,omitempty"`
-	Artifact              string `json:"artifact"`
-	Threading             string `json:"threading,omitempty"`
-	Installation          string `json:"installation"`
-	Coverage              string `json:"coverage"`
-	Status                string `json:"status"`
-	ProtocolVersion       int    `json:"protocolVersion"`
-	Java                  []int  `json:"java"`
-	ClientModRequired     bool   `json:"clientModRequired"`
-	CryptographicIdentity bool   `json:"cryptographicNodeIdentity"`
-	ArtifactIntegrity     bool   `json:"artifactIntegrity"`
-	OneTimeJoin           bool   `json:"oneTimeJoin"`
-	HandoffSource         bool   `json:"handoffSource"`
-	HandoffTarget         bool   `json:"handoffTarget"`
+	ID                        string `json:"id"`
+	Family                    string `json:"family"`
+	Role                      string `json:"role"`
+	MinVersion                string `json:"minVersion,omitempty"`
+	MinMinecraft              string `json:"minMinecraft,omitempty"`
+	Artifact                  string `json:"artifact"`
+	Threading                 string `json:"threading,omitempty"`
+	Installation              string `json:"installation"`
+	Coverage                  string `json:"coverage"`
+	Status                    string `json:"status"`
+	ProtocolVersion           int    `json:"protocolVersion"`
+	SupportedProtocolVersions []int  `json:"supportedProtocolVersions"`
+	Java                      []int  `json:"java"`
+	ClientModRequired         bool   `json:"clientModRequired"`
+	CryptographicIdentity     bool   `json:"cryptographicNodeIdentity"`
+	ArtifactIntegrity         bool   `json:"artifactIntegrity"`
+	OneTimeJoin               bool   `json:"oneTimeJoin"`
+	HandoffSource             bool   `json:"handoffSource"`
+	HandoffTarget             bool   `json:"handoffTarget"`
 }
 
 func serverBridgeMatrixPlatforms0149(version string) []serverBridgeMatrixPlatform0149 {
@@ -28,7 +29,7 @@ func serverBridgeMatrixPlatforms0149(version string) []serverBridgeMatrixPlatfor
 		return serverBridgeMatrixPlatform0149{
 			ID: id, Family: family, Role: role, MinVersion: minVersion, MinMinecraft: minMinecraft,
 			Artifact: artifact, Threading: threading, Installation: "drop-in-zero-patch", Coverage: coverage,
-			Status: "supported", ProtocolVersion: serverBridgeProtocolV2, Java: []int{21}, ClientModRequired: false,
+			Status: "supported", ProtocolVersion: serverBridgeProtocolCurrent, SupportedProtocolVersions: append([]int(nil), serverBridgeSupportedProtocols0191...), Java: []int{21}, ClientModRequired: false,
 			CryptographicIdentity: true, ArtifactIntegrity: true, OneTimeJoin: true,
 			HandoffSource: role == "proxy", HandoffTarget: role == "backend",
 		}
@@ -52,11 +53,13 @@ func (s Server) serverBridgePublicMatrix0149(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{
 		"apiVersion": bridgePluginsSchema940,
 		"data": map[string]any{
-			"schemaVersion":   bridgePluginsSchema940,
-			"toolVersion":     s.Version,
-			"status":          "supported",
-			"protocolVersion": serverBridgeProtocolV2,
-			"platforms":       serverBridgeMatrixPlatforms0149(s.Version),
+			"schemaVersion":             bridgePluginsSchema940,
+			"toolVersion":               s.Version,
+			"status":                    "supported",
+			"protocolVersion":           serverBridgeProtocolCurrent,
+			"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+			"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
+			"platforms":                 serverBridgeMatrixPlatforms0149(s.Version),
 			"ha": map[string]any{
 				"sourceOfTruth":            "postgresql",
 				"nodeAuthentication":       "ed25519-signed-requests",

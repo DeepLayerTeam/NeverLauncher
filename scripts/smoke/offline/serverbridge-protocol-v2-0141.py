@@ -45,26 +45,32 @@ require(repo, [
 
 handler = read("services/api/internal/httpapi/handler.go")
 require(handler, ["configureRepositoryV2(s.Repo)"], "ServerBridge repository wiring")
-bridge = read("services/api/internal/httpapi/server_bridge.go") + read("services/api/internal/httpapi/server_bridge_persistence_v2.go")
+protocol = read("services/api/internal/httpapi/server_bridge_protocol_0191.go")
+bridge = read("services/api/internal/httpapi/server_bridge.go") + read("services/api/internal/httpapi/server_bridge_persistence_v2.go") + protocol
 require(bridge, [
-    "serverBridgeProtocolV2 = 2",
+    "serverBridgeProtocolV2",
+    "serverBridgeProtocolV3",
+    "serverBridgeSupportedProtocols0191",
     "ConsumeServerBridgeJoinTicket",
     "validBridgeServerKindV2",
     "one-time atomic join tickets",
     '"sourceOfTruth": "memory-dev-test"',
 ], "ServerBridge v2 runtime")
 plugins = read("services/api/internal/httpapi/bridge_plugins.go")
-require(plugins, [
-    "ProtocolVersion int",
+require(plugins + protocol, [
+    "decodeBridgeHeartbeat0191",
+    "decodeBridgeValidateJoin0191",
     "http.StatusUpgradeRequired",
     "serverbridge_protocol_unsupported",
-    "валидный pluginSha256 обязательны для Protocol v2",
+    "serverBridgeProtocolV2",
     "consumeJoinV2(join, redemption)",
 ], "ServerBridge v2 endpoint enforcement")
 java = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
 defaults = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java")
 require(java, ["protocolVersion", "BridgeDefaults.PROTOCOL_VERSION"], "ServerBridge Java client")
-require(defaults, ["PROTOCOL_VERSION = 2"], "ServerBridge Java protocol constant")
+require(defaults, ["PROTOCOL_VERSION = 3", "LEGACY_PROTOCOL_VERSION = 2"], "ServerBridge Java v3 current + v2 rolling constants")
+contract_tests = read("services/api/internal/httpapi/server_bridge_protocol_0191_test.go")
+require(contract_tests, ["v2 rolling-upgrade contract rejected", "Protocol v2 contract must reject Protocol v3 feature field", "v2 rolling heartbeat"], "ServerBridge v2 rolling regression tests")
 
 tests = read("services/api/internal/httpapi/server_bridge_test.go") + read("services/api/internal/httpapi/bridge_plugins_test.go")
 require(tests, [
@@ -81,4 +87,4 @@ require(e2e, [
     'sourceOfTruth == "postgresql"',
 ], "Minecraft PostgreSQL ServerBridge E2E")
 
-print(f"NeverLauncher 0.14.1 ServerBridge Protocol v2 + PostgreSQL source-of-truth gate: OK ({version})")
+print(f"NeverLauncher ServerBridge Protocol v2 rolling-compatibility + PostgreSQL source-of-truth gate: OK ({version})")

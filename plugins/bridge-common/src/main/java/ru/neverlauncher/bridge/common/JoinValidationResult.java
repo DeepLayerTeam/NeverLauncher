@@ -14,7 +14,7 @@ public final class JoinValidationResult {
     public String userMessage() {
         return switch (reason) {
             case "backend_unavailable", "backend_interrupted" -> "Сервис авторизации NeverLauncher временно недоступен.";
-            case "serverbridge_protocol_unsupported" -> "ServerBridge требует Protocol v2. Обновите серверный bridge до текущего релиза NeverLauncher.";
+            case "serverbridge_protocol_unsupported", "serverbridge_v3_required_features_missing", "serverbridge_v3_feature_unsupported" -> "Версия ServerBridge несовместима с Backend NeverLauncher. Обновите server bridge/backend до совместимого релиза.";
             case "node_identity_missing", "node_identity_signing_failed", "serverbridge_node_signature_required", "serverbridge_node_identity_invalid", "serverbridge_node_fingerprint_mismatch" -> "Криптографическая identity ServerBridge не зарегистрирована или недействительна.";
             case "serverbridge_node_timestamp_invalid", "serverbridge_node_timestamp_out_of_window" -> "Время ServerBridge node не синхронизировано с Backend.";
             case "serverbridge_node_nonce_invalid", "serverbridge_node_nonce_replayed" -> "Backend отклонил повторный или некорректный ServerBridge-запрос.";

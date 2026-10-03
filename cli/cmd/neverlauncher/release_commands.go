@@ -100,7 +100,7 @@ func handleRelease(args []string) error {
 			}
 			if serverBridge2CertificationRequired0150(manifestVersion) {
 				if err := verifyServerBridge2CertificationInBundle0150(args[1], manifestVersion); err != nil {
-					return fmt.Errorf("ServerBridge 2 certification: %w", err)
+					return fmt.Errorf("ServerBridge certification: %w", err)
 				}
 			}
 			if windowsSigningRequired0152(manifestVersion) {
@@ -1314,8 +1314,10 @@ func releaseDescription(ver string) string {
 	if guardCICertificationRequired(ver) {
 		extra += "\n- начиная с 0.13.9 publish-check требует cross-platform GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет exact Windows/Linux/macOS Guard artifacts по SHA-256;"
 	}
-	if serverBridge2CertificationRequired0150(ver) {
-		extra += "\n- начиная с 0.15.0 publish-check требует SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+	if serverBridge3CertificationRequired0191(ver) {
+		extra += "\n- начиная с 0.19.1 publish-check требует SERVERBRIDGE3_CERTIFICATION.json (Protocol v3) и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+	} else if serverBridge2CertificationRequired0150(ver) {
+		extra += "\n- для 0.15.0–0.19.0 publish-check требует исторический SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
 	}
 	if deliveryManifestRequired0151(ver) {
 		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"

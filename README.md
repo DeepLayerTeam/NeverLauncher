@@ -1,3 +1,9 @@
+## ServerBridge 3 — 0.19.1
+
+`0.19.1` переводит рабочий ServerBridge runtime на Protocol v3 с реальным capability negotiation через `GET /api/v1/server-bridge/capabilities`. Backend и bridge имеют отдельные v2/v3 wire contracts; v3 требует negotiated feature flags, а v2 остаётся рабочим для rolling upgrade. Bridge 0.19.1 кэширует negotiation на 5 минут и откатывается на v2 только если capabilities route отсутствует (`404`), поэтому backend failures не маскируются downgrade.
+
+PostgreSQL migration `0031_serverbridge_protocol_v3_0191` разрешает protocol versions 2/3 у node и one-time join ticket; heartbeat сохраняет реально negotiated protocol ноды. Release boundary требует `SERVERBRIDGE3_CERTIFICATION.json` и наличие negotiation runtime в platform JAR. Public matrix/diagnostics публикуют current protocol `3`, supported `[3,2]` и feature flags.
+
 ## NeverGuard Windows Protection GA — 0.19.0
 
 NeverLauncher `0.19.0` переводит накопленный Windows protection stack `0.18.1–0.18.12` в production GA. Официальный Windows release считается GA только при aggressive/fail-closed user-mode boundary: подписанный ранний Sensor, Continuous Module Guard, IAT Hook Engine, executable-memory integrity, Thread & Process Integrity, Debug & Instrumentation Guard, JVM-aware enforcement для Java 8/16/17/21/25, Sensor↔Guard Continuous Guard и post-launch Attestation v2 с одноразовым ServerBridge join ticket.
@@ -367,7 +373,7 @@ Production-подпись выполняется Windows SDK `signtool`: SHA-256
 
 Для диагностики и интеграции доступны `nl delivery target`, `nl delivery verify` и `nl delivery resolve`. Resolver принимает aliases вроде `amd64`/`x86_64` и `aarch64`; macOS universal artifact совместим с обеими native архитектурами. Manifest не заявляет отсутствующие ARM64/x64 сборки: `publishedTargets` выводится только из фактически находящихся в bundle platform artifacts.
 
-## ServerBridge 2 Release — 0.15.0
+## Historical: ServerBridge 2 Release — 0.15.0
 
 `0.15.0` закрепляет ServerBridge 2 как production release без новой DB migration поверх `0030`. `scripts/build/bridge-plugins.sh` обязан собрать все 11 platform-matched JAR и завершиться `SERVERBRIDGE2_CERTIFICATION.json`; certification сверяет public matrix, manifest, фактические JAR, SHA256SUMS и exact-version `BRIDGE_RELEASE_ALLOWLIST.json`. Production release bundle и `nl release publish-check` fail-closed требуют эту certification и повторно хэшируют каждый bridge artifact.
 

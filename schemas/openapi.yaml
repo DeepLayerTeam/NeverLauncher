@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6450,6 +6450,53 @@
         }
       }
     },
+    "/api/v1/server-bridge/capabilities": {
+      "get": {
+        "operationId": "get_server_bridge_capabilities",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/capabilities",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeCapabilitiesResponse"
+                }
+              }
+            }
+          },
+          "426": {
+            "$ref": "#/components/responses/UpgradeRequired"
+          }
+        },
+        "parameters": [
+          {
+            "name": "protocols",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated protocol versions offered by the bridge, highest preference first.",
+            "schema": {
+              "type": "string",
+              "example": "3,2"
+            }
+          },
+          {
+            "name": "features",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated Protocol v3 feature identifiers supported by the bridge.",
+            "schema": {
+              "type": "string",
+              "example": "protocol.capability-negotiation,protocol.feature-flags"
+            }
+          }
+        ],
+        "security": []
+      }
+    },
     "/api/v1/server-bridge/diagnostics": {
       "get": {
         "operationId": "get_server_bridge_diagnostics",
@@ -6488,7 +6535,7 @@
         ],
         "summary": "POST /api/v1/server-bridge/handoff",
         "responses": {
-          "200": {
+          "201": {
             "description": "Success",
             "content": {
               "application/json": {
@@ -8670,7 +8717,118 @@
           }
         }
       },
-      "HeartbeatRequest": {
+      "ServerBridgeCapabilitiesResponse": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "data"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "toolVersion",
+              "release",
+              "status",
+              "preferredProtocolVersion",
+              "minimumProtocolVersion",
+              "supportedProtocolVersions",
+              "negotiatedProtocolVersion",
+              "features",
+              "featureFlags",
+              "requiredFeatures",
+              "rollingUpgrade",
+              "legacyProtocolV2Supported",
+              "capabilityNegotiationActive"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "type": "string"
+              },
+              "toolVersion": {
+                "type": "string"
+              },
+              "release": {
+                "const": "ServerBridge 3"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "negotiated",
+                  "serverbridge_no_compatible_protocol"
+                ]
+              },
+              "preferredProtocolVersion": {
+                "const": 3
+              },
+              "minimumProtocolVersion": {
+                "const": 2
+              },
+              "supportedProtocolVersions": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "enum": [
+                    2,
+                    3
+                  ]
+                },
+                "minItems": 2,
+                "uniqueItems": true
+              },
+              "negotiatedProtocolVersion": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "featureFlags": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "boolean"
+                }
+              },
+              "requiredFeatures": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "rollingUpgrade": {
+                "const": true
+              },
+              "legacyProtocolV2Supported": {
+                "const": true
+              },
+              "capabilityNegotiationActive": {
+                "const": true
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "HeartbeatRequestV2": {
         "type": "object",
         "required": [
           "protocolVersion",
@@ -8710,11 +8868,88 @@
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$",
             "description": "SHA-256 of the running ServerBridge JAR"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "playersOnline": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "additionalProperties": false
       },
-      "BridgeHandoffRequest": {
+      "HeartbeatRequestV3": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "features",
+          "serverId",
+          "serverType",
+          "pluginVersion",
+          "pluginSha256"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 3
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          },
+          "serverId": {
+            "type": "string"
+          },
+          "serverType": {
+            "type": "string",
+            "enum": [
+              "velocity",
+              "bungeecord",
+              "waterfall",
+              "bukkit",
+              "spigot",
+              "paper",
+              "purpur",
+              "folia",
+              "fabric",
+              "forge",
+              "neoforge"
+            ]
+          },
+          "pluginVersion": {
+            "type": "string"
+          },
+          "pluginSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$",
+            "description": "SHA-256 of the running ServerBridge JAR"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "playersOnline": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "HeartbeatRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/HeartbeatRequestV2"
+          },
+          {
+            "$ref": "#/components/schemas/HeartbeatRequestV3"
+          }
+        ]
+      },
+      "BridgeHandoffRequestV2": {
         "type": "object",
         "required": [
           "protocolVersion",
@@ -8732,11 +8967,52 @@
           },
           "targetServer": {
             "type": "string",
-            "minLength": 1,
-            "description": "Existing proxy backend name or canonical ServerBridge target node id."
+            "minLength": 1
           }
         },
         "additionalProperties": false
+      },
+      "BridgeHandoffRequestV3": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "features",
+          "username",
+          "targetServer"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 3
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetServer": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "BridgeHandoffRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/BridgeHandoffRequestV2"
+          },
+          {
+            "$ref": "#/components/schemas/BridgeHandoffRequestV3"
+          }
+        ]
       },
       "BridgeAuditEventRequest": {
         "type": "object",
@@ -9039,7 +9315,7 @@
         "type": "object",
         "additionalProperties": true
       },
-      "ValidateJoinRequest": {
+      "ValidateJoinRequestV2": {
         "type": "object",
         "required": [
           "protocolVersion",
@@ -9087,6 +9363,74 @@
           }
         },
         "additionalProperties": false
+      },
+      "ValidateJoinRequestV3": {
+        "type": "object",
+        "required": [
+          "protocolVersion",
+          "features",
+          "serverId",
+          "username",
+          "pluginVersion",
+          "pluginSha256"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 3
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "uniqueItems": true
+          },
+          "serverId": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          },
+          "serverHash": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "pluginVersion": {
+            "type": "string"
+          },
+          "pluginSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$",
+            "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidateJoinRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ValidateJoinRequestV2"
+          },
+          {
+            "$ref": "#/components/schemas/ValidateJoinRequestV3"
+          }
+        ]
       }
     },
     "responses": {
@@ -9141,7 +9485,7 @@
         }
       },
       "UpgradeRequired": {
-        "description": "ServerBridge Protocol v2 is required",
+        "description": "No compatible ServerBridge Protocol v2/v3 contract or required v3 feature set was negotiated",
         "content": {
           "application/json": {
             "schema": {

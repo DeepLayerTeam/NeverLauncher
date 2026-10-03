@@ -2,6 +2,12 @@
 
 Production-стек использует PostgreSQL, Redis с паролем, Backend API, неизменяемый образ Admin и Nginx ingress. Проверка совместимости БД, доверие к манифестам и распределённый rate limiting работают fail-closed.
 
+### Upgrade 0.19.0 → 0.19.1 — ServerBridge 3
+
+Примените migration `0031_serverbridge_protocol_v3_0191`, затем выполните `nl db migrate verify`. Она расширяет существующие node/join constraints до Protocol v2/v3 и не сбрасывает Ed25519 identities: старые 0.19.0 bridge продолжают работать по v2 во время rolling upgrade.
+
+Сначала обновите Backend до 0.19.1, затем заменяйте bridge JAR по одному. Bridge 0.19.1 запрашивает `GET /api/v1/server-bridge/capabilities`, выбирает Protocol v3 и передаёт negotiated feature set в heartbeat/validate-join/handoff. Единственный автоматический downgrade к v2 разрешён при HTTP 404 от старого Backend; ошибки negotiation и 5xx остаются fail-closed. После rollout проверьте diagnostics (`protocolVersion=3`, `supportedProtocolVersions=[3,2]`), public matrix и `SERVERBRIDGE3_CERTIFICATION.json`.
+
 ### Upgrade 0.15.9 → 0.15.10
 
 DB migration не требуется. Перед rollout сохраните backup install root и persistent release trust state. На каждом installation выполните `nl update migrate-state --root <install>` либо позвольте первому `update recover/components` выполнить migration автоматически: legacy macOS `.neverlauncher/updater/component-update-state.json` будет перенесён в canonical `.neverlauncher/component-update-state.json`, incomplete transaction восстановлены, а terminal staging/backup очищены после durable journal.

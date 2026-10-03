@@ -75,6 +75,7 @@ public final class BridgeConfig {
         return new BridgeConfig(Map.of(), null, normalizedDefaultServerId(defaultServerId));
     }
 
+    public String capabilitiesUrl() { return backendUrl + "/api/v1/server-bridge/capabilities"; }
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
     public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
     public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }

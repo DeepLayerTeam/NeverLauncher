@@ -12,30 +12,6 @@ import (
 
 const bridgePluginsSchema940 = apiContractVersion
 
-type bridgePluginHeartbeatRequest940 struct {
-	ProtocolVersion int    `json:"protocolVersion"`
-	ServerID        string `json:"serverId"`
-	ServerType      string `json:"serverType"`
-	PluginVersion   string `json:"pluginVersion"`
-	PluginSHA256    string `json:"pluginSha256"`
-	Hostname        string `json:"hostname,omitempty"`
-	PlayersOnline   int    `json:"playersOnline,omitempty"`
-}
-
-type bridgeValidateJoinRequest940 struct {
-	ProtocolVersion int    `json:"protocolVersion"`
-	ServerID        string `json:"serverId"`
-	Username        string `json:"username"`
-	UUID            string `json:"uuid,omitempty"`
-	ServerHash      string `json:"serverHash,omitempty"`
-	IP              string `json:"ip,omitempty"`
-	ProjectID       string `json:"projectId"`
-	ProfileID       string `json:"profileId"`
-	Channel         string `json:"channel"`
-	PluginVersion   string `json:"pluginVersion"`
-	PluginSHA256    string `json:"pluginSha256"`
-}
-
 type bridgeAuditEventRequest940 struct {
 	ServerID string         `json:"serverId"`
 	Event    string         `json:"event"`
@@ -55,16 +31,18 @@ func (s Server) serverBridgePluginManifest(w http.ResponseWriter, r *http.Reques
 
 func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion":            bridgePluginsSchema940,
-		"toolVersion":              s.Version,
-		"protocolVersion":          serverBridgeProtocolV2,
-		"status":                   "compatible",
-		"platforms":                serverBridgeMatrixPlatforms0149(s.Version),
-		"requiredBackendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
-		"trustPolicy":              gameplayTrustPolicy0127,
-		"trustEnforcement":         "required",
-		"integrityPolicy":          serverBridgeIntegrityPolicy0135,
-		"integrityEnforcement":     "release-allowlist-required-in-production",
+		"schemaVersion":             bridgePluginsSchema940,
+		"toolVersion":               s.Version,
+		"protocolVersion":           serverBridgeProtocolCurrent,
+		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
+		"status":                    "compatible",
+		"platforms":                 serverBridgeMatrixPlatforms0149(s.Version),
+		"requiredBackendEndpoints":  []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event"},
+		"trustPolicy":               gameplayTrustPolicy0127,
+		"trustEnforcement":          "required",
+		"integrityPolicy":           serverBridgeIntegrityPolicy0135,
+		"integrityEnforcement":      "release-allowlist-required-in-production",
 	}})
 }
 
@@ -75,9 +53,9 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeBridgeNodeAuthError0142(w, authErr)
 		return
 	}
-	var req bridgePluginHeartbeatRequest940
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	req, err := decodeBridgeHeartbeat0191(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
 	serverID := firstNonEmpty(strings.TrimSpace(r.PathValue("serverId")), strings.TrimSpace(req.ServerID))
@@ -89,15 +67,15 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "serverbridge_node_server_id_mismatch")
 		return
 	}
-	if req.ProtocolVersion != serverBridgeProtocolV2 {
-		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-rejected", "reason": "serverbridge_protocol_unsupported"}})
+	if ok, reason := validateBridgeProtocolFeatures0191(req.ProtocolVersion, req.Features); !ok {
+		writeJSON(w, http.StatusUpgradeRequired, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolCurrent, "supportedProtocolVersions": serverBridgeSupportedProtocols0191, "status": "heartbeat-rejected", "reason": reason}})
 		return
 	}
 	req.ServerType = strings.ToLower(strings.TrimSpace(req.ServerType))
 	req.PluginVersion = strings.TrimSpace(req.PluginVersion)
 	req.PluginSHA256 = strings.ToLower(strings.TrimSpace(req.PluginSHA256))
 	if !validBridgeServerKindV2(req.ServerType) || req.PluginVersion == "" || !isSHA256Hex0134(req.PluginSHA256) {
-		writeError(w, http.StatusBadRequest, "serverType, pluginVersion и валидный pluginSha256 обязательны для Protocol v2")
+		writeError(w, http.StatusBadRequest, "serverType, pluginVersion и валидный pluginSha256 обязательны для ServerBridge Protocol")
 		return
 	}
 	if req.ServerType != strings.ToLower(strings.TrimSpace(server.Kind)) {
@@ -115,7 +93,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusPreconditionFailed, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "status": "heartbeat-rejected", "serverId": server.ID, "integrity": decision}})
 		return
 	}
-	if err := s.State.ServerBridge.markHeartbeat940(serverID, req.ServerType, req.PluginVersion); err != nil {
+	if err := s.State.ServerBridge.markHeartbeat940(serverID, req.ServerType, req.PluginVersion, req.ProtocolVersion); err != nil {
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL heartbeat не сохранён")
 		return
 	}
@@ -124,7 +102,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	s.State.ServerBridge.maybeMaintain0149()
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": serverBridgeProtocolV2, "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"schemaVersion": bridgePluginsSchema940, "toolVersion": s.Version, "protocolVersion": req.ProtocolVersion, "features": bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2), "status": "heartbeat-accepted", "serverId": server.ID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "serverType": firstNonEmpty(req.ServerType, server.Kind), "pluginVersion": req.PluginVersion, "pluginSha256": req.PluginSHA256, "integrity": decision, "receivedAt": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request) {
@@ -133,9 +111,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeBridgeNodeAuthError0142(w, authErr)
 		return
 	}
-	var req bridgeValidateJoinRequest940
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	req, err := decodeBridgeValidateJoin0191(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
 	req.ServerID = strings.TrimSpace(req.ServerID)
@@ -144,8 +122,8 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "serverId и username обязательны")
 		return
 	}
-	if req.ProtocolVersion != serverBridgeProtocolV2 {
-		writeJSON(w, http.StatusUpgradeRequired, bridgeValidateResponse940(s.Version, false, "serverbridge_protocol_unsupported", req, bridgeJoinRecord{}))
+	if ok, reason := validateBridgeProtocolFeatures0191(req.ProtocolVersion, req.Features); !ok {
+		writeJSON(w, http.StatusUpgradeRequired, bridgeValidateResponse940(s.Version, false, reason, req, bridgeJoinRecord{}))
 		return
 	}
 	if server.ID != req.ServerID {
@@ -300,17 +278,21 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 		haPayload = map[string]any{"status": "unavailable", "error": haErr.Error()}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion":   bridgePluginsSchema940,
-		"toolVersion":     s.Version,
-		"status":          "diagnostics-ready",
-		"protocolVersion": serverBridgeProtocolV2,
-		"summary":         s.State.ServerBridge.summary(),
-		"ha":              haPayload,
-		"maintenance":     map[string]any{"last": maintenance, "lastError": maintenanceErr, "coordination": "postgresql-advisory-lock"},
-		"plugins":         bridgePluginsManifest940(s.Version)["artifacts"],
+		"schemaVersion":             bridgePluginsSchema940,
+		"toolVersion":               s.Version,
+		"status":                    "diagnostics-ready",
+		"protocolVersion":           serverBridgeProtocolCurrent,
+		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
+		"summary":                   s.State.ServerBridge.summary(),
+		"ha":                        haPayload,
+		"maintenance":               map[string]any{"last": maintenance, "lastError": maintenanceErr, "coordination": "postgresql-advisory-lock"},
+		"plugins":                   bridgePluginsManifest940(s.Version)["artifacts"],
 		"checks": []map[string]string{
 			{"id": "plugin-manifest", "status": "implemented"},
-			{"id": "protocol-v2-negotiation", "status": "implemented"},
+			{"id": "protocol-v3-negotiation", "status": "implemented"},
+			{"id": "protocol-v2-rolling-upgrade", "status": "implemented"},
+			{"id": "protocol-feature-flags", "status": "implemented"},
 			{"id": "postgresql-source-of-truth", "status": "implemented"},
 			{"id": "ed25519-node-authentication", "status": "implemented"},
 			{"id": "single-use-node-nonce", "status": "implemented"},
@@ -335,7 +317,8 @@ func bridgeValidateResponse940(version string, allowed bool, reason string, req 
 	payload := map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"protocolVersion": serverBridgeProtocolV2,
+		"protocolVersion": req.ProtocolVersion,
+		"features":        bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2),
 		"allowed":         allowed,
 		"reason":          reason,
 		"serverId":        req.ServerID,
@@ -356,11 +339,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.15.0 ServerBridge 2 Release",
+		"release":         "NeverLauncher 0.19.1 ServerBridge 3",
 		"status":          "bridge-plugins-ready",
-		"mode":            "serverbridge-protocol-v2",
-		"protocolVersion": serverBridgeProtocolV2,
-		"implemented":     []string{"Protocol v2 wire negotiation", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
+		"protocolVersion": serverBridgeProtocolCurrent,
+		"implemented":     []string{"Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "runtime-learned PostgreSQL topology", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}
@@ -368,10 +351,13 @@ func bridgePluginsStatus940(version string) map[string]any {
 
 func bridgePluginsManifest940(version string) map[string]any {
 	return map[string]any{
-		"schemaVersion":   bridgePluginsSchema940,
-		"toolVersion":     version,
-		"status":          "published",
-		"protocolVersion": serverBridgeProtocolV2,
+		"schemaVersion":             bridgePluginsSchema940,
+		"toolVersion":               version,
+		"status":                    "published",
+		"protocolVersion":           serverBridgeProtocolCurrent,
+		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
+		"capabilitiesEndpoint":      "GET /api/v1/server-bridge/capabilities",
 		"artifacts": []map[string]any{
 			{"id": "velocity", "name": "NeverLauncher Velocity Bridge", "file": fmt.Sprintf("neverlauncher-velocity-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-velocity-bridge-%s.jar", version), "serverType": "velocity", "descriptor": "velocity-plugin.json", "mainClass": "ru.neverlauncher.bridge.velocity.NeverLauncherVelocityBridge"},
 			{"id": "bungeecord", "name": "NeverLauncher BungeeCord Bridge", "file": fmt.Sprintf("neverlauncher-bungeecord-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-bungeecord-bridge-%s.jar", version), "serverType": "bungeecord", "descriptor": "bungee.yml", "mainClass": "ru.neverlauncher.bridge.bungeecord.NeverLauncherBungeeCordBridge"},
@@ -388,15 +374,15 @@ func bridgePluginsManifest940(version string) map[string]any {
 		"configExamples":   []string{"plugins/velocity-bridge/config.example.yml", "plugins/bungeecord-bridge/config.example.yml", "plugins/waterfall-bridge/config.example.yml", "plugins/bukkit-bridge/config.example.yml", "plugins/spigot-bridge/config.example.yml", "plugins/paper-bridge/config.example.yml", "plugins/purpur-bridge/config.example.yml", "plugins/folia-bridge/config.example.yml", "plugins/fabric-bridge/config.example.yml", "plugins/forge-bridge/config.example.yml", "plugins/neoforge-bridge/config.example.yml"},
 		"releaseAllowlist": "artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json",
 		"integrityPolicy":  serverBridgeIntegrityPolicy0135,
-		"backendEndpoints": []string{"POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
+		"backendEndpoints": []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
 	}
 }
 
-func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion string) error {
+func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion string, protocolVersion int) error {
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
-		return backend.TouchServerBridgeNodeHeartbeat(ctx, serverID, serverType, pluginVersion, time.Now().UTC())
+		return backend.TouchServerBridgeNodeHeartbeat(ctx, serverID, serverType, pluginVersion, protocolVersion, time.Now().UTC())
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -407,7 +393,7 @@ func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) {
 		return fmt.Errorf("server bridge node identity/type is not active")
 	}
-	server.ProtocolVersion = serverBridgeProtocolV2
+	server.ProtocolVersion = protocolVersion
 	server.LastHeartbeatAt = time.Now().UTC()
 	server.Fingerprint = firstNonEmpty(server.Fingerprint, "plugin:"+pluginVersion)
 	b.servers[serverID] = server

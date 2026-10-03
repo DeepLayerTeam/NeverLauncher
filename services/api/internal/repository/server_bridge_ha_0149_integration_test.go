@@ -43,7 +43,7 @@ func TestServerBridgeHA0149(t *testing.T) {
 	if _, err := r1.SaveServerBridgeNode(ctx, node); err != nil {
 		t.Fatal(err)
 	}
-	if err := r1.TouchServerBridgeNodeHeartbeat(ctx, node.ID, node.Kind, "0.14.9", now); err != nil {
+	if err := r1.TouchServerBridgeNodeHeartbeat(ctx, node.ID, node.Kind, "0.14.9", 2, now); err != nil {
 		t.Fatal(err)
 	}
 

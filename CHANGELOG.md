@@ -1,4 +1,14 @@
+## [0.19.1] - 2026-10-03
+
+### ServerBridge 3
+- Added production Protocol v3 wire contracts for heartbeat, validate-join and proxy handoff while retaining Protocol v2 for rolling upgrades.
+- Added public capability negotiation with protocol/feature selection and fail-closed v3 required feature validation.
+- Bridge runtimes now negotiate v3, cache the negotiated result, attach feature flags to v3 requests, and downgrade to v2 only when an older Backend returns 404 for the capability route.
+- PostgreSQL now persists each node's negotiated v2/v3 protocol and issues one-time join tickets using the target node protocol.
+- Release certification, public matrix, diagnostics, OpenAPI and production deployment checks are updated for ServerBridge 3.
+
 ## 0.19.0 — NeverGuard Windows Protection GA
+
 
 - Windows protection переведён из RC в GA отдельным machine-verifiable `WINDOWS_PROTECTION_GA_CERTIFICATE.json`: GA строится только поверх успешно перепроверенного `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json`, exact adversarial cohort из 55 Windows/JVM executions и тех же Authenticode/RFC3161 x64/ARM64 bytes.
 - GA boundary фиксирует `user-mode + aggressive + fail-closed`, полный capability set Sensor/Module Guard/Hook Engine/Memory/Thread+Process/Debug/JVM-aware/Continuous Guard/Attestation v2 и deterministic `boundarySha256`/`certificateId`.

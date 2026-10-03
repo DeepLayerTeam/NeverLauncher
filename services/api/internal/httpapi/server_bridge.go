@@ -18,7 +18,6 @@ import (
 )
 
 const serverBridgeSchema910 = apiContractVersion
-const serverBridgeProtocolV2 = 2
 
 type bridgeServerRecord struct {
 	ID                  string    `json:"id"`
@@ -270,7 +269,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.flushPersistenceState950("server-bridge-join-created")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("join-created"), Actor: user.Email, Action: "serverbridge:session:join", Target: join.ServerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed Protocol v2 request", "a replay, expired ticket, or rotated node identity is denied"}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": map[string]any{"schemaVersion": serverBridgeSchema910, "toolVersion": s.Version, "status": "joined", "oneTime": true, "ticketId": join.ID, "ticketVersion": join.TicketVersion, "join": sanitizeJoinRecord910(join), "expiresInSeconds": int(time.Until(join.ExpiresAt).Seconds()), "next": []string{"server redeems this authorization exactly once with its signed negotiated ServerBridge request", "a replay, expired ticket, or rotated node identity is denied"}}})
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +341,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	}
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": serverBridgeProtocolV2, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -422,14 +421,23 @@ func (s Server) bridgeClaimsFromRequest910(r *http.Request) (authClaims, string,
 
 func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
-		"schemaVersion": serverBridgeSchema910,
-		"toolVersion":   s.Version,
-		"release":       "NeverLauncher 0.14.3 One-Time Join Tickets",
-		"mode":          "serverbridge-protocol-v2",
-		"parentMode":    "launcherops-ecosystem-platform",
-		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
-		"summary":       s.State.ServerBridge.summary(),
+		"schemaVersion":             serverBridgeSchema910,
+		"toolVersion":               s.Version,
+		"release":                   "NeverLauncher 0.19.1 ServerBridge 3",
+		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
+		"protocolVersion":           serverBridgeProtocolCurrent,
+		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
+		"parentMode":                "launcherops-ecosystem-platform",
+		"generatedAt":               time.Now().UTC().Format(time.RFC3339),
+		"summary":                   s.State.ServerBridge.summary(),
 		"endpoints": []string{
+			"GET /api/v1/server-bridge/capabilities",
+			"GET /api/v1/server-bridge/matrix",
+			"GET /api/v1/server-bridge/diagnostics",
+			"POST /api/v1/server-bridge/servers/{serverId}/heartbeat",
+			"POST /api/v1/server-bridge/validate-join",
+			"POST /api/v1/server-bridge/handoff",
 			"POST /api/v1/server-bridge/servers/register",
 			"POST /api/v1/server-bridge/servers/{serverId}/rotate-identity",
 			"POST /api/v1/session/join",
@@ -444,14 +452,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "Protocol v2 node identity", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v2", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-rolling-upgrade", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
@@ -694,7 +702,7 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	if err != nil {
 		return bridgeJoinRecord{}, err
 	}
-	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: serverBridgeProtocolV2, IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: bridgeNodeProtocolVersion0191(server.ProtocolVersion), IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
@@ -861,7 +869,7 @@ func (b *serverBridgeStore) summary() map[string]any {
 		if err == nil {
 			return summary
 		}
-		return map[string]any{"protocolVersion": 2, "sourceOfTruth": "postgresql", "status": "unavailable"}
+		return map[string]any{"protocolVersion": serverBridgeProtocolCurrent, "supportedProtocolVersions": serverBridgeSupportedProtocols0191, "sourceOfTruth": "postgresql", "status": "unavailable"}
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -871,7 +879,7 @@ func (b *serverBridgeStore) summary() map[string]any {
 			activeJoins++
 		}
 	}
-	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "memory-single-use-nonce", "protocolVersion": 2, "sourceOfTruth": "memory-dev-test"}
+	return map[string]any{"servers": len(b.servers), "activeJoins": activeJoins, "textures": len(b.textures), "joinTtlSeconds": 120, "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "memory-single-use-nonce", "protocolVersion": serverBridgeProtocolCurrent, "supportedProtocolVersions": serverBridgeSupportedProtocols0191, "sourceOfTruth": "memory-dev-test"}
 }
 
 func (b *serverBridgeStore) joinKey(username, serverID string) string {

@@ -11,6 +11,7 @@ import (
 )
 
 const serverBridge2CertificationReleaseFile = "SERVERBRIDGE2_CERTIFICATION.json"
+const serverBridge3CertificationReleaseFile = "SERVERBRIDGE3_CERTIFICATION.json"
 
 var serverBridge2ReleaseTargets0150 = []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge"}
 
@@ -53,20 +54,52 @@ func serverBridge2CertificationRequired0150(ver string) bool {
 	return major > 0 || (major == 0 && minor >= 15)
 }
 
+func serverBridge3CertificationRequired0191(ver string) bool {
+	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
+	if len(parts) < 3 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	patchPart := parts[2]
+	if i := strings.IndexByte(patchPart, '-'); i >= 0 {
+		patchPart = patchPart[:i]
+	}
+	patch, err3 := strconv.Atoi(patchPart)
+	if err1 != nil || err2 != nil || err3 != nil {
+		return false
+	}
+	return major > 0 || minor > 19 || (minor == 19 && patch >= 1)
+}
+
+func serverBridgeCertificationReleaseFile(ver string) string {
+	if serverBridge3CertificationRequired0191(ver) {
+		return serverBridge3CertificationReleaseFile
+	}
+	return serverBridge2CertificationReleaseFile
+}
+
 func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
-	raw, err := os.ReadFile(filepath.Join(dir, serverBridge2CertificationReleaseFile))
+	certFile := serverBridgeCertificationReleaseFile(ver)
+	raw, err := os.ReadFile(filepath.Join(dir, certFile))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", serverBridge2CertificationReleaseFile, err)
+		return fmt.Errorf("read %s: %w", certFile, err)
 	}
 	var cert serverBridge2Certification0150
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("invalid %s: %w", serverBridge2CertificationReleaseFile, err)
+		return fmt.Errorf("invalid %s: %w", certFile, err)
 	}
-	if cert.SchemaVersion != "1.0" || cert.Release != "ServerBridge 2" || cert.Version != ver || cert.ProtocolVersion != 2 || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
-		return errors.New("ServerBridge 2 certification metadata mismatch")
+	expectedRelease := "ServerBridge 2"
+	expectedProtocol := 2
+	if serverBridge3CertificationRequired0191(ver) {
+		expectedRelease = "ServerBridge 3"
+		expectedProtocol = 3
+	}
+	if cert.SchemaVersion != "1.0" || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
+		return fmt.Errorf("%s certification metadata mismatch", expectedRelease)
 	}
 	if cert.TargetCount != len(serverBridge2ReleaseTargets0150) || len(cert.Artifacts) != len(serverBridge2ReleaseTargets0150) {
-		return fmt.Errorf("ServerBridge 2 certification must contain %d artifacts", len(serverBridge2ReleaseTargets0150))
+		return fmt.Errorf("%s certification must contain %d artifacts", expectedRelease, len(serverBridge2ReleaseTargets0150))
 	}
 
 	allowRaw, err := os.ReadFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"))
@@ -86,7 +119,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	for i, expectedID := range serverBridge2ReleaseTargets0150 {
 		item := cert.Artifacts[i]
 		if item.ID != expectedID {
-			return fmt.Errorf("ServerBridge 2 artifact #%d must be %s, got %s", i+1, expectedID, item.ID)
+			return fmt.Errorf("%s artifact #%d must be %s, got %s", expectedRelease, i+1, expectedID, item.ID)
 		}
 		expectedFile := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {

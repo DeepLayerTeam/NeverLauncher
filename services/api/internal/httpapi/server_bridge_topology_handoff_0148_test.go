@@ -45,9 +45,9 @@ func TestBridgeProxyKind0148IsStrict(t *testing.T) {
 
 func TestBridgeJoinFromHandoff0148PreservesTargetSecurityBinding(t *testing.T) {
 	now := time.Now().UTC()
-	h := model.ServerBridgeHandoff{ID: "ho_test", Username: "Player", UUID: "uuid", UserID: "user", SessionID: "session", TargetNodeID: "paper-1", ProjectID: "project", ProfileID: "profile", Channel: "stable", TrustedDeviceID: "device", BindingEpoch: 7, MinecraftSessionID: "mc", TargetIdentityEpoch: 4, TargetKeyFingerprint: strings.Repeat("a", 64), Status: "active", CreatedAt: now, ExpiresAt: now.Add(30 * time.Second)}
+	h := model.ServerBridgeHandoff{ID: "ho_test", Username: "Player", UUID: "uuid", UserID: "user", SessionID: "session", TargetNodeID: "paper-1", ProjectID: "project", ProfileID: "profile", Channel: "stable", TrustedDeviceID: "device", BindingEpoch: 7, MinecraftSessionID: "mc", TargetIdentityEpoch: 4, TargetKeyFingerprint: strings.Repeat("a", 64), ProtocolVersion: 3, Status: "active", CreatedAt: now, ExpiresAt: now.Add(30 * time.Second)}
 	j := bridgeJoinFromHandoff0148(h)
-	if j.ID != h.ID || j.ServerID != h.TargetNodeID || j.IssuedIdentityEpoch != h.TargetIdentityEpoch || j.IssuedKeyFingerprint != h.TargetKeyFingerprint || j.BindingEpoch != h.BindingEpoch || j.SessionID != h.SessionID {
+	if j.ID != h.ID || j.ServerID != h.TargetNodeID || j.IssuedIdentityEpoch != h.TargetIdentityEpoch || j.IssuedKeyFingerprint != h.TargetKeyFingerprint || j.BindingEpoch != h.BindingEpoch || j.SessionID != h.SessionID || j.ProtocolVersion != h.ProtocolVersion {
 		t.Fatalf("handoff mapping lost security binding: %#v", j)
 	}
 }

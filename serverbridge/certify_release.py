@@ -17,6 +17,10 @@ HASH_FIELDS = {
     'bukkit':'bukkitSha256','spigot':'spigotSha256','paper':'paperSha256','purpur':'purpurSha256',
     'folia':'foliaSha256','fabric':'fabricSha256','forge':'forgeSha256','neoforge':'neoforgeSha256',
 }
+COMMON_PROTOCOL_ENTRIES = [
+    'ru/neverlauncher/bridge/common/NeverLauncherApiClient.class',
+    'ru/neverlauncher/bridge/common/BridgeProtocolNegotiation.class',
+]
 REQUIRED_ENTRIES = {
     'velocity':['velocity-plugin.json','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class'],
     'bungeecord':['bungee.yml','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class','ru/neverlauncher/bridge/bungee/BungeeFamilyBridgePlugin.class'],
@@ -34,7 +38,7 @@ HEX64 = re.compile(r'^[0-9a-f]{64}$')
 
 
 def die(msg: str) -> None:
-    raise SystemExit(f'ServerBridge 2 release certification failed: {msg}')
+    raise SystemExit(f'ServerBridge 3 release certification failed: {msg}')
 
 
 def sha256(path: Path) -> str:
@@ -56,7 +60,7 @@ def load_json(path: Path) -> dict:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description='Certify a built NeverLauncher ServerBridge 2 release cohort')
+    ap = argparse.ArgumentParser(description='Certify a built NeverLauncher ServerBridge 3 release cohort')
     ap.add_argument('--artifacts', type=Path, default=ROOT / 'artifacts/plugins')
     ap.add_argument('--out', type=Path)
     args = ap.parse_args()
@@ -68,7 +72,7 @@ def main() -> int:
 
     targets = load_json(TARGETS)
     target_rows = targets.get('targets')
-    if targets.get('productVersion') != VERSION or targets.get('protocolVersion') != 2:
+    if targets.get('productVersion') != VERSION or targets.get('protocolVersion') != 3:
         die('serverbridge/targets.json version/protocol drift')
     if not isinstance(target_rows, list) or [r.get('id') for r in target_rows] != EXPECTED:
         die('serverbridge target set/order mismatch')
@@ -111,7 +115,7 @@ def main() -> int:
         try:
             with zipfile.ZipFile(jar) as zf:
                 names = set(zf.namelist())
-                for entry in REQUIRED_ENTRIES[target]:
+                for entry in COMMON_PROTOCOL_ENTRIES + REQUIRED_ENTRIES[target]:
                     if entry not in names:
                         die(f'{target}: JAR missing {entry}')
                 if target == 'folia':
@@ -145,14 +149,14 @@ def main() -> int:
             die(f"{item['id']}: SHA256SUMS mismatch")
 
     report = {
-        'schemaVersion': '1.0', 'release': 'ServerBridge 2', 'version': VERSION,
-        'protocolVersion': 2, 'status': 'certified', 'targetCount': len(evidence),
+        'schemaVersion': '1.0', 'release': 'ServerBridge 3', 'version': VERSION,
+        'protocolVersion': 3, 'status': 'certified', 'targetCount': len(evidence),
         'zeroPatch': True, 'nodeIdentity': 'Ed25519', 'oneTimeJoin': True,
         'artifacts': evidence,
     }
-    out = args.out or (artifacts / 'SERVERBRIDGE2_CERTIFICATION.json')
+    out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print(f'ServerBridge 2 release certified: {VERSION}, {len(evidence)} platform artifacts -> {out}')
+    print(f'ServerBridge 3 release certified: {VERSION}, {len(evidence)} platform artifacts -> {out}')
     return 0
 
 

@@ -22,8 +22,8 @@ def load(path: Path) -> dict[str, Any]:
         raise SystemExit("ServerBridge targets schemaVersion must be 1.0")
     if str(data.get("productVersion", "")) != VERSION:
         raise SystemExit(f"ServerBridge targets productVersion must equal VERSION={VERSION}")
-    if data.get("protocolVersion") != 2:
-        raise SystemExit("ServerBridge targets protocolVersion must be 2")
+    if data.get("protocolVersion") != 3:
+        raise SystemExit("ServerBridge targets protocolVersion must be 3")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
         raise SystemExit("ServerBridge targets must be a non-empty array")
@@ -71,7 +71,7 @@ def markdown(data: dict[str, Any]) -> str:
     ]
     for row in data["targets"]:
         handoff = "source" if row["role"] == "proxy" else "target"
-        lines.append(f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 2 | yes | Ed25519 | yes | {handoff} |")
+        lines.append(f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 (v2 rolling) | yes | Ed25519 | yes | {handoff} |")
     lines += ["", "Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.", ""]
     return "\n".join(lines)
 

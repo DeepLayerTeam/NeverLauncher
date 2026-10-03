@@ -60,3 +60,51 @@ func TestVerifyServerBridge2CertificationInBundle0150(t *testing.T) {
 		t.Fatal("tampered ServerBridge 2 artifact must be rejected")
 	}
 }
+
+func TestVerifyServerBridge3CertificationInBundle0191(t *testing.T) {
+	dir := t.TempDir()
+	ver := "0.19.1"
+	policy := map[string][]string{}
+	cert := serverBridge2Certification0150{
+		SchemaVersion: "1.0", Release: "ServerBridge 3", Version: ver, ProtocolVersion: 3,
+		Status: "certified", TargetCount: len(serverBridge2ReleaseTargets0150), ZeroPatch: true,
+		NodeIdentity: "Ed25519", OneTimeJoin: true,
+	}
+	for i, id := range serverBridge2ReleaseTargets0150 {
+		name := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", id, ver)
+		body := []byte(fmt.Sprintf("synthetic-serverbridge3-artifact:%s:%d", id, i))
+		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		hash, size, err := hashFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		cert.Artifacts = append(cert.Artifacts, serverBridge2CertifiedArtifact0150{ID: id, File: name, SHA256: hash, Bytes: size})
+		policy[serverBridge2AllowlistFields0150[id]] = []string{hash}
+	}
+	certRaw, _ := json.Marshal(cert)
+	if err := os.WriteFile(filepath.Join(dir, serverBridge3CertificationReleaseFile), certRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	allowRaw, _ := json.Marshal(map[string]map[string][]string{ver: policy})
+	if err := os.WriteFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"), allowRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := serverBridgeCertificationReleaseFile(ver); got != serverBridge3CertificationReleaseFile {
+		t.Fatalf("certification file for %s = %s, want %s", ver, got, serverBridge3CertificationReleaseFile)
+	}
+	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
+		t.Fatalf("valid ServerBridge 3 release certification rejected: %v", err)
+	}
+	legacy := filepath.Join(dir, serverBridge2CertificationReleaseFile)
+	if err := os.WriteFile(legacy, certRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, serverBridge3CertificationReleaseFile)); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err == nil {
+		t.Fatal("0.19.1 must not accept only the legacy ServerBridge 2 certification filename")
+	}
+}

@@ -947,7 +947,7 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
-jq -e '.data.protocolVersion == 2 and .data.summary.protocolVersion == 2 and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
+jq -e '.data.protocolVersion == 3 and .data.summary.protocolVersion == 3 and .data.supportedProtocolVersions == [3,2] and .data.summary.supportedProtocolVersions == [3,2] and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
 required_nodes=1
 [[ "$MODE" == "full" ]] && required_nodes=10

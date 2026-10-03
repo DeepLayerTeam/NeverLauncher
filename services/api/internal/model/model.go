@@ -382,7 +382,7 @@ type MinecraftJoin struct {
 	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
-// ServerBridgeNode is the authoritative Protocol v2 identity of a game/proxy node.
+// ServerBridgeNode is the authoritative ServerBridge identity of a game/proxy node; protocol_version tracks the negotiated v2/v3 wire generation.
 // Since 0.14.2 node requests are authenticated by an Ed25519 public key; private
 // key material never crosses the node/backend boundary. Legacy token fields remain
 // internal only so the 0.14.1 schema can be migrated safely.
@@ -411,7 +411,7 @@ type ServerBridgeNode struct {
 	RotatedAt           time.Time `json:"rotatedAt,omitempty"`
 }
 
-// ServerBridgeJoinTicket is a short-lived one-time Protocol v2 authorization.
+// ServerBridgeJoinTicket is a short-lived one-time ServerBridge authorization bound to the negotiated v2/v3 node protocol.
 // A successful server-side validation atomically consumes it, preventing replay.
 type ServerBridgeJoinTicket struct {
 	ID                     string    `json:"id"`
@@ -444,7 +444,7 @@ type ServerBridgeJoinTicket struct {
 
 // ServerBridgeJoinRedemption is the authenticated node proof persisted when a
 // one-time join ticket is consumed. The request nonce has already passed the
-// Protocol v2 replay store before this proof reaches the repository.
+// signed-request replay store before this proof reaches the repository.
 type ServerBridgeJoinRedemption struct {
 	NodeID         string
 	IdentityEpoch  int64
@@ -477,6 +477,7 @@ type ServerBridgeHandoff struct {
 	SourceKeyFingerprint string    `json:"sourceKeyFingerprint"`
 	TargetIdentityEpoch  int64     `json:"targetIdentityEpoch"`
 	TargetKeyFingerprint string    `json:"targetKeyFingerprint"`
+	ProtocolVersion      int       `json:"protocolVersion"`
 	Status               string    `json:"status"`
 	CreatedAt            time.Time `json:"createdAt"`
 	ExpiresAt            time.Time `json:"expiresAt"`
@@ -532,7 +533,7 @@ type ServerBridgeHAStatus struct {
 	ExpiredNonceBacklog   int64     `json:"expiredNonceBacklog"`
 }
 
-// ServerBridgeTexture is the persistent texture profile used by Protocol v2.
+// ServerBridgeTexture is the persistent texture profile used by ServerBridge sessions.
 type ServerBridgeTexture struct {
 	UUID      string    `json:"uuid"`
 	Username  string    `json:"username"`

@@ -42,7 +42,7 @@ for required in \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-linux-arm64-${VERSION}.tar.gz" \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-macos-x64-${VERSION}.tar.gz" \
   "${BUNDLE_DIR}/neverlauncher-jre-temurin21-macos-arm64-${VERSION}.tar.gz" \
-  "${BUNDLE_DIR}/SERVERBRIDGE2_CERTIFICATION.json" \
+  "${BUNDLE_DIR}/SERVERBRIDGE3_CERTIFICATION.json" \
   "${BUNDLE_DIR}/BRIDGE_RELEASE_ALLOWLIST.json" \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \
   "${BUNDLE_DIR}/neverlauncher-desktop-package-${VERSION}.zip"; do

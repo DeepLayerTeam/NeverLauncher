@@ -45,8 +45,10 @@ require("services/api/internal/httpapi/server_bridge.go", [
     '"trust": trust',
 ])
 require("services/api/internal/httpapi/bridge_plugins.go", [
-    '"trustPolicy":              gameplayTrustPolicy0127',
-    '"trustEnforcement":         "required"',
+    '"trustPolicy":',
+    'gameplayTrustPolicy0127',
+    '"trustEnforcement":',
+    '"required"',
     '"channel_mismatch"',
     "evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)",
     'payload["data"].(map[string]any)["trust"] = trust',

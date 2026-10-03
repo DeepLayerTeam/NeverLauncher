@@ -192,7 +192,7 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 		return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
-		return fmt.Errorf("ServerBridge 2 certification: %w", err)
+		return fmt.Errorf("ServerBridge certification: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
 		return fmt.Errorf("Delivery Manifest: %w", err)

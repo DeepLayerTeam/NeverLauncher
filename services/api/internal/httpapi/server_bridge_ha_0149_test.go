@@ -10,7 +10,7 @@ import (
 )
 
 func TestServerBridgePublicMatrix0149IsCompleteAndHonestAboutCoverage(t *testing.T) {
-	rows := serverBridgeMatrixPlatforms0149("0.14.9")
+	rows := serverBridgeMatrixPlatforms0149("0.19.1")
 	if len(rows) != 11 {
 		t.Fatalf("expected 11 ServerBridge matrix rows, got %d", len(rows))
 	}
@@ -20,7 +20,7 @@ func TestServerBridgePublicMatrix0149IsCompleteAndHonestAboutCoverage(t *testing
 			t.Fatalf("duplicate matrix target %q", row.ID)
 		}
 		seen[row.ID] = true
-		if row.ProtocolVersion != 2 || row.Installation != "drop-in-zero-patch" || !row.CryptographicIdentity || !row.ArtifactIntegrity || !row.OneTimeJoin {
+		if row.ProtocolVersion != serverBridgeProtocolV3 || len(row.SupportedProtocolVersions) != 2 || row.SupportedProtocolVersions[0] != serverBridgeProtocolV3 || row.SupportedProtocolVersions[1] != serverBridgeProtocolV2 || row.Installation != "drop-in-zero-patch" || !row.CryptographicIdentity || !row.ArtifactIntegrity || !row.OneTimeJoin {
 			t.Fatalf("incomplete security capability row: %+v", row)
 		}
 		if row.Role == "proxy" && !row.HandoffSource {

@@ -2,6 +2,7 @@ package ru.neverlauncher.bridge.common;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -10,11 +11,25 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 
 public final class NeverLauncherApiClient {
     private static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-Node-v1";
+    private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION, BridgeDefaults.LEGACY_PROTOCOL_VERSION);
+    private static final List<String> SUPPORTED_FEATURES = List.of(
+        BridgeDefaults.FEATURE_CAPABILITY_NEGOTIATION,
+        BridgeDefaults.FEATURE_PROTOCOL_FLAGS,
+        BridgeDefaults.FEATURE_ROLLING_UPGRADE,
+        BridgeDefaults.FEATURE_NODE_SIGNATURES,
+        BridgeDefaults.FEATURE_NONCE_REPLAY,
+        BridgeDefaults.FEATURE_ARTIFACT_INTEGRITY,
+        BridgeDefaults.FEATURE_ONE_TIME_JOIN,
+        BridgeDefaults.FEATURE_ONE_TIME_HANDOFF,
+        BridgeDefaults.FEATURE_RUNTIME_TOPOLOGY
+    );
 
     private final BridgeConfig config;
     private final NodeIdentity identity;
@@ -22,6 +37,7 @@ public final class NeverLauncherApiClient {
     private final String serverType;
     private final String pluginVersion;
     private final String pluginSha256;
+    private volatile BridgeProtocolNegotiation negotiation;
 
     public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
         this.config = config;
@@ -36,12 +52,13 @@ public final class NeverLauncherApiClient {
         String actualType = first(serverType, this.serverType);
         String actualVersion = first(pluginVersion, this.pluginVersion);
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(pluginSha256)) return false;
-        String json = "{\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION +
-            ",\"serverId\":" + quote(config.serverId) +
-            ",\"serverType\":" + quote(actualType) +
-            ",\"pluginVersion\":" + quote(actualVersion) +
-            ",\"pluginSha256\":" + quote(pluginSha256) + "}";
         try {
+            BridgeProtocolNegotiation protocol = negotiateProtocol();
+            String json = "{" + protocolFields(protocol) +
+                ",\"serverId\":" + quote(config.serverId) +
+                ",\"serverType\":" + quote(actualType) +
+                ",\"pluginVersion\":" + quote(actualVersion) +
+                ",\"pluginSha256\":" + quote(pluginSha256) + "}";
             HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
@@ -57,8 +74,14 @@ public final class NeverLauncherApiClient {
         if (config.requireIntegrity && (!BridgeIntegrity.isSha256(pluginSha256) || pluginVersion.isBlank() || serverType.isBlank())) {
             return new JoinValidationResult(false, "bridge_integrity_unavailable", "{}");
         }
-        String body = "{" +
-            "\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION + "," +
+        BridgeProtocolNegotiation protocol;
+        try {
+            protocol = negotiateProtocol();
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            return new JoinValidationResult(false, "backend_unavailable", "{}");
+        }
+        String body = "{" + protocolFields(protocol) + "," +
             "\"serverId\":" + quote(config.serverId) + "," +
             "\"username\":" + quote(username) + "," +
             "\"uuid\":" + quote(uuid) + "," +
@@ -98,8 +121,14 @@ public final class NeverLauncherApiClient {
 
     public JoinValidationResult createHandoff(String username, String targetServer) {
         if (identity == null) return new JoinValidationResult(false, "node_identity_missing", "{}");
-        String body = "{" +
-            "\"protocolVersion\":" + BridgeDefaults.PROTOCOL_VERSION + "," +
+        BridgeProtocolNegotiation protocol;
+        try {
+            protocol = negotiateProtocol();
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            return new JoinValidationResult(false, "backend_unavailable", "{}");
+        }
+        String body = "{" + protocolFields(protocol) + "," +
             "\"username\":" + quote(username) + "," +
             "\"targetServer\":" + quote(targetServer) +
             "}";
@@ -123,6 +152,65 @@ public final class NeverLauncherApiClient {
             }
         }
         return new JoinValidationResult(false, lastIo == null ? "backend_denied" : "backend_unavailable", "{}");
+    }
+
+    public int negotiatedProtocolVersion() {
+        BridgeProtocolNegotiation current = negotiation;
+        return current == null ? 0 : current.protocolVersion();
+    }
+
+    private BridgeProtocolNegotiation negotiateProtocol() throws IOException, InterruptedException {
+        BridgeProtocolNegotiation current = negotiation;
+        Instant now = Instant.now();
+        if (current != null && !current.expired(now)) return current;
+        synchronized (this) {
+            current = negotiation;
+            now = Instant.now();
+            if (current != null && !current.expired(now)) return current;
+
+            String protocols = SUPPORTED_PROTOCOLS.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("3,2");
+            String features = String.join(",", SUPPORTED_FEATURES);
+            String query = "protocols=" + URLEncoder.encode(protocols, StandardCharsets.UTF_8) +
+                "&features=" + URLEncoder.encode(features, StandardCharsets.UTF_8);
+            URI uri = URI.create(config.capabilitiesUrl() + "?" + query);
+            HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofMillis(config.timeoutMs))
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // 0.19.0 and older backends do not expose capabilities. A 404 is the
+            // deliberate rolling-upgrade signal; other failures do not silently
+            // downgrade an otherwise v3-capable deployment.
+            if (response.statusCode() == 404) {
+                current = new BridgeProtocolNegotiation(BridgeDefaults.LEGACY_PROTOCOL_VERSION, List.of(), true, now);
+                negotiation = current;
+                return current;
+            }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IOException("ServerBridge capability negotiation failed with HTTP " + response.statusCode());
+            }
+            String raw = response.body() == null ? "" : response.body();
+            int selected = extractJsonInt(raw, "negotiatedProtocolVersion");
+            List<String> enabled = extractJsonStringArray(raw, "features");
+            if (!SUPPORTED_PROTOCOLS.contains(selected)) {
+                throw new IOException("Backend selected unsupported ServerBridge protocol " + selected);
+            }
+            if (selected == BridgeDefaults.PROTOCOL_VERSION &&
+                (!enabled.contains(BridgeDefaults.FEATURE_CAPABILITY_NEGOTIATION) || !enabled.contains(BridgeDefaults.FEATURE_PROTOCOL_FLAGS))) {
+                throw new IOException("Backend selected Protocol v3 without required feature flags");
+            }
+            current = new BridgeProtocolNegotiation(selected, enabled, false, now);
+            negotiation = current;
+            return current;
+        }
+    }
+
+    private static String protocolFields(BridgeProtocolNegotiation protocol) {
+        String base = "\"protocolVersion\":" + protocol.protocolVersion();
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION) return base;
+        return base + ",\"features\":" + jsonArray(protocol.features());
     }
 
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
@@ -163,11 +251,52 @@ public final class NeverLauncherApiClient {
         return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
+    private static String jsonArray(List<String> values) {
+        StringBuilder out = new StringBuilder("[");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) out.append(',');
+            out.append(quote(values.get(i)));
+        }
+        return out.append(']').toString();
+    }
+
     private static String extractReason(String raw) {
         String reason = extractJsonString(raw, "reason");
         if (!reason.isBlank()) return reason;
         String message = extractJsonString(raw, "message");
         return message.isBlank() ? "session_denied" : message;
+    }
+
+    private static int extractJsonInt(String raw, String field) {
+        String marker = "\"" + field + "\":";
+        int idx = raw.indexOf(marker);
+        if (idx < 0) return 0;
+        int start = idx + marker.length();
+        while (start < raw.length() && Character.isWhitespace(raw.charAt(start))) start++;
+        int end = start;
+        while (end < raw.length() && Character.isDigit(raw.charAt(end))) end++;
+        if (end == start) return 0;
+        try { return Integer.parseInt(raw.substring(start, end)); } catch (NumberFormatException ignored) { return 0; }
+    }
+
+    private static List<String> extractJsonStringArray(String raw, String field) {
+        String marker = "\"" + field + "\":";
+        int idx = raw.indexOf(marker);
+        if (idx < 0) return List.of();
+        int start = raw.indexOf('[', idx + marker.length());
+        int end = start < 0 ? -1 : raw.indexOf(']', start + 1);
+        if (start < 0 || end < 0) return List.of();
+        String body = raw.substring(start + 1, end).trim();
+        if (body.isEmpty()) return List.of();
+        List<String> out = new ArrayList<>();
+        for (String item : body.split(",")) {
+            String value = item.trim();
+            if (value.length() >= 2 && value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"') {
+                value = value.substring(1, value.length() - 1);
+            }
+            if (!value.isBlank()) out.add(value);
+        }
+        return List.copyOf(out);
     }
 
     private static String extractJsonString(String raw, String field) {

@@ -3,7 +3,6 @@ package httpapi
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,12 +12,6 @@ import (
 )
 
 const serverBridgeHandoffTTL0148 = 30 * time.Second
-
-type bridgeHandoffRequest0148 struct {
-	ProtocolVersion int    `json:"protocolVersion"`
-	Username        string `json:"username"`
-	TargetServer    string `json:"targetServer"`
-}
 
 func newServerBridgeHandoffID0148() (string, error) {
 	buf := make([]byte, 24)
@@ -53,15 +46,15 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		writeJSON(w, http.StatusPreconditionFailed, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "handoff-denied", "reason": bridgeIntegrity.Reason, "bridgeIntegrity": bridgeIntegrity}})
 		return
 	}
-	var req bridgeHandoffRequest0148
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	req, err := decodeBridgeHandoff0191(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	req.TargetServer = strings.TrimSpace(req.TargetServer)
-	if req.ProtocolVersion != serverBridgeProtocolV2 {
-		writeError(w, http.StatusUpgradeRequired, "serverbridge_protocol_unsupported")
+	if ok, reason := validateBridgeProtocolFeatures0191(req.ProtocolVersion, req.Features); !ok {
+		writeError(w, http.StatusUpgradeRequired, reason)
 		return
 	}
 	if req.Username == "" || req.TargetServer == "" {
@@ -89,7 +82,8 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
 		"schemaVersion":       bridgePluginsSchema940,
 		"toolVersion":         s.Version,
-		"protocolVersion":     serverBridgeProtocolV2,
+		"protocolVersion":     req.ProtocolVersion,
+		"features":            bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2),
 		"status":              "handoff-created",
 		"oneTime":             true,
 		"handoffId":           handoff.ID,
@@ -186,7 +180,7 @@ func bridgeJoinFromHandoff0148(h model.ServerBridgeHandoff) bridgeJoinRecord {
 		TrustedDeviceID:      h.TrustedDeviceID,
 		BindingEpoch:         h.BindingEpoch,
 		MinecraftSessionID:   h.MinecraftSessionID,
-		ProtocolVersion:      serverBridgeProtocolV2,
+		ProtocolVersion:      h.ProtocolVersion,
 		IssuedIdentityEpoch:  h.TargetIdentityEpoch,
 		IssuedKeyFingerprint: h.TargetKeyFingerprint,
 		Status:               h.Status,
