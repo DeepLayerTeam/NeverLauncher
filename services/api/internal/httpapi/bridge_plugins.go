@@ -490,7 +490,7 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.19.8 ServerBridge 3",
+		"release":         "NeverLauncher 0.19.9 ServerBridge 3",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion": serverBridgeProtocolCurrent,

@@ -7,7 +7,8 @@ def require(text, needles, label):
     for n in needles:
         if n not in text: raise SystemExit(f'{label}: missing {n!r}')
 version=read('VERSION').strip()
-if version!='0.19.8': raise SystemExit(f'expected VERSION 0.19.8, got {version}')
+parts=tuple(int(x) for x in version.split('-',1)[0].split('.')[:3])
+if parts < (0,19,8): raise SystemExit(f'expected VERSION >= 0.19.8, got {version}')
 targets=json.loads(read('serverbridge/targets.json'))
 expected=['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']
 if [x['id'] for x in targets['targets']] != expected: raise SystemExit('universal 14-target cohort mismatch')
@@ -38,4 +39,4 @@ build=read('scripts/build/bridge-plugins.sh')
 require(build,[':plugins:quilt-bridge:remapJar',':plugins:sponge-bridge:jar',':plugins:vanilla-bridge:jar','QUILT_SHA256','SPONGE_SHA256','VANILLA_SHA256'],'production build')
 openapi=read('scripts/contracts/generate_openapi.py')
 require(openapi,['"fabric","quilt","forge","neoforge","sponge","vanilla"'],'OpenAPI platform enum')
-print('ServerBridge Universal Server Adapters 0.19.8 production gate: OK (14 adapters; hybrid cohort fail-closed)')
+print('ServerBridge Universal Server Adapters 0.19.8+ production gate: OK (14 adapters; hybrid cohort fail-closed)')

@@ -1,3 +1,12 @@
+## [0.19.9] - 2026-10-04
+
+- Added production Zero-Patch Provisioning CLI: `nl server-bridge detect|install|enroll|status|upgrade|rollback` with automatic certified-platform detection and fail-closed hybrid-core rejection.
+- Installer selects the exact platform artifact, validates its platform descriptor/class plus ServerBridge 3 certification/SHA-256, performs atomic managed-file updates, creates Java-compatible local Ed25519 node identity and a public-only enrollment request, and never edits Minecraft/proxy core or authlib files.
+- Added transaction journals/backups, `--dry-run`, automatic failure rollback and explicit rollback of install/upgrade operations; upgrades preserve node identity and refuse silent cross-platform replacement.
+- Added enrollment against the existing administrative ServerBridge API with idempotent exact-identity handling, optional identity rotation, and local enrollment status persistence; `status` correlates local artifact/identity state with Backend node state when credentials are supplied.
+- Fixed release verification so historical releases keep the 11-target cohort while 0.19.8+ requires the complete 14-target Universal Server Adapter cohort.
+- Added 0.19.9 provisioning tests and mandatory CI/preflight production gate. No database migration is required for this release.
+
 ## [0.19.8] - 2026-10-04
 
 - Added Universal Server Adapter capability profiles and runtime capability publication so platform behavior is selected by explicit capabilities instead of platform-name/`instanceof` inference.

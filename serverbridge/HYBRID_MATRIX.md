@@ -1,8 +1,8 @@
-# ServerBridge hybrid core certification matrix — 0.19.8
+# ServerBridge hybrid core certification matrix — 0.19.9
 
 Hybrid cores are **not** covered by the Universal Server Adapter release cohort. A Bukkit/Forge/Fabric-compatible API surface is not sufficient evidence that login interception, scheduler ownership, lifecycle, telemetry, or control semantics are equivalent.
 
-| Core | 0.19.8 status | Universal adapter fallback |
+| Core | 0.19.9 status | Universal adapter fallback |
 |---|---|---|
 | Mohist | not certified | denied |
 | Arclight | not certified | denied |

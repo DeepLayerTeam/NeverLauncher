@@ -1,3 +1,15 @@
+
+## ServerBridge Zero-Patch Provisioning (0.19.9)
+
+- `nl server-bridge detect --server-root <dir>` — определить certified platform без изменения файлов.
+- `nl server-bridge install --server-root <dir> --artifact-dir <release>` — выбрать/проверить platform artifact, установить bridge, создать config, Ed25519 node identity и public-only enrollment request.
+- `nl server-bridge enroll --server-root <dir> --backend <url> --token <admin-token>` — зарегистрировать node identity; `--rotate` использует существующий rotate-identity API.
+- `nl server-bridge status --server-root <dir> [--backend <url> --token <token>]` — проверить локальный artifact/hash/identity и, при наличии credentials, Backend node.
+- `nl server-bridge upgrade ...` — транзакционно заменить bridge artifact без ротации node identity.
+- `nl server-bridge rollback --server-root <dir> [--transaction <id>]` — восстановить предыдущие managed files. Все mutating команды поддерживают `--dry-run` там, где применимо.
+
+Production provisioning требует sibling `SERVERBRIDGE3_CERTIFICATION.json` или exact-version `BRIDGE_RELEASE_ALLOWLIST.json`; `--allow-unverified-artifact` предназначен только для development. Universal provisioning не патчит authlib/core и fail-closed отклоняет Mohist/Arclight/Magma/CatServer/Banner/Cardboard без отдельной certification matrix.
+
 # NeverLauncher CLI
 
 ## Loader Resolution & Pinning — 0.17.7

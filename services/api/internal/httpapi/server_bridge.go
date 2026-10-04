@@ -457,7 +457,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.8 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.9 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -523,7 +523,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	if !validBridgeServerKindV2(kind) {
-		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, bungeecord, waterfall, bukkit, spigot, paper, purpur, folia, fabric, forge или neoforge")
+		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, bungeecord, waterfall, bukkit, spigot, paper, purpur, folia, fabric, quilt, forge, neoforge, sponge или vanilla")
 	}
 	algorithm, publicKey, keyFingerprint, err := validateBridgeNodeIdentity0142(req.KeyAlgorithm, req.PublicKey)
 	if err != nil {

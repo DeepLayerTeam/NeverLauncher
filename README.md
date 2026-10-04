@@ -1,3 +1,11 @@
+## ServerBridge 3 Zero-Patch Provisioning — 0.19.9
+
+`0.19.9` добавляет рабочий provisioning для уже поддерживаемых ServerBridge-платформ: `nl server-bridge detect`, `install`, `enroll`, `status`, `upgrade`, `rollback`. CLI определяет ядро по реальному server/proxy/modloader layout и JAR metadata, fail-closed отклоняет несертифицированные hybrid cores, выбирает platform-matched release JAR и проверяет его SHA-256, ServerBridge 3 certification и обязательные platform entries.
+
+`install`/`upgrade` меняют только ServerBridge-owned files: JAR/mod/sidecar, его config, локальную Ed25519 identity, enrollment request и transaction state. `server.properties`, proxy/core JAR, authlib и конфигурация самого ядра не патчатся. Node private key остаётся только на сервере; enrollment request содержит только public key/fingerprint. `--dry-run` не меняет файловую систему, а каждая запись ведётся через transaction backup с автоматическим rollback при ошибке и явным `nl server-bridge rollback`. Для Vanilla устанавливается исполняемый sidecar launcher; существующая RCON-конфигурация ядра не переписывается.
+
+Пример: `nl server-bridge install --server-root /srv/paper --artifact-dir /opt/neverlauncher/release --backend https://launcher.example.com --server-id paper-main --project prod --profile survival --dry-run`, затем без `--dry-run` и `nl server-bridge enroll --server-root /srv/paper --token ...`.
+
 ## ServerBridge 3 Universal Server Adapters — 0.19.8
 
 `0.19.8` переводит ServerBridge на единый capability-based adapter contract для 14 target-платформ. К существующим Velocity/Bungee/Waterfall, Bukkit/Spigot/Paper/Purpur/Folia и Fabric/Forge/NeoForge добавлены Quilt, Sponge и stock Vanilla sidecar. Vanilla честно не объявляет pre-login gate: он использует локальный RCON и bounded `latest.log` tail для control/telemetry/events. Hybrid cores не наследуют universal certification и допускаются только через отдельную certification matrix.

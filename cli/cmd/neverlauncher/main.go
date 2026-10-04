@@ -34,6 +34,7 @@ const helpText = `NeverLauncher CLI
   branding ...                    branding tooling
   sdk ...                         SDK tooling
   plugin ...                      plugin manifest tooling
+  server-bridge detect|install|enroll|status|upgrade|rollback  Zero-Patch ServerBridge provisioning
 
 Backend / production:
   auth login|capabilities|accounts|roles|sessions|revoke|logout-all|session-policy|password-policy
@@ -315,6 +316,8 @@ func run(args []string) error {
 		return handleSDK(args[1:])
 	case "plugin":
 		return handlePlugin(args[1:])
+	case "server-bridge", "serverbridge":
+		return handleServerBridge0199(args[1:])
 	case "production":
 		return handleProduction(args[1:])
 	case "adminops", "operator":
