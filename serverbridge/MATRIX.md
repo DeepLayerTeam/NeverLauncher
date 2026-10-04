@@ -1,4 +1,4 @@
-# NeverLauncher 0.19.9 — Public ServerBridge Matrix
+# NeverLauncher 0.19.10 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.
 

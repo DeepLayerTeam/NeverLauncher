@@ -9,7 +9,8 @@ def require(text, needles, label):
         if n not in text: raise SystemExit(f'{label}: missing {n!r}')
 
 version=read('VERSION').strip()
-if version!='0.19.9': raise SystemExit(f'expected VERSION 0.19.9, got {version}')
+parts=tuple(int(x) for x in version.split('-',1)[0].split('.')[:3])
+if parts < (0,19,9): raise SystemExit(f'expected VERSION >= 0.19.9, got {version}')
 main=read('cli/cmd/neverlauncher/main.go')
 prov=read('cli/cmd/neverlauncher/serverbridge_provisioning_0199.go')
 tests=read('cli/cmd/neverlauncher/serverbridge_provisioning_0199_test.go')
@@ -32,9 +33,9 @@ require(tests,[
 ], '0.19.9 provisioning tests')
 require(release,['serverBridgeUniversalReleaseTargets0198','serverBridgeReleaseTargetsForVersion0150','serverBridgeUniversalAdaptersRequired0198'], 'release cohort verifier')
 targets=json.loads(read('serverbridge/targets.json'))
-if targets.get('productVersion')!='0.19.9' or len(targets.get('targets',[]))!=14:
-    raise SystemExit('0.19.9 ServerBridge target metadata mismatch')
+if targets.get('productVersion')!=version or len(targets.get('targets',[]))!=14:
+    raise SystemExit('0.19.9+ ServerBridge target metadata mismatch')
 hybrid=json.loads(read('serverbridge/hybrid-targets.json'))
-if hybrid.get('productVersion')!='0.19.9' or any(x.get('status')!='not-certified' for x in hybrid.get('targets',[])):
-    raise SystemExit('0.19.9 hybrid certification metadata mismatch')
-print('ServerBridge Zero-Patch Provisioning 0.19.9 production gate: OK')
+if hybrid.get('productVersion')!=version or any(x.get('status')!='not-certified' for x in hybrid.get('targets',[])):
+    raise SystemExit('0.19.9+ hybrid certification metadata mismatch')
+print('ServerBridge Zero-Patch Provisioning 0.19.9+ production gate: OK')

@@ -1,3 +1,11 @@
+## [0.19.10] - 2026-10-04
+
+- Added production ServerBridge Host supervisor with `configure|start|run|stop|restart|status|logs`, detached lifecycle management and exclusive per-server lock.
+- Added real JVM process supervision: persisted supervisor/Minecraft PID state, exit-code and crash detection, bounded `never|on-failure|always` restart policies, configurable restart backoff and graceful-stop timeout.
+- Added Java/JRE selection through explicit path, `NEVERLAUNCHER_SERVERBRIDGE_JAVA`, `JAVA_HOME` and PATH with `java -version` validation; added repeated JVM/server argument support.
+- Added launch support for normal `java -jar` platforms plus native modern Forge/NeoForge `@unix_args.txt` / `@win_args.txt` argument files without replacing Minecraft main class or patching authlib/core files.
+- Added separate stdout/stderr logs, a timestamped combined stream, tail/follow CLI, Unix process-group signal handling, Windows detached process-group support, regression tests and mandatory CI/preflight gate. No database migration is required.
+
 ## [0.19.9] - 2026-10-04
 
 - Added production Zero-Patch Provisioning CLI: `nl server-bridge detect|install|enroll|status|upgrade|rollback` with automatic certified-platform detection and fail-closed hybrid-core rejection.

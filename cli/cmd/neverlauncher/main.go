@@ -34,7 +34,7 @@ const helpText = `NeverLauncher CLI
   branding ...                    branding tooling
   sdk ...                         SDK tooling
   plugin ...                      plugin manifest tooling
-  server-bridge detect|install|enroll|status|upgrade|rollback  Zero-Patch ServerBridge provisioning
+  server-bridge detect|install|enroll|status|upgrade|rollback|host  Zero-Patch provisioning + host supervisor
 
 Backend / production:
   auth login|capabilities|accounts|roles|sessions|revoke|logout-all|session-policy|password-policy

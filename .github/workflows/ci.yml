@@ -765,6 +765,11 @@ jobs:
         run: |
           python3 scripts/smoke/offline/serverbridge-zero-patch-provisioning-0199.py
           (cd cli && go test -run 'TestServerBridge(Detect|Install|DryRun|ReleaseTargetCohort)' ./cmd/neverlauncher)
+      - name: ServerBridge Host 0.19.10 gate
+        run: |
+          python3 scripts/smoke/offline/serverbridge-host-01910.py
+          (cd cli && go test -run 'TestServerBridgeHost' ./cmd/neverlauncher)
+          (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/neverlauncher -o /tmp/neverlauncher-host-windows.test.exe)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

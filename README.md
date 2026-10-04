@@ -1,3 +1,11 @@
+## ServerBridge Host — 0.19.10
+
+`0.19.10` добавляет опциональный host-side supervisor для ServerBridge: `nl server-bridge host configure|start|run|stop|restart|status|logs`. Host запускает существующий Minecraft/proxy entry point как отдельный JVM-процесс, не заменяет Minecraft main class и не меняет authlib/core. Для Bukkit/Proxy/Fabric/Quilt/Sponge/legacy Forge используется `java -jar`; modern Forge/NeoForge поддерживает штатные `@unix_args.txt` / `@win_args.txt`.
+
+Java/JRE выбирается через `--java`, `NEVERLAUNCHER_SERVERBRIDGE_JAVA`, `JAVA_HOME` или PATH и проверяется реальным `java -version`. Конфиг хранит JVM/server args и restart policy; runtime state атомарно фиксирует supervisor PID, Minecraft PID, command, exit code, crash count, restart count и timestamps. На Unix Minecraft работает в отдельной process group с SIGTERM/SIGKILL fallback; на Windows используется отдельная process group и detached supervisor. Stdout/stderr пишутся раздельно и в общий timestamped stream, `host logs --follow` позволяет читать поток без доступа к JVM stdin. Exclusive lock и stale-PID проверка не дают двум supervisor одновременно управлять одним server root.
+
+Пример: `nl server-bridge host configure --server-root /srv/paper --platform paper --server-jar paper.jar --java /opt/jre21/bin/java --jvm-arg -Xms2G --jvm-arg -Xmx4G --restart-policy on-failure`, затем `nl server-bridge host start --server-root /srv/paper`, `status`, `logs --follow`, `restart` или `stop`.
+
 ## ServerBridge 3 Zero-Patch Provisioning — 0.19.9
 
 `0.19.9` добавляет рабочий provisioning для уже поддерживаемых ServerBridge-платформ: `nl server-bridge detect`, `install`, `enroll`, `status`, `upgrade`, `rollback`. CLI определяет ядро по реальному server/proxy/modloader layout и JAR metadata, fail-closed отклоняет несертифицированные hybrid cores, выбирает platform-matched release JAR и проверяет его SHA-256, ServerBridge 3 certification и обязательные platform entries.

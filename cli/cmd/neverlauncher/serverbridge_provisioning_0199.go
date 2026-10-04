@@ -97,7 +97,7 @@ type bridgeIdentityMaterial0199 struct {
 
 func handleServerBridge0199(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|rollback [параметры]")
+		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|rollback|host [параметры]")
 	}
 	switch args[0] {
 	case "detect":
@@ -120,6 +120,8 @@ func handleServerBridge0199(args []string) error {
 		return serverBridgeProvisionStatus0199(args)
 	case "rollback":
 		return rollbackServerBridge0199(args)
+	case "host":
+		return handleServerBridgeHost01910(args[1:])
 	default:
 		return fmt.Errorf("неизвестная server-bridge-подкоманда: %s", args[0])
 	}
