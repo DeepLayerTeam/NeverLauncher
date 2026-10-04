@@ -10,7 +10,7 @@ def require(text, needles, label):
     if missing: raise SystemExit(f'{label}: missing {missing}')
 cert=read('serverbridge/certify_release.py')
 require(cert,[
-    "EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge']",
+    "EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']",
     'BRIDGE_RELEASE_ALLOWLIST.json','PLUGIN_MANIFEST.json','SHA256SUMS','SERVERBRIDGE3_CERTIFICATION.json',
     'NeverLauncherApiClient.class','BridgeProtocolNegotiation.class',
     'BridgeRuntimeDescriptor.class','BridgeRuntimeIdentity.class','BridgeRuntimeProbe.class',
@@ -28,6 +28,6 @@ import json
 targets=json.loads(read('serverbridge/targets.json'))
 if targets.get('productVersion') != version or targets.get('protocolVersion') != 3: raise SystemExit('ServerBridge matrix version/protocol mismatch')
 ids=[x.get('id') for x in targets.get('targets',[])]
-if ids != ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge']:
+if ids != ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']:
     raise SystemExit(f'ServerBridge 3 target cohort mismatch: {ids}')
-print(f'NeverLauncher {version} ServerBridge 3 release gate: OK (11-platform certified cohort)')
+print(f'NeverLauncher {version} ServerBridge 3 release gate: OK (14-platform certified cohort)')

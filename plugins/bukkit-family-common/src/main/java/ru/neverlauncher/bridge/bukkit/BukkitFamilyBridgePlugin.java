@@ -14,6 +14,9 @@ import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.neverlauncher.bridge.common.BridgeConfig;
+import ru.neverlauncher.bridge.common.BridgeAdapterCapability;
+import ru.neverlauncher.bridge.common.BridgeAdapterProfile;
+import ru.neverlauncher.bridge.common.BridgeAdapterProfiles;
 import ru.neverlauncher.bridge.common.BridgeControlCommand;
 import ru.neverlauncher.bridge.common.BridgeControlResult;
 import ru.neverlauncher.bridge.common.BridgeDefaults;
@@ -50,6 +53,7 @@ import java.util.function.Consumer;
  */
 public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Listener, CommandExecutor {
     private final BukkitFamilyPlatform expectedPlatform;
+    private final BridgeAdapterProfile adapterProfile;
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
     private final AtomicBoolean drainMode = new AtomicBoolean(false);
@@ -62,6 +66,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
 
     protected BukkitFamilyBridgePlugin(BukkitFamilyPlatform expectedPlatform) {
         this.expectedPlatform = expectedPlatform;
+        this.adapterProfile = BridgeAdapterProfiles.require(expectedPlatform.id());
     }
 
     @Override
@@ -264,7 +269,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             throw new IllegalStateException("cannot measure running plugin JAR SHA-256");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256, runtimeDescriptor());
+        BridgeRuntimeDescriptor descriptor = runtimeDescriptor();
+        BridgeAdapterProfiles.rejectUncertifiedHybrid(expectedPlatform.id(), descriptor.serverBrand());
+        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 
@@ -280,8 +287,8 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             "control.secure-channel-v1",
             "plugin.bukkit-api"
         ));
-        if (expectedPlatform == BukkitFamilyPlatform.FOLIA) capabilities.add("scheduler.folia-safe-io");
-        if (expectedPlatform == BukkitFamilyPlatform.PAPER || expectedPlatform == BukkitFamilyPlatform.PURPUR || expectedPlatform == BukkitFamilyPlatform.FOLIA) {
+        if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) capabilities.add("scheduler.folia-safe-io");
+        if (adapterProfile.supports(BridgeAdapterCapability.PAPER_API_FAMILY)) {
             capabilities.add("server.paper-api-family");
         }
         String bukkitVersion = safe(Bukkit.getBukkitVersion());
@@ -299,7 +306,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         RuntimeState state = runtime;
         if (state == null || stopping.get()) return;
         long periodTicks = Math.max(100L, state.config.telemetrySampleIntervalSeconds * 20L);
-        if (expectedPlatform != BukkitFamilyPlatform.FOLIA) {
+        if (!adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) {
             try {
                 Object scheduler = Bukkit.class.getMethod("getScheduler").invoke(null);
                 Method runTaskTimer = scheduler.getClass().getMethod(
@@ -378,7 +385,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             // which can violate the telemetry sampling budget on large worlds.
             // Folia also requires region ownership for arbitrary world state, so
             // those platforms intentionally report these counters as unsupported.
-            if ((expectedPlatform == BukkitFamilyPlatform.PAPER || expectedPlatform == BukkitFamilyPlatform.PURPUR) && loaded.size() <= 64) {
+            if (adapterProfile.supports(BridgeAdapterCapability.TELEMETRY_BOUNDED_WORLD_COUNTERS) && loaded.size() <= 64) {
                 long chunkTotal = 0L;
                 long entityTotal = 0L;
                 boolean complete = true;
@@ -500,10 +507,10 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             });
             return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
         }
-        if (expectedPlatform == BukkitFamilyPlatform.FOLIA && "player.kick".equals(type)) {
+        if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER) && "player.kick".equals(type)) {
             return executeFoliaPlayerKick(command);
         }
-        if (expectedPlatform == BukkitFamilyPlatform.FOLIA && "message.broadcast".equals(type)) {
+        if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER) && "message.broadcast".equals(type)) {
             return executeFoliaBroadcast(command);
         }
         return callOnBukkitControlThread(() -> executeControlOnBukkitThread(command));
@@ -630,7 +637,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     }
 
     private void scheduleBukkitTask(Runnable task) {
-        if (expectedPlatform == BukkitFamilyPlatform.FOLIA) {
+        if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) {
             try {
                 Object scheduler = Bukkit.class.getMethod("getGlobalRegionScheduler").invoke(null);
                 Method execute = scheduler.getClass().getMethod("execute", org.bukkit.plugin.Plugin.class, Runnable.class);

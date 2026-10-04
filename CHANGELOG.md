@@ -1,3 +1,11 @@
+## [0.19.8] - 2026-10-04
+
+- Added Universal Server Adapter capability profiles and runtime capability publication so platform behavior is selected by explicit capabilities instead of platform-name/`instanceof` inference.
+- Added production Quilt, Sponge and Vanilla sidecar adapters. Quilt uses a server-only Quilt Loader artifact and login/event/control/telemetry hooks; Sponge uses the native asynchronous Auth gate and Sponge scheduler; Vanilla uses bounded local RCON plus log-tail integration without pretending to have a pre-login plugin gate.
+- Expanded ServerBridge registration, runtime identity, artifact integrity allowlists, OpenAPI and PostgreSQL canonical kinds from 11 to 14 adapters with separate `quiltSha256`, `spongeSha256` and `vanillaSha256` namespaces.
+- Added fail-closed hybrid-core policy and separate certification matrix: Mohist, Arclight, Magma, CatServer, Banner and Cardboard cannot inherit Bukkit/Fabric/Forge certification.
+- Added migration `0039_universal_server_adapters_0198`, 14-target release certification/build rules and the 0.19.8 production gate.
+
 ## [0.19.7] - 2026-10-04
 
 - Added production Player Session Integration 3 with a cryptographically random `sessionCorrelationId` spanning launcher join, proxy ownership and final backend admission.

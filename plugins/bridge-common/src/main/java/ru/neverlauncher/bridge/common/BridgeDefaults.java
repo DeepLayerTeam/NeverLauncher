@@ -28,5 +28,8 @@ public final class BridgeDefaults {
     public static final String PAPER_ID = "neverlauncher-paper-bridge";
     public static final String PURPUR_ID = "neverlauncher-purpur-bridge";
     public static final String FOLIA_ID = "neverlauncher-folia-bridge";
+    public static final String QUILT_ID = "neverlauncher-quilt-bridge";
+    public static final String SPONGE_ID = "neverlauncher-sponge-bridge";
+    public static final String VANILLA_ID = "neverlauncher-vanilla-bridge";
     private BridgeDefaults() {}
 }

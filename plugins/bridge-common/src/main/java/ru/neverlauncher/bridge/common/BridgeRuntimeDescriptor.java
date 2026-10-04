@@ -28,6 +28,10 @@ public record BridgeRuntimeDescriptor(
                 if (!capability.isEmpty()) normalized.add(capability);
             }
         }
+        BridgeAdapterProfile adapterProfile = BridgeAdapterProfiles.find(platform);
+        if (adapterProfile != null) {
+            normalized.addAll(adapterProfile.runtimeCapabilities(List.of()));
+        }
         capabilities = List.copyOf(normalized);
     }
 

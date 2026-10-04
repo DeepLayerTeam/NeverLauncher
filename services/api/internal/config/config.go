@@ -126,6 +126,30 @@ func bridgeReleaseRequiresForgeFamily0147(version string) bool {
 	return patch >= 7
 }
 
+func bridgeReleaseRequiresUniversalAdapters0198(version string) bool {
+	parts := strings.Split(strings.TrimSpace(version), ".")
+	if len(parts) < 2 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	if major > 0 {
+		return true
+	}
+	if minor > 19 {
+		return true
+	}
+	if minor < 19 || len(parts) < 3 {
+		return false
+	}
+	patchPart := strings.SplitN(parts[2], "-", 2)[0]
+	patch, err := strconv.Atoi(patchPart)
+	return err == nil && patch >= 8
+}
+
 // Load читает конфигурацию из переменных окружения.
 func Load() Config {
 	environment := env("NEVERLAUNCHER_ENV", "dev")
@@ -358,6 +382,9 @@ func ValidateProduction(cfg Config) error {
 			FabricSHA256     []string `json:"fabricSha256"`
 			ForgeSHA256      []string `json:"forgeSha256"`
 			NeoForgeSHA256   []string `json:"neoforgeSha256"`
+			QuiltSHA256      []string `json:"quiltSha256"`
+			SpongeSHA256     []string `json:"spongeSha256"`
+			VanillaSHA256    []string `json:"vanillaSha256"`
 		}
 		if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil || len(bridgeAllowlist) == 0 {
 			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->ServerBridge hash allowlists")
@@ -383,7 +410,11 @@ func ValidateProduction(cfg Config) error {
 					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.7+ должна содержать forgeSha256 и neoforgeSha256", version))
 					continue
 				}
-				values := make([]string, 0, len(entry.VelocitySHA256)+len(entry.BungeeCordSHA256)+len(entry.WaterfallSHA256)+len(entry.BukkitSHA256)+len(entry.SpigotSHA256)+len(entry.PaperSHA256)+len(entry.PurpurSHA256)+len(entry.FoliaSHA256)+len(entry.FabricSHA256)+len(entry.ForgeSHA256)+len(entry.NeoForgeSHA256))
+				if bridgeReleaseRequiresUniversalAdapters0198(version) && (len(entry.QuiltSHA256) == 0 || len(entry.SpongeSHA256) == 0 || len(entry.VanillaSHA256) == 0) {
+					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.19.8+ должна содержать quiltSha256, spongeSha256 и vanillaSha256", version))
+					continue
+				}
+				values := make([]string, 0, len(entry.VelocitySHA256)+len(entry.BungeeCordSHA256)+len(entry.WaterfallSHA256)+len(entry.BukkitSHA256)+len(entry.SpigotSHA256)+len(entry.PaperSHA256)+len(entry.PurpurSHA256)+len(entry.FoliaSHA256)+len(entry.FabricSHA256)+len(entry.ForgeSHA256)+len(entry.NeoForgeSHA256)+len(entry.QuiltSHA256)+len(entry.SpongeSHA256)+len(entry.VanillaSHA256))
 				values = append(values, entry.VelocitySHA256...)
 				values = append(values, entry.BungeeCordSHA256...)
 				values = append(values, entry.WaterfallSHA256...)
@@ -395,6 +426,9 @@ func ValidateProduction(cfg Config) error {
 				values = append(values, entry.FabricSHA256...)
 				values = append(values, entry.ForgeSHA256...)
 				values = append(values, entry.NeoForgeSHA256...)
+				values = append(values, entry.QuiltSHA256...)
+				values = append(values, entry.SpongeSHA256...)
+				values = append(values, entry.VanillaSHA256...)
 				for _, value := range values {
 					value = strings.TrimSpace(value)
 					if len(value) != 64 {

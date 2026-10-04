@@ -457,7 +457,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.6 ServerBridge 3",
+		"release":                   "NeverLauncher 0.19.8 ServerBridge 3",
 		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -959,7 +959,7 @@ func textureProfile910(texture bridgeTextureRecord) map[string]any {
 
 func validBridgeServerKindV2(kind string) bool {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
-	case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge":
+	case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla":
 		return true
 	default:
 		return false

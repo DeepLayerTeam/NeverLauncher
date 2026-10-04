@@ -78,6 +78,7 @@ public final class NeverLauncherApiClient {
         this.serverType = normalized(serverType);
         this.pluginVersion = normalized(pluginVersion);
         this.pluginSha256 = normalized(pluginSha256).toLowerCase();
+        BridgeAdapterProfiles.rejectUncertifiedHybrid(this.serverType, runtimeDescriptor == null ? "" : runtimeDescriptor.serverBrand());
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(config.timeoutMs)).build();
         try {
             this.runtimeIdentity = identity == null ? null : BridgeRuntimeIdentity.capture(config, identity, runtimeDescriptor);

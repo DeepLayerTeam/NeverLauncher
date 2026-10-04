@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "productVersion": "0.19.8",
+  "policy": "separate-certification-required",
+  "targets": [
+    {"id":"mohist","status":"not-certified","reason":"hybrid Bukkit+Forge/NeoForge core requires dedicated runtime evidence"},
+    {"id":"arclight","status":"not-certified","reason":"hybrid Bukkit+Forge/NeoForge core requires dedicated runtime evidence"},
+    {"id":"magma","status":"not-certified","reason":"hybrid Bukkit+Forge core requires dedicated runtime evidence"},
+    {"id":"catserver","status":"not-certified","reason":"hybrid Bukkit+Forge core requires dedicated runtime evidence"},
+    {"id":"banner","status":"not-certified","reason":"hybrid Bukkit+Fabric core requires dedicated runtime evidence"},
+    {"id":"cardboard","status":"not-certified","reason":"hybrid Bukkit+Fabric core requires dedicated runtime evidence"}
+  ]
+}

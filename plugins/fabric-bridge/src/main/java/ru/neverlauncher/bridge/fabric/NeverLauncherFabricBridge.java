@@ -298,7 +298,7 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
     }
 
     private void updateRoutingModes() {
-        RuntimeState current = runtime;
+        RuntimeState current = state;
         if (current != null) current.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
         triggerHeartbeat();
     }

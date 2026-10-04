@@ -1,0 +1,12 @@
+backend:
+  url: http://127.0.0.1:8080
+server:
+  id: sponge-main
+identity:
+  file: node-identity.properties
+security:
+  failMode: closed
+  requireLauncherSession: true
+  requireIntegrity: true
+control:
+  backendPublicKey: ""

@@ -1,3 +1,7 @@
+## ServerBridge 3 Universal Server Adapters — 0.19.8
+
+`0.19.8` переводит ServerBridge на единый capability-based adapter contract для 14 target-платформ. К существующим Velocity/Bungee/Waterfall, Bukkit/Spigot/Paper/Purpur/Folia и Fabric/Forge/NeoForge добавлены Quilt, Sponge и stock Vanilla sidecar. Vanilla честно не объявляет pre-login gate: он использует локальный RCON и bounded `latest.log` tail для control/telemetry/events. Hybrid cores не наследуют universal certification и допускаются только через отдельную certification matrix.
+
 ## ServerBridge 3 Player Session Integration 3 — 0.19.7
 
 `0.19.7` связывает launcher join, proxy и конечный backend одним 256-bit `sessionCorrelationId`. PostgreSQL хранит единственную активную gameplay correlation для Never/Minecraft session, runtime-bound proxy/backend presence и монотонную transfer chain. Новый transfer переводится в `recheck_required` и завершается только после повторной Device Trust + Guard/Minecraft Integrity проверки на target. Попытка session cloning атомарно инвалидирует предыдущую correlation и ставит durable `player.kick` через Control API на прежний proxy/backend. Session/device revoke, runtime replacement и permanent trust/integrity failure распространяют invalidate/disconnect на всю topology. Protocol v2 остаётся rolling-upgrade путём без выдуманной runtime identity.

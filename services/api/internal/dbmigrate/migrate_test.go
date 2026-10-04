@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0038_serverbridge_player_session_integration3_0197" {
+	if st.Current != "0039_universal_server_adapters_0198" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0038_serverbridge_player_session_integration3_0197" {
+		if k != "0039_universal_server_adapters_0198" {
 			pending[k] = v
 		}
 	}
@@ -504,6 +504,24 @@ func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.19.7 player-session migration missing %q", required)
+		}
+	}
+}
+
+func TestUniversalServerAdaptersMigration0198(t *testing.T) {
+	b, err := os.ReadFile("sql/0039_universal_server_adapters_0198.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{"server_bridge_nodes_v2_kind_check", "'quilt'", "'sponge'", "'vanilla'", "separate certification"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.19.8 migration missing %q", required)
+		}
+	}
+	for _, hybrid := range []string{"'mohist'", "'arclight'", "'magma'", "'catserver'", "'banner'", "'cardboard'"} {
+		if strings.Contains(text, hybrid) {
+			t.Fatalf("hybrid core leaked into canonical kind constraint: %s", hybrid)
 		}
 	}
 }

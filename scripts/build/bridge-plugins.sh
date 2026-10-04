@@ -23,6 +23,9 @@ mkdir -p "$OUT"
     :plugins:purpur-bridge:clean :plugins:purpur-bridge:jar \
     :plugins:folia-bridge:clean :plugins:folia-bridge:jar \
     :plugins:fabric-bridge:clean :plugins:fabric-bridge:remapJar \
+    :plugins:quilt-bridge:clean :plugins:quilt-bridge:remapJar \
+    :plugins:sponge-bridge:clean :plugins:sponge-bridge:jar \
+    :plugins:vanilla-bridge:clean :plugins:vanilla-bridge:jar \
     :plugins:forge-bridge:clean :plugins:forge-bridge:jar \
     :plugins:neoforge-bridge:clean :plugins:neoforge-bridge:jar
 )
@@ -44,10 +47,15 @@ copy_artifact folia-bridge "neverlauncher-folia-bridge-${VERSION}.jar"
 FABRIC_SRC="$ROOT/plugins/fabric-bridge/build/libs/neverlauncher-fabric-bridge-${VERSION}.jar"
 [[ -s "$FABRIC_SRC" ]] || { echo "[NeverLauncher] missing remapped Fabric artifact" >&2; exit 1; }
 cp "$FABRIC_SRC" "$OUT/neverlauncher-fabric-bridge-${VERSION}.jar"
+QUILT_SRC="$ROOT/plugins/quilt-bridge/build/libs/neverlauncher-quilt-bridge-${VERSION}.jar"
+[[ -s "$QUILT_SRC" ]] || { echo "[NeverLauncher] missing remapped Quilt artifact" >&2; exit 1; }
+cp "$QUILT_SRC" "$OUT/neverlauncher-quilt-bridge-${VERSION}.jar"
+copy_artifact sponge-bridge "neverlauncher-sponge-bridge-${VERSION}.jar"
+copy_artifact vanilla-bridge "neverlauncher-vanilla-bridge-${VERSION}.jar"
 copy_artifact forge-bridge "neverlauncher-forge-bridge-${VERSION}.jar"
 copy_artifact neoforge-bridge "neverlauncher-neoforge-bridge-${VERSION}.jar"
 
-for artifact in "$OUT"/neverlauncher-{velocity,bungeecord,waterfall,bukkit,spigot,paper,purpur,folia,forge,neoforge}-bridge-"${VERSION}".jar; do
+for artifact in "$OUT"/neverlauncher-{velocity,bungeecord,waterfall,bukkit,spigot,paper,purpur,folia,sponge,vanilla,forge,neoforge}-bridge-"${VERSION}".jar; do
   jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/common/NeverLauncherApiClient.class$' || {
     echo "[NeverLauncher] bridge common runtime classes missing from $(basename "$artifact")" >&2
     exit 1
@@ -123,6 +131,21 @@ if not isinstance(neverlauncher, dict) or neverlauncher.get("clientModRequired")
     raise SystemExit("[NeverLauncher] Fabric artifact must not require a client mod")
 PY_FABRIC_META
 
+QUILT_ARTIFACT="$OUT/neverlauncher-quilt-bridge-${VERSION}.jar"
+for entry in 'fabric.mod.json' 'quilt.mod.json' 'neverlauncher.quilt.mixins.json' 'ru/neverlauncher/bridge/quilt/NeverLauncherQuiltBridge.class'; do
+  jar tf "$QUILT_ARTIFACT" | grep -q "^${entry}$" || { echo "[NeverLauncher] Quilt artifact missing ${entry}" >&2; exit 1; }
+done
+jar tf "$QUILT_ARTIFACT" | grep -Eq '^META-INF/jars/bridge-common-[^/]+\.jar$' || { echo "[NeverLauncher] Quilt artifact does not embed bridge-common runtime" >&2; exit 1; }
+python3 - "$QUILT_ARTIFACT" <<'PY_QUILT_META'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as zf:
+    data=json.loads(zf.read('fabric.mod.json'))
+    depends=data.get('depends') or {}
+    custom=(data.get('custom') or {}).get('neverlauncher') or {}
+    if data.get('environment')!='server' or 'quilt_loader' not in depends or custom.get('clientModRequired') is not False:
+        raise SystemExit('[NeverLauncher] Quilt artifact must be Quilt-only, server-only and clientModRequired=false')
+PY_QUILT_META
+
 for platform in forge neoforge; do
   artifact="$OUT/neverlauncher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/neverlauncher/bridge/modloader/ModLoaderBridgeRuntime.class$' || {
@@ -138,6 +161,9 @@ jar tf "$OUT/neverlauncher-neoforge-bridge-${VERSION}.jar" | grep -q '^META-INF/
   echo "[NeverLauncher] NeoForge neoforge.mods.toml missing" >&2
   exit 1
 }
+jar tf "$OUT/neverlauncher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/neverlauncher/bridge/sponge/NeverLauncherSpongeBridge.class$' || { echo "[NeverLauncher] Sponge runtime class missing" >&2; exit 1; }
+jar tf "$OUT/neverlauncher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/neverlauncher/bridge/vanilla/NeverLauncherVanillaBridge.class$' || { echo "[NeverLauncher] Vanilla sidecar runtime class missing" >&2; exit 1; }
+jar tf "$OUT/neverlauncher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/neverlauncher/bridge/vanilla/VanillaRconClient.class$' || { echo "[NeverLauncher] Vanilla RCON client missing" >&2; exit 1; }
 
 (
   cd "$OUT"
@@ -152,10 +178,13 @@ PAPER_SHA256="$(sha256sum "$OUT/neverlauncher-paper-bridge-${VERSION}.jar" | awk
 PURPUR_SHA256="$(sha256sum "$OUT/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
 FOLIA_SHA256="$(sha256sum "$OUT/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
 FABRIC_SHA256="$(sha256sum "$OUT/neverlauncher-fabric-bridge-${VERSION}.jar" | awk '{print $1}')"
+QUILT_SHA256="$(sha256sum "$OUT/neverlauncher-quilt-bridge-${VERSION}.jar" | awk '{print $1}')"
+SPONGE_SHA256="$(sha256sum "$OUT/neverlauncher-sponge-bridge-${VERSION}.jar" | awk '{print $1}')"
+VANILLA_SHA256="$(sha256sum "$OUT/neverlauncher-vanilla-bridge-${VERSION}.jar" | awk '{print $1}')"
 FORGE_SHA256="$(sha256sum "$OUT/neverlauncher-forge-bridge-${VERSION}.jar" | awk '{print $1}')"
 NEOFORGE_SHA256="$(sha256sum "$OUT/neverlauncher-neoforge-bridge-${VERSION}.jar" | awk '{print $1}')"
 cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
-{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"],"fabricSha256":["${FABRIC_SHA256}"],"forgeSha256":["${FORGE_SHA256}"],"neoforgeSha256":["${NEOFORGE_SHA256}"]}}
+{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"],"fabricSha256":["${FABRIC_SHA256}"],"quiltSha256":["${QUILT_SHA256}"],"forgeSha256":["${FORGE_SHA256}"],"neoforgeSha256":["${NEOFORGE_SHA256}"],"spongeSha256":["${SPONGE_SHA256}"],"vanillaSha256":["${VANILLA_SHA256}"]}}
 JSON
 cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 {
@@ -175,8 +204,11 @@ cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
     {"id":"purpur","file":"neverlauncher-purpur-bridge-${VERSION}.jar","platform":"purpur","descriptor":"plugin.yml","sha256":"${PURPUR_SHA256}"},
     {"id":"folia","file":"neverlauncher-folia-bridge-${VERSION}.jar","platform":"folia","descriptor":"plugin.yml","sha256":"${FOLIA_SHA256}","foliaSupported":true},
     {"id":"fabric","file":"neverlauncher-fabric-bridge-${VERSION}.jar","platform":"fabric","descriptor":"fabric.mod.json","sha256":"${FABRIC_SHA256}","serverOnly":true,"clientModRequired":false},
+    {"id":"quilt","file":"neverlauncher-quilt-bridge-${VERSION}.jar","platform":"quilt","descriptor":"fabric.mod.json+quilt.mod.json","sha256":"${QUILT_SHA256}","serverOnly":true,"clientModRequired":false},
     {"id":"forge","file":"neverlauncher-forge-bridge-${VERSION}.jar","platform":"forge","descriptor":"META-INF/mods.toml","sha256":"${FORGE_SHA256}","serverOnly":true,"clientModRequired":false},
-    {"id":"neoforge","file":"neverlauncher-neoforge-bridge-${VERSION}.jar","platform":"neoforge","descriptor":"META-INF/neoforge.mods.toml","sha256":"${NEOFORGE_SHA256}","serverOnly":true,"clientModRequired":false}
+    {"id":"neoforge","file":"neverlauncher-neoforge-bridge-${VERSION}.jar","platform":"neoforge","descriptor":"META-INF/neoforge.mods.toml","sha256":"${NEOFORGE_SHA256}","serverOnly":true,"clientModRequired":false},
+    {"id":"sponge","file":"neverlauncher-sponge-bridge-${VERSION}.jar","platform":"sponge","descriptor":"@Plugin","sha256":"${SPONGE_SHA256}","serverOnly":true,"clientModRequired":false},
+    {"id":"vanilla","file":"neverlauncher-vanilla-bridge-${VERSION}.jar","platform":"vanilla","descriptor":"Main-Class","sha256":"${VANILLA_SHA256}","sidecar":true,"loginGate":false}
   ]
 }
 JSON

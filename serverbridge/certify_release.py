@@ -11,11 +11,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 TARGETS = ROOT / 'serverbridge/targets.json'
-EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge']
+EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']
 HASH_FIELDS = {
     'velocity':'velocitySha256','bungeecord':'bungeeCordSha256','waterfall':'waterfallSha256',
     'bukkit':'bukkitSha256','spigot':'spigotSha256','paper':'paperSha256','purpur':'purpurSha256',
-    'folia':'foliaSha256','fabric':'fabricSha256','forge':'forgeSha256','neoforge':'neoforgeSha256',
+    'folia':'foliaSha256','fabric':'fabricSha256','quilt':'quiltSha256','forge':'forgeSha256','neoforge':'neoforgeSha256',
+    'sponge':'spongeSha256','vanilla':'vanillaSha256',
 }
 COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/NeverLauncherApiClient.class',
@@ -35,6 +36,9 @@ COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/BridgeControlTrust.class',
     'ru/neverlauncher/bridge/common/BridgeRoutingSnapshot.class',
     'ru/neverlauncher/bridge/common/BridgePlayerSessionRegistry.class',
+    'ru/neverlauncher/bridge/common/BridgeAdapterCapability.class',
+    'ru/neverlauncher/bridge/common/BridgeAdapterProfile.class',
+    'ru/neverlauncher/bridge/common/BridgeAdapterProfiles.class',
 ]
 REQUIRED_ENTRIES = {
     'velocity':['velocity-plugin.json','ru/neverlauncher/bridge/common/NeverLauncherApiClient.class','ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.class'],
@@ -48,6 +52,9 @@ REQUIRED_ENTRIES = {
     'fabric':['fabric.mod.json','neverlauncher.fabric.mixins.json','ru/neverlauncher/bridge/fabric/NeverLauncherFabricBridge.class'],
     'forge':['META-INF/mods.toml','ru/neverlauncher/bridge/modloader/ModLoaderBridgeRuntime.class'],
     'neoforge':['META-INF/neoforge.mods.toml','ru/neverlauncher/bridge/modloader/ModLoaderBridgeRuntime.class'],
+    'quilt':['fabric.mod.json','quilt.mod.json','neverlauncher.quilt.mixins.json','ru/neverlauncher/bridge/quilt/NeverLauncherQuiltBridge.class'],
+    'sponge':['ru/neverlauncher/bridge/sponge/NeverLauncherSpongeBridge.class'],
+    'vanilla':['ru/neverlauncher/bridge/vanilla/NeverLauncherVanillaBridge.class','ru/neverlauncher/bridge/vanilla/VanillaRconClient.class'],
 }
 HEX64 = re.compile(r'^[0-9a-f]{64}$')
 
@@ -91,6 +98,15 @@ def main() -> int:
         die('serverbridge/targets.json version/protocol drift')
     if not isinstance(target_rows, list) or [r.get('id') for r in target_rows] != EXPECTED:
         die('serverbridge target set/order mismatch')
+    hybrid = load_json(ROOT / 'serverbridge/hybrid-targets.json')
+    hybrid_rows = hybrid.get('targets')
+    if hybrid.get('productVersion') != VERSION or hybrid.get('policy') != 'separate-certification-required':
+        die('hybrid certification matrix version/policy drift')
+    if not isinstance(hybrid_rows, list) or any(r.get('status') != 'not-certified' for r in hybrid_rows):
+        die('universal release must not implicitly certify hybrid cores')
+    hybrid_ids = {r.get('id') for r in hybrid_rows}
+    if hybrid_ids & set(EXPECTED):
+        die('hybrid target leaked into universal artifact cohort')
 
     manifest = load_json(manifest_path)
     if manifest.get('toolVersion') != VERSION or manifest.get('schemaVersion') != '1.2':
@@ -130,9 +146,23 @@ def main() -> int:
         try:
             with zipfile.ZipFile(jar) as zf:
                 names = set(zf.namelist())
-                for entry in COMMON_PROTOCOL_ENTRIES + REQUIRED_ENTRIES[target]:
+                for entry in REQUIRED_ENTRIES[target]:
                     if entry not in names:
                         die(f'{target}: JAR missing {entry}')
+                if target in {'fabric','quilt'}:
+                    nested = [name for name in names if name.startswith('META-INF/jars/bridge-common-') and name.endswith('.jar')]
+                    if len(nested) != 1:
+                        die(f'{target}: expected exactly one embedded bridge-common JAR')
+                    import io
+                    with zipfile.ZipFile(io.BytesIO(zf.read(nested[0]))) as common:
+                        common_names=set(common.namelist())
+                        for entry in COMMON_PROTOCOL_ENTRIES:
+                            if entry not in common_names:
+                                die(f'{target}: embedded bridge-common missing {entry}')
+                else:
+                    for entry in COMMON_PROTOCOL_ENTRIES:
+                        if entry not in names:
+                            die(f'{target}: JAR missing {entry}')
                 if target == 'folia':
                     text = zf.read('plugin.yml').decode('utf-8', 'replace')
                     if 'folia-supported: true' not in text:
@@ -147,6 +177,15 @@ def main() -> int:
                         or neverlauncher.get('clientModRequired') is not False
                     ):
                         die('fabric: artifact must be server-only and clientModRequired=false')
+                elif target == 'quilt':
+                    data = json.loads(zf.read('fabric.mod.json').decode('utf-8'))
+                    custom = (data.get('custom') or {}).get('neverlauncher') or {}
+                    if data.get('environment') != 'server' or 'quilt_loader' not in (data.get('depends') or {}) or custom.get('clientModRequired') is not False:
+                        die('quilt: artifact must be Quilt-only, server-only and clientModRequired=false')
+                elif target == 'vanilla':
+                    manifest = zf.read('META-INF/MANIFEST.MF').decode('utf-8', 'replace')
+                    if 'Main-Class: ru.neverlauncher.bridge.vanilla.NeverLauncherVanillaBridge' not in manifest:
+                        die('vanilla: executable sidecar Main-Class missing')
         except zipfile.BadZipFile:
             die(f'{target}: invalid JAR/ZIP')
         evidence.append({'id': target, 'file': filename, 'sha256': digest, 'bytes': jar.stat().st_size})
@@ -179,6 +218,9 @@ def main() -> int:
         'playerSessionIntegration3': True, 'sessionCloneProtection': True,
         'orderedTransferChain': True, 'trustGuardTransferRecheck': True,
         'topologyWideSessionInvalidation': True,
+        'universalServerAdapters': True, 'adapterCapabilities': True,
+        'quiltAdapter': True, 'spongeAdapter': True, 'vanillaSidecarRcon': True,
+        'hybridCertificationPolicy': 'separate-fail-closed',
         'artifacts': evidence,
     }
     out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')

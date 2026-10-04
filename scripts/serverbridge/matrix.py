@@ -9,10 +9,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-EXPECTED = ["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","forge","neoforge"]
-ALLOWED_FAMILIES = {"proxy","bukkit","fabric","modloader"}
+EXPECTED = ["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]
+ALLOWED_FAMILIES = {"proxy","bukkit","fabric","quilt","modloader","sponge","vanilla-sidecar"}
 ALLOWED_ROLES = {"proxy","backend"}
-ALLOWED_COVERAGE = {"runtime-e2e","build-compatibility"}
+ALLOWED_COVERAGE = {"runtime-e2e","build-compatibility","sidecar-rcon-e2e"}
 ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 
 
@@ -51,10 +51,9 @@ def load(path: Path) -> dict[str, Any]:
             raise SystemExit(f"{tid}: required must be true")
         if (row.get("role") == "proxy") != (row.get("family") == "proxy"):
             raise SystemExit(f"{tid}: proxy family/role mismatch")
-        if tid == "bukkit" and row.get("coverage") != "build-compatibility":
-            raise SystemExit("bukkit must transparently declare build-compatibility coverage")
-        if tid != "bukkit" and row.get("coverage") != "runtime-e2e":
-            raise SystemExit(f"{tid}: supported runtime target must declare runtime-e2e")
+        expected_coverage = {"bukkit":"build-compatibility", "quilt":"build-compatibility", "sponge":"build-compatibility", "vanilla":"sidecar-rcon-e2e"}.get(tid, "runtime-e2e")
+        if row.get("coverage") != expected_coverage:
+            raise SystemExit(f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}")
     if ids != EXPECTED:
         raise SystemExit(f"ServerBridge target ordering/set mismatch: {ids!r}")
     return data
@@ -64,7 +63,7 @@ def markdown(data: dict[str, Any]) -> str:
     lines = [
         f"# NeverLauncher {data['productVersion']} — Public ServerBridge Matrix",
         "",
-        "> Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.",
+        "> Capability matrix. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.",
         "",
         "| Platform | Family | Role | Minecraft | Coverage | Protocol | Zero-patch | Node identity | One-time join | Handoff |",
         "|---|---|---|---|---|---:|---:|---:|---:|---:|",

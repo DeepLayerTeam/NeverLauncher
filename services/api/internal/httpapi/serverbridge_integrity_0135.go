@@ -26,6 +26,9 @@ type bridgeReleasePolicy0135 struct {
 	FabricSHA256     []string `json:"fabricSha256"`
 	ForgeSHA256      []string `json:"forgeSha256"`
 	NeoForgeSHA256   []string `json:"neoforgeSha256"`
+	QuiltSHA256      []string `json:"quiltSha256"`
+	SpongeSHA256     []string `json:"spongeSha256"`
+	VanillaSHA256    []string `json:"vanillaSha256"`
 }
 
 type bridgePluginIntegrityDecision0135 struct {
@@ -105,6 +108,18 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		if err != nil {
 			return nil, fmt.Errorf("ServerBridge neoforge release %s: %w", version, err)
 		}
+		quilt, err := normalizeOptionalBridgeHashes0144(policy.QuiltSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge quilt release %s: %w", version, err)
+		}
+		sponge, err := normalizeOptionalBridgeHashes0144(policy.SpongeSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge sponge release %s: %w", version, err)
+		}
+		vanilla, err := normalizeOptionalBridgeHashes0144(policy.VanillaSHA256)
+		if err != nil {
+			return nil, fmt.Errorf("ServerBridge vanilla release %s: %w", version, err)
+		}
 		policy.VelocitySHA256 = velocity
 		policy.BungeeCordSHA256 = bungeecord
 		policy.WaterfallSHA256 = waterfall
@@ -116,6 +131,9 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		policy.FabricSHA256 = fabric
 		policy.ForgeSHA256 = forge
 		policy.NeoForgeSHA256 = neoforge
+		policy.QuiltSHA256 = quilt
+		policy.SpongeSHA256 = sponge
+		policy.VanillaSHA256 = vanilla
 		out[version] = policy
 	}
 	return out, nil
@@ -152,6 +170,12 @@ func bridgeHashesForKind0135(policy bridgeReleasePolicy0135, kind string) []stri
 		return policy.ForgeSHA256
 	case "neoforge":
 		return policy.NeoForgeSHA256
+	case "quilt":
+		return policy.QuiltSHA256
+	case "sponge":
+		return policy.SpongeSHA256
+	case "vanilla":
+		return policy.VanillaSHA256
 	default:
 		return nil
 	}

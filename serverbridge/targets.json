@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.19.7",
+  "productVersion": "0.19.8",
   "protocolVersion": 3,
   "targets": [
     {
@@ -76,6 +76,14 @@
       "required": true
     },
     {
+      "id": "quilt",
+      "family": "quilt",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "build-compatibility",
+      "required": true
+    },
+    {
       "id": "forge",
       "family": "modloader",
       "role": "backend",
@@ -89,6 +97,22 @@
       "role": "backend",
       "minecraft": "1.21.1",
       "coverage": "runtime-e2e",
+      "required": true
+    },
+    {
+      "id": "sponge",
+      "family": "sponge",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "build-compatibility",
+      "required": true
+    },
+    {
+      "id": "vanilla",
+      "family": "vanilla-sidecar",
+      "role": "backend",
+      "minecraft": "1.21.1",
+      "coverage": "sidecar-rcon-e2e",
       "required": true
     }
   ]
