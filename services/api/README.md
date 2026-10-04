@@ -1,5 +1,9 @@
 # NeverLauncher Backend API
 
+## ServerBridge HA Control Plane — 0.19.11
+
+Операции управления надёжно хранятся в PostgreSQL и защищены двумя уровнями fencing: транзакционной row lease (`delivery_sequence`, `lease_owner`, `lease_token`) и краткоживущим ключом владения в Redis. При `NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true` Redis обязателен: при недоступности coordinator запуск и control-запросы завершаются fail-closed. Все API-реплики используют общие PostgreSQL и Redis и уникальный `NEVERLAUNCHER_REPLICA_ID`; ACK/resume state хранится вне процесса API, поэтому Bridge может переподключиться к любой реплике.
+
 Backend предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
 
 ### Upgrade 0.14.5 → 0.14.6

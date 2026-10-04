@@ -6,6 +6,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
 )
 
 type RuntimeState struct {
@@ -23,6 +24,9 @@ type RuntimeState struct {
 	RateLimitServerBridgePerMinute int
 	RateLimitFailClosed            bool
 	TrustedProxies                 *trustedProxySet
+	ServerBridgeCoordinator        serverbridgeha.Coordinator
+	ServerBridgeReplicaID          string
+	ServerBridgeHARequired         bool
 }
 
 func NewRuntimeState() *RuntimeState {

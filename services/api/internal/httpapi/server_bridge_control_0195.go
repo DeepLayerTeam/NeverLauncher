@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/base64"
@@ -15,6 +16,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
 )
 
 const (
@@ -43,14 +45,17 @@ type serverBridgeControlCreateRequest0195 struct {
 }
 
 type serverBridgeControlAckRequest0195 struct {
-	ProtocolVersion int      `json:"protocolVersion"`
-	Features        []string `json:"features"`
-	ServerID        string   `json:"serverId"`
-	RuntimeID       string   `json:"runtimeId"`
-	CommandID       string   `json:"commandId"`
-	Status          string   `json:"status"`
-	Result          string   `json:"result"` // base64url canonical JSON object<string,string>
-	Error           string   `json:"error,omitempty"`
+	ProtocolVersion  int      `json:"protocolVersion"`
+	Features         []string `json:"features"`
+	ServerID         string   `json:"serverId"`
+	RuntimeID        string   `json:"runtimeId"`
+	CommandID        string   `json:"commandId"`
+	DeliverySequence int64    `json:"deliverySequence"`
+	ChannelID        string   `json:"channelId"`
+	LeaseToken       string   `json:"leaseToken"`
+	Status           string   `json:"status"`
+	Result           string   `json:"result"` // base64url canonical JSON object<string,string>
+	Error            string   `json:"error,omitempty"`
 }
 
 func canonicalControlPayload0195(payload map[string]string) ([]byte, error) {
@@ -175,9 +180,9 @@ func (s Server) serverBridgeControlSigningPrivateKey0195() (ed25519.PrivateKey, 
 	return ed25519.NewKeyFromSeed(seed), nil
 }
 
-func serverBridgeControlCanonical0195(serverID, commandID, runtimeID, kind, payloadSHA string, runtimeEpoch int64, attempt int, issuedAt, expiresAt int64) string {
+func serverBridgeControlCanonical0195(serverID, commandID, runtimeID, kind, payloadSHA, channelID, leaseToken string, runtimeEpoch, deliverySequence int64, attempt int, issuedAt, expiresAt int64) string {
 	enc := func(v string) string { return base64.RawURLEncoding.EncodeToString([]byte(strings.TrimSpace(v))) }
-	return strings.Join([]string{serverBridgeControlSignatureScheme0195, enc(serverID), enc(commandID), strconv.FormatInt(runtimeEpoch, 10), strings.ToLower(runtimeID), enc(kind), strings.ToLower(payloadSHA), strconv.Itoa(attempt), strconv.FormatInt(issuedAt, 10), strconv.FormatInt(expiresAt, 10)}, "\n")
+	return strings.Join([]string{serverBridgeControlSignatureScheme0195, enc(serverID), enc(commandID), strconv.FormatInt(runtimeEpoch, 10), strings.ToLower(runtimeID), enc(kind), strings.ToLower(payloadSHA), strconv.FormatInt(deliverySequence, 10), enc(channelID), enc(leaseToken), strconv.Itoa(attempt), strconv.FormatInt(issuedAt, 10), strconv.FormatInt(expiresAt, 10)}, "\n")
 }
 
 func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Request) {
@@ -298,18 +303,61 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	runtimeID := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("runtimeId")))
+	channelID := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("channelId")))
+	resumeAfter, parseErr := strconv.ParseInt(strings.TrimSpace(r.URL.Query().Get("resumeAfter")), 10, 64)
+	if parseErr != nil || resumeAfter < 0 || len(channelID) != 32 {
+		writeError(w, http.StatusBadRequest, "serverbridge_control_resume_invalid")
+		return
+	}
+	for _, ch := range channelID {
+		if !((ch >= 'a' && ch <= 'f') || (ch >= '0' && ch <= '9')) {
+			writeError(w, http.StatusBadRequest, "serverbridge_control_channel_invalid")
+			return
+		}
+	}
 	if node.ProtocolVersion != serverBridgeProtocolV3 || node.RuntimeEpoch < 1 || runtimeID == "" || !strings.EqualFold(runtimeID, node.RuntimeID) {
 		writeError(w, http.StatusConflict, "serverbridge_control_runtime_not_active")
 		return
 	}
+	if s.State.ServerBridgeHARequired && s.State.ServerBridgeCoordinator == nil {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
+		return
+	}
+	leaseToken, err := randomToken("lease")
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_lease_generation_failed")
+		return
+	}
 	now := time.Now().UTC()
-	cmd, err := s.State.ServerBridge.leaseControl0195(node.ID, node.RuntimeEpoch, runtimeID, now, serverBridgeControlLease0195)
+	cmd, err := s.State.ServerBridge.leaseControl0195(node.ID, node.RuntimeEpoch, runtimeID, channelID, leaseToken, resumeAfter, now, serverBridgeControlLease0195)
 	if errors.Is(err, repository.ErrNotFound) {
+		if coord := s.State.ServerBridgeCoordinator; coord != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 1200*time.Millisecond)
+			_ = coord.TouchChannel(ctx, serverbridgeha.ChannelPresence{ReplicaID: s.State.ServerBridgeReplicaID, ServerID: node.ID, RuntimeID: runtimeID, ChannelID: channelID, ResumeAfter: resumeAfter, BackendAddress: r.Host}, 3*serverBridgeControlLease0195)
+			cancel()
+		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_storage_unavailable")
+		return
+	}
+	if coord := s.State.ServerBridgeCoordinator; coord != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 1500*time.Millisecond)
+		_ = coord.TouchChannel(ctx, serverbridgeha.ChannelPresence{ReplicaID: s.State.ServerBridgeReplicaID, ServerID: node.ID, RuntimeID: runtimeID, ChannelID: channelID, ResumeAfter: resumeAfter, BackendAddress: r.Host}, 3*serverBridgeControlLease0195)
+		acquired, coordErr := coord.AcquireCommandLease(ctx, node.ID, cmd.ID, cmd.LeaseOwner, cmd.LeaseToken, serverBridgeControlLease0195)
+		cancel()
+		if coordErr != nil {
+			writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
+			return
+		}
+		if !acquired {
+			writeError(w, http.StatusConflict, "serverbridge_control_lease_fenced")
+			return
+		}
+	} else if s.State.ServerBridgeHARequired {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
 		return
 	}
 	privateKey, err := s.serverBridgeControlSigningPrivateKey0195()
@@ -323,9 +371,16 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadBytes)
 	issued := now.UnixMilli()
 	expires := cmd.ExpiresAt.UnixMilli()
-	canonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.RuntimeEpoch, cmd.Attempt, issued, expires)
+	canonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
 	signature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(privateKey, []byte(canonical)))
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "command", "protocolVersion": serverBridgeProtocolV3, "feature": serverBridgeFeatureControlAPI, "serverId": cmd.ServerID, "runtimeId": cmd.RuntimeID, "runtimeEpoch": cmd.RuntimeEpoch, "commandId": cmd.ID, "type": cmd.Type, "payload": payloadB64, "payloadSha256": cmd.PayloadSHA256, "attempt": cmd.Attempt, "issuedAtUnixMillis": issued, "expiresAtUnixMillis": expires, "signingPublicKey": base64.RawURLEncoding.EncodeToString(publicKey), "signingKeyFingerprint": hex.EncodeToString(finger[:]), "signature": signature}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
+		"status": "command", "protocolVersion": serverBridgeProtocolV3, "feature": serverBridgeFeatureHAControlPlane, "controlFeature": serverBridgeFeatureControlAPI,
+		"serverId": cmd.ServerID, "runtimeId": cmd.RuntimeID, "runtimeEpoch": cmd.RuntimeEpoch, "commandId": cmd.ID,
+		"deliverySequence": cmd.DeliverySequence, "channelId": cmd.LeaseOwner, "leaseToken": cmd.LeaseToken,
+		"type": cmd.Type, "payload": payloadB64, "payloadSha256": cmd.PayloadSHA256, "attempt": cmd.Attempt,
+		"issuedAtUnixMillis": issued, "expiresAtUnixMillis": expires,
+		"signingPublicKey": base64.RawURLEncoding.EncodeToString(publicKey), "signingKeyFingerprint": hex.EncodeToString(finger[:]), "signature": signature,
+	}})
 }
 
 func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Request) {
@@ -335,22 +390,31 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req serverBridgeControlAckRequest0195
-	dec := json.NewDecoder(r.Body)
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "serverbridge_control_ack_invalid")
 		return
 	}
 	features := normalizeBridgeFeatures0191(req.Features)
-	hasControlFeature := false
+	hasControlFeature, hasHAFeature := false, false
 	for _, feature := range features {
 		if feature == serverBridgeFeatureControlAPI {
 			hasControlFeature = true
-			break
+		}
+		if feature == serverBridgeFeatureHAControlPlane {
+			hasHAFeature = true
 		}
 	}
-	if req.ProtocolVersion != serverBridgeProtocolV3 || !hasControlFeature || strings.TrimSpace(req.ServerID) != node.ID || !strings.EqualFold(strings.TrimSpace(req.RuntimeID), node.RuntimeID) || node.RuntimeEpoch < 1 {
+	if req.ProtocolVersion != serverBridgeProtocolV3 || !hasControlFeature || !hasHAFeature || strings.TrimSpace(req.ServerID) != node.ID || !strings.EqualFold(strings.TrimSpace(req.RuntimeID), node.RuntimeID) || node.RuntimeEpoch < 1 {
 		writeError(w, http.StatusConflict, "serverbridge_control_ack_runtime_mismatch")
+		return
+	}
+	channelID := strings.ToLower(strings.TrimSpace(req.ChannelID))
+	leaseToken := strings.TrimSpace(req.LeaseToken)
+	commandID := strings.TrimSpace(req.CommandID)
+	if len(channelID) != 32 || len(leaseToken) < 16 || req.DeliverySequence < 1 || commandID == "" {
+		writeError(w, http.StatusBadRequest, "serverbridge_control_ack_lease_invalid")
 		return
 	}
 	status := strings.ToLower(strings.TrimSpace(req.Status))
@@ -370,7 +434,41 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "serverbridge_control_ack_result_invalid")
 		return
 	}
-	completed, err := s.State.ServerBridge.completeControl0195(node.ID, node.RuntimeEpoch, node.RuntimeID, strings.TrimSpace(req.CommandID), status, result, strings.TrimSpace(req.Error), time.Now().UTC())
+	current, err := s.State.ServerBridge.getControl0195(node.ID, commandID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "serverbridge_control_command_not_found")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_storage_unavailable")
+		return
+	}
+	leaseMatches := current.DeliverySequence == req.DeliverySequence && current.LeaseOwner == channelID && current.LeaseToken == leaseToken
+	if !leaseMatches {
+		writeError(w, http.StatusConflict, "serverbridge_control_ack_lease_mismatch")
+		return
+	}
+	terminal := current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate"
+	if !terminal {
+		if s.State.ServerBridgeHARequired && s.State.ServerBridgeCoordinator == nil {
+			writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
+			return
+		}
+		if coord := s.State.ServerBridgeCoordinator; coord != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 1500*time.Millisecond)
+			valid, coordErr := coord.VerifyCommandLease(ctx, node.ID, commandID, channelID, leaseToken)
+			cancel()
+			if coordErr != nil {
+				writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
+				return
+			}
+			if !valid {
+				writeError(w, http.StatusConflict, "serverbridge_control_lease_fenced")
+				return
+			}
+		}
+	}
+	completed, err := s.State.ServerBridge.completeControl0195(node.ID, node.RuntimeEpoch, node.RuntimeID, commandID, channelID, leaseToken, req.DeliverySequence, status, result, strings.TrimSpace(req.Error), time.Now().UTC())
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
 			writeError(w, http.StatusConflict, "serverbridge_control_ack_conflict")
@@ -379,10 +477,16 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_storage_unavailable")
 		return
 	}
+	if coord := s.State.ServerBridgeCoordinator; coord != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
+		_ = coord.ReleaseCommandLease(ctx, node.ID, commandID, channelID, leaseToken)
+		_ = coord.TouchChannel(ctx, serverbridgeha.ChannelPresence{ReplicaID: s.State.ServerBridgeReplicaID, ServerID: node.ID, RuntimeID: node.RuntimeID, ChannelID: channelID, ResumeAfter: req.DeliverySequence, BackendAddress: r.Host}, 3*serverBridgeControlLease0195)
+		cancel()
+	}
 	if s.State.ServerBridge.backendV2() == nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "serverbridge-control-complete-" + completed.ID, Actor: node.ID, Action: "serverbridge:control:" + completed.Status, Target: completed.Type + ":" + completed.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "acknowledged", "commandId": completed.ID, "commandStatus": completed.Status}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "acknowledged", "commandId": completed.ID, "commandStatus": completed.Status, "deliverySequence": completed.DeliverySequence}})
 }
 
 func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
@@ -419,6 +523,8 @@ func (b *serverBridgeStore) createControl0195(c model.ServerBridgeControlCommand
 		}
 		return existing, true, nil
 	}
+	b.controlSequence++
+	c.DeliverySequence = b.controlSequence
 	b.controlCommands[c.ID] = c
 	b.controlIdempotency[key] = c.ID
 	return c, false, nil
@@ -438,24 +544,31 @@ func (b *serverBridgeStore) getControl0195(serverID, commandID string) (model.Se
 	return c, nil
 }
 
-func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runtimeID string, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
+func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runtimeID, leaseOwner, leaseToken string, resumeAfter int64, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
-		return backend.LeaseServerBridgeControlCommand(ctx, serverID, epoch, runtimeID, now, lease)
+		return backend.LeaseServerBridgeControlCommand(ctx, serverID, epoch, runtimeID, leaseOwner, leaseToken, resumeAfter, now, lease)
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var chosen model.ServerBridgeControlCommand
 	for id, c := range b.controlCommands {
-		if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) {
+		if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence <= resumeAfter {
 			continue
 		}
 		if !c.ExpiresAt.After(now) {
 			if c.Status == "pending" || c.Status == "leased" {
 				c.Status = "expired"
 				c.CompletedAt = now
+				c.LeaseUntil = time.Time{}
 				b.controlCommands[id] = c
+			}
+			continue
+		}
+		if c.Status == "leased" && c.LeaseOwner == leaseOwner && c.LeaseUntil.After(now) {
+			if chosen.ID == "" || c.DeliverySequence < chosen.DeliverySequence {
+				chosen = c
 			}
 			continue
 		}
@@ -463,25 +576,31 @@ func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runti
 		if !eligible {
 			continue
 		}
-		if chosen.ID == "" || c.CreatedAt.Before(chosen.CreatedAt) {
+		if chosen.ID == "" || c.DeliverySequence < chosen.DeliverySequence {
 			chosen = c
 		}
 	}
 	if chosen.ID == "" {
 		return model.ServerBridgeControlCommand{}, repository.ErrNotFound
 	}
+	if chosen.Status == "leased" && chosen.LeaseOwner == leaseOwner && chosen.LeaseUntil.After(now) {
+		return chosen, nil
+	}
 	chosen.Status = "leased"
 	chosen.Attempt++
+	chosen.LeaseOwner = leaseOwner
+	chosen.LeaseToken = leaseToken
 	chosen.LeaseUntil = now.Add(lease)
 	chosen.UpdatedAt = now
 	b.controlCommands[chosen.ID] = chosen
 	return chosen, nil
 }
-func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, runtimeID, commandID, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
+
+func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
-		return backend.CompleteServerBridgeControlCommand(ctx, serverID, epoch, runtimeID, commandID, status, result, failure, now)
+		return backend.CompleteServerBridgeControlCommand(ctx, serverID, epoch, runtimeID, commandID, leaseOwner, leaseToken, deliverySequence, status, result, failure, now)
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -489,7 +608,7 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 	if !ok {
 		return model.ServerBridgeControlCommand{}, repository.ErrNotFound
 	}
-	if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) {
+	if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence != deliverySequence || c.LeaseOwner != leaseOwner || c.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, repository.ErrConflict
 	}
 	if c.Status == "succeeded" || c.Status == "failed" || c.Status == "unsupported" || c.Status == "indeterminate" {
@@ -498,7 +617,7 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 		}
 		return c, nil
 	}
-	if c.Status != "leased" {
+	if c.Status != "leased" || !c.LeaseUntil.After(now) {
 		return model.ServerBridgeControlCommand{}, repository.ErrConflict
 	}
 	c.Status = status

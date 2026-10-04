@@ -78,6 +78,7 @@ run_step serverbridge-player-session-integration3-0197 python3 "${ROOT_DIR}/scri
 run_step serverbridge-universal-adapters-0198 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-universal-adapters-0198.py"
 run_step serverbridge-zero-patch-provisioning-0199 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-zero-patch-provisioning-0199.py"
 run_step serverbridge-host-01910 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-host-01910.py"
+run_step serverbridge-ha-control-plane-01911 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-ha-control-plane-01911.py"
 run_step delivery-manifest-platform-architecture-0151 python3 "${ROOT_DIR}/scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
 run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offline/signed-windows-x64-arm64-0152.py"
 run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"

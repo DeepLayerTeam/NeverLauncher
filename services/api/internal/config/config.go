@@ -21,6 +21,8 @@ type Config struct {
 	SQLDriver                            string
 	RedisAddr                            string
 	RedisURL                             string
+	ServerBridgeHARequired               bool
+	ServerBridgeReplicaID                string
 	TrustedProxyCIDRs                    []string
 	RateLimitEnabled                     bool
 	RateLimitGlobalPerMinute             int
@@ -175,6 +177,8 @@ func Load() Config {
 		SQLDriver:                            env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
 		RedisAddr:                            redisAddr,
 		RedisURL:                             redisURL,
+		ServerBridgeHARequired:               envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production),
+		ServerBridgeReplicaID:                env("NEVERLAUNCHER_REPLICA_ID", ""),
 		TrustedProxyCIDRs:                    envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
 		RateLimitEnabled:                     envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
 		RateLimitGlobalPerMinute:             envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
@@ -350,6 +354,16 @@ func ValidateProduction(cfg Config) error {
 	// policy. Require Redis-backed fail-closed limiting there; the all-zero case
 	// is retained only for backwards-compatible direct Config construction in
 	// unit/integration harnesses.
+	haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
+	if haPolicySpecified {
+		if !cfg.ServerBridgeHARequired {
+			problems = append(problems, "production требует NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
+		}
+		if strings.TrimSpace(cfg.RedisURL) == "" {
+			problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
+		}
+	}
+
 	ratePolicySpecified := strings.TrimSpace(cfg.RedisURL) != "" || cfg.RateLimitEnabled || cfg.RateLimitGlobalPerMinute != 0 || cfg.RateLimitAuthPerMinute != 0 || cfg.RateLimitServerBridgePerMinute != 0 || cfg.RateLimitFailClosed
 	if ratePolicySpecified {
 		if !cfg.RateLimitEnabled {

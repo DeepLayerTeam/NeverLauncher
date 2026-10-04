@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.11. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6919,6 +6919,26 @@
             "schema": {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          {
+            "name": "channelId",
+            "in": "query",
+            "required": true,
+            "description": "Stable 128-bit control-channel id persisted by the active runtime across Backend endpoint failover.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          },
+          {
+            "name": "resumeAfter",
+            "in": "query",
+            "required": true,
+            "description": "Highest delivery sequence durably acknowledged by this runtime channel.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         ],

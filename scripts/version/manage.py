@@ -89,6 +89,9 @@ def desired_files(version: str) -> dict[Path, str]:
     serverbridge_targets = ROOT / "serverbridge/targets.json"
     result[serverbridge_targets] = render_product_version_json(serverbridge_targets, version)
 
+    serverbridge_hybrid_targets = ROOT / "serverbridge/hybrid-targets.json"
+    result[serverbridge_hybrid_targets] = render_product_version_json(serverbridge_hybrid_targets, version)
+
     for rel in ("deploy/production/env.production.example", "cli/cmd/neverlauncher/templates/production/env.production.example"):
         path = ROOT / rel
         result[path] = replace_env_image_tag(path.read_text(encoding="utf-8"), version, path)

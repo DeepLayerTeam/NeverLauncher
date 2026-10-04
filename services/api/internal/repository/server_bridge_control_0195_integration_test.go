@@ -64,25 +64,32 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	if _, _, err := repo.CreateServerBridgeControlCommand(ctx, conflict, now); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected idempotency conflict, got %v", err)
 	}
-	if _, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", now, 30*time.Second); !errors.Is(err, ErrConflict) {
+	if _, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0123456789abcdef0123456789abcdef", "lease_wrong_0123456789abcdef", 0, now, 30*time.Second); !errors.Is(err, ErrConflict) {
 		t.Fatalf("wrong runtime lease should conflict, got %v", err)
 	}
-	leased, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, now, 30*time.Second)
+	leased, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "lease_token_0123456789abcdef", 0, now, 30*time.Second)
 	if err != nil || leased.Status != "leased" || leased.Attempt != 1 {
 		t.Fatalf("lease: %+v err=%v", leased, err)
 	}
-	done, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
+	resumed, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, "0123456789abcdef0123456789abcdef", "ignored_token_0123456789abcdef", 0, now.Add(time.Second), 30*time.Second)
+	if err != nil || resumed.ID != leased.ID || resumed.Attempt != leased.Attempt || resumed.LeaseToken != leased.LeaseToken {
+		t.Fatalf("resumed lease mismatch: %+v err=%v", resumed, err)
+	}
+	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, "wrong_token_0123456789abcdef", leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second)); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale/wrong lease token was not fenced: %v", err)
+	}
+	done, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(time.Second))
 	if err != nil || done.Status != "succeeded" {
 		t.Fatalf("complete: %+v err=%v", done, err)
 	}
-	done2, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
+	done2, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || done2.Status != "succeeded" {
 		t.Fatalf("idempotent completion: %+v err=%v", done2, err)
 	}
-	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
+	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "succeeded", map[string]string{"saved": "false"}, "", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
 		t.Fatalf("same-status ACK with conflicting result accepted: %v", err)
 	}
-	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, "failed", nil, "late", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
+	if _, err := repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd.ID, leased.LeaseOwner, leased.LeaseToken, leased.DeliverySequence, "failed", nil, "late", now.Add(3*time.Second)); !errors.Is(err, ErrConflict) {
 		t.Fatalf("conflicting ACK accepted: %v", err)
 	}
 	var auditCount int

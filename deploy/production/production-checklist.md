@@ -79,5 +79,5 @@
 
 ## ServerBridge 0.19.5 Control API
 
-- [ ] ServerBridge 0.19.5 control signing key is configured, `serverbridge:control` / `serverbridge:console` assignments are reviewed, and each Bridge has a local console allowlist.
-- [ ] Control commands are tested through native platform APIs; OS shell/process execution remains disabled.
+- [ ] Настроен ключ подписи ServerBridge 0.19.5 Control API, проверены назначения `serverbridge:control` / `serverbridge:console`, а для каждого Bridge задан локальный console allowlist.
+- [ ] Control-команды проверены через native platform APIs; выполнение OS shell/process по-прежнему отключено.

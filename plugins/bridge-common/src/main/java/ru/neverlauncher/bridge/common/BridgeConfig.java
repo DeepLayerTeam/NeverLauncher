@@ -5,11 +5,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class BridgeConfig {
     public final String backendUrl;
+    public final List<String> backendUrls;
     public final String serverId;
     public final Path identityFile;
     public final String projectId;
@@ -20,6 +22,7 @@ public final class BridgeConfig {
     public final boolean requireIntegrity;
     public final int timeoutMs;
     public final int retries;
+    public final int failoverCooldownMs;
     public final int heartbeatIntervalSeconds;
     public final int telemetrySampleIntervalSeconds;
     public final int telemetrySamplingBudgetMs;
@@ -28,7 +31,9 @@ public final class BridgeConfig {
     public final Set<String> controlConsoleAllowlist;
 
     private BridgeConfig(Map<String, String> values, Path configPath, String defaultServerId) {
-        this.backendUrl = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
+        String primaryBackend = trimSlash(first(values, "backend.url", "NEVERLAUNCHER_BACKEND_URL", "http://127.0.0.1:8080"));
+        this.backendUrls = parseBackendUrls(first(values, "backend.urls", "NEVERLAUNCHER_BACKEND_URLS", ""), primaryBackend);
+        this.backendUrl = this.backendUrls.get(0);
         this.serverId = first(values, "server.id", "NEVERLAUNCHER_SERVER_ID", defaultServerId);
         String identity = first(values, "identity.file", "NEVERLAUNCHER_NODE_IDENTITY_FILE", "node-identity.properties");
         Path configuredIdentity = Path.of(identity);
@@ -44,6 +49,7 @@ public final class BridgeConfig {
         this.requireIntegrity = Boolean.parseBoolean(first(values, "security.requireIntegrity", "NEVERLAUNCHER_REQUIRE_BRIDGE_INTEGRITY", "true"));
         this.timeoutMs = parseInt(first(values, "backend.timeoutMs", "NEVERLAUNCHER_TIMEOUT_MS", "5000"), 5000);
         this.retries = boundedInt(first(values, "backend.retries", "NEVERLAUNCHER_RETRIES", "2"), 2, 0, 5);
+        this.failoverCooldownMs = boundedInt(first(values, "backend.failoverCooldownMs", "NEVERLAUNCHER_FAILOVER_COOLDOWN_MS", "2000"), 2000, 250, 30000);
         this.heartbeatIntervalSeconds = boundedInt(first(values, "backend.heartbeatIntervalSeconds", "NEVERLAUNCHER_HEARTBEAT_INTERVAL_SECONDS", "30"), 30, 10, 300);
         this.telemetrySampleIntervalSeconds = boundedInt(first(values, "telemetry.sampleIntervalSeconds", "NEVERLAUNCHER_TELEMETRY_SAMPLE_INTERVAL_SECONDS", "10"), 10, 5, 60);
         this.telemetrySamplingBudgetMs = boundedInt(first(values, "telemetry.samplingBudgetMs", "NEVERLAUNCHER_TELEMETRY_SAMPLING_BUDGET_MS", "20"), 20, 5, 100);
@@ -87,14 +93,22 @@ public final class BridgeConfig {
         return new BridgeConfig(Map.of(), null, normalizedDefaultServerId(defaultServerId));
     }
 
-    public String capabilitiesUrl() { return backendUrl + "/api/v1/server-bridge/capabilities"; }
-    public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
-    public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
-    public String routesUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/routes"; }
-    public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
-    public String eventStreamUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/events"; }
-    public String controlPollUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/control/poll"; }
-    public String controlAckUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/control/ack"; }
+    public String capabilitiesPath() { return "/api/v1/server-bridge/capabilities"; }
+    public String validateJoinPath() { return "/api/v1/server-bridge/validate-join"; }
+    public String handoffPath() { return "/api/v1/server-bridge/handoff"; }
+    public String routesPath() { return "/api/v1/server-bridge/servers/" + serverId + "/routes"; }
+    public String heartbeatPath() { return "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
+    public String eventStreamPath() { return "/api/v1/server-bridge/servers/" + serverId + "/events"; }
+    public String controlPollPath() { return "/api/v1/server-bridge/servers/" + serverId + "/control/poll"; }
+    public String controlAckPath() { return "/api/v1/server-bridge/servers/" + serverId + "/control/ack"; }
+    public String capabilitiesUrl() { return backendUrl + capabilitiesPath(); }
+    public String validateJoinUrl() { return backendUrl + validateJoinPath(); }
+    public String handoffUrl() { return backendUrl + handoffPath(); }
+    public String routesUrl() { return backendUrl + routesPath(); }
+    public String heartbeatUrl() { return backendUrl + heartbeatPath(); }
+    public String eventStreamUrl() { return backendUrl + eventStreamPath(); }
+    public String controlPollUrl() { return backendUrl + controlPollPath(); }
+    public String controlAckUrl() { return backendUrl + controlAckPath(); }
     public boolean isConsoleCommandAllowed(String command) {
         if (command == null || command.isBlank()) return false;
         String root = command.trim();
@@ -116,7 +130,7 @@ public final class BridgeConfig {
             String template = "# NeverLauncher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
                 "# No Minecraft/proxy configuration is modified by this plugin.\n" +
                 "# Defaults: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
-                "# Override with NEVERLAUNCHER_BACKEND_URL / NEVERLAUNCHER_SERVER_ID and related env vars,\n" +
+                "# Override with NEVERLAUNCHER_BACKEND_URLS (HA) or NEVERLAUNCHER_BACKEND_URL / NEVERLAUNCHER_SERVER_ID,\n" +
                 "# or add explicit keys here when file-based configuration is preferred.\n";
             Files.writeString(absolute, template, java.nio.charset.StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
@@ -132,6 +146,30 @@ public final class BridgeConfig {
         value = System.getenv(env);
         if (value != null && !value.isBlank()) return value;
         return fallback;
+    }
+
+    private static List<String> parseBackendUrls(String raw, String primary) {
+        LinkedHashSet<String> urls = new LinkedHashSet<>();
+        if (raw != null) {
+            for (String item : raw.split(",")) {
+                String value = trimSlash(item.trim());
+                if (!value.isEmpty()) urls.add(validateBackendUrl(value));
+            }
+        }
+        if (urls.isEmpty() && primary != null && !primary.isBlank()) urls.add(validateBackendUrl(trimSlash(primary.trim())));
+        if (urls.isEmpty()) urls.add("http://127.0.0.1:8080");
+        return List.copyOf(urls);
+    }
+
+    private static String validateBackendUrl(String value) {
+        java.net.URI uri;
+        try { uri = java.net.URI.create(value); } catch (Exception e) { throw new IllegalArgumentException("invalid ServerBridge backend URL: " + value, e); }
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
+        if (!(scheme.equals("http") || scheme.equals("https")) || uri.getHost() == null || uri.getRawQuery() != null || uri.getRawFragment() != null)
+            throw new IllegalArgumentException("ServerBridge backend URL must be an http(s) origin: " + value);
+        String path = uri.getRawPath();
+        if (path != null && !path.isEmpty() && !path.equals("/")) throw new IllegalArgumentException("ServerBridge backend URL must not contain a path: " + value);
+        return trimSlash(value);
     }
 
     private static int parseInt(String value, int fallback) {

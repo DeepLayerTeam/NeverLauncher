@@ -67,7 +67,11 @@ def path_parameters(path):
           {"name":"features","in":"query","required":False,"description":"Comma-separated Protocol v3 feature identifiers supported by the bridge.","schema":{"type":"string","example":"protocol.capability-negotiation,protocol.feature-flags"}},
         ]
     if path == "/api/v1/server-bridge/servers/{serverId}/control/poll":
-        out += [{"name":"runtimeId","in":"query","required":True,"schema":{"type":"string","pattern":"^[0-9a-f]{64}$"}}]
+        out += [
+          {"name":"runtimeId","in":"query","required":True,"schema":{"type":"string","pattern":"^[0-9a-f]{64}$"}},
+          {"name":"channelId","in":"query","required":True,"description":"Stable 128-bit control-channel id persisted by the active runtime across Backend endpoint failover.","schema":{"type":"string","pattern":"^[0-9a-f]{32}$"}},
+          {"name":"resumeAfter","in":"query","required":True,"description":"Highest delivery sequence durably acknowledged by this runtime channel.","schema":{"type":"integer","minimum":0}},
+        ]
     if path == "/sessionserver/session/minecraft/hasJoined":
         out += [{"name":"username","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"serverId","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"ip","in":"query","required":False,"schema":{"type":"string"}}]
     if path.endswith("/oidc/{providerId}/start"):

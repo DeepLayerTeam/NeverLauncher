@@ -19,7 +19,7 @@ import java.util.Properties;
 final class BridgeControlTrust {
     private final Path trustFile;
     private final String configuredPublicKey;
-    private final URI backend;
+    private final java.util.List<URI> backends;
     private volatile String pinnedPublicKey;
 
     BridgeControlTrust(BridgeConfig config) throws IOException {
@@ -33,7 +33,7 @@ final class BridgeControlTrust {
                 throw new IOException("control.backendPublicKey must be an unpadded base64url 32-byte Ed25519 public key", e);
             }
         }
-        this.backend = URI.create(config.backendUrl);
+        this.backends = config.backendUrls.stream().map(URI::create).toList();
         this.pinnedPublicKey = loadPinned();
     }
 
@@ -65,10 +65,14 @@ final class BridgeControlTrust {
     }
 
     private boolean secureFirstUseAllowed() {
-        String scheme = backend.getScheme() == null ? "" : backend.getScheme().toLowerCase();
-        if (scheme.equals("https")) return true;
-        String host = backend.getHost() == null ? "" : backend.getHost().toLowerCase();
-        return scheme.equals("http") && (host.equals("127.0.0.1") || host.equals("localhost") || host.equals("::1"));
+        if (backends.isEmpty()) return false;
+        for (URI backend : backends) {
+            String scheme = backend.getScheme() == null ? "" : backend.getScheme().toLowerCase();
+            if (scheme.equals("https")) continue;
+            String host = backend.getHost() == null ? "" : backend.getHost().toLowerCase();
+            if (!(scheme.equals("http") && (host.equals("127.0.0.1") || host.equals("localhost") || host.equals("::1")))) return false;
+        }
+        return true;
     }
 
     private String loadPinned() {

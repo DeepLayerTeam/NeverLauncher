@@ -1,3 +1,12 @@
+## [0.19.11] - 2026-10-04
+
+- Added production ServerBridge HA Control Plane with ordered multi-Backend endpoint failover, endpoint cooldown and terminal fail-closed handling for authentication/authorization responses.
+- Added durable channel resumption using per-runtime `channelId` plus monotonic `deliverySequence`; reconnect to another API replica resumes after the last locally acknowledged sequence.
+- Added PostgreSQL distributed command ownership with `FOR UPDATE SKIP LOCKED`, `lease_owner`/`lease_token` fencing and idempotent terminal ACKs that can be replayed safely on another Backend replica.
+- Added Redis command fencing and channel presence as a second coordination layer; production HA refuses control delivery/ACK when the required Redis coordinator is unavailable.
+- Preserved exactly-once side-effect behavior through the Bridge execution journal: delivery leases/timestamps can rotate while the stable command execution digest remains unchanged.
+- Added migration `0040_serverbridge_ha_control_plane_01911`, multi-replica PostgreSQL integration coverage, Redis fencing tests, 14 platform HA endpoint config examples and mandatory CI/preflight production gate.
+
 ## [0.19.10] - 2026-10-04
 
 - Added production ServerBridge Host supervisor with `configure|start|run|stop|restart|status|logs`, detached lifecycle management and exclusive per-server lock.

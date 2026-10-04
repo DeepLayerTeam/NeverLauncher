@@ -14,6 +14,9 @@ public record BridgeControlCommand(
     String type,
     Map<String, String> payload,
     String payloadSha256,
+    long deliverySequence,
+    String channelId,
+    String leaseToken,
     int attempt,
     long issuedAtUnixMillis,
     long expiresAtUnixMillis,
@@ -28,7 +31,8 @@ public record BridgeControlCommand(
         return String.join("\n",
             "NeverLauncher-ServerBridge-Control-v1",
             b64(serverId), b64(commandId), Long.toString(runtimeEpoch), runtimeId.toLowerCase(),
-            b64(type), payloadSha256.toLowerCase(), Integer.toString(attempt),
+            b64(type), payloadSha256.toLowerCase(), Long.toString(deliverySequence),
+            b64(channelId), b64(leaseToken), Integer.toString(attempt),
             Long.toString(issuedAtUnixMillis), Long.toString(expiresAtUnixMillis));
     }
 

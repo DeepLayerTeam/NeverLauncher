@@ -30,8 +30,8 @@ type ServerBridgeRepository interface {
 	EnsureServerBridgeNodeRoutable(context.Context, string, int64, string, time.Time) error
 	AppendServerBridgeEvents(context.Context, string, int64, string, []model.ServerBridgeEvent, time.Time) (model.ServerBridgeEventAppendResult, error)
 	CreateServerBridgeControlCommand(context.Context, model.ServerBridgeControlCommand, time.Time) (model.ServerBridgeControlCommand, bool, error)
-	LeaseServerBridgeControlCommand(context.Context, string, int64, string, time.Time, time.Duration) (model.ServerBridgeControlCommand, error)
-	CompleteServerBridgeControlCommand(context.Context, string, int64, string, string, string, map[string]string, string, time.Time) (model.ServerBridgeControlCommand, error)
+	LeaseServerBridgeControlCommand(context.Context, string, int64, string, string, string, int64, time.Time, time.Duration) (model.ServerBridgeControlCommand, error)
+	CompleteServerBridgeControlCommand(context.Context, string, int64, string, string, string, string, int64, string, map[string]string, string, time.Time) (model.ServerBridgeControlCommand, error)
 	GetServerBridgeControlCommand(context.Context, string, string) (model.ServerBridgeControlCommand, error)
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
@@ -1381,7 +1381,8 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 	var payloadRaw, resultRaw []byte
 	var leaseUntil, completedAt sql.NullTime
 	err := row.Scan(&c.ID, &c.ServerID, &c.RuntimeEpoch, &c.RuntimeID, &c.Type, &payloadRaw, &c.PayloadSHA256, &c.RequestDigest,
-		&c.RequestedBy, &c.IdempotencyKey, &c.Status, &c.Attempt, &c.CreatedAt, &c.UpdatedAt, &c.ExpiresAt, &leaseUntil, &completedAt, &resultRaw, &c.Error)
+		&c.RequestedBy, &c.IdempotencyKey, &c.Status, &c.Attempt, &c.CreatedAt, &c.UpdatedAt, &c.ExpiresAt,
+		&c.DeliverySequence, &c.LeaseOwner, &c.LeaseToken, &leaseUntil, &completedAt, &resultRaw, &c.Error)
 	if err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
@@ -1410,10 +1411,11 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 	return c, nil
 }
 
-const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
+const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,delivery_sequence,lease_owner,lease_token,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
 
-// CreateServerBridgeControlCommand is idempotent per (server, actor, idempotency key).
-// Reuse with a different request digest is rejected rather than mutating the original command.
+// CreateServerBridgeControlCommand is exactly-once at admission per (server, actor, idempotency key).
+// Reuse with the same canonical request returns the original command; reuse with a different
+// digest is rejected on every API replica by the PostgreSQL unique key + advisory lock.
 func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c model.ServerBridgeControlCommand, now time.Time) (model.ServerBridgeControlCommand, bool, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
@@ -1466,9 +1468,18 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	return created, false, err
 }
 
-func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
+// LeaseServerBridgeControlCommand provides a fenced, resumable command channel. leaseOwner is
+// the bridge channel identity and survives Backend endpoint failover; leaseToken fences stale
+// deliveries. A reconnect from the same owner receives its still-live lease instead of causing
+// a second delivery attempt. resumeAfter is the highest locally acknowledged delivery sequence.
+func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, leaseOwner, leaseToken string, resumeAfter int64, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
+	}
+	leaseOwner = strings.TrimSpace(leaseOwner)
+	leaseToken = strings.TrimSpace(leaseToken)
+	if len(leaseOwner) < 16 || len(leaseOwner) > 128 || len(leaseToken) < 16 || len(leaseToken) > 160 || resumeAfter < 0 {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control lease identity", ErrConflict)
 	}
 	if lease < 5*time.Second {
 		lease = 5 * time.Second
@@ -1492,12 +1503,20 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
 	}
-	// Expired commands never execute.
-	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery' WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery',lease_until=NULL WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
+	// HTTP response loss or Backend endpoint failover: resume the exact live lease for this channel.
+	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND status='leased' AND lease_owner=$4 AND lease_until>$5 AND delivery_sequence>$6 ORDER BY delivery_sequence LIMIT 1 FOR UPDATE`, serverID, runtimeEpoch, runtimeID, leaseOwner, now.UTC(), resumeAfter)); scanErr == nil {
+		if err = tx.Commit(); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+		return existing, nil
+	} else if !errors.Is(scanErr, sql.ErrNoRows) {
+		return model.ServerBridgeControlCommand{}, scanErr
+	}
 	var id string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND expires_at>$4 AND (status='pending' OR (status='leased' AND lease_until<=$4)) ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`, serverID, runtimeEpoch, runtimeID, now.UTC()).Scan(&id)
+	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND delivery_sequence>$4 AND expires_at>$5 AND (status='pending' OR (status='leased' AND lease_until<=$5)) ORDER BY delivery_sequence FOR UPDATE SKIP LOCKED LIMIT 1`, serverID, runtimeEpoch, runtimeID, resumeAfter, now.UTC()).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeControlCommand{}, ErrNotFound
 	}
@@ -1505,10 +1524,10 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 		return model.ServerBridgeControlCommand{}, err
 	}
 	leaseUntil := now.Add(lease).UTC()
-	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased',attempt=attempt+1,lease_until=$2,updated_at=$3 WHERE id=$1`, id, leaseUntil, now.UTC()); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased',attempt=attempt+1,lease_owner=$2,lease_token=$3,lease_until=$4,updated_at=$5 WHERE id=$1`, id, leaseOwner, leaseToken, leaseUntil, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'serverbridge:control:delivered',$3,'','ServerBridge Control API',$4) ON CONFLICT(id) DO NOTHING`, `serverbridge-control-delivered-`+id+`-`+fmt.Sprint(now.UnixNano()), serverID, serverID+":"+id, now.UTC()); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'serverbridge:control:delivered',$3,'','ServerBridge Control API',$4) ON CONFLICT(id) DO NOTHING`, `serverbridge-control-delivered-`+id+`-`+leaseToken, serverID, serverID+":"+id, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -1517,12 +1536,15 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
 }
 
-func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
+// CompleteServerBridgeControlCommand is an idempotent fenced commit. Only the channel and lease
+// token that received the command can complete it. The token is retained after completion so a
+// retry routed to a different Backend replica receives the same durable result.
+func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	allowed := map[string]bool{"succeeded": true, "failed": true, "unsupported": true, "indeterminate": true}
-	if !allowed[status] {
+	if !allowed[status] || len(strings.TrimSpace(leaseOwner)) < 16 || len(strings.TrimSpace(leaseToken)) < 16 || deliverySequence < 1 {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
 	}
 	resultJSON, err := json.Marshal(result)
@@ -1541,8 +1563,8 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		}
 		return model.ServerBridgeControlCommand{}, err
 	}
-	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement runtime mismatch", ErrConflict)
+	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement lease mismatch", ErrConflict)
 	}
 	if current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
 		if current.Status != status || !serverBridgeControlStringMapEqual0195(current.Result, result) || current.Error != failure {
@@ -1550,8 +1572,8 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		}
 		return current, nil
 	}
-	if current.Status != "leased" {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command is not leased", ErrConflict)
+	if current.Status != "leased" || !current.LeaseUntil.After(now) {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease expired", ErrConflict)
 	}
 	if len(failure) > 1024 {
 		failure = failure[:1024]

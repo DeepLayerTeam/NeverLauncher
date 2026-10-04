@@ -22,7 +22,9 @@
 - [ ] Официальный 0.13.0 bundle содержит `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json` для exact source commit и проходит `nl release publish-check`.
 - [ ] При upgrade с 0.12.9 старые API instance остановлены; `nl db migrate apply` и `nl db migrate verify` успешно применили/проверили `0018_device_trust_stabilization_01210` до запуска 0.12.10 API.
 - [ ] При upgrade с 0.13.9 старые API instance остановлены; `nl db migrate apply`/`verify` успешно довели schema до sealed `0020_guard_migration_compatibility_stabilization_01310`, а partial Guard snapshots отсутствуют.
-- [ ] Для 0.19.1 ServerBridge 3 собраны все 11 platform-matched JAR; `SERVERBRIDGE3_CERTIFICATION.json` имеет status `certified`, exact version `0.19.1`, protocolVersion `3`, содержит negotiation runtime, совпадает с `BRIDGE_RELEASE_ALLOWLIST.json`, а `nl release publish-check` повторно проверяет hashes/sizes каждого JAR.
+- [ ] Для 0.19.2 ServerBridge 3 собраны все 11 platform-matched JAR; `SERVERBRIDGE3_CERTIFICATION.json` имеет status `certified`, exact version `0.19.2`, protocolVersion `3`, содержит `BridgeRuntimeIdentity`/discovery runtime, совпадает с `BRIDGE_RELEASE_ALLOWLIST.json`, а `nl release publish-check` повторно проверяет hashes/sizes каждого JAR. `nl db migrate verify` подтверждает `0033_serverbridge_runtime_identity_0192`; после heartbeat node diagnostics содержит signed `runtimeId`, runtime epoch и Minecraft/Java/loader/brand metadata.
+- [ ] Для 0.19.3 ServerBridge 3 telemetry negotiation содержит `telemetry.server-v1`; `nl db migrate verify` подтверждает `0034_serverbridge_telemetry_0193`; heartbeat сохраняет runtime-bound latest sample/history, а release certification подтверждает `BridgeTelemetrySampler`/`BridgeTickSampler` во всех 11 JAR. Проверен bounded retention: примерно 4096 samples/node и purge старше 7 дней.
+- [ ] Для 0.19.4 ServerBridge 3 event stream negotiated feature `events.ordered-stream-v1`; migration `0035_serverbridge_event_stream_0194` применена; event/ACK cursor и `audit_events` пишутся транзакционно, а reconnect/reload подтверждён durable journal + idempotent resend.
 - [ ] Для 0.14.10 `nl db migrate verify` подтверждает sealed `0030_serverbridge_migration_stabilization_01410`; exact 0.14.9→0.14.10 rehearsal сохраняет node identity state, удаляет expired nonces, seal-ит stale topology, а runtime maintenance использует bounded `FOR UPDATE SKIP LOCKED` batches и retention cleanup.
 - [ ] Для 0.14.9 `nl db migrate verify` подтверждает sealed `0029_serverbridge_public_matrix_ha_hardening_0149`; `/ready` видит ServerBridge HA snapshot, Redis rate limit работает fail-closed, public matrix показывает 11 supported targets, stale topology не считается active, а multi-instance nonce replay/maintenance E2E проходит.
 - [ ] Для 0.14.8 `nl db migrate verify` подтверждает sealed `0028_zero_patch_topology_handoff_0148`; proxy/backend nodes обновлены до 0.14.8, Minecraft/proxy configs не патчатся NeverLauncher-ом, proxy→backend handoff проходит один раз, replay отклоняется, а `GET /api/v1/server-bridge/topology` показывает runtime-learned edges из PostgreSQL.
@@ -74,3 +76,8 @@
 - [ ] Для 0.13.10+ каждый Guard target result дополнительно совпадает с aggregate matrix по `repository`; evidence из другого fork не принимается.
 - [ ] `nl release verify <release-dir> --public-key <trusted-public-key>` проходит успешно и все `required=true` artifacts имеют `status=present`.
 - [ ] `nl release publish-check <release-dir> --public-key <trusted-public-key>` проходит Compatibility + Device Trust + Cross-platform Guard certification gates.
+
+## ServerBridge 0.19.5 Control API
+
+- [ ] Настроен ключ подписи ServerBridge 0.19.5 Control API, проверены назначения `serverbridge:control` / `serverbridge:console`, а для каждого Bridge задан локальный console allowlist.
+- [ ] Control-команды проверены через native platform APIs; выполнение OS shell/process по-прежнему отключено.

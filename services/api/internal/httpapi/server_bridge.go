@@ -121,6 +121,7 @@ type serverBridgeStore struct {
 	controlCommands    map[string]model.ServerBridgeControlCommand
 	routing            map[string]model.ServerBridgeRoutingSnapshot
 	controlIdempotency map[string]string
+	controlSequence    int64
 }
 
 type registerBridgeServerRequest struct {

@@ -33,8 +33,9 @@ const (
 	serverBridgeFeatureServerTelemetry       = "telemetry.server-v1"
 	serverBridgeFeatureEventStream           = "events.ordered-stream-v1"
 	serverBridgeFeatureControlAPI            = "control.secure-channel-v1"
+	serverBridgeFeatureHAControlPlane        = "control.ha-channel-v2"
 	serverBridgeFeatureRoutingV2             = "topology.routing-v2"
-	serverBridgeFeaturePlayerSessionV3        = "session.player-lifecycle-v3"
+	serverBridgeFeaturePlayerSessionV3       = "session.player-lifecycle-v3"
 )
 
 var serverBridgeSupportedProtocols0191 = []int{serverBridgeProtocolV3, serverBridgeProtocolV2}
@@ -67,6 +68,7 @@ var serverBridgeV3Features0191 = []string{
 	serverBridgeFeatureServerTelemetry,
 	serverBridgeFeatureEventStream,
 	serverBridgeFeatureControlAPI,
+	serverBridgeFeatureHAControlPlane,
 	serverBridgeFeatureRoutingV2,
 	serverBridgeFeaturePlayerSessionV3,
 }

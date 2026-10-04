@@ -171,3 +171,27 @@ func TestValidateProductionRequiresForgeNeoForgeHashes0147(t *testing.T) {
 		t.Fatalf("complete 0.14.7 Forge/NeoForge release policy rejected: %v", err)
 	}
 }
+
+func TestValidateProductionServerBridgeHA01911RequiresRedisAndFailClosedPolicy(t *testing.T) {
+	cfg := Config{
+		Environment: "production", RepositoryDriver: "postgres", SQLDriver: "pgx",
+		DatabaseDSN: "postgres://user:pass@db:5432/neverlauncher?sslmode=require", PublicURL: "https://api.example.com",
+		AuthTokenSecret: "0123456789abcdef0123456789abcdef", StorageDriver: "local", StorageLocalPath: "/var/lib/neverlauncher/storage", BackupRoot: "/var/lib/neverlauncher/backups",
+		CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://launcher.example.com"},
+		GuardReleaseAllowlistJSON: testGuardAllowlist0134, BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
+		ServerBridgeHARequired: true, ServerBridgeReplicaID: "api-a", RedisURL: "redis://redis:6379/0",
+		RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
+	}
+	if err := ValidateProduction(cfg); err != nil {
+		t.Fatalf("valid HA production policy rejected: %v", err)
+	}
+	cfg.RedisURL = ""
+	if err := ValidateProduction(cfg); err == nil {
+		t.Fatal("HA production without Redis must be rejected")
+	}
+	cfg.RedisURL = "redis://redis:6379/0"
+	cfg.ServerBridgeHARequired = false
+	if err := ValidateProduction(cfg); err == nil {
+		t.Fatal("replica identity without required HA policy must be rejected")
+	}
+}

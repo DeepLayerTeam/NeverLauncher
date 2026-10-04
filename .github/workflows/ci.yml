@@ -770,6 +770,11 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-host-01910.py
           (cd cli && go test -run 'TestServerBridgeHost' ./cmd/neverlauncher)
           (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/neverlauncher -o /tmp/neverlauncher-host-windows.test.exe)
+      - name: ServerBridge HA Control Plane 0.19.11 gate
+        run: |
+          python3 scripts/smoke/offline/serverbridge-ha-control-plane-01911.py
+          (cd services/api && go test ./internal/serverbridgeha)
+          (cd services/api && go test -run 'TestServerBridge(Control|HAControlPlane)' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

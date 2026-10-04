@@ -42,6 +42,7 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_SERVER_TELEMETRY,
         BridgeDefaults.FEATURE_EVENT_STREAM,
         BridgeDefaults.FEATURE_CONTROL_API,
+        BridgeDefaults.FEATURE_HA_CONTROL_PLANE,
         BridgeDefaults.FEATURE_ROUTING_V2,
         BridgeDefaults.FEATURE_PLAYER_SESSION_V3
     );
@@ -49,6 +50,7 @@ public final class NeverLauncherApiClient {
     private final BridgeConfig config;
     private final NodeIdentity identity;
     private final HttpClient client;
+    private final BridgeBackendPool backendPool;
     private final String serverType;
     private final String pluginVersion;
     private final String pluginSha256;
@@ -62,6 +64,7 @@ public final class NeverLauncherApiClient {
     private final AtomicBoolean eventClosed = new AtomicBoolean(false);
     private final BridgeControlJournal controlJournal;
     private final BridgeControlTrust controlTrust;
+    private final String controlChannelId;
     private final AtomicBoolean controlClosed = new AtomicBoolean(false);
     private volatile ScheduledExecutorService controlExecutor;
     private volatile BridgeControlExecutor controlHandler;
@@ -80,6 +83,7 @@ public final class NeverLauncherApiClient {
         this.pluginSha256 = normalized(pluginSha256).toLowerCase();
         BridgeAdapterProfiles.rejectUncertifiedHybrid(this.serverType, runtimeDescriptor == null ? "" : runtimeDescriptor.serverBrand());
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(config.timeoutMs)).build();
+        this.backendPool = new BridgeBackendPool(config.backendUrls, config.failoverCooldownMs);
         try {
             this.runtimeIdentity = identity == null ? null : BridgeRuntimeIdentity.capture(config, identity, runtimeDescriptor);
             if (this.runtimeIdentity != null && identity != null) {
@@ -96,6 +100,7 @@ public final class NeverLauncherApiClient {
                 });
                 this.controlJournal = new BridgeControlJournal(config.identityFile.resolveSibling("control-channel.journal"));
                 this.controlTrust = new BridgeControlTrust(config);
+                this.controlChannelId = this.controlJournal.channelId(this.runtimeIdentity.runtimeId());
                 String crashedRuntime = this.eventJournal.previousUncleanRuntimeId();
                 if (!crashedRuntime.isBlank()) {
                     publishEvent("server.crash", Map.of("previousRuntimeId", crashedRuntime, "detectedBy", "journal-recovery"));
@@ -105,6 +110,7 @@ public final class NeverLauncherApiClient {
                 this.eventExecutor = null;
                 this.controlJournal = null;
                 this.controlTrust = null;
+                this.controlChannelId = "";
             }
         } catch (GeneralSecurityException | IOException e) {
             throw new IllegalStateException("cannot create ServerBridge runtime identity/event journal", e);
@@ -126,8 +132,7 @@ public final class NeverLauncherApiClient {
                 ",\"pluginVersion\":" + quote(actualVersion) +
                 ",\"pluginSha256\":" + quote(pluginSha256) +
                 runtime + telemetry + routing + "}";
-            HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendSignedWithFailover("POST", config.heartbeatPath(), json);
             return response.statusCode() >= 200 && response.statusCode() < 300;
         } catch (Exception ignored) {
             return false;
@@ -165,8 +170,7 @@ public final class NeverLauncherApiClient {
             try {
                 // A retry is a new authenticated request with a fresh nonce. Reusing
                 // a signed request would correctly be rejected as a replay.
-                HttpRequest request = signedRequest("POST", URI.create(config.validateJoinUrl()), body);
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = sendSignedWithFailover("POST", config.validateJoinPath(), body);
                 String raw = response.body() == null ? "" : response.body();
                 boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
                 if (allowed) {
@@ -214,8 +218,7 @@ public final class NeverLauncherApiClient {
         IOException lastIo = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
             try {
-                HttpRequest request = signedRequest("POST", URI.create(config.handoffUrl()), body);
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = sendSignedWithFailover("POST", config.handoffPath(), body);
                 String raw = response.body() == null ? "" : response.body();
                 if (response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"status\":\"handoff-created\"")) {
                     return new JoinValidationResult(true, "handoff_created", raw);
@@ -251,13 +254,7 @@ public final class NeverLauncherApiClient {
             String features = String.join(",", SUPPORTED_FEATURES);
             String query = "protocols=" + URLEncoder.encode(protocols, StandardCharsets.UTF_8) +
                 "&features=" + URLEncoder.encode(features, StandardCharsets.UTF_8);
-            URI uri = URI.create(config.capabilitiesUrl() + "?" + query);
-            HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofMillis(config.timeoutMs))
-                .header("Accept", "application/json")
-                .GET()
-                .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendUnsignedGetWithFailover(config.capabilitiesPath() + "?" + query);
 
             // 0.19.0 and older backends do not expose capabilities. A 404 is the
             // deliberate rolling-upgrade signal; other failures do not silently
@@ -335,8 +332,7 @@ public final class NeverLauncherApiClient {
 
     private JoinValidationResult verifyTargetRoute(String targetServer) {
         try {
-            HttpRequest request = signedRequest("GET", URI.create(config.routesUrl()), "");
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendSignedWithFailover("GET", config.routesPath(), "");
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 return new JoinValidationResult(false, "routing_table_unavailable", response.body() == null ? "{}" : response.body());
             }
@@ -413,14 +409,17 @@ public final class NeverLauncherApiClient {
 
     private void pollControlOnce() throws Exception {
         BridgeProtocolNegotiation protocol = negotiateProtocol();
-        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_CONTROL_API)) return;
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_CONTROL_API) || !protocol.features().contains(BridgeDefaults.FEATURE_HA_CONTROL_PLANE)) return;
         BridgeControlExecutor executor = controlHandler;
         if (executor == null) return;
-        URI uri = URI.create(config.controlPollUrl() + "?runtimeId=" + URLEncoder.encode(runtimeIdentity.runtimeId(), StandardCharsets.UTF_8));
-        HttpResponse<String> response = client.send(signedRequest("GET", uri, ""), HttpResponse.BodyHandlers.ofString());
+        long resumeAfter = controlJournal.acknowledgedSequence();
+        String relative = config.controlPollPath() + "?runtimeId=" + URLEncoder.encode(runtimeIdentity.runtimeId(), StandardCharsets.UTF_8) +
+            "&channelId=" + URLEncoder.encode(controlChannelId, StandardCharsets.UTF_8) +
+            "&resumeAfter=" + resumeAfter;
+        HttpResponse<String> response = sendSignedWithFailover("GET", relative, "");
         if (response.statusCode() == 204) return;
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            if (response.statusCode() >= 500) return;
+            if (isRetryableBackendStatus(response.statusCode())) return;
             throw new IOException("control poll rejected with HTTP " + response.statusCode());
         }
         String raw = response.body() == null ? "" : response.body();
@@ -431,13 +430,17 @@ public final class NeverLauncherApiClient {
         String type = extractJsonString(raw, "type");
         String payloadEncoded = extractJsonString(raw, "payload");
         String payloadSha256 = extractJsonString(raw, "payloadSha256");
+        long deliverySequence = extractJsonLong(raw, "deliverySequence");
+        String channelId = extractJsonString(raw, "channelId");
+        String leaseToken = extractJsonString(raw, "leaseToken");
         int attempt = extractJsonInt(raw, "attempt");
         long issuedAt = extractJsonLong(raw, "issuedAtUnixMillis");
         long expiresAt = extractJsonLong(raw, "expiresAtUnixMillis");
         String signingPublicKey = extractJsonString(raw, "signingPublicKey");
         String signature = extractJsonString(raw, "signature");
-        if (!config.serverId.equals(serverId) || !runtimeIdentity.runtimeId().equalsIgnoreCase(runtimeId) || commandId.isBlank() || type.isBlank()) {
-            throw new IOException("control command binding mismatch");
+        if (!config.serverId.equals(serverId) || !runtimeIdentity.runtimeId().equalsIgnoreCase(runtimeId) || commandId.isBlank() || type.isBlank() ||
+            deliverySequence <= resumeAfter || deliverySequence < 1 || !controlChannelId.equals(channelId) || leaseToken.length() < 16) {
+            throw new IOException("control command binding/resumption mismatch");
         }
         long now = System.currentTimeMillis();
         if (issuedAt <= 0 || expiresAt <= now || issuedAt > now + 120_000L || expiresAt - issuedAt > 660_000L) {
@@ -450,7 +453,8 @@ public final class NeverLauncherApiClient {
             throw new GeneralSecurityException("control payload digest mismatch");
         }
         Map<String,String> payload = BridgeControlCommand.decodePayload(payloadEncoded);
-        BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, type, payload, payloadSha256, attempt, issuedAt, expiresAt, signingPublicKey, signature);
+        BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, type, payload, payloadSha256,
+            deliverySequence, channelId, leaseToken, attempt, issuedAt, expiresAt, signingPublicKey, signature);
         if (!controlTrust.verify(command)) throw new GeneralSecurityException("control command signature or backend trust failed");
 
         BridgeControlJournal.State state = controlJournal.state(command);
@@ -476,11 +480,15 @@ public final class NeverLauncherApiClient {
             ",\"serverId\":" + quote(config.serverId) +
             ",\"runtimeId\":" + quote(runtimeIdentity.runtimeId()) +
             ",\"commandId\":" + quote(command.commandId()) +
+            ",\"deliverySequence\":" + command.deliverySequence() +
+            ",\"channelId\":" + quote(command.channelId()) +
+            ",\"leaseToken\":" + quote(command.leaseToken()) +
             ",\"status\":" + quote(result.status()) +
             ",\"result\":" + quote(BridgeControlCommand.encodeMap(result.result())) +
             ",\"error\":" + quote(result.error()) + "}";
-        HttpResponse<String> response = client.send(signedRequest("POST", URI.create(config.controlAckUrl()), body), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = sendSignedWithFailover("POST", config.controlAckPath(), body);
         if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IOException("control ACK rejected with HTTP " + response.statusCode());
+        controlJournal.acknowledgeSequence(command.deliverySequence());
     }
 
     /** Best-effort final flush; the journal remains authoritative if the backend is unavailable. */
@@ -541,8 +549,7 @@ public final class NeverLauncherApiClient {
         IOException last = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
             try {
-                HttpRequest request = signedRequest("POST", URI.create(config.eventStreamUrl()), body);
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = sendSignedWithFailover("POST", config.eventStreamPath(), body);
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     if (response.statusCode() >= 500) { last = new IOException("event stream backend HTTP " + response.statusCode()); continue; }
                     throw new IOException("event stream rejected with HTTP " + response.statusCode());
@@ -568,6 +575,54 @@ public final class NeverLauncherApiClient {
         String base = "\"protocolVersion\":" + protocol.protocolVersion();
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION) return base;
         return base + ",\"features\":" + jsonArray(protocol.features());
+    }
+
+    private HttpResponse<String> sendSignedWithFailover(String method, String relative, String body) throws IOException, InterruptedException, GeneralSecurityException {
+        IOException last = null;
+        for (BridgeBackendPool.Endpoint endpoint : backendPool.candidates(relative)) {
+            try {
+                HttpResponse<String> response = client.send(signedRequest(method, endpoint.uri(), body), HttpResponse.BodyHandlers.ofString());
+                if (isRetryableBackendStatus(response.statusCode())) {
+                    backendPool.failure(endpoint.index());
+                    last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
+                    continue;
+                }
+                // Authentication/authorization failures are deliberately terminal: failover must
+                // never turn a rejected signed request into an implicit fail-open retry policy.
+                backendPool.success(endpoint.index());
+                return response;
+            } catch (IOException e) {
+                backendPool.failure(endpoint.index());
+                last = e;
+            }
+        }
+        throw last == null ? new IOException("no ServerBridge backend endpoint available") : last;
+    }
+
+    private HttpResponse<String> sendUnsignedGetWithFailover(String relative) throws IOException, InterruptedException {
+        IOException last = null;
+        for (BridgeBackendPool.Endpoint endpoint : backendPool.candidates(relative)) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder(endpoint.uri())
+                    .timeout(Duration.ofMillis(config.timeoutMs)).header("Accept", "application/json").GET().build();
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (isRetryableBackendStatus(response.statusCode())) {
+                    backendPool.failure(endpoint.index());
+                    last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
+                    continue;
+                }
+                backendPool.success(endpoint.index());
+                return response;
+            } catch (IOException e) {
+                backendPool.failure(endpoint.index());
+                last = e;
+            }
+        }
+        throw last == null ? new IOException("no ServerBridge backend endpoint available") : last;
+    }
+
+    private static boolean isRetryableBackendStatus(int status) {
+        return status == 502 || status == 503 || status == 504;
     }
 
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {

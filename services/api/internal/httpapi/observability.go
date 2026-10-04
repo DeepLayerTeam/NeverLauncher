@@ -45,6 +45,23 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if s.State != nil && s.State.ServerBridgeHARequired {
+		if s.State.ServerBridgeCoordinator == nil {
+			checks["serverBridgeCoordinator"] = "not configured"
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge HA coordinator unavailable"})
+			return
+		}
+		haCtx, haCancel := context.WithTimeout(r.Context(), 1500*time.Millisecond)
+		err := s.State.ServerBridgeCoordinator.Health(haCtx)
+		haCancel()
+		if err != nil {
+			checks["serverBridgeCoordinator"] = err.Error()
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks, "message": "serverbridge HA coordinator unavailable"})
+			return
+		}
+		checks["serverBridgeCoordinator"] = s.State.ServerBridgeCoordinator.Backend()
+	}
+
 	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
 		ha, err := s.State.ServerBridge.haStatus0149()
 		if err != nil {

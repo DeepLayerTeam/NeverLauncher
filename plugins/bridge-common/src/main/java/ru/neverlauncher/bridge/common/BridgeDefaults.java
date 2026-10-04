@@ -18,6 +18,7 @@ public final class BridgeDefaults {
     public static final String FEATURE_SERVER_TELEMETRY = "telemetry.server-v1";
     public static final String FEATURE_EVENT_STREAM = "events.ordered-stream-v1";
     public static final String FEATURE_CONTROL_API = "control.secure-channel-v1";
+    public static final String FEATURE_HA_CONTROL_PLANE = "control.ha-channel-v2";
     public static final String FEATURE_ROUTING_V2 = "topology.routing-v2";
     public static final String FEATURE_PLAYER_SESSION_V3 = "session.player-lifecycle-v3";
     public static final String VELOCITY_ID = "neverlauncher-velocity-bridge";

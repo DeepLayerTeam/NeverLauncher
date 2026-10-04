@@ -22,6 +22,30 @@ final class BridgeControlJournal {
         if(Files.exists(this.path)){try(var in=Files.newInputStream(this.path)){props.load(in);}}
     }
 
+    synchronized String channelId(String runtimeId) throws IOException {
+        String normalizedRuntime = runtimeId == null ? "" : runtimeId.trim().toLowerCase(java.util.Locale.ROOT);
+        String currentRuntime = props.getProperty("_channel.runtimeId", "");
+        String currentId = props.getProperty("_channel.id", "");
+        if (!normalizedRuntime.isBlank() && normalizedRuntime.equals(currentRuntime) && currentId.matches("[a-f0-9]{32}")) return currentId;
+        String id = java.util.UUID.randomUUID().toString().replace("-", "").toLowerCase(java.util.Locale.ROOT);
+        props.setProperty("_channel.runtimeId", normalizedRuntime);
+        props.setProperty("_channel.id", id);
+        props.setProperty("_channel.ackedSequence", "0");
+        persist();
+        return id;
+    }
+
+    synchronized long acknowledgedSequence() {
+        try { return Math.max(0L, Long.parseLong(props.getProperty("_channel.ackedSequence", "0"))); }
+        catch (NumberFormatException ignored) { return 0L; }
+    }
+
+    synchronized void acknowledgeSequence(long sequence) throws IOException {
+        if (sequence <= acknowledgedSequence()) return;
+        props.setProperty("_channel.ackedSequence", Long.toString(sequence));
+        persist();
+    }
+
     synchronized State state(BridgeControlCommand command) {
         String prefix=command.commandId()+"."; String digest=props.getProperty(prefix+"digest","");
         if(digest.isBlank()) return null;

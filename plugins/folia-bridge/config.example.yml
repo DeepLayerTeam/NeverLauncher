@@ -1,5 +1,8 @@
 backend:
   url: "https://launcher.example.com"
+  # Ordered HA endpoints; url remains the single-endpoint fallback.
+  urls: "https://launcher-a.example.com,https://launcher-b.example.com"
+  failoverCooldownMs: 5000
   timeoutMs: 5000
   retries: 2
   heartbeatIntervalSeconds: 30

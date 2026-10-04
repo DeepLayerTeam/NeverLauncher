@@ -1,3 +1,11 @@
+## HA Control Plane — 0.19.11
+
+`0.19.11` переводит ServerBridge control channel в multi-replica режим. Bridge принимает упорядоченный список `backend.urls`/`NEVERLAUNCHER_BACKEND_URLS`, держит active endpoint и автоматически переключается только при transport failure или `502/503/504`; `401/403` остаются terminal fail-closed ответами и не обходятся через другой Backend. Каждый runtime хранит стабильный `channelId` и durable high-water `deliverySequence`, поэтому reconnect или смена API replica продолжают канал с последнего подтверждённого ACK.
+
+PostgreSQL остаётся durable source of truth: admission защищён существующим idempotency key, delivery получает глобальную sequence, `lease_owner`/`lease_token` и row lock `FOR UPDATE SKIP LOCKED`; ACK проверяет runtime, sequence, channel и fencing token и является идемпотентным между репликами. Redis используется как второй ephemeral distributed fence и channel-presence registry. При обязательном HA (`NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true`) недоступность Redis блокирует выдачу/ACK, а не переключает control path на process-local state. Локальный Bridge execution journal использует стабильный execution digest, поэтому повторная доставка после lost ACK/lease expiry не повторяет завершённый Minecraft side effect.
+
+Production: задайте одинаковые PostgreSQL/Redis для всех Backend replicas, уникальный `NEVERLAUNCHER_REPLICA_ID` на replica и несколько HTTPS origin в `backend.urls`. Migration `0040_serverbridge_ha_control_plane_01911` добавляет sequencing/fencing columns и индексы к существующей durable control queue.
+
 ## ServerBridge Host — 0.19.10
 
 `0.19.10` добавляет опциональный host-side supervisor для ServerBridge: `nl server-bridge host configure|start|run|stop|restart|status|logs`. Host запускает существующий Minecraft/proxy entry point как отдельный JVM-процесс, не заменяет Minecraft main class и не меняет authlib/core. Для Bukkit/Proxy/Fabric/Quilt/Sponge/legacy Forge используется `java -jar`; modern Forge/NeoForge поддерживает штатные `@unix_args.txt` / `@win_args.txt`.
@@ -44,7 +52,7 @@ Backend принимает batches до 64 events, требует непреры
 
 Paper/Spigot/Bukkit/Purpur собирают TPS/MSPT, players, worlds/dimensions и bounded chunk/entity counters; Folia намеренно не обходит region-owned chunks/entities из global scheduler и помечает их unsupported. Fabric/Forge/NeoForge используют tick hooks и bounded entity enumeration, Velocity/BungeeCord/Waterfall публикуют proxy player capacity. Backend принимает telemetry только при negotiated `telemetry.server-v1`, связывает snapshot с уже проверенным Ed25519 runtime identity, хранит latest snapshot на node и bounded history в PostgreSQL (`0034_serverbridge_telemetry_0193`): hot-path cap около 4096 samples/node плюс HA-retention старше 7 дней.
 
-## ServerBridge 3 Node Discovery & Runtime Identity — 0.19.2
+## ServerBridge 3: обнаружение узла и Runtime Identity — 0.19.2
 
 `0.19.2` добавляет рабочую runtime discovery/identity цепочку поверх Protocol v3. Каждый platform bridge автоматически определяет Minecraft version, Java runtime, platform/loader, server brand, hostname/node name и фактические bridge capabilities. JVM instance получает детерминированный `runtimeId`, связанный с node ID, Ed25519 key fingerprint, JVM start time, PID и hostname; весь immutable runtime descriptor отдельно подписывается зарегистрированным Ed25519 node key.
 

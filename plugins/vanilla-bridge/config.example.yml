@@ -1,6 +1,9 @@
 # NeverLauncher Vanilla sidecar adapter. Keep RCON bound to loopback/firewalled.
 backend:
   url: http://127.0.0.1:8080
+  # Ordered HA endpoints. The single url above is used only when urls is empty.
+  urls: "https://launcher-a.example.com,https://launcher-b.example.com"
+  failoverCooldownMs: 5000
 server:
   id: vanilla-main
 identity:

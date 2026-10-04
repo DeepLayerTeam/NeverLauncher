@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
 )
 
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
@@ -18,6 +20,35 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		return fmt.Errorf("invalid NEVERLAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
 	}
 	s.TrustedProxies = trusted
+	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired
+	s.ServerBridgeReplicaID = strings.TrimSpace(cfg.ServerBridgeReplicaID)
+	if s.ServerBridgeReplicaID == "" {
+		hostname, _ := os.Hostname()
+		hostname = strings.TrimSpace(hostname)
+		if hostname == "" {
+			hostname = "unknown-host"
+		}
+		s.ServerBridgeReplicaID = fmt.Sprintf("%s-%d", hostname, os.Getpid())
+	}
+
+	// ServerBridge HA has its own Redis fence. It is independent from rate limiting:
+	// production control delivery must not silently fall back to process-local state.
+	if strings.TrimSpace(cfg.RedisURL) != "" {
+		coordinator, coordErr := serverbridgeha.NewRedis(cfg.RedisURL)
+		if coordErr == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			coordErr = coordinator.Health(ctx)
+			cancel()
+		}
+		if coordErr == nil {
+			s.ServerBridgeCoordinator = coordinator
+		} else if cfg.ServerBridgeHARequired {
+			return fmt.Errorf("Redis ServerBridge HA coordinator is required but unavailable: %w", coordErr)
+		}
+	} else if cfg.ServerBridgeHARequired {
+		return fmt.Errorf("Redis ServerBridge HA coordinator is required but NEVERLAUNCHER_REDIS_URL is empty")
+	}
+
 	s.RateLimitEnabled = cfg.RateLimitEnabled
 	s.RateLimitGlobalPerMinute = cfg.RateLimitGlobalPerMinute
 	s.RateLimitAuthPerMinute = cfg.RateLimitAuthPerMinute
