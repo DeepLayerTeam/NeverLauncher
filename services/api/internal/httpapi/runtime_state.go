@@ -30,7 +30,7 @@ func NewRuntimeState() *RuntimeState {
 		AuthSessions:                   newAuthSessionStore111(),
 		Security:                       &securityHardeningStore{mfa: map[string]mfaRecord{}, failedLogins: map[string]loginFailureRecord{}, passwordResets: map[string]oneTimeSecurityToken{}, emailTokens: map[string]oneTimeSecurityToken{}, emailVerified: map[string]bool{}},
 		Passkeys:                       newPasskeyStore117(),
-		ServerBridge:                   &serverBridgeStore{servers: map[string]bridgeServerRecord{}, joins: map[string]bridgeJoinRecord{}, textures: map[string]bridgeTextureRecord{}, nodeNonces: map[string]time.Time{}, controlCommands: map[string]model.ServerBridgeControlCommand{}, controlIdempotency: map[string]string{}},
+		ServerBridge:                   &serverBridgeStore{servers: map[string]bridgeServerRecord{}, joins: map[string]bridgeJoinRecord{}, textures: map[string]bridgeTextureRecord{}, nodeNonces: map[string]time.Time{}, controlCommands: map[string]model.ServerBridgeControlCommand{}, controlIdempotency: map[string]string{}, routing: map[string]model.ServerBridgeRoutingSnapshot{}},
 		Maintenance:                    &maintenanceGate{},
 		PackageMutation:                &sync.Mutex{},
 		RateLimiter:                    ratelimit.NewMemory(),

@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class NeverLauncherApiClient {
     private static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-Node-v1";
@@ -39,7 +40,8 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_RUNTIME_IDENTITY,
         BridgeDefaults.FEATURE_SERVER_TELEMETRY,
         BridgeDefaults.FEATURE_EVENT_STREAM,
-        BridgeDefaults.FEATURE_CONTROL_API
+        BridgeDefaults.FEATURE_CONTROL_API,
+        BridgeDefaults.FEATURE_ROUTING_V2
     );
 
     private final BridgeConfig config;
@@ -50,6 +52,7 @@ public final class NeverLauncherApiClient {
     private final String pluginSha256;
     private final BridgeRuntimeIdentity runtimeIdentity;
     private final BridgeTelemetrySampler telemetrySampler = new BridgeTelemetrySampler();
+    private final AtomicReference<String> routingState = new AtomicReference<>("ready");
     private final BridgeEventJournal eventJournal;
     private final ExecutorService eventExecutor;
     private final AtomicBoolean eventFlushScheduled = new AtomicBoolean(false);
@@ -112,12 +115,13 @@ public final class NeverLauncherApiClient {
             BridgeProtocolNegotiation protocol = negotiateProtocol();
             String runtime = runtimeFields(protocol);
             String telemetry = telemetryFields(protocol);
+            String routing = routingFields(protocol);
             String json = "{" + protocolFields(protocol) +
                 ",\"serverId\":" + quote(config.serverId) +
                 ",\"serverType\":" + quote(actualType) +
                 ",\"pluginVersion\":" + quote(actualVersion) +
                 ",\"pluginSha256\":" + quote(pluginSha256) +
-                runtime + telemetry + "}";
+                runtime + telemetry + routing + "}";
             HttpRequest request = signedRequest("POST", URI.create(config.heartbeatUrl()), json);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
@@ -186,6 +190,10 @@ public final class NeverLauncherApiClient {
         } catch (IOException | InterruptedException e) {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             return new JoinValidationResult(false, "backend_unavailable", "{}");
+        }
+        if (protocol.protocolVersion() >= BridgeDefaults.PROTOCOL_VERSION && protocol.features().contains(BridgeDefaults.FEATURE_ROUTING_V2)) {
+            JoinValidationResult route = verifyTargetRoute(targetServer);
+            if (!route.allowed) return route;
         }
         String body = "{" + protocolFields(protocol) + "," +
             "\"username\":" + quote(username) + "," +
@@ -285,6 +293,52 @@ public final class NeverLauncherApiClient {
 
     public void recordPlatformTelemetry(BridgePlatformTelemetry sample) {
         telemetrySampler.recordPlatformSample(sample);
+    }
+
+    public void setRoutingModes(boolean maintenance, boolean draining) {
+        routingState.set(maintenance ? "maintenance" : (draining ? "draining" : "ready"));
+    }
+
+    private String routingFields(BridgeProtocolNegotiation protocol) throws GeneralSecurityException {
+        if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || runtimeIdentity == null || identity == null) return "";
+        if (!protocol.features().contains(BridgeDefaults.FEATURE_ROUTING_V2)) return "";
+        BridgePlatformTelemetry sample = telemetrySampler.latestPlatformSample();
+        int online = sample == null ? 0 : sample.playersOnline();
+        int capacity = sample == null ? 0 : sample.playersMax();
+        String health = routingHealth(sample);
+        BridgeRoutingSnapshot routing = BridgeRoutingSnapshot.create(
+            config.serverId, runtimeIdentity.runtimeId(), routingState.get(), online, capacity, health, identity
+        );
+        return ",\"routing\":" + routing.toJson();
+    }
+
+    private static String routingHealth(BridgePlatformTelemetry sample) {
+        if (sample == null) return "unhealthy";
+        Double mspt = sample.mspt();
+        Double tps = sample.tps();
+        if ((mspt != null && mspt >= 50.0d) || (tps != null && tps < 15.0d)) return "unhealthy";
+        if ((mspt != null && mspt >= 40.0d) || (tps != null && tps < 19.0d)) return "degraded";
+        return "healthy";
+    }
+
+    private JoinValidationResult verifyTargetRoute(String targetServer) {
+        try {
+            HttpRequest request = signedRequest("GET", URI.create(config.routesUrl()), "");
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                return new JoinValidationResult(false, "routing_table_unavailable", response.body() == null ? "{}" : response.body());
+            }
+            String raw = response.body() == null ? "" : response.body();
+            String target = targetServer == null ? "" : targetServer.trim();
+            String quoted = quote(target);
+            boolean present = raw.contains("\"nodeId\":" + quoted) || raw.contains("\"backendName\":" + quoted);
+            return new JoinValidationResult(present, present ? "route_allowed" : "target_not_routable", raw);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new JoinValidationResult(false, "backend_interrupted", "{}");
+        } catch (IOException | GeneralSecurityException e) {
+            return new JoinValidationResult(false, "routing_table_unavailable", "{}");
+        }
     }
 
     /** Enqueue an individually signed event without blocking the game/proxy thread on HTTP. */

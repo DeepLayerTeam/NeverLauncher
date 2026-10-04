@@ -28,6 +28,7 @@ func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/server-bridge/servers/{serverId}/control/ack", s.serverBridgeControlAck0195)
 	mux.HandleFunc("POST /api/v1/server-bridge/validate-join", s.serverBridgeValidateJoin)
 	mux.HandleFunc("POST /api/v1/server-bridge/handoff", s.serverBridgeCreateHandoff0148)
+	mux.HandleFunc("GET /api/v1/server-bridge/servers/{serverId}/routes", s.serverBridgeAllowedRoutes0196)
 	mux.Handle("GET /api/v1/server-bridge/topology", s.requirePermission("project:read", s.serverBridgeTopology0148))
 	mux.HandleFunc("POST /api/v1/server-bridge/audit-event", s.serverBridgeAuditEvent)
 	mux.Handle("GET /api/v1/server-bridge/diagnostics", s.requirePermission("project:read", s.serverBridgeDiagnostics))

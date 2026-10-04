@@ -297,16 +297,24 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
         current.api.publishEvent(type, Map.of("world", world.getRegistryKey().getValue().toString()));
     }
 
+    private void updateRoutingModes() {
+        RuntimeState current = runtime;
+        if (current != null) current.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
+        triggerHeartbeat();
+    }
+
     private BridgeControlResult executeControl(MinecraftServer server, BridgeControlCommand command) throws Exception {
         Map<String,String> payload = command.payload();
         if ("server.maintenance".equals(command.type())) {
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             maintenanceMode.set(enabled);
+            updateRoutingModes();
             return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
         }
         if ("server.drain".equals(command.type())) {
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             drainMode.set(enabled);
+            updateRoutingModes();
             return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
         }
         if ("server.shutdown".equals(command.type())) {

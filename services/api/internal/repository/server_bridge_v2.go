@@ -25,6 +25,9 @@ type ServerBridgeRepository interface {
 	TouchServerBridgeNodeHeartbeat(context.Context, string, string, string, int, time.Time) error
 	TouchServerBridgeNodeRuntimeHeartbeat(context.Context, string, string, string, int, model.ServerBridgeRuntimeIdentity, time.Time) (model.ServerBridgeRuntimeTransition, error)
 	SaveServerBridgeTelemetry(context.Context, string, int64, model.ServerBridgeTelemetry, time.Time) error
+	SaveServerBridgeRoutingState(context.Context, string, int64, model.ServerBridgeRoutingSnapshot, time.Time) (model.ServerBridgeRoutingSnapshot, error)
+	ListServerBridgeAllowedBackends(context.Context, string, time.Time) ([]model.ServerBridgeRouteTarget, error)
+	EnsureServerBridgeNodeRoutable(context.Context, string, int64, string, time.Time) error
 	AppendServerBridgeEvents(context.Context, string, int64, string, []model.ServerBridgeEvent, time.Time) (model.ServerBridgeEventAppendResult, error)
 	CreateServerBridgeControlCommand(context.Context, model.ServerBridgeControlCommand, time.Time) (model.ServerBridgeControlCommand, bool, error)
 	LeaseServerBridgeControlCommand(context.Context, string, int64, string, time.Time, time.Duration) (model.ServerBridgeControlCommand, error)
@@ -228,7 +231,7 @@ func (r *SQLRepository) RotateServerBridgeNodeIdentity(ctx context.Context, id, 
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_runtime_instances_v3 SET ended_at=COALESCE(ended_at,$2),last_seen_at=GREATEST(last_seen_at,$2) WHERE server_id=$1 AND ended_at IS NULL`, id, now.UTC()); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash='',token_prefix='',key_algorithm=$2,public_key=$3,key_fingerprint=$4,identity_epoch=GREATEST(identity_epoch,0)+1,identity_rotated_at=$5,status='active',protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL,runtime_previous_id=runtime_id,runtime_id='',runtime_transition='identity-rotated',runtime_replacement_detected=FALSE,runtime_started_at=NULL,runtime_first_seen_at=NULL,runtime_last_seen_at=NULL,runtime_uptime_seconds=0,runtime_identity_digest='',runtime_identity_signature='',runtime_process_id=0,hostname='',node_name='',minecraft_version='',java_version='',java_vendor='',java_vm_name='',runtime_platform='',loader_name='',loader_version='',server_brand='',runtime_capabilities='[]'::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL WHERE id=$1`, id, algorithm, publicKey, fingerprint, now.UTC())
+	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET token_hash='',token_prefix='',key_algorithm=$2,public_key=$3,key_fingerprint=$4,identity_epoch=GREATEST(identity_epoch,0)+1,identity_rotated_at=$5,status='active',protocol_version=2,plugin_version='',plugin_sha256='',integrity_status='',integrity_verified_at=NULL,last_heartbeat_at=NULL,runtime_previous_id=runtime_id,runtime_id='',runtime_transition='identity-rotated',runtime_replacement_detected=FALSE,runtime_started_at=NULL,runtime_first_seen_at=NULL,runtime_last_seen_at=NULL,runtime_uptime_seconds=0,runtime_identity_digest='',runtime_identity_signature='',runtime_process_id=0,hostname='',node_name='',minecraft_version='',java_version='',java_vendor='',java_vm_name='',runtime_platform='',loader_name='',loader_version='',server_brand='',runtime_capabilities='[]'::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL,routing_state='unknown',routing_accepting=FALSE,routing_players_online=0,routing_capacity_max=0,routing_health='unknown',routing_observed_at=NULL,routing_revision=0,routing_digest='',routing_signature='' WHERE id=$1`, id, algorithm, publicKey, fingerprint, now.UTC())
 	if err != nil {
 		return model.ServerBridgeNode{}, err
 	}
@@ -426,7 +429,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		runtime_previous_id=$6,runtime_id=$7,runtime_epoch=$8,runtime_transition=$9,runtime_replacement_detected=$10,
 		runtime_started_at=$11,runtime_first_seen_at=$5,runtime_last_seen_at=$5,runtime_uptime_seconds=$12,runtime_identity_digest=$13,
 		runtime_identity_signature=$14,runtime_process_id=$15,hostname=$16,node_name=$17,minecraft_version=$18,java_version=$19,
-		java_vendor=$20,java_vm_name=$21,runtime_platform=$22,loader_name=$23,loader_version=$24,server_brand=$25,runtime_capabilities=$26::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL
+		java_vendor=$20,java_vm_name=$21,runtime_platform=$22,loader_name=$23,loader_version=$24,server_brand=$25,runtime_capabilities=$26::jsonb,telemetry_latest='{}'::jsonb,telemetry_sampled_at=NULL,routing_state='unknown',routing_accepting=FALSE,routing_players_online=0,routing_capacity_max=0,routing_health='unknown',routing_observed_at=NULL,routing_revision=0,routing_digest='',routing_signature=''
 		WHERE id=$1 AND status='active' AND kind=lower(btrim($2)) AND identity_epoch=$27 AND key_fingerprint=$28`,
 		id, kind, pluginVersion, protocolVersion, now, previousRuntimeID, runtime.RuntimeID, newEpoch, transition, replacementDetected,
 		runtime.StartedAt.UTC(), runtime.UptimeSeconds, strings.ToLower(runtime.IdentityDigest), runtime.IdentitySignature, runtime.ProcessID,
@@ -855,6 +858,8 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 		&h.SourceNodeID, &h.TargetNodeID, &h.BackendName, &h.ProjectID, &h.ProfileID, &h.Channel,
 		&h.TrustedDeviceID, &h.BindingEpoch, &h.MinecraftSessionID,
 		&h.SourceIdentityEpoch, &h.SourceKeyFingerprint, &h.TargetIdentityEpoch, &h.TargetKeyFingerprint, &h.ProtocolVersion,
+		&h.SourceRuntimeID, &h.SourceRuntimeEpoch, &h.SourceRoutingRevision, &h.SourceRoutingDigest, &h.SourceRoutingSignature,
+		&h.TargetRuntimeID, &h.TargetRuntimeEpoch, &h.TargetRoutingRevision, &h.TargetRoutingDigest, &h.TargetRoutingSignature,
 		&h.Status, &h.CreatedAt, &h.ExpiresAt, &consumed, &h.RedeemedNonceHash, &h.RedeemedByIP)
 	if err != nil {
 		return model.ServerBridgeHandoff{}, err
@@ -865,7 +870,7 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 	return h, nil
 }
 
-const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_handoffs_v2`
+const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_handoffs_v2`
 
 // CreateServerBridgeHandoff mints a target-specific credential only from a very
 // recent join ticket already redeemed by the authenticated proxy. The target is
@@ -892,23 +897,43 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, err
 	}
 
-	var sourceKind, sourceStatus, sourceFingerprint string
-	var sourceEpoch int64
-	if err = tx.QueryRowContext(ctx, `SELECT kind,status,identity_epoch,key_fingerprint FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, h.SourceNodeID).
-		Scan(&sourceKind, &sourceStatus, &sourceEpoch, &sourceFingerprint); err != nil {
+	var sourceKind, sourceStatus, sourceFingerprint, sourceRuntimeID, sourceRouteState, sourceRouteHealth, sourceRouteDigest, sourceRouteSignature string
+	var sourceEpoch, sourceRuntimeEpoch, sourceRouteRevision int64
+	var sourceProtocolVersion int
+	var sourceRouteAccepting bool
+	var sourceHeartbeat, sourceRouteObserved sql.NullTime
+	if err = tx.QueryRowContext(ctx, `SELECT kind,status,identity_epoch,key_fingerprint,runtime_id,runtime_epoch,routing_state,routing_health,routing_accepting,routing_revision,routing_digest,routing_signature,last_heartbeat_at,routing_observed_at,protocol_version FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, h.SourceNodeID).
+		Scan(&sourceKind, &sourceStatus, &sourceEpoch, &sourceFingerprint, &sourceRuntimeID, &sourceRuntimeEpoch, &sourceRouteState, &sourceRouteHealth, &sourceRouteAccepting, &sourceRouteRevision, &sourceRouteDigest, &sourceRouteSignature, &sourceHeartbeat, &sourceRouteObserved, &sourceProtocolVersion); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ServerBridgeHandoff{}, ErrNotFound
 		}
 		return model.ServerBridgeHandoff{}, err
 	}
+	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	if sourceStatus != "active" || !isProxyBridgeKind0148(sourceKind) || sourceEpoch < 1 || len(sourceFingerprint) != 64 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("source node is not an active proxy")
 	}
+	routingV3 := h.RequireRoutingProof && sourceProtocolVersion >= 3
+	if routingV3 {
+		if len(sourceRuntimeID) != 64 || sourceRuntimeEpoch < 1 || sourceRouteRevision < 1 || len(sourceRouteDigest) != 64 || sourceRouteSignature == "" ||
+			!sourceHeartbeat.Valid || sourceHeartbeat.Time.Before(freshAfter) || !sourceRouteObserved.Valid || sourceRouteObserved.Time.Before(freshAfter) ||
+			sourceRouteState != "ready" || !sourceRouteAccepting || sourceRouteHealth == "unhealthy" {
+			return model.ServerBridgeHandoff{}, fmt.Errorf("source node is not a routable proxy")
+		}
+		h.SourceRuntimeID = strings.ToLower(sourceRuntimeID)
+		h.SourceRuntimeEpoch = sourceRuntimeEpoch
+		h.SourceRoutingRevision = sourceRouteRevision
+		h.SourceRoutingDigest = strings.ToLower(sourceRouteDigest)
+		h.SourceRoutingSignature = sourceRouteSignature
+	}
 
 	var targetID, targetName, targetKind, targetStatus, targetProject, targetProfile, targetFingerprint string
-	var targetEpoch int64
-	var targetProtocolVersion int
-	rows, err := tx.QueryContext(ctx, `SELECT id,name,kind,status,project_id,profile_id,identity_epoch,key_fingerprint,protocol_version FROM server_bridge_nodes_v2 WHERE id=$1 OR lower(name)=lower($1) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END,id LIMIT 2 FOR SHARE`, targetRef)
+	var targetRuntimeID, targetRouteState, targetRouteHealth, targetRouteDigest, targetRouteSignature string
+	var targetEpoch, targetRuntimeEpoch, targetRouteRevision int64
+	var targetProtocolVersion, targetPlayers, targetCapacity int
+	var targetRouteAccepting bool
+	var targetHeartbeat, targetRouteObserved sql.NullTime
+	rows, err := tx.QueryContext(ctx, `SELECT id,name,kind,status,project_id,profile_id,identity_epoch,key_fingerprint,protocol_version,runtime_id,runtime_epoch,routing_state,routing_health,routing_accepting,routing_players_online,routing_capacity_max,routing_revision,routing_digest,routing_signature,last_heartbeat_at,routing_observed_at FROM server_bridge_nodes_v2 WHERE id=$1 OR lower(name)=lower($1) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END,id LIMIT 2 FOR UPDATE`, targetRef)
 	if err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
@@ -917,7 +942,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	for rows.Next() {
 		matches++
 		if matches == 1 {
-			if err = rows.Scan(&targetID, &targetName, &targetKind, &targetStatus, &targetProject, &targetProfile, &targetEpoch, &targetFingerprint, &targetProtocolVersion); err != nil {
+			if err = rows.Scan(&targetID, &targetName, &targetKind, &targetStatus, &targetProject, &targetProfile, &targetEpoch, &targetFingerprint, &targetProtocolVersion, &targetRuntimeID, &targetRuntimeEpoch, &targetRouteState, &targetRouteHealth, &targetRouteAccepting, &targetPlayers, &targetCapacity, &targetRouteRevision, &targetRouteDigest, &targetRouteSignature, &targetHeartbeat, &targetRouteObserved); err != nil {
 				return model.ServerBridgeHandoff{}, err
 			}
 		}
@@ -937,8 +962,32 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	if targetStatus != "active" || !isBackendBridgeKind0148(targetKind) || targetEpoch < 1 || len(targetFingerprint) != 64 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("target node is not an active backend")
 	}
+	if routingV3 {
+		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
+			!targetHeartbeat.Valid || targetHeartbeat.Time.Before(freshAfter) || !targetRouteObserved.Valid || targetRouteObserved.Time.Before(freshAfter) ||
+			targetRouteState != "ready" || !targetRouteAccepting || (targetRouteHealth != "healthy" && targetRouteHealth != "degraded") ||
+			(targetCapacity > 0 && targetPlayers >= targetCapacity) {
+			return model.ServerBridgeHandoff{}, fmt.Errorf("target node is unhealthy, draining, in maintenance, stale, or at capacity")
+		}
+		if targetCapacity > 0 {
+			var reservations int
+			if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE target_node_id=$1 AND ((status='active' AND expires_at>$2) OR (status='consumed' AND consumed_at>$2::timestamptz-interval '30 seconds'))`, targetID, now.UTC()).Scan(&reservations); err != nil {
+				return model.ServerBridgeHandoff{}, err
+			}
+			if targetPlayers+reservations >= targetCapacity {
+				return model.ServerBridgeHandoff{}, fmt.Errorf("target node has no unreserved capacity")
+			}
+		}
+	}
 	if targetProtocolVersion != 2 && targetProtocolVersion != 3 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("target node has unsupported ServerBridge protocol version %d", targetProtocolVersion)
+	}
+	if routingV3 {
+		h.TargetRuntimeID = strings.ToLower(targetRuntimeID)
+		h.TargetRuntimeEpoch = targetRuntimeEpoch
+		h.TargetRoutingRevision = targetRouteRevision
+		h.TargetRoutingDigest = strings.ToLower(targetRouteDigest)
+		h.TargetRoutingSignature = targetRouteSignature
 	}
 
 	// The source proof is the latest successfully consumed launcher ticket for an
@@ -991,7 +1040,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='replaced',invalidated_at=$3 WHERE target_node_id=$1 AND username_normalized=$2 AND status='active'`, h.TargetNodeID, h.UsernameNormalized, now.UTC()); err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_handoffs_v2(id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,trusted_device_id,binding_epoch,minecraft_session_id,source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,status,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14,NULLIF($15,''),$16,$17,$18,$19,$20,'active',$21,$22)`, h.ID, h.Username, h.UsernameNormalized, h.UUID, h.UserID, h.SessionID, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, h.Channel, h.TrustedDeviceID, h.BindingEpoch, h.MinecraftSessionID, h.SourceIdentityEpoch, h.SourceKeyFingerprint, h.TargetIdentityEpoch, h.TargetKeyFingerprint, h.ProtocolVersion, h.CreatedAt, h.ExpiresAt); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_handoffs_v2(id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,trusted_device_id,binding_epoch,minecraft_session_id,source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14,NULLIF($15,''),$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,'active',$31,$32)`, h.ID, h.Username, h.UsernameNormalized, h.UUID, h.UserID, h.SessionID, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, h.Channel, h.TrustedDeviceID, h.BindingEpoch, h.MinecraftSessionID, h.SourceIdentityEpoch, h.SourceKeyFingerprint, h.TargetIdentityEpoch, h.TargetKeyFingerprint, h.ProtocolVersion, h.SourceRuntimeID, h.SourceRuntimeEpoch, h.SourceRoutingRevision, h.SourceRoutingDigest, h.SourceRoutingSignature, h.TargetRuntimeID, h.TargetRuntimeEpoch, h.TargetRoutingRevision, h.TargetRoutingDigest, h.TargetRoutingSignature, h.CreatedAt, h.ExpiresAt); err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_topology_edges_v2(source_node_id,target_node_id,backend_name,project_id,profile_id,status,created_at,last_seen_at) VALUES($1,$2,$3,$4,$5,'active',$6,$6) ON CONFLICT(source_node_id,target_node_id) DO UPDATE SET backend_name=EXCLUDED.backend_name,project_id=EXCLUDED.project_id,profile_id=EXCLUDED.profile_id,status='active',last_seen_at=EXCLUDED.last_seen_at`, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, now.UTC()); err != nil {
@@ -1021,7 +1070,7 @@ func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id strin
 	redemption.NodeID = strings.TrimSpace(redemption.NodeID)
 	redemption.KeyFingerprint = strings.ToLower(strings.TrimSpace(redemption.KeyFingerprint))
 	redemption.NonceHash = strings.ToLower(strings.TrimSpace(redemption.NonceHash))
-	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip`
+	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max)))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip`
 	h, err := scanServerBridgeHandoff(r.db.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeHandoff{}, ErrConflict
@@ -1047,19 +1096,34 @@ func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.S
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	// Report an effective status instead of presenting a historical edge as live
-	// forever. Both endpoint identities and the edge itself must have been seen
-	// recently. Stored disabled edges remain disabled.
-	rows, err := r.db.QueryContext(ctx, `SELECT e.source_node_id,e.target_node_id,e.backend_name,e.project_id,e.profile_id,
-CASE WHEN e.status='active' AND e.last_seen_at > CURRENT_TIMESTAMP - interval '2 minutes'
- AND s.status='active' AND s.last_heartbeat_at > CURRENT_TIMESTAMP - interval '2 minutes'
- AND t.status='active' AND t.last_heartbeat_at > CURRENT_TIMESTAMP - interval '2 minutes'
- THEN 'active' WHEN e.status='disabled' THEN 'disabled' ELSE 'stale' END AS effective_status,
-e.last_seen_at,e.created_at
-FROM server_bridge_topology_edges_v2 e
-JOIN server_bridge_nodes_v2 s ON s.id=e.source_node_id
-JOIN server_bridge_nodes_v2 t ON t.id=e.target_node_id
-ORDER BY e.source_node_id,e.backend_name,e.target_node_id`)
+	// Topology & Routing 2 derives the live graph from authenticated node/runtime
+	// advertisements instead of waiting for the first successful handoff to create
+	// an edge. Historical observed edges are joined only for created/last-seen
+	// metadata; routing eligibility is always recomputed from current node state.
+	rows, err := r.db.QueryContext(ctx, `SELECT
+s.id,t.id,t.name,s.project_id,t.profile_id,
+CASE
+ WHEN s.status<>'active' OR s.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR s.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'source-stale'
+ WHEN s.routing_state='maintenance' THEN 'source-maintenance'
+ WHEN s.routing_state='draining' THEN 'source-draining'
+ WHEN s.routing_health='unhealthy' OR NOT s.routing_accepting THEN 'source-unhealthy'
+ WHEN t.status<>'active' OR t.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR t.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'stale'
+ WHEN t.routing_state='maintenance' THEN 'maintenance'
+ WHEN t.routing_state='draining' THEN 'draining'
+ WHEN t.routing_health='unhealthy' OR NOT t.routing_accepting THEN 'unhealthy'
+ WHEN t.routing_capacity_max>0 AND t.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 hcap WHERE hcap.target_node_id=t.id AND ((hcap.status='active' AND hcap.expires_at>CURRENT_TIMESTAMP) OR (hcap.status='consumed' AND hcap.consumed_at>CURRENT_TIMESTAMP-interval '30 seconds'))),0)>=t.routing_capacity_max THEN 'full'
+ ELSE 'active' END AS effective_status,
+s.routing_health,t.routing_health,t.routing_state,t.routing_players_online,t.routing_capacity_max,t.routing_accepting,
+t.runtime_id,t.runtime_epoch,t.routing_revision,
+COALESCE(e.last_seen_at,LEAST(s.routing_observed_at,t.routing_observed_at)),COALESCE(e.created_at,GREATEST(s.created_at,t.created_at))
+FROM server_bridge_nodes_v2 s
+JOIN server_bridge_nodes_v2 t ON t.project_id=s.project_id
+ AND (s.profile_id='' OR t.profile_id='' OR t.profile_id=s.profile_id)
+ AND t.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge')
+LEFT JOIN server_bridge_topology_edges_v2 e ON e.source_node_id=s.id AND e.target_node_id=t.id
+WHERE s.kind IN ('velocity','bungeecord','waterfall')
+ORDER BY s.id,t.name,t.id
+LIMIT 5000`)
 	if err != nil {
 		return nil, err
 	}
@@ -1067,7 +1131,9 @@ ORDER BY e.source_node_id,e.backend_name,e.target_node_id`)
 	out := []model.ServerBridgeTopologyEdge{}
 	for rows.Next() {
 		var e model.ServerBridgeTopologyEdge
-		if err := rows.Scan(&e.SourceNodeID, &e.TargetNodeID, &e.BackendName, &e.ProjectID, &e.ProfileID, &e.Status, &e.LastSeenAt, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.SourceNodeID, &e.TargetNodeID, &e.BackendName, &e.ProjectID, &e.ProfileID, &e.Status,
+			&e.SourceHealth, &e.TargetHealth, &e.TargetState, &e.TargetPlayers, &e.TargetCapacity, &e.AcceptingConnections,
+			&e.TargetRuntimeID, &e.TargetRuntimeEpoch, &e.RoutingRevision, &e.LastSeenAt, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -1118,6 +1184,11 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, execErr
 	} else {
 		result.TopologyEdgesDisabled, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_topology_edges_v2 e USING (SELECT source_node_id,target_node_id FROM server_bridge_topology_edges_v2 WHERE status='disabled' AND last_seen_at <= $1::timestamptz - interval '30 minutes' ORDER BY last_seen_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.source_node_id=q.source_node_id AND e.target_node_id=q.target_node_id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.TopologyEdgesPurged, _ = res.RowsAffected()
 	}
 	// Terminal transient rows are operational evidence, not permanent audit
 	// records. Keep recent rows for diagnostics, but cap unbounded growth. A

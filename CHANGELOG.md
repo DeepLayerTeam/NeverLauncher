@@ -1,3 +1,10 @@
+## [0.19.6] - 2026-10-04
+
+- Added ServerBridge 3 Topology & Routing 2 with Ed25519-attested, runtime-bound route snapshots published on Protocol v3 heartbeats.
+- Added realtime proxy route discovery filtered by heartbeat freshness, maintenance/drain state, health and effective player capacity including in-flight handoff reservations.
+- Added handoff v3 source+target runtime/routing proof capture, target runtime revalidation at redemption, direct-backend route admission checks and immediate invalidation when a target becomes non-routable.
+- Added automatic stale topology disable/purge, migration `0037_serverbridge_topology_routing2_0196`, OpenAPI route schemas, release certification requirements and the 0.19.6 CI production gate while retaining Protocol v2 rolling compatibility.
+
 ## [0.19.5] - 2026-10-03
 
 - Added production ServerBridge 3 Backend→Bridge control channel with runtime-bound durable command leasing, signed node poll/ACK and dedicated Backend Ed25519 command signatures.

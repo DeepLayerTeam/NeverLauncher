@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0036_serverbridge_control_api_0195" {
+	if st.Current != "0037_serverbridge_topology_routing2_0196" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0036_serverbridge_control_api_0195" {
+		if k != "0037_serverbridge_topology_routing2_0196" {
 			pending[k] = v
 		}
 	}
@@ -457,6 +457,32 @@ func TestServerBridgeControlAPIMigration0195(t *testing.T) {
 	} {
 		if !strings.Contains(s, required) {
 			t.Fatalf("0.19.5 ServerBridge control migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgeTopologyRouting2Migration0196(t *testing.T) {
+	b, err := os.ReadFile("sql/0037_serverbridge_topology_routing2_0196.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"routing_state",
+		"routing_accepting",
+		"routing_capacity_max",
+		"routing_health",
+		"routing_revision",
+		"source_runtime_id",
+		"source_routing_digest",
+		"target_runtime_id",
+		"target_routing_digest",
+		"server_bridge_nodes_routing_admission_shape_0196",
+		"server_bridge_nodes_routing_proof_shape_0196",
+		"server_bridge_handoff_routing_proofs_check",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.19.6 topology/routing migration missing %q", required)
 		}
 	}
 }

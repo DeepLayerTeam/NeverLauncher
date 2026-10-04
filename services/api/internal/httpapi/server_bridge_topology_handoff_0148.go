@@ -30,6 +30,15 @@ func bridgeProxyKind0148(kind string) bool {
 	}
 }
 
+func bridgeFeatureContains0196(features []string, wanted string) bool {
+	for _, feature := range normalizeBridgeFeatures0191(features) {
+		if feature == wanted {
+			return true
+		}
+	}
+	return false
+}
+
 func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Request) {
 	source, authErr := s.authenticateBridgeNodeRequest0142(r)
 	if authErr != nil {
@@ -67,11 +76,12 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		return
 	}
 	handoff, err := s.State.ServerBridge.createHandoff0148(model.ServerBridgeHandoff{
-		ID:           id,
-		Username:     req.Username,
-		SourceNodeID: source.ID,
-		TargetNodeID: req.TargetServer,
-		ExpiresAt:    time.Now().UTC().Add(serverBridgeHandoffTTL0148),
+		ID:                  id,
+		Username:            req.Username,
+		SourceNodeID:        source.ID,
+		TargetNodeID:        req.TargetServer,
+		RequireRoutingProof: req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeatureRoutingV2),
+		ExpiresAt:           time.Now().UTC().Add(serverBridgeHandoffTTL0148),
 	})
 	if err != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("handoff-denied"), Actor: source.ID, Action: "serverbridge:handoff:denied", Target: req.Username + ":" + req.TargetServer, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -80,20 +90,30 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("handoff-created"), Actor: source.ID, Action: "serverbridge:handoff:created", Target: handoff.TargetNodeID + ":" + handoff.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
-		"schemaVersion":       bridgePluginsSchema940,
-		"toolVersion":         s.Version,
-		"protocolVersion":     req.ProtocolVersion,
-		"features":            bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2),
-		"status":              "handoff-created",
-		"oneTime":             true,
-		"handoffId":           handoff.ID,
-		"sourceNodeId":        handoff.SourceNodeID,
-		"targetNodeId":        handoff.TargetNodeID,
-		"backendName":         handoff.BackendName,
-		"username":            handoff.Username,
-		"expiresAt":           handoff.ExpiresAt,
-		"sourceIdentityEpoch": handoff.SourceIdentityEpoch,
-		"targetIdentityEpoch": handoff.TargetIdentityEpoch,
+		"schemaVersion":         bridgePluginsSchema940,
+		"toolVersion":           s.Version,
+		"protocolVersion":       req.ProtocolVersion,
+		"features":              bridgeNegotiatedFeatures0191(req.ProtocolVersion, req.Features, req.ProtocolVersion == serverBridgeProtocolV2),
+		"status":                "handoff-created",
+		"oneTime":               true,
+		"handoffId":             handoff.ID,
+		"sourceNodeId":          handoff.SourceNodeID,
+		"targetNodeId":          handoff.TargetNodeID,
+		"backendName":           handoff.BackendName,
+		"username":              handoff.Username,
+		"expiresAt":             handoff.ExpiresAt,
+		"sourceIdentityEpoch":   handoff.SourceIdentityEpoch,
+		"targetIdentityEpoch":   handoff.TargetIdentityEpoch,
+		"sourceRuntimeId":       handoff.SourceRuntimeID,
+		"sourceRuntimeEpoch":    handoff.SourceRuntimeEpoch,
+		"sourceRoutingRevision": handoff.SourceRoutingRevision,
+		"sourceRoutingDigest":   handoff.SourceRoutingDigest,
+		"sourceRoutingProof":    handoff.SourceRoutingSignature,
+		"targetRuntimeId":       handoff.TargetRuntimeID,
+		"targetRuntimeEpoch":    handoff.TargetRuntimeEpoch,
+		"targetRoutingRevision": handoff.TargetRoutingRevision,
+		"targetRoutingDigest":   handoff.TargetRoutingDigest,
+		"targetRoutingProof":    handoff.TargetRoutingSignature,
 	}})
 }
 

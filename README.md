@@ -1,3 +1,7 @@
+## ServerBridge 3 Topology & Routing 2 — 0.19.6
+
+`0.19.6` переводит topology из исторически изученных handoff-edges в realtime routing plane. Каждый Protocol v3 node публикует Ed25519-подписанный snapshot, связанный с текущим `runtimeId`: `ready/maintenance/draining`, health, players/capacity и accepting state. Proxy получает только свежие допустимые backend nodes, а Backend повторно проверяет runtime/health/capacity при выдаче и redemption handoff и при прямом validate-join. Handoff v3 сохраняет source+target routing proofs; Protocol v2 остаётся для rolling upgrade. Stale topology автоматически отключается и удаляется bounded maintenance.
+
 ## ServerBridge 3 Control API — 0.19.5
 
 `0.19.5` добавляет production Backend→Bridge control channel поверх Protocol v3. Команды создаются только через RBAC (`serverbridge:control`, отдельно `serverbridge:console`), привязываются к активному `runtimeId/runtimeEpoch`, имеют обязательный idempotency key и durable PostgreSQL lifecycle. Bridge получает команды signed-node polling, проверяет отдельную Ed25519 подпись Backend, фиксирует локальный execution journal до side effect и отправляет signed ACK. Повторная доставка не повторяет завершённый side effect; неопределённое выполнение после crash/reload помечается `indeterminate`.

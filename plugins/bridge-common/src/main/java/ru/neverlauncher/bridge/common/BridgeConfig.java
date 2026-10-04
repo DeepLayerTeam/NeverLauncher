@@ -90,6 +90,7 @@ public final class BridgeConfig {
     public String capabilitiesUrl() { return backendUrl + "/api/v1/server-bridge/capabilities"; }
     public String validateJoinUrl() { return backendUrl + "/api/v1/server-bridge/validate-join"; }
     public String handoffUrl() { return backendUrl + "/api/v1/server-bridge/handoff"; }
+    public String routesUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/routes"; }
     public String heartbeatUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/heartbeat"; }
     public String eventStreamUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/events"; }
     public String controlPollUrl() { return backendUrl + "/api/v1/server-bridge/servers/" + serverId + "/control/poll"; }

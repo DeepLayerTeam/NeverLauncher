@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -7175,6 +7175,56 @@
         }
       }
     },
+    "/api/v1/server-bridge/servers/{serverId}/routes": {
+      "get": {
+        "operationId": "get_server_bridge_servers_by_serverId_routes",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/servers/{serverId}/routes",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeRoutesResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "NodeId": [],
+            "NodeKeyFingerprint": [],
+            "NodeTimestamp": [],
+            "NodeNonce": [],
+            "NodeSignature": []
+          }
+        ]
+      }
+    },
     "/api/v1/server-bridge/topology": {
       "get": {
         "operationId": "get_server_bridge_topology",
@@ -9469,6 +9519,191 @@
         },
         "additionalProperties": false
       },
+      "ServerBridgeRoutingSnapshotV3": {
+        "type": "object",
+        "required": [
+          "runtimeId",
+          "observedAtUnixMillis",
+          "state",
+          "acceptingConnections",
+          "playersOnline",
+          "capacityMax",
+          "health",
+          "signature"
+        ],
+        "properties": {
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "observedAtUnixMillis": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "maintenance",
+              "draining"
+            ]
+          },
+          "acceptingConnections": {
+            "type": "boolean"
+          },
+          "playersOnline": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "capacityMax": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "health": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "unhealthy"
+            ]
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ServerBridgeRouteTargetV3": {
+        "type": "object",
+        "required": [
+          "nodeId",
+          "backendName",
+          "kind",
+          "runtimeId",
+          "runtimeEpoch",
+          "health",
+          "state",
+          "playersOnline",
+          "capacityMax",
+          "availableSlots",
+          "routingRevision",
+          "routingDigest",
+          "observedAt",
+          "lastHeartbeatAt"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "backendName": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "runtimeId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "runtimeEpoch": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "health": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded"
+            ]
+          },
+          "state": {
+            "const": "ready"
+          },
+          "playersOnline": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "capacityMax": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "availableSlots": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "routingRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "routingDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastHeartbeatAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ServerBridgeRoutesResponseV3": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "data"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "toolVersion",
+              "sourceNodeId",
+              "freshnessSeconds",
+              "items"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "type": "string"
+              },
+              "toolVersion": {
+                "type": "string"
+              },
+              "sourceNodeId": {
+                "type": "string"
+              },
+              "freshnessSeconds": {
+                "const": 90
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 1024,
+                "items": {
+                  "$ref": "#/components/schemas/ServerBridgeRouteTargetV3"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
       "HeartbeatRequestV3": {
         "type": "object",
         "required": [
@@ -9524,6 +9759,9 @@
           },
           "telemetry": {
             "$ref": "#/components/schemas/ServerBridgeTelemetryV3"
+          },
+          "routing": {
+            "$ref": "#/components/schemas/ServerBridgeRoutingSnapshotV3"
           },
           "hostname": {
             "type": "string"

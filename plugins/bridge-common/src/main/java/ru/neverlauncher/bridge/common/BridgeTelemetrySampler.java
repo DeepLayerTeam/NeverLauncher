@@ -32,6 +32,13 @@ public final class BridgeTelemetrySampler {
         if (sample != null) platform.set(sample);
     }
 
+    public BridgePlatformTelemetry latestPlatformSample() {
+        BridgePlatformTelemetry sample = platform.get();
+        if (sample == null) return null;
+        if (System.currentTimeMillis() - sample.sampledAtUnixMillis() > PLATFORM_SAMPLE_MAX_AGE_MS) return null;
+        return sample;
+    }
+
     public BridgeTelemetrySnapshot sample(String runtimeId) {
         long now = System.currentTimeMillis();
         long previousAt = previousSampleAt.getAndSet(now);

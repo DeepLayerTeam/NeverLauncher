@@ -434,6 +434,22 @@ type ServerBridgeNode struct {
 	Telemetry                  *ServerBridgeTelemetry `json:"telemetry,omitempty"`
 }
 
+// ServerBridgeRoutingSnapshot is a signed runtime-bound routing advertisement.
+// It is accepted only from Protocol v3 nodes and is used for fail-closed handoff routing.
+type ServerBridgeRoutingSnapshot struct {
+	RuntimeID            string    `json:"runtimeId"`
+	ObservedAtUnixMillis int64     `json:"observedAtUnixMillis"`
+	State                string    `json:"state"`
+	AcceptingConnections bool      `json:"acceptingConnections"`
+	PlayersOnline        int       `json:"playersOnline"`
+	CapacityMax          int       `json:"capacityMax"`
+	Health               string    `json:"health"`
+	Revision             int64     `json:"revision"`
+	Digest               string    `json:"digest"`
+	Signature            string    `json:"signature"`
+	ObservedAt           time.Time `json:"observedAt,omitempty"`
+}
+
 // ServerBridgeTelemetry is one bounded telemetry snapshot bound to one verified JVM runtime.
 type ServerBridgeTelemetry struct {
 	Sequence                    int64    `json:"sequence"`
@@ -590,46 +606,86 @@ type ServerBridgeJoinRedemption struct {
 // cryptographically bound to both current node identities. Backend validation
 // atomically consumes it, so the original launcher ticket is never replayed.
 type ServerBridgeHandoff struct {
-	ID                   string    `json:"id"`
-	Username             string    `json:"username"`
-	UsernameNormalized   string    `json:"-"`
-	UUID                 string    `json:"uuid"`
-	UserID               string    `json:"userId"`
-	SessionID            string    `json:"sessionId"`
-	SourceNodeID         string    `json:"sourceNodeId"`
-	TargetNodeID         string    `json:"targetNodeId"`
-	BackendName          string    `json:"backendName,omitempty"`
-	ProjectID            string    `json:"projectId"`
-	ProfileID            string    `json:"profileId"`
-	Channel              string    `json:"channel"`
-	TrustedDeviceID      string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch         int64     `json:"bindingEpoch"`
-	MinecraftSessionID   string    `json:"minecraftSessionId,omitempty"`
-	SourceIdentityEpoch  int64     `json:"sourceIdentityEpoch"`
-	SourceKeyFingerprint string    `json:"sourceKeyFingerprint"`
-	TargetIdentityEpoch  int64     `json:"targetIdentityEpoch"`
-	TargetKeyFingerprint string    `json:"targetKeyFingerprint"`
-	ProtocolVersion      int       `json:"protocolVersion"`
-	Status               string    `json:"status"`
-	CreatedAt            time.Time `json:"createdAt"`
-	ExpiresAt            time.Time `json:"expiresAt"`
-	ConsumedAt           time.Time `json:"consumedAt,omitempty"`
-	RedeemedNonceHash    string    `json:"redeemedNonceHash,omitempty"`
-	RedeemedByIP         string    `json:"redeemedByIp,omitempty"`
+	ID                     string    `json:"id"`
+	Username               string    `json:"username"`
+	UsernameNormalized     string    `json:"-"`
+	UUID                   string    `json:"uuid"`
+	UserID                 string    `json:"userId"`
+	SessionID              string    `json:"sessionId"`
+	SourceNodeID           string    `json:"sourceNodeId"`
+	TargetNodeID           string    `json:"targetNodeId"`
+	BackendName            string    `json:"backendName,omitempty"`
+	ProjectID              string    `json:"projectId"`
+	ProfileID              string    `json:"profileId"`
+	Channel                string    `json:"channel"`
+	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch           int64     `json:"bindingEpoch"`
+	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	SourceIdentityEpoch    int64     `json:"sourceIdentityEpoch"`
+	SourceKeyFingerprint   string    `json:"sourceKeyFingerprint"`
+	TargetIdentityEpoch    int64     `json:"targetIdentityEpoch"`
+	TargetKeyFingerprint   string    `json:"targetKeyFingerprint"`
+	ProtocolVersion        int       `json:"protocolVersion"`
+	RequireRoutingProof    bool      `json:"-"`
+	SourceRuntimeID        string    `json:"sourceRuntimeId,omitempty"`
+	SourceRuntimeEpoch     int64     `json:"sourceRuntimeEpoch,omitempty"`
+	SourceRoutingRevision  int64     `json:"sourceRoutingRevision,omitempty"`
+	SourceRoutingDigest    string    `json:"sourceRoutingDigest,omitempty"`
+	SourceRoutingSignature string    `json:"sourceRoutingSignature,omitempty"`
+	TargetRuntimeID        string    `json:"targetRuntimeId,omitempty"`
+	TargetRuntimeEpoch     int64     `json:"targetRuntimeEpoch,omitempty"`
+	TargetRoutingRevision  int64     `json:"targetRoutingRevision,omitempty"`
+	TargetRoutingDigest    string    `json:"targetRoutingDigest,omitempty"`
+	TargetRoutingSignature string    `json:"targetRoutingSignature,omitempty"`
+	Status                 string    `json:"status"`
+	CreatedAt              time.Time `json:"createdAt"`
+	ExpiresAt              time.Time `json:"expiresAt"`
+	ConsumedAt             time.Time `json:"consumedAt,omitempty"`
+	RedeemedNonceHash      string    `json:"redeemedNonceHash,omitempty"`
+	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
 }
 
 // ServerBridgeTopologyEdge records an observed proxy -> backend route. Edges are
 // learned from authenticated handoffs; operators do not patch proxy/server
 // configuration to maintain a parallel routing graph in NeverLauncher.
 type ServerBridgeTopologyEdge struct {
-	SourceNodeID string    `json:"sourceNodeId"`
-	TargetNodeID string    `json:"targetNodeId"`
-	BackendName  string    `json:"backendName"`
-	ProjectID    string    `json:"projectId"`
-	ProfileID    string    `json:"profileId"`
-	Status       string    `json:"status"`
-	LastSeenAt   time.Time `json:"lastSeenAt"`
-	CreatedAt    time.Time `json:"createdAt"`
+	SourceNodeID         string    `json:"sourceNodeId"`
+	TargetNodeID         string    `json:"targetNodeId"`
+	BackendName          string    `json:"backendName"`
+	ProjectID            string    `json:"projectId"`
+	ProfileID            string    `json:"profileId"`
+	Status               string    `json:"status"`
+	SourceHealth         string    `json:"sourceHealth,omitempty"`
+	TargetHealth         string    `json:"targetHealth,omitempty"`
+	TargetState          string    `json:"targetState,omitempty"`
+	TargetPlayers        int       `json:"targetPlayers,omitempty"`
+	TargetCapacity       int       `json:"targetCapacity,omitempty"`
+	AcceptingConnections bool      `json:"acceptingConnections"`
+	TargetRuntimeID      string    `json:"targetRuntimeId,omitempty"`
+	TargetRuntimeEpoch   int64     `json:"targetRuntimeEpoch,omitempty"`
+	RoutingRevision      int64     `json:"routingRevision,omitempty"`
+	LastSeenAt           time.Time `json:"lastSeenAt"`
+	CreatedAt            time.Time `json:"createdAt"`
+}
+
+// ServerBridgeRouteTarget is one backend currently admissible for a proxy.
+type ServerBridgeRouteTarget struct {
+	NodeID          string    `json:"nodeId"`
+	BackendName     string    `json:"backendName"`
+	Kind            string    `json:"kind"`
+	ProjectID       string    `json:"projectId"`
+	ProfileID       string    `json:"profileId"`
+	RuntimeID       string    `json:"runtimeId"`
+	RuntimeEpoch    int64     `json:"runtimeEpoch"`
+	Health          string    `json:"health"`
+	State           string    `json:"state"`
+	PlayersOnline   int       `json:"playersOnline"`
+	CapacityMax     int       `json:"capacityMax"`
+	AvailableSlots  int       `json:"availableSlots"`
+	RoutingRevision int64     `json:"routingRevision"`
+	RoutingDigest   string    `json:"routingDigest"`
+	ObservedAt      time.Time `json:"observedAt"`
+	LastHeartbeatAt time.Time `json:"lastHeartbeatAt"`
 }
 
 // ServerBridgeMaintenanceResult is the result of one HA-safe maintenance pass.
@@ -641,6 +697,7 @@ type ServerBridgeMaintenanceResult struct {
 	JoinTicketsInvalidated    int64     `json:"joinTicketsInvalidated"`
 	HandoffsExpired           int64     `json:"handoffsExpired"`
 	TopologyEdgesDisabled     int64     `json:"topologyEdgesDisabled"`
+	TopologyEdgesPurged       int64     `json:"topologyEdgesPurged"`
 	TerminalJoinTicketsPurged int64     `json:"terminalJoinTicketsPurged"`
 	TerminalHandoffsPurged    int64     `json:"terminalHandoffsPurged"`
 	TelemetrySamplesPurged    int64     `json:"telemetrySamplesPurged"`

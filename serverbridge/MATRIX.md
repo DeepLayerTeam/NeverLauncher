@@ -1,4 +1,4 @@
-# NeverLauncher 0.19.5 — Public ServerBridge Matrix
+# NeverLauncher 0.19.6 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.
 
@@ -22,3 +22,8 @@ Runtime status is not hard-coded into this document; CI evidence is attached to 
 ## 0.19.5 Control API
 
 Все target-платформы используют Protocol v3 feature `control.secure-channel-v1`: signed node poll/ACK, Backend Ed25519 command signatures, runtime-bound leases, local idempotency journal и platform-native execution. OS shell execution не используется. Proxy cores честно возвращают `unsupported` для whitelist/ban/save, которыми они не управляют.
+
+
+## 0.19.6 Topology & Routing 2
+
+Protocol v3 feature `topology.routing-v2` publishes an Ed25519-attested, runtime-bound route snapshot on heartbeat. Proxy nodes receive only fresh `ready` backends with `healthy/degraded` health and available capacity. Maintenance, draining, unhealthy, stale and full nodes are excluded and rejected again during handoff redemption/direct join. Handoff v3 stores source+target runtime/routing proofs; v2 remains available for rolling upgrades. Stale learned edges are disabled and purged automatically.

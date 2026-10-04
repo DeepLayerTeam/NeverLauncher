@@ -484,11 +484,13 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         if ("server.maintenance".equals(type)) {
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             maintenanceMode.set(enabled);
+            updateRoutingModes();
             return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
         }
         if ("server.drain".equals(type)) {
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             drainMode.set(enabled);
+            updateRoutingModes();
             return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
         }
         if ("server.shutdown".equals(type)) {
@@ -505,6 +507,15 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             return executeFoliaBroadcast(command);
         }
         return callOnBukkitControlThread(() -> executeControlOnBukkitThread(command));
+    }
+
+    private void updateRoutingModes() {
+        RuntimeState current = runtime;
+        if (current != null) {
+            current.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
+            ScheduledExecutorService executor = networkExecutor;
+            if (executor != null && !executor.isShutdown()) executor.execute(this::heartbeatOnce);
+        }
     }
 
     private BridgeControlResult executeControlOnBukkitThread(BridgeControlCommand command) {
