@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +42,8 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_SERVER_TELEMETRY,
         BridgeDefaults.FEATURE_EVENT_STREAM,
         BridgeDefaults.FEATURE_CONTROL_API,
-        BridgeDefaults.FEATURE_ROUTING_V2
+        BridgeDefaults.FEATURE_ROUTING_V2,
+        BridgeDefaults.FEATURE_PLAYER_SESSION_V3
     );
 
     private final BridgeConfig config;
@@ -53,6 +55,7 @@ public final class NeverLauncherApiClient {
     private final BridgeRuntimeIdentity runtimeIdentity;
     private final BridgeTelemetrySampler telemetrySampler = new BridgeTelemetrySampler();
     private final AtomicReference<String> routingState = new AtomicReference<>("ready");
+    private final BridgePlayerSessionRegistry playerSessions = new BridgePlayerSessionRegistry();
     private final BridgeEventJournal eventJournal;
     private final ExecutorService eventExecutor;
     private final AtomicBoolean eventFlushScheduled = new AtomicBoolean(false);
@@ -165,7 +168,11 @@ public final class NeverLauncherApiClient {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 String raw = response.body() == null ? "" : response.body();
                 boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
-                if (allowed) return new JoinValidationResult(true, "session_valid", raw);
+                if (allowed) {
+                    String correlation = extractJsonString(raw, "sessionCorrelationId");
+                    if (!correlation.isBlank()) playerSessions.bind(username, correlation);
+                    return new JoinValidationResult(true, "session_valid", raw);
+                }
                 return new JoinValidationResult(false, extractReason(raw), raw);
             } catch (IOException e) {
                 lastIo = e;
@@ -195,9 +202,13 @@ public final class NeverLauncherApiClient {
             JoinValidationResult route = verifyTargetRoute(targetServer);
             if (!route.allowed) return route;
         }
+        String correlation = playerSessions.get(username);
+        String sessionField = protocol.protocolVersion() >= BridgeDefaults.PROTOCOL_VERSION &&
+            protocol.features().contains(BridgeDefaults.FEATURE_PLAYER_SESSION_V3) && !correlation.isBlank()
+            ? ",\"sessionCorrelationId\":" + quote(correlation) : "";
         String body = "{" + protocolFields(protocol) + "," +
             "\"username\":" + quote(username) + "," +
-            "\"targetServer\":" + quote(targetServer) +
+            "\"targetServer\":" + quote(targetServer) + sessionField +
             "}";
         IOException lastIo = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
@@ -346,7 +357,17 @@ public final class NeverLauncherApiClient {
         BridgeEventJournal journal = eventJournal;
         if (journal == null || eventClosed.get()) return false;
         try {
-            journal.append(type, payload == null ? Map.of() : payload);
+            Map<String, String> actual = payload == null ? new HashMap<>() : new HashMap<>(payload);
+            String username = actual.getOrDefault("username", "");
+            if (!username.isBlank() && !actual.containsKey("sessionCorrelationId")) {
+                String correlation = playerSessions.get(username);
+                if (!correlation.isBlank()) actual.put("sessionCorrelationId", correlation);
+            }
+            journal.append(type, actual);
+            String normalizedType = type == null ? "" : type.trim().toLowerCase();
+            if (("player.quit".equals(normalizedType) || "player.kick".equals(normalizedType)) && !username.isBlank()) {
+                playerSessions.clear(username);
+            }
             scheduleEventFlush();
             return true;
         } catch (Exception ignored) {
@@ -672,6 +693,8 @@ public final class NeverLauncherApiClient {
         if (start >= 0 && end > start) return raw.substring(start + 1, end);
         return "";
     }
+
+
 
     private static String normalized(String value) {
         return value == null ? "" : value.trim();

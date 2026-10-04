@@ -3,6 +3,7 @@ package httpapi
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,6 +29,15 @@ func bridgeProxyKind0148(kind string) bool {
 	default:
 		return false
 	}
+}
+
+func validPlayerSessionCorrelation0197(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if len(value) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
 }
 
 func bridgeFeatureContains0196(features []string, wanted string) bool {
@@ -62,6 +72,7 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	req.TargetServer = strings.TrimSpace(req.TargetServer)
+	req.SessionCorrelationID = strings.ToLower(strings.TrimSpace(req.SessionCorrelationID))
 	if ok, reason := validateBridgeProtocolFeatures0191(req.ProtocolVersion, req.Features); !ok {
 		writeError(w, http.StatusUpgradeRequired, reason)
 		return
@@ -70,18 +81,24 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "username и targetServer обязательны")
 		return
 	}
+	playerSessionV3 := req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeaturePlayerSessionV3)
+	if playerSessionV3 && !validPlayerSessionCorrelation0197(req.SessionCorrelationID) {
+		writeError(w, http.StatusBadRequest, "serverbridge_session_correlation_required")
+		return
+	}
 	id, err := newServerBridgeHandoffID0148()
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "handoff_entropy_unavailable")
 		return
 	}
 	handoff, err := s.State.ServerBridge.createHandoff0148(model.ServerBridgeHandoff{
-		ID:                  id,
-		Username:            req.Username,
-		SourceNodeID:        source.ID,
-		TargetNodeID:        req.TargetServer,
-		RequireRoutingProof: req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeatureRoutingV2),
-		ExpiresAt:           time.Now().UTC().Add(serverBridgeHandoffTTL0148),
+		ID:                   id,
+		Username:             req.Username,
+		SourceNodeID:         source.ID,
+		TargetNodeID:         req.TargetServer,
+		SessionCorrelationID: req.SessionCorrelationID,
+		RequireRoutingProof:  req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeatureRoutingV2),
+		ExpiresAt:            time.Now().UTC().Add(serverBridgeHandoffTTL0148),
 	})
 	if err != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("handoff-denied"), Actor: source.ID, Action: "serverbridge:handoff:denied", Target: req.Username + ":" + req.TargetServer, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -101,6 +118,8 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		"targetNodeId":          handoff.TargetNodeID,
 		"backendName":           handoff.BackendName,
 		"username":              handoff.Username,
+		"sessionCorrelationId":  handoff.SessionCorrelationID,
+		"transferSequence":      handoff.TransferSequence,
 		"expiresAt":             handoff.ExpiresAt,
 		"sourceIdentityEpoch":   handoff.SourceIdentityEpoch,
 		"targetIdentityEpoch":   handoff.TargetIdentityEpoch,
@@ -200,6 +219,7 @@ func bridgeJoinFromHandoff0148(h model.ServerBridgeHandoff) bridgeJoinRecord {
 		TrustedDeviceID:      h.TrustedDeviceID,
 		BindingEpoch:         h.BindingEpoch,
 		MinecraftSessionID:   h.MinecraftSessionID,
+		SessionCorrelationID: h.SessionCorrelationID,
 		ProtocolVersion:      h.ProtocolVersion,
 		IssuedIdentityEpoch:  h.TargetIdentityEpoch,
 		IssuedKeyFingerprint: h.TargetKeyFingerprint,

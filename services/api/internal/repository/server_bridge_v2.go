@@ -615,6 +615,9 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 				auditID, serverID, "serverbridge:event:"+event.Type, target, now.UTC()); err != nil {
 				return model.ServerBridgeEventAppendResult{}, err
 			}
+			if err = r.applyPlayerLifecycleEventTx0197(ctx, tx, serverID, event, now); err != nil {
+				return model.ServerBridgeEventAppendResult{}, err
+			}
 		}
 		ack = event.Sequence
 	}
@@ -630,7 +633,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoinTicket, error) {
 	var j model.ServerBridgeJoinTicket
 	var consumed sql.NullTime
-	err := row.Scan(&j.ID, &j.TicketVersion, &j.Username, &j.UsernameNormalized, &j.UUID, &j.UserID, &j.SessionID, &j.ServerID, &j.ProjectID, &j.ProfileID, &j.Channel, &j.AccessTokenHash, &j.TrustedDeviceID, &j.BindingEpoch, &j.MinecraftSessionID, &j.ProtocolVersion, &j.IssuedIdentityEpoch, &j.IssuedKeyFingerprint, &j.Status, &j.CreatedAt, &j.ExpiresAt, &consumed, &j.RedeemedIdentityEpoch, &j.RedeemedKeyFingerprint, &j.RedeemedNonceHash, &j.RedeemedByIP)
+	err := row.Scan(&j.ID, &j.TicketVersion, &j.Username, &j.UsernameNormalized, &j.UUID, &j.UserID, &j.SessionID, &j.ServerID, &j.ProjectID, &j.ProfileID, &j.Channel, &j.AccessTokenHash, &j.TrustedDeviceID, &j.BindingEpoch, &j.MinecraftSessionID, &j.ProtocolVersion, &j.IssuedIdentityEpoch, &j.IssuedKeyFingerprint, &j.Status, &j.CreatedAt, &j.ExpiresAt, &consumed, &j.RedeemedIdentityEpoch, &j.RedeemedKeyFingerprint, &j.RedeemedNonceHash, &j.RedeemedByIP, &j.SessionCorrelationID)
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
@@ -640,7 +643,7 @@ func scanBridgeJoin(row interface{ Scan(...any) error }) (model.ServerBridgeJoin
 	return j, nil
 }
 
-const bridgeJoinSelectV2 = `SELECT id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_join_tickets_v2`
+const bridgeJoinSelectV2 = `SELECT id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id FROM server_bridge_join_tickets_v2`
 
 func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error) {
 	if err := r.check(); err != nil {
@@ -699,7 +702,7 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_join_tickets_v2(id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,trusted_device_id,binding_epoch,minecraft_session_id,protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at) VALUES($1,2,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,''),$13,NULLIF($14,''),$15,$16,$17,'active',$18,$19)`, j.ID, j.Username, j.UsernameNormalized, j.UUID, j.UserID, j.SessionID, j.ServerID, j.ProjectID, j.ProfileID, j.Channel, j.AccessTokenHash, j.TrustedDeviceID, j.BindingEpoch, j.MinecraftSessionID, j.ProtocolVersion, j.IssuedIdentityEpoch, j.IssuedKeyFingerprint, j.CreatedAt.UTC(), j.ExpiresAt.UTC())
+	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_join_tickets_v2(id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,trusted_device_id,binding_epoch,minecraft_session_id,protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,session_correlation_id) VALUES($1,2,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,''),$13,NULLIF($14,''),$15,$16,$17,'active',$18,$19,$20)`, j.ID, j.Username, j.UsernameNormalized, j.UUID, j.UserID, j.SessionID, j.ServerID, j.ProjectID, j.ProfileID, j.Channel, j.AccessTokenHash, j.TrustedDeviceID, j.BindingEpoch, j.MinecraftSessionID, j.ProtocolVersion, j.IssuedIdentityEpoch, j.IssuedKeyFingerprint, j.CreatedAt.UTC(), j.ExpiresAt.UTC(), strings.ToLower(strings.TrimSpace(j.SessionCorrelationID)))
 	if err != nil {
 		return model.ServerBridgeJoinTicket{}, err
 	}
@@ -730,20 +733,35 @@ func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id st
 	redemption.KeyFingerprint = strings.ToLower(strings.TrimSpace(redemption.KeyFingerprint))
 	redemption.NonceHash = strings.ToLower(strings.TrimSpace(redemption.NonceHash))
 	redemption.RemoteIP = strings.TrimSpace(redemption.RemoteIP)
+	redemption.SessionCorrelationID = strings.ToLower(strings.TrimSpace(redemption.SessionCorrelationID))
 	if id == "" || redemption.NodeID == "" || redemption.IdentityEpoch < 1 || len(redemption.KeyFingerprint) != 64 || len(redemption.NonceHash) != 64 {
 		return model.ServerBridgeJoinTicket{}, ErrConflict
 	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeJoinTicket{}, err
+	}
+	defer tx.Rollback()
 	q := `UPDATE server_bridge_join_tickets_v2 AS j
 SET status='consumed',consumed_at=$6,redeemed_identity_epoch=$3,redeemed_key_fingerprint=$4,redeemed_nonce_hash=$5,redeemed_by_ip=$7
 WHERE j.id=$1 AND j.server_id=$2 AND j.ticket_version=2 AND j.status='active' AND j.expires_at>$6
   AND j.issued_identity_epoch=$3 AND j.issued_key_fingerprint=$4
   AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=j.server_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$4)
-RETURNING id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip`
-	j, err := scanBridgeJoin(r.db.QueryRowContext(ctx, q, id, redemption.NodeID, redemption.IdentityEpoch, redemption.KeyFingerprint, redemption.NonceHash, now.UTC(), redemption.RemoteIP))
+RETURNING id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id`
+	j, err := scanBridgeJoin(tx.QueryRowContext(ctx, q, id, redemption.NodeID, redemption.IdentityEpoch, redemption.KeyFingerprint, redemption.NonceHash, now.UTC(), redemption.RemoteIP))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeJoinTicket{}, ErrConflict
 	}
-	return j, err
+	if err != nil {
+		return model.ServerBridgeJoinTicket{}, err
+	}
+	if err = r.activatePlayerSessionTx0197(ctx, tx, j, redemption, now); err != nil {
+		return model.ServerBridgeJoinTicket{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeJoinTicket{}, err
+	}
+	return j, nil
 }
 
 func (r *SQLRepository) InvalidateServerBridgeJoinTicket(ctx context.Context, id string, now time.Time) (bool, error) {
@@ -761,34 +779,59 @@ func (r *SQLRepository) InvalidateServerBridgeSession(ctx context.Context, sessi
 	if err := r.check(); err != nil {
 		return 0, err
 	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
 	q := `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$3 WHERE session_id=$1 AND ($2='' OR server_id=$2) AND status='active'`
-	res, err := r.db.ExecContext(ctx, q, sessionID, serverID, now.UTC())
+	res, err := tx.ExecContext(ctx, q, sessionID, serverID, now.UTC())
 	if err != nil {
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
-	hRes, err := r.db.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$3 WHERE session_id=$1 AND ($2='' OR target_node_id=$2 OR source_node_id=$2) AND status='active'`, sessionID, serverID, now.UTC())
+	hRes, err := tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$3 WHERE session_id=$1 AND ($2='' OR target_node_id=$2 OR source_node_id=$2) AND status='active'`, sessionID, serverID, now.UTC())
 	if err != nil {
 		return int(n), err
 	}
 	hn, _ := hRes.RowsAffected()
-	return int(n + hn), nil
+	pn, err := r.invalidatePlayerSessionsBySessionTx0197(ctx, tx, sessionID, serverID, "never-session-invalidated", now)
+	if err != nil {
+		return int(n + hn), err
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(n+hn) + pn, nil
 }
+
 func (r *SQLRepository) InvalidateServerBridgeUser(ctx context.Context, userID string, now time.Time) (int, error) {
 	if err := r.check(); err != nil {
 		return 0, err
 	}
-	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE user_id=$1 AND status='active'`, userID, now.UTC())
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=$2 WHERE user_id=$1 AND status='active'`, userID, now.UTC())
 	if err != nil {
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
-	hRes, err := r.db.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE user_id=$1 AND status='active'`, userID, now.UTC())
+	hRes, err := tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE user_id=$1 AND status='active'`, userID, now.UTC())
 	if err != nil {
 		return int(n), err
 	}
 	hn, _ := hRes.RowsAffected()
-	return int(n + hn), nil
+	pn, err := r.invalidatePlayerSessionsByUserTx0197(ctx, tx, userID, "user-invalidated", now)
+	if err != nil {
+		return int(n + hn), err
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+	return int(n+hn) + pn, nil
 }
 
 func (r *SQLRepository) SaveServerBridgeTexture(ctx context.Context, t model.ServerBridgeTexture) (model.ServerBridgeTexture, error) {
@@ -860,7 +903,7 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 		&h.SourceIdentityEpoch, &h.SourceKeyFingerprint, &h.TargetIdentityEpoch, &h.TargetKeyFingerprint, &h.ProtocolVersion,
 		&h.SourceRuntimeID, &h.SourceRuntimeEpoch, &h.SourceRoutingRevision, &h.SourceRoutingDigest, &h.SourceRoutingSignature,
 		&h.TargetRuntimeID, &h.TargetRuntimeEpoch, &h.TargetRoutingRevision, &h.TargetRoutingDigest, &h.TargetRoutingSignature,
-		&h.Status, &h.CreatedAt, &h.ExpiresAt, &consumed, &h.RedeemedNonceHash, &h.RedeemedByIP)
+		&h.Status, &h.CreatedAt, &h.ExpiresAt, &consumed, &h.RedeemedNonceHash, &h.RedeemedByIP, &h.SessionCorrelationID, &h.TransferSequence)
 	if err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
@@ -870,7 +913,7 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 	return h, nil
 }
 
-const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip FROM server_bridge_handoffs_v2`
+const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence FROM server_bridge_handoffs_v2`
 
 // CreateServerBridgeHandoff mints a target-specific credential only from a very
 // recent join ticket already redeemed by the authenticated proxy. The target is
@@ -996,7 +1039,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	var sourceJoin model.ServerBridgeJoinTicket
 	var consumedAt sql.NullTime
 	err = tx.QueryRowContext(ctx, bridgeJoinSelectV2+` WHERE server_id=$1 AND username_normalized=$2 AND status='consumed' AND EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=server_bridge_join_tickets_v2.session_id AND a.user_id=server_bridge_join_tickets_v2.user_id AND a.status='active' AND a.expires_at>$3 AND a.binding_epoch=server_bridge_join_tickets_v2.binding_epoch) ORDER BY consumed_at DESC LIMIT 1`, h.SourceNodeID, h.UsernameNormalized, now.UTC()).
-		Scan(&sourceJoin.ID, &sourceJoin.TicketVersion, &sourceJoin.Username, &sourceJoin.UsernameNormalized, &sourceJoin.UUID, &sourceJoin.UserID, &sourceJoin.SessionID, &sourceJoin.ServerID, &sourceJoin.ProjectID, &sourceJoin.ProfileID, &sourceJoin.Channel, &sourceJoin.AccessTokenHash, &sourceJoin.TrustedDeviceID, &sourceJoin.BindingEpoch, &sourceJoin.MinecraftSessionID, &sourceJoin.ProtocolVersion, &sourceJoin.IssuedIdentityEpoch, &sourceJoin.IssuedKeyFingerprint, &sourceJoin.Status, &sourceJoin.CreatedAt, &sourceJoin.ExpiresAt, &consumedAt, &sourceJoin.RedeemedIdentityEpoch, &sourceJoin.RedeemedKeyFingerprint, &sourceJoin.RedeemedNonceHash, &sourceJoin.RedeemedByIP)
+		Scan(&sourceJoin.ID, &sourceJoin.TicketVersion, &sourceJoin.Username, &sourceJoin.UsernameNormalized, &sourceJoin.UUID, &sourceJoin.UserID, &sourceJoin.SessionID, &sourceJoin.ServerID, &sourceJoin.ProjectID, &sourceJoin.ProfileID, &sourceJoin.Channel, &sourceJoin.AccessTokenHash, &sourceJoin.TrustedDeviceID, &sourceJoin.BindingEpoch, &sourceJoin.MinecraftSessionID, &sourceJoin.ProtocolVersion, &sourceJoin.IssuedIdentityEpoch, &sourceJoin.IssuedKeyFingerprint, &sourceJoin.Status, &sourceJoin.CreatedAt, &sourceJoin.ExpiresAt, &consumedAt, &sourceJoin.RedeemedIdentityEpoch, &sourceJoin.RedeemedKeyFingerprint, &sourceJoin.RedeemedNonceHash, &sourceJoin.RedeemedByIP, &sourceJoin.SessionCorrelationID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeHandoff{}, ErrNotFound
 	}
@@ -1025,7 +1068,23 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	h.Channel = sourceJoin.Channel
 	h.TrustedDeviceID = sourceJoin.TrustedDeviceID
 	h.BindingEpoch = sourceJoin.BindingEpoch
+	expectedCorrelation := strings.ToLower(strings.TrimSpace(h.SessionCorrelationID))
+	if expectedCorrelation != "" && !strings.EqualFold(expectedCorrelation, sourceJoin.SessionCorrelationID) {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: session correlation proof mismatch", ErrConflict)
+	}
 	h.MinecraftSessionID = sourceJoin.MinecraftSessionID
+	// A lifecycle transfer is runtime-bound. The explicit 0.19.7 correlation
+	// proof therefore requires v3 + Routing 2 on both ends; older rolling-upgrade
+	// paths continue with the pre-0.19.7 handoff without fabricating a runtime.
+	lifecycleTransfer := sourceJoin.ProtocolVersion >= 3 && targetProtocolVersion >= 3 && routingV3 && len(h.SourceRuntimeID) == 64 && h.SourceRuntimeEpoch > 0 && len(h.TargetRuntimeID) == 64 && h.TargetRuntimeEpoch > 0
+	if expectedCorrelation != "" && !lifecycleTransfer {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer requires v3 runtime-bound source and target", ErrConflict)
+	}
+	if lifecycleTransfer {
+		h.SessionCorrelationID = strings.ToLower(strings.TrimSpace(sourceJoin.SessionCorrelationID))
+	} else {
+		h.SessionCorrelationID = ""
+	}
 	h.SourceIdentityEpoch = sourceEpoch
 	h.SourceKeyFingerprint = strings.ToLower(sourceFingerprint)
 	h.TargetIdentityEpoch = targetEpoch
@@ -1037,10 +1096,18 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		h.ExpiresAt = now.UTC().Add(30 * time.Second)
 	}
 
+	if h.SessionCorrelationID != "" {
+		if err = r.issuePlayerTransferTx0197(ctx, tx, &h, expectedCorrelation, now); err != nil {
+			return model.ServerBridgeHandoff{}, err
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='replaced',invalidated_at=$3 WHERE target_node_id=$1 AND username_normalized=$2 AND status='active'`, h.TargetNodeID, h.UsernameNormalized, now.UTC()); err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_handoffs_v2(id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,trusted_device_id,binding_epoch,minecraft_session_id,source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14,NULLIF($15,''),$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,'active',$31,$32)`, h.ID, h.Username, h.UsernameNormalized, h.UUID, h.UserID, h.SessionID, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, h.Channel, h.TrustedDeviceID, h.BindingEpoch, h.MinecraftSessionID, h.SourceIdentityEpoch, h.SourceKeyFingerprint, h.TargetIdentityEpoch, h.TargetKeyFingerprint, h.ProtocolVersion, h.SourceRuntimeID, h.SourceRuntimeEpoch, h.SourceRoutingRevision, h.SourceRoutingDigest, h.SourceRoutingSignature, h.TargetRuntimeID, h.TargetRuntimeEpoch, h.TargetRoutingRevision, h.TargetRoutingDigest, h.TargetRoutingSignature, h.CreatedAt, h.ExpiresAt); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_handoffs_v2(id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,trusted_device_id,binding_epoch,minecraft_session_id,source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,session_correlation_id,transfer_sequence) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14,NULLIF($15,''),$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,'active',$31,$32,$33,$34)`, h.ID, h.Username, h.UsernameNormalized, h.UUID, h.UserID, h.SessionID, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, h.Channel, h.TrustedDeviceID, h.BindingEpoch, h.MinecraftSessionID, h.SourceIdentityEpoch, h.SourceKeyFingerprint, h.TargetIdentityEpoch, h.TargetKeyFingerprint, h.ProtocolVersion, h.SourceRuntimeID, h.SourceRuntimeEpoch, h.SourceRoutingRevision, h.SourceRoutingDigest, h.SourceRoutingSignature, h.TargetRuntimeID, h.TargetRuntimeEpoch, h.TargetRoutingRevision, h.TargetRoutingDigest, h.TargetRoutingSignature, h.CreatedAt, h.ExpiresAt, h.SessionCorrelationID, h.TransferSequence); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if err = r.recordPlayerTransferTx0197(ctx, tx, h, now); err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_topology_edges_v2(source_node_id,target_node_id,backend_name,project_id,profile_id,status,created_at,last_seen_at) VALUES($1,$2,$3,$4,$5,'active',$6,$6) ON CONFLICT(source_node_id,target_node_id) DO UPDATE SET backend_name=EXCLUDED.backend_name,project_id=EXCLUDED.project_id,profile_id=EXCLUDED.profile_id,status='active',last_seen_at=EXCLUDED.last_seen_at`, h.SourceNodeID, h.TargetNodeID, h.BackendName, h.ProjectID, h.ProfileID, now.UTC()); err != nil {
@@ -1070,12 +1137,27 @@ func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id strin
 	redemption.NodeID = strings.TrimSpace(redemption.NodeID)
 	redemption.KeyFingerprint = strings.ToLower(strings.TrimSpace(redemption.KeyFingerprint))
 	redemption.NonceHash = strings.ToLower(strings.TrimSpace(redemption.NonceHash))
-	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max)))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip`
-	h, err := scanServerBridgeHandoff(r.db.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
+	redemption.SessionCorrelationID = strings.ToLower(strings.TrimSpace(redemption.SessionCorrelationID))
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	defer tx.Rollback()
+	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max)))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence`
+	h, err := scanServerBridgeHandoff(tx.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeHandoff{}, ErrConflict
 	}
-	return h, err
+	if err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if err = r.consumePlayerTransferTx0197(ctx, tx, h, redemption, now); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.ServerBridgeHandoff{}, err
+	}
+	return h, nil
 }
 
 func (r *SQLRepository) InvalidateServerBridgeHandoff(ctx context.Context, id string, now time.Time) (bool, error) {
@@ -1180,6 +1262,41 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
+	// A gameplay lifecycle may outlive its short-lived join/handoff rows, but it
+	// must never outlive the Never session or the exact proxy/backend runtime it
+	// was bound to. Invalidate under the same maintenance transaction so the
+	// existing durable Control API can fan out player.kick to every live side.
+	staleRows, queryErr := tx.QueryContext(ctx, `SELECT p.correlation_id FROM server_bridge_player_sessions_v3 p
+		WHERE p.status='active' AND (
+			NOT EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=p.never_session_id AND a.user_id=p.user_id AND a.status='active' AND a.expires_at>$1 AND a.binding_epoch=p.binding_epoch)
+			OR (p.proxy_node_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=p.proxy_node_id AND n.status='active' AND n.runtime_id=p.proxy_runtime_id AND n.runtime_epoch=p.proxy_runtime_epoch))
+			OR (p.backend_node_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=p.backend_node_id AND n.status='active' AND n.runtime_id=p.backend_runtime_id AND n.runtime_epoch=p.backend_runtime_epoch))
+		)
+		ORDER BY p.updated_at LIMIT 1000 FOR UPDATE OF p SKIP LOCKED`, now.UTC())
+	if queryErr != nil {
+		return result, queryErr
+	}
+	staleCorrelations := make([]string, 0, 64)
+	for staleRows.Next() {
+		var correlationID string
+		if scanErr := staleRows.Scan(&correlationID); scanErr != nil {
+			staleRows.Close()
+			return result, scanErr
+		}
+		staleCorrelations = append(staleCorrelations, correlationID)
+	}
+	if queryErr = staleRows.Close(); queryErr != nil {
+		return result, queryErr
+	}
+	for _, correlationID := range staleCorrelations {
+		invalidated, invalidateErr := r.invalidatePlayerSessionRowTx0197(ctx, tx, correlationID, "session-revoked-or-runtime-replaced", now)
+		if invalidateErr != nil {
+			return result, invalidateErr
+		}
+		if invalidated {
+			result.PlayerSessionsInvalidated++
+		}
+	}
 	if res, execErr := tx.ExecContext(ctx, `UPDATE server_bridge_topology_edges_v2 e SET status='disabled' FROM (SELECT source_node_id,target_node_id FROM server_bridge_topology_edges_v2 WHERE status='active' AND last_seen_at <= $1::timestamptz - interval '5 minutes' ORDER BY last_seen_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.source_node_id=q.source_node_id AND e.target_node_id=q.target_node_id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1223,6 +1340,11 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, execErr
 	} else {
 		result.ControlCommandsPurged, _ = res.RowsAffected()
+	}
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_player_sessions_v3 p USING (SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status IN ('invalidated','disconnected','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 5000 FOR UPDATE SKIP LOCKED) q WHERE p.correlation_id=q.correlation_id`, now.UTC()); execErr != nil {
+		return result, execErr
+	} else {
+		result.PlayerSessionsPurged, _ = res.RowsAffected()
 	}
 	if err = tx.Commit(); err != nil {
 		return result, err

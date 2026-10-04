@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0037_serverbridge_topology_routing2_0196" {
+	if st.Current != "0038_serverbridge_player_session_integration3_0197" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0037_serverbridge_topology_routing2_0196" {
+		if k != "0038_serverbridge_player_session_integration3_0197" {
 			pending[k] = v
 		}
 	}
@@ -483,6 +483,27 @@ func TestServerBridgeTopologyRouting2Migration0196(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.19.6 topology/routing migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
+	b, err := os.ReadFile("sql/0038_serverbridge_player_session_integration3_0197.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"session_correlation_id",
+		"transfer_sequence",
+		"server_bridge_player_sessions_v3",
+		"server_bridge_player_transfers_v3",
+		"uq_server_bridge_player_never_session_active_0197",
+		"uq_server_bridge_player_minecraft_session_active_0197",
+		"recheck_required",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.19.7 player-session migration missing %q", required)
 		}
 	}
 }

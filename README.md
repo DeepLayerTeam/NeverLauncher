@@ -1,3 +1,7 @@
+## ServerBridge 3 Player Session Integration 3 — 0.19.7
+
+`0.19.7` связывает launcher join, proxy и конечный backend одним 256-bit `sessionCorrelationId`. PostgreSQL хранит единственную активную gameplay correlation для Never/Minecraft session, runtime-bound proxy/backend presence и монотонную transfer chain. Новый transfer переводится в `recheck_required` и завершается только после повторной Device Trust + Guard/Minecraft Integrity проверки на target. Попытка session cloning атомарно инвалидирует предыдущую correlation и ставит durable `player.kick` через Control API на прежний proxy/backend. Session/device revoke, runtime replacement и permanent trust/integrity failure распространяют invalidate/disconnect на всю topology. Protocol v2 остаётся rolling-upgrade путём без выдуманной runtime identity.
+
 ## ServerBridge 3 Topology & Routing 2 — 0.19.6
 
 `0.19.6` переводит topology из исторически изученных handoff-edges в realtime routing plane. Каждый Protocol v3 node публикует Ed25519-подписанный snapshot, связанный с текущим `runtimeId`: `ready/maintenance/draining`, health, players/capacity и accepting state. Proxy получает только свежие допустимые backend nodes, а Backend повторно проверяет runtime/health/capacity при выдаче и redemption handoff и при прямом validate-join. Handoff v3 сохраняет source+target routing proofs; Protocol v2 остаётся для rolling upgrade. Stale topology автоматически отключается и удаляется bounded maintenance.

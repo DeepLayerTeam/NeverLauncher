@@ -74,6 +74,7 @@ run_step serverbridge-telemetry-0193 python3 "${ROOT_DIR}/scripts/smoke/offline/
 run_step serverbridge-event-stream-0194 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-event-stream-0194.py"
 run_step serverbridge-control-api-0195 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-control-api-0195.py"
 run_step serverbridge-topology-routing2-0196 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-topology-routing2-0196.py"
+run_step serverbridge-player-session-integration3-0197 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-player-session-integration3-0197.py"
 run_step delivery-manifest-platform-architecture-0151 python3 "${ROOT_DIR}/scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
 run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offline/signed-windows-x64-arm64-0152.py"
 run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"

@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9997,6 +9997,11 @@
           "targetServer": {
             "type": "string",
             "minLength": 1
+          },
+          "sessionCorrelationId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Player Session Integration 3 correlation proof; required when session.player-lifecycle-v3 is negotiated"
           }
         },
         "additionalProperties": false

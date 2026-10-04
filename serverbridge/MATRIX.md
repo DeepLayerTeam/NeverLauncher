@@ -1,4 +1,4 @@
-# NeverLauncher 0.19.6 — Public ServerBridge Matrix
+# NeverLauncher 0.19.7 — Public ServerBridge Matrix
 
 > Capability matrix. Runtime PASS evidence is produced by CI; the Bukkit row is intentionally marked build-compatibility because the release CI does not redistribute a CraftBukkit runtime.
 
@@ -27,3 +27,7 @@ Runtime status is not hard-coded into this document; CI evidence is attached to 
 ## 0.19.6 Topology & Routing 2
 
 Protocol v3 feature `topology.routing-v2` publishes an Ed25519-attested, runtime-bound route snapshot on heartbeat. Proxy nodes receive only fresh `ready` backends with `healthy/degraded` health and available capacity. Maintenance, draining, unhealthy, stale and full nodes are excluded and rejected again during handoff redemption/direct join. Handoff v3 stores source+target runtime/routing proofs; v2 remains available for rolling upgrades. Stale learned edges are disabled and purged automatically.
+## 0.19.7 Player Session Integration 3
+
+Protocol v3 feature `session.player-lifecycle-v3` carries a backend-issued 256-bit correlation from launcher join through proxy handoff to backend admission. PostgreSQL enforces one active gameplay correlation per Never/Minecraft credential, records an ordered runtime-bound transfer chain and marks each transfer for Device Trust/Guard recheck before consume. Clone replacement and explicit/session/device invalidation fan out durable `player.kick` control commands to all currently bound proxy/backend runtimes. Protocol v2 remains available as the rolling-upgrade compatibility path without synthetic runtime/session proofs.
+

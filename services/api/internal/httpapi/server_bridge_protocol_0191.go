@@ -34,6 +34,7 @@ const (
 	serverBridgeFeatureEventStream           = "events.ordered-stream-v1"
 	serverBridgeFeatureControlAPI            = "control.secure-channel-v1"
 	serverBridgeFeatureRoutingV2             = "topology.routing-v2"
+	serverBridgeFeaturePlayerSessionV3        = "session.player-lifecycle-v3"
 )
 
 var serverBridgeSupportedProtocols0191 = []int{serverBridgeProtocolV3, serverBridgeProtocolV2}
@@ -67,6 +68,7 @@ var serverBridgeV3Features0191 = []string{
 	serverBridgeFeatureEventStream,
 	serverBridgeFeatureControlAPI,
 	serverBridgeFeatureRoutingV2,
+	serverBridgeFeaturePlayerSessionV3,
 }
 
 type bridgeProtocolEnvelope0191 struct {
@@ -136,10 +138,11 @@ type bridgeHandoffV2Contract0191 struct {
 }
 
 type bridgeHandoffV3Contract0191 struct {
-	ProtocolVersion int      `json:"protocolVersion"`
-	Features        []string `json:"features"`
-	Username        string   `json:"username"`
-	TargetServer    string   `json:"targetServer"`
+	ProtocolVersion      int      `json:"protocolVersion"`
+	Features             []string `json:"features"`
+	Username             string   `json:"username"`
+	TargetServer         string   `json:"targetServer"`
+	SessionCorrelationID string   `json:"sessionCorrelationId,omitempty"`
 }
 
 type bridgePluginHeartbeatRequest940 struct {
@@ -172,10 +175,11 @@ type bridgeValidateJoinRequest940 struct {
 }
 
 type bridgeHandoffRequest0148 struct {
-	ProtocolVersion int
-	Features        []string
-	Username        string
-	TargetServer    string
+	ProtocolVersion      int
+	Features             []string
+	Username             string
+	TargetServer         string
+	SessionCorrelationID string
 }
 
 func readBridgeProtocolBody0191(r io.Reader) ([]byte, bridgeProtocolEnvelope0191, error) {
@@ -271,7 +275,7 @@ func decodeBridgeHandoff0191(r io.Reader) (bridgeHandoffRequest0148, error) {
 		if err := decodeBridgeContract0191(body, &req); err != nil {
 			return bridgeHandoffRequest0148{}, err
 		}
-		return bridgeHandoffRequest0148{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), Username: req.Username, TargetServer: req.TargetServer}, nil
+		return bridgeHandoffRequest0148{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), Username: req.Username, TargetServer: req.TargetServer, SessionCorrelationID: req.SessionCorrelationID}, nil
 	default:
 		return bridgeHandoffRequest0148{ProtocolVersion: envelope.ProtocolVersion}, nil
 	}

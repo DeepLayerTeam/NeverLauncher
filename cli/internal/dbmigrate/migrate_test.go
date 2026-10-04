@@ -36,6 +36,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0035_serverbridge_event_stream_0194",
 		"0036_serverbridge_control_api_0195",
 		"0037_serverbridge_topology_routing2_0196",
+		"0038_serverbridge_player_session_integration3_0197",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

@@ -282,6 +282,11 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_or_handoff_missing_or_expired", req, bridgeJoinRecord{}))
 		return
 	}
+	playerSessionV3 := req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeaturePlayerSessionV3)
+	if playerSessionV3 && !validPlayerSessionCorrelation0197(join.SessionCorrelationID) {
+		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "serverbridge_session_correlation_missing", req, join))
+		return
+	}
 	// A direct launcher join must not steal capacity already reserved by proxy
 	// handoffs. A handoff redemption owns its reservation and is revalidated by
 	// ConsumeServerBridgeHandoff against the same target runtime and live route.
@@ -308,7 +313,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
 			if fromHandoff {
-				s.State.ServerBridge.invalidateHandoff0148(handoff.ID)
+				// The proxy already owns an active correlated lifecycle. A permanent
+				// Device Trust failure invalidates that lifecycle across the topology,
+				// not merely this one pending backend handoff.
+				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
 				_ = s.flushPersistenceState950("server-bridge-trust-invalidate")
@@ -325,7 +333,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !minecraftIntegrity.Allowed {
 		if minecraftIntegrityPermanentFailure0135(minecraftIntegrity.Reason) || minecraftIntegrity.Reason == "minecraft_integrity_session_required" || minecraftIntegrity.Reason == "minecraft_integrity_binding_mismatch" {
 			if fromHandoff {
-				s.State.ServerBridge.invalidateHandoff0148(handoff.ID)
+				// Guard/binding failure on transfer revokes the whole correlated
+				// gameplay lifecycle and fans disconnect to proxy + current backend.
+				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
 				_ = s.flushPersistenceState950("server-bridge-integrity-invalidate")
@@ -344,6 +354,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_join_redemption_proof_unavailable")
 		return
 	}
+	redemption.SessionCorrelationID = join.SessionCorrelationID
+	redemption.TrustReason = trust.Reason
+	redemption.IntegrityReason = minecraftIntegrity.Reason
+	redemption.VerifiedAt = time.Now().UTC()
 	if fromHandoff {
 		consumedHandoff, consumedOK := s.State.ServerBridge.consumeHandoff0148(handoff.ID, redemption)
 		if !consumedOK {
@@ -369,9 +383,13 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	payload["data"].(map[string]any)["nodeKeyFingerprint"] = server.KeyFingerprint
 	payload["data"].(map[string]any)["identityEpoch"] = server.IdentityEpoch
 	payload["data"].(map[string]any)["authorization"] = map[bool]string{true: "proxy-handoff", false: "direct-ticket"}[fromHandoff]
+	payload["data"].(map[string]any)["sessionCorrelationId"] = join.SessionCorrelationID
+	payload["data"].(map[string]any)["sessionLifecycle"] = "active"
+	payload["data"].(map[string]any)["trustIntegrityRechecked"] = true
 	if fromHandoff {
 		payload["data"].(map[string]any)["sourceNodeId"] = handoff.SourceNodeID
 		payload["data"].(map[string]any)["handoffId"] = handoff.ID
+		payload["data"].(map[string]any)["transferSequence"] = handoff.TransferSequence
 	}
 	writeJSON(w, http.StatusOK, payload)
 }
@@ -438,6 +456,9 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 			{"id": "minecraft-integrity-enforcement", "status": "implemented"},
 			{"id": "serverbridge-artifact-integrity", "status": "implemented"},
 			{"id": "heartbeat", "status": "implemented"},
+			{"id": "player-session-integration-v3", "status": "implemented"},
+			{"id": "session-clone-protection", "status": "implemented"},
+			{"id": "topology-wide-session-invalidation", "status": "implemented"},
 			{"id": "audit-event", "status": "implemented"},
 		},
 	}})
@@ -469,11 +490,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.19.6 ServerBridge 3",
+		"release":         "NeverLauncher 0.19.7 ServerBridge 3",
 		"status":          "bridge-plugins-ready",
 		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
 		"protocolVersion": serverBridgeProtocolCurrent,
-		"implemented":     []string{"Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "bounded JVM/server telemetry", "ordered signed event stream", "durable RBAC control channel", "idempotent control execution journal", "allowlisted platform console commands", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "realtime PostgreSQL topology/routing", "health/capacity route admission", "runtime-bound source+target handoff proofs", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "bounded JVM/server telemetry", "ordered signed event stream", "durable RBAC control channel", "idempotent control execution journal", "allowlisted platform console commands", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "realtime PostgreSQL topology/routing", "health/capacity route admission", "runtime-bound source+target handoff proofs", "Player Session Integration 3 correlation lifecycle", "ordered runtime-bound transfer chain", "session-cloning prevention", "Device Trust/Guard transfer recheck", "topology-wide session invalidation/disconnect", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}

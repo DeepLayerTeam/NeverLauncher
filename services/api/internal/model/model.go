@@ -577,6 +577,7 @@ type ServerBridgeJoinTicket struct {
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
 	ProtocolVersion        int       `json:"protocolVersion"`
 	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
 	IssuedKeyFingerprint   string    `json:"issuedKeyFingerprint"`
@@ -594,11 +595,15 @@ type ServerBridgeJoinTicket struct {
 // one-time join ticket is consumed. The request nonce has already passed the
 // signed-request replay store before this proof reaches the repository.
 type ServerBridgeJoinRedemption struct {
-	NodeID         string
-	IdentityEpoch  int64
-	KeyFingerprint string
-	NonceHash      string
-	RemoteIP       string
+	NodeID               string
+	IdentityEpoch        int64
+	KeyFingerprint       string
+	NonceHash            string
+	RemoteIP             string
+	SessionCorrelationID string
+	TrustReason          string
+	IntegrityReason      string
+	VerifiedAt           time.Time
 }
 
 // ServerBridgeHandoff is a short-lived one-time proxy-to-backend credential.
@@ -621,6 +626,8 @@ type ServerBridgeHandoff struct {
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
+	TransferSequence       int64     `json:"transferSequence,omitempty"`
 	SourceIdentityEpoch    int64     `json:"sourceIdentityEpoch"`
 	SourceKeyFingerprint   string    `json:"sourceKeyFingerprint"`
 	TargetIdentityEpoch    int64     `json:"targetIdentityEpoch"`
@@ -643,6 +650,55 @@ type ServerBridgeHandoff struct {
 	ConsumedAt             time.Time `json:"consumedAt,omitempty"`
 	RedeemedNonceHash      string    `json:"redeemedNonceHash,omitempty"`
 	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
+}
+
+// ServerBridgePlayerSession is the authoritative gameplay lifecycle spanning launcher, proxy and backend nodes.
+// One correlation id represents one logical player connection; a newer correlation for the same Never/Minecraft
+// session invalidates and disconnects the previous topology, preventing session cloning.
+type ServerBridgePlayerSession struct {
+	CorrelationID       string    `json:"correlationId"`
+	PlayerUUID          string    `json:"playerUuid"`
+	Username            string    `json:"username"`
+	UserID              string    `json:"userId"`
+	NeverSessionID      string    `json:"neverSessionId"`
+	MinecraftSessionID  string    `json:"minecraftSessionId,omitempty"`
+	TrustedDeviceID     string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch        int64     `json:"bindingEpoch"`
+	ProjectID           string    `json:"projectId"`
+	ProfileID           string    `json:"profileId"`
+	Channel             string    `json:"channel"`
+	Status              string    `json:"status"`
+	ProxyNodeID         string    `json:"proxyNodeId,omitempty"`
+	ProxyRuntimeID      string    `json:"proxyRuntimeId,omitempty"`
+	ProxyRuntimeEpoch   int64     `json:"proxyRuntimeEpoch,omitempty"`
+	BackendNodeID       string    `json:"backendNodeId,omitempty"`
+	BackendRuntimeID    string    `json:"backendRuntimeId,omitempty"`
+	BackendRuntimeEpoch int64     `json:"backendRuntimeEpoch,omitempty"`
+	TransferSequence    int64     `json:"transferSequence"`
+	RecheckRequired     bool      `json:"recheckRequired"`
+	TrustReason         string    `json:"trustReason,omitempty"`
+	IntegrityReason     string    `json:"integrityReason,omitempty"`
+	LastVerifiedAt      time.Time `json:"lastVerifiedAt,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
+	InvalidatedAt       time.Time `json:"invalidatedAt,omitempty"`
+	InvalidatedReason   string    `json:"invalidatedReason,omitempty"`
+}
+
+// ServerBridgeTransferHop is one ordered proxy -> backend hop in a correlated gameplay session.
+type ServerBridgeTransferHop struct {
+	CorrelationID      string    `json:"correlationId"`
+	Sequence           int64     `json:"sequence"`
+	HandoffID          string    `json:"handoffId"`
+	SourceNodeID       string    `json:"sourceNodeId"`
+	TargetNodeID       string    `json:"targetNodeId"`
+	SourceRuntimeID    string    `json:"sourceRuntimeId,omitempty"`
+	SourceRuntimeEpoch int64     `json:"sourceRuntimeEpoch,omitempty"`
+	TargetRuntimeID    string    `json:"targetRuntimeId,omitempty"`
+	TargetRuntimeEpoch int64     `json:"targetRuntimeEpoch,omitempty"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"createdAt"`
+	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
 // ServerBridgeTopologyEdge records an observed proxy -> backend route. Edges are
@@ -703,6 +759,8 @@ type ServerBridgeMaintenanceResult struct {
 	TelemetrySamplesPurged    int64     `json:"telemetrySamplesPurged"`
 	EventStreamRowsPurged     int64     `json:"eventStreamRowsPurged"`
 	ControlCommandsPurged     int64     `json:"controlCommandsPurged"`
+	PlayerSessionsInvalidated int64     `json:"playerSessionsInvalidated"`
+	PlayerSessionsPurged      int64     `json:"playerSessionsPurged"`
 	CompletedAt               time.Time `json:"completedAt"`
 }
 

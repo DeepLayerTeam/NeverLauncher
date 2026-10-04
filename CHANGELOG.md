@@ -1,3 +1,11 @@
+## [0.19.7] - 2026-10-04
+
+- Added production Player Session Integration 3 with a cryptographically random `sessionCorrelationId` spanning launcher join, proxy ownership and final backend admission.
+- Added PostgreSQL authoritative player lifecycle and ordered transfer chain with runtime-bound source/target ownership, monotonic transfer sequence and mandatory trust/integrity recheck before transfer consumption.
+- Added active-session clone prevention for Never/Minecraft credentials; a replacement correlation atomically invalidates the previous lifecycle and queues durable Control API disconnects to its proxy/backend nodes.
+- Session/user/device revocation, permanent Device Trust/Guard failure and stale/replaced runtime maintenance now invalidate the complete correlated topology instead of only transient join/handoff rows.
+- Added correlated player quit/kick event handling, migration `0038_serverbridge_player_session_integration3_0197`, Java runtime correlation registry, release certification requirements and the 0.19.7 production gate while preserving Protocol v2 rolling compatibility.
+
 ## [0.19.6] - 2026-10-04
 
 - Added ServerBridge 3 Topology & Routing 2 with Ed25519-attested, runtime-bound route snapshots published on Protocol v3 heartbeats.

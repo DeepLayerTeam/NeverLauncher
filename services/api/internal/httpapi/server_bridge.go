@@ -82,6 +82,7 @@ type bridgeJoinRecord struct {
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
 	ProtocolVersion        int       `json:"protocolVersion"`
 	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
 	IssuedKeyFingerprint   string    `json:"issuedKeyFingerprint"`
@@ -362,6 +363,10 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_join_redemption_proof_unavailable")
 		return
 	}
+	redemption.SessionCorrelationID = join.SessionCorrelationID
+	redemption.TrustReason = trust.Reason
+	redemption.IntegrityReason = integrity.Reason
+	redemption.VerifiedAt = time.Now().UTC()
 	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
 	if !consumedOK {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-replay"), Actor: server.ID, Action: "serverbridge:has-joined:replay-denied", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -370,7 +375,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	}
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -737,7 +742,11 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	if err != nil {
 		return bridgeJoinRecord{}, err
 	}
-	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), ProtocolVersion: bridgeNodeProtocolVersion0191(server.ProtocolVersion), IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	correlationID, err := newPlayerSessionCorrelationID0197()
+	if err != nil {
+		return bridgeJoinRecord{}, err
+	}
+	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), SessionCorrelationID: correlationID, ProtocolVersion: bridgeNodeProtocolVersion0191(server.ProtocolVersion), IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
@@ -922,7 +931,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "sessionCorrelationId": join.SessionCorrelationID, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 func playerUUID910(seed string) string {
@@ -955,6 +964,14 @@ func validBridgeServerKindV2(kind string) bool {
 	default:
 		return false
 	}
+}
+
+func newPlayerSessionCorrelationID0197() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("player session correlation entropy unavailable: %w", err)
+	}
+	return hex.EncodeToString(buf), nil
 }
 
 func randomSuffix910(n int) string {
