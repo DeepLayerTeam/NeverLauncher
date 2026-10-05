@@ -1,12 +1,15 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
+	"log"
 	"net/http"
 	"runtime"
 	"strconv"
 	"strings"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -122,6 +125,44 @@ func writeLifecycleError0204(w http.ResponseWriter, err error) {
 	}
 }
 
+func hostKeyForInstall0205(item model.ExtensionInstall) extensionhost.Key {
+	return extensionhost.Key{ExtensionID: item.ExtensionID, Scope: item.Scope, ScopeID: item.ScopeID}
+}
+
+func (s Server) stopExtensionHostForLifecycle0205(r *http.Request, id string, scope extensionlifecycle.Scope) (model.ExtensionInstall, bool, error) {
+	before, err := s.Repo.GetExtensionInstallState(r.Context(), id, scope.Scope, scope.ScopeID)
+	if err != nil {
+		return model.ExtensionInstall{}, false, err
+	}
+	wasRunningDesired := before.CurrentState == model.ExtensionInstallStateEnabled && before.Enabled
+	if wasRunningDesired && s.ExtensionHost != nil {
+		if err := s.ExtensionHost.Stop(r.Context(), hostKeyForInstall0205(before)); err != nil {
+			return before, true, err
+		}
+	}
+	return before, wasRunningDesired, nil
+}
+
+func (s Server) restoreExtensionHostAfterLifecycleFailure0205(before model.ExtensionInstall, shouldRun bool) {
+	if !shouldRun || s.ExtensionHost == nil {
+		return
+	}
+	if err := s.ExtensionHost.StartInstallation(context.Background(), before); err != nil && !errors.Is(err, extensionhost.ErrNoBackendTarget) {
+		log.Printf("extension host compensation restart failed %s/%s/%s: %v", before.Scope, before.ScopeID, before.ExtensionID, err)
+	}
+}
+
+func (s Server) startEnabledExtensionHost0205(ctx context.Context, install model.ExtensionInstall) error {
+	if s.ExtensionHost == nil || install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled {
+		return nil
+	}
+	err := s.ExtensionHost.StartInstallation(ctx, install)
+	if errors.Is(err, extensionhost.ErrNoBackendTarget) {
+		return nil
+	}
+	return err
+}
+
 func (s Server) extensionInstall0204(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeLifecycleWrite0204(r)
 	if err != nil {
@@ -147,9 +188,19 @@ func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	install, err := s.lifecycleManager0204().Enable(r.Context(), r.PathValue("extensionId"), lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
+	install, err := s.lifecycleManager0204().Enable(r.Context(), r.PathValue("extensionId"), scope)
 	if err != nil {
 		writeLifecycleError0204(w, err)
+		return
+	}
+	if err := s.startEnabledExtensionHost0205(r.Context(), install); err != nil {
+		compensated, compErr := s.lifecycleManager0204().Disable(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
+		if compErr != nil {
+			writeError(w, http.StatusInternalServerError, "extension host start failed and disable compensation failed: "+err.Error()+"; "+compErr.Error())
+			return
+		}
+		writeError(w, http.StatusConflict, "extension host start failed; enable was compensated to disabled: "+err.Error()+" generation="+strconv.FormatInt(compensated.Generation, 10))
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:enable", install.ExtensionID+":"+install.Scope+":"+install.ScopeID)
@@ -161,8 +212,15 @@ func (s Server) extensionDisable0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	install, err := s.lifecycleManager0204().Disable(r.Context(), r.PathValue("extensionId"), lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
+	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
 	if err != nil {
+		writeLifecycleError0204(w, err)
+		return
+	}
+	install, err := s.lifecycleManager0204().Disable(r.Context(), r.PathValue("extensionId"), scope)
+	if err != nil {
+		s.restoreExtensionHostAfterLifecycleFailure0205(before, wasRunning)
 		writeLifecycleError0204(w, err)
 		return
 	}
@@ -175,8 +233,15 @@ func (s Server) extensionUninstall0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	install, err := s.lifecycleManager0204().Uninstall(r.Context(), r.PathValue("extensionId"), lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
+	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
 	if err != nil {
+		writeLifecycleError0204(w, err)
+		return
+	}
+	install, err := s.lifecycleManager0204().Uninstall(r.Context(), r.PathValue("extensionId"), scope)
+	if err != nil {
+		s.restoreExtensionHostAfterLifecycleFailure0205(before, wasRunning)
 		writeLifecycleError0204(w, err)
 		return
 	}
@@ -189,14 +254,31 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
 	item, err := s.resolveLifecycleRegistryVersion0204(r, r.PathValue("extensionId"), req.Version, req.Channel)
 	if err != nil {
 		writeLifecycleError0204(w, err)
 		return
 	}
-	install, err := s.lifecycleManager0204().Update(r.Context(), item, lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
 	if err != nil {
 		writeLifecycleError0204(w, err)
+		return
+	}
+	install, err := s.lifecycleManager0204().Update(r.Context(), item, scope)
+	if err != nil {
+		s.restoreExtensionHostAfterLifecycleFailure0205(before, wasRunning)
+		writeLifecycleError0204(w, err)
+		return
+	}
+	if err := s.startEnabledExtensionHost0205(r.Context(), install); err != nil {
+		rolled, rbErr := s.lifecycleManager0204().Rollback(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
+		if rbErr != nil {
+			writeError(w, http.StatusInternalServerError, "updated extension failed to start and rollback failed: "+err.Error()+"; "+rbErr.Error())
+			return
+		}
+		_ = s.startEnabledExtensionHost0205(context.Background(), rolled)
+		writeError(w, http.StatusConflict, "updated extension failed host activation; payload/state rolled back: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:update", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)
@@ -208,9 +290,23 @@ func (s Server) extensionRollback0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	install, err := s.lifecycleManager0204().Rollback(r.Context(), r.PathValue("extensionId"), lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
+	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
 	if err != nil {
 		writeLifecycleError0204(w, err)
+		return
+	}
+	install, err := s.lifecycleManager0204().Rollback(r.Context(), r.PathValue("extensionId"), scope)
+	if err != nil {
+		s.restoreExtensionHostAfterLifecycleFailure0205(before, wasRunning)
+		writeLifecycleError0204(w, err)
+		return
+	}
+	if err := s.startEnabledExtensionHost0205(r.Context(), install); err != nil {
+		if install.CurrentState == model.ExtensionInstallStateEnabled {
+			_, _ = s.lifecycleManager0204().Disable(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
+		}
+		writeError(w, http.StatusConflict, "rollback payload restored but backend host failed to start; installation was disabled: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:rollback", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)

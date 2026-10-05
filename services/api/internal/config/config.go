@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -44,6 +45,21 @@ type Config struct {
 	BackupRoot                                   string
 	ExtensionRoot                                string
 	ExtensionBackupRetention                     int
+	ExtensionHostEnabled                         bool
+	ExtensionHostListen                          string
+	ExtensionHostStartupTimeoutSeconds           int
+	ExtensionHostHeartbeatTimeoutSeconds         int
+	ExtensionHostStopTimeoutSeconds              int
+	ExtensionHostCapabilityTimeoutSeconds        int
+	ExtensionHostMaxMemoryMB                     int64
+	ExtensionHostMaxProcesses                    int
+	ExtensionHostMaxLogBytes                     int64
+	ExtensionHostMaxLogEntries                   int
+	ExtensionHostMaxProtocolBodyBytes            int64
+	ExtensionHostMaxStorageReadBytes             int64
+	ExtensionHostCrashLimit                      int
+	ExtensionHostCrashWindowSeconds              int
+	ExtensionHostRestartBackoffMilliseconds      int
 	CORSAllowedOrigins                           []string
 	Environment                                  string
 	AuthTokenSecret                              string
@@ -174,53 +190,68 @@ func Load() Config {
 		corsFallback = ""
 	}
 	return Config{
-		HTTPAddr:                             env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
-		PublicURL:                            publicURL,
-		DatabaseDSN:                          env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
-		RepositoryDriver:                     env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
-		SQLDriver:                            env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
-		RedisAddr:                            redisAddr,
-		RedisURL:                             redisURL,
-		ServerBridgeHARequired:               envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production),
-		ServerBridgeReplicaID:                env("NEVERLAUNCHER_REPLICA_ID", ""),
-		TrustedProxyCIDRs:                    envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
-		RateLimitEnabled:                     envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
-		RateLimitGlobalPerMinute:             envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
-		RateLimitAuthPerMinute:               envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
-		RateLimitServerBridgePerMinute:       envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
-		RateLimitFailClosed:                  envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
-		StorageDriver:                        env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
-		StorageLocalPath:                     env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
-		StorageS3Endpoint:                    env("NEVERLAUNCHER_STORAGE_S3_ENDPOINT", ""),
-		StorageS3Bucket:                      env("NEVERLAUNCHER_STORAGE_S3_BUCKET", ""),
-		StorageS3Region:                      env("NEVERLAUNCHER_STORAGE_S3_REGION", "ru-central1"),
-		StorageS3AccessKey:                   env("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
-		StorageS3SecretKey:                   env("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY", ""),
-		StorageS3PublicURL:                   env("NEVERLAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
-		StorageS3PathStyle:                   envBool("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", true),
-		StorageDeliveryMode:                  env("NEVERLAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
-		StorageCDNOrigin:                     env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
-		StorageMaxUploadBytes:                envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
-		BackupRoot:                           env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
-		ExtensionRoot:                        env("NEVERLAUNCHER_EXTENSION_ROOT", "./data/extensions"),
-		ExtensionBackupRetention:             envInt("NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION", 10),
-		CORSAllowedOrigins:                   envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
-		Environment:                          environment,
-		AuthTokenSecret:                      env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
-		AuthTokenTTLHours:                    envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
-		AuthTokenIssuer:                      env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
-		AuthTokenAudience:                    env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
-		AuthTokenActiveKID:                   env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
-		AuthTokenKeysJSON:                    env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
-		GuardReleaseAllowlistJSON:            env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
-		BridgeReleaseAllowlistJSON:           env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
-		MetricsEnabled:                       envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
-		PersistentSessions:                   envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
-		RequirePersistentStoreInProduction:   envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
-		DatabaseAutoMigrate:                  envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
-		BootstrapToken:                       env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
-		ManifestSigningPrivateKey:            manifestSigningPrivateKey,
-		ServerBridgeControlSigningPrivateKey: serverBridgeControlSigningPrivateKey,
+		HTTPAddr:                                     env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
+		PublicURL:                                    publicURL,
+		DatabaseDSN:                                  env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
+		RepositoryDriver:                             env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
+		SQLDriver:                                    env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
+		RedisAddr:                                    redisAddr,
+		RedisURL:                                     redisURL,
+		ServerBridgeHARequired:                       envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production),
+		ServerBridgeReplicaID:                        env("NEVERLAUNCHER_REPLICA_ID", ""),
+		TrustedProxyCIDRs:                            envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
+		RateLimitEnabled:                             envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
+		RateLimitGlobalPerMinute:                     envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
+		RateLimitAuthPerMinute:                       envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
+		RateLimitServerBridgePerMinute:               envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
+		RateLimitFailClosed:                          envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
+		StorageDriver:                                env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
+		StorageLocalPath:                             env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
+		StorageS3Endpoint:                            env("NEVERLAUNCHER_STORAGE_S3_ENDPOINT", ""),
+		StorageS3Bucket:                              env("NEVERLAUNCHER_STORAGE_S3_BUCKET", ""),
+		StorageS3Region:                              env("NEVERLAUNCHER_STORAGE_S3_REGION", "ru-central1"),
+		StorageS3AccessKey:                           env("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
+		StorageS3SecretKey:                           env("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY", ""),
+		StorageS3PublicURL:                           env("NEVERLAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
+		StorageS3PathStyle:                           envBool("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", true),
+		StorageDeliveryMode:                          env("NEVERLAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
+		StorageCDNOrigin:                             env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
+		StorageMaxUploadBytes:                        envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
+		BackupRoot:                                   env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
+		ExtensionRoot:                                env("NEVERLAUNCHER_EXTENSION_ROOT", "./data/extensions"),
+		ExtensionBackupRetention:                     envInt("NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION", 10),
+		ExtensionHostEnabled:                         envBool("NEVERLAUNCHER_EXTENSION_HOST_ENABLED", true),
+		ExtensionHostListen:                          env("NEVERLAUNCHER_EXTENSION_HOST_LISTEN", "127.0.0.1:0"),
+		ExtensionHostStartupTimeoutSeconds:           envInt("NEVERLAUNCHER_EXTENSION_HOST_STARTUP_TIMEOUT_SECONDS", 10),
+		ExtensionHostHeartbeatTimeoutSeconds:         envInt("NEVERLAUNCHER_EXTENSION_HOST_HEARTBEAT_TIMEOUT_SECONDS", 30),
+		ExtensionHostStopTimeoutSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_STOP_TIMEOUT_SECONDS", 5),
+		ExtensionHostCapabilityTimeoutSeconds:        envInt("NEVERLAUNCHER_EXTENSION_HOST_CAPABILITY_TIMEOUT_SECONDS", 3),
+		ExtensionHostMaxMemoryMB:                     envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_MEMORY_MB", 512),
+		ExtensionHostMaxProcesses:                    envInt("NEVERLAUNCHER_EXTENSION_HOST_MAX_PROCESSES", 8),
+		ExtensionHostMaxLogBytes:                     envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_LOG_BYTES", 4<<20),
+		ExtensionHostMaxLogEntries:                   envInt("NEVERLAUNCHER_EXTENSION_HOST_MAX_LOG_ENTRIES", 1000),
+		ExtensionHostMaxProtocolBodyBytes:            envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_PROTOCOL_BODY_BYTES", 1<<20),
+		ExtensionHostMaxStorageReadBytes:             envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_STORAGE_READ_BYTES", 1<<20),
+		ExtensionHostCrashLimit:                      envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_LIMIT", 5),
+		ExtensionHostCrashWindowSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_WINDOW_SECONDS", 600),
+		ExtensionHostRestartBackoffMilliseconds:      envInt("NEVERLAUNCHER_EXTENSION_HOST_RESTART_BACKOFF_MS", 1000),
+		CORSAllowedOrigins:                           envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
+		Environment:                                  environment,
+		AuthTokenSecret:                              env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
+		AuthTokenTTLHours:                            envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
+		AuthTokenIssuer:                              env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
+		AuthTokenAudience:                            env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
+		AuthTokenActiveKID:                           env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
+		AuthTokenKeysJSON:                            env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
+		GuardReleaseAllowlistJSON:                    env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
+		BridgeReleaseAllowlistJSON:                   env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
+		MetricsEnabled:                               envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
+		PersistentSessions:                           envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
+		RequirePersistentStoreInProduction:           envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
+		DatabaseAutoMigrate:                          envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
+		BootstrapToken:                               env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
+		ManifestSigningPrivateKey:                    manifestSigningPrivateKey,
+		ServerBridgeControlSigningPrivateKey:         serverBridgeControlSigningPrivateKey,
 		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
 		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
 		AuthSQLProvidersFile:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
@@ -559,6 +590,53 @@ func ValidateProduction(cfg Config) error {
 	}
 	if cfg.ExtensionBackupRetention < 1 || cfg.ExtensionBackupRetention > 100 {
 		problems = append(problems, "NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
+	}
+	if cfg.ExtensionHostEnabled {
+		host, _, err := net.SplitHostPort(strings.TrimSpace(cfg.ExtensionHostListen))
+		if err != nil {
+			problems = append(problems, "NEVERLAUNCHER_EXTENSION_HOST_LISTEN должен быть host:port")
+		} else if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+			problems = append(problems, "NEVERLAUNCHER_EXTENSION_HOST_LISTEN должен быть loopback-адресом")
+		}
+		if cfg.ExtensionHostStartupTimeoutSeconds < 1 || cfg.ExtensionHostStartupTimeoutSeconds > 300 {
+			problems = append(problems, "extension host startup timeout должен быть 1..300 секунд")
+		}
+		if cfg.ExtensionHostHeartbeatTimeoutSeconds < 3 || cfg.ExtensionHostHeartbeatTimeoutSeconds > 600 {
+			problems = append(problems, "extension host heartbeat timeout должен быть 3..600 секунд")
+		}
+		if cfg.ExtensionHostStopTimeoutSeconds < 1 || cfg.ExtensionHostStopTimeoutSeconds > 120 {
+			problems = append(problems, "extension host stop timeout должен быть 1..120 секунд")
+		}
+		if cfg.ExtensionHostCapabilityTimeoutSeconds < 1 || cfg.ExtensionHostCapabilityTimeoutSeconds > 60 {
+			problems = append(problems, "extension host capability timeout должен быть 1..60 секунд")
+		}
+		if cfg.ExtensionHostMaxMemoryMB < 32 || cfg.ExtensionHostMaxMemoryMB > 1048576 {
+			problems = append(problems, "extension host max memory должен быть 32..1048576 MiB")
+		}
+		if cfg.ExtensionHostMaxProcesses < 1 || cfg.ExtensionHostMaxProcesses > 1024 {
+			problems = append(problems, "extension host max processes должен быть 1..1024")
+		}
+		if cfg.ExtensionHostMaxLogBytes < 65536 || cfg.ExtensionHostMaxLogBytes > 1<<30 {
+			problems = append(problems, "extension host max log bytes вне безопасного диапазона")
+		}
+		if cfg.ExtensionHostMaxLogEntries < 10 || cfg.ExtensionHostMaxLogEntries > 100000 {
+			problems = append(problems, "extension host max log entries вне безопасного диапазона")
+		}
+		if cfg.ExtensionHostMaxProtocolBodyBytes < 4096 || cfg.ExtensionHostMaxProtocolBodyBytes > 16<<20 {
+			problems = append(problems, "extension host max protocol body вне безопасного диапазона")
+		}
+		if cfg.ExtensionHostMaxStorageReadBytes < 4096 || cfg.ExtensionHostMaxStorageReadBytes > 64<<20 {
+			problems = append(problems, "extension host storage read limit вне безопасного диапазона")
+		}
+		if cfg.ExtensionHostCrashLimit < 1 || cfg.ExtensionHostCrashLimit > 100 {
+			problems = append(problems, "extension host crash limit должен быть 1..100")
+		}
+		if cfg.ExtensionHostCrashWindowSeconds < 10 || cfg.ExtensionHostCrashWindowSeconds > 86400 {
+			problems = append(problems, "extension host crash window должен быть 10..86400 секунд")
+		}
+		if cfg.ExtensionHostRestartBackoffMilliseconds < 100 || cfg.ExtensionHostRestartBackoffMilliseconds > 60000 {
+			problems = append(problems, "extension host restart backoff должен быть 100..60000 ms")
+		}
 	}
 	driver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))
 	switch driver {

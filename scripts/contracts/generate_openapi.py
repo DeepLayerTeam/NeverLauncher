@@ -112,6 +112,13 @@ def path_parameters(path):
           {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
           {"name":"historyLimit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":200,"default":50}},
         ]
+    if path.startswith("/api/v1/admin/extension-hosts/{extensionId}"):
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+        if path.endswith("/logs"):
+          out.append({"name":"limit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":100000,"default":1000}})
     return out
 
 ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
@@ -183,7 +190,9 @@ def request_body_required(method,path):
       "/api/v1/auth/sessions/revoke-others", "/api/v1/auth/providers/{providerId}/logout",
       "/api/v1/auth/devices/{deviceId}/revoke", "/api/v1/auth/devices/revoke-others", "/api/v1/admin/auth/devices/{deviceId}/revoke",
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
+      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
+      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
     }
     if (path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/"):
         return False
@@ -197,6 +206,7 @@ def request_body_allowed(method,path):
       "/api/v1/auth/logout","/api/v1/admin/logout","/api/v1/session/invalidate-all",
       "/api/v1/auth/sessions/revoke-others","/api/v1/auth/providers/{providerId}/logout",
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
+      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
     }
     if path in no_body or ((path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/")) or path.endswith("/versions/{versionId}/publish"):
         return False

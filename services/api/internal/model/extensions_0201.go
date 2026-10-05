@@ -62,7 +62,7 @@ type ExtensionVersion struct {
 }
 
 // ExtensionInstall is the persisted desired/current lifecycle state. The 0.20.4
-// lifecycle manager owns transitions; a later Extension Host consumes enabled state.
+// lifecycle manager owns transitions; the 0.20.5 Extension Host consumes enabled state.
 type ExtensionInstall struct {
 	ExtensionID string `json:"extensionId"`
 	Scope       string `json:"scope"`

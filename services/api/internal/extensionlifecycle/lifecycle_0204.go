@@ -813,3 +813,21 @@ func (m *Manager) VerifyLockfile(ctx context.Context, id string, scope Scope) er
 	}
 	return nil
 }
+
+// CurrentPayloadDir returns the canonical activated payload directory for one
+// persisted extension installation. Extension Host uses this instead of
+// reconstructing lifecycle paths independently.
+func CurrentPayloadDir(root, scope, scopeID, extensionID string) (string, error) {
+	s, err := normalizeScope0204(Scope{Scope: scope, ScopeID: scopeID})
+	if err != nil {
+		return "", err
+	}
+	id, err := safeExtensionID0204(extensionID)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(root) == "" {
+		root = "./data/extensions"
+	}
+	return currentDir0204(filepath.Clean(root), s, id), nil
+}

@@ -10,6 +10,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
@@ -86,13 +87,50 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var host *extensionhost.Supervisor
+	if cfg.ExtensionHostEnabled {
+		if err := extensionhost.HardenBackendProcess(); err != nil {
+			log.Fatalf("extension host backend memory hardening failed: %v", err)
+		}
+		host = extensionhost.New(extensionhost.Config{
+			ExtensionRoot:       cfg.ExtensionRoot,
+			Listen:              cfg.ExtensionHostListen,
+			StartupTimeout:      time.Duration(cfg.ExtensionHostStartupTimeoutSeconds) * time.Second,
+			HeartbeatTimeout:    time.Duration(cfg.ExtensionHostHeartbeatTimeoutSeconds) * time.Second,
+			StopTimeout:         time.Duration(cfg.ExtensionHostStopTimeoutSeconds) * time.Second,
+			CapabilityTimeout:   time.Duration(cfg.ExtensionHostCapabilityTimeoutSeconds) * time.Second,
+			MaxMemoryBytes:      cfg.ExtensionHostMaxMemoryMB << 20,
+			MaxProcesses:        cfg.ExtensionHostMaxProcesses,
+			MaxLogBytes:         cfg.ExtensionHostMaxLogBytes,
+			MaxLogEntries:       cfg.ExtensionHostMaxLogEntries,
+			MaxProtocolBody:     cfg.ExtensionHostMaxProtocolBodyBytes,
+			MaxStorageReadBytes: cfg.ExtensionHostMaxStorageReadBytes,
+			CrashLimit:          cfg.ExtensionHostCrashLimit,
+			CrashWindow:         time.Duration(cfg.ExtensionHostCrashWindowSeconds) * time.Second,
+			RestartBackoff:      time.Duration(cfg.ExtensionHostRestartBackoffMilliseconds) * time.Millisecond,
+		}, repo, store)
+		if err := host.Start(context.Background()); err != nil {
+			log.Fatalf("extension host initialization failed: %v", err)
+		}
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = host.Close(ctx)
+		}()
+		for _, reconcileErr := range host.Reconcile(context.Background()) {
+			log.Printf("extension host reconcile: %v", reconcileErr)
+		}
+		log.Printf("NeverExtensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
+	}
+
 	server := httpapi.Server{
-		Version:    version,
-		Config:     cfg,
-		Repo:       repo,
-		Storage:    store,
-		State:      state,
-		Federation: federationCore,
+		Version:       version,
+		Config:        cfg,
+		Repo:          repo,
+		Storage:       store,
+		State:         state,
+		Federation:    federationCore,
+		ExtensionHost: host,
 	}
 
 	log.Printf(

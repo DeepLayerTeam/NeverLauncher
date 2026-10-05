@@ -1,3 +1,12 @@
+## [0.20.5] - 2026-10-05
+
+- Added the production NeverExtensions Backend Extension Host: enabled backend targets execute as separately supervised OS processes rather than Go plugins or in-process code.
+- Added a loopback-only authenticated Host Protocol with per-process 256-bit bearer tokens, mandatory identity-bound hello, heartbeats, structured logs and a permission-gated capability broker for project/release/storage access.
+- Added process supervision with startup/stop/capability timeouts, crash detection, bounded automatic restart with crash-loop suppression, stdout/stderr capture and bounded in-memory log retention.
+- Added Linux process-group supervision with parent-death signal, aggregate process-tree RSS/process-count enforcement and Backend `PR_SET_DUMPABLE=0` memory hardening; extension child environments are allowlisted and never inherit Backend DB/auth/signing/storage secrets.
+- Integrated Host execution with install lifecycle compensation: enable rolls back to disabled on startup failure, update rolls payload/state back when the new process cannot activate, and disable/update/rollback/uninstall stop running processes before filesystem swaps.
+- Added Host health/log/start/stop/restart Admin API, `nl extension host ...`, Admin runtime controls, production configuration, OpenAPI coverage, real subprocess/heartbeat/crash-loop tests and the mandatory 0.20.5 CI gate. No database migration is required.
+
 ## [0.20.4] - 2026-10-05
 
 - Added production NeverExtensions install lifecycle with install, enable, disable, update, rollback and uninstall for global and project scopes, persisted desired/current version and state, package identities and monotonic generations.

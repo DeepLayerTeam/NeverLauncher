@@ -807,6 +807,13 @@ jobs:
           (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestNeverExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
           (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/neverlauncher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
+      - name: NeverExtensions Extension Host 1 0.20.5 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-host-0205.py
+          (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentNeverForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
+          (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
+          (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/neverlauncher)
+          (cd cli && go vet ./cmd/neverlauncher)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

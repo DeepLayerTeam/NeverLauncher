@@ -53,7 +53,7 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback")
+		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host")
 	}
 	switch args[0] {
 	case "template":
@@ -95,6 +95,8 @@ func handleExtension0201(args []string) error {
 		return handleExtensionPackage0202(args)
 	case "registry":
 		return handleExtensionRegistry0203(args[1:])
+	case "host":
+		return handleExtensionHost0205(args[1:])
 	case "installed", "installations", "status", "install", "enable", "disable", "uninstall", "update", "rollback":
 		return handleExtensionLifecycle0204(args[0], args[1:])
 	case "import-legacy":

@@ -106,7 +106,7 @@ func TestNeverExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T
 	if res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "artifact verification failed") {
 		t.Fatalf("install must fail closed: %d %s", res.Code, res.Body.String())
 	}
-	installs, err := repo.ListExtensionInstalls(ctx)
+	installs, err := repo.ListExtensionInstalls(ctx, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

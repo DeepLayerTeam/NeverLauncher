@@ -26,6 +26,8 @@ type RegistryVersionView = { extensionId: string; version: string; publisherId: 
 type RegistrySearchData = { schemaVersion?: string; count?: number; items?: RegistryVersionView[] };
 type ExtensionInstallView = { extensionId: string; scope: string; scopeId?: string; version: string; desiredVersion: string; currentVersion?: string; desiredState: string; currentState: string; enabled: boolean; packageIdentity?: string; currentPackageIdentity?: string; previousVersion?: string; generation: number; source: string; lastError?: string; updatedAt?: string };
 type ExtensionInstallListData = { schemaVersion?: string; count?: number; items?: ExtensionInstallView[] };
+type ExtensionHostView = { extensionId: string; scope: string; scopeId?: string; version?: string; generation: number; pid?: number; state: string; healthy: boolean; restarts: number; lastError?: string; memoryBytes?: number; processCount?: number; resourceIsolation: string; lastHeartbeatAt?: string };
+type ExtensionHostListData = { protocolVersion?: string; resourceIsolation?: string; limits?: Record<string, unknown>; items?: ExtensionHostView[] };
 
 const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
 
@@ -221,6 +223,7 @@ function App() {
   const [extensionScope, setExtensionScope] = useState<'global' | 'project'>('global');
   const [extensionScopeId, setExtensionScopeId] = useState('');
   const [extensionInstalls, setExtensionInstalls] = useState<ExtensionInstallView[]>([]);
+  const [extensionHosts, setExtensionHosts] = useState<ExtensionHostView[]>([]);
 
   const sections = productionUI.sections?.length ? productionUI.sections : fallbackSections;
   const selectedProjectId = projectForm.id || profileForm.projectId || channelForm.projectId || 'project-required';
@@ -451,11 +454,27 @@ function App() {
     return data;
   }
 
+  async function loadExtensionHosts() {
+    const data = await requestJSON<ExtensionHostListData>(backendUrl, '/api/v1/admin/extension-hosts', token);
+    setExtensionHosts(data.items ?? []);
+    return data;
+  }
+
+  function hostForInstall(item: ExtensionInstallView) {
+    return extensionHosts.find((host) => host.extensionId === item.extensionId && host.scope === item.scope && (host.scopeId ?? '') === (item.scopeId ?? ''));
+  }
+
+  async function hostAction(item: ExtensionInstallView, action: 'start' | 'stop' | 'restart') {
+    const params = new URLSearchParams({ scope: item.scope });
+    if (item.scopeId) params.set('scopeId', item.scopeId);
+    return requestJSON(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(item.extensionId)}/${action}?${params.toString()}`, token, { method: 'POST' });
+  }
+
   async function runRegistryAction(label: string, fn: () => Promise<unknown>) {
     setError(null); setMessage(null);
     await fn();
     setMessage(`${label}: выполнено`);
-    await Promise.all([loadRegistry(), loadExtensionInstalls().catch(() => undefined), loadDashboard().catch(() => undefined)]);
+    await Promise.all([loadRegistry(), loadExtensionInstalls().catch(() => undefined), loadExtensionHosts().catch(() => undefined), loadDashboard().catch(() => undefined)]);
   }
 
   async function createRegistryPublisher() {
@@ -541,7 +560,7 @@ function App() {
     <div className="registryToolbar">
       <select aria-label="Extension scope" value={extensionScope} onChange={(event) => setExtensionScope(event.target.value as 'global' | 'project')}><option value="global">global</option><option value="project">project</option></select>
       {extensionScope === 'project' && <input aria-label="Extension project scope" value={extensionScopeId} onChange={(event) => setExtensionScopeId(event.target.value)} placeholder="Project ID" />}
-      <button onClick={() => loadExtensionInstalls().catch((err: Error) => setError(err.message))}>Обновить installs</button>
+      <button onClick={() => Promise.all([loadExtensionInstalls(), loadExtensionHosts()]).catch((err: Error) => setError(err.message))}>Обновить installs/hosts</button>
     </div>
     <div className="registryToolbar">
       <input aria-label="Registry search" value={registryQuery} onChange={(event) => setRegistryQuery(event.target.value)} placeholder="Поиск extension/publisher" />
@@ -587,6 +606,7 @@ function App() {
         <div className="registryHeading"><div><strong>{item.extensionId}</strong><p className="muted"><code>{item.currentVersion || 'absent'}</code> · desired <code>{item.desiredVersion}</code> · generation {item.generation}</p></div><div className="registryBadges"><span className={`badge ${item.currentState === 'enabled' ? 'ok' : item.currentState === 'absent' ? 'warn' : ''}`}>{item.currentState}</span><span className="badge">{item.scope}{item.scopeId ? `:${item.scopeId}` : ''}</span></div></div>
         <p className="registryIdentity"><code>{item.currentPackageIdentity || item.packageIdentity || 'no package identity'}</code></p>
         {item.lastError && <p className="error">{item.lastError}</p>}
+        {(() => { const host = hostForInstall(item); return host ? <><p className="muted">Host: <strong>{host.state}</strong> · healthy {host.healthy ? 'yes' : 'no'} · PID {host.pid ?? '—'} · restarts {host.restarts} · RSS {host.memoryBytes ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB` : '—'} · processes {host.processCount ?? '—'}</p>{host.lastError && <p className="error">Host: {host.lastError}</p>}<div className="buttonRow"><button disabled={item.currentState !== 'enabled' || host.state === 'running'} onClick={() => runRegistryAction('Host start', () => hostAction(item, 'start')).catch((err) => setError(err.message))}>Host Start</button><button disabled={!['running','starting','stopping'].includes(host.state)} onClick={() => runRegistryAction('Host stop', () => hostAction(item, 'stop')).catch((err) => setError(err.message))}>Host Stop</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Host restart', () => hostAction(item, 'restart')).catch((err) => setError(err.message))}>Host Restart</button></div></> : item.currentState === 'enabled' ? <p className="muted">Host: backend target не запущен или отсутствует; обновите hosts для актуального состояния.</p> : null; })()}
         <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Extension enable', () => lifecycleAction(item, 'enable')).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Extension disable', () => lifecycleAction(item, 'disable')).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Extension update', () => updateInstalledExtension(item)).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Extension rollback', () => lifecycleAction(item, 'rollback')).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Extension uninstall', () => lifecycleAction(item, 'uninstall')).catch((err) => setError(err.message))}>Uninstall</button></div>
       </article>)}
     </section>

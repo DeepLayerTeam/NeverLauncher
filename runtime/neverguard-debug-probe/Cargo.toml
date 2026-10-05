@@ -1,6 +1,6 @@
 [package]
 name = "neverguard-debug-probe"
-version = "0.20.4"
+version = "0.20.5"
 description = "NeverGuard Windows debugger-attach adversarial integration probe"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
