@@ -53,7 +53,7 @@ func TestServerBridgeEventSignature0194(t *testing.T) {
 	}
 	runtime := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	raw := signedEvent0194(t, private, "paper-0194", runtime, 1, "server.ready", map[string]string{"platform": "paper"})
-	event, err := validateBridgeEvent0194("paper-0194", runtime, raw, public, time.Now().UTC())
+	event, err := validateBridgeEvent0194("paper-0194", runtime, "", raw, public, time.Now().UTC(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestServerBridgeEventSignature0194(t *testing.T) {
 	}
 
 	raw.Payload["platform"] = "tampered"
-	if _, err := validateBridgeEvent0194("paper-0194", runtime, raw, public, time.Now().UTC()); err == nil {
+	if _, err := validateBridgeEvent0194("paper-0194", runtime, "", raw, public, time.Now().UTC(), false); err == nil {
 		t.Fatal("tampered event payload must fail digest/signature validation")
 	}
 }

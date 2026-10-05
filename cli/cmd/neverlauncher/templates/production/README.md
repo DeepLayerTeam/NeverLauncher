@@ -185,3 +185,9 @@ NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ### ServerBridge HA Control Plane 0.19.11
 
 Для нескольких API replicas используйте общие PostgreSQL и Redis. На каждой replica задайте уникальный `NEVERLAUNCHER_REPLICA_ID`; `NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true` запрещает локальный fallback для control ownership. ServerBridge получает несколько HTTPS origin через `backend.urls` или `NEVERLAUNCHER_BACKEND_URLS`; transport/502/503/504 допускают failover, а authentication/authorization rejection не переключается на другой endpoint. Перед rolling deployment примените migration `0040_serverbridge_ha_control_plane_01911`.
+### ServerBridge Security & Certification 0.19.12
+
+Bridge 0.19.12 использует только Protocol v3 security profile `serverbridge3-security-01912`; старый Protocol v2 остаётся на Backend только для уже развёрнутого fleet. Production release должен использовать ServerBridge 3 allowlist schema 3.0 с точным capability digest и всеми 14 platform SHA-256.
+
+Для ротации control signing key без downtime сначала оставьте текущий seed в `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY`, а новый seed установите в `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY`. Выполните rolling deployment Backend, дождитесь, пока активные Bridges успешно negotiate capability document с overlap key-set, и только затем удалите previous key и повторите rolling deployment. После финализации удалённый ключ больше не считается trust anchor. Не используйте одинаковый active/previous seed.
+

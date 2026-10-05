@@ -360,26 +360,43 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
 		return
 	}
-	privateKey, err := s.serverBridgeControlSigningPrivateKey0195()
+	activeKey, previousKey, err := s.serverBridgeSigningKeys01912()
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_signing_unavailable")
 		return
 	}
-	publicKey := privateKey.Public().(ed25519.PublicKey)
-	finger := sha256.Sum256(publicKey)
 	payloadBytes, _ := canonicalControlPayload0195(cmd.Payload)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadBytes)
 	issued := now.UnixMilli()
 	expires := cmd.ExpiresAt.UnixMilli()
-	canonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
-	signature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(privateKey, []byte(canonical)))
+	capabilityDigest := serverBridgeExpectedSecurityCapabilityDigest01912()
+
+	activeCanonical := serverBridgeControlCanonical01912(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, capabilityDigest, activeKey.Fingerprint, node.IdentityEpoch, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
+	activeSignature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(activeKey.PrivateKey, []byte(activeCanonical)))
+	previousPublicKey, previousFingerprint, previousSignature := "", "", ""
+	legacyKey := activeKey
+	if previousKey != nil {
+		previousPublicKey = previousKey.PublicB64
+		previousFingerprint = previousKey.Fingerprint
+		previousCanonical := serverBridgeControlCanonical01912(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, capabilityDigest, previousKey.Fingerprint, node.IdentityEpoch, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
+		previousSignature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(previousKey.PrivateKey, []byte(previousCanonical)))
+		// During overlap, pre-0.19.12 bridges still trust the previous key. Keep the
+		// legacy signature on that key while v3 clients authenticate the active set.
+		legacyKey = *previousKey
+	}
+	legacyCanonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
+	legacySignature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(legacyKey.PrivateKey, []byte(legacyCanonical)))
+
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{
 		"status": "command", "protocolVersion": serverBridgeProtocolV3, "feature": serverBridgeFeatureHAControlPlane, "controlFeature": serverBridgeFeatureControlAPI,
-		"serverId": cmd.ServerID, "runtimeId": cmd.RuntimeID, "runtimeEpoch": cmd.RuntimeEpoch, "commandId": cmd.ID,
+		"serverId": cmd.ServerID, "runtimeId": cmd.RuntimeID, "runtimeEpoch": cmd.RuntimeEpoch, "identityEpoch": node.IdentityEpoch, "commandId": cmd.ID,
 		"deliverySequence": cmd.DeliverySequence, "channelId": cmd.LeaseOwner, "leaseToken": cmd.LeaseToken,
 		"type": cmd.Type, "payload": payloadB64, "payloadSha256": cmd.PayloadSHA256, "attempt": cmd.Attempt,
 		"issuedAtUnixMillis": issued, "expiresAtUnixMillis": expires,
-		"signingPublicKey": base64.RawURLEncoding.EncodeToString(publicKey), "signingKeyFingerprint": hex.EncodeToString(finger[:]), "signature": signature,
+		"securityProfile": serverBridgeSecurityProfile01912, "securityCapabilityDigest": capabilityDigest,
+		"v3SigningPublicKey": activeKey.PublicB64, "v3SigningKeyFingerprint": activeKey.Fingerprint, "v3Signature": activeSignature,
+		"previousV3SigningPublicKey": previousPublicKey, "previousV3SigningKeyFingerprint": previousFingerprint, "previousV3Signature": previousSignature,
+		"signingPublicKey": legacyKey.PublicB64, "signingKeyFingerprint": legacyKey.Fingerprint, "signature": legacySignature,
 	}})
 }
 
@@ -397,6 +414,10 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	features := normalizeBridgeFeatures0191(req.Features)
+	if _, reason := validateServerBridgeSecurityEnvelope01912(r, req.ProtocolVersion, features); reason != "" {
+		writeError(w, http.StatusUpgradeRequired, reason)
+		return
+	}
 	hasControlFeature, hasHAFeature := false, false
 	for _, feature := range features {
 		if feature == serverBridgeFeatureControlAPI {

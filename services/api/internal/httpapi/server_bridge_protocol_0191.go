@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -71,6 +73,12 @@ var serverBridgeV3Features0191 = []string{
 	serverBridgeFeatureHAControlPlane,
 	serverBridgeFeatureRoutingV2,
 	serverBridgeFeaturePlayerSessionV3,
+	serverBridgeFeatureV3SigningDomain01912,
+	serverBridgeFeatureDowngradeProtection01912,
+	serverBridgeFeatureCommandSignatures01912,
+	serverBridgeFeatureEventSignatures01912,
+	serverBridgeFeatureRuntimeBinding01912,
+	serverBridgeFeatureOnlineKeyRotation01912,
 }
 
 type bridgeProtocolEnvelope0191 struct {
@@ -432,21 +440,48 @@ func (s Server) serverBridgeCapabilities0191(w http.ResponseWriter, r *http.Requ
 		status = http.StatusUpgradeRequired
 		reason = "serverbridge_no_compatible_protocol"
 	}
+	activeSigningKey, previousSigningKey, signingErr := s.serverBridgeSigningKeys01912()
+	if signingErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "serverbridge_capability_signing_unavailable")
+		return
+	}
+	securityDigest := serverBridgeExpectedSecurityCapabilityDigest01912()
+	previousFingerprint := ""
+	previousPublicKey := ""
+	if previousSigningKey != nil {
+		previousFingerprint = previousSigningKey.Fingerprint
+		previousPublicKey = previousSigningKey.PublicB64
+	}
+	capabilityCanonical := serverBridgeCapabilityCanonical01912(securityDigest, activeSigningKey.Fingerprint, previousFingerprint)
+	capabilitySignature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(activeSigningKey.PrivateKey, []byte(capabilityCanonical)))
+	previousCapabilitySignature := ""
+	if previousSigningKey != nil {
+		previousCapabilitySignature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(previousSigningKey.PrivateKey, []byte(capabilityCanonical)))
+	}
+
 	data := map[string]any{
-		"schemaVersion":               bridgePluginsSchema940,
-		"toolVersion":                 s.Version,
-		"release":                     "ServerBridge 3",
-		"status":                      reason,
-		"preferredProtocolVersion":    serverBridgeProtocolCurrent,
-		"minimumProtocolVersion":      serverBridgeProtocolMinimum,
-		"supportedProtocolVersions":   serverBridgeSupportedProtocols0191,
-		"negotiatedProtocolVersion":   negotiatedProtocol,
-		"features":                    enabledFeatures,
-		"featureFlags":                bridgeFeatureFlags0191(enabledFeatures),
-		"requiredFeatures":            map[string][]string{"2": []string{}, "3": append([]string(nil), serverBridgeV3RequiredFeatures0191...)},
-		"rollingUpgrade":              true,
-		"legacyProtocolV2Supported":   true,
-		"capabilityNegotiationActive": true,
+		"schemaVersion":                 bridgePluginsSchema940,
+		"toolVersion":                   s.Version,
+		"release":                       "ServerBridge 3",
+		"status":                        reason,
+		"preferredProtocolVersion":      serverBridgeProtocolCurrent,
+		"minimumProtocolVersion":        serverBridgeProtocolMinimum,
+		"supportedProtocolVersions":     serverBridgeSupportedProtocols0191,
+		"negotiatedProtocolVersion":     negotiatedProtocol,
+		"features":                      enabledFeatures,
+		"featureFlags":                  bridgeFeatureFlags0191(enabledFeatures),
+		"requiredFeatures":              map[string][]string{"2": []string{}, "3": append([]string(nil), serverBridgeV3RequiredFeatures0191...)},
+		"rollingUpgrade":                true,
+		"legacyProtocolV2Supported":     true,
+		"capabilityNegotiationActive":   true,
+		"securityProfile":               serverBridgeSecurityProfile01912,
+		"securityCapabilityDigest":      securityDigest,
+		"activeSigningPublicKey":        activeSigningKey.PublicB64,
+		"activeSigningKeyFingerprint":   activeSigningKey.Fingerprint,
+		"previousSigningPublicKey":      previousPublicKey,
+		"previousSigningKeyFingerprint": previousFingerprint,
+		"capabilitySignature":           capabilitySignature,
+		"previousCapabilitySignature":   previousCapabilitySignature,
 	}
 	if negotiatedProtocol == 0 {
 		data["reason"] = reason

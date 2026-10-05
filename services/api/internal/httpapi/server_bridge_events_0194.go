@@ -42,6 +42,9 @@ type bridgeEventContract0194 struct {
 	OccurredAtUnixMillis int64             `json:"occurredAtUnixMillis"`
 	Payload              map[string]string `json:"payload"`
 	PayloadSHA256        string            `json:"payloadSha256"`
+	SecurityProfile      string            `json:"securityProfile,omitempty"`
+	CapabilityDigest     string            `json:"securityCapabilityDigest,omitempty"`
+	NodeKeyFingerprint   string            `json:"nodeKeyFingerprint,omitempty"`
 	Signature            string            `json:"signature"`
 }
 
@@ -92,6 +95,11 @@ func (s Server) serverBridgeEventStream0194(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUpgradeRequired, reason)
 		return
 	}
+	securityV3, securityReason := validateServerBridgeSecurityEnvelope01912(r, req.ProtocolVersion, req.Features)
+	if securityReason != "" {
+		writeError(w, http.StatusUpgradeRequired, securityReason)
+		return
+	}
 	enabled, reason := bridgeEventFeatureMode0194(req.Features)
 	if reason != "" {
 		writeError(w, http.StatusUpgradeRequired, reason)
@@ -125,7 +133,7 @@ func (s Server) serverBridgeEventStream0194(w http.ResponseWriter, r *http.Reque
 	events := make([]model.ServerBridgeEvent, 0, len(req.Events))
 	var previous int64
 	for i, raw := range req.Events {
-		event, eventErr := validateBridgeEvent0194(server.ID, runtimeID, raw, publicKey, now)
+		event, eventErr := validateBridgeEvent0194(server.ID, runtimeID, server.KeyFingerprint, raw, publicKey, now, securityV3)
 		if eventErr != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("event-stream-denied"), Actor: server.ID, Action: "serverbridge:event-stream:denied", Target: eventErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 			writeError(w, http.StatusBadRequest, eventErr.Error())
@@ -167,7 +175,7 @@ func (s Server) serverBridgeEventStream0194(w http.ResponseWriter, r *http.Reque
 	}})
 }
 
-func validateBridgeEvent0194(serverID, runtimeID string, raw bridgeEventContract0194, publicKey ed25519.PublicKey, now time.Time) (model.ServerBridgeEvent, error) {
+func validateBridgeEvent0194(serverID, runtimeID, keyFingerprint string, raw bridgeEventContract0194, publicKey ed25519.PublicKey, now time.Time, securityV3 bool) (model.ServerBridgeEvent, error) {
 	raw.EventID = strings.TrimSpace(raw.EventID)
 	raw.RuntimeID = strings.ToLower(strings.TrimSpace(raw.RuntimeID))
 	raw.Type = strings.ToLower(strings.TrimSpace(raw.Type))
@@ -212,7 +220,20 @@ func validateBridgeEvent0194(serverID, runtimeID string, raw bridgeEventContract
 	if err != nil || len(signature) != ed25519.SignatureSize {
 		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_signature_invalid")
 	}
-	canonical := bridgeEventCanonical0194(serverID, raw.EventID, runtimeID, raw.Sequence, raw.Type, raw.OccurredAtUnixMillis, digestHex)
+	canonical := ""
+	if securityV3 {
+		raw.SecurityProfile = strings.TrimSpace(raw.SecurityProfile)
+		raw.CapabilityDigest = strings.ToLower(strings.TrimSpace(raw.CapabilityDigest))
+		raw.NodeKeyFingerprint = strings.ToLower(strings.TrimSpace(raw.NodeKeyFingerprint))
+		if raw.SecurityProfile != serverBridgeSecurityProfile01912 ||
+			subtle.ConstantTimeCompare([]byte(raw.CapabilityDigest), []byte(serverBridgeExpectedSecurityCapabilityDigest01912())) != 1 ||
+			subtle.ConstantTimeCompare([]byte(raw.NodeKeyFingerprint), []byte(strings.ToLower(strings.TrimSpace(keyFingerprint)))) != 1 {
+			return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_security_binding_invalid")
+		}
+		canonical = serverBridgeEventCanonical01912(serverID, raw.EventID, runtimeID, raw.NodeKeyFingerprint, raw.CapabilityDigest, raw.Sequence, raw.Type, raw.OccurredAtUnixMillis, digestHex)
+	} else {
+		canonical = bridgeEventCanonical0194(serverID, raw.EventID, runtimeID, raw.Sequence, raw.Type, raw.OccurredAtUnixMillis, digestHex)
+	}
 	if !ed25519.Verify(publicKey, []byte(canonical), signature) {
 		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_signature_invalid")
 	}

@@ -16,6 +16,29 @@ const serverBridge3CertificationReleaseFile = "SERVERBRIDGE3_CERTIFICATION.json"
 var serverBridge2ReleaseTargets0150 = []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge"}
 var serverBridgeUniversalReleaseTargets0198 = []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla"}
 
+var serverBridgeSecurityFeatures01912 = []string{"security.protocol-v3-signing-domain", "security.capability-downgrade-protection", "security.command-signatures-v3", "security.event-signatures-v3", "security.runtime-instance-binding-v3", "security.online-key-rotation-v1"}
+
+func serverBridgeSecurityFeaturesExact01912(features []string) bool {
+	if len(features) != len(serverBridgeSecurityFeatures01912) {
+		return false
+	}
+	want := make(map[string]struct{}, len(serverBridgeSecurityFeatures01912))
+	for _, feature := range serverBridgeSecurityFeatures01912 {
+		want[feature] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(features))
+	for _, feature := range features {
+		if _, ok := want[feature]; !ok {
+			return false
+		}
+		if _, duplicate := seen[feature]; duplicate {
+			return false
+		}
+		seen[feature] = struct{}{}
+	}
+	return len(seen) == len(want)
+}
+
 var serverBridge2AllowlistFields0150 = map[string]string{
 	"velocity": "velocitySha256", "bungeecord": "bungeeCordSha256", "waterfall": "waterfallSha256",
 	"bukkit": "bukkitSha256", "spigot": "spigotSha256", "paper": "paperSha256", "purpur": "purpurSha256",
@@ -31,16 +54,24 @@ type serverBridge2CertifiedArtifact0150 struct {
 }
 
 type serverBridge2Certification0150 struct {
-	SchemaVersion   string                               `json:"schemaVersion"`
-	Release         string                               `json:"release"`
-	Version         string                               `json:"version"`
-	ProtocolVersion int                                  `json:"protocolVersion"`
-	Status          string                               `json:"status"`
-	TargetCount     int                                  `json:"targetCount"`
-	ZeroPatch       bool                                 `json:"zeroPatch"`
-	NodeIdentity    string                               `json:"nodeIdentity"`
-	OneTimeJoin     bool                                 `json:"oneTimeJoin"`
-	Artifacts       []serverBridge2CertifiedArtifact0150 `json:"artifacts"`
+	SchemaVersion            string                               `json:"schemaVersion"`
+	Release                  string                               `json:"release"`
+	Version                  string                               `json:"version"`
+	ProtocolVersion          int                                  `json:"protocolVersion"`
+	Status                   string                               `json:"status"`
+	TargetCount              int                                  `json:"targetCount"`
+	ZeroPatch                bool                                 `json:"zeroPatch"`
+	NodeIdentity             string                               `json:"nodeIdentity"`
+	OneTimeJoin              bool                                 `json:"oneTimeJoin"`
+	SecurityProfile          string                               `json:"securityProfile"`
+	SecurityCapabilityDigest string                               `json:"securityCapabilityDigest"`
+	RequiredSecurityFeatures []string                             `json:"requiredSecurityFeatures"`
+	CapabilityDowngrade      bool                                 `json:"capabilityDowngradeProtection"`
+	CommandSignatures        bool                                 `json:"commandSignatures"`
+	EventSignatures          bool                                 `json:"eventSignatures"`
+	RuntimeInstanceBinding   bool                                 `json:"runtimeInstanceBinding"`
+	OnlineKeyRotation        bool                                 `json:"onlineKeyRotation"`
+	Artifacts                []serverBridge2CertifiedArtifact0150 `json:"artifacts"`
 }
 
 func serverBridge2CertificationRequired0150(ver string) bool {
@@ -92,6 +123,24 @@ func serverBridgeUniversalAdaptersRequired0198(ver string) bool {
 	return major > 0 || minor > 19 || (minor == 19 && patch >= 8)
 }
 
+func serverBridgeSecurityCertificationRequired01912(ver string) bool {
+	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
+	if len(parts) < 3 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	patchPart := parts[2]
+	if i := strings.IndexByte(patchPart, '-'); i >= 0 {
+		patchPart = patchPart[:i]
+	}
+	patch, err3 := strconv.Atoi(patchPart)
+	if err1 != nil || err2 != nil || err3 != nil {
+		return false
+	}
+	return major > 0 || minor > 19 || (minor == 19 && patch >= 12)
+}
+
 func serverBridgeReleaseTargetsForVersion0150(ver string) []string {
 	if serverBridgeUniversalAdaptersRequired0198(ver) {
 		return serverBridgeUniversalReleaseTargets0198
@@ -125,6 +174,11 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	if cert.SchemaVersion != "1.0" || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
 		return fmt.Errorf("%s certification metadata mismatch", expectedRelease)
 	}
+	if serverBridgeSecurityCertificationRequired01912(ver) {
+		if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
+			return errors.New("ServerBridge 3 security certification metadata mismatch")
+		}
+	}
 	targets := serverBridgeReleaseTargetsForVersion0150(ver)
 	if cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
 		return fmt.Errorf("%s certification must contain %d artifacts", expectedRelease, len(targets))
@@ -135,7 +189,25 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		return fmt.Errorf("read BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
 	}
 	var allow map[string]map[string][]string
-	if err := json.Unmarshal(allowRaw, &allow); err != nil {
+	if serverBridgeSecurityCertificationRequired01912(ver) {
+		var document struct {
+			SchemaVersion            string                         `json:"schemaVersion"`
+			Release                  string                         `json:"release"`
+			ProtocolVersion          int                            `json:"protocolVersion"`
+			MinimumProtocolVersion   int                            `json:"minimumProtocolVersion"`
+			SecurityProfile          string                         `json:"securityProfile"`
+			SecurityCapabilityDigest string                         `json:"securityCapabilityDigest"`
+			RequiredFeatures         []string                       `json:"requiredFeatures"`
+			Releases                 map[string]map[string][]string `json:"releases"`
+		}
+		if err := json.Unmarshal(allowRaw, &document); err != nil {
+			return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+		}
+		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+			return errors.New("ServerBridge 3 release allowlist security metadata mismatch")
+		}
+		allow = document.Releases
+	} else if err := json.Unmarshal(allowRaw, &allow); err != nil {
 		return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
 	}
 	if len(allow) != 1 || allow[ver] == nil {

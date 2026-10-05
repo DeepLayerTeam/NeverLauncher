@@ -1,3 +1,12 @@
+## [0.19.12] - 2026-10-05
+
+- Added one canonical ServerBridge Protocol v3 signing domain for capability negotiation, node requests, ordered events and Backend control commands, with node fingerprint, runtime instance and identity/runtime epoch binding.
+- Added fail-closed capability downgrade protection: the 0.19.12 Bridge offers only Protocol v3 and requires the exact certified six-feature security profile/digest while the Backend retains compatibility for older fleet releases.
+- Added signed Backend capability documents plus overlap active/previous Ed25519 trust, allowing zero-downtime control signing-key rotation without retaining removed keys as hidden authorization anchors.
+- Added ServerBridge 3 schemaVersion 3.0 release allowlist/certification checks across Backend, CLI and certifier with exact security metadata and all 14 platform artifact hashes.
+- Added runtime-bound command signatures and execution replay identity, v3 event signatures, signed node request runtime binding and migration of pending legacy event-journal entries into v3-signed records.
+- Added adversarial security tests and an executable 14-target × 10-scenario E2E certification matrix covering tampered bridge/node/event/command, replayed event/command, runtime rebind, capability downgrade and online key rotation. No database migration is required.
+
 ## [0.19.11] - 2026-10-04
 
 - Added production ServerBridge HA Control Plane with ordered multi-Backend endpoint failover, endpoint cooldown and terminal fail-closed handling for authentication/authorization responses.

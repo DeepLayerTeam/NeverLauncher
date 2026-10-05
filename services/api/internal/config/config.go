@@ -14,62 +14,63 @@ import (
 
 // Config содержит настройки Backend API.
 type Config struct {
-	HTTPAddr                             string
-	PublicURL                            string
-	DatabaseDSN                          string
-	RepositoryDriver                     string
-	SQLDriver                            string
-	RedisAddr                            string
-	RedisURL                             string
-	ServerBridgeHARequired               bool
-	ServerBridgeReplicaID                string
-	TrustedProxyCIDRs                    []string
-	RateLimitEnabled                     bool
-	RateLimitGlobalPerMinute             int
-	RateLimitAuthPerMinute               int
-	RateLimitServerBridgePerMinute       int
-	RateLimitFailClosed                  bool
-	StorageDriver                        string
-	StorageLocalPath                     string
-	StorageS3Endpoint                    string
-	StorageS3Bucket                      string
-	StorageS3Region                      string
-	StorageS3AccessKey                   string
-	StorageS3SecretKey                   string
-	StorageS3PublicURL                   string
-	StorageS3PathStyle                   bool
-	StorageDeliveryMode                  string
-	StorageCDNOrigin                     string
-	StorageMaxUploadBytes                int64
-	BackupRoot                           string
-	CORSAllowedOrigins                   []string
-	Environment                          string
-	AuthTokenSecret                      string
-	AuthTokenTTLHours                    int
-	AuthTokenIssuer                      string
-	AuthTokenAudience                    string
-	AuthTokenActiveKID                   string
-	AuthTokenKeysJSON                    string
-	GuardReleaseAllowlistJSON            string
-	BridgeReleaseAllowlistJSON           string
-	MetricsEnabled                       bool
-	PersistentSessions                   bool
-	RequirePersistentStoreInProduction   bool
-	DatabaseAutoMigrate                  bool
-	BootstrapToken                       string
-	ManifestSigningPrivateKey            string
-	ServerBridgeControlSigningPrivateKey string
-	AuthSQLProvidersJSON                 string
-	AuthSQLProvidersFile                 string
-	AuthHTTPProvidersJSON                string
-	AuthHTTPProvidersFile                string
-	AuthOIDCProvidersJSON                string
-	AuthOIDCProvidersFile                string
-	AuthMicrosoftProvidersJSON           string
-	AuthMicrosoftProvidersFile           string
-	WebAuthnRPID                         string
-	WebAuthnRPName                       string
-	WebAuthnOrigins                      []string
+	HTTPAddr                                     string
+	PublicURL                                    string
+	DatabaseDSN                                  string
+	RepositoryDriver                             string
+	SQLDriver                                    string
+	RedisAddr                                    string
+	RedisURL                                     string
+	ServerBridgeHARequired                       bool
+	ServerBridgeReplicaID                        string
+	TrustedProxyCIDRs                            []string
+	RateLimitEnabled                             bool
+	RateLimitGlobalPerMinute                     int
+	RateLimitAuthPerMinute                       int
+	RateLimitServerBridgePerMinute               int
+	RateLimitFailClosed                          bool
+	StorageDriver                                string
+	StorageLocalPath                             string
+	StorageS3Endpoint                            string
+	StorageS3Bucket                              string
+	StorageS3Region                              string
+	StorageS3AccessKey                           string
+	StorageS3SecretKey                           string
+	StorageS3PublicURL                           string
+	StorageS3PathStyle                           bool
+	StorageDeliveryMode                          string
+	StorageCDNOrigin                             string
+	StorageMaxUploadBytes                        int64
+	BackupRoot                                   string
+	CORSAllowedOrigins                           []string
+	Environment                                  string
+	AuthTokenSecret                              string
+	AuthTokenTTLHours                            int
+	AuthTokenIssuer                              string
+	AuthTokenAudience                            string
+	AuthTokenActiveKID                           string
+	AuthTokenKeysJSON                            string
+	GuardReleaseAllowlistJSON                    string
+	BridgeReleaseAllowlistJSON                   string
+	MetricsEnabled                               bool
+	PersistentSessions                           bool
+	RequirePersistentStoreInProduction           bool
+	DatabaseAutoMigrate                          bool
+	BootstrapToken                               string
+	ManifestSigningPrivateKey                    string
+	ServerBridgeControlSigningPrivateKey         string
+	ServerBridgeControlPreviousSigningPrivateKey string
+	AuthSQLProvidersJSON                         string
+	AuthSQLProvidersFile                         string
+	AuthHTTPProvidersJSON                        string
+	AuthHTTPProvidersFile                        string
+	AuthOIDCProvidersJSON                        string
+	AuthOIDCProvidersFile                        string
+	AuthMicrosoftProvidersJSON                   string
+	AuthMicrosoftProvidersFile                   string
+	WebAuthnRPID                                 string
+	WebAuthnRPName                               string
+	WebAuthnOrigins                              []string
 }
 
 func bridgeReleaseRequiresBukkitFamily0144(version string) bool {
@@ -163,6 +164,7 @@ func Load() Config {
 	production := IsProductionEnvironment(environment)
 	manifestSigningPrivateKey := env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", "")
 	serverBridgeControlSigningPrivateKey := env("NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", manifestSigningPrivateKey)
+	serverBridgeControlPreviousSigningPrivateKey := env("NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY", "")
 	publicURL := env("NEVERLAUNCHER_PUBLIC_URL", "http://localhost:8080")
 	webauthnRPID, webauthnOrigin := defaultWebAuthnScope(publicURL)
 	corsFallback := "http://localhost:5173,http://127.0.0.1:5173"
@@ -215,17 +217,18 @@ func Load() Config {
 		BootstrapToken:                       env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
 		ManifestSigningPrivateKey:            manifestSigningPrivateKey,
 		ServerBridgeControlSigningPrivateKey: serverBridgeControlSigningPrivateKey,
-		AuthSQLProvidersJSON:                 env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
-		AuthSQLProvidersFile:                 env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
-		AuthHTTPProvidersJSON:                env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
-		AuthHTTPProvidersFile:                env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
-		AuthOIDCProvidersJSON:                env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
-		AuthOIDCProvidersFile:                env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
-		AuthMicrosoftProvidersJSON:           env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
-		AuthMicrosoftProvidersFile:           env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
-		WebAuthnRPID:                         env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
-		WebAuthnRPName:                       env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
-		WebAuthnOrigins:                      envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
+		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
+		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
+		AuthSQLProvidersFile:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
+		AuthHTTPProvidersJSON:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
+		AuthHTTPProvidersFile:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
+		AuthOIDCProvidersJSON:                        env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
+		AuthOIDCProvidersFile:                        env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
+		AuthMicrosoftProvidersJSON:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
+		AuthMicrosoftProvidersFile:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
+		WebAuthnRPID:                                 env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
+		WebAuthnRPName:                               env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
+		WebAuthnOrigins:                              envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
 	}
 }
 
@@ -272,6 +275,15 @@ func ValidateProduction(cfg Config) error {
 		decoded, err := hex.DecodeString(controlKey)
 		if err != nil || len(decoded) != 32 {
 			problems = append(problems, "NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
+		}
+	}
+	if previousKey := strings.TrimSpace(cfg.ServerBridgeControlPreviousSigningPrivateKey); previousKey != "" {
+		decoded, err := hex.DecodeString(previousKey)
+		if err != nil || len(decoded) != 32 {
+			problems = append(problems, "NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
+		}
+		if strings.EqualFold(previousKey, strings.TrimSpace(cfg.ServerBridgeControlSigningPrivateKey)) {
+			problems = append(problems, "активный и previous ServerBridge control signing keys должны различаться")
 		}
 	}
 	if raw := strings.TrimSpace(cfg.AuthTokenKeysJSON); raw != "" {
@@ -384,7 +396,7 @@ func ValidateProduction(cfg Config) error {
 	if bridgeAllowlistRaw == "" {
 		problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
 	} else {
-		var bridgeAllowlist map[string]struct {
+		type bridgeReleaseEntry struct {
 			VelocitySHA256   []string `json:"velocitySha256"`
 			BungeeCordSHA256 []string `json:"bungeeCordSha256"`
 			WaterfallSHA256  []string `json:"waterfallSha256"`
@@ -400,8 +412,32 @@ func ValidateProduction(cfg Config) error {
 			SpongeSHA256     []string `json:"spongeSha256"`
 			VanillaSHA256    []string `json:"vanillaSha256"`
 		}
-		if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil || len(bridgeAllowlist) == 0 {
-			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть непустым JSON object release->ServerBridge hash allowlists")
+		var probe struct {
+			SchemaVersion string `json:"schemaVersion"`
+		}
+		_ = json.Unmarshal([]byte(bridgeAllowlistRaw), &probe)
+		var bridgeAllowlist map[string]bridgeReleaseEntry
+		if probe.SchemaVersion == "3.0" {
+			var document struct {
+				SchemaVersion            string                        `json:"schemaVersion"`
+				Release                  string                        `json:"release"`
+				ProtocolVersion          int                           `json:"protocolVersion"`
+				MinimumProtocolVersion   int                           `json:"minimumProtocolVersion"`
+				SecurityProfile          string                        `json:"securityProfile"`
+				SecurityCapabilityDigest string                        `json:"securityCapabilityDigest"`
+				RequiredFeatures         []string                      `json:"requiredFeatures"`
+				Releases                 map[string]bridgeReleaseEntry `json:"releases"`
+			}
+			if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &document); err != nil || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+				problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON ServerBridge 3 security certification metadata некорректна")
+			} else {
+				bridgeAllowlist = document.Releases
+			}
+		} else if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil {
+			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть legacy release map или ServerBridge 3 schemaVersion=3.0")
+		}
+		if len(bridgeAllowlist) == 0 {
+			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен содержать непустой releases")
 		} else {
 			for version, entry := range bridgeAllowlist {
 				if strings.TrimSpace(version) == "" || len(entry.VelocitySHA256) == 0 || len(entry.PaperSHA256) == 0 || len(entry.PurpurSHA256) == 0 {
@@ -650,4 +686,30 @@ func splitCSV(value string) []string {
 		items = append(items, item)
 	}
 	return items
+}
+
+func serverBridgeSecurityFeaturesExact01912(features []string) bool {
+	want := map[string]struct{}{
+		"security.protocol-v3-signing-domain":      {},
+		"security.capability-downgrade-protection": {},
+		"security.command-signatures-v3":           {},
+		"security.event-signatures-v3":             {},
+		"security.runtime-instance-binding-v3":     {},
+		"security.online-key-rotation-v1":          {},
+	}
+	if len(features) != len(want) {
+		return false
+	}
+	seen := make(map[string]struct{}, len(features))
+	for _, feature := range features {
+		feature = strings.TrimSpace(feature)
+		if _, ok := want[feature]; !ok {
+			return false
+		}
+		if _, duplicate := seen[feature]; duplicate {
+			return false
+		}
+		seen[feature] = struct{}{}
+	}
+	return len(seen) == len(want)
 }

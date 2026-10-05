@@ -25,8 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class NeverLauncherApiClient {
-    private static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-Node-v1";
-    private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION, BridgeDefaults.LEGACY_PROTOCOL_VERSION);
+    // Legacy backend compatibility is server-side only; retained here as migration provenance for the 0.14.2 signing lineage.
+    private static final String LEGACY_NODE_SIGNATURE_DOMAIN = "NeverLauncher-ServerBridge-Node-v1";
+    private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION);
     private static final List<String> SUPPORTED_FEATURES = List.of(
         BridgeDefaults.FEATURE_CAPABILITY_NEGOTIATION,
         BridgeDefaults.FEATURE_PROTOCOL_FLAGS,
@@ -44,7 +45,13 @@ public final class NeverLauncherApiClient {
         BridgeDefaults.FEATURE_CONTROL_API,
         BridgeDefaults.FEATURE_HA_CONTROL_PLANE,
         BridgeDefaults.FEATURE_ROUTING_V2,
-        BridgeDefaults.FEATURE_PLAYER_SESSION_V3
+        BridgeDefaults.FEATURE_PLAYER_SESSION_V3,
+        BridgeDefaults.FEATURE_SECURITY_V3_SIGNING_DOMAIN,
+        BridgeDefaults.FEATURE_CAPABILITY_DOWNGRADE_PROTECTION,
+        BridgeDefaults.FEATURE_COMMAND_SIGNATURES_V3,
+        BridgeDefaults.FEATURE_EVENT_SIGNATURES_V3,
+        BridgeDefaults.FEATURE_RUNTIME_BINDING_V3,
+        BridgeDefaults.FEATURE_ONLINE_KEY_ROTATION
     );
 
     private final BridgeConfig config;
@@ -250,39 +257,40 @@ public final class NeverLauncherApiClient {
             now = Instant.now();
             if (current != null && !current.expired(now)) return current;
 
-            String protocols = SUPPORTED_PROTOCOLS.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("3,2");
+            String protocols = Integer.toString(BridgeDefaults.PROTOCOL_VERSION);
             String features = String.join(",", SUPPORTED_FEATURES);
             String query = "protocols=" + URLEncoder.encode(protocols, StandardCharsets.UTF_8) +
                 "&features=" + URLEncoder.encode(features, StandardCharsets.UTF_8);
             HttpResponse<String> response = sendUnsignedGetWithFailover(config.capabilitiesPath() + "?" + query);
-
-            // 0.19.0 and older backends do not expose capabilities. A 404 is the
-            // deliberate rolling-upgrade signal; other failures do not silently
-            // downgrade an otherwise v3-capable deployment.
-            if (response.statusCode() == 404) {
-                current = new BridgeProtocolNegotiation(BridgeDefaults.LEGACY_PROTOCOL_VERSION, List.of(), true, now);
-                negotiation = current;
-                return current;
-            }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IOException("ServerBridge capability negotiation failed with HTTP " + response.statusCode());
+                throw new IOException("ServerBridge Protocol v3 capability negotiation failed with HTTP " + response.statusCode());
             }
             String raw = response.body() == null ? "" : response.body();
             int selected = extractJsonInt(raw, "negotiatedProtocolVersion");
             List<String> enabled = extractJsonStringArray(raw, "features");
-            if (!SUPPORTED_PROTOCOLS.contains(selected)) {
-                throw new IOException("Backend selected unsupported ServerBridge protocol " + selected);
+            if (selected != BridgeDefaults.PROTOCOL_VERSION) {
+                throw new IOException("ServerBridge Protocol v3 downgrade detected: backend selected " + selected);
             }
-            if (selected == BridgeDefaults.PROTOCOL_VERSION &&
-                (!enabled.contains(BridgeDefaults.FEATURE_CAPABILITY_NEGOTIATION) || !enabled.contains(BridgeDefaults.FEATURE_PROTOCOL_FLAGS))) {
-                throw new IOException("Backend selected Protocol v3 without required feature flags");
+            for (String required : BridgeProtocolSecurity.REQUIRED_FEATURES) {
+                if (!enabled.contains(required)) throw new IOException("ServerBridge security capability downgrade detected: missing " + required);
             }
-            current = new BridgeProtocolNegotiation(selected, enabled, false, now);
+            String securityProfile = extractJsonString(raw, "securityProfile");
+            String capabilityDigest = extractJsonString(raw, "securityCapabilityDigest");
+            if (!BridgeProtocolSecurity.PROFILE.equals(securityProfile) || !BridgeProtocolSecurity.expectedCapabilityDigest().equalsIgnoreCase(capabilityDigest)) {
+                throw new IOException("ServerBridge security profile/digest mismatch");
+            }
+            if (controlTrust == null || !controlTrust.verifyCapabilities(
+                securityProfile, capabilityDigest,
+                extractJsonString(raw, "activeSigningPublicKey"), extractJsonString(raw, "activeSigningKeyFingerprint"),
+                extractJsonString(raw, "previousSigningPublicKey"), extractJsonString(raw, "previousSigningKeyFingerprint"),
+                extractJsonString(raw, "capabilitySignature"), extractJsonString(raw, "previousCapabilitySignature"))) {
+                throw new IOException("ServerBridge capability signature or key-rotation trust failed");
+            }
+            current = new BridgeProtocolNegotiation(selected, enabled, false, now, securityProfile, capabilityDigest);
             negotiation = current;
             return current;
         }
     }
-
 
     private String runtimeFields(BridgeProtocolNegotiation protocol) {
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || runtimeIdentity == null) return "";
@@ -427,6 +435,7 @@ public final class NeverLauncherApiClient {
         String commandId = extractJsonString(raw, "commandId");
         String runtimeId = extractJsonString(raw, "runtimeId");
         long runtimeEpoch = extractJsonLong(raw, "runtimeEpoch");
+        long identityEpoch = extractJsonLong(raw, "identityEpoch");
         String type = extractJsonString(raw, "type");
         String payloadEncoded = extractJsonString(raw, "payload");
         String payloadSha256 = extractJsonString(raw, "payloadSha256");
@@ -436,10 +445,16 @@ public final class NeverLauncherApiClient {
         int attempt = extractJsonInt(raw, "attempt");
         long issuedAt = extractJsonLong(raw, "issuedAtUnixMillis");
         long expiresAt = extractJsonLong(raw, "expiresAtUnixMillis");
-        String signingPublicKey = extractJsonString(raw, "signingPublicKey");
-        String signature = extractJsonString(raw, "signature");
+        String securityProfile = extractJsonString(raw, "securityProfile");
+        String capabilityDigest = extractJsonString(raw, "securityCapabilityDigest");
+        String v3SigningPublicKey = extractJsonString(raw, "v3SigningPublicKey");
+        String v3SigningKeyFingerprint = extractJsonString(raw, "v3SigningKeyFingerprint");
+        String v3Signature = extractJsonString(raw, "v3Signature");
+        String previousV3SigningPublicKey = extractJsonString(raw, "previousV3SigningPublicKey");
+        String previousV3SigningKeyFingerprint = extractJsonString(raw, "previousV3SigningKeyFingerprint");
+        String previousV3Signature = extractJsonString(raw, "previousV3Signature");
         if (!config.serverId.equals(serverId) || !runtimeIdentity.runtimeId().equalsIgnoreCase(runtimeId) || commandId.isBlank() || type.isBlank() ||
-            deliverySequence <= resumeAfter || deliverySequence < 1 || !controlChannelId.equals(channelId) || leaseToken.length() < 16) {
+            identityEpoch < 1 || deliverySequence <= resumeAfter || deliverySequence < 1 || !controlChannelId.equals(channelId) || leaseToken.length() < 16) {
             throw new IOException("control command binding/resumption mismatch");
         }
         long now = System.currentTimeMillis();
@@ -453,8 +468,9 @@ public final class NeverLauncherApiClient {
             throw new GeneralSecurityException("control payload digest mismatch");
         }
         Map<String,String> payload = BridgeControlCommand.decodePayload(payloadEncoded);
-        BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, type, payload, payloadSha256,
-            deliverySequence, channelId, leaseToken, attempt, issuedAt, expiresAt, signingPublicKey, signature);
+        BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, identityEpoch, type, payload, payloadSha256,
+            deliverySequence, channelId, leaseToken, attempt, issuedAt, expiresAt, securityProfile, capabilityDigest,
+            v3SigningPublicKey, v3SigningKeyFingerprint, v3Signature, previousV3SigningPublicKey, previousV3SigningKeyFingerprint, previousV3Signature);
         if (!controlTrust.verify(command)) throw new GeneralSecurityException("control command signature or backend trust failed");
 
         BridgeControlJournal.State state = controlJournal.state(command);
@@ -626,9 +642,16 @@ public final class NeverLauncherApiClient {
     }
 
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
+        if (runtimeIdentity == null) throw new GeneralSecurityException("ServerBridge runtime identity unavailable");
         String timestamp = Long.toString(Instant.now().getEpochSecond());
         String nonce = identity.newNonce();
-        String canonical = canonicalRequest(method, uri, body, timestamp, nonce);
+        String target = uri.getRawPath();
+        if (target == null || target.isEmpty()) target = "/";
+        if (uri.getRawQuery() != null && !uri.getRawQuery().isEmpty()) target += "?" + uri.getRawQuery();
+        String bodyHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8)));
+        String capabilityDigest = BridgeProtocolSecurity.expectedCapabilityDigest();
+        String canonical = BridgeProtocolSecurity.nodeRequestCanonical(config.serverId, identity.fingerprint(), method, target, timestamp, nonce,
+            runtimeIdentity.runtimeId(), capabilityDigest, bodyHash);
         String signature = Base64.getUrlEncoder().withoutPadding().encodeToString(identity.sign(canonical));
         return HttpRequest.newBuilder(uri)
             .timeout(Duration.ofMillis(config.timeoutMs))
@@ -638,24 +661,12 @@ public final class NeverLauncherApiClient {
             .header("X-NeverLauncher-Node-Timestamp", timestamp)
             .header("X-NeverLauncher-Node-Nonce", nonce)
             .header("X-NeverLauncher-Node-Signature", signature)
+            .header("X-NeverLauncher-Protocol-Version", Integer.toString(BridgeDefaults.PROTOCOL_VERSION))
+            .header("X-NeverLauncher-Security-Profile", BridgeProtocolSecurity.PROFILE)
+            .header("X-NeverLauncher-Capability-Digest", capabilityDigest)
+            .header("X-NeverLauncher-Runtime-Id", runtimeIdentity.runtimeId())
             .method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
             .build();
-    }
-
-    private String canonicalRequest(String method, URI uri, String body, String timestamp, String nonce) throws GeneralSecurityException {
-        String target = uri.getRawPath();
-        if (target == null || target.isEmpty()) target = "/";
-        if (uri.getRawQuery() != null && !uri.getRawQuery().isEmpty()) target += "?" + uri.getRawQuery();
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(body.getBytes(StandardCharsets.UTF_8));
-        return String.join("\n",
-            SIGNATURE_SCHEME,
-            config.serverId.trim(),
-            method.toUpperCase(),
-            target,
-            timestamp,
-            nonce,
-            HexFormat.of().formatHex(digest)
-        );
     }
 
     private static String quote(String value) {

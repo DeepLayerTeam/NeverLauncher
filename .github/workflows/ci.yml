@@ -775,6 +775,11 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-ha-control-plane-01911.py
           (cd services/api && go test ./internal/serverbridgeha)
           (cd services/api && go test -run 'TestServerBridge(Control|HAControlPlane)' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
+      - name: ServerBridge Security & Certification 0.19.12 gate
+        run: |
+          python3 scripts/smoke/offline/serverbridge-security-certification-01912.py
+          bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
+          (cd services/api && go test -run 'TestServerBridge(Security|ProtocolV3|Event|NodeIdentity|Control)' ./internal/httpapi)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

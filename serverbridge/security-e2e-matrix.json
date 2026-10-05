@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "release": "ServerBridge 3",
+  "securityProfile": "serverbridge3-security-01912",
+  "protocolVersion": 3,
+  "requiredScenarios": [
+    "canonical-v3-domain",
+    "capability-downgrade",
+    "tampered-bridge-artifact",
+    "tampered-node-request",
+    "tampered-event",
+    "replayed-event",
+    "tampered-command",
+    "replayed-command",
+    "runtime-instance-rebind",
+    "online-key-rotation"
+  ],
+  "targets": [
+    "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia",
+    "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla"
+  ],
+  "coverage": "all-required-scenarios-on-every-target"
+}

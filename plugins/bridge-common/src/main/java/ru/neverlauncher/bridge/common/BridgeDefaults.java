@@ -21,6 +21,13 @@ public final class BridgeDefaults {
     public static final String FEATURE_HA_CONTROL_PLANE = "control.ha-channel-v2";
     public static final String FEATURE_ROUTING_V2 = "topology.routing-v2";
     public static final String FEATURE_PLAYER_SESSION_V3 = "session.player-lifecycle-v3";
+    public static final String FEATURE_SECURITY_V3_SIGNING_DOMAIN = "security.protocol-v3-signing-domain";
+    public static final String FEATURE_CAPABILITY_DOWNGRADE_PROTECTION = "security.capability-downgrade-protection";
+    public static final String FEATURE_COMMAND_SIGNATURES_V3 = "security.command-signatures-v3";
+    public static final String FEATURE_EVENT_SIGNATURES_V3 = "security.event-signatures-v3";
+    public static final String FEATURE_RUNTIME_BINDING_V3 = "security.runtime-instance-binding-v3";
+    public static final String FEATURE_ONLINE_KEY_ROTATION = "security.online-key-rotation-v1";
+    public static final String SECURITY_PROFILE = "serverbridge3-security-01912";
     public static final String VELOCITY_ID = "neverlauncher-velocity-bridge";
     public static final String BUNGEECORD_ID = "neverlauncher-bungeecord-bridge";
     public static final String WATERFALL_ID = "neverlauncher-waterfall-bridge";

@@ -12,6 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 TARGETS = ROOT / 'serverbridge/targets.json'
 EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']
+SECURITY_PROFILE = 'serverbridge3-security-01912'
+SECURITY_FEATURES = [
+    'security.protocol-v3-signing-domain',
+    'security.capability-downgrade-protection',
+    'security.command-signatures-v3',
+    'security.event-signatures-v3',
+    'security.runtime-instance-binding-v3',
+    'security.online-key-rotation-v1',
+]
+SECURITY_CAPABILITY_DIGEST = '088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4'
 HASH_FIELDS = {
     'velocity':'velocitySha256','bungeecord':'bungeeCordSha256','waterfall':'waterfallSha256',
     'bukkit':'bukkitSha256','spigot':'spigotSha256','paper':'paperSha256','purpur':'purpurSha256',
@@ -21,6 +31,7 @@ HASH_FIELDS = {
 COMMON_PROTOCOL_ENTRIES = [
     'ru/neverlauncher/bridge/common/NeverLauncherApiClient.class',
     'ru/neverlauncher/bridge/common/BridgeProtocolNegotiation.class',
+    'ru/neverlauncher/bridge/common/BridgeProtocolSecurity.class',
     'ru/neverlauncher/bridge/common/BridgeRuntimeDescriptor.class',
     'ru/neverlauncher/bridge/common/BridgeRuntimeIdentity.class',
     'ru/neverlauncher/bridge/common/BridgeRuntimeProbe.class',
@@ -116,9 +127,16 @@ def main() -> int:
         die('plugin manifest artifact set/order mismatch')
 
     allow = load_json(allowlist_path)
-    if set(allow) != {VERSION} or not isinstance(allow[VERSION], dict):
-        die(f'allowlist must contain only the exact release cohort {VERSION}')
-    policy = allow[VERSION]
+    if (allow.get('schemaVersion') != '3.0' or allow.get('release') != 'ServerBridge 3' or
+        allow.get('protocolVersion') != 3 or allow.get('minimumProtocolVersion') != 3 or
+        allow.get('securityProfile') != SECURITY_PROFILE or
+        str(allow.get('securityCapabilityDigest', '')).lower() != SECURITY_CAPABILITY_DIGEST or
+        sorted(allow.get('requiredFeatures') or []) != sorted(SECURITY_FEATURES)):
+        die('ServerBridge 3 release allowlist security metadata mismatch')
+    releases = allow.get('releases')
+    if not isinstance(releases, dict) or set(releases) != {VERSION} or not isinstance(releases[VERSION], dict):
+        die(f'allowlist releases must contain only the exact release cohort {VERSION}')
+    policy = releases[VERSION]
 
     evidence = []
     seen_hashes: dict[str, str] = {}
@@ -205,6 +223,10 @@ def main() -> int:
     report = {
         'schemaVersion': '1.0', 'release': 'ServerBridge 3', 'version': VERSION,
         'protocolVersion': 3, 'status': 'certified', 'targetCount': len(evidence),
+        'securityProfile': SECURITY_PROFILE, 'securityCapabilityDigest': SECURITY_CAPABILITY_DIGEST,
+        'requiredSecurityFeatures': SECURITY_FEATURES, 'capabilityDowngradeProtection': True,
+        'canonicalSigningDomain': 'NeverLauncher-ServerBridge-Protocol-v3',
+        'commandSignatures': True, 'eventSignatures': True, 'runtimeInstanceBinding': True, 'onlineKeyRotation': True,
         'zeroPatch': True, 'nodeIdentity': 'Ed25519', 'oneTimeJoin': True,
         'nodeDiscovery': True, 'runtimeIdentity': 'Ed25519 node-bound process identity',
         'runtimeReplacementDetection': True,

@@ -180,11 +180,11 @@ public final class BridgeEventJournal {
     private static String encodeEvent(BridgeEventRecord event) {
         return String.join("\t", "E", Long.toString(event.sequence()), Long.toString(event.occurredAtUnixMillis()),
             encode(event.eventId()), encode(event.type()), encode(BridgeEventRecord.payloadJson(new TreeMap<>(event.payload()))),
-            event.payloadSha256(), encode(event.signature()));
+            event.payloadSha256(), encode(event.securityProfile()), event.capabilityDigest(), event.nodeKeyFingerprint(), encode(event.signature()));
     }
 
-    private static BridgeEventRecord decodeEvent(String[] parts) {
-        if (parts.length != 8) return null;
+    private BridgeEventRecord decodeEvent(String[] parts) {
+        if (parts.length != 8 && parts.length != 11) return null;
         try {
             long sequence = Long.parseLong(parts[1]);
             long occurred = Long.parseLong(parts[2]);
@@ -192,11 +192,15 @@ public final class BridgeEventJournal {
             String type = decode(parts[4]);
             Map<String, String> payload = parseFlatJsonObject(decode(parts[5]));
             String digest = parts[6];
-            String signature = decode(parts[7]);
             String runtimeId = eventId.length() >= 64 ? eventId.substring(0, 64) : "";
             if (runtimeId.length() != 64) return null;
-            return new BridgeEventRecord(sequence, eventId, runtimeId, type, occurred, payload, digest, signature);
-        } catch (RuntimeException ignored) {
+            if (parts.length == 8) {
+                // Upgrade a pending pre-0.19.12 event in-place: preserve sequence/time/payload but re-sign in Protocol v3.
+                return BridgeEventRecord.signed(sequence, serverId, runtimeId, type, occurred, payload, identity);
+            }
+            return new BridgeEventRecord(sequence, eventId, runtimeId, type, occurred, payload, digest,
+                decode(parts[7]), parts[8], parts[9], decode(parts[10]));
+        } catch (RuntimeException | GeneralSecurityException ignored) {
             return null;
         }
     }

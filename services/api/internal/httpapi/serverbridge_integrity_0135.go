@@ -31,6 +31,17 @@ type bridgeReleasePolicy0135 struct {
 	VanillaSHA256    []string `json:"vanillaSha256"`
 }
 
+type bridgeReleaseAllowlistDocument01912 struct {
+	SchemaVersion            string                             `json:"schemaVersion"`
+	Release                  string                             `json:"release"`
+	ProtocolVersion          int                                `json:"protocolVersion"`
+	MinimumProtocolVersion   int                                `json:"minimumProtocolVersion"`
+	SecurityProfile          string                             `json:"securityProfile"`
+	SecurityCapabilityDigest string                             `json:"securityCapabilityDigest"`
+	RequiredFeatures         []string                           `json:"requiredFeatures"`
+	Releases                 map[string]bridgeReleasePolicy0135 `json:"releases"`
+}
+
 type bridgePluginIntegrityDecision0135 struct {
 	Allowed       bool      `json:"allowed"`
 	Required      bool      `json:"required"`
@@ -52,8 +63,23 @@ func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135,
 		return nil, errors.New("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON is not configured")
 	}
 	policies := map[string]bridgeReleasePolicy0135{}
-	if err := json.Unmarshal([]byte(raw), &policies); err != nil {
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
 		return nil, fmt.Errorf("invalid ServerBridge release allowlist: %w", err)
+	}
+	if _, v3 := probe["schemaVersion"]; v3 {
+		var document bridgeReleaseAllowlistDocument01912
+		if err := json.Unmarshal([]byte(raw), &document); err != nil {
+			return nil, fmt.Errorf("invalid ServerBridge 3 release allowlist: %w", err)
+		}
+		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != serverBridgeProtocolV3 || document.MinimumProtocolVersion != serverBridgeProtocolV3 ||
+			document.SecurityProfile != serverBridgeSecurityProfile01912 || !strings.EqualFold(document.SecurityCapabilityDigest, serverBridgeExpectedSecurityCapabilityDigest01912()) ||
+			!serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+			return nil, errors.New("ServerBridge 3 release allowlist security certification metadata is invalid")
+		}
+		policies = document.Releases
+	} else if err := json.Unmarshal([]byte(raw), &policies); err != nil {
+		return nil, fmt.Errorf("invalid legacy ServerBridge release allowlist: %w", err)
 	}
 	if len(policies) == 0 {
 		return nil, errors.New("ServerBridge release allowlist is empty")

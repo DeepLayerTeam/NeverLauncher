@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.11. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.19.12. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -8116,7 +8116,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-NeverLauncher-Node-Signature",
-        "description": "Unpadded base64url Ed25519 signature over NeverLauncher-ServerBridge-Node-v1 canonical request."
+        "description": "Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge."
       },
       "BootstrapToken": {
         "type": "apiKey",
@@ -9125,7 +9125,15 @@
               "requiredFeatures",
               "rollingUpgrade",
               "legacyProtocolV2Supported",
-              "capabilityNegotiationActive"
+              "capabilityNegotiationActive",
+              "securityProfile",
+              "securityCapabilityDigest",
+              "activeSigningPublicKey",
+              "activeSigningKeyFingerprint",
+              "previousSigningPublicKey",
+              "previousSigningKeyFingerprint",
+              "capabilitySignature",
+              "previousCapabilitySignature"
             ],
             "properties": {
               "schemaVersion": {
@@ -9200,6 +9208,34 @@
               },
               "capabilityNegotiationActive": {
                 "const": true
+              },
+              "securityProfile": {
+                "const": "serverbridge3-security-01912"
+              },
+              "securityCapabilityDigest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "activeSigningPublicKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$"
+              },
+              "activeSigningKeyFingerprint": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "previousSigningPublicKey": {
+                "type": "string"
+              },
+              "previousSigningKeyFingerprint": {
+                "type": "string"
+              },
+              "capabilitySignature": {
+                "type": "string",
+                "minLength": 1
+              },
+              "previousCapabilitySignature": {
+                "type": "string"
               },
               "reason": {
                 "type": "string"
@@ -9873,6 +9909,20 @@
             }
           },
           "payloadSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "securityProfile": {
+            "type": "string",
+            "enum": [
+              "serverbridge3-security-01912"
+            ]
+          },
+          "securityCapabilityDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "nodeKeyFingerprint": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
           },

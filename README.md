@@ -1,3 +1,11 @@
+## Security & Certification — 0.19.12
+
+`0.19.12` закрепляет ServerBridge Protocol v3 как единственный security profile для нового Bridge release: capability negotiation подписывается Backend Ed25519 key и содержит canonical capability digest, а node requests, events и control commands используют единый domain `NeverLauncher-ServerBridge-Protocol-v3`. Подписи связаны с node fingerprint, текущим `runtimeId`, identity/runtime epoch и полным сертифицированным security feature-set; downgrade или перенос подписанного сообщения на другой runtime fail-closed отклоняется.
+
+Backend сохраняет rolling compatibility со старым fleet, но Bridge 0.19.12 больше не предлагает Protocol v2. Для zero-downtime Backend signing-key rotation задайте новый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY` и старый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY`: capability document и команды публикуют overlap signatures, Bridges закрепляют новую пару, после чего previous key удаляется из окружения. Удалённый ключ перестаёт быть trust anchor после обновления durable pin-set.
+
+Официальный ServerBridge 3 release allowlist имеет `schemaVersion=3.0`, Protocol 3, security profile/digest и ровно шесть обязательных security capabilities; CLI, Backend и release certifier проверяют эту метаинформацию и SHA-256 всех 14 platform artifacts. Adversarial E2E matrix покрывает 14 targets × 10 сценариев, включая tampered bridge/node/event/command, replay event/command, runtime rebind, downgrade и online key rotation. Новая DB migration не требуется.
+
 ## HA Control Plane — 0.19.11
 
 `0.19.11` переводит ServerBridge control channel в multi-replica режим. Bridge принимает упорядоченный список `backend.urls`/`NEVERLAUNCHER_BACKEND_URLS`, держит active endpoint и автоматически переключается только при transport failure или `502/503/504`; `401/403` остаются terminal fail-closed ответами и не обходятся через другой Backend. Каждый runtime хранит стабильный `channelId` и durable high-water `deliverySequence`, поэтому reconnect или смена API replica продолжают канал с последнего подтверждённого ACK.

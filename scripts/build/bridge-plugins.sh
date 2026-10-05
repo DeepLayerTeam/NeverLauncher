@@ -184,7 +184,18 @@ VANILLA_SHA256="$(sha256sum "$OUT/neverlauncher-vanilla-bridge-${VERSION}.jar" |
 FORGE_SHA256="$(sha256sum "$OUT/neverlauncher-forge-bridge-${VERSION}.jar" | awk '{print $1}')"
 NEOFORGE_SHA256="$(sha256sum "$OUT/neverlauncher-neoforge-bridge-${VERSION}.jar" | awk '{print $1}')"
 cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
-{"${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"],"fabricSha256":["${FABRIC_SHA256}"],"quiltSha256":["${QUILT_SHA256}"],"forgeSha256":["${FORGE_SHA256}"],"neoforgeSha256":["${NEOFORGE_SHA256}"],"spongeSha256":["${SPONGE_SHA256}"],"vanillaSha256":["${VANILLA_SHA256}"]}}
+{
+  "schemaVersion":"3.0",
+  "release":"ServerBridge 3",
+  "protocolVersion":3,
+  "minimumProtocolVersion":3,
+  "securityProfile":"serverbridge3-security-01912",
+  "securityCapabilityDigest":"088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+  "requiredFeatures":["security.protocol-v3-signing-domain","security.capability-downgrade-protection","security.command-signatures-v3","security.event-signatures-v3","security.runtime-instance-binding-v3","security.online-key-rotation-v1"],
+  "releases":{
+    "${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"],"fabricSha256":["${FABRIC_SHA256}"],"quiltSha256":["${QUILT_SHA256}"],"forgeSha256":["${FORGE_SHA256}"],"neoforgeSha256":["${NEOFORGE_SHA256}"],"spongeSha256":["${SPONGE_SHA256}"],"vanillaSha256":["${VANILLA_SHA256}"]}
+  }
+}
 JSON
 cat > "$OUT/PLUGIN_MANIFEST.json" <<JSON
 {

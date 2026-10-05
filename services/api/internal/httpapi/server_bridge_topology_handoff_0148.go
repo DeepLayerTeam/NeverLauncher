@@ -77,6 +77,10 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusUpgradeRequired, reason)
 		return
 	}
+	if _, reason := validateServerBridgeSecurityEnvelope01912(r, req.ProtocolVersion, req.Features); reason != "" {
+		writeError(w, http.StatusUpgradeRequired, reason)
+		return
+	}
 	if req.Username == "" || req.TargetServer == "" {
 		writeError(w, http.StatusBadRequest, "username и targetServer обязательны")
 		return

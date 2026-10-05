@@ -1,6 +1,6 @@
 [package]
 name = "neverguard-sensor"
-version = "0.19.11"
+version = "0.19.12"
 description = "NeverGuard early JVM sensor for Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

@@ -31,6 +31,10 @@ const (
 	nodeTimestampHeader0142   = "X-NeverLauncher-Node-Timestamp"
 	nodeNonceHeader0142       = "X-NeverLauncher-Node-Nonce"
 	nodeSignatureHeader0142   = "X-NeverLauncher-Node-Signature"
+	nodeProtocolHeader01912   = "X-NeverLauncher-Protocol-Version"
+	nodeSecurityProfile01912  = "X-NeverLauncher-Security-Profile"
+	nodeCapabilityDigest01912 = "X-NeverLauncher-Capability-Digest"
+	nodeRuntimeIDHeader01912  = "X-NeverLauncher-Runtime-Id"
 )
 
 type bridgeNodeAuthError0142 struct {
@@ -194,7 +198,32 @@ func (s Server) authenticateBridgeNodeRequest0142(r *http.Request) (bridgeServer
 	if len(fingerprint) != len(node.KeyFingerprint) || subtle.ConstantTimeCompare([]byte(fingerprint), []byte(node.KeyFingerprint)) != 1 || subtle.ConstantTimeCompare([]byte(actualFingerprintHex), []byte(node.KeyFingerprint)) != 1 {
 		return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_node_fingerprint_mismatch"}
 	}
-	canonical := serverBridgeCanonicalRequest0142(r, body, nodeID, timestampRaw, nonceRaw)
+	securityProfile := strings.TrimSpace(r.Header.Get(nodeSecurityProfile01912))
+	canonical := ""
+	if securityProfile == "" {
+		canonical = serverBridgeCanonicalRequest0142(r, body, nodeID, timestampRaw, nonceRaw)
+	} else {
+		if securityProfile != serverBridgeSecurityProfile01912 || strings.TrimSpace(r.Header.Get(nodeProtocolHeader01912)) != strconv.Itoa(serverBridgeProtocolV3) {
+			return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUpgradeRequired, Reason: "serverbridge_security_profile_unsupported"}
+		}
+		capabilityDigest := strings.ToLower(strings.TrimSpace(r.Header.Get(nodeCapabilityDigest01912)))
+		expectedDigest := serverBridgeExpectedSecurityCapabilityDigest01912()
+		if len(capabilityDigest) != 64 || subtle.ConstantTimeCompare([]byte(capabilityDigest), []byte(expectedDigest)) != 1 {
+			return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUpgradeRequired, Reason: "serverbridge_capability_downgrade_detected"}
+		}
+		runtimeID := strings.ToLower(strings.TrimSpace(r.Header.Get(nodeRuntimeIDHeader01912)))
+		if len(runtimeID) != 64 {
+			return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_runtime_binding_required"}
+		}
+		if _, err := hex.DecodeString(runtimeID); err != nil {
+			return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_runtime_binding_invalid"}
+		}
+		bootstrapHeartbeat := strings.HasSuffix(r.URL.Path, "/heartbeat")
+		if !bootstrapHeartbeat && (node.RuntimeEpoch < 1 || !strings.EqualFold(runtimeID, node.RuntimeID)) {
+			return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusConflict, Reason: "serverbridge_runtime_binding_mismatch"}
+		}
+		canonical = serverBridgeNodeRequestCanonical01912(r, body, nodeID, fingerprint, timestampRaw, nonceRaw, runtimeID, capabilityDigest)
+	}
 	if !ed25519.Verify(ed25519.PublicKey(publicKey), []byte(canonical), sig) {
 		return bridgeServerRecord{}, &bridgeNodeAuthError0142{Status: http.StatusUnauthorized, Reason: "serverbridge_node_signature_invalid"}
 	}

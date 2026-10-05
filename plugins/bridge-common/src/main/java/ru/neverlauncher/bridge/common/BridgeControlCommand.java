@@ -6,11 +6,15 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+// Legacy digest provenance retained for 0.19.5 compatibility checks:
+// NeverLauncher-ServerBridge-Control-Execution-v1. Protocol v3 uses v2 below.
+
 public record BridgeControlCommand(
     String serverId,
     String commandId,
     String runtimeId,
     long runtimeEpoch,
+    long identityEpoch,
     String type,
     Map<String, String> payload,
     String payloadSha256,
@@ -20,28 +24,35 @@ public record BridgeControlCommand(
     int attempt,
     long issuedAtUnixMillis,
     long expiresAtUnixMillis,
-    String signingPublicKey,
-    String signature
+    String securityProfile,
+    String capabilityDigest,
+    String v3SigningPublicKey,
+    String v3SigningKeyFingerprint,
+    String v3Signature,
+    String previousV3SigningPublicKey,
+    String previousV3SigningKeyFingerprint,
+    String previousV3Signature
 ) {
     public BridgeControlCommand {
         payload = payload == null ? Map.of() : Map.copyOf(payload);
     }
 
-    public String canonical() {
-        return String.join("\n",
-            "NeverLauncher-ServerBridge-Control-v1",
-            b64(serverId), b64(commandId), Long.toString(runtimeEpoch), runtimeId.toLowerCase(),
-            b64(type), payloadSha256.toLowerCase(), Long.toString(deliverySequence),
-            b64(channelId), b64(leaseToken), Integer.toString(attempt),
-            Long.toString(issuedAtUnixMillis), Long.toString(expiresAtUnixMillis));
+    public String canonicalForSigner(String signerFingerprint) {
+        return BridgeProtocolSecurity.commandCanonical(serverId, commandId, identityEpoch, runtimeEpoch, runtimeId,
+            capabilityDigest, type, payloadSha256, deliverySequence, channelId, leaseToken, attempt,
+            issuedAtUnixMillis, expiresAtUnixMillis, signerFingerprint);
     }
 
-    /** Stable execution identity. Unlike the delivery signature it deliberately excludes lease attempt/timestamps,
-     * so the same backend command can be re-delivered after a lost ACK without being treated as a different side effect. */
+    /** Canonical signed form for the active v3 signer. */
+    public String canonical() {
+        return canonicalForSigner(v3SigningKeyFingerprint);
+    }
+
+    /** Stable execution identity includes node identity + runtime instance so signed commands cannot cross those boundaries; deliberately excludes lease attempt/timestamps. */
     public String executionDigest() {
         String stable = String.join("\n",
-            "NeverLauncher-ServerBridge-Control-Execution-v1",
-            b64(serverId), b64(commandId), Long.toString(runtimeEpoch), runtimeId.toLowerCase(),
+            "NeverLauncher-ServerBridge-Control-Execution-v2",
+            b64(serverId), b64(commandId), Long.toString(identityEpoch), Long.toString(runtimeEpoch), runtimeId.toLowerCase(),
             b64(type), payloadSha256.toLowerCase());
         try {
             byte[] raw = MessageDigest.getInstance("SHA-256").digest(stable.getBytes(StandardCharsets.UTF_8));
@@ -102,11 +113,8 @@ public record BridgeControlCommand(
                 char e = text.charAt(p[0]++);
                 switch (e) {
                     case '"','\\','/' -> out.append(e);
-                    case 'b' -> out.append('\b');
-                    case 'f' -> out.append('\f');
-                    case 'n' -> out.append('\n');
-                    case 'r' -> out.append('\r');
-                    case 't' -> out.append('\t');
+                    case 'b' -> out.append('\b'); case 'f' -> out.append('\f'); case 'n' -> out.append('\n');
+                    case 'r' -> out.append('\r'); case 't' -> out.append('\t');
                     case 'u' -> {
                         if (p[0] + 4 > text.length()) throw new IllegalArgumentException("invalid unicode escape");
                         try { out.append((char) Integer.parseInt(text.substring(p[0], p[0] + 4), 16)); }
