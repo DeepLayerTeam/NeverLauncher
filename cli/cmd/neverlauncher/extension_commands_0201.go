@@ -53,7 +53,7 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect")
+		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry")
 	}
 	switch args[0] {
 	case "template":
@@ -93,6 +93,8 @@ func handleExtension0201(args []string) error {
 		return nil
 	case "pack", "sign", "verify", "inspect":
 		return handleExtensionPackage0202(args)
+	case "registry":
+		return handleExtensionRegistry0203(args[1:])
 	case "import-legacy":
 		if len(args) < 2 {
 			return errors.New("extension import-legacy требует путь к neverlauncher-plugin.json или каталогу")

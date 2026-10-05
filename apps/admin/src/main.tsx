@@ -21,6 +21,9 @@ type ProfileForm = { projectId: string; id: string; name: string; description: s
 type ChannelForm = { projectId: string; id: string; name: string; description: string; protected: boolean };
 type UserForm = { id: string; email: string; displayName: string; roleId: string; password: string };
 type PackageForm = { projectId: string; profileId: string; channel: string; version: string; packageId: string; path: string; sha256: string };
+type RegistryArtifactView = { packageIdentity: string; sha256: string; size: number; signatureKeyFingerprint: string };
+type RegistryVersionView = { extensionId: string; version: string; publisherId: string; manifest?: { name?: string; description?: string }; compatibility?: { minNeverLauncher?: string; maxNeverLauncher?: string; supportedOs?: string[]; supportedArchitectures?: string[] }; artifact: RegistryArtifactView; channels?: string[]; publishedAt?: string; yankedAt?: string; yankReason?: string };
+type RegistrySearchData = { schemaVersion?: string; count?: number; items?: RegistryVersionView[] };
 
 const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
 
@@ -36,6 +39,7 @@ const fallbackSections: Section[] = [
   { id: 'devices', title: 'Устройства' },
   { id: 'audit', title: 'Аудит' },
   { id: 'storage', title: 'Хранилище' },
+  { id: 'extension-registry', title: 'NeverExtensions Registry' },
   { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'diagnostics', title: 'Диагностика' },
   { id: 'backup-restore', title: 'Резервное копирование' },
@@ -53,6 +57,7 @@ const endpointBySection: Record<string, string> = {
   devices: '/api/v1/admin/auth/devices',
   audit: '/api/v1/admin/audit',
   storage: '/api/v1/admin/storage/health',
+  'extension-registry': '/api/v1/admin/extension-registry/extensions',
   'server-bridge': '/api/v1/server-bridge/overview',
   diagnostics: '/api/v1/operations/diagnostics',
   'backup-restore': '/api/v1/operations/backup',
@@ -197,6 +202,20 @@ function App() {
   const [userForm, setUserForm] = useState<UserForm>({ id: '', email: 'operator@neverlauncher.local', displayName: 'Оператор', roleId: 'viewer', password: 'Смените-этот-пароль' });
   const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: 'neverlauncher-project', profileId: 'vanilla-java21', channel: 'stable', version: `${TOOL_VERSION}-client`, packageId: '', path: 'mods/example.jar', sha256: '' });
   const [packageFile, setPackageFile] = useState<File | null>(null);
+  const [registryQuery, setRegistryQuery] = useState('');
+  const [registryChannel, setRegistryChannel] = useState('');
+  const [registryLauncherVersion, setRegistryLauncherVersion] = useState(TOOL_VERSION);
+  const [registryOS, setRegistryOS] = useState('');
+  const [registryArch, setRegistryArch] = useState('');
+  const [registryPublisherId, setRegistryPublisherId] = useState('');
+  const [registryPublisherName, setRegistryPublisherName] = useState('');
+  const [registryPublicKey, setRegistryPublicKey] = useState('');
+  const [registryPackageFile, setRegistryPackageFile] = useState<File | null>(null);
+  const [registryPublishChannels, setRegistryPublishChannels] = useState('stable');
+  const [registryMinLauncher, setRegistryMinLauncher] = useState('');
+  const [registryMaxLauncher, setRegistryMaxLauncher] = useState('');
+  const [registryPublishOS, setRegistryPublishOS] = useState('');
+  const [registryPublishArch, setRegistryPublishArch] = useState('');
 
   const sections = productionUI.sections?.length ? productionUI.sections : fallbackSections;
   const selectedProjectId = projectForm.id || profileForm.projectId || channelForm.projectId || 'project-required';
@@ -400,6 +419,132 @@ function App() {
     return payload.data ?? payload;
   }
 
+  async function loadRegistry() {
+    const params = new URLSearchParams();
+    if (registryQuery.trim()) params.set('q', registryQuery.trim());
+    if (registryChannel.trim()) params.set('channel', registryChannel.trim());
+    if (registryLauncherVersion.trim()) params.set('launcherVersion', registryLauncherVersion.trim());
+    if (registryOS.trim()) params.set('os', registryOS.trim());
+    if (registryArch.trim()) params.set('arch', registryArch.trim());
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    const data = await requestJSON<RegistrySearchData>(backendUrl, `/api/v1/admin/extension-registry/extensions${suffix}`, token);
+    setPayload(data as unknown as Record<string, unknown>);
+    return data;
+  }
+
+  async function runRegistryAction(label: string, fn: () => Promise<unknown>) {
+    setError(null); setMessage(null);
+    await fn();
+    setMessage(`${label}: выполнено`);
+    await Promise.all([loadRegistry(), loadDashboard().catch(() => undefined)]);
+  }
+
+  async function createRegistryPublisher() {
+    if (!registryPublisherId.trim() || !registryPublisherName.trim()) throw new Error('Укажите ID и название publisher.');
+    return requestJSON(backendUrl, '/api/v1/admin/extension-registry/publishers', token, { method: 'POST', body: JSON.stringify({ id: registryPublisherId.trim(), name: registryPublisherName.trim(), active: true }) });
+  }
+
+  async function addRegistryPublisherKey() {
+    if (!registryPublisherId.trim() || !registryPublicKey.trim()) throw new Error('Укажите publisher ID и raw Ed25519 public key в Base64.');
+    return requestJSON(backendUrl, `/api/v1/admin/extension-registry/publishers/${encodeURIComponent(registryPublisherId.trim())}/keys`, token, { method: 'POST', body: JSON.stringify({ publicKeyBase64: registryPublicKey.trim(), active: true }) });
+  }
+
+  async function publishRegistryArtifact() {
+    if (!registryPackageFile) throw new Error('Выберите подписанный .nlext artifact.');
+    const body = new FormData();
+    body.append('artifact', registryPackageFile);
+    if (registryPublisherId.trim()) body.append('publisher', registryPublisherId.trim());
+    if (registryPublishChannels.trim()) body.append('channels', registryPublishChannels.trim());
+    if (registryMinLauncher.trim()) body.append('minNeverLauncher', registryMinLauncher.trim());
+    if (registryMaxLauncher.trim()) body.append('maxNeverLauncher', registryMaxLauncher.trim());
+    if (registryPublishOS.trim()) body.append('os', registryPublishOS.trim());
+    if (registryPublishArch.trim()) body.append('arch', registryPublishArch.trim());
+    const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/v1/admin/extension-registry/publish`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body });
+    const responsePayload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(responsePayload?.error?.message ?? `${response.status} ${response.statusText}`);
+    return responsePayload.data ?? responsePayload;
+  }
+
+  async function installRegistryVersion(item: RegistryVersionView) {
+    const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/versions/${encodeURIComponent(item.version)}/install`, token, { method: 'POST', body: JSON.stringify({ scope: 'global' }) });
+    return result;
+  }
+
+  async function yankRegistryVersion(item: RegistryVersionView) {
+    const reason = window.prompt(`Причина yank ${item.extensionId}@${item.version}`, 'withdrawn by administrator');
+    if (!reason) return null;
+    const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/versions/${encodeURIComponent(item.version)}/yank`, token, { method: 'POST', body: JSON.stringify({ reason }) });
+    return result;
+  }
+
+  async function setRegistryVersionChannel(item: RegistryVersionView) {
+    const channel = window.prompt(`Канал для ${item.extensionId}@${item.version}`, item.channels?.[0] ?? 'stable');
+    if (!channel) return null;
+    const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/channels/${encodeURIComponent(channel)}`, token, { method: 'PUT', body: JSON.stringify({ version: item.version }) });
+    return result;
+  }
+
+  async function downloadRegistryArtifact(item: RegistryVersionView) {
+    const response = await fetch(`${backendUrl.replace(/\/$/, '')}/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/versions/${encodeURIComponent(item.version)}/artifact`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) {
+      const responsePayload = await response.json().catch(() => ({}));
+      throw new Error(responsePayload?.error?.message ?? `${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `${item.extensionId}-${item.version}.nlext`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(href);
+    return { extensionId: item.extensionId, version: item.version, size: blob.size };
+  }
+
+  const registryItems = ((payload as unknown as RegistrySearchData | null)?.items ?? []);
+  const registryPanel = token && active === 'extension-registry' ? <section className="card wide registryPanel">
+    <div className="registryHeading"><div><h2>NeverExtensions Registry {TOOL_VERSION}</h2><p className="muted">Private/local registry подписанных immutable .nlext. Publish принимает только artifact с доверенным Ed25519 publisher key; install повторно проверяет bytes и signature из storage.</p></div><span className="badge ok">verified-only install</span></div>
+    <div className="registryToolbar">
+      <input aria-label="Registry search" value={registryQuery} onChange={(event) => setRegistryQuery(event.target.value)} placeholder="Поиск extension/publisher" />
+      <input aria-label="Registry channel" value={registryChannel} onChange={(event) => setRegistryChannel(event.target.value)} placeholder="канал: stable" />
+      <input aria-label="Registry launcher version" value={registryLauncherVersion} onChange={(event) => setRegistryLauncherVersion(event.target.value)} placeholder="NeverLauncher version" />
+      <input aria-label="Registry OS" value={registryOS} onChange={(event) => setRegistryOS(event.target.value)} placeholder="OS: linux" />
+      <input aria-label="Registry architecture" value={registryArch} onChange={(event) => setRegistryArch(event.target.value)} placeholder="arch: amd64" />
+      <button onClick={() => loadRegistry().catch((err: Error) => setError(err.message))}>Найти</button>
+    </div>
+    <div className="formGrid">
+      <article className="subcard">
+        <h3>Publisher trust</h3>
+        <TextInput label="Publisher ID" value={registryPublisherId} onChange={setRegistryPublisherId} />
+        <TextInput label="Название" value={registryPublisherName} onChange={setRegistryPublisherName} />
+        <label className="field"><span>Ed25519 raw public key, Base64</span><textarea value={registryPublicKey} onChange={(event) => setRegistryPublicKey(event.target.value)} rows={4} /></label>
+        <div className="buttonRow"><button onClick={() => runRegistryAction('Registry publisher', createRegistryPublisher).catch((err) => setError(err.message))}>Создать/обновить publisher</button><button onClick={() => runRegistryAction('Publisher key', addRegistryPublisherKey).catch((err) => setError(err.message))}>Добавить trusted key</button></div>
+      </article>
+      <article className="subcard">
+        <h3>Publish signed .nlext</h3>
+        <label className="field"><span>Artifact</span><input accept=".nlext,application/octet-stream" type="file" onChange={(event) => setRegistryPackageFile(event.target.files?.[0] ?? null)} /></label>
+        <TextInput label="Каналы" value={registryPublishChannels} onChange={setRegistryPublishChannels} />
+        <TextInput label="Min NeverLauncher" value={registryMinLauncher} onChange={setRegistryMinLauncher} />
+        <TextInput label="Max NeverLauncher" value={registryMaxLauncher} onChange={setRegistryMaxLauncher} />
+        <TextInput label="OS (через запятую)" value={registryPublishOS} onChange={setRegistryPublishOS} />
+        <TextInput label="Architecture (через запятую)" value={registryPublishArch} onChange={setRegistryPublishArch} />
+        <div className="buttonRow"><button disabled={!registryPackageFile} onClick={() => runRegistryAction('Registry publish', publishRegistryArtifact).catch((err) => setError(err.message))}>Проверить подпись и опубликовать</button></div>
+      </article>
+    </div>
+    <section className="registryResults">
+      <div className="registryHeading"><h3>Опубликованные версии</h3><span className="muted">{registryItems.length} найдено</span></div>
+      {registryItems.length === 0 ? <p className="muted">По текущим фильтрам публикаций нет.</p> : registryItems.map((item) => <article className="subcard registryItem" key={`${item.extensionId}@${item.version}`}>
+        <div className="registryHeading"><div><strong>{item.manifest?.name ?? item.extensionId}</strong><p className="muted"><code>{item.extensionId}@${item.version}</code> · {item.publisherId}</p></div><div className="registryBadges">{item.channels?.map((channel) => <span className="badge ok" key={channel}>{channel}</span>)}{item.yankedAt && <span className="badge warn">yanked</span>}</div></div>
+        <p>{item.manifest?.description || 'Без описания'}</p>
+        <p className="muted">NeverLauncher {item.compatibility?.minNeverLauncher || 'any'} → {item.compatibility?.maxNeverLauncher || 'any'} · OS {(item.compatibility?.supportedOs ?? []).join(', ') || 'any'} · arch {(item.compatibility?.supportedArchitectures ?? []).join(', ') || 'any'}</p>
+        <p className="registryIdentity"><code>{item.artifact.packageIdentity}</code></p>
+        {item.yankReason && <p className="error">Yank: {item.yankReason}</p>}
+        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
+      </article>)}
+    </section>
+  </section> : null;
+
   const packagePanel = token ? <section className="card wide">
     <h2>Конвейер пакетов и релизов {TOOL_VERSION}</h2>
     <p className="muted">Создание пакета, multipart-загрузка в хранилище, проверка SHA-256 и публикация манифеста в релизный канал.</p>
@@ -496,9 +641,10 @@ function App() {
         {error && <p className="error">{error}</p>}
       </section>
       <section className="grid"><MetricCard label="Проекты" value={metrics.projects ?? '—'} /><MetricCard label="Профили" value={metrics.profiles ?? '—'} /><MetricCard label="Каналы" value={metrics.channels ?? '—'} /><MetricCard label="Аудит" value={metrics.auditEvents ?? '—'} /><MetricCard label="Состояние" value={dashboard?.status ?? status} /></section>
+      {registryPanel}
       {crudPanel}
       {packagePanel}
-      <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : <DataTable payload={payload} />}</section>
+      <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'extension-registry' ? <p className="muted">Registry управляется рабочей панелью выше; raw API payload доступен через CLI/OpenAPI.</p> : <DataTable payload={payload} />}</section>
       <section className="card wide"><h2>Основной сценарий</h2><div className="workflow">{(productionUI.primaryFlow ?? ['вход', 'создание проекта', 'изменение проекта', 'создание профиля', 'изменение профиля', 'создание канала', 'изменение канала', 'создание пользователя', 'публикация stable', 'проверка аудита']).map((step) => <span key={step}>{step}</span>)}</div></section>
     </section>
   </main>;

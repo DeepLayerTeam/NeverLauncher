@@ -22,6 +22,13 @@ var (
 	extensionPermission0201 = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{1,127}$`)
 )
 
+// NormalizeExtensionManifest validates and canonicalizes a NeverExtensions manifest.
+// Registry/package verification uses the same normalization as persistence so
+// package identity and database identity cannot diverge.
+func NormalizeExtensionManifest(in model.ExtensionManifest) (model.ExtensionManifest, string, error) {
+	return normalizeExtensionManifest0201(in)
+}
+
 func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.ExtensionManifest, string, error) {
 	m := in
 	m.SchemaVersion = strings.TrimSpace(m.SchemaVersion)

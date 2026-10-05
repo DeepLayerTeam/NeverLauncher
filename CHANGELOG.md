@@ -1,3 +1,12 @@
+## [0.20.3] - 2026-10-05
+
+- Added the production private/local NeverExtensions Registry with trusted publishers and Ed25519 keys, immutable extension/version publications, compatibility metadata, content-addressed artifacts, movable channels and irreversible yank state.
+- Added strict server-side `.nlext` inspection/verification and verified-only installation: registry publish accepts only a signature trusted for the manifest publisher, while install re-reads storage bytes and repeats SHA-256/package-identity/Ed25519 verification before persisting install state.
+- Added authenticated Registry API for publisher/key management, search/list/details, multipart publish, artifact download, channel movement, yank and install, backed by PostgreSQL migration `0043_neverextensions_registry_0203` and serializable repository transactions.
+- Added `nl extension registry publishers|publisher-add|key-add|keys|search|list|show|publish|yank|channel-set|pull|install`, including download SHA-256 verification, plus a functional Admin Registry UI.
+- Fixed `.nlext` SBOM verification so immutable packages created by NeverLauncher CLI 0.20.2 remain verifiable by later registry/server versions without weakening package identity or signature checks.
+- Added Registry repository/package/CLI/API regression coverage, OpenAPI multipart/binary contract support, production table checks and a mandatory 0.20.3 CI gate.
+
 ## [0.20.2] - 2026-10-05
 
 - Added the production `.nlext` extension package format with deterministic ZIP layout, canonical manifest embedding, payload hashing, `checksums.sha256`, SPDX 2.3 SBOM and a content-derived immutable package identity.

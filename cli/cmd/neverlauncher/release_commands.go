@@ -513,7 +513,7 @@ func publishTransactionPlan(kind, subject, channel, releaseVersion string) map[s
 }
 
 func productionTables() []string {
-	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "extension_versions", "extension_permissions", "extension_dependencies", "extension_installs"}
+	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "extension_versions", "extension_permissions", "extension_dependencies", "extension_installs", "extension_registry_publishers", "extension_registry_publisher_keys", "extension_registry_versions", "extension_registry_compatibility", "extension_registry_artifacts", "extension_registry_channels"}
 }
 
 func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, guardCIMatrixPath, guardCITargetsPath, expectedCommit, publicBaseURL string) error {

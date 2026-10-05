@@ -92,6 +92,15 @@ def path_parameters(path):
           {"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}},
           {"name":"riskState","in":"query","required":False,"schema":{"type":"string","enum":["normal","elevated","compromised"]}},
         ]
+    if path == "/api/v1/admin/extension-registry/extensions":
+        out += [
+          {"name":"q","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"channel","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"launcherVersion","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"os","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"arch","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"includeYanked","in":"query","required":False,"schema":{"type":"boolean","default":False}},
+        ]
     return out
 
 ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
@@ -121,6 +130,11 @@ def body_schema(path):
       "/api/v1/admin/auth/devices/{deviceId}/revoke":"TrustedDeviceRevokeRequest",
       "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
       "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
+      "/api/v1/admin/extension-registry/publishers":"ExtensionRegistryPublisherWrite",
+      "/api/v1/admin/extension-registry/publishers/{publisherId}/keys":"ExtensionRegistryPublisherKeyWrite",
+      "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/yank":"ExtensionRegistryYankWrite",
+      "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}":"ExtensionRegistryChannelWrite",
+      "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install":"ExtensionRegistryInstallWrite",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
@@ -177,8 +191,9 @@ def success_status(method,path):
     created={
       "/api/v1/install/bootstrap-admin","/api/v1/install/first-project","/api/v1/admin/users","/api/v1/admin/projects",
       "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff","/api/v1/server-bridge/servers/{serverId}/control",
+      "/api/v1/admin/extension-registry/publishers","/api/v1/admin/extension-registry/publishers/{publisherId}/keys","/api/v1/admin/extension-registry/publish","/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install",
     }
-    if path in created or (method=="post" and (path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish"))):
+    if method=="post" and (path in created or path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish")):
         return "201"
     return "200"
 
@@ -188,7 +203,9 @@ def response_schema(path, method):
     if path == "/metrics": return {"type":"string"}
     if path.endswith("/manifest") and method=="get":return ref("Manifest")
     if path.startswith("/api/v1/files/"): return {"type":"string","format":"binary"}
+    if path.endswith("/artifact") and "/extension-registry/" in path: return {"type":"string","format":"binary"}
     if path.endswith("/versions") and method=="post":return ref("ReleaseVersion")
+    if path == "/api/v1/admin/extension-registry/publish" and method=="post": return {"type":"object","additionalProperties":True}
     if path.endswith("/publish") and method=="post":return ref("ReleaseVersion")
     if path == "/api/v1/admin/login":return ref("AdminSession")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
@@ -213,12 +230,15 @@ for method,path in routes:
     sec=security_for(method,path)
     if sec: op["security"]=sec
     elif sec==[]: op["security"]=[]
-    if request_body_allowed(method,path) and not path.endswith("/files"):
+    if request_body_allowed(method,path) and not path.endswith("/files") and path != "/api/v1/admin/extension-registry/publish":
         op["requestBody"]={"required":request_body_required(method,path),"content":{"application/json":{"schema":body_schema(path)}}}
     if path.endswith("/files") and method=="post":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"path":{"type":"string"},"file":{"type":"string","format":"binary"}}}}}}
+    if path == "/api/v1/admin/extension-registry/publish" and method=="post":
+        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["artifact"],"properties":{"artifact":{"type":"string","format":"binary"},"publisher":{"type":"string"},"channels":{"type":"string"},"minNeverLauncher":{"type":"string"},"maxNeverLauncher":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"}}}}}}
     success=success_status(method,path)
-    ctype="text/plain" if path=="/metrics" else ("application/octet-stream" if path.startswith("/api/v1/files/") else "application/json")
+    binary_response = path.startswith("/api/v1/files/") or (path.endswith("/artifact") and "/extension-registry/" in path)
+    ctype="text/plain" if path=="/metrics" else ("application/octet-stream" if binary_response else "application/json")
     op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
     if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
         op["responses"]["200"]={"description":"Idempotent replay of the same queued command","content":{"application/json":{"schema":ref("ServerBridgeControlCommandResponseV3")}}}
@@ -240,6 +260,11 @@ for method,path in routes:
 
 schemas={
 "Error":{"type":"object","required":["error"],"properties":{"error":{"type":"object","required":["code","message"],"properties":{"code":{"type":"integer"},"message":{"type":"string"}},"additionalProperties":False}},"additionalProperties":False},
+"ExtensionRegistryPublisherWrite":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,127}$"},"name":{"type":"string","minLength":1,"maxLength":160},"active":{"type":"boolean"}},"additionalProperties":False},
+"ExtensionRegistryPublisherKeyWrite":{"type":"object","required":["publicKeyBase64"],"properties":{"publicKeyBase64":{"type":"string","description":"Raw 32-byte Ed25519 public key encoded as standard Base64."},"active":{"type":"boolean"}},"additionalProperties":False},
+"ExtensionRegistryYankWrite":{"type":"object","required":["reason"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":500}},"additionalProperties":False},
+"ExtensionRegistryChannelWrite":{"type":"object","required":["version"],"properties":{"version":{"type":"string","minLength":1}},"additionalProperties":False},
+"ExtensionRegistryInstallWrite":{"type":"object","properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"}},"additionalProperties":False},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},

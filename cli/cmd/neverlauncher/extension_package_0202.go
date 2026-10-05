@@ -608,6 +608,46 @@ func extensionSBOMBytes0202(manifest CanonicalExtensionManifest0201, canonicalDi
 	return marshalCanonicalPrettyJSON0202(doc)
 }
 
+func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0201, canonicalDigest string, payload ExtensionPackagePayload0202, buildTime time.Time) error {
+	var doc extensionSPDXDocument0202
+	if err := decodeStrictJSON0202(data, &doc); err != nil {
+		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
+	}
+	pkgID := "SPDXRef-Package-Extension"
+	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://neverlauncher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
+		return errors.New("SBOM.spdx.json metadata не соответствует manifest")
+	}
+	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: NeverLauncher CLI ") {
+		return errors.New("SBOM.spdx.json creationInfo некорректен")
+	}
+	if len(doc.Packages) != 1 {
+		return errors.New("SBOM.spdx.json должен описывать один extension package")
+	}
+	pkg := doc.Packages[0]
+	if pkg.SPDXID != pkgID || pkg.Name != manifest.Name || pkg.VersionInfo != manifest.Version || pkg.DownloadLocation != "NOASSERTION" || !pkg.FilesAnalyzed || pkg.LicenseConcluded != "NOASSERTION" || pkg.LicenseDeclared != "NOASSERTION" {
+		return errors.New("SBOM.spdx.json package metadata не соответствует manifest")
+	}
+	if len(doc.Files) != len(payload.Files) || len(doc.Relationships) != len(payload.Files)+1 {
+		return errors.New("SBOM.spdx.json file/relationship count не соответствует payload")
+	}
+	if doc.Relationships[0] != (extensionSPDXRelationship0202{SPDXElementID: "SPDXRef-DOCUMENT", RelationshipType: "DESCRIBES", RelatedSPDXElement: pkgID}) {
+		return errors.New("SBOM.spdx.json DESCRIBES relationship некорректен")
+	}
+	for i, file := range payload.Files {
+		pathDigest := sha256.Sum256([]byte(file.Path))
+		fileID := "SPDXRef-File-" + hex.EncodeToString(pathDigest[:8])
+		actual := doc.Files[i]
+		if actual.SPDXID != fileID || actual.FileName != "./"+extensionPackagePayloadPrefix0202+file.Path || len(actual.Checksums) != 1 || actual.Checksums[0].Algorithm != "SHA256" || actual.Checksums[0].ChecksumValue != file.SHA256 {
+			return fmt.Errorf("SBOM.spdx.json file entry %d не соответствует payload", i)
+		}
+		expectedRel := extensionSPDXRelationship0202{SPDXElementID: pkgID, RelationshipType: "CONTAINS", RelatedSPDXElement: fileID}
+		if doc.Relationships[i+1] != expectedRel {
+			return fmt.Errorf("SBOM.spdx.json relationship %d не соответствует payload", i+1)
+		}
+	}
+	return nil
+}
+
 func buildExtensionPackageDescriptor0202(manifest CanonicalExtensionManifest0201, buildEpoch int64, manifestSHA, canonicalManifestSHA, checksumsSHA, sbomSHA string, payload ExtensionPackagePayload0202) (ExtensionPackageDescriptor0202, error) {
 	material := extensionPackageIdentityMaterial0202{
 		Format:                  extensionPackageFormat0202,
@@ -825,12 +865,8 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	if err != nil {
 		return nil, err
 	}
-	expectedSBOM, err := extensionSBOMBytes0202(manifest, canonicalDigest, payload, buildTime)
-	if err != nil {
+	if err := validateExtensionSBOM0203(sbomBytes, manifest, canonicalDigest, payload, buildTime); err != nil {
 		return nil, err
-	}
-	if !bytes.Equal(sbomBytes, expectedSBOM) {
-		return nil, errors.New("SBOM.spdx.json не соответствует manifest/payload")
 	}
 	analysis.SBOMBytes = sbomBytes
 

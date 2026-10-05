@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0042_neverextensions_core_0201" {
+	if st.Current != "0043_neverextensions_registry_0203" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0042_neverextensions_core_0201" {
+		if k != "0043_neverextensions_registry_0203" {
 			pending[k] = v
 		}
 	}
@@ -548,6 +548,32 @@ func TestServerBridge3GAMigration0200(t *testing.T) {
 	for _, required := range []string{"protocol_version=2", "compatibility/deprecation-only", "nl server-bridge migrate-v3", "idx_server_bridge_nodes_protocol_migration_0200"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("GA migration missing %q", required)
+		}
+	}
+}
+
+func TestNeverExtensionsRegistryMigration0203(t *testing.T) {
+	b, err := os.ReadFile("sql/0043_neverextensions_registry_0203.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"extension_registry_publishers",
+		"extension_registry_publisher_keys",
+		"extension_registry_versions",
+		"extension_registry_compatibility",
+		"extension_registry_artifacts",
+		"extension_registry_channels",
+		"package_identity",
+		"signature_key_fingerprint",
+		"neverlauncher_registry_version_guard_0203",
+		"neverlauncher_registry_immutable_guard_0203",
+		"neverlauncher_registry_channel_guard_0203",
+		"yank state is irreversible",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.20.3 registry migration missing %q", required)
 		}
 	}
 }

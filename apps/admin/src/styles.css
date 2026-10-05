@@ -62,3 +62,16 @@ code { color: #bfdbfe; }
 .bridgeColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 1300px) { .bridgeMetricGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .bridgeMetricGrid, .bridgeNodeGrid, .bridgeColumns { grid-template-columns: 1fr; } }
+
+.registryPanel textarea, .registryToolbar input { width: 100%; border: 1px solid #334155; background: #020617; color: #e5e7eb; padding: 10px 12px; border-radius: 12px; font: inherit; }
+.registryToolbar { display: grid; grid-template-columns: 2fr repeat(4, minmax(130px, 1fr)) auto; gap: 10px; margin: 14px 0 18px; }
+.registryToolbar button { border: 1px solid #334155; border-radius: 12px; background: #1d4ed8; color: #e5e7eb; padding: 9px 14px; cursor: pointer; }
+.registryHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.registryHeading h2, .registryHeading h3, .registryHeading p { margin-top: 0; }
+.registryResults { display: grid; gap: 12px; margin-top: 18px; }
+.registryItem { background: #0b1220; }
+.registryBadges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.registryIdentity { overflow-wrap: anywhere; }
+.buttonRow button.danger { background: #7f1d1d; border-color: #991b1b; }
+@media (max-width: 1300px) { .registryToolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .registryToolbar { grid-template-columns: 1fr; } .registryHeading { flex-direction: column; } }

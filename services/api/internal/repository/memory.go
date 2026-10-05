@@ -84,32 +84,46 @@ type Repository interface {
 	GetExtensionInstall(ctx context.Context, extensionID, scope, scopeID string) (model.ExtensionInstall, error)
 	SaveExtensionInstall(ctx context.Context, install model.ExtensionInstall) (model.ExtensionInstall, error)
 	DeleteExtensionInstall(ctx context.Context, extensionID, scope, scopeID string) error
+	SaveExtensionRegistryPublisher(ctx context.Context, publisher model.ExtensionRegistryPublisher) (model.ExtensionRegistryPublisher, error)
+	ListExtensionRegistryPublishers(ctx context.Context) ([]model.ExtensionRegistryPublisher, error)
+	SaveExtensionRegistryPublisherKey(ctx context.Context, key model.ExtensionRegistryPublisherKey) (model.ExtensionRegistryPublisherKey, error)
+	GetExtensionRegistryPublisherKey(ctx context.Context, publisherID, fingerprint string) (model.ExtensionRegistryPublisherKey, error)
+	ListExtensionRegistryPublisherKeys(ctx context.Context, publisherID string) ([]model.ExtensionRegistryPublisherKey, error)
+	PublishExtensionRegistryVersion(ctx context.Context, publication model.ExtensionRegistryPublication) (model.ExtensionRegistryVersion, error)
+	SearchExtensionRegistry(ctx context.Context, query model.ExtensionRegistrySearch) ([]model.ExtensionRegistryVersion, error)
+	GetExtensionRegistryVersion(ctx context.Context, extensionID, version string) (model.ExtensionRegistryVersion, error)
+	GetExtensionRegistryExtension(ctx context.Context, extensionID string) (model.ExtensionRegistryExtension, error)
+	SetExtensionRegistryChannel(ctx context.Context, extensionID, channel, version string) (model.ExtensionRegistryVersion, error)
+	YankExtensionRegistryVersion(ctx context.Context, extensionID, version, reason string) (model.ExtensionRegistryVersion, error)
 }
 
 type MemoryRepository struct {
-	deviceMu            sync.Mutex
-	minecraftMu         sync.Mutex
-	extensionMu         sync.Mutex
-	projects            []model.Project
-	profiles            []model.Profile
-	channels            []model.ReleaseChannel
-	releases            []model.ReleaseVersion
-	files               []model.FileObject
-	users               []model.User
-	identities          []model.AuthIdentity
-	providerCredentials []model.ProviderCredential
-	minecraftProfiles   []model.MinecraftProfile
-	minecraftSessions   []model.MinecraftSession
-	minecraftJoins      []model.MinecraftJoin
-	trustedDevices      []model.TrustedDevice
-	deviceChallenges    []model.DeviceChallenge
-	roles               []model.Role
-	audit               []model.AuditEvent
-	telemetry           []model.TelemetryEvent
-	crashes             []model.CrashReport
-	extensions          []model.Extension
-	extensionVersions   []model.ExtensionVersion
-	extensionInstalls   []model.ExtensionInstall
+	deviceMu                    sync.Mutex
+	minecraftMu                 sync.Mutex
+	extensionMu                 sync.Mutex
+	projects                    []model.Project
+	profiles                    []model.Profile
+	channels                    []model.ReleaseChannel
+	releases                    []model.ReleaseVersion
+	files                       []model.FileObject
+	users                       []model.User
+	identities                  []model.AuthIdentity
+	providerCredentials         []model.ProviderCredential
+	minecraftProfiles           []model.MinecraftProfile
+	minecraftSessions           []model.MinecraftSession
+	minecraftJoins              []model.MinecraftJoin
+	trustedDevices              []model.TrustedDevice
+	deviceChallenges            []model.DeviceChallenge
+	roles                       []model.Role
+	audit                       []model.AuditEvent
+	telemetry                   []model.TelemetryEvent
+	crashes                     []model.CrashReport
+	extensions                  []model.Extension
+	extensionVersions           []model.ExtensionVersion
+	extensionInstalls           []model.ExtensionInstall
+	extensionRegistryPublishers []model.ExtensionRegistryPublisher
+	extensionRegistryKeys       []model.ExtensionRegistryPublisherKey
+	extensionRegistryVersions   []model.ExtensionRegistryVersion
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
