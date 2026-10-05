@@ -1,3 +1,12 @@
+## [0.20.8] - 2026-10-06
+
+- Added the production NeverExtensions Admin Extension Host with declarative pages, navigation, dashboard widgets and actions backed by enabled immutable extension versions.
+- Admin executable UI is loaded only from the active extension payload and rendered in opaque-origin `sandbox="allow-scripts"` iframes; no extension JavaScript is imported into the NeverLauncher React bundle. Standalone Admin HTML receives a restrictive CSP with network, object, form and nested-frame access disabled.
+- Added typed `neverextensions.admin-rpc.v1` postMessage/RPC bridging plus a TypeScript SDK. RPC requests are rebound to the current authenticated Admin session and require both the extension capability grant and the user/project authorization, preventing UI extensions from bypassing RBAC, Guard or Device Trust.
+- Added the Admin Extension Manager with persistent install state, permission state, Backend Host runtime/health, errors and bounded recent logs plus Host start/stop/restart and enable/disable operations.
+- Extended canonical extension manifests with validated Admin contributions; contributions require an `admin` target, explicit `ui:contribute` permission and a standalone `.html` entrypoint.
+- Added Admin Host schema/OpenAPI coverage, traversal/symlink/CSP/manifest regression tests and the mandatory 0.20.8 production gate. No database migration is required.
+
 ## [0.20.7] - 2026-10-06
 
 - Replaced manifest-implies-access with an explicit deny-by-default capability policy: extension manifests only request permissions, while effective access is the intersection of immutable-version requests and persisted global/project grants.

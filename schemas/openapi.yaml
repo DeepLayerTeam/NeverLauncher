@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.20.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.20.8. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -2097,6 +2097,66 @@
         ]
       }
     },
+    "/api/v1/admin/extensions/catalog": {
+      "get": {
+        "operationId": "get_admin_extensions_catalog",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extensions/catalog",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/extensions/manager": {
+      "get": {
+        "operationId": "get_admin_extensions_manager",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extensions/manager",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/extensions/versions": {
       "post": {
         "operationId": "post_admin_extensions_versions",
@@ -2410,6 +2470,60 @@
         ]
       }
     },
+    "/api/v1/admin/extensions/{extensionId}/rpc": {
+      "post": {
+        "operationId": "post_admin_extensions_by_extensionId_rpc",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extensions/{extensionId}/rpc",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/extensions/{extensionId}/secrets": {
       "get": {
         "operationId": "get_admin_extensions_by_extensionId_secrets",
@@ -2614,6 +2728,47 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/extensions/{extensionId}/ui": {
+      "get": {
+        "operationId": "get_admin_extensions_by_extensionId_ui",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extensions/{extensionId}/ui",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/admin/extensions/{extensionId}/versions": {

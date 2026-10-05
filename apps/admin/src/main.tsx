@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
+import { AdminExtensions } from './admin_extensions_0208';
 
 type ApiEnvelope<T> = { data?: T; error?: { message?: string } };
 type Section = { id: string; title: string; endpoint?: string; permission?: string };
@@ -44,6 +45,7 @@ const fallbackSections: Section[] = [
   { id: 'audit', title: 'Аудит' },
   { id: 'storage', title: 'Хранилище' },
   { id: 'extension-registry', title: 'NeverExtensions Registry' },
+  { id: 'extensions-manager', title: 'Admin Extensions' },
   { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'diagnostics', title: 'Диагностика' },
   { id: 'backup-restore', title: 'Резервное копирование' },
@@ -62,6 +64,7 @@ const endpointBySection: Record<string, string> = {
   audit: '/api/v1/admin/audit',
   storage: '/api/v1/admin/storage/health',
   'extension-registry': '/api/v1/admin/extension-registry/extensions',
+  'extensions-manager': '/api/v1/admin/extensions/manager',
   'server-bridge': '/api/v1/server-bridge/overview',
   diagnostics: '/api/v1/operations/diagnostics',
   'backup-restore': '/api/v1/operations/backup',
@@ -708,10 +711,12 @@ function App() {
         {error && <p className="error">{error}</p>}
       </section>
       <section className="grid"><MetricCard label="Проекты" value={metrics.projects ?? '—'} /><MetricCard label="Профили" value={metrics.profiles ?? '—'} /><MetricCard label="Каналы" value={metrics.channels ?? '—'} /><MetricCard label="Аудит" value={metrics.auditEvents ?? '—'} /><MetricCard label="Состояние" value={dashboard?.status ?? status} /></section>
+      {active === 'dashboard' && token && <AdminExtensions backendUrl={backendUrl} token={token} mode="dashboard" onError={setError} />}
+      {active === 'extensions-manager' && token ? <section className="card wide"><AdminExtensions backendUrl={backendUrl} token={token} onError={setError} /></section> : null}
       {registryPanel}
       {crudPanel}
       {packagePanel}
-      <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'extension-registry' ? <p className="muted">Registry управляется рабочей панелью выше; raw API payload доступен через CLI/OpenAPI.</p> : <DataTable payload={payload} />}</section>
+      {active !== 'extensions-manager' && <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'extension-registry' ? <p className="muted">Registry управляется рабочей панелью выше; raw API payload доступен через CLI/OpenAPI.</p> : <DataTable payload={payload} />}</section>}
       <section className="card wide"><h2>Основной сценарий</h2><div className="workflow">{(productionUI.primaryFlow ?? ['вход', 'создание проекта', 'изменение проекта', 'создание профиля', 'изменение профиля', 'создание канала', 'изменение канала', 'создание пользователя', 'публикация stable', 'проверка аудита']).map((step) => <span key={step}>{step}</span>)}</div></section>
     </section>
   </main>;

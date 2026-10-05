@@ -833,6 +833,17 @@ jobs:
           (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/neverlauncher && go test ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
+      - name: NeverExtensions Admin Extensions 0.20.8 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-admin-0208.py
+          (cd services/api && go test -run 'TestAdminContributions0208' ./internal/repository)
+          (cd services/api && go test -run 'TestAdminHTMLHardening0208|TestSafeAdminEntrypoint0208|TestAdminProjectScope0208|TestAdminEntrypointServedFromEnabledVerifiedInstall0208' ./internal/httpapi)
+          (cd services/api && go vet ./internal/repository ./internal/httpapi)
+          (cd cli && go test -run 'TestCanonicalAdminContributions0208' ./cmd/neverlauncher)
+          (cd cli && go vet ./cmd/neverlauncher)
+          npm ci --prefix apps/admin
+          npm run build --prefix apps/admin
+          python3 scripts/contracts/validate-openapi.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

@@ -141,6 +141,29 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	sort.Slice(deps, func(i, j int) bool { return deps[i].ID < deps[j].ID })
 	m.Dependencies = deps
+	if m.Admin != nil {
+		if _, ok := seenTargets["admin"]; !ok {
+			return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require an admin target")
+		}
+		for _, target := range m.Targets {
+			if target.Kind == "admin" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
+				return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require a standalone .html entrypoint")
+			}
+		}
+		hasUI := false
+		for _, p := range m.Permissions {
+			if p == "ui:contribute" {
+				hasUI = true
+				break
+			}
+		}
+		if !hasUI {
+			return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require ui:contribute permission")
+		}
+		if err := normalizeAdminContributions0208(m.Admin); err != nil {
+			return model.ExtensionManifest{}, "", err
+		}
+	}
 	if m.Metadata == nil {
 		m.Metadata = map[string]string{}
 	}
@@ -724,6 +747,102 @@ func (r *SQLRepository) DeleteExtensionInstall(ctx context.Context, extensionID,
 	}
 	if rows == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+func validAdminContributionID0208(v string) bool {
+	if len(v) < 2 || len(v) > 64 {
+		return false
+	}
+	for i, r := range v {
+		if i == 0 && !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9') {
+			return false
+		}
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error {
+	if a == nil {
+		return nil
+	}
+	if len(a.Pages) > 64 || len(a.Navigation) > 64 || len(a.DashboardWidgets) > 32 || len(a.Actions) > 64 {
+		return fmt.Errorf("admin contributions exceed limits")
+	}
+	pages := map[string]struct{}{}
+	for i := range a.Pages {
+		p := &a.Pages[i]
+		p.ID = strings.ToLower(strings.TrimSpace(p.ID))
+		p.Title = strings.TrimSpace(p.Title)
+		p.Description = strings.TrimSpace(p.Description)
+		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
+			return fmt.Errorf("invalid admin page %q", p.ID)
+		}
+		if _, ok := pages[p.ID]; ok {
+			return fmt.Errorf("duplicate admin page %q", p.ID)
+		}
+		pages[p.ID] = struct{}{}
+	}
+	seen := map[string]struct{}{}
+	for i := range a.Navigation {
+		n := &a.Navigation[i]
+		n.ID = strings.ToLower(strings.TrimSpace(n.ID))
+		n.Label = strings.TrimSpace(n.Label)
+		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
+		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
+			return fmt.Errorf("invalid admin navigation %q", n.ID)
+		}
+		if _, ok := pages[n.PageID]; !ok {
+			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
+		}
+		if _, ok := seen[n.ID]; ok {
+			return fmt.Errorf("duplicate admin navigation %q", n.ID)
+		}
+		seen[n.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range a.DashboardWidgets {
+		w := &a.DashboardWidgets[i]
+		w.ID = strings.ToLower(strings.TrimSpace(w.ID))
+		w.Title = strings.TrimSpace(w.Title)
+		w.PageID = strings.ToLower(strings.TrimSpace(w.PageID))
+		if w.Height == 0 {
+			w.Height = 280
+		}
+		if !validAdminContributionID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
+			return fmt.Errorf("invalid admin widget %q", w.ID)
+		}
+		if _, ok := pages[w.PageID]; !ok {
+			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
+		}
+		if _, ok := seen[w.ID]; ok {
+			return fmt.Errorf("duplicate admin widget %q", w.ID)
+		}
+		seen[w.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range a.Actions {
+		x := &a.Actions[i]
+		x.ID = strings.ToLower(strings.TrimSpace(x.ID))
+		x.Label = strings.TrimSpace(x.Label)
+		x.PageID = strings.ToLower(strings.TrimSpace(x.PageID))
+		x.Placement = strings.ToLower(strings.TrimSpace(x.Placement))
+		if x.Placement == "" {
+			x.Placement = "toolbar"
+		}
+		if !validAdminContributionID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
+			return fmt.Errorf("invalid admin action %q", x.ID)
+		}
+		if _, ok := pages[x.PageID]; !ok {
+			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
+		}
+		if _, ok := seen[x.ID]; ok {
+			return fmt.Errorf("duplicate admin action %q", x.ID)
+		}
+		seen[x.ID] = struct{}{}
 	}
 	return nil
 }

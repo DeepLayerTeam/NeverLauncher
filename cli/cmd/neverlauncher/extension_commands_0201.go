@@ -28,6 +28,36 @@ type CanonicalExtensionTarget0201 struct {
 	Entrypoint string `json:"entrypoint"`
 }
 
+type CanonicalExtensionAdminPage0208 struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+}
+type CanonicalExtensionAdminNavigation0208 struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	PageID string `json:"pageId"`
+	Order  int    `json:"order,omitempty"`
+}
+type CanonicalExtensionAdminWidget0208 struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	PageID string `json:"pageId"`
+	Height int    `json:"height,omitempty"`
+}
+type CanonicalExtensionAdminAction0208 struct {
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	PageID    string `json:"pageId"`
+	Placement string `json:"placement,omitempty"`
+}
+type CanonicalExtensionAdminContributions0208 struct {
+	Pages            []CanonicalExtensionAdminPage0208       `json:"pages,omitempty"`
+	Navigation       []CanonicalExtensionAdminNavigation0208 `json:"navigation,omitempty"`
+	DashboardWidgets []CanonicalExtensionAdminWidget0208     `json:"dashboardWidgets,omitempty"`
+	Actions          []CanonicalExtensionAdminAction0208     `json:"actions,omitempty"`
+}
+
 type CanonicalExtensionDependency0201 struct {
 	ID       string `json:"id"`
 	Version  string `json:"version"`
@@ -35,20 +65,21 @@ type CanonicalExtensionDependency0201 struct {
 }
 
 type CanonicalExtensionManifest0201 struct {
-	SchemaVersion string                             `json:"schemaVersion"`
-	ID            string                             `json:"id"`
-	Name          string                             `json:"name"`
-	Version       string                             `json:"version"`
-	Publisher     string                             `json:"publisher"`
-	Description   string                             `json:"description,omitempty"`
-	Homepage      string                             `json:"homepage,omitempty"`
-	Repository    string                             `json:"repository,omitempty"`
-	API           string                             `json:"api"`
-	Targets       []CanonicalExtensionTarget0201     `json:"targets"`
-	Permissions   []string                           `json:"permissions,omitempty"`
-	Hooks         []string                           `json:"hooks,omitempty"`
-	Dependencies  []CanonicalExtensionDependency0201 `json:"dependencies,omitempty"`
-	Metadata      map[string]string                  `json:"metadata,omitempty"`
+	SchemaVersion string                                    `json:"schemaVersion"`
+	ID            string                                    `json:"id"`
+	Name          string                                    `json:"name"`
+	Version       string                                    `json:"version"`
+	Publisher     string                                    `json:"publisher"`
+	Description   string                                    `json:"description,omitempty"`
+	Homepage      string                                    `json:"homepage,omitempty"`
+	Repository    string                                    `json:"repository,omitempty"`
+	API           string                                    `json:"api"`
+	Targets       []CanonicalExtensionTarget0201            `json:"targets"`
+	Permissions   []string                                  `json:"permissions,omitempty"`
+	Hooks         []string                                  `json:"hooks,omitempty"`
+	Dependencies  []CanonicalExtensionDependency0201        `json:"dependencies,omitempty"`
+	Metadata      map[string]string                         `json:"metadata,omitempty"`
+	Admin         *CanonicalExtensionAdminContributions0208 `json:"admin,omitempty"`
 }
 
 func handleExtension0201(args []string) error {
@@ -71,6 +102,14 @@ func handleExtension0201(args []string) error {
 			API:           "3.7",
 			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
 			Permissions:   []string{"release:read"},
+		}
+		if target == "admin" {
+			manifest.Permissions = []string{"ui:contribute", "project:read"}
+			manifest.Admin = &CanonicalExtensionAdminContributions0208{
+				Pages:            []CanonicalExtensionAdminPage0208{{ID: "main", Title: "Example extension"}},
+				Navigation:       []CanonicalExtensionAdminNavigation0208{{ID: "main-nav", Label: "Example extension", PageID: "main"}},
+				DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Example extension", PageID: "main", Height: 280}},
+			}
 		}
 		manifest, _, err := normalizeCanonicalExtension0201(manifest)
 		if err != nil {
@@ -265,6 +304,22 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		seenDeps[d.ID] = struct{}{}
 	}
 	sort.Slice(m.Dependencies, func(i, j int) bool { return m.Dependencies[i].ID < m.Dependencies[j].ID })
+	if m.Admin != nil {
+		if _, ok := seenTargets["admin"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require an admin target")
+		}
+		for _, target := range m.Targets {
+			if target.Kind == "admin" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
+				return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require a standalone .html entrypoint")
+			}
+		}
+		if _, ok := setOfStrings0208(m.Permissions)["ui:contribute"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require ui:contribute permission")
+		}
+		if err := normalizeAdminContributions0208(m.Admin); err != nil {
+			return CanonicalExtensionManifest0201{}, "", err
+		}
+	}
 	if m.Metadata == nil {
 		m.Metadata = map[string]string{}
 	}
@@ -324,4 +379,109 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 	}
 	manifest, _, err = normalizeCanonicalExtension0201(manifest)
 	return manifest, path, err
+}
+
+func setOfStrings0208(values []string) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, v := range values {
+		out[strings.ToLower(strings.TrimSpace(v))] = struct{}{}
+	}
+	return out
+}
+
+func validAdminID0208(v string) bool {
+	if len(v) < 2 || len(v) > 64 {
+		return false
+	}
+	for i, r := range v {
+		if i == 0 && !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9') {
+			return false
+		}
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208) error {
+	if a == nil {
+		return nil
+	}
+	if len(a.Pages) > 64 || len(a.Navigation) > 64 || len(a.DashboardWidgets) > 32 || len(a.Actions) > 64 {
+		return errors.New("admin contributions exceed limits")
+	}
+	pages := map[string]struct{}{}
+	for i := range a.Pages {
+		p := &a.Pages[i]
+		p.ID = strings.ToLower(strings.TrimSpace(p.ID))
+		p.Title = strings.TrimSpace(p.Title)
+		p.Description = strings.TrimSpace(p.Description)
+		if !validAdminID0208(p.ID) || p.Title == "" || len(p.Title) > 120 {
+			return fmt.Errorf("invalid admin page %q", p.ID)
+		}
+		if _, ok := pages[p.ID]; ok {
+			return fmt.Errorf("duplicate admin page %q", p.ID)
+		}
+		pages[p.ID] = struct{}{}
+	}
+	seen := map[string]struct{}{}
+	for i := range a.Navigation {
+		n := &a.Navigation[i]
+		n.ID = strings.ToLower(strings.TrimSpace(n.ID))
+		n.Label = strings.TrimSpace(n.Label)
+		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
+		if !validAdminID0208(n.ID) || n.Label == "" || len(n.Label) > 80 {
+			return fmt.Errorf("invalid admin navigation %q", n.ID)
+		}
+		if _, ok := pages[n.PageID]; !ok {
+			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
+		}
+		if _, ok := seen[n.ID]; ok {
+			return fmt.Errorf("duplicate admin navigation %q", n.ID)
+		}
+		seen[n.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range a.DashboardWidgets {
+		w := &a.DashboardWidgets[i]
+		w.ID = strings.ToLower(strings.TrimSpace(w.ID))
+		w.Title = strings.TrimSpace(w.Title)
+		w.PageID = strings.ToLower(strings.TrimSpace(w.PageID))
+		if w.Height == 0 {
+			w.Height = 280
+		}
+		if !validAdminID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
+			return fmt.Errorf("invalid admin widget %q", w.ID)
+		}
+		if _, ok := pages[w.PageID]; !ok {
+			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
+		}
+		if _, ok := seen[w.ID]; ok {
+			return fmt.Errorf("duplicate admin widget %q", w.ID)
+		}
+		seen[w.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range a.Actions {
+		x := &a.Actions[i]
+		x.ID = strings.ToLower(strings.TrimSpace(x.ID))
+		x.Label = strings.TrimSpace(x.Label)
+		x.PageID = strings.ToLower(strings.TrimSpace(x.PageID))
+		x.Placement = strings.ToLower(strings.TrimSpace(x.Placement))
+		if x.Placement == "" {
+			x.Placement = "toolbar"
+		}
+		if !validAdminID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
+			return fmt.Errorf("invalid admin action %q", x.ID)
+		}
+		if _, ok := pages[x.PageID]; !ok {
+			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
+		}
+		if _, ok := seen[x.ID]; ok {
+			return fmt.Errorf("duplicate admin action %q", x.ID)
+		}
+		seen[x.ID] = struct{}{}
+	}
+	return nil
 }

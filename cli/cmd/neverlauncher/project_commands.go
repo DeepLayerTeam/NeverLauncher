@@ -372,6 +372,10 @@ func handleSDK(args []string) error {
 			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
 			Permissions:   []string{"release:read"},
 		}
+		if target == "admin" {
+			manifest.Permissions = []string{"ui:contribute", "project:read"}
+			manifest.Admin = &CanonicalExtensionAdminContributions0208{Pages: []CanonicalExtensionAdminPage0208{{ID: "main", Title: "Example extension"}}, Navigation: []CanonicalExtensionAdminNavigation0208{{ID: "main-nav", Label: "Example extension", PageID: "main"}}, DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Example extension", PageID: "main", Height: 280}}}
+		}
 		manifest, _, err := normalizeCanonicalExtension0201(manifest)
 		if err != nil {
 			return err
@@ -402,7 +406,9 @@ func sdkEntrypoint(target string) string {
 	switch target {
 	case "backend", "cli":
 		return "main.go"
-	case "admin", "desktop":
+	case "admin":
+		return "index.html"
+	case "desktop":
 		return "index.ts"
 	default:
 		return "extension.txt"
@@ -420,7 +426,7 @@ func sdkTemplate(target string) string {
 	case "cli":
 		return "package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"NeverLauncher CLI extension\\\")\\n}\\n"
 	case "admin":
-		return "export const extension = { id: 'ru.example.neverlauncher.admin', target: 'admin', title: 'Admin extension' };\\n"
+		return `<!doctype html><html><head><meta charset="utf-8"><title>NeverLauncher extension</title><style>body{font:14px system-ui;margin:0;padding:16px;color:#111}pre{white-space:pre-wrap}</style></head><body><h2>NeverLauncher Admin extension</h2><pre id="out">Waiting for host…</pre><script>(()=>{const P='neverextensions.admin-rpc.v1';let seq=0,pending=new Map();const out=document.getElementById('out');window.addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.protocol!==P)return;const m=e.data;if(m.type==='rpc.response'){const p=pending.get(m.id);if(!p)return;pending.delete(m.id);m.error?p.reject(new Error(m.error)):p.resolve(m.result)}if(m.type==='host.context'){rpc('context.get',{}).then(async ctx=>{const projects=await rpc('projects.list',{});out.textContent=JSON.stringify({ctx,projects},null,2)}).catch(err=>out.textContent=String(err))}});function rpc(method,params){const id='rpc-'+Date.now()+'-'+(++seq);parent.postMessage({protocol:P,type:'rpc.request',id,method,params},'*');return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});setTimeout(()=>{if(pending.delete(id))reject(new Error('RPC timeout'))},10000)})}})();</script></body></html>`
 	case "desktop":
 		return "export const extension = { id: 'ru.example.neverlauncher.desktop', target: 'desktop', title: 'Desktop extension' };\\n"
 	default:

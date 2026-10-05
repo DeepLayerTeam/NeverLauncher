@@ -9,6 +9,48 @@ type ExtensionTarget struct {
 	Entrypoint string `json:"entrypoint"`
 }
 
+// ExtensionAdminPage declares a sandboxed Admin page rendered by the host.
+type ExtensionAdminPage struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+}
+
+// ExtensionAdminNavigation contributes one sidebar entry backed by an Admin page.
+type ExtensionAdminNavigation struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	PageID string `json:"pageId"`
+	Order  int    `json:"order,omitempty"`
+}
+
+// ExtensionAdminWidget contributes a dashboard iframe backed by an Admin page.
+type ExtensionAdminWidget struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	PageID string `json:"pageId"`
+	Height int    `json:"height,omitempty"`
+}
+
+// ExtensionAdminAction contributes a toolbar action that activates a page and
+// delivers the action ID over the typed Admin bridge.
+type ExtensionAdminAction struct {
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	PageID    string `json:"pageId"`
+	Placement string `json:"placement,omitempty"`
+}
+
+// ExtensionAdminContributions are declarative slot bindings. The executable UI
+// stays inside the sandboxed admin target iframe; these values never inject JS
+// into the NeverLauncher Admin bundle.
+type ExtensionAdminContributions struct {
+	Pages            []ExtensionAdminPage       `json:"pages,omitempty"`
+	Navigation       []ExtensionAdminNavigation `json:"navigation,omitempty"`
+	DashboardWidgets []ExtensionAdminWidget     `json:"dashboardWidgets,omitempty"`
+	Actions          []ExtensionAdminAction     `json:"actions,omitempty"`
+}
+
 // ExtensionDependency declares another extension required by a concrete
 // immutable extension version.
 type ExtensionDependency struct {
@@ -21,20 +63,21 @@ type ExtensionDependency struct {
 // NeverLauncher 0.20.1. It replaces newly-authored neverlauncher-plugin.json
 // manifests while the CLI can still import the legacy format.
 type ExtensionManifest struct {
-	SchemaVersion string                `json:"schemaVersion"`
-	ID            string                `json:"id"`
-	Name          string                `json:"name"`
-	Version       string                `json:"version"`
-	Publisher     string                `json:"publisher"`
-	Description   string                `json:"description,omitempty"`
-	Homepage      string                `json:"homepage,omitempty"`
-	Repository    string                `json:"repository,omitempty"`
-	API           string                `json:"api"`
-	Targets       []ExtensionTarget     `json:"targets"`
-	Permissions   []string              `json:"permissions,omitempty"`
-	Hooks         []string              `json:"hooks,omitempty"`
-	Dependencies  []ExtensionDependency `json:"dependencies,omitempty"`
-	Metadata      map[string]string     `json:"metadata,omitempty"`
+	SchemaVersion string                       `json:"schemaVersion"`
+	ID            string                       `json:"id"`
+	Name          string                       `json:"name"`
+	Version       string                       `json:"version"`
+	Publisher     string                       `json:"publisher"`
+	Description   string                       `json:"description,omitempty"`
+	Homepage      string                       `json:"homepage,omitempty"`
+	Repository    string                       `json:"repository,omitempty"`
+	API           string                       `json:"api"`
+	Targets       []ExtensionTarget            `json:"targets"`
+	Permissions   []string                     `json:"permissions,omitempty"`
+	Hooks         []string                     `json:"hooks,omitempty"`
+	Dependencies  []ExtensionDependency        `json:"dependencies,omitempty"`
+	Metadata      map[string]string            `json:"metadata,omitempty"`
+	Admin         *ExtensionAdminContributions `json:"admin,omitempty"`
 }
 
 // Extension is the stable identity shared by all immutable versions.
