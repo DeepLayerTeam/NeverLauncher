@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -21,6 +22,7 @@ type Server struct {
 	State         *RuntimeState
 	Federation    *federation.Core
 	ExtensionHost *extensionhost.Supervisor
+	EventBus      *eventbus.Bus
 }
 
 type statusResponse struct {

@@ -105,6 +105,8 @@ type MemoryRepository struct {
 	deviceMu                       sync.Mutex
 	minecraftMu                    sync.Mutex
 	extensionMu                    sync.Mutex
+	auditSinkMu                    sync.RWMutex
+	auditSink                      func(model.AuditEvent)
 	projects                       []model.Project
 	profiles                       []model.Profile
 	channels                       []model.ReleaseChannel
@@ -129,7 +131,15 @@ type MemoryRepository struct {
 	extensionRegistryKeys          []model.ExtensionRegistryPublisherKey
 	extensionRegistryVersions      []model.ExtensionRegistryVersion
 	extensionInstallRevisions      []model.ExtensionInstallRevision
+	extensionEvents                []model.ExtensionEvent
+	extensionEventSubscriptions    []model.ExtensionEventSubscription
+	extensionEventDeliveries       []model.ExtensionEventDelivery
+	extensionEventDeadLetters      []model.ExtensionEventDeadLetter
 	nextExtensionInstallRevisionID int64
+	nextExtensionEventSequence     int64
+	nextExtensionSubscriptionID    int64
+	nextExtensionDeliveryID        int64
+	nextExtensionDeadLetterID      int64
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
@@ -651,6 +661,18 @@ func (r *MemoryRepository) AddAuditEvent(event model.AuditEvent) {
 		event.CreatedAt = time.Now().UTC()
 	}
 	r.audit = append(r.audit, event)
+	r.auditSinkMu.RLock()
+	sink := r.auditSink
+	r.auditSinkMu.RUnlock()
+	if sink != nil {
+		sink(event)
+	}
+}
+
+func (r *MemoryRepository) SetAuditEventSink(sink func(model.AuditEvent)) {
+	r.auditSinkMu.Lock()
+	r.auditSink = sink
+	r.auditSinkMu.Unlock()
 }
 
 func (r *MemoryRepository) GetManifest(projectID, profileID, channel string) (model.Manifest, error) {

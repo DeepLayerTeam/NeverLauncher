@@ -10,8 +10,10 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
@@ -87,6 +89,29 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var events *eventbus.Bus
+	if cfg.ExtensionEventsEnabled {
+		events, err = eventbus.New(eventbus.Config{
+			WorkerInterval: time.Duration(cfg.ExtensionEventsWorkerIntervalMilliseconds) * time.Millisecond,
+			LeaseDuration:  time.Duration(cfg.ExtensionEventsLeaseSeconds) * time.Second,
+			HookTimeout:    time.Duration(cfg.ExtensionEventsHookTimeoutMilliseconds) * time.Millisecond,
+			MaxAttempts:    cfg.ExtensionEventsMaxAttempts,
+			BaseRetry:      time.Duration(cfg.ExtensionEventsBaseRetryMilliseconds) * time.Millisecond,
+			MaxRetry:       time.Duration(cfg.ExtensionEventsMaxRetrySeconds) * time.Second,
+			BatchSize:      cfg.ExtensionEventsBatchSize,
+		}, repo)
+		if err != nil {
+			log.Fatalf("NeverExtensions event bus initialization failed: %v", err)
+		}
+		if sinkRepo, ok := repo.(interface{ SetAuditEventSink(func(model.AuditEvent)) }); ok {
+			sinkRepo.SetAuditEventSink(func(a model.AuditEvent) {
+				if err := events.AuditCreated(context.Background(), a); err != nil {
+					log.Printf("NeverExtensions audit event publish failed: %v", err)
+				}
+			})
+		}
+	}
+
 	var host *extensionhost.Supervisor
 	if cfg.ExtensionHostEnabled {
 		if err := extensionhost.HardenBackendProcess(); err != nil {
@@ -109,6 +134,10 @@ func main() {
 			CrashWindow:         time.Duration(cfg.ExtensionHostCrashWindowSeconds) * time.Second,
 			RestartBackoff:      time.Duration(cfg.ExtensionHostRestartBackoffMilliseconds) * time.Millisecond,
 		}, repo, store)
+		if events != nil {
+			host.SetEventBus(events)
+			events.SetDispatcher(host)
+		}
 		if err := host.Start(context.Background()); err != nil {
 			log.Fatalf("extension host initialization failed: %v", err)
 		}
@@ -123,6 +152,12 @@ func main() {
 		log.Printf("NeverExtensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
 	}
 
+	if events != nil {
+		events.Start(context.Background())
+		defer events.Close()
+		log.Printf("NeverExtensions Event Bus protocol=%s", eventbus.ProtocolVersion)
+	}
+
 	server := httpapi.Server{
 		Version:       version,
 		Config:        cfg,
@@ -131,6 +166,7 @@ func main() {
 		State:         state,
 		Federation:    federationCore,
 		ExtensionHost: host,
+		EventBus:      events,
 	}
 
 	log.Printf(

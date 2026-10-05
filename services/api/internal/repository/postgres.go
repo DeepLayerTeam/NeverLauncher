@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
@@ -23,10 +24,12 @@ import (
 // По умолчанию используется имя драйвера "pgx" через github.com/jackc/pgx/v5/stdlib.
 // Для нестандартного driver-name используйте NewSQLRepository.
 type SQLRepository struct {
-	db         *sql.DB
-	initErr    error
-	driverName string
-	publicURL  string
+	db          *sql.DB
+	initErr     error
+	driverName  string
+	publicURL   string
+	auditSinkMu sync.RWMutex
+	auditSink   func(model.AuditEvent)
 }
 
 // NewPostgresRepository создаёт SQL repository для PostgreSQL-режима.
@@ -759,7 +762,21 @@ func (r *SQLRepository) AddAuditEvent(event model.AuditEvent) {
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()
 	}
-	_, _ = r.db.Exec(`INSERT INTO audit_events (id, actor, action, target, ip, user_agent, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, event.ID, event.Actor, event.Action, event.Target, event.IP, event.UserAgent, event.CreatedAt)
+	if _, err := r.db.Exec(`INSERT INTO audit_events (id, actor, action, target, ip, user_agent, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, event.ID, event.Actor, event.Action, event.Target, event.IP, event.UserAgent, event.CreatedAt); err != nil {
+		return
+	}
+	r.auditSinkMu.RLock()
+	sink := r.auditSink
+	r.auditSinkMu.RUnlock()
+	if sink != nil {
+		sink(event)
+	}
+}
+
+func (r *SQLRepository) SetAuditEventSink(sink func(model.AuditEvent)) {
+	r.auditSinkMu.Lock()
+	r.auditSink = sink
+	r.auditSinkMu.Unlock()
 }
 
 func (r *SQLRepository) GetManifest(projectID, profileID, channel string) (model.Manifest, error) {

@@ -60,6 +60,14 @@ type Config struct {
 	ExtensionHostCrashLimit                      int
 	ExtensionHostCrashWindowSeconds              int
 	ExtensionHostRestartBackoffMilliseconds      int
+	ExtensionEventsEnabled                       bool
+	ExtensionEventsWorkerIntervalMilliseconds    int
+	ExtensionEventsLeaseSeconds                  int
+	ExtensionEventsHookTimeoutMilliseconds       int
+	ExtensionEventsMaxAttempts                   int
+	ExtensionEventsBaseRetryMilliseconds         int
+	ExtensionEventsMaxRetrySeconds               int
+	ExtensionEventsBatchSize                     int
 	CORSAllowedOrigins                           []string
 	Environment                                  string
 	AuthTokenSecret                              string
@@ -235,6 +243,14 @@ func Load() Config {
 		ExtensionHostCrashLimit:                      envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_LIMIT", 5),
 		ExtensionHostCrashWindowSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_WINDOW_SECONDS", 600),
 		ExtensionHostRestartBackoffMilliseconds:      envInt("NEVERLAUNCHER_EXTENSION_HOST_RESTART_BACKOFF_MS", 1000),
+		ExtensionEventsEnabled:                       envBool("NEVERLAUNCHER_EXTENSION_EVENTS_ENABLED", true),
+		ExtensionEventsWorkerIntervalMilliseconds:    envInt("NEVERLAUNCHER_EXTENSION_EVENTS_WORKER_INTERVAL_MS", 250),
+		ExtensionEventsLeaseSeconds:                  envInt("NEVERLAUNCHER_EXTENSION_EVENTS_LEASE_SECONDS", 30),
+		ExtensionEventsHookTimeoutMilliseconds:       envInt("NEVERLAUNCHER_EXTENSION_EVENTS_HOOK_TIMEOUT_MS", 2000),
+		ExtensionEventsMaxAttempts:                   envInt("NEVERLAUNCHER_EXTENSION_EVENTS_MAX_ATTEMPTS", 8),
+		ExtensionEventsBaseRetryMilliseconds:         envInt("NEVERLAUNCHER_EXTENSION_EVENTS_BASE_RETRY_MS", 1000),
+		ExtensionEventsMaxRetrySeconds:               envInt("NEVERLAUNCHER_EXTENSION_EVENTS_MAX_RETRY_SECONDS", 300),
+		ExtensionEventsBatchSize:                     envInt("NEVERLAUNCHER_EXTENSION_EVENTS_BATCH_SIZE", 32),
 		CORSAllowedOrigins:                           envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
 		Environment:                                  environment,
 		AuthTokenSecret:                              env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
@@ -590,6 +606,32 @@ func ValidateProduction(cfg Config) error {
 	}
 	if cfg.ExtensionBackupRetention < 1 || cfg.ExtensionBackupRetention > 100 {
 		problems = append(problems, "NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
+	}
+	if cfg.ExtensionEventsEnabled {
+		if !cfg.ExtensionHostEnabled {
+			problems = append(problems, "NeverExtensions Events требует NEVERLAUNCHER_EXTENSION_HOST_ENABLED=true")
+		}
+		if cfg.ExtensionEventsWorkerIntervalMilliseconds < 50 || cfg.ExtensionEventsWorkerIntervalMilliseconds > 60000 {
+			problems = append(problems, "extension events worker interval должен быть 50..60000 ms")
+		}
+		if cfg.ExtensionEventsLeaseSeconds < 2 || cfg.ExtensionEventsLeaseSeconds > 600 {
+			problems = append(problems, "extension events lease должен быть 2..600 секунд")
+		}
+		if cfg.ExtensionEventsHookTimeoutMilliseconds < 50 || cfg.ExtensionEventsHookTimeoutMilliseconds > 60000 {
+			problems = append(problems, "extension events hook timeout должен быть 50..60000 ms")
+		}
+		if cfg.ExtensionEventsMaxAttempts < 1 || cfg.ExtensionEventsMaxAttempts > 100 {
+			problems = append(problems, "extension events max attempts должен быть 1..100")
+		}
+		if cfg.ExtensionEventsBaseRetryMilliseconds < 100 || cfg.ExtensionEventsBaseRetryMilliseconds > 60000 {
+			problems = append(problems, "extension events base retry должен быть 100..60000 ms")
+		}
+		if cfg.ExtensionEventsMaxRetrySeconds < 1 || cfg.ExtensionEventsMaxRetrySeconds > 86400 {
+			problems = append(problems, "extension events max retry должен быть 1..86400 секунд")
+		}
+		if cfg.ExtensionEventsBatchSize < 1 || cfg.ExtensionEventsBatchSize > 100 {
+			problems = append(problems, "extension events batch size должен быть 1..100")
+		}
 	}
 	if cfg.ExtensionHostEnabled {
 		host, _, err := net.SplitHostPort(strings.TrimSpace(cfg.ExtensionHostListen))

@@ -2,6 +2,7 @@ package extensionhost
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -14,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -189,47 +192,51 @@ func (r *ringLog) list(limit int) []LogEntry {
 }
 
 type processState struct {
-	mu                                        sync.Mutex
-	key                                       Key
-	install                                   model.ExtensionInstall
-	manifest                                  model.ExtensionManifest
-	permissions                               map[string]struct{}
-	token, instanceID, entrypoint             string
-	cmd                                       *exec.Cmd
-	state                                     string
-	startedAt, helloAt, heartbeatAt, exitedAt time.Time
-	exitCode                                  *int
-	lastError                                 string
-	memoryBytes                               int64
-	processCount                              int
-	expectedStop                              bool
-	restarts                                  int
-	helloCh                                   chan struct{}
-	helloOnce                                 sync.Once
-	doneCh                                    chan struct{}
-	logs                                      ringLog
+	mu                                                        sync.Mutex
+	key                                                       Key
+	install                                                   model.ExtensionInstall
+	manifest                                                  model.ExtensionManifest
+	permissions                                               map[string]struct{}
+	token, callbackToken, callbackURL, instanceID, entrypoint string
+	cmd                                                       *exec.Cmd
+	state                                                     string
+	startedAt, helloAt, heartbeatAt, exitedAt                 time.Time
+	exitCode                                                  *int
+	lastError                                                 string
+	memoryBytes                                               int64
+	processCount                                              int
+	expectedStop                                              bool
+	restarts                                                  int
+	helloCh                                                   chan struct{}
+	helloOnce                                                 sync.Once
+	doneCh                                                    chan struct{}
+	logs                                                      ringLog
 }
 
 type Supervisor struct {
-	cfg       Config
-	repo      repository.Repository
-	storage   storage.Storage
-	mu        sync.RWMutex
-	processes map[string]*processState
-	tokens    map[string]*processState
-	crashes   map[string][]time.Time
-	restarts  map[string]int
-	listener  net.Listener
-	server    *http.Server
-	baseURL   string
-	ctx       context.Context
-	cancel    context.CancelFunc
-	wg        sync.WaitGroup
+	cfg            Config
+	repo           repository.Repository
+	storage        storage.Storage
+	mu             sync.RWMutex
+	processes      map[string]*processState
+	tokens         map[string]*processState
+	crashes        map[string][]time.Time
+	restarts       map[string]int
+	listener       net.Listener
+	server         *http.Server
+	baseURL        string
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	eventBus       *eventbus.Bus
+	callbackClient *http.Client
 }
 
 func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervisor {
 	cfg = cfg.normalized()
-	return &Supervisor{cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}}
+	transport := &http.Transport{Proxy: nil, DialContext: (&net.Dialer{Timeout: time.Second}).DialContext, MaxIdleConns: 16, MaxIdleConnsPerHost: 2, IdleConnTimeout: 30 * time.Second}
+	client := &http.Client{Transport: transport, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	return &Supervisor{cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, callbackClient: client}
 }
 
 func (s *Supervisor) Start(ctx context.Context) error {
@@ -255,6 +262,9 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	mux.HandleFunc("POST /v1/heartbeat", s.handleHeartbeat)
 	mux.HandleFunc("POST /v1/log", s.handleLog)
 	mux.HandleFunc("POST /v1/capabilities/{capability}", s.handleCapability)
+	mux.HandleFunc("GET /v1/events/subscriptions", s.handleEventSubscriptions)
+	mux.HandleFunc("POST /v1/events/subscriptions", s.handleEventSubscribe)
+	mux.HandleFunc("DELETE /v1/events/subscriptions/{subscriptionId}", s.handleEventUnsubscribe)
 	s.server = &http.Server{Handler: mux, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
 	s.wg.Add(2)
 	go func() {
@@ -386,6 +396,10 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	if err != nil {
 		return err
 	}
+	callbackToken, err := randomHex(32)
+	if err != nil {
+		return err
+	}
 	instance, err := randomHex(16)
 	if err != nil {
 		return err
@@ -394,7 +408,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	for _, p := range manifestVersion.Manifest.Permissions {
 		permissions[p] = struct{}{}
 	}
-	st := &processState{key: key, install: install, manifest: manifestVersion.Manifest, permissions: permissions, token: token, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
+	st := &processState{key: key, install: install, manifest: manifestVersion.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
 	s.mu.Lock()
 	if existing := s.processes[k]; existing != nil {
 		existing.mu.Lock()
@@ -417,7 +431,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	cmd := exec.Command(entrypoint)
 	cmd.Dir = payloadRoot
 	cmd.Env = sanitizedEnvironment(map[string]string{
-		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
+		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID,
 	})
 	configureProcess(cmd)
@@ -449,6 +463,10 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	defer timer.Stop()
 	select {
 	case <-st.helloCh:
+		if err := s.reconcileManifestSubscriptions0206(ctx, st); err != nil {
+			s.failProcess(st, "event subscription reconcile failed: "+err.Error(), true)
+			return err
+		}
 		return nil
 	case <-st.doneCh:
 		st.mu.Lock()
@@ -845,6 +863,7 @@ type helloRequest struct {
 	ExtensionID     string `json:"extensionId"`
 	InstanceID      string `json:"instanceId"`
 	PID             int    `json:"pid"`
+	CallbackURL     string `json:"callbackUrl,omitempty"`
 }
 
 func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
@@ -861,6 +880,11 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "host identity/protocol mismatch", 409)
 		return
 	}
+	callbackURL, err := validateCallbackURL0206(req.CallbackURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	st.mu.Lock()
 	expectedPID := 0
 	if st.cmd != nil && st.cmd.Process != nil {
@@ -874,10 +898,11 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	st.helloAt = now
 	st.heartbeatAt = now
+	st.callbackURL = callbackURL
 	st.state = "running"
 	st.helloOnce.Do(func() { close(st.helloCh) })
 	st.mu.Unlock()
-	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st)})
+	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st), "events": eventbus.KnownEventTypes(), "eventProtocolVersion": eventbus.ProtocolVersion})
 }
 func (s *Supervisor) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.authenticate(w, r)
@@ -1063,6 +1088,258 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 	case <-r.Context().Done():
 		return
 	}
+}
+
+func parseManifestHook0206(raw string) (string, string) {
+	raw = strings.ToLower(strings.TrimSpace(raw))
+	mode := model.ExtensionEventModeAsync
+	if strings.HasPrefix(raw, "sync:") {
+		mode = model.ExtensionEventModeSync
+		raw = strings.TrimPrefix(raw, "sync:")
+	}
+	if strings.HasPrefix(raw, "async:") {
+		mode = model.ExtensionEventModeAsync
+		raw = strings.TrimPrefix(raw, "async:")
+	}
+	return strings.TrimSpace(raw), mode
+}
+func (s *Supervisor) reconcileManifestSubscriptions0206(ctx context.Context, st *processState) error {
+	bus := s.eventBusValue0206()
+	if bus == nil || len(st.manifest.Hooks) == 0 {
+		return nil
+	}
+	st.mu.Lock()
+	callbackReady := st.callbackURL != ""
+	st.mu.Unlock()
+	if !callbackReady {
+		return errors.New("manifest hooks require callbackUrl in authenticated hello")
+	}
+	for _, raw := range st.manifest.Hooks {
+		eventType, mode := parseManifestHook0206(raw)
+		if err := s.validateEventPermission0206(st, eventType, mode); err != nil {
+			return fmt.Errorf("manifest hook %q: %w", raw, err)
+		}
+		if _, err := bus.Subscribe(ctx, model.ExtensionEventSubscription{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, EventType: eventType, Mode: mode, Enabled: true}); err != nil {
+			return fmt.Errorf("manifest hook %q: %w", raw, err)
+		}
+	}
+	return nil
+}
+
+func (s *Supervisor) SetEventBus(bus *eventbus.Bus) { s.mu.Lock(); s.eventBus = bus; s.mu.Unlock() }
+
+func validateCallbackURL0206(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "http" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+		return "", errors.New("callbackUrl must be a plain http loopback origin")
+	}
+	host := u.Hostname()
+	port := u.Port()
+	ip := net.ParseIP(host)
+	if ip == nil || !ip.IsLoopback() || port == "" {
+		return "", errors.New("callbackUrl must use an explicit loopback IP and port")
+	}
+	return "http://" + net.JoinHostPort(host, port), nil
+}
+
+func (s *Supervisor) eventBusValue0206() *eventbus.Bus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.eventBus
+}
+func (s *Supervisor) validateEventPermission0206(st *processState, eventType, mode string) error {
+	spec, ok := eventbus.Spec(eventType)
+	if !ok {
+		return fmt.Errorf("unsupported event type %q", eventType)
+	}
+	if !s.requirePermission(st, "events:subscribe") {
+		return errors.New("permission events:subscribe required")
+	}
+	if spec.CategoryPermission != "" && !s.requirePermission(st, spec.CategoryPermission) {
+		return fmt.Errorf("permission %s required", spec.CategoryPermission)
+	}
+	if mode == model.ExtensionEventModeSync {
+		if !spec.SyncAllowed {
+			return fmt.Errorf("event %s is async-only", eventType)
+		}
+		if !s.requirePermission(st, "events:sync") {
+			return errors.New("permission events:sync required")
+		}
+	}
+	return nil
+}
+
+type eventSubscriptionRequest0206 struct {
+	EventType string `json:"eventType"`
+	Mode      string `json:"mode"`
+}
+
+func (s *Supervisor) handleEventSubscriptions(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.authenticate(w, r)
+	if !ok {
+		return
+	}
+	bus := s.eventBusValue0206()
+	if bus == nil {
+		http.Error(w, "event bus unavailable", 503)
+		return
+	}
+	items, err := bus.Subscriptions(r.Context(), st.key.ExtensionID, st.key.Scope, st.key.ScopeID)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	jsonResponse(w, 200, map[string]any{"items": items})
+}
+func (s *Supervisor) handleEventSubscribe(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.authenticate(w, r)
+	if !ok {
+		return
+	}
+	bus := s.eventBusValue0206()
+	if bus == nil {
+		http.Error(w, "event bus unavailable", 503)
+		return
+	}
+	var req eventSubscriptionRequest0206
+	if err := decodeJSONBody(w, r, s.cfg.MaxProtocolBody, &req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	req.EventType = strings.ToLower(strings.TrimSpace(req.EventType))
+	req.Mode = strings.ToLower(strings.TrimSpace(req.Mode))
+	if req.Mode == "" {
+		req.Mode = model.ExtensionEventModeAsync
+	}
+	if err := s.validateEventPermission0206(st, req.EventType, req.Mode); err != nil {
+		http.Error(w, err.Error(), 403)
+		return
+	}
+	st.mu.Lock()
+	callbackReady := st.callbackURL != ""
+	st.mu.Unlock()
+	if !callbackReady {
+		http.Error(w, "callbackUrl must be registered before subscribing", http.StatusConflict)
+		return
+	}
+	item, err := bus.Subscribe(r.Context(), model.ExtensionEventSubscription{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, EventType: req.EventType, Mode: req.Mode, Enabled: true})
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	jsonResponse(w, http.StatusCreated, item)
+}
+func (s *Supervisor) handleEventUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.authenticate(w, r)
+	if !ok {
+		return
+	}
+	bus := s.eventBusValue0206()
+	if bus == nil {
+		http.Error(w, "event bus unavailable", 503)
+		return
+	}
+	id, err := strconv.ParseInt(strings.TrimSpace(r.PathValue("subscriptionId")), 10, 64)
+	if err != nil || id < 1 {
+		http.Error(w, "invalid subscription id", 400)
+		return
+	}
+	if err := bus.Unsubscribe(r.Context(), id, st.key.ExtensionID, st.key.Scope, st.key.ScopeID); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			http.Error(w, "subscription not found", 404)
+		} else {
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Supervisor) processForSubscription0206(sub model.ExtensionEventSubscription) (*processState, error) {
+	key := Key{ExtensionID: sub.ExtensionID, Scope: sub.Scope, ScopeID: sub.ScopeID}.normalized()
+	s.mu.RLock()
+	st := s.processes[key.String()]
+	s.mu.RUnlock()
+	if st == nil {
+		return nil, ErrHostNotRunning
+	}
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if st.state != "running" || st.callbackURL == "" {
+		return nil, ErrHostNotRunning
+	}
+	return st, nil
+}
+func (s *Supervisor) callbackRequest0206(ctx context.Context, sub model.ExtensionEventSubscription, event model.ExtensionEvent, path string) (*http.Response, error) {
+	st, err := s.processForSubscription0206(sub)
+	if err != nil {
+		return nil, err
+	}
+	st.mu.Lock()
+	base := st.callbackURL
+	token := st.callbackToken
+	st.mu.Unlock()
+	body, err := json.Marshal(map[string]any{"protocolVersion": eventbus.ProtocolVersion, "subscription": sub, "event": event})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+path, strings.NewReader(string(body)))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-NeverLauncher-Event-ID", event.ID)
+	req.Header.Set("Idempotency-Key", event.IdempotencyKey)
+	return s.callbackClient.Do(req)
+}
+func (s *Supervisor) DeliverExtensionEvent(ctx context.Context, sub model.ExtensionEventSubscription, event model.ExtensionEvent) error {
+	resp, err := s.callbackRequest0206(ctx, sub, event, "/v1/events")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("extension event callback returned HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+func (s *Supervisor) DeliverExtensionHook(ctx context.Context, sub model.ExtensionEventSubscription, event model.ExtensionEvent) (model.ExtensionHookResult, error) {
+	resp, err := s.callbackRequest0206(ctx, sub, event, "/v1/hooks")
+	if err != nil {
+		return model.ExtensionHookResult{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+		return model.ExtensionHookResult{}, fmt.Errorf("extension hook callback returned HTTP %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, (64<<10)+1))
+	if err != nil {
+		return model.ExtensionHookResult{}, fmt.Errorf("read hook response: %w", err)
+	}
+	if len(body) > 64<<10 {
+		return model.ExtensionHookResult{}, errors.New("extension hook response exceeds 64 KiB")
+	}
+	var result model.ExtensionHookResult
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&result); err != nil {
+		return model.ExtensionHookResult{}, fmt.Errorf("decode hook response: %w", err)
+	}
+	if dec.More() {
+		return model.ExtensionHookResult{}, errors.New("extension hook response contains trailing JSON")
+	}
+	var trailing any
+	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return model.ExtensionHookResult{}, errors.New("extension hook response contains trailing data")
+	}
+	return result, nil
 }
 
 func (s *Supervisor) ProtocolURL() string       { s.mu.RLock(); defer s.mu.RUnlock(); return s.baseURL }

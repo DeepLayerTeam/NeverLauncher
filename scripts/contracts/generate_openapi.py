@@ -112,6 +112,17 @@ def path_parameters(path):
           {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
           {"name":"historyLimit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":200,"default":50}},
         ]
+    if path == "/api/v1/admin/extension-events/subscriptions":
+        out += [
+          {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+    if path == "/api/v1/admin/extension-events/dead-letters":
+        out += [
+          {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"limit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":1000,"default":100}},
+        ]
     if path.startswith("/api/v1/admin/extension-hosts/{extensionId}"):
         out += [
           {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},

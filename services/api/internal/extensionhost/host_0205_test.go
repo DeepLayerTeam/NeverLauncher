@@ -196,3 +196,32 @@ func TestStartRequiresEnabledState0205(t *testing.T) {
 		t.Fatalf("disabled extension start should fail before target resolution: %v", err)
 	}
 }
+
+func TestEventSubscriptionPermissionBoundary0206(t *testing.T) {
+	s := New(Config{ExtensionRoot: t.TempDir()}, repository.NewMemoryRepository("http://localhost"), storage.NewLocalStorage(t.TempDir()))
+	st := &processState{permissions: map[string]struct{}{"events:subscribe": {}, "project:read": {}}}
+	if err := s.validateEventPermission0206(st, "project.saved", model.ExtensionEventModeAsync); err != nil {
+		t.Fatalf("async permission rejected: %v", err)
+	}
+	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err == nil {
+		t.Fatal("sync subscription accepted without events:sync")
+	}
+	st.permissions["events:sync"] = struct{}{}
+	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err != nil {
+		t.Fatalf("sync permission rejected: %v", err)
+	}
+	if err := s.validateEventPermission0206(st, "audit.event.created", model.ExtensionEventModeAsync); err == nil {
+		t.Fatal("audit subscription accepted without audit:read")
+	}
+}
+
+func TestValidateCallbackURLLoopbackOnly0206(t *testing.T) {
+	for _, raw := range []string{"https://127.0.0.1:9000", "http://example.com:9000", "http://localhost:9000", "http://127.0.0.1:9000/path", "http://127.0.0.1"} {
+		if _, err := validateCallbackURL0206(raw); err == nil {
+			t.Fatalf("unsafe callback URL accepted: %s", raw)
+		}
+	}
+	if got, err := validateCallbackURL0206("http://127.0.0.1:9000"); err != nil || got != "http://127.0.0.1:9000" {
+		t.Fatalf("valid loopback callback rejected: got=%q err=%v", got, err)
+	}
+}

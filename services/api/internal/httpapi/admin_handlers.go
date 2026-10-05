@@ -254,12 +254,21 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 	if req.Channel == "" {
 		req.Channel = "stable"
 	}
+	if req.Version == "" {
+		req.Version = time.Now().UTC().Format("20060102150405")
+	}
+	candidate := model.ReleaseVersion{ID: req.Version, ProjectID: r.PathValue("projectId"), ProfileID: req.ProfileID, Channel: req.Channel, Version: req.Version, Status: "draft"}
+	if err := s.beforeReleasePublish0206(r, candidate); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	release, err := s.publishSigned(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "проект или профиль не найден")
 		return
 	}
 	s.audit(r, s.adminActor(r), "release:publish", release.ID)
+	s.releasePublished0206(r, release)
 	writeJSON(w, http.StatusCreated, release)
 }
 
@@ -281,6 +290,7 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "release:create", release.ID)
+	s.releaseCreated0206(r, release)
 	writeJSON(w, http.StatusCreated, release)
 }
 
@@ -294,12 +304,17 @@ func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, item := range versions {
 		if item.ID == versionID {
+			if err := s.beforeReleasePublish0206(r, item); err != nil {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
 			release, err := s.publishSigned(projectID, item.ProfileID, item.Channel, item.Version)
 			if err != nil {
 				writeError(w, http.StatusBadRequest, err.Error())
 				return
 			}
 			s.audit(r, s.adminActor(r), "release:publish", release.ID)
+			s.releasePublished0206(r, release)
 			writeJSON(w, http.StatusOK, release)
 			return
 		}
@@ -342,6 +357,10 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.beforeStorageWrite0206(r, projectID, versionID, relativePath); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	hasher := sha256.New()
 	reader := io.TeeReader(file, hasher)
 	_, size, err := s.Storage.Save(projectID, versionID, relativePath, reader)
@@ -368,6 +387,7 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "file:upload", saved.ID)
+	s.storageWritten0206(r, saved)
 	writeJSON(w, http.StatusCreated, saved)
 }
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neverlauncher.local/schemas/neverlauncher-extension-events.schema.json",
+  "title": "NeverExtensions Event Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sequence", "id", "type", "schemaVersion", "aggregateType", "aggregateId", "orderingKey", "idempotencyKey", "source", "payload", "payloadSha256", "occurredAt", "createdAt"],
+  "properties": {
+    "sequence": {"type": "integer", "minimum": 1},
+    "id": {"type": "string", "pattern": "^evt_[0-9a-f]{32}$"},
+    "type": {"enum": ["project.before-save", "project.saved", "release.created", "release.before-publish", "release.published", "package.created", "package.file-added", "package.validated", "package.signed", "package.staged", "package.smoke-tested", "package.before-publish", "package.published", "storage.before-write", "storage.file-written", "serverbridge.event.received", "audit.event.created"]},
+    "schemaVersion": {"const": 1},
+    "projectId": {"type": "string"},
+    "aggregateType": {"type": "string", "minLength": 1, "maxLength": 128},
+    "aggregateId": {"type": "string", "minLength": 1, "maxLength": 256},
+    "orderingKey": {"type": "string", "minLength": 1, "maxLength": 256},
+    "idempotencyKey": {"type": "string", "minLength": 1, "maxLength": 256},
+    "source": {"type": "string", "minLength": 1, "maxLength": 128},
+    "payload": {"type": "object"},
+    "payloadSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "createdAt": {"type": "string", "format": "date-time"}
+  }
+}

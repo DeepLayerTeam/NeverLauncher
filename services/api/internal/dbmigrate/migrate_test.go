@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0044_neverextensions_install_lifecycle_0204" {
+	if st.Current != "0045_neverextensions_events_hooks_0206" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0044_neverextensions_install_lifecycle_0204" {
+		if k != "0045_neverextensions_events_hooks_0206" {
 			pending[k] = v
 		}
 	}
@@ -592,5 +592,25 @@ func TestNeverExtensionsInstallLifecycleMigration0204(t *testing.T) {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.4 lifecycle migration missing %q", required)
 		}
+	}
+}
+
+func TestNeverExtensionsEventsHooksMigration0206(t *testing.T) {
+	b, err := os.ReadFile("sql/0045_neverextensions_events_hooks_0206.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"extension_event_log", "extension_event_subscriptions", "extension_event_deliveries", "extension_event_dead_letters",
+		"UNIQUE (event_type, idempotency_key)", "ON DELETE CASCADE", "payload_sha256", "next_attempt_at", "lease_until", "lease_token", "extension_event_delivery_lease_state",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.20.6 events migration missing %q", required)
+		}
+	}
+	dead := text[strings.Index(text, "CREATE TABLE IF NOT EXISTS extension_event_dead_letters"):]
+	if strings.Contains(dead, "REFERENCES extension_event_subscriptions") || strings.Contains(dead, "REFERENCES extension_event_deliveries") {
+		t.Fatal("DLQ must survive subscription/delivery deletion")
 	}
 }

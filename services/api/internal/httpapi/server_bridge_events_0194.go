@@ -157,6 +157,11 @@ func (s Server) serverBridgeEventStream0194(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_event_stream_storage_unavailable")
 		return
 	}
+	if s.EventBus != nil {
+		for _, event := range events {
+			s.logEventError0206("serverbridge.event.received", s.EventBus.ServerBridgeReceived(r.Context(), server.ID, runtimeID, event))
+		}
+	}
 	if s.State.ServerBridge.backendV2() == nil {
 		for _, event := range events {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: fmt.Sprintf("serverbridge-event-%s-%d-%d", server.ID, server.RuntimeEpoch, event.Sequence), Actor: server.ID, Action: "serverbridge:event:" + event.Type, Target: event.EventID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})

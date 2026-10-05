@@ -73,12 +73,20 @@ func (s Server) adminProjectCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	project := model.Project{ID: req.ID, Name: req.Name, Description: req.Description, Homepage: req.Homepage, Repository: req.Repository, DefaultChannel: firstNonEmpty(req.DefaultChannel, "stable")}
+	if strings.TrimSpace(project.ID) == "" {
+		project.ID = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(project.Name), " ", "-"))
+	}
+	if err := s.beforeProjectSave0206(r, "create", project); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	saved, err := s.Repo.SaveProject(project)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "project:create", saved.ID)
+	s.projectSaved0206(r, "create", saved)
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "project": saved, "status": "created"}})
 }
 
@@ -109,12 +117,17 @@ func (s Server) adminProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	if req.DefaultChannel != "" {
 		existing.DefaultChannel = req.DefaultChannel
 	}
+	if err := s.beforeProjectSave0206(r, "update", existing); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	saved, err := s.Repo.SaveProject(existing)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "project:update", saved.ID)
+	s.projectSaved0206(r, "update", saved)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "project": saved, "status": "updated"}})
 }
 

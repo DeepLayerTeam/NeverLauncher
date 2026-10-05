@@ -152,6 +152,7 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:create", release.ID)
+	s.packageEvent0206(r, "package.created", "created", release)
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(release, nil, "created")})
 }
 
@@ -208,6 +209,10 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 не совпадает", "expected": expected, "actual": actualSHA}})
 		return
 	}
+	if err := s.beforeStorageWrite0206(r, lookup.Release.ProjectID, lookup.Release.ID, relativePath); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	_, size, err := s.Storage.Save(lookup.Release.ProjectID, lookup.Release.ID, relativePath, bytes.NewReader(payload))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -220,6 +225,8 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:file:upload", lookup.Release.ID+":"+relativePath)
+	s.storageWritten0206(r, saved)
+	s.packageEvent0206(r, "package.file-added", relativePath+":"+actualSHA, lookup.Release)
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "file": saved, "storageDriver": s.Storage.Driver(), "checksumVerified": true, "status": "uploaded"}})
 }
 
@@ -238,6 +245,7 @@ func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.audit(r, s.adminActor(r), "package:validate", lookup.Release.ID)
+	s.packageEvent0206(r, "package.validated", status, lookup.Release)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "status": status, "files": len(lookup.Files), "checks": checks}})
 }
 
@@ -312,6 +320,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:sign", lookup.Release.ID)
+	s.packageEvent0206(r, "package.signed", updated.Status, updated)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": updated.ID, "signatureStatus": "verified-ed25519", "algorithm": signed.Signature.Algorithm, "publicKey": signed.Signature.PublicKey, "signedAt": signed.Signature.SignedAt, "status": updated.Status}})
 }
 
@@ -344,6 +353,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:stage", lookup.Release.ID)
+	s.packageEvent0206(r, "package.staged", updated.Status, updated)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(updated, lookup.Files, updated.Status)})
 }
 
@@ -380,6 +390,7 @@ func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:smoke-test", lookup.Release.ID)
+	s.packageEvent0206(r, "package.smoke-tested", updated.Status, updated)
 	code := http.StatusOK
 	if status == "smoke-failed" {
 		code = http.StatusConflict
@@ -418,12 +429,22 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := s.beforePackagePublish0206(r, lookup.Release); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	release, err := s.Repo.PublishVersionWithManifest(lookup.Release.ProjectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:publish", release.ID)
+	s.packageEvent0206(r, "package.published", "published", release)
+	s.releasePublished0206(r, release)
 	files, _ := s.Repo.ListFiles(release.ProjectID, release.ID)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(release, files, "published")})
 }

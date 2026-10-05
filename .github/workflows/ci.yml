@@ -814,6 +814,15 @@ jobs:
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
           (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/neverlauncher)
           (cd cli && go vet ./cmd/neverlauncher)
+      - name: NeverExtensions Events & Hooks 0.20.6 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-events-0206.py
+          (cd services/api && go test -run 'TestEventBus.*0206|TestSyncHook.*0206|TestAsyncDelivery.*0206|TestSubscription.*0206|TestTypedProjectPayload.*0206|TestDeliveryLeaseFencing.*0206|TestDisabledInstall.*0206' ./internal/eventbus)
+          (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestValidateCallbackURLLoopbackOnly0206' ./internal/extensionhost)
+          (cd services/api && go test -run 'TestNeverExtensionsEventsHooksMigration0206' ./internal/dbmigrate)
+          (cd services/api && go vet ./internal/eventbus ./internal/extensionhost)
+          (cd cli && go test ./internal/dbmigrate)
+          python3 scripts/contracts/validate-openapi.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

@@ -1,3 +1,12 @@
+## [0.20.6] - 2026-10-06
+
+- Added the production typed NeverExtensions Event Bus with durable PostgreSQL event log, persistent subscriptions, per-subscription delivery state, ordering keys, idempotency keys, payload SHA-256 integrity and cryptographic lease fencing against stale worker ACKs.
+- Added synchronous pre-mutation hooks with fail-closed per-hook timeouts and separate durable asynchronous delivery with lease recovery, exponential retry and persistent DLQ snapshots.
+- Extended the authenticated loopback Extension Host Protocol with subscribe/unsubscribe/list and callback delivery using a separate per-process callback token; callback endpoints are restricted to numeric loopback origins and redirects are refused.
+- Added permission-gated event subscriptions (`events:subscribe`, `events:sync` plus domain permissions), project-scope filtering and install-state-aware dispatch: disabled/uninstalled extensions retain their durable backlog without consuming retries, while crashes on one Backend replica do not globally disable subscriptions.
+- Wired project, release, package, storage, ServerBridge and audit events into successful domain operations; sync hooks run only after normal HTTP authentication/authorization/Guard/Device Trust middleware and cannot obtain user bearer tokens, Guard/device credentials or Backend database/storage secrets.
+- Added migration `0045_neverextensions_events_hooks_0206`, Admin event diagnostics/DLQ API, event envelope schema, production configuration, repository/worker/timeout/DLQ regression coverage and the mandatory 0.20.6 CI gate.
+
 ## [0.20.5] - 2026-10-05
 
 - Added the production NeverExtensions Backend Extension Host: enabled backend targets execute as separately supervised OS processes rather than Go plugins or in-process code.
