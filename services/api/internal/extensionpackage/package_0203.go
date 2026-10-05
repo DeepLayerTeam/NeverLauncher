@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -570,4 +571,107 @@ func InspectSignedFile(packagePath string) (VerifiedPackage, error) {
 		return VerifiedPackage{}, err
 	}
 	return VerifiedPackage{Manifest: a.manifest, Descriptor: a.descriptor, Signature: *a.signature, SHA256: hex.EncodeToString(h.Sum(nil)), Size: size, PackageIdentity: a.descriptor.PackageIdentity, KeyFingerprint: a.signature.KeyFingerprint}, nil
+}
+
+// ExtractPayloadFile re-validates the canonical .nlext structure and extracts
+// only payload/ entries into an empty destination directory. It refuses to
+// extract when packageIdentity does not match the expected immutable identity.
+// Paths were already rejected for traversal/symlink/case-collision by analyze0203;
+// this routine additionally creates every output file with O_EXCL so an
+// unexpected pre-existing path cannot be overwritten.
+func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string) (model.ExtensionManifest, error) {
+	a, err := analyze0203(packagePath)
+	if err != nil {
+		return model.ExtensionManifest{}, err
+	}
+	defer a.close()
+	expectedPackageIdentity = strings.ToLower(strings.TrimSpace(expectedPackageIdentity))
+	if expectedPackageIdentity == "" || a.descriptor.PackageIdentity != expectedPackageIdentity {
+		return model.ExtensionManifest{}, errors.New(".nlext package identity does not match expected immutable identity")
+	}
+	if info, err := os.Lstat(destination); err == nil {
+		if !info.IsDir() {
+			return model.ExtensionManifest{}, errors.New("extension staging destination exists and is not a directory")
+		}
+		entries, err := os.ReadDir(destination)
+		if err != nil {
+			return model.ExtensionManifest{}, err
+		}
+		if len(entries) != 0 {
+			return model.ExtensionManifest{}, errors.New("extension staging destination must be empty")
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return model.ExtensionManifest{}, err
+	} else if err := os.MkdirAll(destination, 0o750); err != nil {
+		return model.ExtensionManifest{}, err
+	}
+	rootAbs, err := filepath.Abs(destination)
+	if err != nil {
+		return model.ExtensionManifest{}, err
+	}
+	payloadNames := make([]string, 0)
+	for name := range a.entries {
+		if strings.HasPrefix(name, payloadPrefix0203) {
+			payloadNames = append(payloadNames, name)
+		}
+	}
+	sort.Strings(payloadNames)
+	for _, archiveName := range payloadNames {
+		entry := a.entries[archiveName]
+		rel := strings.TrimPrefix(archiveName, payloadPrefix0203)
+		outPath := filepath.Join(destination, filepath.FromSlash(rel))
+		outAbs, err := filepath.Abs(outPath)
+		if err != nil {
+			return model.ExtensionManifest{}, err
+		}
+		if outAbs == rootAbs || !strings.HasPrefix(outAbs, rootAbs+string(os.PathSeparator)) {
+			return model.ExtensionManifest{}, errors.New("extension payload escaped staging root")
+		}
+		if err := os.MkdirAll(filepath.Dir(outAbs), 0o750); err != nil {
+			return model.ExtensionManifest{}, err
+		}
+		reader, err := entry.Open()
+		if err != nil {
+			return model.ExtensionManifest{}, err
+		}
+		mode := entry.FileInfo().Mode().Perm()
+		file, err := os.OpenFile(outAbs, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
+		if err != nil {
+			reader.Close()
+			return model.ExtensionManifest{}, err
+		}
+		h := sha256.New()
+		written, copyErr := io.Copy(io.MultiWriter(file, h), io.LimitReader(reader, maxSingleFile0203+1))
+		closeReadErr := reader.Close()
+		syncErr := file.Sync()
+		closeWriteErr := file.Close()
+		if copyErr != nil {
+			return model.ExtensionManifest{}, copyErr
+		}
+		if closeReadErr != nil || syncErr != nil || closeWriteErr != nil {
+			return model.ExtensionManifest{}, errors.New("failed to durably extract extension payload")
+		}
+		if written != int64(entry.UncompressedSize64) || written > maxSingleFile0203 {
+			return model.ExtensionManifest{}, fmt.Errorf("extracted payload size mismatch for %s", rel)
+		}
+		expected := ""
+		for _, f := range a.descriptor.Payload.Files {
+			if f.Path == rel {
+				expected = f.SHA256
+				break
+			}
+		}
+		if expected == "" || hex.EncodeToString(h.Sum(nil)) != expected {
+			return model.ExtensionManifest{}, fmt.Errorf("extracted payload digest mismatch for %s", rel)
+		}
+	}
+	manifestBytes, err := canonicalJSON0203(a.manifest)
+	if err != nil {
+		return model.ExtensionManifest{}, err
+	}
+	metadata := filepath.Join(destination, manifestName0203)
+	if err := os.WriteFile(metadata, manifestBytes, 0o640); err != nil {
+		return model.ExtensionManifest{}, err
+	}
+	return a.manifest, nil
 }

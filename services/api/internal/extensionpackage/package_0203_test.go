@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -127,5 +128,31 @@ func TestVerifyRegistryPackageAcceptsOlderCLISBOM0203(t *testing.T) {
 	}
 	if _, err := VerifyFile(packagePath, otherPublic); err == nil {
 		t.Fatal("VerifyFile accepted an untrusted Ed25519 key")
+	}
+}
+
+func TestExtractPayloadFile0204(t *testing.T) {
+	packagePath, public := buildRegistryTestPackage0203(t, "0.20.2")
+	verified, err := VerifyFile(packagePath, public)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(t.TempDir(), "activated")
+	manifest, err := ExtractPayloadFile(packagePath, dst, verified.PackageIdentity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.ID != "example.registry-extension" || manifest.Version != "1.2.3" {
+		t.Fatalf("manifest=%+v", manifest)
+	}
+	data, err := os.ReadFile(filepath.Join(dst, "backend", "extension"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "#!/bin/sh\necho registry\n" {
+		t.Fatalf("unexpected payload %q", data)
+	}
+	if _, err := ExtractPayloadFile(packagePath, filepath.Join(t.TempDir(), "other"), "sha256:"+strings.Repeat("0", 64)); err == nil {
+		t.Fatal("ExtractPayloadFile accepted wrong immutable package identity")
 	}
 }

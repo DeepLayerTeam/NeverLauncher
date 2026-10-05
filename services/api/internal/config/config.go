@@ -42,6 +42,8 @@ type Config struct {
 	StorageCDNOrigin                             string
 	StorageMaxUploadBytes                        int64
 	BackupRoot                                   string
+	ExtensionRoot                                string
+	ExtensionBackupRetention                     int
 	CORSAllowedOrigins                           []string
 	Environment                                  string
 	AuthTokenSecret                              string
@@ -200,6 +202,8 @@ func Load() Config {
 		StorageCDNOrigin:                     env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
 		StorageMaxUploadBytes:                envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
 		BackupRoot:                           env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
+		ExtensionRoot:                        env("NEVERLAUNCHER_EXTENSION_ROOT", "./data/extensions"),
+		ExtensionBackupRetention:             envInt("NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION", 10),
 		CORSAllowedOrigins:                   envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
 		Environment:                          environment,
 		AuthTokenSecret:                      env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
@@ -547,6 +551,15 @@ func ValidateProduction(cfg Config) error {
 	if strings.TrimSpace(cfg.BackupRoot) == "" || backupRoot == "." {
 		problems = append(problems, "NEVERLAUNCHER_BACKUP_ROOT обязателен")
 	}
+	extensionRoot := filepath.Clean(strings.TrimSpace(cfg.ExtensionRoot))
+	if strings.TrimSpace(cfg.ExtensionRoot) == "" || extensionRoot == "." {
+		problems = append(problems, "NEVERLAUNCHER_EXTENSION_ROOT обязателен")
+	} else if pathsOverlap(extensionRoot, backupRoot) {
+		problems = append(problems, "extension root должен быть отделён от backup root")
+	}
+	if cfg.ExtensionBackupRetention < 1 || cfg.ExtensionBackupRetention > 100 {
+		problems = append(problems, "NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
+	}
 	driver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))
 	switch driver {
 	case "local", "":
@@ -555,6 +568,8 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "NEVERLAUNCHER_STORAGE_LOCAL_PATH обязателен для local storage")
 		} else if pathsOverlap(storageRoot, backupRoot) {
 			problems = append(problems, "backup root должен быть отделён от local storage root")
+		} else if strings.TrimSpace(cfg.ExtensionRoot) != "" && extensionRoot != "." && pathsOverlap(storageRoot, extensionRoot) {
+			problems = append(problems, "extension root должен быть отделён от local storage root")
 		}
 	case "s3", "s3-compatible":
 		if strings.TrimSpace(cfg.StorageS3Endpoint) == "" || strings.TrimSpace(cfg.StorageS3Bucket) == "" || strings.TrimSpace(cfg.StorageS3AccessKey) == "" || strings.TrimSpace(cfg.StorageS3SecretKey) == "" {

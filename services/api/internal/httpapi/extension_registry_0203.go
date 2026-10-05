@@ -479,25 +479,17 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	}
-	if request.Scope == "" {
-		request.Scope = "global"
-	}
-	tmpPath, err := s.verifiedRegistryArtifactToTemp0203(r, item)
+	install, err := s.lifecycleManager0204().Install(r.Context(), item, lifecycleScopeFromRequest0204(request.Scope, request.ScopeID))
 	if err != nil {
-		writeError(w, http.StatusConflict, "registry artifact verification failed: "+err.Error())
+		lower := strings.ToLower(err.Error())
+		if strings.Contains(lower, ".nlext") || strings.Contains(lower, "signature") || strings.Contains(lower, "package identity") || strings.Contains(lower, "artifact sha") || strings.Contains(lower, "publisher key") {
+			writeError(w, http.StatusConflict, "registry artifact verification failed: "+err.Error())
+			return
+		}
+		writeLifecycleError0204(w, err)
 		return
 	}
-	defer os.Remove(tmpPath)
-	if _, err := s.Repo.SaveExtensionVersion(r.Context(), item.Manifest); err != nil {
-		writeError(w, http.StatusConflict, "canonical extension version persistence failed: "+err.Error())
-		return
-	}
-	install, err := s.Repo.SaveExtensionInstall(r.Context(), model.ExtensionInstall{ExtensionID: item.ExtensionID, Version: item.Version, Scope: request.Scope, ScopeID: request.ScopeID, Enabled: false, Source: "registry:" + registryInstallSource0203(item)})
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	s.audit(r, s.adminActor(r), "extension:registry:install", item.ExtensionID+"@"+item.Version+"#"+item.Artifact.PackageIdentity)
+	s.audit(r, s.adminActor(r), "extension:lifecycle:install", item.ExtensionID+"@"+item.Version+"#"+item.Artifact.PackageIdentity)
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "enabled": false, "install": install, "artifact": item.Artifact}})
 }
 

@@ -192,6 +192,14 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 	if item.Source == "" {
 		item.Source = "local"
 	}
+	item.DesiredVersion = item.Version
+	item.CurrentVersion = item.Version
+	item.DesiredState = model.ExtensionInstallStateDisabled
+	item.CurrentState = model.ExtensionInstallStateDisabled
+	if item.Enabled {
+		item.DesiredState = model.ExtensionInstallStateEnabled
+		item.CurrentState = model.ExtensionInstallStateEnabled
+	}
 	return item, nil
 }
 
@@ -685,10 +693,10 @@ func (r *SQLRepository) SaveExtensionInstall(ctx context.Context, install model.
 	if !versionExists {
 		return model.ExtensionInstall{}, ErrNotFound
 	}
-	item, err := scanExtensionInstall0201(r.db.QueryRowContext(ctx, `INSERT INTO extension_installs(extension_id,scope,scope_id,version,enabled,source)
-VALUES($1,$2,$3,$4,$5,$6)
-ON CONFLICT(extension_id,scope,scope_id) DO UPDATE SET version=EXCLUDED.version,enabled=EXCLUDED.enabled,source=EXCLUDED.source,updated_at=now()
-RETURNING extension_id,scope,scope_id,version,enabled,source,installed_at,updated_at`, install.ExtensionID, install.Scope, install.ScopeID, install.Version, install.Enabled, install.Source))
+	item, err := scanExtensionInstall0201(r.db.QueryRowContext(ctx, `INSERT INTO extension_installs(extension_id,scope,scope_id,version,desired_version,current_version,desired_state,current_state,enabled,source)
+VALUES($1,$2,$3,$4,$4,$4,$5,$5,$6,$7)
+ON CONFLICT(extension_id,scope,scope_id) DO UPDATE SET version=EXCLUDED.version,desired_version=EXCLUDED.desired_version,current_version=EXCLUDED.current_version,desired_state=EXCLUDED.desired_state,current_state=EXCLUDED.current_state,enabled=EXCLUDED.enabled,source=EXCLUDED.source,updated_at=now()
+RETURNING extension_id,scope,scope_id,version,enabled,source,installed_at,updated_at`, install.ExtensionID, install.Scope, install.ScopeID, install.Version, install.CurrentState, install.Enabled, install.Source))
 	if err != nil {
 		return model.ExtensionInstall{}, err
 	}

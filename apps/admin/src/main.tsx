@@ -24,6 +24,8 @@ type PackageForm = { projectId: string; profileId: string; channel: string; vers
 type RegistryArtifactView = { packageIdentity: string; sha256: string; size: number; signatureKeyFingerprint: string };
 type RegistryVersionView = { extensionId: string; version: string; publisherId: string; manifest?: { name?: string; description?: string }; compatibility?: { minNeverLauncher?: string; maxNeverLauncher?: string; supportedOs?: string[]; supportedArchitectures?: string[] }; artifact: RegistryArtifactView; channels?: string[]; publishedAt?: string; yankedAt?: string; yankReason?: string };
 type RegistrySearchData = { schemaVersion?: string; count?: number; items?: RegistryVersionView[] };
+type ExtensionInstallView = { extensionId: string; scope: string; scopeId?: string; version: string; desiredVersion: string; currentVersion?: string; desiredState: string; currentState: string; enabled: boolean; packageIdentity?: string; currentPackageIdentity?: string; previousVersion?: string; generation: number; source: string; lastError?: string; updatedAt?: string };
+type ExtensionInstallListData = { schemaVersion?: string; count?: number; items?: ExtensionInstallView[] };
 
 const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
 
@@ -216,6 +218,9 @@ function App() {
   const [registryMaxLauncher, setRegistryMaxLauncher] = useState('');
   const [registryPublishOS, setRegistryPublishOS] = useState('');
   const [registryPublishArch, setRegistryPublishArch] = useState('');
+  const [extensionScope, setExtensionScope] = useState<'global' | 'project'>('global');
+  const [extensionScopeId, setExtensionScopeId] = useState('');
+  const [extensionInstalls, setExtensionInstalls] = useState<ExtensionInstallView[]>([]);
 
   const sections = productionUI.sections?.length ? productionUI.sections : fallbackSections;
   const selectedProjectId = projectForm.id || profileForm.projectId || channelForm.projectId || 'project-required';
@@ -391,6 +396,11 @@ function App() {
     return () => { cancelled = true; };
   }, [backendUrl, active, activeEndpoint, token]);
 
+  useEffect(() => {
+    if (!token || active !== 'extension-registry') return;
+    loadExtensionInstalls().catch((err: Error) => setError(err.message));
+  }, [backendUrl, token, active, extensionScope, extensionScopeId]);
+
   async function runAction(label: string, fn: () => Promise<unknown>) {
     setError(null); setMessage(null);
     const result = await fn();
@@ -432,11 +442,20 @@ function App() {
     return data;
   }
 
+  async function loadExtensionInstalls() {
+    const params = new URLSearchParams();
+    params.set('scope', extensionScope);
+    if (extensionScope === 'project' && extensionScopeId.trim()) params.set('scopeId', extensionScopeId.trim());
+    const data = await requestJSON<ExtensionInstallListData>(backendUrl, `/api/v1/admin/extension-installs?${params.toString()}`, token);
+    setExtensionInstalls(data.items ?? []);
+    return data;
+  }
+
   async function runRegistryAction(label: string, fn: () => Promise<unknown>) {
     setError(null); setMessage(null);
     await fn();
     setMessage(`${label}: выполнено`);
-    await Promise.all([loadRegistry(), loadDashboard().catch(() => undefined)]);
+    await Promise.all([loadRegistry(), loadExtensionInstalls().catch(() => undefined), loadDashboard().catch(() => undefined)]);
   }
 
   async function createRegistryPublisher() {
@@ -465,9 +484,23 @@ function App() {
     return responsePayload.data ?? responsePayload;
   }
 
+  function lifecycleScopePayload() {
+    if (extensionScope === 'project' && !extensionScopeId.trim()) throw new Error('Для project scope укажите Project ID.');
+    return { scope: extensionScope, scopeId: extensionScope === 'project' ? extensionScopeId.trim() : '' };
+  }
+
   async function installRegistryVersion(item: RegistryVersionView) {
-    const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/versions/${encodeURIComponent(item.version)}/install`, token, { method: 'POST', body: JSON.stringify({ scope: 'global' }) });
-    return result;
+    return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/install`, token, { method: 'POST', body: JSON.stringify({ ...lifecycleScopePayload(), version: item.version }) });
+  }
+
+  async function lifecycleAction(item: ExtensionInstallView, action: 'enable' | 'disable' | 'uninstall' | 'rollback') {
+    return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/${action}`, token, { method: 'POST', body: JSON.stringify({ scope: item.scope, scopeId: item.scopeId ?? '' }) });
+  }
+
+  async function updateInstalledExtension(item: ExtensionInstallView) {
+    const version = window.prompt(`Новая версия ${item.extensionId} (оставьте пустым для stable channel)`, '');
+    const body = version?.trim() ? { scope: item.scope, scopeId: item.scopeId ?? '', version: version.trim() } : { scope: item.scope, scopeId: item.scopeId ?? '', channel: 'stable' };
+    return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/update`, token, { method: 'POST', body: JSON.stringify(body) });
   }
 
   async function yankRegistryVersion(item: RegistryVersionView) {
@@ -506,6 +539,11 @@ function App() {
   const registryPanel = token && active === 'extension-registry' ? <section className="card wide registryPanel">
     <div className="registryHeading"><div><h2>NeverExtensions Registry {TOOL_VERSION}</h2><p className="muted">Private/local registry подписанных immutable .nlext. Publish принимает только artifact с доверенным Ed25519 publisher key; install повторно проверяет bytes и signature из storage.</p></div><span className="badge ok">verified-only install</span></div>
     <div className="registryToolbar">
+      <select aria-label="Extension scope" value={extensionScope} onChange={(event) => setExtensionScope(event.target.value as 'global' | 'project')}><option value="global">global</option><option value="project">project</option></select>
+      {extensionScope === 'project' && <input aria-label="Extension project scope" value={extensionScopeId} onChange={(event) => setExtensionScopeId(event.target.value)} placeholder="Project ID" />}
+      <button onClick={() => loadExtensionInstalls().catch((err: Error) => setError(err.message))}>Обновить installs</button>
+    </div>
+    <div className="registryToolbar">
       <input aria-label="Registry search" value={registryQuery} onChange={(event) => setRegistryQuery(event.target.value)} placeholder="Поиск extension/publisher" />
       <input aria-label="Registry channel" value={registryChannel} onChange={(event) => setRegistryChannel(event.target.value)} placeholder="канал: stable" />
       <input aria-label="Registry launcher version" value={registryLauncherVersion} onChange={(event) => setRegistryLauncherVersion(event.target.value)} placeholder="NeverLauncher version" />
@@ -540,7 +578,16 @@ function App() {
         <p className="muted">NeverLauncher {item.compatibility?.minNeverLauncher || 'any'} → {item.compatibility?.maxNeverLauncher || 'any'} · OS {(item.compatibility?.supportedOs ?? []).join(', ') || 'any'} · arch {(item.compatibility?.supportedArchitectures ?? []).join(', ') || 'any'}</p>
         <p className="registryIdentity"><code>{item.artifact.packageIdentity}</code></p>
         {item.yankReason && <p className="error">Yank: {item.yankReason}</p>}
-        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
+        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact (staged)</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
+      </article>)}
+    </section>
+    <section className="registryResults">
+      <div className="registryHeading"><h3>Install Lifecycle</h3><span className="muted">{extensionInstalls.length} installs</span></div>
+      {extensionInstalls.length === 0 ? <p className="muted">Для выбранного scope установок нет. Нажмите «Обновить installs».</p> : extensionInstalls.map((item) => <article className="subcard registryItem" key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`}>
+        <div className="registryHeading"><div><strong>{item.extensionId}</strong><p className="muted"><code>{item.currentVersion || 'absent'}</code> · desired <code>{item.desiredVersion}</code> · generation {item.generation}</p></div><div className="registryBadges"><span className={`badge ${item.currentState === 'enabled' ? 'ok' : item.currentState === 'absent' ? 'warn' : ''}`}>{item.currentState}</span><span className="badge">{item.scope}{item.scopeId ? `:${item.scopeId}` : ''}</span></div></div>
+        <p className="registryIdentity"><code>{item.currentPackageIdentity || item.packageIdentity || 'no package identity'}</code></p>
+        {item.lastError && <p className="error">{item.lastError}</p>}
+        <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Extension enable', () => lifecycleAction(item, 'enable')).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Extension disable', () => lifecycleAction(item, 'disable')).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Extension update', () => updateInstalledExtension(item)).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Extension rollback', () => lifecycleAction(item, 'rollback')).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Extension uninstall', () => lifecycleAction(item, 'uninstall')).catch((err) => setError(err.message))}>Uninstall</button></div>
       </article>)}
     </section>
   </section> : null;

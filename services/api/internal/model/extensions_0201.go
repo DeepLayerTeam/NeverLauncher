@@ -61,15 +61,27 @@ type ExtensionVersion struct {
 	CreatedAt      time.Time         `json:"createdAt"`
 }
 
-// ExtensionInstall is persisted desired installation state. 0.20.1 does not
-// start extension processes; later lifecycle releases consume this state.
+// ExtensionInstall is the persisted desired/current lifecycle state. The 0.20.4
+// lifecycle manager owns transitions; a later Extension Host consumes enabled state.
 type ExtensionInstall struct {
-	ExtensionID string    `json:"extensionId"`
-	Scope       string    `json:"scope"`
-	ScopeID     string    `json:"scopeId,omitempty"`
-	Version     string    `json:"version"`
-	Enabled     bool      `json:"enabled"`
-	Source      string    `json:"source"`
-	InstalledAt time.Time `json:"installedAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ExtensionID string `json:"extensionId"`
+	Scope       string `json:"scope"`
+	ScopeID     string `json:"scopeId,omitempty"`
+	// Version is retained as the 0.20.1 compatibility alias for DesiredVersion.
+	Version                 string     `json:"version"`
+	DesiredVersion          string     `json:"desiredVersion"`
+	CurrentVersion          string     `json:"currentVersion,omitempty"`
+	DesiredState            string     `json:"desiredState"`
+	CurrentState            string     `json:"currentState"`
+	Enabled                 bool       `json:"enabled"`
+	PackageIdentity         string     `json:"packageIdentity,omitempty"`
+	CurrentPackageIdentity  string     `json:"currentPackageIdentity,omitempty"`
+	PreviousVersion         string     `json:"previousVersion,omitempty"`
+	PreviousPackageIdentity string     `json:"previousPackageIdentity,omitempty"`
+	Generation              int64      `json:"generation"`
+	Source                  string     `json:"source"`
+	LastError               string     `json:"lastError,omitempty"`
+	InstalledAt             time.Time  `json:"installedAt"`
+	UpdatedAt               time.Time  `json:"updatedAt"`
+	ActivatedAt             *time.Time `json:"activatedAt,omitempty"`
 }

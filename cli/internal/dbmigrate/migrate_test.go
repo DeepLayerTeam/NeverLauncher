@@ -42,6 +42,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0041_serverbridge3_ga_0200",
 		"0042_neverextensions_core_0201",
 		"0043_neverextensions_registry_0203",
+		"0044_neverextensions_install_lifecycle_0204",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

@@ -95,35 +95,41 @@ type Repository interface {
 	GetExtensionRegistryExtension(ctx context.Context, extensionID string) (model.ExtensionRegistryExtension, error)
 	SetExtensionRegistryChannel(ctx context.Context, extensionID, channel, version string) (model.ExtensionRegistryVersion, error)
 	YankExtensionRegistryVersion(ctx context.Context, extensionID, version, reason string) (model.ExtensionRegistryVersion, error)
+	GetExtensionInstallState(ctx context.Context, extensionID, scope, scopeID string) (model.ExtensionInstall, error)
+	ListExtensionInstallStates(ctx context.Context, scope, scopeID string) ([]model.ExtensionInstall, error)
+	TransitionExtensionInstall(ctx context.Context, transition model.ExtensionLifecycleTransition) (model.ExtensionInstall, error)
+	ListExtensionInstallRevisions(ctx context.Context, extensionID, scope, scopeID string, limit int) ([]model.ExtensionInstallRevision, error)
 }
 
 type MemoryRepository struct {
-	deviceMu                    sync.Mutex
-	minecraftMu                 sync.Mutex
-	extensionMu                 sync.Mutex
-	projects                    []model.Project
-	profiles                    []model.Profile
-	channels                    []model.ReleaseChannel
-	releases                    []model.ReleaseVersion
-	files                       []model.FileObject
-	users                       []model.User
-	identities                  []model.AuthIdentity
-	providerCredentials         []model.ProviderCredential
-	minecraftProfiles           []model.MinecraftProfile
-	minecraftSessions           []model.MinecraftSession
-	minecraftJoins              []model.MinecraftJoin
-	trustedDevices              []model.TrustedDevice
-	deviceChallenges            []model.DeviceChallenge
-	roles                       []model.Role
-	audit                       []model.AuditEvent
-	telemetry                   []model.TelemetryEvent
-	crashes                     []model.CrashReport
-	extensions                  []model.Extension
-	extensionVersions           []model.ExtensionVersion
-	extensionInstalls           []model.ExtensionInstall
-	extensionRegistryPublishers []model.ExtensionRegistryPublisher
-	extensionRegistryKeys       []model.ExtensionRegistryPublisherKey
-	extensionRegistryVersions   []model.ExtensionRegistryVersion
+	deviceMu                       sync.Mutex
+	minecraftMu                    sync.Mutex
+	extensionMu                    sync.Mutex
+	projects                       []model.Project
+	profiles                       []model.Profile
+	channels                       []model.ReleaseChannel
+	releases                       []model.ReleaseVersion
+	files                          []model.FileObject
+	users                          []model.User
+	identities                     []model.AuthIdentity
+	providerCredentials            []model.ProviderCredential
+	minecraftProfiles              []model.MinecraftProfile
+	minecraftSessions              []model.MinecraftSession
+	minecraftJoins                 []model.MinecraftJoin
+	trustedDevices                 []model.TrustedDevice
+	deviceChallenges               []model.DeviceChallenge
+	roles                          []model.Role
+	audit                          []model.AuditEvent
+	telemetry                      []model.TelemetryEvent
+	crashes                        []model.CrashReport
+	extensions                     []model.Extension
+	extensionVersions              []model.ExtensionVersion
+	extensionInstalls              []model.ExtensionInstall
+	extensionRegistryPublishers    []model.ExtensionRegistryPublisher
+	extensionRegistryKeys          []model.ExtensionRegistryPublisherKey
+	extensionRegistryVersions      []model.ExtensionRegistryVersion
+	extensionInstallRevisions      []model.ExtensionInstallRevision
+	nextExtensionInstallRevisionID int64
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
@@ -164,6 +170,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 	}
 
 	return &MemoryRepository{
+		nextExtensionInstallRevisionID: 1,
 		projects: []model.Project{
 			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта NeverLauncher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
 		},

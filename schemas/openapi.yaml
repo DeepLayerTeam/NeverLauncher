@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.20.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.20.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -436,6 +436,455 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AdminSessionRevokeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs": {
+      "get": {
+        "operationId": "get_admin_extension_installs",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extension-installs",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "project"
+              ]
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}": {
+      "get": {
+        "operationId": "get_admin_extension_installs_by_extensionId",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extension-installs/{extensionId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "project"
+              ],
+              "default": "global"
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "historyLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/disable": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_disable",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/disable",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/enable": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_enable",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/enable",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/install": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_install",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/install",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/rollback": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_rollback",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/rollback",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/uninstall": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_uninstall",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/uninstall",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-installs/{extensionId}/update": {
+      "post": {
+        "operationId": "post_admin_extension_installs_by_extensionId_update",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-installs/{extensionId}/update",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionLifecycleWrite"
               }
             }
           }
@@ -9106,6 +9555,32 @@
           },
           "scopeId": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExtensionLifecycleWrite": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Exact registry version for install/update."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Registry channel used when version is omitted; defaults to stable for install/update."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "project"
+            ],
+            "default": "global"
+          },
+          "scopeId": {
+            "type": "string",
+            "description": "Required when scope=project."
           }
         },
         "additionalProperties": false

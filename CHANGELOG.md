@@ -1,3 +1,12 @@
+## [0.20.4] - 2026-10-05
+
+- Added production NeverExtensions install lifecycle with install, enable, disable, update, rollback and uninstall for global and project scopes, persisted desired/current version and state, package identities and monotonic generations.
+- Added migration `0044_neverextensions_install_lifecycle_0204` and append-only lifecycle revisions; PostgreSQL transitions use SERIALIZABLE transactions, advisory locks, row locks and generation compare-and-swap to prevent lost updates.
+- Added verified staged activation under `NEVERLAUNCHER_EXTENSION_ROOT`: registry artifacts are re-read from storage, SHA-256/package identity/Ed25519 verified, extracted into staging, atomically swapped into `current`, and previous payloads retained as bounded generation backups.
+- Added failure compensation across filesystem and repository state, persistent `neverextensions.lock.json`, exclusive per-install lifecycle lock, rollback from retained backups and lockfile/state consistency diagnostics.
+- Added authenticated REST lifecycle API, top-level `nl extension installed|status|install|enable|disable|update|rollback|uninstall`, and Admin Registry lifecycle controls with global/project scope selection.
+- Added `.nlext` payload extraction integrity checks, lifecycle repository/CLI/migration regression coverage, production configuration and mandatory 0.20.4 CI gate.
+
 ## [0.20.3] - 2026-10-05
 
 - Added the production private/local NeverExtensions Registry with trusted publishers and Ed25519 keys, immutable extension/version publications, compatibility metadata, content-addressed artifacts, movable channels and irreversible yank state.

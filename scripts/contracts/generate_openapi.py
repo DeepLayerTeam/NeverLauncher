@@ -101,6 +101,17 @@ def path_parameters(path):
           {"name":"arch","in":"query","required":False,"schema":{"type":"string"}},
           {"name":"includeYanked","in":"query","required":False,"schema":{"type":"boolean","default":False}},
         ]
+    if path == "/api/v1/admin/extension-installs":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+    if path == "/api/v1/admin/extension-installs/{extensionId}":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"historyLimit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":200,"default":50}},
+        ]
     return out
 
 ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
@@ -135,6 +146,12 @@ def body_schema(path):
       "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/yank":"ExtensionRegistryYankWrite",
       "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}":"ExtensionRegistryChannelWrite",
       "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install":"ExtensionRegistryInstallWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/install":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/enable":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/disable":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/uninstall":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/update":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extension-installs/{extensionId}/rollback":"ExtensionLifecycleWrite",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
@@ -168,7 +185,7 @@ def request_body_required(method,path):
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
       "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
     }
-    if path.endswith("/disable") or path.endswith("/enable"):
+    if (path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/"):
         return False
     if path.endswith("/versions/{versionId}/publish"):
         return False
@@ -181,7 +198,7 @@ def request_body_allowed(method,path):
       "/api/v1/auth/sessions/revoke-others","/api/v1/auth/providers/{providerId}/logout",
       "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
     }
-    if path in no_body or path.endswith("/disable") or path.endswith("/enable") or path.endswith("/versions/{versionId}/publish"):
+    if path in no_body or ((path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/")) or path.endswith("/versions/{versionId}/publish"):
         return False
     return True
 
@@ -191,7 +208,7 @@ def success_status(method,path):
     created={
       "/api/v1/install/bootstrap-admin","/api/v1/install/first-project","/api/v1/admin/users","/api/v1/admin/projects",
       "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff","/api/v1/server-bridge/servers/{serverId}/control",
-      "/api/v1/admin/extension-registry/publishers","/api/v1/admin/extension-registry/publishers/{publisherId}/keys","/api/v1/admin/extension-registry/publish","/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install",
+      "/api/v1/admin/extension-registry/publishers","/api/v1/admin/extension-registry/publishers/{publisherId}/keys","/api/v1/admin/extension-registry/publish","/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install","/api/v1/admin/extension-installs/{extensionId}/install",
     }
     if method=="post" and (path in created or path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish")):
         return "201"
@@ -265,6 +282,7 @@ schemas={
 "ExtensionRegistryYankWrite":{"type":"object","required":["reason"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":500}},"additionalProperties":False},
 "ExtensionRegistryChannelWrite":{"type":"object","required":["version"],"properties":{"version":{"type":"string","minLength":1}},"additionalProperties":False},
 "ExtensionRegistryInstallWrite":{"type":"object","properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"}},"additionalProperties":False},
+"ExtensionLifecycleWrite":{"type":"object","properties":{"version":{"type":"string","description":"Exact registry version for install/update."},"channel":{"type":"string","description":"Registry channel used when version is omitted; defaults to stable for install/update."},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string","description":"Required when scope=project."}},"additionalProperties":False},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
