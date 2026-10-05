@@ -112,6 +112,28 @@ def path_parameters(path):
           {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
           {"name":"historyLimit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":200,"default":50}},
         ]
+    if path == "/api/v1/admin/extensions/{extensionId}/permissions":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"version","in":"query","required":False,"schema":{"type":"string"}},
+          {"name":"fromVersion","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+    if path == "/api/v1/admin/extensions/{extensionId}/permissions/{permission}":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+    if path == "/api/v1/admin/extensions/{extensionId}/secrets":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
+    if path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}":
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
     if path == "/api/v1/admin/extension-events/subscriptions":
         out += [
           {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
@@ -170,6 +192,8 @@ def body_schema(path):
       "/api/v1/admin/extension-installs/{extensionId}/uninstall":"ExtensionLifecycleWrite",
       "/api/v1/admin/extension-installs/{extensionId}/update":"ExtensionLifecycleWrite",
       "/api/v1/admin/extension-installs/{extensionId}/rollback":"ExtensionLifecycleWrite",
+      "/api/v1/admin/extensions/{extensionId}/permissions":"ExtensionPermissionGrantWrite",
+      "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}":"ExtensionSecretWrite",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
@@ -224,6 +248,9 @@ def request_body_allowed(method,path):
     return True
 
 def success_status(method,path):
+    if method=="delete" and path in {"/api/v1/admin/extensions/{extensionId}/permissions/{permission}", "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"}: return "204"
+    if method=="put" and path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}": return "201"
+    if method=="post" and path == "/api/v1/admin/extensions/{extensionId}/permissions": return "201"
     if path.endswith("/oidc/{providerId}/start"): return "302"
     if path in {"/api/v1/telemetry/events","/api/v1/crash-reports"}: return "202"
     created={
@@ -277,7 +304,10 @@ for method,path in routes:
     success=success_status(method,path)
     binary_response = path.startswith("/api/v1/files/") or (path.endswith("/artifact") and "/extension-registry/" in path)
     ctype="text/plain" if path=="/metrics" else ("application/octet-stream" if binary_response else "application/json")
-    op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
+    if success == "204":
+        op["responses"][success]={"description":"Success"}
+    else:
+        op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
     if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
         op["responses"]["200"]={"description":"Idempotent replay of the same queued command","content":{"application/json":{"schema":ref("ServerBridgeControlCommandResponseV3")}}}
     if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":
@@ -304,6 +334,8 @@ schemas={
 "ExtensionRegistryChannelWrite":{"type":"object","required":["version"],"properties":{"version":{"type":"string","minLength":1}},"additionalProperties":False},
 "ExtensionRegistryInstallWrite":{"type":"object","properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"}},"additionalProperties":False},
 "ExtensionLifecycleWrite":{"type":"object","properties":{"version":{"type":"string","description":"Exact registry version for install/update."},"channel":{"type":"string","description":"Registry channel used when version is omitted; defaults to stable for install/update."},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string","description":"Required when scope=project."}},"additionalProperties":False},
+"ExtensionPermissionGrantWrite":{"type":"object","required":["permission"],"properties":{"version":{"type":"string"},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"permission":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{1,127}$"},"reason":{"type":"string","maxLength":1000}},"additionalProperties":False},
+"ExtensionSecretWrite":{"type":"object","required":["valueBase64"],"properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"valueBase64":{"type":"string","description":"Secret plaintext encoded as standard Base64; never returned by list/read admin APIs."}},"additionalProperties":False},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},

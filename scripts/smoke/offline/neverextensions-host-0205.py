@@ -29,7 +29,7 @@ for token in ('Setpgid: true', 'Pdeathsig: syscall.SIGKILL', 'processTreeUsage',
     require(token in linux, f"Linux host isolation missing {token}")
 
 main = read("services/api/cmd/neverlauncher-api/main.go")
-for token in ('extensionhost.HardenBackendProcess()', 'extensionhost.New(', 'host.Start(', 'host.Reconcile(', 'ExtensionHost: host'):
+for token in ('extensionhost.HardenBackendProcess()', 'extensionhost.New(', 'host.Start(', 'host.Reconcile(', 'ExtensionHost:'):
     require(token in main, f"Backend Extension Host wiring missing {token}")
 
 lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")

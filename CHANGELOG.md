@@ -1,3 +1,12 @@
+## [0.20.7] - 2026-10-06
+
+- Replaced manifest-implies-access with an explicit deny-by-default capability policy: extension manifests only request permissions, while effective access is the intersection of immutable-version requests and persisted global/project grants.
+- Added migration `0046_neverextensions_capability_security_0207` with persistent permission grants and AES-256-GCM encrypted extension secrets; project-scoped grants/secrets are validated against real projects and secret plaintext is never returned by Admin list APIs or written to audit.
+- Added grant/revoke, permission-state/diff and secret-management Admin APIs plus `nl extension capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete`; critical writes require fresh MFA/phishing-resistant authentication.
+- Made the Extension Host fail closed on policy/repository errors and re-check grants dynamically for privileged capabilities and event delivery; update preflight blocks activation when a candidate version adds permissions that have not been explicitly granted.
+- Expanded the capability broker for project/release/storage/telemetry, secure outbound HTTPS, events and secrets; outbound HTTP uses public-IP DNS pinning, no proxy/redirects and bounded request/response/timeouts to prevent SSRF into loopback/private/link-local networks.
+- Added privileged-call audit without secret/payload leakage, production configuration/OpenAPI coverage, migration/security/host regression tests and the mandatory 0.20.7 production gate.
+
 ## [0.20.6] - 2026-10-06
 
 - Added the production typed NeverExtensions Event Bus with durable PostgreSQL event log, persistent subscriptions, per-subscription delivery state, ordering keys, idempotency keys, payload SHA-256 integrity and cryptographic lease fencing against stale worker ACKs.

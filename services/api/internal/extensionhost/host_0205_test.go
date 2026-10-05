@@ -62,6 +62,9 @@ func hostFixtureInstall0205(t *testing.T, repo repository.Repository, root strin
 	if _, err := repo.SaveExtensionVersion(context.Background(), manifest); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := repo.GrantExtensionPermission(context.Background(), model.ExtensionPermissionGrant{ExtensionID: id, Scope: "global", Permission: "project:read", GrantedBy: "test"}); err != nil {
+		t.Fatal(err)
+	}
 	current, err := extensionlifecycle.CurrentPayloadDir(root, "global", "", id)
 	if err != nil {
 		t.Fatal(err)
@@ -198,20 +201,32 @@ func TestStartRequiresEnabledState0205(t *testing.T) {
 }
 
 func TestEventSubscriptionPermissionBoundary0206(t *testing.T) {
-	s := New(Config{ExtensionRoot: t.TempDir()}, repository.NewMemoryRepository("http://localhost"), storage.NewLocalStorage(t.TempDir()))
-	st := &processState{permissions: map[string]struct{}{"events:subscribe": {}, "project:read": {}}}
+	repo := repository.NewMemoryRepository("http://localhost")
+	manifest := model.ExtensionManifest{SchemaVersion: "2.0", ID: "example.events", Name: "events", Version: "1.0.0", Publisher: "test.publisher", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/extension"}}, Permissions: []string{"events:subscribe", "events:sync", "project:read", "audit:read"}}
+	if _, err := repo.SaveExtensionVersion(context.Background(), manifest); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"events:subscribe", "project:read"} {
+		if _, err := repo.GrantExtensionPermission(context.Background(), model.ExtensionPermissionGrant{ExtensionID: manifest.ID, Scope: "global", Permission: p, GrantedBy: "test"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
+	st := &processState{key: Key{ExtensionID: manifest.ID, Scope: "global"}, install: model.ExtensionInstall{ExtensionID: manifest.ID, Scope: "global", CurrentVersion: "1.0.0"}, manifest: manifest}
 	if err := s.validateEventPermission0206(st, "project.saved", model.ExtensionEventModeAsync); err != nil {
 		t.Fatalf("async permission rejected: %v", err)
 	}
 	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err == nil {
-		t.Fatal("sync subscription accepted without events:sync")
+		t.Fatal("sync subscription accepted without granted events:sync")
 	}
-	st.permissions["events:sync"] = struct{}{}
+	if _, err := repo.GrantExtensionPermission(context.Background(), model.ExtensionPermissionGrant{ExtensionID: manifest.ID, Scope: "global", Permission: "events:sync", GrantedBy: "test"}); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.validateEventPermission0206(st, "project.before-save", model.ExtensionEventModeSync); err != nil {
 		t.Fatalf("sync permission rejected: %v", err)
 	}
 	if err := s.validateEventPermission0206(st, "audit.event.created", model.ExtensionEventModeAsync); err == nil {
-		t.Fatal("audit subscription accepted without audit:read")
+		t.Fatal("audit subscription accepted without granted audit:read")
 	}
 }
 

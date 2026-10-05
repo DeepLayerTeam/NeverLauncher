@@ -12,6 +12,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -89,6 +90,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	secretKey, err := extensionsecurity.ParseKey(cfg.ExtensionSecretsKey)
+	if err != nil {
+		log.Fatalf("NeverExtensions secrets key: %v", err)
+	}
+	extSecurity, err := extensionsecurity.New(repo, secretKey)
+	if err != nil {
+		log.Fatalf("NeverExtensions capability security initialization failed: %v", err)
+	}
+
 	var events *eventbus.Bus
 	if cfg.ExtensionEventsEnabled {
 		events, err = eventbus.New(eventbus.Config{
@@ -118,22 +128,26 @@ func main() {
 			log.Fatalf("extension host backend memory hardening failed: %v", err)
 		}
 		host = extensionhost.New(extensionhost.Config{
-			ExtensionRoot:       cfg.ExtensionRoot,
-			Listen:              cfg.ExtensionHostListen,
-			StartupTimeout:      time.Duration(cfg.ExtensionHostStartupTimeoutSeconds) * time.Second,
-			HeartbeatTimeout:    time.Duration(cfg.ExtensionHostHeartbeatTimeoutSeconds) * time.Second,
-			StopTimeout:         time.Duration(cfg.ExtensionHostStopTimeoutSeconds) * time.Second,
-			CapabilityTimeout:   time.Duration(cfg.ExtensionHostCapabilityTimeoutSeconds) * time.Second,
-			MaxMemoryBytes:      cfg.ExtensionHostMaxMemoryMB << 20,
-			MaxProcesses:        cfg.ExtensionHostMaxProcesses,
-			MaxLogBytes:         cfg.ExtensionHostMaxLogBytes,
-			MaxLogEntries:       cfg.ExtensionHostMaxLogEntries,
-			MaxProtocolBody:     cfg.ExtensionHostMaxProtocolBodyBytes,
-			MaxStorageReadBytes: cfg.ExtensionHostMaxStorageReadBytes,
-			CrashLimit:          cfg.ExtensionHostCrashLimit,
-			CrashWindow:         time.Duration(cfg.ExtensionHostCrashWindowSeconds) * time.Second,
-			RestartBackoff:      time.Duration(cfg.ExtensionHostRestartBackoffMilliseconds) * time.Millisecond,
+			ExtensionRoot:        cfg.ExtensionRoot,
+			Listen:               cfg.ExtensionHostListen,
+			StartupTimeout:       time.Duration(cfg.ExtensionHostStartupTimeoutSeconds) * time.Second,
+			HeartbeatTimeout:     time.Duration(cfg.ExtensionHostHeartbeatTimeoutSeconds) * time.Second,
+			StopTimeout:          time.Duration(cfg.ExtensionHostStopTimeoutSeconds) * time.Second,
+			CapabilityTimeout:    time.Duration(cfg.ExtensionHostCapabilityTimeoutSeconds) * time.Second,
+			MaxMemoryBytes:       cfg.ExtensionHostMaxMemoryMB << 20,
+			MaxProcesses:         cfg.ExtensionHostMaxProcesses,
+			MaxLogBytes:          cfg.ExtensionHostMaxLogBytes,
+			MaxLogEntries:        cfg.ExtensionHostMaxLogEntries,
+			MaxProtocolBody:      cfg.ExtensionHostMaxProtocolBodyBytes,
+			MaxStorageReadBytes:  cfg.ExtensionHostMaxStorageReadBytes,
+			MaxHTTPRequestBytes:  cfg.ExtensionHTTPMaxRequestBytes,
+			MaxHTTPResponseBytes: cfg.ExtensionHTTPMaxResponseBytes,
+			HTTPTimeout:          time.Duration(cfg.ExtensionHTTPTimeoutSeconds) * time.Second,
+			CrashLimit:           cfg.ExtensionHostCrashLimit,
+			CrashWindow:          time.Duration(cfg.ExtensionHostCrashWindowSeconds) * time.Second,
+			RestartBackoff:       time.Duration(cfg.ExtensionHostRestartBackoffMilliseconds) * time.Millisecond,
 		}, repo, store)
+		host.SetSecurity(extSecurity)
 		if events != nil {
 			host.SetEventBus(events)
 			events.SetDispatcher(host)
@@ -159,14 +173,15 @@ func main() {
 	}
 
 	server := httpapi.Server{
-		Version:       version,
-		Config:        cfg,
-		Repo:          repo,
-		Storage:       store,
-		State:         state,
-		Federation:    federationCore,
-		ExtensionHost: host,
-		EventBus:      events,
+		Version:           version,
+		Config:            cfg,
+		Repo:              repo,
+		Storage:           store,
+		State:             state,
+		Federation:        federationCore,
+		ExtensionHost:     host,
+		ExtensionSecurity: extSecurity,
+		EventBus:          events,
 	}
 
 	log.Printf(

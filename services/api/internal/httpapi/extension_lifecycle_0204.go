@@ -174,13 +174,20 @@ func (s Server) extensionInstall0204(w http.ResponseWriter, r *http.Request) {
 		writeLifecycleError0204(w, err)
 		return
 	}
-	install, err := s.lifecycleManager0204().Install(r.Context(), item, lifecycleScopeFromRequest0204(req.Scope, req.ScopeID))
+	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
+	var permissionDiff any
+	if s.ExtensionSecurity != nil {
+		if d, diffErr := s.ExtensionSecurity.PermissionDiff(r.Context(), item.ExtensionID, "", item.Version, scope.Scope, scope.ScopeID); diffErr == nil {
+			permissionDiff = d
+		}
+	}
+	install, err := s.lifecycleManager0204().Install(r.Context(), item, scope)
 	if err != nil {
 		writeLifecycleError0204(w, err)
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:install", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)
-	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "install": install}})
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "install": install, "permissionDiff": permissionDiff}})
 }
 func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeLifecycleWrite0204(r)
@@ -260,6 +267,24 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 		writeLifecycleError0204(w, err)
 		return
 	}
+	if s.ExtensionSecurity == nil {
+		writeError(w, http.StatusServiceUnavailable, "extension capability security unavailable")
+		return
+	}
+	currentInstall, err := s.Repo.GetExtensionInstallState(r.Context(), item.ExtensionID, scope.Scope, scope.ScopeID)
+	if err != nil {
+		writeLifecycleError0204(w, err)
+		return
+	}
+	diff, err := s.ExtensionSecurity.PermissionDiff(r.Context(), item.ExtensionID, currentInstall.CurrentVersion, item.Version, scope.Scope, scope.ScopeID)
+	if err != nil {
+		writeLifecycleError0204(w, err)
+		return
+	}
+	if len(diff.AddedNotGranted) > 0 {
+		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": "extension update requires explicit permission grants", "data": map[string]any{"permissionDiff": diff}})
+		return
+	}
 	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
 	if err != nil {
 		writeLifecycleError0204(w, err)
@@ -282,7 +307,7 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:update", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "updated", "verified": true, "install": install}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "updated", "verified": true, "install": install, "permissionDiff": diff}})
 }
 func (s Server) extensionRollback0204(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeLifecycleWrite0204(r)

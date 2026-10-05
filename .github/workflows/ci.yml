@@ -823,6 +823,16 @@ jobs:
           (cd services/api && go vet ./internal/eventbus ./internal/extensionhost)
           (cd cli && go test ./internal/dbmigrate)
           python3 scripts/contracts/validate-openapi.py
+      - name: NeverExtensions Permissions & Capability Security 0.20.7 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-capability-security-0207.py
+          (cd services/api && go test -run 'TestDenyByDefaultGrantRevokeAndDiff0207|TestProjectScopedGrant0207|TestSecretsEncryptedAuthenticated0207' ./internal/extensionsecurity)
+          (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestExtensionHost.*0205|TestForbiddenOutboundIP0207' ./internal/extensionhost)
+          (cd services/api && go test -run 'TestNeverExtensionsCapabilitySecurityMigration0207' ./internal/dbmigrate)
+          (cd services/api && go vet ./internal/extensionsecurity ./internal/extensionhost)
+          (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/neverlauncher && go test ./internal/dbmigrate)
+          (cd cli && go vet ./cmd/neverlauncher)
+          python3 scripts/contracts/validate-openapi.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

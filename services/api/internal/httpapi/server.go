@@ -9,20 +9,22 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
 type Server struct {
-	Version       string
-	Config        config.Config
-	Repo          repository.Repository
-	Storage       storage.Storage
-	State         *RuntimeState
-	Federation    *federation.Core
-	ExtensionHost *extensionhost.Supervisor
-	EventBus      *eventbus.Bus
+	Version           string
+	Config            config.Config
+	Repo              repository.Repository
+	Storage           storage.Storage
+	State             *RuntimeState
+	Federation        *federation.Core
+	ExtensionHost     *extensionhost.Supervisor
+	ExtensionSecurity *extensionsecurity.Manager
+	EventBus          *eventbus.Bus
 }
 
 type statusResponse struct {

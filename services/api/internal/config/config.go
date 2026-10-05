@@ -60,6 +60,10 @@ type Config struct {
 	ExtensionHostCrashLimit                      int
 	ExtensionHostCrashWindowSeconds              int
 	ExtensionHostRestartBackoffMilliseconds      int
+	ExtensionSecretsKey                          string
+	ExtensionHTTPMaxRequestBytes                 int64
+	ExtensionHTTPMaxResponseBytes                int64
+	ExtensionHTTPTimeoutSeconds                  int
 	ExtensionEventsEnabled                       bool
 	ExtensionEventsWorkerIntervalMilliseconds    int
 	ExtensionEventsLeaseSeconds                  int
@@ -243,6 +247,10 @@ func Load() Config {
 		ExtensionHostCrashLimit:                      envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_LIMIT", 5),
 		ExtensionHostCrashWindowSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_WINDOW_SECONDS", 600),
 		ExtensionHostRestartBackoffMilliseconds:      envInt("NEVERLAUNCHER_EXTENSION_HOST_RESTART_BACKOFF_MS", 1000),
+		ExtensionSecretsKey:                          env("NEVERLAUNCHER_EXTENSION_SECRETS_KEY", ""),
+		ExtensionHTTPMaxRequestBytes:                 envInt64("NEVERLAUNCHER_EXTENSION_HTTP_MAX_REQUEST_BYTES", 256<<10),
+		ExtensionHTTPMaxResponseBytes:                envInt64("NEVERLAUNCHER_EXTENSION_HTTP_MAX_RESPONSE_BYTES", 1<<20),
+		ExtensionHTTPTimeoutSeconds:                  envInt("NEVERLAUNCHER_EXTENSION_HTTP_TIMEOUT_SECONDS", 10),
 		ExtensionEventsEnabled:                       envBool("NEVERLAUNCHER_EXTENSION_EVENTS_ENABLED", true),
 		ExtensionEventsWorkerIntervalMilliseconds:    envInt("NEVERLAUNCHER_EXTENSION_EVENTS_WORKER_INTERVAL_MS", 250),
 		ExtensionEventsLeaseSeconds:                  envInt("NEVERLAUNCHER_EXTENSION_EVENTS_LEASE_SECONDS", 30),
@@ -678,6 +686,15 @@ func ValidateProduction(cfg Config) error {
 		}
 		if cfg.ExtensionHostRestartBackoffMilliseconds < 100 || cfg.ExtensionHostRestartBackoffMilliseconds > 60000 {
 			problems = append(problems, "extension host restart backoff должен быть 100..60000 ms")
+		}
+		if cfg.ExtensionHTTPMaxRequestBytes < 1024 || cfg.ExtensionHTTPMaxRequestBytes > 8<<20 {
+			problems = append(problems, "extension HTTP request limit должен быть 1024..8388608 bytes")
+		}
+		if cfg.ExtensionHTTPMaxResponseBytes < 4096 || cfg.ExtensionHTTPMaxResponseBytes > 32<<20 {
+			problems = append(problems, "extension HTTP response limit должен быть 4096..33554432 bytes")
+		}
+		if cfg.ExtensionHTTPTimeoutSeconds < 1 || cfg.ExtensionHTTPTimeoutSeconds > 60 {
+			problems = append(problems, "extension HTTP timeout должен быть 1..60 seconds")
 		}
 	}
 	driver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))

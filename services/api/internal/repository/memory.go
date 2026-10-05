@@ -99,6 +99,13 @@ type Repository interface {
 	ListExtensionInstallStates(ctx context.Context, scope, scopeID string) ([]model.ExtensionInstall, error)
 	TransitionExtensionInstall(ctx context.Context, transition model.ExtensionLifecycleTransition) (model.ExtensionInstall, error)
 	ListExtensionInstallRevisions(ctx context.Context, extensionID, scope, scopeID string, limit int) ([]model.ExtensionInstallRevision, error)
+	ListExtensionPermissionGrants(ctx context.Context, extensionID, scope, scopeID string) ([]model.ExtensionPermissionGrant, error)
+	GrantExtensionPermission(ctx context.Context, grant model.ExtensionPermissionGrant) (model.ExtensionPermissionGrant, error)
+	RevokeExtensionPermission(ctx context.Context, extensionID, scope, scopeID, permission string) error
+	PutExtensionSecret(ctx context.Context, secret model.ExtensionSecret) (model.ExtensionSecret, error)
+	GetExtensionSecret(ctx context.Context, extensionID, scope, scopeID, name string) (model.ExtensionSecret, error)
+	ListExtensionSecrets(ctx context.Context, extensionID, scope, scopeID string) ([]model.ExtensionSecretMetadata, error)
+	DeleteExtensionSecret(ctx context.Context, extensionID, scope, scopeID, name string) error
 }
 
 type MemoryRepository struct {
@@ -135,6 +142,8 @@ type MemoryRepository struct {
 	extensionEventSubscriptions    []model.ExtensionEventSubscription
 	extensionEventDeliveries       []model.ExtensionEventDelivery
 	extensionEventDeadLetters      []model.ExtensionEventDeadLetter
+	extensionPermissionGrants       []model.ExtensionPermissionGrant
+	extensionSecrets                []model.ExtensionSecret
 	nextExtensionInstallRevisionID int64
 	nextExtensionEventSequence     int64
 	nextExtensionSubscriptionID    int64
