@@ -1,3 +1,10 @@
+## [0.20.2] - 2026-10-05
+
+- Added the production `.nlext` extension package format with deterministic ZIP layout, canonical manifest embedding, payload hashing, `checksums.sha256`, SPDX 2.3 SBOM and a content-derived immutable package identity.
+- Added `nl extension pack|sign|verify|inspect`, including deterministic Ed25519 signatures, external trust-key verification and optional unsigned integrity verification.
+- Added fail-closed package validation for path traversal, Windows-unsafe paths, symlinks/special files, case-colliding duplicate entries, missing target entrypoints, archive size/compression limits and unexpected package files.
+- Added canonical package/signature schemas, reproducible-build support through `SOURCE_DATE_EPOCH`, cross-platform CLI compilation coverage and a mandatory 0.20.2 production CI gate.
+
 ## [0.20.1] - 2026-10-05
 
 - Added the canonical NeverExtensions Core model and `neverlauncher-extension.json` schema 2.0 with multi-target manifests, permissions, hooks and dependencies.

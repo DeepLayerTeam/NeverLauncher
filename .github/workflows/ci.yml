@@ -790,6 +790,11 @@ jobs:
           python3 scripts/smoke/offline/neverextensions-core-0201.py
           (cd services/api && go test -run 'TestNeverExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher ./internal/dbmigrate)
+      - name: NeverExtensions Extension Package 0.20.2 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-package-0202.py
+          (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher)
+          (cd cli && go vet ./cmd/neverlauncher)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

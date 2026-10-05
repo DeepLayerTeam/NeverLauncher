@@ -33,7 +33,7 @@ const helpText = `NeverLauncher CLI
   tenant ...                      tenant tooling
   branding ...                    branding tooling
   sdk ...                         SDK tooling
-  extension ...                   canonical NeverExtensions manifest tooling
+  extension template|validate|import-legacy|pack|sign|verify|inspect  NeverExtensions tooling
   plugin ...                      legacy compatibility alias
   server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor
 

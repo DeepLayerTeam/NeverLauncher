@@ -13,8 +13,9 @@ def require(rel, tokens):
     if missing:
         raise SystemExit(f"{rel}: missing {missing}")
 
-if read("VERSION").strip() != "0.20.1":
-    raise SystemExit("VERSION must be 0.20.1")
+version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
+if version < (0, 20, 1):
+    raise SystemExit("VERSION must be >= 0.20.1")
 
 schema = json.loads(read("schemas/neverlauncher-extension.schema.json"))
 if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":

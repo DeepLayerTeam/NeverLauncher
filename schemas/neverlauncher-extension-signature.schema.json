@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neverlauncher.local/schemas/neverlauncher-extension-signature.schema.json",
+  "title": "NeverLauncher Extension Package Ed25519 Signature",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "algorithm", "signingDomain", "packageIdentity", "keyFingerprint", "signature"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "algorithm": { "const": "Ed25519" },
+    "signingDomain": { "const": "neverlauncher.extension-package.v1" },
+    "packageIdentity": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "keyFingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "signature": { "type": "string", "minLength": 88, "maxLength": 88 }
+  }
+}
