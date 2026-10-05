@@ -1,3 +1,12 @@
+## [0.20.1] - 2026-10-05
+
+- Added the canonical NeverExtensions Core model and `neverlauncher-extension.json` schema 2.0 with multi-target manifests, permissions, hooks and dependencies.
+- Added PostgreSQL migration `0042_neverextensions_core_0201` with normalized `extensions`, `extension_versions`, `extension_permissions`, `extension_dependencies` and `extension_installs` tables, constraints and indexes.
+- Added a real PostgreSQL and in-memory extension repository with immutable `(extensionId, version)` manifests, deterministic SHA-256 identity, publisher takeover protection and persisted install selection.
+- Added authenticated Admin API for registering and reading canonical extension versions through the production repository layer.
+- Added `nl extension template|validate|import-legacy`; `nl sdk init` now creates `neverlauncher-extension.json`, while legacy `neverlauncher-plugin.json` remains importable with an explicit publisher.
+- Removed nonexistent `registry_entries` and `desktop_packages` from `productionTables()` and replaced them with the actual NeverExtensions Core tables.
+
 ## [0.20.0] - 2026-10-05
 
 - Promoted ServerBridge 3 to GA with a frozen Protocol v3 feature set/digest; Protocol v2 remains Backend compatibility/deprecation-only and emits explicit migration metadata.

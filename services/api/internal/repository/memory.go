@@ -73,11 +73,23 @@ type Repository interface {
 	AddCrashReport(report model.CrashReport)
 	ListTelemetryEvents() []model.TelemetryEvent
 	ListCrashReports() []model.CrashReport
+	ListExtensions(ctx context.Context) ([]model.Extension, error)
+	GetExtension(ctx context.Context, id string) (model.Extension, error)
+	ListExtensionVersions(ctx context.Context, extensionID string) ([]model.ExtensionVersion, error)
+	GetExtensionVersion(ctx context.Context, extensionID, version string) (model.ExtensionVersion, error)
+	ListExtensionPermissions(ctx context.Context, extensionID, version string) ([]string, error)
+	ListExtensionDependencies(ctx context.Context, extensionID, version string) ([]model.ExtensionDependency, error)
+	SaveExtensionVersion(ctx context.Context, manifest model.ExtensionManifest) (model.ExtensionVersion, error)
+	ListExtensionInstalls(ctx context.Context, scope, scopeID string) ([]model.ExtensionInstall, error)
+	GetExtensionInstall(ctx context.Context, extensionID, scope, scopeID string) (model.ExtensionInstall, error)
+	SaveExtensionInstall(ctx context.Context, install model.ExtensionInstall) (model.ExtensionInstall, error)
+	DeleteExtensionInstall(ctx context.Context, extensionID, scope, scopeID string) error
 }
 
 type MemoryRepository struct {
 	deviceMu            sync.Mutex
 	minecraftMu         sync.Mutex
+	extensionMu         sync.Mutex
 	projects            []model.Project
 	profiles            []model.Profile
 	channels            []model.ReleaseChannel
@@ -95,6 +107,9 @@ type MemoryRepository struct {
 	audit               []model.AuditEvent
 	telemetry           []model.TelemetryEvent
 	crashes             []model.CrashReport
+	extensions          []model.Extension
+	extensionVersions   []model.ExtensionVersion
+	extensionInstalls   []model.ExtensionInstall
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {

@@ -351,7 +351,7 @@ func handleSDK(args []string) error {
 	}
 	switch args[0] {
 	case "list":
-		printJSON(map[string]any{"version": version, "api": "3.7", "sdks": sdks})
+		printJSON(map[string]any{"version": version, "api": "3.7", "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "sdks": sdks})
 		return nil
 	case "init":
 		target := flagValue(args, "--target", "backend")
@@ -362,8 +362,21 @@ func handleSDK(args []string) error {
 		if err := os.MkdirAll(out, 0o755); err != nil {
 			return err
 		}
-		manifest := PluginManifest{SchemaVersion: "1.2", ID: "ru.example.neverlauncher." + target, Name: "Пример SDK-расширения", Version: "0.1.0", Target: target, API: "3.7", Entrypoint: sdkEntrypoint(target), Permissions: []string{"release:read"}}
-		if err := writeJSONFile(filepath.Join(out, "neverlauncher-plugin.json"), manifest); err != nil {
+		manifest := CanonicalExtensionManifest0201{
+			SchemaVersion: "2.0",
+			ID:            "ru.example.neverlauncher." + target,
+			Name:          "Пример SDK-расширения",
+			Version:       "0.1.0",
+			Publisher:     "Example Publisher",
+			API:           "3.7",
+			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
+			Permissions:   []string{"release:read"},
+		}
+		manifest, _, err := normalizeCanonicalExtension0201(manifest)
+		if err != nil {
+			return err
+		}
+		if err := writeJSONFile(filepath.Join(out, canonicalExtensionManifestName0201), manifest); err != nil {
 			return err
 		}
 		if err := os.WriteFile(filepath.Join(out, "README.md"), []byte(sdkReadme(target)), 0o644); err != nil {
@@ -372,42 +385,13 @@ func handleSDK(args []string) error {
 		return os.WriteFile(filepath.Join(out, sdkEntrypoint(target)), []byte(sdkTemplate(target)), 0o644)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("sdk validate требует путь к каталогу расширения или neverlauncher-plugin.json")
+			return errors.New("sdk validate требует путь к каталогу расширения или neverlauncher-extension.json")
 		}
-		path := args[1]
-		manifestPath := path
-		if st, err := os.Stat(path); err == nil && st.IsDir() {
-			manifestPath = filepath.Join(path, "neverlauncher-plugin.json")
-		}
-		data, err := os.ReadFile(manifestPath)
+		manifest, path, digest, err := loadCanonicalExtension0201(args[1])
 		if err != nil {
 			return err
 		}
-		var manifest PluginManifest
-		if err := json.Unmarshal(data, &manifest); err != nil {
-			return err
-		}
-		var errs []string
-		if strings.TrimSpace(manifest.ID) == "" {
-			errs = append(errs, "отсутствует id")
-		}
-		if strings.TrimSpace(manifest.Name) == "" {
-			errs = append(errs, "отсутствует name")
-		}
-		if strings.TrimSpace(manifest.Version) == "" {
-			errs = append(errs, "отсутствует version")
-		}
-		if !containsString([]string{"backend", "admin", "desktop", "cli"}, manifest.Target) {
-			errs = append(errs, "target должен быть одним из: backend, admin, desktop, cli")
-		}
-		if manifest.API != "3.7" && manifest.API != "3.3" && manifest.API != "3.1" && manifest.API != "3.0" {
-			errs = append(errs, "api должен быть совместим с 3.0, 3.1, 3.3 или 3.7")
-		}
-		if len(errs) > 0 {
-			printJSON(map[string]any{"valid": false, "errors": errs})
-			return errors.New("SDK-расширение не прошло проверку")
-		}
-		printJSON(map[string]any{"valid": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "manifest": manifestPath})
+		printJSON(map[string]any{"valid": true, "id": manifest.ID, "targets": manifest.Targets, "api": manifest.API, "manifest": path, "sha256": digest})
 		return nil
 	default:
 		return fmt.Errorf("неизвестная sdk-подкоманда: %s", args[0])
@@ -426,7 +410,7 @@ func sdkEntrypoint(target string) string {
 }
 
 func sdkReadme(target string) string {
-	return "# Расширение NeverLauncher\\n\\nЦель: " + target + "\\n\\nФайл `neverlauncher-plugin.json` описывает расширение. Исходный файл entrypoint создаётся как стартовый шаблон для SDK NeverLauncher 3.7.\\n"
+	return "# Расширение NeverLauncher\\n\\nЦель: " + target + "\\n\\nФайл `neverlauncher-extension.json` описывает расширение. Исходный файл entrypoint создаётся как стартовый шаблон для SDK NeverLauncher 3.7.\\n"
 }
 
 func sdkTemplate(target string) string {
@@ -446,38 +430,26 @@ func sdkTemplate(target string) string {
 
 func handlePlugin(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные plugin-подкоманды: list, template, validate")
+		return errors.New("plugin — legacy compatibility alias; используйте extension template|validate|import-legacy")
 	}
 	switch args[0] {
 	case "list":
 		printJSON(map[string]any{
-			"version":     version,
-			"api":         "3.7",
-			"targets":     []string{"backend", "admin", "desktop", "cli"},
-			"permissions": []string{"storage:read", "storage:write", "release:read", "release:write", "ui:extend", "diagnostics:read"},
+			"version":           version,
+			"deprecated":        true,
+			"canonicalManifest": canonicalExtensionManifestName0201,
+			"manifestSchema":    "2.0",
+			"targets":           []string{"backend", "admin", "desktop", "cli"},
 		})
 		return nil
 	case "template":
-		target := flagValue(args, "--target", "backend")
-		out := flagValue(args, "--output", "neverlauncher-plugin.json")
-		manifest := PluginManifest{
-			SchemaVersion: "1.2",
-			ID:            "ru.example.neverlauncher.plugin",
-			Name:          "Пример расширения NeverLauncher",
-			Version:       "1.0.0",
-			Target:        target,
-			API:           "3.7",
-			Entrypoint:    "./plugin",
-			Permissions:   []string{"release:read"},
-		}
-		if out == "-" {
-			printJSON(manifest)
-			return nil
-		}
-		return writeJSONFile(out, manifest)
+		return handleExtension0201(append([]string{"template"}, args[1:]...))
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("plugin validate требует путь к plugin manifest")
+			return errors.New("plugin validate требует путь к manifest")
+		}
+		if filepath.Base(canonicalExtensionManifestPath0201(args[1])) == canonicalExtensionManifestName0201 {
+			return handleExtension0201([]string{"validate", args[1]})
 		}
 		data, err := os.ReadFile(args[1])
 		if err != nil {
@@ -504,10 +476,10 @@ func handlePlugin(args []string) error {
 			errs = append(errs, "отсутствует api")
 		}
 		if len(errs) > 0 {
-			printJSON(map[string]any{"valid": false, "errors": errs})
-			return errors.New("plugin manifest не прошёл проверку")
+			printJSON(map[string]any{"valid": false, "legacy": true, "errors": errs})
+			return errors.New("legacy plugin manifest не прошёл проверку")
 		}
-		printJSON(map[string]any{"valid": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API})
+		printJSON(map[string]any{"valid": true, "legacy": true, "deprecated": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "migration": "nl extension import-legacy <neverlauncher-plugin.json> --publisher <publisher>"})
 		return nil
 	default:
 		return fmt.Errorf("неизвестная plugin-подкоманда: %s", args[0])

@@ -785,6 +785,11 @@ jobs:
           python3 scripts/smoke/offline/serverbridge3-ga-0200.py
           (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
           (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/neverlauncher ./internal/dbmigrate)
+      - name: NeverExtensions Core 0.20.1 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-core-0201.py
+          (cd services/api && go test -run 'TestNeverExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
+          (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher ./internal/dbmigrate)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

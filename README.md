@@ -1,3 +1,11 @@
+## NeverExtensions Core — 0.20.1
+
+`0.20.1` introduces the first production persistence layer for NeverExtensions. The canonical manifest is now `neverlauncher-extension.json` schema `2.0`; one immutable extension version can declare multiple `backend`, `admin`, `desktop` and `cli` targets, requested permissions, hooks and dependencies. The Backend persists extension identity/version metadata through the normal Repository implementation rather than an in-memory declaration or a disconnected table.
+
+PostgreSQL migration `0042_neverextensions_core_0201` creates `extensions`, `extension_versions`, `extension_permissions`, `extension_dependencies` and `extension_installs`. Registering a version is transactional: the manifest is normalized, hashed with SHA-256 and immutable by `(extensionId, version)`; an existing extension publisher cannot be replaced by a different publisher. Core Admin routes require `extension:manage` and expose registration/read operations only; process lifecycle and remote registry behavior remain separate later NeverExtensions milestones.
+
+CLI uses `nl extension template|validate|import-legacy`. `nl sdk init` writes `neverlauncher-extension.json`. Existing `neverlauncher-plugin.json` files can be converted with `nl extension import-legacy <path> --publisher <publisher>`; new manifests are not generated in the legacy format.
+
 ## ServerBridge 3 GA — 0.20.0
 
 `0.20.0` переводит ServerBridge 3 в GA без изменения замороженного wire contract Protocol v3. Полный v3 feature-set имеет фиксированный digest `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`; новый Bridge не делает downgrade до v2, а Backend сохраняет Protocol v2 только в режиме `compatibility-deprecated`. Production migration выполняется командой `nl server-bridge migrate-v3`: она проверяет GA capabilities Backend, использует существующий certified transactional upgrade/dry-run/rollback путь, сохраняет Ed25519 node identity и записывает migration receipt.

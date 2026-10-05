@@ -33,7 +33,8 @@ const helpText = `NeverLauncher CLI
   tenant ...                      tenant tooling
   branding ...                    branding tooling
   sdk ...                         SDK tooling
-  plugin ...                      plugin manifest tooling
+  extension ...                   canonical NeverExtensions manifest tooling
+  plugin ...                      legacy compatibility alias
   server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor
 
 Backend / production:
@@ -314,6 +315,8 @@ func run(args []string) error {
 		return handleBranding(args[1:])
 	case "sdk":
 		return handleSDK(args[1:])
+	case "extension":
+		return handleExtension0201(args[1:])
 	case "plugin":
 		return handlePlugin(args[1:])
 	case "server-bridge", "serverbridge":
