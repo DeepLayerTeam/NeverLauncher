@@ -191,3 +191,7 @@ Bridge 0.19.12 использует только Protocol v3 security profile `s
 
 Для ротации control signing key без downtime сначала оставьте текущий seed в `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY`, а новый seed установите в `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY`. Выполните rolling deployment Backend, дождитесь, пока активные Bridges успешно negotiate capability document с overlap key-set, и только затем удалите previous key и повторите rolling deployment. После финализации удалённый ключ больше не считается trust anchor. Не используйте одинаковый active/previous seed.
 
+
+### ServerBridge 3 GA 0.20.0
+
+Перед rollout примените `0041_serverbridge3_ga_0200`, затем обновите Backend до 0.20.0. Protocol v3 заморожен; Protocol v2 остаётся только в compatibility/deprecation mode. Для каждого managed node сначала выполните `nl server-bridge migrate-v3 --dry-run --server-dir <dir> --artifacts-dir <release>`, затем повторите без `--dry-run`. Команда требует GA capabilities Backend и certified 0.20.0 artifact, сохраняет node Ed25519 identity и использует существующий transactional upgrade/rollback path. После рестарта проверяйте `/api/v1/server-bridge/overview`: узел должен иметь Protocol v3/`ga-frozen`, а счётчик `protocolMigrationsRequired` должен уменьшиться.

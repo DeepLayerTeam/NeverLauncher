@@ -12,6 +12,7 @@ import (
 
 const serverBridge2CertificationReleaseFile = "SERVERBRIDGE2_CERTIFICATION.json"
 const serverBridge3CertificationReleaseFile = "SERVERBRIDGE3_CERTIFICATION.json"
+const serverBridgeV3FrozenFeatureDigest0200 = "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"
 
 var serverBridge2ReleaseTargets0150 = []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge"}
 var serverBridgeUniversalReleaseTargets0198 = []string{"velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge", "vanilla"}
@@ -53,25 +54,47 @@ type serverBridge2CertifiedArtifact0150 struct {
 	Bytes  int64  `json:"bytes"`
 }
 
+type serverBridgeReleaseAllowlist01912 struct {
+	SchemaVersion            string                         `json:"schemaVersion"`
+	Release                  string                         `json:"release"`
+	ProtocolVersion          int                            `json:"protocolVersion"`
+	MinimumProtocolVersion   int                            `json:"minimumProtocolVersion"`
+	SecurityProfile          string                         `json:"securityProfile"`
+	SecurityCapabilityDigest string                         `json:"securityCapabilityDigest"`
+	RequiredFeatures         []string                       `json:"requiredFeatures"`
+	GA                       bool                           `json:"ga"`
+	ProtocolV3Frozen         bool                           `json:"protocolV3Frozen"`
+	ProtocolV3FeatureDigest  string                         `json:"protocolV3FeatureDigest"`
+	ProtocolV2Mode           string                         `json:"protocolV2Mode"`
+	Releases                 map[string]map[string][]string `json:"releases"`
+}
+
 type serverBridge2Certification0150 struct {
-	SchemaVersion            string                               `json:"schemaVersion"`
-	Release                  string                               `json:"release"`
-	Version                  string                               `json:"version"`
-	ProtocolVersion          int                                  `json:"protocolVersion"`
-	Status                   string                               `json:"status"`
-	TargetCount              int                                  `json:"targetCount"`
-	ZeroPatch                bool                                 `json:"zeroPatch"`
-	NodeIdentity             string                               `json:"nodeIdentity"`
-	OneTimeJoin              bool                                 `json:"oneTimeJoin"`
-	SecurityProfile          string                               `json:"securityProfile"`
-	SecurityCapabilityDigest string                               `json:"securityCapabilityDigest"`
-	RequiredSecurityFeatures []string                             `json:"requiredSecurityFeatures"`
-	CapabilityDowngrade      bool                                 `json:"capabilityDowngradeProtection"`
-	CommandSignatures        bool                                 `json:"commandSignatures"`
-	EventSignatures          bool                                 `json:"eventSignatures"`
-	RuntimeInstanceBinding   bool                                 `json:"runtimeInstanceBinding"`
-	OnlineKeyRotation        bool                                 `json:"onlineKeyRotation"`
-	Artifacts                []serverBridge2CertifiedArtifact0150 `json:"artifacts"`
+	SchemaVersion             string                               `json:"schemaVersion"`
+	Release                   string                               `json:"release"`
+	Version                   string                               `json:"version"`
+	ProtocolVersion           int                                  `json:"protocolVersion"`
+	Status                    string                               `json:"status"`
+	TargetCount               int                                  `json:"targetCount"`
+	ZeroPatch                 bool                                 `json:"zeroPatch"`
+	NodeIdentity              string                               `json:"nodeIdentity"`
+	OneTimeJoin               bool                                 `json:"oneTimeJoin"`
+	SecurityProfile           string                               `json:"securityProfile"`
+	SecurityCapabilityDigest  string                               `json:"securityCapabilityDigest"`
+	RequiredSecurityFeatures  []string                             `json:"requiredSecurityFeatures"`
+	CapabilityDowngrade       bool                                 `json:"capabilityDowngradeProtection"`
+	CommandSignatures         bool                                 `json:"commandSignatures"`
+	EventSignatures           bool                                 `json:"eventSignatures"`
+	RuntimeInstanceBinding    bool                                 `json:"runtimeInstanceBinding"`
+	OnlineKeyRotation         bool                                 `json:"onlineKeyRotation"`
+	GA                        bool                                 `json:"ga"`
+	ProtocolV3Frozen          bool                                 `json:"protocolV3Frozen"`
+	ProtocolV3FeatureDigest   string                               `json:"protocolV3FeatureDigest"`
+	ProtocolV2Mode            string                               `json:"protocolV2Mode"`
+	InstallerUpgradePath      bool                                 `json:"installerUpgradePath"`
+	UnifiedOperatorAPI        string                               `json:"unifiedOperatorAPI"`
+	PublicCompatibilityMatrix bool                                 `json:"publicCompatibilityMatrix"`
+	Artifacts                 []serverBridge2CertifiedArtifact0150 `json:"artifacts"`
 }
 
 func serverBridge2CertificationRequired0150(ver string) bool {
@@ -141,6 +164,16 @@ func serverBridgeSecurityCertificationRequired01912(ver string) bool {
 	return major > 0 || minor > 19 || (minor == 19 && patch >= 12)
 }
 
+func serverBridgeGARequired0200(ver string) bool {
+	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
+	if len(parts) < 2 {
+		return false
+	}
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	return err1 == nil && err2 == nil && (major > 0 || minor >= 20)
+}
+
 func serverBridgeReleaseTargetsForVersion0150(ver string) []string {
 	if serverBridgeUniversalAdaptersRequired0198(ver) {
 		return serverBridgeUniversalReleaseTargets0198
@@ -171,8 +204,15 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		expectedRelease = "ServerBridge 3"
 		expectedProtocol = 3
 	}
-	if cert.SchemaVersion != "1.0" || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
+	expectedSchema := "1.0"
+	if serverBridgeGARequired0200(ver) {
+		expectedSchema = "1.1"
+	}
+	if cert.SchemaVersion != expectedSchema || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
 		return fmt.Errorf("%s certification metadata mismatch", expectedRelease)
+	}
+	if serverBridgeGARequired0200(ver) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc") || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
+		return errors.New("ServerBridge 3 GA certification metadata mismatch")
 	}
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
@@ -190,21 +230,15 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	}
 	var allow map[string]map[string][]string
 	if serverBridgeSecurityCertificationRequired01912(ver) {
-		var document struct {
-			SchemaVersion            string                         `json:"schemaVersion"`
-			Release                  string                         `json:"release"`
-			ProtocolVersion          int                            `json:"protocolVersion"`
-			MinimumProtocolVersion   int                            `json:"minimumProtocolVersion"`
-			SecurityProfile          string                         `json:"securityProfile"`
-			SecurityCapabilityDigest string                         `json:"securityCapabilityDigest"`
-			RequiredFeatures         []string                       `json:"requiredFeatures"`
-			Releases                 map[string]map[string][]string `json:"releases"`
-		}
+		var document serverBridgeReleaseAllowlist01912
 		if err := json.Unmarshal(allowRaw, &document); err != nil {
 			return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
 			return errors.New("ServerBridge 3 release allowlist security metadata mismatch")
+		}
+		if serverBridgeGARequired0200(ver) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
+			return errors.New("ServerBridge 3 GA release allowlist metadata mismatch")
 		}
 		allow = document.Releases
 	} else if err := json.Unmarshal(allowRaw, &allow); err != nil {

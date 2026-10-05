@@ -22,6 +22,7 @@ SECURITY_FEATURES = [
     'security.online-key-rotation-v1',
 ]
 SECURITY_CAPABILITY_DIGEST = '088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4'
+PROTOCOL_V3_FEATURE_DIGEST = '098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc'
 HASH_FIELDS = {
     'velocity':'velocitySha256','bungeecord':'bungeeCordSha256','waterfall':'waterfallSha256',
     'bukkit':'bukkitSha256','spigot':'spigotSha256','paper':'paperSha256','purpur':'purpurSha256',
@@ -129,6 +130,9 @@ def main() -> int:
     allow = load_json(allowlist_path)
     if (allow.get('schemaVersion') != '3.0' or allow.get('release') != 'ServerBridge 3' or
         allow.get('protocolVersion') != 3 or allow.get('minimumProtocolVersion') != 3 or
+        allow.get('ga') is not True or allow.get('protocolV3Frozen') is not True or
+        str(allow.get('protocolV3FeatureDigest', '')).lower() != PROTOCOL_V3_FEATURE_DIGEST or
+        allow.get('protocolV2Mode') != 'compatibility-deprecated' or
         allow.get('securityProfile') != SECURITY_PROFILE or
         str(allow.get('securityCapabilityDigest', '')).lower() != SECURITY_CAPABILITY_DIGEST or
         sorted(allow.get('requiredFeatures') or []) != sorted(SECURITY_FEATURES)):
@@ -221,8 +225,11 @@ def main() -> int:
             die(f"{item['id']}: SHA256SUMS mismatch")
 
     report = {
-        'schemaVersion': '1.0', 'release': 'ServerBridge 3', 'version': VERSION,
+        'schemaVersion': '1.1', 'release': 'ServerBridge 3', 'version': VERSION,
         'protocolVersion': 3, 'status': 'certified', 'targetCount': len(evidence),
+        'ga': True, 'protocolV3Frozen': True, 'protocolV3FeatureDigest': PROTOCOL_V3_FEATURE_DIGEST,
+        'protocolV2Mode': 'compatibility-deprecated', 'installerUpgradePath': True,
+        'unifiedOperatorAPI': '/api/v1/server-bridge/overview', 'publicCompatibilityMatrix': True,
         'securityProfile': SECURITY_PROFILE, 'securityCapabilityDigest': SECURITY_CAPABILITY_DIGEST,
         'requiredSecurityFeatures': SECURITY_FEATURES, 'capabilityDowngradeProtection': True,
         'canonicalSigningDomain': 'NeverLauncher-ServerBridge-Protocol-v3',

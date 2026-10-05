@@ -3,6 +3,8 @@ package main
 import (
 	"archive/zip"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +76,26 @@ func writeCertifiedArtifact0199(t *testing.T, dir, platform, ver string) string 
 	cert := serverBridge2Certification0150{
 		SchemaVersion: "1.0", Release: "ServerBridge 3", Version: ver, ProtocolVersion: 3, Status: "certified",
 		TargetCount: len(targets), ZeroPatch: true, NodeIdentity: "Ed25519", OneTimeJoin: true,
+	}
+	if serverBridgeSecurityCertificationRequired01912(ver) {
+		cert.SecurityProfile = "serverbridge3-security-01912"
+		cert.SecurityCapabilityDigest = "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4"
+		cert.RequiredSecurityFeatures = append([]string(nil), serverBridgeSecurityFeatures01912...)
+		cert.CapabilityDowngrade = true
+		cert.CommandSignatures = true
+		cert.EventSignatures = true
+		cert.RuntimeInstanceBinding = true
+		cert.OnlineKeyRotation = true
+	}
+	if serverBridgeGARequired0200(ver) {
+		cert.SchemaVersion = "1.1"
+		cert.GA = true
+		cert.ProtocolV3Frozen = true
+		cert.ProtocolV3FeatureDigest = serverBridgeV3FrozenFeatureDigest0200
+		cert.ProtocolV2Mode = "compatibility-deprecated"
+		cert.InstallerUpgradePath = true
+		cert.UnifiedOperatorAPI = "/api/v1/server-bridge/overview"
+		cert.PublicCompatibilityMatrix = true
 	}
 	for _, id := range targets {
 		item := serverBridge2CertifiedArtifact0150{ID: id, File: "neverlauncher-" + id + "-bridge-" + ver + ".jar", SHA256: strings.Repeat("a", 64), Bytes: 1}
@@ -278,5 +300,99 @@ func TestServerBridgeReleaseTargetCohortIncludesUniversalAdapters0199(t *testing
 		if serverBridge2AllowlistFields0150[id] == "" {
 			t.Fatalf("release verifier missing allowlist field for %s", id)
 		}
+	}
+}
+
+func TestServerBridgeMigrateV3GA0200(t *testing.T) {
+	oldVersion := version
+	version = "0.20.0"
+	defer func() { version = oldVersion }()
+	root := t.TempDir()
+	writeMarkerJar0199(t, filepath.Join(root, "paper-1.21.1.jar"), "io/papermc/paper/configuration/GlobalConfiguration.class")
+	oldArtifacts := t.TempDir()
+	writeCertifiedArtifact0199(t, oldArtifacts, "paper", "0.19.12")
+	if err := provisionServerBridge0199([]string{
+		"install", "--server-root", root, "--artifact-dir", oldArtifacts, "--bridge-version", "0.19.12",
+		"--backend", "https://old-backend.example.test", "--server-id", "paper-ga", "--project", "prod", "--profile", "survival",
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
+	before, err := readBridgeProvisionState0199(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identityBefore, err := loadNodeIdentityPublic0199(before.IdentityPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/server-bridge/capabilities" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"apiVersion":"1.0","data":{"negotiatedProtocolVersion":3,"protocolV3Frozen":true,"protocolV3Status":"ga-frozen","protocolV3FeatureDigest":"098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"}}`))
+	}))
+	defer backend.Close()
+	configRaw, err := os.ReadFile(before.ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configRaw = []byte(strings.ReplaceAll(string(configRaw), "https://old-backend.example.test", backend.URL))
+	if err := os.WriteFile(before.ConfigPath, configRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	gaArtifacts := t.TempDir()
+	writeCertifiedArtifact0199(t, gaArtifacts, "paper", "0.20.0")
+	if err := serverBridgeMigrateV30200([]string{
+		"migrate-v3", "--server-root", root, "--artifact-dir", gaArtifacts, "--bridge-version", "0.20.0", "--backend", backend.URL,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	after, err := readBridgeProvisionState0199(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Version != "0.20.0" {
+		t.Fatalf("migration version=%s", after.Version)
+	}
+	identityAfter, err := loadNodeIdentityPublic0199(after.IdentityPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identityAfter.Fingerprint != identityBefore.Fingerprint || identityAfter.PublicKey != identityBefore.PublicKey {
+		t.Fatal("v2->v3 migration rotated node identity")
+	}
+	receiptPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "protocol-v3-ga-migration.json")
+	receiptRaw, err := os.ReadFile(receiptPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var receipt map[string]any
+	if err := json.Unmarshal(receiptRaw, &receipt); err != nil {
+		t.Fatal(err)
+	}
+	if receipt["fromVersion"] != "0.19.12" || receipt["toVersion"] != "0.20.0" || receipt["protocolTo"] != "v3-ga-frozen" {
+		t.Fatalf("unexpected migration receipt: %#v", receipt)
+	}
+	if err := rollbackServerBridge0199([]string{"rollback", "--server-root", root, "--transaction", after.TransactionID}); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := readBridgeProvisionState0199(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Version != "0.19.12" {
+		t.Fatalf("rollback version=%s", restored.Version)
+	}
+	identityRestored, err := loadNodeIdentityPublic0199(restored.IdentityPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identityRestored.Fingerprint != identityBefore.Fingerprint {
+		t.Fatal("rollback changed node identity")
 	}
 }

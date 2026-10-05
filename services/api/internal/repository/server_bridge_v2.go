@@ -33,6 +33,7 @@ type ServerBridgeRepository interface {
 	LeaseServerBridgeControlCommand(context.Context, string, int64, string, string, string, int64, time.Time, time.Duration) (model.ServerBridgeControlCommand, error)
 	CompleteServerBridgeControlCommand(context.Context, string, int64, string, string, string, string, int64, string, map[string]string, string, time.Time) (model.ServerBridgeControlCommand, error)
 	GetServerBridgeControlCommand(context.Context, string, string) (model.ServerBridgeControlCommand, error)
+	ListServerBridgeRecentControlCommands(context.Context, int) ([]model.ServerBridgeControlCommand, error)
 	CreateServerBridgeJoinTicket(context.Context, model.ServerBridgeJoinTicket) (model.ServerBridgeJoinTicket, error)
 	GetActiveServerBridgeJoinTicket(context.Context, string, string, time.Time) (model.ServerBridgeJoinTicket, error)
 	ConsumeServerBridgeJoinTicket(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeJoinTicket, error)
@@ -1611,4 +1612,32 @@ func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serve
 		return model.ServerBridgeControlCommand{}, ErrNotFound
 	}
 	return c, err
+}
+
+// ListServerBridgeRecentControlCommands returns bounded control-plane history for the
+// GA operator overview. Lease tokens remain redacted by the model JSON contract.
+func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Context, limit int) ([]model.ServerBridgeControlCommand, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	if limit < 1 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	rows, err := r.db.QueryContext(ctx, serverBridgeControlSelect0195+` ORDER BY updated_at DESC,id DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]model.ServerBridgeControlCommand, 0, limit)
+	for rows.Next() {
+		item, scanErr := scanServerBridgeControl0195(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }

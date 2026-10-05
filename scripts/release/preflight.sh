@@ -81,6 +81,7 @@ run_step serverbridge-host-01910 python3 "${ROOT_DIR}/scripts/smoke/offline/serv
 run_step serverbridge-ha-control-plane-01911 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-ha-control-plane-01911.py"
 run_step serverbridge-security-certification-01912 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge-security-certification-01912.py"
 run_step serverbridge-security-certification-01912-e2e bash "${ROOT_DIR}/e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh"
+run_step serverbridge3-ga-0200 python3 "${ROOT_DIR}/scripts/smoke/offline/serverbridge3-ga-0200.py"
 run_step delivery-manifest-platform-architecture-0151 python3 "${ROOT_DIR}/scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
 run_step signed-windows-x64-arm64-0152 python3 "${ROOT_DIR}/scripts/smoke/offline/signed-windows-x64-arm64-0152.py"
 run_step linux-x64-arm64-production-packages-0153 python3 "${ROOT_DIR}/scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"

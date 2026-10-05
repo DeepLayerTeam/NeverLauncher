@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0040_serverbridge_ha_control_plane_01911" {
+	if st.Current != "0041_serverbridge3_ga_0200" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0040_serverbridge_ha_control_plane_01911" {
+		if k != "0041_serverbridge3_ga_0200" {
 			pending[k] = v
 		}
 	}
@@ -535,6 +535,19 @@ func TestServerBridgeHAControlPlaneMigration01911(t *testing.T) {
 	for _, required := range []string{"delivery_sequence", "lease_owner", "lease_token", "uq_server_bridge_control_delivery_sequence_01911", "idx_server_bridge_control_resume_01911", "idx_server_bridge_control_owner_01911"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.19.11 HA migration missing %q", required)
+		}
+	}
+}
+
+func TestServerBridge3GAMigration0200(t *testing.T) {
+	b, err := os.ReadFile("sql/0041_serverbridge3_ga_0200.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{"protocol_version=2", "compatibility/deprecation-only", "nl server-bridge migrate-v3", "idx_server_bridge_nodes_protocol_migration_0200"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("GA migration missing %q", required)
 		}
 	}
 }

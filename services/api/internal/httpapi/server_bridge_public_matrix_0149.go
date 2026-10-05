@@ -44,8 +44,11 @@ func serverBridgeMatrixPlatforms0149(version string) []serverBridgeMatrixPlatfor
 		common("purpur", "bukkit", "backend", "", "1.21.1", "neverlauncher-purpur-bridge-"+version+".jar", "Bukkit-family listener + dedicated network executor", "runtime-e2e"),
 		common("folia", "bukkit", "backend", "", "1.21.1", "neverlauncher-folia-bridge-"+version+".jar", "Folia-safe dedicated network executor", "runtime-e2e"),
 		common("fabric", "fabric", "backend", "", "1.21.1", "neverlauncher-fabric-bridge-"+version+".jar", "Fabric login synchronizer + bounded validation executor", "runtime-e2e"),
+		common("quilt", "quilt", "backend", "", "1.21.1", "neverlauncher-quilt-bridge-"+version+".jar", "Quilt server lifecycle + bounded validation executor", "build-compatibility"),
 		common("forge", "modloader", "backend", "", "1.21.1", "neverlauncher-forge-bridge-"+version+".jar", "PlayerNegotiationEvent future + bounded validation executor", "runtime-e2e"),
 		common("neoforge", "modloader", "backend", "", "1.21.1", "neverlauncher-neoforge-bridge-"+version+".jar", "PlayerNegotiationEvent future + bounded validation executor", "runtime-e2e"),
+		common("sponge", "sponge", "backend", "", "1.21.1", "neverlauncher-sponge-bridge-"+version+".jar", "Sponge event lifecycle + bounded validation executor", "build-compatibility"),
+		common("vanilla", "vanilla-sidecar", "backend", "", "1.21.1", "neverlauncher-vanilla-bridge-"+version+".jar", "RCON sidecar + bounded polling executor", "sidecar-rcon-e2e"),
 	}
 }
 
@@ -56,8 +59,15 @@ func (s Server) serverBridgePublicMatrix0149(w http.ResponseWriter, r *http.Requ
 			"schemaVersion":             bridgePluginsSchema940,
 			"toolVersion":               s.Version,
 			"status":                    "supported",
+			"release":                   serverBridgeGAVersion0200,
 			"protocolVersion":           serverBridgeProtocolCurrent,
 			"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
+			"protocolV3Status":          serverBridgeV3GAMode0200,
+			"protocolV3Frozen":          serverBridgeV3Frozen0200(),
+			"protocolV3FeatureDigest":   serverBridgeV3FrozenFeatureDigest0200,
+			"protocolV2Mode":            serverBridgeV2CompatibilityMode0200,
+			"protocolV2Deprecated":      true,
+			"migrationCommand":          "nl server-bridge migrate-v3",
 			"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
 			"platforms":                 serverBridgeMatrixPlatforms0149(s.Version),
 			"ha": map[string]any{

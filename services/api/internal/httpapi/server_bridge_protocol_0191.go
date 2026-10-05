@@ -55,31 +55,7 @@ var serverBridgeV2Features0191 = []string{
 	serverBridgeFeatureRuntimeTopology,
 }
 
-var serverBridgeV3Features0191 = []string{
-	serverBridgeFeatureCapabilityNegotiation,
-	serverBridgeFeatureFlags,
-	serverBridgeFeatureRollingUpgrade,
-	serverBridgeFeatureNodeSignatures,
-	serverBridgeFeatureNonceReplay,
-	serverBridgeFeatureArtifactIntegrity,
-	serverBridgeFeatureOneTimeJoin,
-	serverBridgeFeatureOneTimeHandoff,
-	serverBridgeFeatureRuntimeTopology,
-	serverBridgeFeatureRuntimeDiscovery,
-	serverBridgeFeatureRuntimeIdentity,
-	serverBridgeFeatureServerTelemetry,
-	serverBridgeFeatureEventStream,
-	serverBridgeFeatureControlAPI,
-	serverBridgeFeatureHAControlPlane,
-	serverBridgeFeatureRoutingV2,
-	serverBridgeFeaturePlayerSessionV3,
-	serverBridgeFeatureV3SigningDomain01912,
-	serverBridgeFeatureDowngradeProtection01912,
-	serverBridgeFeatureCommandSignatures01912,
-	serverBridgeFeatureEventSignatures01912,
-	serverBridgeFeatureRuntimeBinding01912,
-	serverBridgeFeatureOnlineKeyRotation01912,
-}
+var serverBridgeV3Features0191 = serverBridgeV3FrozenFeatureSet0200()
 
 type bridgeProtocolEnvelope0191 struct {
 	ProtocolVersion int `json:"protocolVersion"`
@@ -472,7 +448,13 @@ func (s Server) serverBridgeCapabilities0191(w http.ResponseWriter, r *http.Requ
 		"featureFlags":                  bridgeFeatureFlags0191(enabledFeatures),
 		"requiredFeatures":              map[string][]string{"2": []string{}, "3": append([]string(nil), serverBridgeV3RequiredFeatures0191...)},
 		"rollingUpgrade":                true,
+		"protocolV3Frozen":              serverBridgeV3Frozen0200(),
+		"protocolV3FeatureDigest":       serverBridgeV3FrozenFeatureDigest0200,
+		"protocolV3Status":              serverBridgeV3GAMode0200,
 		"legacyProtocolV2Supported":     true,
+		"legacyProtocolV2Mode":          serverBridgeV2CompatibilityMode0200,
+		"legacyProtocolV2Deprecated":    true,
+		"migrationCommand":              "nl server-bridge migrate-v3",
 		"capabilityNegotiationActive":   true,
 		"securityProfile":               serverBridgeSecurityProfile01912,
 		"securityCapabilityDigest":      securityDigest,
@@ -485,6 +467,8 @@ func (s Server) serverBridgeCapabilities0191(w http.ResponseWriter, r *http.Requ
 	}
 	if negotiatedProtocol == 0 {
 		data["reason"] = reason
+	} else {
+		markServerBridgeProtocolResponse0200(w, negotiatedProtocol)
 	}
 	writeJSON(w, status, map[string]any{"apiVersion": bridgePluginsSchema940, "data": data})
 }

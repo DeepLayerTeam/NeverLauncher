@@ -780,6 +780,11 @@ jobs:
           python3 scripts/smoke/offline/serverbridge-security-certification-01912.py
           bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
           (cd services/api && go test -run 'TestServerBridge(Security|ProtocolV3|Event|NodeIdentity|Control)' ./internal/httpapi)
+      - name: ServerBridge 3 GA 0.20.0 gate
+        run: |
+          python3 scripts/smoke/offline/serverbridge3-ga-0200.py
+          (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
+          (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/neverlauncher ./internal/dbmigrate)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

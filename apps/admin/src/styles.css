@@ -47,3 +47,18 @@ code { color: #bfdbfe; }
 .check { display: flex; gap: 8px; align-items: center; color: #cbd5e1; margin-top: 8px; }
 .check input { width: auto; }
 @media (max-width: 1200px) { .formGrid { grid-template-columns: 1fr; } }
+
+.bridgeOverview { display: grid; gap: 16px; }
+.bridgeHero, .bridgeNodeTitle { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.bridgeHero h2 { margin-bottom: 6px; }
+.bridgeMetricGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.bridgeMetricGrid .card { box-shadow: none; background: #0f172a; padding: 14px; }
+.bridgeMetricGrid .metric { font-size: 24px; }
+.bridgeDigest { overflow-wrap: anywhere; }
+.bridgeSection { border: 1px solid #334155; border-radius: 16px; padding: 14px; background: #0b1220; overflow: auto; }
+.bridgeNodeGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bridgeNode p { margin: 8px 0; }
+.bridgeAttention { color: #fde68a; }
+.bridgeColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1300px) { .bridgeMetricGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .bridgeMetricGrid, .bridgeNodeGrid, .bridgeColumns { grid-template-columns: 1fr; } }

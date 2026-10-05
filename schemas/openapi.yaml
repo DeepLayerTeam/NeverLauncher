@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.19.12. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.20.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -6609,6 +6609,35 @@
         "security": []
       }
     },
+    "/api/v1/server-bridge/overview": {
+      "get": {
+        "operationId": "get_server_bridge_overview",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/server-bridge/overview",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerBridgeOverviewResponseGA"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/server-bridge/plugin-compatibility": {
       "get": {
         "operationId": "get_server_bridge_plugin_compatibility",
@@ -9124,7 +9153,13 @@
               "featureFlags",
               "requiredFeatures",
               "rollingUpgrade",
+              "protocolV3Frozen",
+              "protocolV3FeatureDigest",
+              "protocolV3Status",
               "legacyProtocolV2Supported",
+              "legacyProtocolV2Mode",
+              "legacyProtocolV2Deprecated",
+              "migrationCommand",
               "capabilityNegotiationActive",
               "securityProfile",
               "securityCapabilityDigest",
@@ -9203,8 +9238,26 @@
               "rollingUpgrade": {
                 "const": true
               },
+              "protocolV3Frozen": {
+                "const": true
+              },
+              "protocolV3FeatureDigest": {
+                "const": "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"
+              },
+              "protocolV3Status": {
+                "const": "ga-frozen"
+              },
               "legacyProtocolV2Supported": {
                 "const": true
+              },
+              "legacyProtocolV2Mode": {
+                "const": "compatibility-deprecated"
+              },
+              "legacyProtocolV2Deprecated": {
+                "const": true
+              },
+              "migrationCommand": {
+                "const": "nl server-bridge migrate-v3"
               },
               "capabilityNegotiationActive": {
                 "const": true
@@ -9239,6 +9292,110 @@
               },
               "reason": {
                 "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ServerBridgeOverviewResponseGA": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "data"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "toolVersion",
+              "release",
+              "protocol",
+              "metrics",
+              "nodes",
+              "topology",
+              "control",
+              "audit",
+              "generatedAt"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "const": "3.0-ga"
+              },
+              "toolVersion": {
+                "type": "string"
+              },
+              "release": {
+                "const": "ServerBridge 3 GA"
+              },
+              "protocol": {
+                "type": "object",
+                "required": [
+                  "version",
+                  "status",
+                  "frozen",
+                  "featureDigest",
+                  "v2Mode"
+                ],
+                "properties": {
+                  "version": {
+                    "const": 3
+                  },
+                  "status": {
+                    "const": "ga-frozen"
+                  },
+                  "frozen": {
+                    "const": true
+                  },
+                  "featureDigest": {
+                    "const": "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"
+                  },
+                  "v2Mode": {
+                    "const": "compatibility-deprecated"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "metrics": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "topology": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "control": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "audit": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "generatedAt": {
+                "type": "string",
+                "format": "date-time"
               }
             },
             "additionalProperties": false

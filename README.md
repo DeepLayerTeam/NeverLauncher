@@ -1,3 +1,9 @@
+## ServerBridge 3 GA — 0.20.0
+
+`0.20.0` переводит ServerBridge 3 в GA без изменения замороженного wire contract Protocol v3. Полный v3 feature-set имеет фиксированный digest `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`; новый Bridge не делает downgrade до v2, а Backend сохраняет Protocol v2 только в режиме `compatibility-deprecated`. Production migration выполняется командой `nl server-bridge migrate-v3`: она проверяет GA capabilities Backend, использует существующий certified transactional upgrade/dry-run/rollback путь, сохраняет Ed25519 node identity и записывает migration receipt.
+
+GA release boundary требует `SERVERBRIDGE3_CERTIFICATION.json` schema 1.1 и schema 3.0 release allowlist с exact SHA-256 всех 14 adapters. `GET /api/v1/server-bridge/overview` объединяет node/runtime state, telemetry, topology, control history и audit в одном operator API; Admin UI отображает этот overview напрямую. Public compatibility policy опубликован в `serverbridge/MATRIX.md` и `GET /api/v1/server-bridge/matrix`. Полная процедура миграции и сертификации: `serverbridge/GA.md`.
+
 ## Security & Certification — 0.19.12
 
 `0.19.12` закрепляет ServerBridge Protocol v3 как единственный security profile для нового Bridge release: capability negotiation подписывается Backend Ed25519 key и содержит canonical capability digest, а node requests, events и control commands используют единый domain `NeverLauncher-ServerBridge-Protocol-v3`. Подписи связаны с node fingerprint, текущим `runtimeId`, identity/runtime epoch и полным сертифицированным security feature-set; downgrade или перенос подписанного сообщения на другой runtime fail-closed отклоняется.

@@ -23,7 +23,10 @@ require(release,['SERVERBRIDGE3_CERTIFICATION.json','BRIDGE_RELEASE_ALLOWLIST.js
 required=read('scripts/smoke/release-required/release-bundle.sh')
 require(required,['SERVERBRIDGE3_CERTIFICATION.json','BRIDGE_RELEASE_ALLOWLIST.json','BRIDGE_PLUGIN_MANIFEST.json'],'publish gate')
 status=read('services/api/internal/httpapi/bridge_plugins.go')
-require(status,[f'NeverLauncher {version} ServerBridge 3'],'runtime release status')
+if parts >= (0,20,0):
+    require(status,['ServerBridge 3 GA'],'runtime release status')
+else:
+    require(status,[f'NeverLauncher {version} ServerBridge 3'],'runtime release status')
 import json
 targets=json.loads(read('serverbridge/targets.json'))
 if targets.get('productVersion') != version or targets.get('protocolVersion') != 3: raise SystemExit('ServerBridge matrix version/protocol mismatch')

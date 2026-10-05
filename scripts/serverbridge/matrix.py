@@ -63,14 +63,14 @@ def markdown(data: dict[str, Any]) -> str:
     lines = [
         f"# NeverLauncher {data['productVersion']} — Public ServerBridge Matrix",
         "",
-        "> Capability matrix. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.",
+        "> ServerBridge 3 GA compatibility matrix. Protocol v3 is frozen; Protocol v2 is compatibility/deprecation-only and must migrate with `nl server-bridge migrate-v3`. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.",
         "",
-        "| Platform | Family | Role | Minecraft | Coverage | Protocol | Zero-patch | Node identity | One-time join | Handoff |",
-        "|---|---|---|---|---|---:|---:|---:|---:|---:|",
+        "| Platform | Family | Role | Minecraft | Coverage | Protocol | v2 compatibility | Zero-patch | Node identity | One-time join | Handoff |",
+        "|---|---|---|---|---|---:|---|---:|---:|---:|---:|",
     ]
     for row in data["targets"]:
         handoff = "source" if row["role"] == "proxy" else "target"
-        lines.append(f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 (v2 rolling) | yes | Ed25519 | yes | {handoff} |")
+        lines.append(f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | {handoff} |")
     lines += ["", "Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.", ""]
     return "\n".join(lines)
 

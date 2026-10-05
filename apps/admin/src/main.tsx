@@ -13,6 +13,8 @@ type PasskeySessionResponse = { status?: string; accessToken?: string; session?:
 type DashboardData = { status?: string; metrics?: Record<string, number>; projects?: any[]; profiles?: any[]; channels?: any[]; users?: any[]; audit?: any[] };
 type SessionView = { id: string; device: string; deviceId?: string; provider?: string; status?: string; riskState?: string; lastIp?: string; lastSeenAt?: string; expiresAt?: string; current?: boolean };
 type TrustedDeviceView = { id: string; userId: string; name: string; status: string; trustState?: string; keyAlgorithm?: string; keyBinding?: string; hardwareProvider?: string; keyFingerprint?: string; lastSeenAt?: string; revokedAt?: string; revokedReason?: string; attestationState?: string; revocationPermanent?: boolean };
+type ServerBridgeNodeView = { id?: string; name?: string; kind?: string; status?: string; protocolVersion?: number; protocolMode?: string; protocolMigrationRequired?: boolean; upgradeRecommended?: boolean; pluginVersion?: string; integrityStatus?: string; fresh?: boolean; runtimeId?: string; hostname?: string; minecraftVersion?: string; javaVersion?: string; loaderName?: string; loaderVersion?: string; serverBrand?: string; telemetry?: Record<string, unknown> };
+type ServerBridgeOverviewData = { release?: string; generatedAt?: string; protocol?: { version?: number; status?: string; frozen?: boolean; featureDigest?: string; v2Mode?: string }; metrics?: { nodesTotal?: number; nodesFresh?: number; nodesStale?: number; protocolMigrationsRequired?: number; upgradesRecommended?: number; topologyEdges?: number; recentControlCommands?: number; recentAuditEvents?: number; protocol?: Record<string, number>; controlStatus?: Record<string, number> }; nodes?: ServerBridgeNodeView[]; topology?: Array<Record<string, unknown>>; control?: Array<Record<string, unknown>>; audit?: Array<Record<string, unknown>> };
 
 type ProjectForm = { id: string; name: string; description: string; homepage: string; repository: string; defaultChannel: string };
 type ProfileForm = { projectId: string; id: string; name: string; description: string; loader: string; preset: string; isDefault: boolean };
@@ -51,7 +53,7 @@ const endpointBySection: Record<string, string> = {
   devices: '/api/v1/admin/auth/devices',
   audit: '/api/v1/admin/audit',
   storage: '/api/v1/admin/storage/health',
-  'server-bridge': '/api/v1/server-bridge/servers',
+  'server-bridge': '/api/v1/server-bridge/overview',
   diagnostics: '/api/v1/operations/diagnostics',
   'backup-restore': '/api/v1/operations/backup',
 };
@@ -144,6 +146,25 @@ function DataTable({ payload }: { payload: Record<string, unknown> | null }) {
   const rows = useMemo(() => Object.entries(payload ?? {}).filter(([key]) => !['schemaVersion', 'toolVersion'].includes(key)), [payload]);
   if (!payload) return <p className="muted">Данные раздела ещё не загружены.</p>;
   return <table className="table"><tbody>{rows.map(([key, value]) => <tr key={key}><th>{key}</th><td><pre>{JSON.stringify(value, null, 2)}</pre></td></tr>)}</tbody></table>;
+}
+
+function ServerBridgeOverview({ payload }: { payload: Record<string, unknown> | null }) {
+  if (!payload) return <p className="muted">ServerBridge overview ещё не загружен.</p>;
+  const data = payload as ServerBridgeOverviewData;
+  const protocol = data.protocol ?? {};
+  const metrics = data.metrics ?? {};
+  const nodes = data.nodes ?? [];
+  const topology = data.topology ?? [];
+  const controls = data.control ?? [];
+  const audit = data.audit ?? [];
+  return <div className="bridgeOverview">
+    <div className="bridgeHero"><div><h2>{data.release ?? 'ServerBridge 3'}</h2><p className="muted">Protocol v{protocol.version ?? '—'} · {protocol.status ?? 'unknown'} · v2: {protocol.v2Mode ?? 'unknown'}</p></div><span className={`badge ${protocol.frozen ? 'ok' : 'warn'}`}>{protocol.frozen ? 'v3 frozen' : 'v3 mutable'}</span></div>
+    <div className="bridgeMetricGrid"><MetricCard label="Узлы" value={metrics.nodesTotal ?? 0} /><MetricCard label="Свежие" value={metrics.nodesFresh ?? 0} /><MetricCard label="Миграция v2→v3" value={metrics.protocolMigrationsRequired ?? 0} /><MetricCard label="Нужно обновить" value={metrics.upgradesRecommended ?? 0} /><MetricCard label="Topology edges" value={metrics.topologyEdges ?? 0} /><MetricCard label="Control history" value={metrics.recentControlCommands ?? 0} /></div>
+    <p className="bridgeDigest muted">Frozen feature digest: <code>{protocol.featureDigest ?? '—'}</code>{data.generatedAt ? ` · ${new Date(data.generatedAt).toLocaleString()}` : ''}</p>
+    <section className="bridgeSection"><h3>Серверы и runtime telemetry</h3>{nodes.length === 0 ? <p className="muted">ServerBridge nodes не зарегистрированы.</p> : <div className="bridgeNodeGrid">{nodes.map((node) => <article className="subcard bridgeNode" key={node.id ?? node.name}><div className="bridgeNodeTitle"><strong>{node.name ?? node.id ?? 'node'}</strong><span className={`badge ${node.fresh && node.status === 'active' ? 'ok' : 'warn'}`}>{node.status ?? 'unknown'}</span></div><p className="muted">{node.kind ?? 'server'} · Protocol v{node.protocolVersion ?? '—'} / {node.protocolMode ?? 'unknown'} · bridge {node.pluginVersion ?? '—'}</p><p>{node.serverBrand ?? node.loaderName ?? 'Minecraft'} {node.minecraftVersion ?? ''} · Java {node.javaVersion ?? '—'} · {node.hostname ?? 'host n/a'}</p><p className="muted">runtime <code>{node.runtimeId ?? '—'}</code> · integrity {node.integrityStatus ?? 'unknown'}</p>{(node.protocolMigrationRequired || node.upgradeRecommended) && <p className="bridgeAttention">{node.protocolMigrationRequired ? 'Требуется production migration v2→v3. ' : ''}{node.upgradeRecommended ? 'Рекомендуется upgrade bridge.' : ''}</p>}{node.telemetry && <details><summary>Telemetry</summary><pre>{JSON.stringify(node.telemetry, null, 2)}</pre></details>}</article>)}</div>}</section>
+    <div className="bridgeColumns"><section className="bridgeSection"><h3>Topology</h3><pre>{JSON.stringify(topology, null, 2)}</pre></section><section className="bridgeSection"><h3>Control</h3><pre>{JSON.stringify(controls, null, 2)}</pre></section></div>
+    <section className="bridgeSection"><h3>Audit</h3><pre>{JSON.stringify(audit, null, 2)}</pre></section>
+  </div>;
 }
 
 function TextInput({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
@@ -477,7 +498,7 @@ function App() {
       <section className="grid"><MetricCard label="Проекты" value={metrics.projects ?? '—'} /><MetricCard label="Профили" value={metrics.profiles ?? '—'} /><MetricCard label="Каналы" value={metrics.channels ?? '—'} /><MetricCard label="Аудит" value={metrics.auditEvents ?? '—'} /><MetricCard label="Состояние" value={dashboard?.status ?? status} /></section>
       {crudPanel}
       {packagePanel}
-      <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2><DataTable payload={payload} /></section>
+      <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : <DataTable payload={payload} />}</section>
       <section className="card wide"><h2>Основной сценарий</h2><div className="workflow">{(productionUI.primaryFlow ?? ['вход', 'создание проекта', 'изменение проекта', 'создание профиля', 'изменение профиля', 'создание канала', 'изменение канала', 'создание пользователя', 'публикация stable', 'проверка аудита']).map((step) => <span key={step}>{step}</span>)}</div></section>
     </section>
   </main>;

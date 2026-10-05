@@ -18,7 +18,7 @@ require(http,['serverBridgeCreateHandoff0148','serverBridgeTopology0148','server
 config=read('plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeConfig.java')
 client=read('plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java')
 require(config,['ensureZeroPatchConfig','No Minecraft/proxy configuration is modified','handoffUrl()'],'zero-patch config bootstrap')
-require(client,['createHandoff','config.handoffUrl()','signedRequest("POST"'],'signed handoff client')
+require(client,['createHandoff','config.handoffPath()','sendSignedWithFailover("POST"'],'signed handoff client')
 proxy=read('plugins/proxy-family-common/src/main/java/ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.java')
 velocity=read('plugins/velocity-bridge/src/main/java/ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.java')
 bungee=read('plugins/bungee-family-common/src/main/java/ru/neverlauncher/bridge/bungee/BungeeFamilyBridgePlugin.java')

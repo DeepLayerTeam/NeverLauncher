@@ -1,3 +1,11 @@
+## [0.20.0] - 2026-10-05
+
+- Promoted ServerBridge 3 to GA with a frozen Protocol v3 feature set/digest; Protocol v2 remains Backend compatibility/deprecation-only and emits explicit migration metadata.
+- Added the production `nl server-bridge migrate-v3` path with GA Backend preflight, certified transactional artifact upgrade, dry-run/rollback compatibility, node-identity preservation and durable migration receipt.
+- Added GA certification schema 1.1 and release-allowlist enforcement across certifier, release verification and provisioning for all 14 ServerBridge artifacts.
+- Added one authenticated ServerBridge operator overview API combining node/runtime state, telemetry, topology, control history and audit, plus a dedicated Admin UI overview.
+- Added database migration `0041_serverbridge3_ga_0200`, completed the public 14-target compatibility matrix and documented the v2→v3 production rollout.
+
 ## [0.19.12] - 2026-10-05
 
 - Added one canonical ServerBridge Protocol v3 signing domain for capability negotiation, node requests, ordered events and Backend control commands, with node fingerprint, runtime instance and identity/runtime epoch binding.

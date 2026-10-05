@@ -108,3 +108,60 @@ func TestVerifyServerBridge3CertificationInBundle0191(t *testing.T) {
 		t.Fatal("0.19.1 must not accept only the legacy ServerBridge 2 certification filename")
 	}
 }
+
+func TestVerifyServerBridge3GACertification0200(t *testing.T) {
+	dir := t.TempDir()
+	ver := "0.20.0"
+	policy := map[string][]string{}
+	cert := serverBridge2Certification0150{
+		SchemaVersion: "1.1", Release: "ServerBridge 3", Version: ver, ProtocolVersion: 3,
+		Status: "certified", TargetCount: len(serverBridgeUniversalReleaseTargets0198), ZeroPatch: true,
+		NodeIdentity: "Ed25519", OneTimeJoin: true,
+		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+		RequiredSecurityFeatures: append([]string(nil), serverBridgeSecurityFeatures01912...), CapabilityDowngrade: true,
+		CommandSignatures: true, EventSignatures: true, RuntimeInstanceBinding: true, OnlineKeyRotation: true,
+		GA: true, ProtocolV3Frozen: true, ProtocolV3FeatureDigest: serverBridgeV3FrozenFeatureDigest0200,
+		ProtocolV2Mode: "compatibility-deprecated", InstallerUpgradePath: true,
+		UnifiedOperatorAPI: "/api/v1/server-bridge/overview", PublicCompatibilityMatrix: true,
+	}
+	for i, id := range serverBridgeUniversalReleaseTargets0198 {
+		name := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", id, ver)
+		body := []byte(fmt.Sprintf("synthetic-serverbridge3-ga-artifact:%s:%d", id, i))
+		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		hash, size, err := hashFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		cert.Artifacts = append(cert.Artifacts, serverBridge2CertifiedArtifact0150{ID: id, File: name, SHA256: hash, Bytes: size})
+		policy[serverBridge2AllowlistFields0150[id]] = []string{hash}
+	}
+	certRaw, _ := json.Marshal(cert)
+	if err := os.WriteFile(filepath.Join(dir, serverBridge3CertificationReleaseFile), certRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	allow := serverBridgeReleaseAllowlist01912{
+		SchemaVersion: "3.0", Release: "ServerBridge 3", ProtocolVersion: 3, MinimumProtocolVersion: 3,
+		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+		RequiredFeatures: append([]string(nil), serverBridgeSecurityFeatures01912...), GA: true, ProtocolV3Frozen: true,
+		ProtocolV3FeatureDigest: serverBridgeV3FrozenFeatureDigest0200, ProtocolV2Mode: "compatibility-deprecated",
+		Releases: map[string]map[string][]string{ver: policy},
+	}
+	allowRaw, _ := json.Marshal(allow)
+	if err := os.WriteFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"), allowRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
+		t.Fatalf("valid GA certification rejected: %v", err)
+	}
+
+	cert.ProtocolV3Frozen = false
+	certRaw, _ = json.Marshal(cert)
+	if err := os.WriteFile(filepath.Join(dir, serverBridge3CertificationReleaseFile), certRaw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err == nil {
+		t.Fatal("GA certification without frozen Protocol v3 must fail")
+	}
+}

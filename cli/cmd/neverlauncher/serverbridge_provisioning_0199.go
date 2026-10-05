@@ -97,7 +97,7 @@ type bridgeIdentityMaterial0199 struct {
 
 func handleServerBridge0199(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|rollback|host [параметры]")
+		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host [параметры]")
 	}
 	switch args[0] {
 	case "detect":
@@ -118,6 +118,8 @@ func handleServerBridge0199(args []string) error {
 		return enrollServerBridge0199(args)
 	case "status":
 		return serverBridgeProvisionStatus0199(args)
+	case "migrate-v3":
+		return serverBridgeMigrateV30200(args)
 	case "rollback":
 		return rollbackServerBridge0199(args)
 	case "host":
@@ -764,8 +766,20 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 			return "", fmt.Errorf("invalid %s: %w", certPath, err)
 		}
 		targets := serverBridgeReleaseTargetsForVersion0150(artifactVersion)
-		if cert.Release != "ServerBridge 3" || cert.Version != artifactVersion || cert.Status != "certified" || cert.ProtocolVersion != 3 || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin || cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
+		expectedSchema := "1.0"
+		if serverBridgeGARequired0200(artifactVersion) {
+			expectedSchema = "1.1"
+		}
+		if cert.SchemaVersion != expectedSchema || cert.Release != "ServerBridge 3" || cert.Version != artifactVersion || cert.Status != "certified" || cert.ProtocolVersion != 3 || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin || cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
 			return "", fmt.Errorf("%s does not contain a complete certified ServerBridge 3 cohort for version %s", certPath, artifactVersion)
+		}
+		if serverBridgeSecurityCertificationRequired01912(artifactVersion) {
+			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
+				return "", errors.New("ServerBridge 3 security certification metadata mismatch")
+			}
+		}
+		if serverBridgeGARequired0200(artifactVersion) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
+			return "", errors.New("ServerBridge 3 GA certification metadata mismatch")
 		}
 		for _, item := range cert.Artifacts {
 			if item.ID != platform {
@@ -783,11 +797,17 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	if err != nil {
 		return "", errors.New("production provisioning requires sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
 	}
-	var allow map[string]map[string][]string
-	if err := json.Unmarshal(raw, &allow); err != nil {
+	var document serverBridgeReleaseAllowlist01912
+	if err := json.Unmarshal(raw, &document); err != nil {
 		return "", fmt.Errorf("invalid %s: %w", allowPath, err)
 	}
-	policy := allow[artifactVersion]
+	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+		return "", errors.New("ServerBridge 3 release allowlist security metadata mismatch")
+	}
+	if serverBridgeGARequired0200(artifactVersion) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
+		return "", errors.New("ServerBridge 3 GA release allowlist metadata mismatch")
+	}
+	policy := document.Releases[artifactVersion]
 	if policy == nil {
 		return "", fmt.Errorf("release allowlist does not contain exact version %s", artifactVersion)
 	}
@@ -1096,6 +1116,98 @@ func enrollServerBridge0199(args []string) error {
 		return err
 	}
 	return writeOrPrintJSON(flagValue(args, "--output", ""), record)
+}
+
+func serverBridgeMigrateV30200(args []string) error {
+	root, err := canonicalServerRoot0199(flagValue(args, "--server-root", "."))
+	if err != nil {
+		return err
+	}
+	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
+	current, err := readBridgeProvisionState0199(statePath)
+	if err != nil {
+		return errors.New("server-bridge migrate-v3 requires an existing managed ServerBridge installation; run `nl server-bridge install` first")
+	}
+	if compareSemver0199(version, "0.20.0") < 0 {
+		return fmt.Errorf("server-bridge migrate-v3 requires nl >= 0.20.0; current CLI is %s", version)
+	}
+	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
+	if compareSemver0199(targetVersion, "0.20.0") < 0 {
+		return fmt.Errorf("ServerBridge 3 GA migration target must be >= 0.20.0, got %s", targetVersion)
+	}
+
+	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), os.Getenv("NEVERLAUNCHER_BACKEND_URL")), "/")
+	if backend == "" && current.ConfigPath != "" && fileExists0199(current.ConfigPath) {
+		if values, readErr := readBridgeConfigValues0199(current.ConfigPath); readErr == nil {
+			backend = strings.TrimRight(values["backend.url"], "/")
+		}
+	}
+	if backend == "" {
+		return errors.New("server-bridge migrate-v3 requires a Backend URL to verify Protocol v3 GA capability before replacing the artifact")
+	}
+	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
+		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",
+		"security.ed25519-node-requests", "security.single-use-node-nonce", "integrity.sha256", "join.one-time", "handoff.one-time", "topology.runtime-learned",
+		"runtime.node-discovery-v1", "security.runtime-identity-ed25519", "telemetry.server-v1", "events.ordered-stream-v1", "control.secure-channel-v1", "control.ha-channel-v2",
+		"topology.routing-v2", "session.player-lifecycle-v3", "security.protocol-v3-signing-domain", "security.capability-downgrade-protection", "security.command-signatures-v3",
+		"security.event-signatures-v3", "security.runtime-instance-binding-v3", "security.online-key-rotation-v1",
+	}, ",")
+	capabilities, err := httpJSONWithAuth("GET", capURL, nil, "")
+	if err != nil {
+		return fmt.Errorf("Protocol v3 GA Backend preflight failed: %w", err)
+	}
+	data, _ := capabilities["data"].(map[string]any)
+	if intFromJSON0200(data["negotiatedProtocolVersion"]) != 3 || data["protocolV3Frozen"] != true || fmt.Sprint(data["protocolV3Status"]) != "ga-frozen" || fmt.Sprint(data["protocolV3FeatureDigest"]) != "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc" {
+		return errors.New("Backend does not expose the frozen ServerBridge 3 GA Protocol v3 capability set; migration aborted before touching server files")
+	}
+
+	upgradeArgs := append([]string{}, args...)
+	upgradeArgs[0] = "upgrade"
+	if strings.TrimSpace(flagValue(upgradeArgs, "--bridge-version", "")) == "" {
+		upgradeArgs = append(upgradeArgs, "--bridge-version", targetVersion)
+	}
+	if strings.TrimSpace(flagValue(upgradeArgs, "--backend", "")) == "" {
+		upgradeArgs = append(upgradeArgs, "--backend", backend)
+	}
+	if flagBool(upgradeArgs, "--dry-run", false) {
+		return provisionServerBridge0199(upgradeArgs, true)
+	}
+	fromVersion := current.Version
+	if err := provisionServerBridge0199(upgradeArgs, true); err != nil {
+		return err
+	}
+	updated, err := readBridgeProvisionState0199(statePath)
+	if err != nil {
+		return fmt.Errorf("read post-migration ServerBridge state: %w", err)
+	}
+	if compareSemver0199(updated.Version, "0.20.0") < 0 {
+		return fmt.Errorf("ServerBridge migration committed unexpected version %s", updated.Version)
+	}
+	record := map[string]any{
+		"schemaVersion": "1.0", "toolVersion": version, "status": "artifact-migrated",
+		"fromVersion": fromVersion, "toVersion": updated.Version, "protocolFrom": "v2/rolling", "protocolTo": "v3-ga-frozen",
+		"backend": backend, "transactionId": updated.TransactionID, "migratedAt": time.Now().UTC().Format(time.RFC3339Nano),
+		"restartRequired": true,
+	}
+	migrationPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "protocol-v3-ga-migration.json")
+	if err := writeJSONSecure0199(migrationPath, record, 0o644); err != nil {
+		return fmt.Errorf("ServerBridge artifact migrated but migration record could not be persisted: %w", err)
+	}
+	return nil
+}
+
+func intFromJSON0200(value any) int {
+	switch v := value.(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	case json.Number:
+		i, _ := v.Int64()
+		return int(i)
+	default:
+		return 0
+	}
 }
 
 func serverBridgeProvisionStatus0199(args []string) error {

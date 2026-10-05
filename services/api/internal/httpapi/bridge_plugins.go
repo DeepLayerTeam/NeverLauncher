@@ -40,7 +40,7 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
 		"status":                    "compatible",
 		"platforms":                 serverBridgeMatrixPlatforms0149(s.Version),
-		"requiredBackendEndpoints":  []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event"},
+		"requiredBackendEndpoints":  []string{"GET /api/v1/server-bridge/capabilities", "GET /api/v1/server-bridge/overview", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event"},
 		"trustPolicy":               gameplayTrustPolicy0127,
 		"trustEnforcement":          "required",
 		"integrityPolicy":           serverBridgeIntegrityPolicy0135,
@@ -60,6 +60,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
+	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)
 	serverID := firstNonEmpty(strings.TrimSpace(r.PathValue("serverId")), strings.TrimSpace(req.ServerID))
 	if serverID == "" {
 		writeError(w, http.StatusBadRequest, "serverId обязателен")
@@ -244,6 +245,7 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
+	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)
 	req.ServerID = strings.TrimSpace(req.ServerID)
 	req.Username = strings.TrimSpace(req.Username)
 	if req.ServerID == "" || req.Username == "" {
@@ -451,7 +453,7 @@ func (s Server) serverBridgeDiagnostics(w http.ResponseWriter, r *http.Request) 
 		"checks": []map[string]string{
 			{"id": "plugin-manifest", "status": "implemented"},
 			{"id": "protocol-v3-negotiation", "status": "implemented"},
-			{"id": "protocol-v2-rolling-upgrade", "status": "implemented"},
+			{"id": "protocol-v2-compatibility-deprecated", "status": "implemented"},
 			{"id": "protocol-feature-flags", "status": "implemented"},
 			{"id": "postgresql-source-of-truth", "status": "implemented"},
 			{"id": "ed25519-node-authentication", "status": "implemented"},
@@ -502,11 +504,11 @@ func bridgePluginsStatus940(version string) map[string]any {
 	return map[string]any{
 		"schemaVersion":   bridgePluginsSchema940,
 		"toolVersion":     version,
-		"release":         "NeverLauncher 0.19.12 ServerBridge 3",
+		"release":         fmt.Sprintf("NeverLauncher %s ServerBridge 3 GA", version),
 		"status":          "bridge-plugins-ready",
-		"mode":            "serverbridge-protocol-v3-with-v2-rolling-upgrade",
+		"mode":            "serverbridge3-ga-protocol-v3-frozen-v2-compatibility-deprecated",
 		"protocolVersion": serverBridgeProtocolCurrent,
-		"implemented":     []string{"Protocol v3 canonical signing domain", "capability downgrade protection", "signed commands and events", "runtime-instance-bound authentication", "online signing-key rotation", "ServerBridge 3 release allowlist certification", "Protocol v3 capability negotiation", "Protocol v2 rolling-upgrade compatibility", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "bounded JVM/server telemetry", "ordered signed event stream", "durable RBAC control channel", "idempotent control execution journal", "allowlisted platform console commands", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "realtime PostgreSQL topology/routing", "health/capacity route admission", "runtime-bound source+target handoff proofs", "Player Session Integration 3 correlation lifecycle", "ordered runtime-bound transfer chain", "session-cloning prevention", "Device Trust/Guard transfer recheck", "topology-wide session invalidation/disconnect", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
+		"implemented":     []string{"Protocol v3 canonical signing domain", "capability downgrade protection", "signed commands and events", "runtime-instance-bound authentication", "online signing-key rotation", "ServerBridge 3 release allowlist certification", "Protocol v3 capability negotiation", "Protocol v2 compatibility/deprecation mode", "per-request protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "restart/replacement process detection", "bounded JVM/server telemetry", "ordered signed event stream", "durable RBAC control channel", "idempotent control execution journal", "allowlisted platform console commands", "Ed25519 request signatures", "single-use node nonce replay protection", "identity-bound one-time join ticket redemption", "one-time proxy-to-backend handoff", "realtime PostgreSQL topology/routing", "health/capacity route admission", "runtime-bound source+target handoff proofs", "Player Session Integration 3 correlation lifecycle", "ordered runtime-bound transfer chain", "session-cloning prevention", "Device Trust/Guard transfer recheck", "topology-wide session invalidation/disconnect", "HA advisory-lock maintenance", "freshness-aware topology", "distributed ServerBridge rate limiting", "public ServerBridge matrix", "zero-patch config bootstrap", "shared proxy-family runtime", "Velocity plugin source and jar", "BungeeCord plugin source and jar", "Waterfall plugin source and jar", "Bukkit plugin source and jar", "Spigot plugin source and jar", "Paper plugin source and jar", "Purpur plugin source and jar", "Folia plugin source and jar", "Fabric server-only mod source and jar", "Quilt server-only mod source and jar", "Forge server-only mod source and jar", "NeoForge server-only mod source and jar", "Sponge server plugin source and jar", "Vanilla RCON sidecar source and jar", "shared modloader-family runtime", "pre-world PlayerNegotiationEvent login gating", "shared Bukkit-family runtime", "Folia-safe network scheduling", "runtime platform mismatch fail-closed", "plugin manifest", "validate-join endpoint", "live session/device/risk enforcement", "Minecraft Guard integrity enforcement", "ServerBridge JAR SHA-256 enforcement", "binding-epoch invalidation", "heartbeat endpoint", "audit-event endpoint", "plugin diagnostics"},
 		"commands":        []string{"nl bridge-plugin status", "nl bridge-plugin build", "nl bridge-plugin smoke", "nl bridge-plugin generate-config velocity", "nl bridge-plugin compatibility"},
 		"artifacts":       bridgePluginsManifest940(version)["artifacts"],
 	}
@@ -531,13 +533,16 @@ func bridgePluginsManifest940(version string) map[string]any {
 			{"id": "purpur", "name": "NeverLauncher Purpur Bridge", "file": fmt.Sprintf("neverlauncher-purpur-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-purpur-bridge-%s.jar", version), "serverType": "purpur", "descriptor": "plugin.yml", "mainClass": "ru.neverlauncher.bridge.purpur.NeverLauncherPurpurBridge"},
 			{"id": "folia", "name": "NeverLauncher Folia Bridge", "file": fmt.Sprintf("neverlauncher-folia-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-folia-bridge-%s.jar", version), "serverType": "folia", "descriptor": "plugin.yml", "mainClass": "ru.neverlauncher.bridge.folia.NeverLauncherFoliaBridge"},
 			{"id": "fabric", "name": "NeverLauncher Fabric Server Bridge", "file": fmt.Sprintf("neverlauncher-fabric-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-fabric-bridge-%s.jar", version), "serverType": "fabric", "descriptor": "fabric.mod.json", "mainClass": "ru.neverlauncher.bridge.fabric.NeverLauncherFabricBridge", "clientModRequired": false},
+			{"id": "quilt", "name": "NeverLauncher Quilt Server Bridge", "file": fmt.Sprintf("neverlauncher-quilt-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-quilt-bridge-%s.jar", version), "serverType": "quilt", "descriptor": "quilt.mod.json", "mainClass": "ru.neverlauncher.bridge.quilt.NeverLauncherQuiltBridge", "clientModRequired": false},
 			{"id": "forge", "name": "NeverLauncher Forge Server Bridge", "file": fmt.Sprintf("neverlauncher-forge-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-forge-bridge-%s.jar", version), "serverType": "forge", "descriptor": "META-INF/mods.toml", "mainClass": "ru.neverlauncher.bridge.forge.NeverLauncherForgeBridge", "clientModRequired": false},
 			{"id": "neoforge", "name": "NeverLauncher NeoForge Server Bridge", "file": fmt.Sprintf("neverlauncher-neoforge-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-neoforge-bridge-%s.jar", version), "serverType": "neoforge", "descriptor": "META-INF/neoforge.mods.toml", "mainClass": "ru.neverlauncher.bridge.neoforge.NeverLauncherNeoForgeBridge", "clientModRequired": false},
+			{"id": "sponge", "name": "NeverLauncher Sponge Server Bridge", "file": fmt.Sprintf("neverlauncher-sponge-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-sponge-bridge-%s.jar", version), "serverType": "sponge", "descriptor": "sponge_plugins.json", "mainClass": "ru.neverlauncher.bridge.sponge.NeverLauncherSpongeBridge", "clientModRequired": false},
+			{"id": "vanilla", "name": "NeverLauncher Vanilla ServerBridge Sidecar", "file": fmt.Sprintf("neverlauncher-vanilla-bridge-%s.jar", version), "path": fmt.Sprintf("artifacts/plugins/neverlauncher-vanilla-bridge-%s.jar", version), "serverType": "vanilla", "descriptor": "META-INF/MANIFEST.MF", "mainClass": "ru.neverlauncher.bridge.vanilla.NeverLauncherVanillaBridge", "clientModRequired": false},
 		},
-		"configExamples":   []string{"plugins/velocity-bridge/config.example.yml", "plugins/bungeecord-bridge/config.example.yml", "plugins/waterfall-bridge/config.example.yml", "plugins/bukkit-bridge/config.example.yml", "plugins/spigot-bridge/config.example.yml", "plugins/paper-bridge/config.example.yml", "plugins/purpur-bridge/config.example.yml", "plugins/folia-bridge/config.example.yml", "plugins/fabric-bridge/config.example.yml", "plugins/forge-bridge/config.example.yml", "plugins/neoforge-bridge/config.example.yml"},
+		"configExamples":   []string{"plugins/velocity-bridge/config.example.yml", "plugins/bungeecord-bridge/config.example.yml", "plugins/waterfall-bridge/config.example.yml", "plugins/bukkit-bridge/config.example.yml", "plugins/spigot-bridge/config.example.yml", "plugins/paper-bridge/config.example.yml", "plugins/purpur-bridge/config.example.yml", "plugins/folia-bridge/config.example.yml", "plugins/fabric-bridge/config.example.yml", "plugins/quilt-bridge/config.example.yml", "plugins/forge-bridge/config.example.yml", "plugins/neoforge-bridge/config.example.yml", "plugins/sponge-bridge/config.example.yml", "plugins/vanilla-bridge/config.example.yml"},
 		"releaseAllowlist": "artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json",
 		"integrityPolicy":  serverBridgeIntegrityPolicy0135,
-		"backendEndpoints": []string{"GET /api/v1/server-bridge/capabilities", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
+		"backendEndpoints": []string{"GET /api/v1/server-bridge/capabilities", "GET /api/v1/server-bridge/overview", "POST /api/v1/server-bridge/validate-join", "POST /api/v1/server-bridge/handoff", "GET /api/v1/server-bridge/topology", "POST /api/v1/server-bridge/servers/{serverId}/heartbeat", "POST /api/v1/server-bridge/servers/{serverId}/events", "POST /api/v1/server-bridge/audit-event", "GET /api/v1/server-bridge/plugin-compatibility"},
 	}
 }
 

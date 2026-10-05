@@ -70,6 +70,7 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "некорректный ServerBridge protocol payload")
 		return
 	}
+	markServerBridgeProtocolResponse0200(w, req.ProtocolVersion)
 	req.Username = strings.TrimSpace(req.Username)
 	req.TargetServer = strings.TrimSpace(req.TargetServer)
 	req.SessionCorrelationID = strings.ToLower(strings.TrimSpace(req.SessionCorrelationID))

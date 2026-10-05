@@ -458,8 +458,8 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   "NeverLauncher 0.19.9 ServerBridge 3",
-		"mode":                      "serverbridge-protocol-v3-with-v2-rolling-upgrade",
+		"release":                   fmt.Sprintf("NeverLauncher %s ServerBridge 3 GA", s.Version),
+		"mode":                      "serverbridge3-ga-protocol-v3-frozen-v2-compatibility-deprecated",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
 		"featureFlags":              bridgeFeatureFlags0191(serverBridgeV3Features0191),
@@ -469,6 +469,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 		"endpoints": []string{
 			"GET /api/v1/server-bridge/capabilities",
 			"GET /api/v1/server-bridge/matrix",
+			"GET /api/v1/server-bridge/overview",
 			"GET /api/v1/server-bridge/diagnostics",
 			"POST /api/v1/server-bridge/servers/{serverId}/heartbeat",
 			"GET /api/v1/server-bridge/servers/{serverId}/routes",
@@ -493,14 +494,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 Protocol v3 with v2 rolling upgrade", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "runtime-bound source+target handoff proofs", "maintenance/drain/stale admission blocking"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "runtime-bound source+target handoff proofs", "maintenance/drain/stale admission blocking"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-rolling-upgrade", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
 	default:
 		base["status"] = "active"
 	}
