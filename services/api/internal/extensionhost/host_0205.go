@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -34,7 +35,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
-const ProtocolVersion = "1.0"
+const ProtocolVersion = extensioncontract.HostProtocolVersion
 
 var ErrNoBackendTarget = errors.New("extension does not declare a backend target")
 var ErrHostNotRunning = errors.New("extension host process is not running")
@@ -486,7 +487,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	cmd := exec.Command(entrypoint)
 	cmd.Dir = payloadRoot
 	cmd.Env = sanitizedEnvironment(map[string]string{
-		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
+		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID,
 	})
 	configureProcess(cmd)
@@ -993,11 +994,12 @@ func jsonResponse(w http.ResponseWriter, code int, v any) {
 }
 
 type helloRequest struct {
-	ProtocolVersion string `json:"protocolVersion"`
-	ExtensionID     string `json:"extensionId"`
-	InstanceID      string `json:"instanceId"`
-	PID             int    `json:"pid"`
-	CallbackURL     string `json:"callbackUrl,omitempty"`
+	ProtocolVersion     string `json:"protocolVersion"`
+	ExtensionAPIVersion string `json:"extensionApiVersion"`
+	ExtensionID         string `json:"extensionId"`
+	InstanceID          string `json:"instanceId"`
+	PID                 int    `json:"pid"`
+	CallbackURL         string `json:"callbackUrl,omitempty"`
 }
 
 func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
@@ -1012,6 +1014,10 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ProtocolVersion != ProtocolVersion || strings.ToLower(strings.TrimSpace(req.ExtensionID)) != st.key.ExtensionID || req.InstanceID != st.instanceID {
 		http.Error(w, "host identity/protocol mismatch", 409)
+		return
+	}
+	if !extensioncontract.SupportsHostHello(st.manifest.API, req.ExtensionAPIVersion) {
+		http.Error(w, "extension API mismatch", http.StatusConflict)
 		return
 	}
 	callbackURL, err := validateCallbackURL0206(req.CallbackURL)
@@ -1036,7 +1042,7 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	st.state = "running"
 	st.helloOnce.Do(func() { close(st.helloCh) })
 	st.mu.Unlock()
-	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st), "events": eventbus.KnownEventTypes(), "eventProtocolVersion": eventbus.ProtocolVersion})
+	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st), "events": eventbus.KnownEventTypes(), "eventProtocolVersion": eventbus.ProtocolVersion})
 }
 func (s *Supervisor) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.authenticate(w, r)

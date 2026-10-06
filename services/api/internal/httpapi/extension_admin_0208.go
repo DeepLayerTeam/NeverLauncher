@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -122,7 +123,7 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 
 func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "protocol": adminBridgeProtocol0208, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "items": []any{}}})
 		return
 	}
 	claims, err := s.adminClaims(r)
@@ -174,7 +175,7 @@ func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request
 		}
 		return items[i].Scope < items[j].Scope
 	})
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": adminBridgeProtocol0208, "sandbox": "allow-scripts", "items": items}})
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": adminBridgeProtocol0208, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "sandbox": "allow-scripts", "items": items}})
 }
 
 func safeAdminEntrypoint0208(root, entry string) (string, error) {
@@ -252,7 +253,7 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 		}
 		return
 	}
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": adminBridgeProtocol0208, "extensionId": install.ExtensionID, "version": install.CurrentVersion, "generation": install.Generation, "html": hardenAdminHTML0208(string(data))}})
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": adminBridgeProtocol0208, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "extensionId": install.ExtensionID, "version": install.CurrentVersion, "generation": install.Generation, "html": hardenAdminHTML0208(string(data))}})
 }
 
 func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
@@ -314,7 +315,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	}
 	switch method {
 	case "context.get":
-		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}}, nil)
+		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}}, nil)
 	case "projects.list":
 		if !claims.HasPermission("project:read") {
 			respond(nil, errors.New("user project:read denied"))

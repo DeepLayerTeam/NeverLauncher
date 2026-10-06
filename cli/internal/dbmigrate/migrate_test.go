@@ -47,6 +47,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0046_neverextensions_capability_security_0207",
 		"0047_neverextensions_dependencies_updates_02011",
 		"0048_neverextensions_trust_recovery_certification_02012",
+		"0049_neverextensions_ga_0210",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

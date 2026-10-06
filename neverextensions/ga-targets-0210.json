@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "feature": "NeverExtensions GA",
+  "contract": {
+    "packageFormatVersion": "1.0",
+    "manifestSchemaVersion": "2.0",
+    "hostProtocolVersion": "1.0",
+    "extensionApiVersion": "1.0",
+    "legacyApiAliases": ["3.7"]
+  },
+  "targets": [
+    {"id":"linux","runner":"ubuntu-latest","os":"linux","required":true},
+    {"id":"windows","runner":"windows-latest","os":"windows","required":true},
+    {"id":"macos","runner":"macos-latest","os":"macos","required":true}
+  ],
+  "requiredChecks": [
+    "frozen-contract-tests",
+    "package-malicious-tests",
+    "registry-trust-tests",
+    "lifecycle-host-tests",
+    "dependency-update-tests",
+    "permission-security-tests",
+    "ga-reconcile-tests",
+    "cli-sdk-tests",
+    "backend-sdk-tests",
+    "admin-build",
+    "desktop-build",
+    "migration-tests",
+    "openapi-contract",
+    "backend-build",
+    "cli-build"
+  ]
+}

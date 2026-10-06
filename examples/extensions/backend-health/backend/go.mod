@@ -2,4 +2,4 @@ module example.com/neverlauncher-extension/backend
 
 go 1.22
 
-require gitflic.ru/skif4er/neverlauncher/sdk/backend/go v0.20.10
+require gitflic.ru/skif4er/neverlauncher/sdk/backend/go v0.21.0

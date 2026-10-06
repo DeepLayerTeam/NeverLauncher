@@ -124,8 +124,8 @@ func TestResolverRejectsIncompatiblePlatformAndAPI02011(t *testing.T) {
 	h := sha256.Sum256([]byte(id + "@1.0.0"))
 	sha := hex.EncodeToString(h[:])
 	_, err := f.repo.PublishExtensionRegistryVersion(context.Background(), model.ExtensionRegistryPublication{
-		Manifest:    model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: id, Version: "1.0.0", Publisher: "publisher.test", API: "3.8", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/bin/x"}}},
-		PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinNeverLauncher: "0.20.0", MinAPI: "3.8", SupportedOS: []string{"windows"}, SupportedArchitectures: []string{"amd64"}},
+		Manifest:    model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: id, Version: "1.0.0", Publisher: "publisher.test", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/bin/x"}}},
+		PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinNeverLauncher: "0.20.0", MinAPI: "2.0", SupportedOS: []string{"windows"}, SupportedArchitectures: []string{"amd64"}},
 		Artifact: model.ExtensionRegistryArtifact{PackageIdentity: "sha256:" + sha, ExtensionID: id, Version: "1.0.0", SHA256: sha, Size: 1, StorageProject: "r", StorageVersion: "r", StoragePath: "r", SignatureKeyFingerprint: f.fp}, Channels: []string{"stable"},
 	})
 	if err != nil {

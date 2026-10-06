@@ -28,8 +28,8 @@ type ExitError struct {
 func (e *ExitError) Error() string { return e.Message }
 
 func Environment() (HostEnvironment, error) {
-	env := HostEnvironment{ExtensionId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_ID")), Version: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_VERSION")), Scope: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE")), ScopeId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE_ID")), Target: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_TARGET")), HostUrl: strings.TrimRight(strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL")), "/"), HostToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")), CallbackToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN")), InstanceId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID"))}
-	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" {
+	env := HostEnvironment{ExtensionId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_ID")), ExtensionApiVersion: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_API_VERSION")), Version: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_VERSION")), Scope: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE")), ScopeId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE_ID")), Target: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_TARGET")), HostUrl: strings.TrimRight(strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL")), "/"), HostToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")), CallbackToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN")), InstanceId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID"))}
+	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
 		return HostEnvironment{}, errors.New("NeverLauncher Extension Host environment is incomplete")
 	}
 	if env.Scope == "" {
@@ -78,11 +78,11 @@ func (c *Client) call(ctx context.Context, path string, input, output any) error
 }
 func (c *Client) Hello(ctx context.Context) (HelloResponse, error) {
 	var out HelloResponse
-	err := c.call(ctx, "/v1/hello", HelloRequest{ProtocolVersion: HostProtocolVersion, InstanceId: c.env.InstanceId, ExtensionId: c.env.ExtensionId, Pid: os.Getpid()}, &out)
+	err := c.call(ctx, "/v1/hello", HelloRequest{ProtocolVersion: HostProtocolVersion, ExtensionApiVersion: ExtensionAPIVersion, InstanceId: c.env.InstanceId, ExtensionId: c.env.ExtensionId, Pid: os.Getpid()}, &out)
 	if err != nil {
 		return HelloResponse{}, err
 	}
-	if out.ProtocolVersion != HostProtocolVersion || out.InstanceId != c.env.InstanceId {
+	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
 		return HelloResponse{}, errors.New("NeverLauncher Host hello identity/protocol mismatch")
 	}
 	c.hello = out

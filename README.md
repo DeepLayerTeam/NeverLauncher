@@ -1,3 +1,9 @@
+## NeverExtensions GA — 0.21.0
+
+`0.21.0` freezes the production NeverExtensions contract: Extension Package `1.0`, Manifest `2.0`, Host Protocol `1.0` and Extension API `1.0`. New registry publications use `api: 1.0`; already signed 0.20 packages with the legacy `api: 3.7` marker are accepted only as a compatibility alias so their signed payload is never rewritten. Backend startup performs fail-closed GA reconciliation of lifecycle state, lockfiles, registry identity, publisher/key trust, quarantine/emergency state, permissions, dependencies and conflicts before extensions are allowed to run.
+
+All four host surfaces (Backend/Admin/Desktop/CLI) and their SDKs negotiate Extension API v1. Source extensions can be upgraded atomically with `nl extension upgrade-source <path>`; signed `.nlext` artifacts must be rebuilt and re-signed. Release/certification details and the public matrix process are documented in `neverextensions/GA.md`; CI collects independent Linux, Windows and macOS evidence before producing the GA certificate.
+
 ## NeverExtensions Core — 0.20.1
 
 `0.20.1` introduces the first production persistence layer for NeverExtensions. The canonical manifest is now `neverlauncher-extension.json` schema `2.0`; one immutable extension version can declare multiple `backend`, `admin`, `desktop` and `cli` targets, requested permissions, hooks and dependencies. The Backend persists extension identity/version metadata through the normal Repository implementation rather than an in-memory declaration or a disconnected table.

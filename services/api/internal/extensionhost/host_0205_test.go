@@ -41,7 +41,7 @@ headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"}
 def post(path,obj):
     req=urllib.request.Request(url+path,data=json.dumps(obj).encode(),headers=headers,method="POST")
     with urllib.request.urlopen(req,timeout=2) as r: return r.read()
-post("/v1/hello",{"protocolVersion":"1.0","extensionId":os.environ["NEVERLAUNCHER_EXTENSION_ID"],"instanceId":os.environ["NEVERLAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
+post("/v1/hello",{"protocolVersion":"1.0","extensionApiVersion":os.environ["NEVERLAUNCHER_EXTENSION_API_VERSION"],"extensionId":os.environ["NEVERLAUNCHER_EXTENSION_ID"],"instanceId":os.environ["NEVERLAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
 post("/v1/log",{"level":"info","message":"fixture-online secret="+str("NEVERLAUNCHER_DATABASE_DSN" in os.environ).lower()})
 post("/v1/capabilities/project.get",{"projectId":"demo-project"})
 print("stdout-ready", flush=True)

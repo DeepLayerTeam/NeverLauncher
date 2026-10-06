@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 const DESKTOP_EXTENSION_PROTOCOL = 'neverextensions.desktop-rpc.v1';
+const EXTENSION_API_VERSION = '1.0';
 const MAX_INFLIGHT = 16;
 
 type DesktopPage = { id: string; title: string; description?: string };
@@ -21,7 +22,7 @@ export type DesktopExtensionCatalogItem = {
 
 type RPCRequest = { protocol: string; type: 'rpc.request'; id: string; method: string; params?: unknown };
 type RPCResponse = { protocol: string; type: 'rpc.response'; id: string; result?: unknown; error?: string };
-type EntrypointResponse = { data?: { protocol: string; extensionId: string; version: string; generation: number; html: string } };
+type EntrypointResponse = { data?: { protocol: string; extensionApiVersion: string; extensionId: string; version: string; generation: number; html: string } };
 
 type Props = {
   backendUrl: string;
@@ -67,6 +68,7 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
       const response = await authorized('/api/v1/desktop/extensions/catalog');
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+      if (payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Desktop extension catalog protocol/API mismatch');
       const next = (payload?.data?.items ?? []) as DesktopExtensionCatalogItem[];
       setItems(next);
       if (!next.length) { setSelected(''); setPageId(''); setHtml(''); return; }
@@ -87,7 +89,7 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
       const response = await authorized(`/api/v1/desktop/extensions/${encodeURIComponent(item.extensionId)}/ui?${queryFor(item)}`);
       const payload = await response.json() as EntrypointResponse & { error?: { message?: string } };
       if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
-      if (payload.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || typeof payload.data.html !== 'string') throw new Error('Desktop extension protocol mismatch');
+      if (payload.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload.data.extensionApiVersion !== EXTENSION_API_VERSION || typeof payload.data.html !== 'string') throw new Error('Desktop extension protocol/API mismatch');
       setHtml(payload.data.html);
     } catch (e) {
       const message = String(e);
@@ -144,7 +146,7 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
   function notifyContext() {
     const frame = iframeRef.current?.contentWindow;
     if (!frame || !current) return;
-    frame.postMessage({ protocol: DESKTOP_EXTENSION_PROTOCOL, type: 'host.context', extensionId: current.extensionId, version: current.version, pageId, scope: current.scope, scopeId: current.scopeId, projectId }, '*');
+    frame.postMessage({ protocol: DESKTOP_EXTENSION_PROTOCOL, type: 'host.context', context: { extensionId: current.extensionId, version: current.version, extensionApiVersion: EXTENSION_API_VERSION, pageId, scope: current.scope, scopeId: current.scopeId ?? '', actionId: '', bridgeAllowed: current.bridgeAllowed } }, '*');
   }
   function triggerAction(action: DesktopAction) {
     setPageId(action.pageId);

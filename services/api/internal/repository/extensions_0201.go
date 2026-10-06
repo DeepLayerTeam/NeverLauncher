@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -41,10 +42,10 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	m.Repository = strings.TrimSpace(m.Repository)
 	m.API = strings.TrimSpace(m.API)
 	if m.SchemaVersion == "" {
-		m.SchemaVersion = "2.0"
+		m.SchemaVersion = extensioncontract.ManifestSchemaVersion
 	}
-	if m.SchemaVersion != "2.0" {
-		return model.ExtensionManifest{}, "", fmt.Errorf("unsupported extension schemaVersion %q; expected 2.0", m.SchemaVersion)
+	if m.SchemaVersion != extensioncontract.ManifestSchemaVersion {
+		return model.ExtensionManifest{}, "", fmt.Errorf("unsupported extension schemaVersion %q; expected %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
 	}
 	if !extensionID0201.MatchString(m.ID) {
 		return model.ExtensionManifest{}, "", fmt.Errorf("invalid extension id %q", m.ID)
@@ -60,6 +61,9 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	if m.API == "" || len(m.API) > 64 {
 		return model.ExtensionManifest{}, "", fmt.Errorf("extension api is required")
+	}
+	if _, err := extensioncontract.CanonicalAPIVersion(m.API); err != nil {
+		return model.ExtensionManifest{}, "", err
 	}
 	if len(m.Targets) == 0 {
 		return model.ExtensionManifest{}, "", fmt.Errorf("extension must declare at least one target")

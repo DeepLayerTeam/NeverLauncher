@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const ADMIN_PROTOCOL = 'neverextensions.admin-rpc.v1';
+const EXTENSION_API_VERSION = '1.0';
 
 type Envelope<T> = { data?: T; error?: { message?: string } };
 export type AdminPage = { id: string; title: string; description?: string };
@@ -10,7 +11,7 @@ export type AdminAction = { id: string; label: string; pageId: string; placement
 export type AdminContributions = { pages?: AdminPage[]; navigation?: AdminNavigation[]; dashboardWidgets?: AdminWidget[]; actions?: AdminAction[] };
 export type RuntimeStatus = { state?: string; healthy?: boolean; pid?: number; restarts?: number; lastError?: string; memoryBytes?: number; processCount?: number; lastHeartbeatAt?: string };
 export type AdminExtension = { extensionId: string; name: string; version: string; scope: string; scopeId?: string; generation: number; packageIdentity?: string; admin: AdminContributions; runtime?: RuntimeStatus; lastError?: string };
-type Catalog = { protocol: string; sandbox: string; items: AdminExtension[] };
+type Catalog = { protocol: string; extensionApiVersion: string; sandbox: string; items: AdminExtension[] };
 type ManagerItem = { install?: Record<string, any>; manifest?: Record<string, any>; permissions?: Record<string, any>; runtime?: RuntimeStatus; logs?: Array<Record<string, any>> };
 type ManagerData = { items?: ManagerItem[]; count?: number };
 
@@ -41,8 +42,11 @@ function AdminExtensionFrame({ backendUrl, token, extension, pageId, actionId, h
   useEffect(() => {
     let cancelled = false;
     setHtml(''); setError('');
-    api<{html: string}>(backendUrl, `/api/v1/admin/extensions/${encodeURIComponent(extension.extensionId)}/ui?${scope}`, token)
-      .then((data) => { if (!cancelled) setHtml(data.html); })
+    api<{html: string; protocol: string; extensionApiVersion: string}>(backendUrl, `/api/v1/admin/extensions/${encodeURIComponent(extension.extensionId)}/ui?${scope}`, token)
+      .then((data) => {
+        if (data.protocol !== ADMIN_PROTOCOL || data.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Admin extension protocol/API mismatch');
+        if (!cancelled) setHtml(data.html);
+      })
       .catch((err: Error) => { if (!cancelled) setError(err.message); });
     return () => { cancelled = true; };
   }, [backendUrl, token, extension.extensionId, extension.version, extension.generation, scope]);
@@ -68,7 +72,7 @@ function AdminExtensionFrame({ backendUrl, token, extension, pageId, actionId, h
   }, [backendUrl, token, extension.extensionId, scope]);
 
   const sendContext = () => {
-    frame.current?.contentWindow?.postMessage({ protocol: ADMIN_PROTOCOL, type: 'host.context', context: { extensionId: extension.extensionId, version: extension.version, scope: extension.scope, scopeId: extension.scopeId ?? '', pageId, actionId: actionId ?? '' } }, '*');
+    frame.current?.contentWindow?.postMessage({ protocol: ADMIN_PROTOCOL, type: 'host.context', context: { extensionId: extension.extensionId, version: extension.version, extensionApiVersion: EXTENSION_API_VERSION, scope: extension.scope, scopeId: extension.scopeId ?? '', pageId, actionId: actionId ?? '' } }, '*');
     if (actionId) frame.current?.contentWindow?.postMessage({ protocol: ADMIN_PROTOCOL, type: 'host.action', actionId, pageId }, '*');
   };
 
@@ -91,6 +95,7 @@ export function AdminExtensions({ backendUrl, token, mode = 'workspace', onError
     setLoading(true); setLocalError('');
     try {
       const data = await api<Catalog>(backendUrl, '/api/v1/admin/extensions/catalog', token);
+      if (data.protocol !== ADMIN_PROTOCOL || data.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Admin extension catalog protocol/API mismatch');
       setCatalog(data.items ?? []);
       if (mode === 'workspace') {
         const m = await api<ManagerData>(backendUrl, '/api/v1/admin/extensions/manager', token).catch(() => ({ items: [] }));

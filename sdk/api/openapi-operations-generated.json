@@ -50,6 +50,11 @@
     "path": "/api/v1/admin/extension-events/subscriptions"
   },
   {
+    "id": "get_admin_extension_ga_status",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-ga/status"
+  },
+  {
     "id": "get_admin_extension_hosts",
     "method": "GET",
     "path": "/api/v1/admin/extension-hosts"
@@ -188,6 +193,11 @@
     "id": "post_admin_extension_cli_by_extensionId_invoke",
     "method": "POST",
     "path": "/api/v1/admin/extension-cli/{extensionId}/invoke"
+  },
+  {
+    "id": "post_admin_extension_ga_reconcile",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-ga/reconcile"
   },
   {
     "id": "post_admin_extension_hosts_by_extensionId_restart",

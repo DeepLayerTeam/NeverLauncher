@@ -33,6 +33,8 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/admin/extensions/{extensionId}", s.requirePermission("extension:manage", s.adminExtension0201))
 	mux.Handle("GET /api/v1/admin/extensions/{extensionId}/versions", s.requirePermission("extension:manage", s.adminExtensionVersions0201))
 	mux.Handle("GET /api/v1/admin/extensions/{extensionId}/versions/{version}", s.requirePermission("extension:manage", s.adminExtensionVersion0201))
+	mux.Handle("GET /api/v1/admin/extension-ga/status", s.requirePermission("extension:manage", s.extensionGAStatus0210))
+	mux.Handle("POST /api/v1/admin/extension-ga/reconcile", s.requireFreshAuth117("extension:manage", "mfa", 5*time.Minute, s.extensionGAReconcile0210))
 	mux.Handle("GET /api/v1/admin/extension-trust/policy", s.requirePermission("extension:manage", s.extensionTrustPolicyGet02012))
 	mux.Handle("PUT /api/v1/admin/extension-trust/policy", s.requireFreshAuth117("extension:manage", "mfa", 5*time.Minute, s.extensionTrustPolicyPut02012))
 	mux.Handle("POST /api/v1/admin/extension-registry/publishers/{publisherId}/keys/{fingerprint}/revoke", s.requireFreshAuth117("extension:manage", "phishing-resistant", 5*time.Minute, s.extensionPublisherKeyRevoke02012))

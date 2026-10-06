@@ -18,13 +18,14 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
 const (
-	formatName0203        = "NeverLauncher Extension Package"
-	formatVersion0203     = "1.0"
+	formatName0203        = extensioncontract.PackageFormatName
+	formatVersion0203     = extensioncontract.PackageFormatVersion
 	manifestName0203      = "neverlauncher-extension.json"
 	checksumsName0203     = "checksums.sha256"
 	sbomName0203          = "SBOM.spdx.json"

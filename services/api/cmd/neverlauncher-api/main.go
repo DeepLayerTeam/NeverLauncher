@@ -12,6 +12,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
@@ -100,6 +101,16 @@ func main() {
 	extSecurity, err := extensionsecurity.New(repo, secretKey)
 	if err != nil {
 		log.Fatalf("NeverExtensions capability security initialization failed: %v", err)
+	}
+	gaManager := extensionga.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
+	if !noExtensions {
+		report, reconcileErr := gaManager.Reconcile(context.Background())
+		if reconcileErr != nil {
+			log.Fatalf("NeverExtensions GA reconciliation failed: %v", reconcileErr)
+		}
+		if len(report.Issues) > 0 {
+			log.Printf("NeverExtensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
+		}
 	}
 
 	var events *eventbus.Bus
@@ -195,6 +206,7 @@ func main() {
 		Federation:        federationCore,
 		ExtensionHost:     host,
 		ExtensionSecurity: extSecurity,
+		ExtensionGA:       gaManager,
 		EventBus:          events,
 	}
 

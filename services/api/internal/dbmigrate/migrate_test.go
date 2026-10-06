@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0048_neverextensions_trust_recovery_certification_02012" {
+	if st.Current != "0049_neverextensions_ga_0210" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0048_neverextensions_trust_recovery_certification_02012" {
+		if k != "0049_neverextensions_ga_0210" {
 			pending[k] = v
 		}
 	}
@@ -659,6 +659,19 @@ func TestNeverExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.12 trust/recovery migration missing %q", required)
+		}
+	}
+}
+
+func TestNeverExtensionsGAMigration0210(t *testing.T) {
+	b, err := os.ReadFile("sql/0049_neverextensions_ga_0210.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{"extension_ga_contract", "package_format_version", "manifest_schema_version", "host_protocol_version", "extension_api_version", "legacy_api_aliases", "3.7"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.21.0 GA migration missing %q", required)
 		}
 	}
 }

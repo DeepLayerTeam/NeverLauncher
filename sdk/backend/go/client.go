@@ -39,17 +39,18 @@ func (e *CapabilityError) Error() string {
 
 func Environment() (HostEnvironment, error) {
 	env := HostEnvironment{
-		ExtensionId:   strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_ID")),
-		Version:       strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_VERSION")),
-		Scope:         strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE")),
-		ScopeId:       strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE_ID")),
-		Target:        strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_TARGET")),
-		HostUrl:       strings.TrimRight(strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL")), "/"),
-		HostToken:     strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")),
-		CallbackToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN")),
-		InstanceId:    strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID")),
+		ExtensionId:         strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_ID")),
+		ExtensionApiVersion: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_API_VERSION")),
+		Version:             strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_VERSION")),
+		Scope:               strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE")),
+		ScopeId:             strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE_ID")),
+		Target:              strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_TARGET")),
+		HostUrl:             strings.TrimRight(strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL")), "/"),
+		HostToken:           strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")),
+		CallbackToken:       strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN")),
+		InstanceId:          strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID")),
 	}
-	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" {
+	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
 		return HostEnvironment{}, errors.New("NeverLauncher Extension Host environment is incomplete")
 	}
 	if env.Scope == "" {
@@ -118,12 +119,12 @@ func (c *Client) doJSON(ctx context.Context, method, path string, input any, out
 }
 
 func (c *Client) Hello(ctx context.Context, callbackURL string) (HelloResponse, error) {
-	req := HelloRequest{ProtocolVersion: HostProtocolVersion, InstanceId: c.env.InstanceId, ExtensionId: c.env.ExtensionId, Pid: os.Getpid(), CallbackUrl: strings.TrimSpace(callbackURL)}
+	req := HelloRequest{ProtocolVersion: HostProtocolVersion, ExtensionApiVersion: ExtensionAPIVersion, InstanceId: c.env.InstanceId, ExtensionId: c.env.ExtensionId, Pid: os.Getpid(), CallbackUrl: strings.TrimSpace(callbackURL)}
 	var out HelloResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/v1/hello", req, &out); err != nil {
 		return HelloResponse{}, err
 	}
-	if out.ProtocolVersion != HostProtocolVersion || out.InstanceId != c.env.InstanceId {
+	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
 		return HelloResponse{}, errors.New("NeverLauncher Host hello identity/protocol mismatch")
 	}
 	c.mu.Lock()

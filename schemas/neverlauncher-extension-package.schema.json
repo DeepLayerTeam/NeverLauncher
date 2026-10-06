@@ -20,25 +20,76 @@
     "payload"
   ],
   "properties": {
-    "format": { "const": "NeverLauncher Extension Package" },
-    "formatVersion": { "const": "1.0" },
-    "extensionId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$" },
-    "extensionVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$" },
-    "publisher": { "type": "string", "minLength": 1, "maxLength": 160 },
-    "api": { "type": "string", "minLength": 1, "maxLength": 64 },
-    "buildEpoch": { "type": "integer", "minimum": 315532800 },
-    "packageIdentity": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-    "manifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "canonicalManifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "checksumsSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "sbomSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "format": {
+      "const": "NeverLauncher Extension Package"
+    },
+    "formatVersion": {
+      "const": "1.0"
+    },
+    "extensionId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+    },
+    "extensionVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "api": {
+      "type": "string",
+      "enum": [
+        "1.0",
+        "3.7"
+      ],
+      "description": "Extension API v1. New 0.21+ publications MUST use 1.0; 3.7 is a read/run compatibility alias for immutable 0.20.x artifacts."
+    },
+    "buildEpoch": {
+      "type": "integer",
+      "minimum": 315532800
+    },
+    "packageIdentity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "manifestSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "canonicalManifestSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "checksumsSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sbomSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "payload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["fileCount", "totalBytes", "files"],
+      "required": [
+        "fileCount",
+        "totalBytes",
+        "files"
+      ],
       "properties": {
-        "fileCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
-        "totalBytes": { "type": "integer", "minimum": 0, "maximum": 2147483648 },
+        "fileCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "totalBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483648
+        },
         "files": {
           "type": "array",
           "minItems": 1,
@@ -46,12 +97,33 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "size", "sha256", "mode"],
+            "required": [
+              "path",
+              "size",
+              "sha256",
+              "mode"
+            ],
             "properties": {
-              "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
-              "size": { "type": "integer", "minimum": 0, "maximum": 536870912 },
-              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-              "mode": { "enum": ["0644", "0755"] }
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 536870912
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "mode": {
+                "enum": [
+                  "0644",
+                  "0755"
+                ]
+              }
             }
           }
         }

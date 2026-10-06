@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -46,7 +47,7 @@ func New(repo repository.Repository, env Environment) *Resolver {
 		env.DefaultChannel = "stable"
 	}
 	if env.APIVersion == "" {
-		env.APIVersion = "3.7"
+		env.APIVersion = extensioncontract.ExtensionAPIVersion
 	}
 	return &Resolver{Repo: repo, Env: env}
 }
@@ -111,11 +112,14 @@ func conflictsSelected02011(cand model.ExtensionRegistryVersion, selected map[st
 }
 
 func normalizeAPIVersion(v string) (Version, error) {
-	v = strings.TrimSpace(v)
-	if strings.Count(v, ".") == 1 {
-		v += ".0"
+	canonical, err := extensioncontract.CanonicalAPIVersion(v)
+	if err != nil {
+		return Version{}, err
 	}
-	return ParseVersion(v)
+	if strings.Count(canonical, ".") == 1 {
+		canonical += ".0"
+	}
+	return ParseVersion(canonical)
 }
 func compatible(item model.ExtensionRegistryVersion, env Environment) bool {
 	if item.YankedAt != nil {

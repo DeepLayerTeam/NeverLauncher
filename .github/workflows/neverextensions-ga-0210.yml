@@ -1,0 +1,119 @@
+name: NeverExtensions GA 0.21.0
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ga-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux
+            runner: ubuntu-latest
+            os: linux
+          - target: windows
+            runner: windows-latest
+            os: windows
+          - target: macos
+            runner: macos-latest
+            os: macos
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: |
+            services/api/go.sum
+            cli/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: |
+            apps/admin/package-lock.json
+            apps/desktop/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Validate GA source contract
+        shell: bash
+        run: |
+          python3 scripts/compatibility/neverextensions_ga_0210.py validate
+          python3 scripts/smoke/offline/neverextensions-ga-0210.py
+          python3 scripts/contracts/validate-openapi.py
+          python3 scripts/version/manage.py check
+
+      - name: Backend NeverExtensions GA tests
+        shell: bash
+        run: |
+          (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
+          (cd services/api && go build ./cmd/neverlauncher-api)
+
+      - name: CLI and SDK tests
+        shell: bash
+        run: |
+          (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher)
+          (cd cli && go build ./cmd/neverlauncher)
+          (cd sdk/backend/go && go test ./...)
+          (cd sdk/cli/go && go test ./...)
+          python3 scripts/sdk/generate-types.py
+          git diff --exit-code -- sdk
+
+      - name: Admin host build
+        shell: bash
+        run: |
+          (cd apps/admin && npm ci && npm run build)
+
+      - name: Desktop host build
+        shell: bash
+        run: |
+          (cd apps/desktop && npm ci && npm run build)
+
+      - name: Write GA evidence
+        shell: bash
+        run: |
+          mkdir -p evidence
+          GOOS_ACTUAL="$(go env GOOS)" GOARCH_ACTUAL="$(go env GOARCH)" GOVERSION="$(go version | awk '{print $3}')" python3 - <<'PY'
+          import json,os
+          contract={"packageFormatVersion":"1.0","manifestSchemaVersion":"2.0","hostProtocolVersion":"1.0","extensionApiVersion":"1.0","legacyApiAliases":["3.7"]}
+          checks={k:True for k in ["frozen-contract-tests","package-malicious-tests","registry-trust-tests","lifecycle-host-tests","dependency-update-tests","permission-security-tests","ga-reconcile-tests","cli-sdk-tests","backend-sdk-tests","admin-build","desktop-build","migration-tests","openapi-contract","backend-build","cli-build"]}
+          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":os.environ['GOOS_ACTUAL'],"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","contract":contract,"checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
+          open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverextensions-ga-evidence-${{ matrix.target }}
+          path: evidence/${{ matrix.target }}.json
+
+  certificate:
+    needs: ga-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: neverextensions-ga-evidence-*
+          path: evidence-raw
+          merge-multiple: true
+      - name: Build fail-closed public matrix and certificate
+        run: |
+          python3 scripts/compatibility/neverextensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_GA_COMPATIBILITY.json --out-md NEVEREXTENSIONS_GA_COMPATIBILITY.md --out-certificate NEVEREXTENSIONS_GA_CERTIFICATE.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverextensions-0.21.0-ga-certification
+          path: |
+            NEVEREXTENSIONS_GA_COMPATIBILITY.json
+            NEVEREXTENSIONS_GA_COMPATIBILITY.md
+            NEVEREXTENSIONS_GA_CERTIFICATE.json

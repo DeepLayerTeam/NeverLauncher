@@ -1,3 +1,11 @@
+## [0.21.0] - 2026-10-06
+
+- Shipped NeverExtensions GA with frozen Extension Package v1, Manifest v2, Host Protocol v1 and Extension API v1. New registry publications must use `api: 1.0`; existing signed 0.20 packages with `api: 3.7` remain runnable through an explicit compatibility alias without signature mutation.
+- Added production GA startup reconciliation across install lockfiles, registry package identity, publisher/key trust, quarantine and emergency-disable state, permissions, dependencies and conflicts. Invalid enabled installs fail closed into persistent emergency-disable and are audited.
+- Completed Extension API v1 negotiation across Backend, Admin, Desktop and CLI hosts plus all SDKs. Fixed the Desktop host context envelope so the Desktop SDK receives the negotiated runtime context instead of `null`.
+- Added a real 0.20→0.21 extension source upgrader (`nl extension upgrade-source`) with atomic writes, SDK reference migration and mandatory rebuild/re-sign boundary for signed packages. Added durable GA contract migration/invariants.
+- Added NeverExtensions GA documentation, Linux/Windows/macOS certification workflow, evidence aggregation, public compatibility matrix generation and tamper-evident certification artifact generation.
+
 ## [0.20.12] - 2026-10-06
 
 - Added production NeverExtensions publisher trust and revocation: persistent strict/audit registry policy, publisher allow-lists, irreversible key revocation, fail-closed lifecycle verification and immediate runtime enforcement for active registry extensions that lose trust.

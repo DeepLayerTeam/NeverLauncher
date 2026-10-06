@@ -1,8 +1,10 @@
 import { PROTOCOL_VERSION, type DesktopContext, type RPCRequest } from './generated';
-export { PROTOCOL_VERSION as NEVERLAUNCHER_DESKTOP_PROTOCOL, type DesktopContext } from './generated';
+export { PROTOCOL_VERSION as NEVERLAUNCHER_DESKTOP_PROTOCOL, EXTENSION_API_VERSION, type DesktopContext } from './generated';
+
+export type DesktopSessionContext = Omit<DesktopContext, 'pageId' | 'actionId' | 'bridgeAllowed'> & { generation:number; actor:{id:string;email:string}; deviceVerified:boolean };
 
 export type DesktopRPCMethods = {
-  'context.get': { params: Record<string, never>; result: DesktopContext };
+  'context.get': { params: Record<string, never>; result: DesktopSessionContext };
   'projects.list': { params: Record<string, never>; result: Array<Record<string, unknown>> };
   'releases.list': { params:{projectId:string}; result:Array<Record<string,unknown>> };
   'telemetry.emit': { params:{projectId:string;event:string;status?:string}; result:{accepted:boolean} };

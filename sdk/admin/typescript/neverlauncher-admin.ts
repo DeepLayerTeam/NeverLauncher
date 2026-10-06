@@ -1,8 +1,10 @@
 import { PROTOCOL_VERSION, type AdminContext, type RPCRequest } from './generated';
-export { PROTOCOL_VERSION as NEVERLAUNCHER_ADMIN_PROTOCOL, type AdminContext } from './generated';
+export { PROTOCOL_VERSION as NEVERLAUNCHER_ADMIN_PROTOCOL, EXTENSION_API_VERSION, type AdminContext } from './generated';
+
+export type AdminSessionContext = Omit<AdminContext, 'pageId' | 'actionId'> & { generation:number; actor:{id:string;email:string} };
 
 export type AdminRPCMethods = {
-  'context.get': { params: Record<string, never>; result: AdminContext & { actor:{id:string;email:string} } };
+  'context.get': { params: Record<string, never>; result: AdminSessionContext };
   'projects.list': { params: Record<string, never>; result: Array<Record<string, unknown>> };
   'releases.list': { params: {projectId:string}; result: Array<Record<string, unknown>> };
   'audit.list': { params: Record<string, never>; result: Array<Record<string, unknown>> };

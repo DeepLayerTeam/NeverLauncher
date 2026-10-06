@@ -2,29 +2,33 @@
 package neverextensions
 
 const HostProtocolVersion = "1.0"
+const ExtensionAPIVersion = "1.0"
 
 type HostEnvironment struct {
-	ExtensionId   string `json:"extensionId,omitempty"`
-	Version       string `json:"version,omitempty"`
-	Scope         string `json:"scope,omitempty"`
-	ScopeId       string `json:"scopeId,omitempty"`
-	Target        string `json:"target,omitempty"`
-	HostUrl       string `json:"hostUrl,omitempty"`
-	HostToken     string `json:"hostToken,omitempty"`
-	CallbackToken string `json:"callbackToken,omitempty"`
-	InstanceId    string `json:"instanceId,omitempty"`
+	ExtensionId         string `json:"extensionId,omitempty"`
+	Version             string `json:"version,omitempty"`
+	ExtensionApiVersion string `json:"extensionApiVersion,omitempty"`
+	Scope               string `json:"scope,omitempty"`
+	ScopeId             string `json:"scopeId,omitempty"`
+	Target              string `json:"target,omitempty"`
+	HostUrl             string `json:"hostUrl,omitempty"`
+	HostToken           string `json:"hostToken,omitempty"`
+	CallbackToken       string `json:"callbackToken,omitempty"`
+	InstanceId          string `json:"instanceId,omitempty"`
 }
 
 type HelloRequest struct {
-	ProtocolVersion string `json:"protocolVersion,omitempty"`
-	InstanceId      string `json:"instanceId,omitempty"`
-	ExtensionId     string `json:"extensionId,omitempty"`
-	Pid             int    `json:"pid,omitempty"`
-	CallbackUrl     string `json:"callbackUrl,omitempty"`
+	ProtocolVersion     string `json:"protocolVersion,omitempty"`
+	ExtensionApiVersion string `json:"extensionApiVersion,omitempty"`
+	InstanceId          string `json:"instanceId,omitempty"`
+	ExtensionId         string `json:"extensionId,omitempty"`
+	Pid                 int    `json:"pid,omitempty"`
+	CallbackUrl         string `json:"callbackUrl,omitempty"`
 }
 
 type HelloResponse struct {
 	ProtocolVersion         string   `json:"protocolVersion,omitempty"`
+	ExtensionApiVersion     string   `json:"extensionApiVersion,omitempty"`
 	InstanceId              string   `json:"instanceId,omitempty"`
 	HeartbeatTimeoutSeconds int      `json:"heartbeatTimeoutSeconds,omitempty"`
 	Capabilities            []string `json:"capabilities,omitempty"`

@@ -12,6 +12,7 @@ export interface NeverExtensionsAPIRequestMap {
   "get_admin_extension_events": undefined;
   "get_admin_extension_events_dead_letters": undefined;
   "get_admin_extension_events_subscriptions": undefined;
+  "get_admin_extension_ga_status": undefined;
   "get_admin_extension_hosts": undefined;
   "get_admin_extension_hosts_by_extensionId": undefined;
   "get_admin_extension_hosts_by_extensionId_logs": undefined;
@@ -40,6 +41,7 @@ export interface NeverExtensionsAPIRequestMap {
   "get_desktop_extensions_by_extensionId_ui": undefined;
   "get_desktop_extensions_catalog": undefined;
   "post_admin_extension_cli_by_extensionId_invoke": Components.ExtensionCLIInvokeRequest0209;
+  "post_admin_extension_ga_reconcile": Components.FreeFormObject;
   "post_admin_extension_hosts_by_extensionId_restart": undefined;
   "post_admin_extension_hosts_by_extensionId_start": undefined;
   "post_admin_extension_hosts_by_extensionId_stop": undefined;

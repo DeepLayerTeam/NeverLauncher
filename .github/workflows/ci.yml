@@ -892,6 +892,15 @@ jobs:
           (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/neverlauncher-api)
           (cd cli && go test -run '02012' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
+      - name: NeverExtensions GA 0.21.0 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-ga-0210.py
+          python3 scripts/compatibility/neverextensions_ga_0210.py validate
+          (cd services/api && go test ./internal/extensioncontract ./internal/extensionga)
+          (cd cli && go test ./cmd/neverlauncher -run '0210|ExtensionUpgradeSource')
+          (cd sdk/backend/go && go test ./...)
+          (cd sdk/cli/go && go test ./...)
+          python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
       - name: Delivery Manifest + platform architecture 0.15.1 gate

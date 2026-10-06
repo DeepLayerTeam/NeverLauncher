@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[3]
 def read(p): return (ROOT/p).read_text(encoding='utf-8')
 def require(cond,msg):
     if not cond: raise SystemExit(msg)
-require((ROOT/'VERSION').read_text().strip()=='0.20.12','VERSION must be 0.20.12')
+require((ROOT/'VERSION').read_text().strip() in {'0.20.12','0.21.0'}, 'VERSION must be 0.20.12 or 0.21.0')
 mig=read('services/api/internal/dbmigrate/sql/0048_neverextensions_trust_recovery_certification_02012.sql')
 for token in ['extension_trust_policy','extension_quarantine','extension_emergency_disables','revoked_at','neverlauncher_revoke_extension_key_02012']:
     require(token in mig,f'migration missing {token}')

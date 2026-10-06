@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
@@ -136,7 +137,7 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 
 func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "protocol": desktopBridgeProtocol0209, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "items": []any{}}})
 		return
 	}
 	claims, err := s.verifyAdminTokenFromRequest(r)
@@ -187,7 +188,7 @@ func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Reque
 		}
 		return items[i].Scope < items[j].Scope
 	})
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": desktopBridgeProtocol0209, "sandbox": "allow-scripts", "items": items}})
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": desktopBridgeProtocol0209, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "sandbox": "allow-scripts", "items": items}})
 }
 
 func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Request) {
@@ -226,7 +227,7 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 		}
 		return
 	}
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": desktopBridgeProtocol0209, "extensionId": install.ExtensionID, "version": install.CurrentVersion, "generation": install.Generation, "html": hardenAdminHTML0208(string(data))}})
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": desktopBridgeProtocol0209, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "extensionId": install.ExtensionID, "version": install.CurrentVersion, "generation": install.Generation, "html": hardenAdminHTML0208(string(data))}})
 }
 
 func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +287,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	}
 	switch req.Method {
 	case "context.get":
-		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}, "deviceVerified": true}, nil)
+		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}, "deviceVerified": true}, nil)
 	case "project.get":
 		var p struct {
 			ProjectID string `json:"projectId"`
@@ -336,7 +337,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 
 func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "protocol": cliProtocol0209, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "items": []any{}}})
 		return
 	}
 	installs, err := s.Repo.ListExtensionInstallStates(r.Context(), "", "")
@@ -372,7 +373,7 @@ func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) 
 		}
 		return items[i].CLI.Namespace < items[j].CLI.Namespace
 	})
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": cliProtocol0209, "items": items}})
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocol": cliProtocol0209, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "items": items}})
 }
 
 func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {

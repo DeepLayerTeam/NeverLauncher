@@ -8,6 +8,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
@@ -25,6 +26,7 @@ type Server struct {
 	Federation        *federation.Core
 	ExtensionHost     *extensionhost.Supervisor
 	ExtensionSecurity *extensionsecurity.Manager
+	ExtensionGA       *extensionga.Manager
 	EventBus          *eventbus.Bus
 }
 

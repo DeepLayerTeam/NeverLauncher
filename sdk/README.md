@@ -1,6 +1,6 @@
-# NeverExtensions SDK 0.20.10
+# NeverExtensions SDK 0.21.0
 
-This directory is the source-of-truth SDK shipped with NeverLauncher 0.20.10.
+This directory is the source-of-truth SDK shipped with NeverLauncher 0.21.0.
 
 - `backend/go` — authenticated Extension Host Protocol client, capabilities, logs, heartbeat and event/hook callbacks.
 - `admin/typescript` — typed sandboxed Admin `postMessage` bridge.

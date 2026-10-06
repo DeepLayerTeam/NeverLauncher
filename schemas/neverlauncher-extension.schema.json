@@ -46,8 +46,11 @@
     },
     "api": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 64
+      "enum": [
+        "1.0",
+        "3.7"
+      ],
+      "description": "Extension API v1. New 0.21+ publications MUST use 1.0; 3.7 is a read/run compatibility alias for immutable 0.20.x artifacts."
     },
     "targets": {
       "type": "array",

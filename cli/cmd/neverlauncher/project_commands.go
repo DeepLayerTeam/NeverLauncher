@@ -351,10 +351,10 @@ func handleSDK(args []string) error {
 	}
 	switch args[0] {
 	case "list":
-		printJSON(map[string]any{"version": version, "sdkVersion": neverExtensionsSDKVersion02010, "api": "3.7", "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "generatedTypes": "sdk/api/extension-host-protocol.json + canonical OpenAPI", "sdks": sdks})
+		printJSON(map[string]any{"version": version, "sdkVersion": neverExtensionsSDKVersion02010, "api": neverExtensionsAPIVersion0210, "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "generatedTypes": "sdk/api/extension-host-protocol.json + canonical OpenAPI", "sdks": sdks})
 		return nil
 	case "init":
-		// 0.20.10 keeps sdk init as a compatibility alias to the real extension initializer.
+		// sdk init is a compatibility alias to the GA extension initializer.
 		return handleExtensionSDK02010("init", args[1:])
 	case "validate":
 		if len(args) < 2 {

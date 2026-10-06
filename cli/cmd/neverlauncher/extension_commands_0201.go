@@ -124,9 +124,13 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, trust, quarantine, emergency, recovery, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
+		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, trust, quarantine, emergency, recovery, ga, upgrade-source, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
 	}
 	switch args[0] {
+	case "ga":
+		return handleExtensionGA0210(args[1:])
+	case "upgrade-source":
+		return extensionUpgradeSource0210(args[1:])
 	case "init", "dev", "test", "build":
 		return handleExtensionSDK02010(args[0], args[1:])
 	case "template":
@@ -141,7 +145,7 @@ func handleExtension0201(args []string) error {
 			Name:          "Пример расширения NeverLauncher",
 			Version:       "1.0.0",
 			Publisher:     "Example Publisher",
-			API:           "3.7",
+			API:           neverExtensionsAPIVersion0210,
 			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
 			Permissions:   []string{"release:read"},
 		}
@@ -293,6 +297,9 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	if m.API == "" || len(m.API) > 64 {
 		return CanonicalExtensionManifest0201{}, "", errors.New("api обязателен")
+	}
+	if !supportedExtensionAPI0210(m.API) {
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("unsupported extension api %q; expected 1.0 (legacy 3.7 is accepted only for 0.20 compatibility)", m.API)
 	}
 	if len(m.Targets) == 0 {
 		return CanonicalExtensionManifest0201{}, "", errors.New("targets должен содержать хотя бы одну цель")
