@@ -1,3 +1,12 @@
+## [0.20.10] - 2026-10-06
+
+- Added the real NeverExtensions SDK distribution under `sdk/`: Backend Go, CLI Go, Admin TypeScript, Desktop TypeScript and Desktop Rust SDKs with generated protocol/OpenAPI metadata.
+- Added deterministic SDK type generation from `sdk/api/extension-host-protocol.json` plus canonical NeverExtensions OpenAPI operations; CI regenerates the files and rejects drift.
+- Added production developer commands `nl extension init|build|test|dev`. `init` supports single or multi-target packages, `build` produces the executable payload entrypoints consumed by the Extension Host, and `test` validates, builds, runs target tests, packs and verifies a real `.nlext`.
+- Added an authenticated loopback local dev Host Protocol with explicit deny-by-default `--grant`, fixture-backed capability responses, sanitized child environment, real hello/heartbeat/log handling and isolated Admin/Desktop sandbox previews.
+- Fixed the historical Backend SDK scaffold mismatch: manifests now point to `backend/bin/extension-backend` rather than Go source, so generated Backend extensions are directly runnable by the production supervisor after build.
+- Added runnable Backend, CLI, Admin and Desktop example extensions plus SDK unit/E2E coverage and the mandatory 0.20.10 production gate. No database migration is required.
+
 ## [0.20.9] - 2026-10-06
 
 - Added production Desktop extensions: enabled immutable `desktop` targets are exposed through the authenticated Desktop API, loaded only from the active payload and rendered in opaque-origin `sandbox="allow-scripts"` iframes with the same restrictive no-network CSP used by the Admin host.

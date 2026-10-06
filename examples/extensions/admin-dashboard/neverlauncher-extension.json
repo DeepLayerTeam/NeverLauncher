@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "2.0",
+  "id": "ru.example.neverlauncher.admin-dashboard",
+  "name": "Admin Dashboard Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "api": "3.7",
+  "targets": [
+    {
+      "kind": "admin",
+      "entrypoint": "admin/index.html"
+    }
+  ],
+  "permissions": [
+    "project:read",
+    "ui:contribute"
+  ],
+  "admin": {
+    "pages": [
+      {
+        "id": "main",
+        "title": "Admin Dashboard Example"
+      }
+    ],
+    "navigation": [
+      {
+        "id": "main-nav",
+        "label": "Admin Dashboard Example",
+        "pageId": "main"
+      }
+    ],
+    "dashboardWidgets": [
+      {
+        "id": "summary",
+        "title": "Admin Dashboard Example",
+        "pageId": "main",
+        "height": 280
+      }
+    ]
+  }
+}

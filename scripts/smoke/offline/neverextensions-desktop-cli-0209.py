@@ -29,8 +29,8 @@ for token in ("desktop_extension_platform_info","neverextensions.desktop-rpc.v1"
 cli=read("cli/cmd/neverlauncher/extension_cli_0209.go")
 for token in ("handleExtensionNamespace0209","extensionCLICompletion0209","/api/v1/admin/extension-cli/catalog","/invoke","namespace"):
     require(token in cli, f"CLI namespace runtime missing {token}")
-scaffold=read("cli/cmd/neverlauncher/project_commands.go")
-for token in ('return "desktop/index.html"','return "cli/bin/extension-cli"',"neverextensions.desktop-rpc.v1","NEVERLAUNCHER_EXTENSION_HOST_URL","/v1/hello"):
+scaffold=read("cli/cmd/neverlauncher/project_commands.go") + read("cli/cmd/neverlauncher/extension_sdk_02010.go")
+for token in ('return "desktop/index.html"','return "cli/bin/extension-cli"',"uiTemplate02010","NEVERLAUNCHER_EXTENSION_HOST_URL","/v1/hello"):
     require(token in scaffold, f"SDK scaffold missing {token}")
 schema=read("schemas/neverlauncher-extension.schema.json")
 for token in ('"desktop"','"cli"','"namespace"','"commands"'):

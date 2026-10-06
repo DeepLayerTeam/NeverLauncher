@@ -1,0 +1,20 @@
+{
+  "name": "@neverlauncher/admin-extension-sdk",
+  "version": "0.20.10",
+  "type": "module",
+  "exports": {
+    ".": "./neverlauncher-admin.ts",
+    "./generated": "./generated.ts",
+    "./openapi": "./openapi-generated.ts",
+    "./api-types": "./api-types-generated.ts",
+    "./api-requests": "./api-requests-generated.ts"
+  },
+  "files": [
+    "neverlauncher-admin.ts",
+    "generated.ts",
+    "openapi-generated.ts",
+    "api-types-generated.ts",
+    "api-requests-generated.ts",
+    "README.md"
+  ]
+}

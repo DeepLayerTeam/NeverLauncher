@@ -118,9 +118,11 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
+		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
 	}
 	switch args[0] {
+	case "init", "dev", "test", "build":
+		return handleExtensionSDK02010(args[0], args[1:])
 	case "template":
 		target := strings.ToLower(flagValue(args, "--target", "backend"))
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, target) {

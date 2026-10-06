@@ -1,0 +1,252 @@
+[
+  {
+    "id": "delete_admin_extensions_by_extensionId_permissions_by_permission",
+    "method": "DELETE",
+    "path": "/api/v1/admin/extensions/{extensionId}/permissions/{permission}"
+  },
+  {
+    "id": "delete_admin_extensions_by_extensionId_secrets_by_secretName",
+    "method": "DELETE",
+    "path": "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"
+  },
+  {
+    "id": "get_admin_extension_capabilities",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-capabilities"
+  },
+  {
+    "id": "get_admin_extension_cli_catalog",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-cli/catalog"
+  },
+  {
+    "id": "get_admin_extension_events",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-events"
+  },
+  {
+    "id": "get_admin_extension_events_dead_letters",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-events/dead-letters"
+  },
+  {
+    "id": "get_admin_extension_events_subscriptions",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-events/subscriptions"
+  },
+  {
+    "id": "get_admin_extension_hosts",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-hosts"
+  },
+  {
+    "id": "get_admin_extension_hosts_by_extensionId",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}"
+  },
+  {
+    "id": "get_admin_extension_hosts_by_extensionId_logs",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}/logs"
+  },
+  {
+    "id": "get_admin_extension_installs",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-installs"
+  },
+  {
+    "id": "get_admin_extension_installs_by_extensionId",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-installs/{extensionId}"
+  },
+  {
+    "id": "get_admin_extension_registry_extensions",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/extensions"
+  },
+  {
+    "id": "get_admin_extension_registry_extensions_by_extensionId",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}"
+  },
+  {
+    "id": "get_admin_extension_registry_extensions_by_extensionId_versions_by_version",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}"
+  },
+  {
+    "id": "get_admin_extension_registry_extensions_by_extensionId_versions_by_version_artifact",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/artifact"
+  },
+  {
+    "id": "get_admin_extension_registry_publishers",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/publishers"
+  },
+  {
+    "id": "get_admin_extension_registry_publishers_by_publisherId_keys",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
+  },
+  {
+    "id": "get_admin_extensions",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId_permissions",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}/permissions"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId_secrets",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}/secrets"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId_ui",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}/ui"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId_versions",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}/versions"
+  },
+  {
+    "id": "get_admin_extensions_by_extensionId_versions_by_version",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/{extensionId}/versions/{version}"
+  },
+  {
+    "id": "get_admin_extensions_catalog",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/catalog"
+  },
+  {
+    "id": "get_admin_extensions_manager",
+    "method": "GET",
+    "path": "/api/v1/admin/extensions/manager"
+  },
+  {
+    "id": "get_desktop_extensions_by_extensionId_ui",
+    "method": "GET",
+    "path": "/api/v1/desktop/extensions/{extensionId}/ui"
+  },
+  {
+    "id": "get_desktop_extensions_catalog",
+    "method": "GET",
+    "path": "/api/v1/desktop/extensions/catalog"
+  },
+  {
+    "id": "post_admin_extension_cli_by_extensionId_invoke",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-cli/{extensionId}/invoke"
+  },
+  {
+    "id": "post_admin_extension_hosts_by_extensionId_restart",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}/restart"
+  },
+  {
+    "id": "post_admin_extension_hosts_by_extensionId_start",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}/start"
+  },
+  {
+    "id": "post_admin_extension_hosts_by_extensionId_stop",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-hosts/{extensionId}/stop"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_disable",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/disable"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_enable",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/enable"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_install",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/install"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_rollback",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/rollback"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_uninstall",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/uninstall"
+  },
+  {
+    "id": "post_admin_extension_installs_by_extensionId_update",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-installs/{extensionId}/update"
+  },
+  {
+    "id": "post_admin_extension_registry_extensions_by_extensionId_versions_by_version_install",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install"
+  },
+  {
+    "id": "post_admin_extension_registry_extensions_by_extensionId_versions_by_version_yank",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/yank"
+  },
+  {
+    "id": "post_admin_extension_registry_publish",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/publish"
+  },
+  {
+    "id": "post_admin_extension_registry_publishers",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/publishers"
+  },
+  {
+    "id": "post_admin_extension_registry_publishers_by_publisherId_keys",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
+  },
+  {
+    "id": "post_admin_extensions_by_extensionId_permissions",
+    "method": "POST",
+    "path": "/api/v1/admin/extensions/{extensionId}/permissions"
+  },
+  {
+    "id": "post_admin_extensions_by_extensionId_rpc",
+    "method": "POST",
+    "path": "/api/v1/admin/extensions/{extensionId}/rpc"
+  },
+  {
+    "id": "post_admin_extensions_versions",
+    "method": "POST",
+    "path": "/api/v1/admin/extensions/versions"
+  },
+  {
+    "id": "post_desktop_extensions_by_extensionId_rpc",
+    "method": "POST",
+    "path": "/api/v1/desktop/extensions/{extensionId}/rpc"
+  },
+  {
+    "id": "put_admin_extension_registry_extensions_by_extensionId_channels_by_channel",
+    "method": "PUT",
+    "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}"
+  },
+  {
+    "id": "put_admin_extensions_by_extensionId_secrets_by_secretName",
+    "method": "PUT",
+    "path": "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"
+  }
+]

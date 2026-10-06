@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "2.0",
+  "id": "ru.example.neverlauncher.cli-status",
+  "name": "CLI Status Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "api": "3.7",
+  "targets": [
+    {
+      "kind": "cli",
+      "entrypoint": "cli/bin/extension-cli"
+    }
+  ],
+  "permissions": [
+    "cli:contribute"
+  ],
+  "cli": {
+    "namespace": "example",
+    "commands": [
+      {
+        "name": "status",
+        "description": "Show extension status",
+        "usage": "nl x example status"
+      }
+    ]
+  }
+}

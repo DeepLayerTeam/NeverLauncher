@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "2.0",
+  "id": "ru.example.neverlauncher.desktop-tool",
+  "name": "Desktop Tool Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "api": "3.7",
+  "targets": [
+    {
+      "kind": "desktop",
+      "entrypoint": "desktop/index.html"
+    }
+  ],
+  "permissions": [
+    "desktop:contribute",
+    "project:read"
+  ],
+  "desktop": {
+    "pages": [
+      {
+        "id": "main",
+        "title": "Desktop Tool Example"
+      }
+    ],
+    "navigation": [
+      {
+        "id": "main-nav",
+        "label": "Desktop Tool Example",
+        "pageId": "main"
+      }
+    ]
+  }
+}

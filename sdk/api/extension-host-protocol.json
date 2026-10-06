@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "hostProtocolVersion": "1.0",
+  "adminProtocolVersion": "neverextensions.admin-rpc.v1",
+  "desktopProtocolVersion": "neverextensions.desktop-rpc.v1",
+  "types": {
+    "HostEnvironment": {
+      "extensionId": "string",
+      "version": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "target": "string",
+      "hostUrl": "string",
+      "hostToken": "string",
+      "callbackToken": "string",
+      "instanceId": "string"
+    },
+    "HelloRequest": {
+      "protocolVersion": "string",
+      "instanceId": "string",
+      "extensionId": "string",
+      "pid": "integer",
+      "callbackUrl": "string"
+    },
+    "HelloResponse": {
+      "protocolVersion": "string",
+      "instanceId": "string",
+      "heartbeatTimeoutSeconds": "integer",
+      "capabilities": "string[]",
+      "events": "string[]",
+      "eventProtocolVersion": "string"
+    },
+    "LogRequest": {
+      "level": "string",
+      "message": "string",
+      "fields": "object"
+    },
+    "EventSubscription": {
+      "id": "string",
+      "eventType": "string",
+      "mode": "string",
+      "projectId": "string"
+    },
+    "AdminContext": {
+      "extensionId": "string",
+      "version": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "pageId": "string",
+      "actionId": "string"
+    },
+    "DesktopContext": {
+      "extensionId": "string",
+      "version": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "pageId": "string",
+      "actionId": "string",
+      "bridgeAllowed": "boolean"
+    }
+  }
+}

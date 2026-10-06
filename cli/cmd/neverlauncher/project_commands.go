@@ -341,7 +341,7 @@ func isHexColor(value string) bool {
 
 func handleSDK(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные sdk-подкоманды: list, init, validate")
+		return errors.New("доступные sdk-подкоманды: list, init, validate (legacy aliases; prefer nl extension init/test)")
 	}
 	sdks := []map[string]string{
 		{"target": "backend", "language": "go", "path": "sdk/backend/go", "purpose": "серверные расширения Backend API"},
@@ -351,72 +351,11 @@ func handleSDK(args []string) error {
 	}
 	switch args[0] {
 	case "list":
-		printJSON(map[string]any{"version": version, "api": "3.7", "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "sdks": sdks})
+		printJSON(map[string]any{"version": version, "sdkVersion": neverExtensionsSDKVersion02010, "api": "3.7", "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "generatedTypes": "sdk/api/extension-host-protocol.json + canonical OpenAPI", "sdks": sdks})
 		return nil
 	case "init":
-		target := flagValue(args, "--target", "backend")
-		out := flagValue(args, "--out", "neverlauncher-extension")
-		if !containsString([]string{"backend", "admin", "desktop", "cli"}, target) {
-			return errors.New("--target должен быть одним из: backend, admin, desktop, cli")
-		}
-		if err := os.MkdirAll(out, 0o755); err != nil {
-			return err
-		}
-		manifest := CanonicalExtensionManifest0201{
-			SchemaVersion: "2.0",
-			ID:            "ru.example.neverlauncher." + target,
-			Name:          "Пример SDK-расширения",
-			Version:       "0.1.0",
-			Publisher:     "Example Publisher",
-			API:           "3.7",
-			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
-			Permissions:   []string{"release:read"},
-		}
-		if target == "admin" {
-			manifest.Permissions = []string{"ui:contribute", "project:read"}
-			manifest.Admin = &CanonicalExtensionAdminContributions0208{Pages: []CanonicalExtensionAdminPage0208{{ID: "main", Title: "Example extension"}}, Navigation: []CanonicalExtensionAdminNavigation0208{{ID: "main-nav", Label: "Example extension", PageID: "main"}}, DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Example extension", PageID: "main", Height: 280}}}
-		}
-		if target == "desktop" {
-			manifest.Permissions = []string{"desktop:contribute", "desktop:bridge", "project:read", "release:read"}
-			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Example Desktop extension"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Example extension", PageID: "main"}}, Actions: []CanonicalExtensionDesktopAction0209{{ID: "platform", Label: "Platform", PageID: "main", Placement: "toolbar"}}}
-		}
-		if target == "cli" {
-			manifest.Permissions = []string{"cli:contribute"}
-			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Show extension status", Usage: "nl x example status"}}}
-		}
-		manifest, _, err := normalizeCanonicalExtension0201(manifest)
-		if err != nil {
-			return err
-		}
-		if err := writeJSONFile(filepath.Join(out, canonicalExtensionManifestName0201), manifest); err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(out, "README.md"), []byte(sdkReadme(target)), 0o644); err != nil {
-			return err
-		}
-		if target == "cli" {
-			if err := os.MkdirAll(filepath.Join(out, "cli"), 0o755); err != nil {
-				return err
-			}
-			if err := os.MkdirAll(filepath.Join(out, "cli", "bin"), 0o755); err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(out, "cli", "main.go"), []byte(sdkTemplate(target)), 0o644); err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(out, "cli", "go.mod"), []byte("module example.com/neverlauncher-extension-cli\n\ngo 1.23\n"), 0o644); err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(out, "build-cli.sh"), []byte("#!/usr/bin/env sh\nset -eu\ncd \"$(dirname \"$0\")/cli\"\ngo build -trimpath -o bin/extension-cli .\n"), 0o755); err != nil {
-				return err
-			}
-			return os.WriteFile(filepath.Join(out, "build-cli.ps1"), []byte("$ErrorActionPreference='Stop'\nSet-Location (Join-Path $PSScriptRoot 'cli')\ngo build -trimpath -o bin/extension-cli .\n"), 0o644)
-		}
-		entry := filepath.Join(out, sdkEntrypoint(target))
-		if err := os.MkdirAll(filepath.Dir(entry), 0o755); err != nil {
-			return err
-		}
-		return os.WriteFile(entry, []byte(sdkTemplate(target)), 0o644)
+		// 0.20.10 keeps sdk init as a compatibility alias to the real extension initializer.
+		return handleExtensionSDK02010("init", args[1:])
 	case "validate":
 		if len(args) < 2 {
 			return errors.New("sdk validate требует путь к каталогу расширения или neverlauncher-extension.json")
@@ -435,9 +374,9 @@ func handleSDK(args []string) error {
 func sdkEntrypoint(target string) string {
 	switch target {
 	case "backend":
-		return "main.go"
+		return "backend/bin/extension-backend"
 	case "admin":
-		return "index.html"
+		return "admin/index.html"
 	case "desktop":
 		return "desktop/index.html"
 	case "cli":
@@ -454,61 +393,13 @@ func sdkReadme(target string) string {
 func sdkTemplate(target string) string {
 	switch target {
 	case "backend":
-		return "package main\\n\\nimport \\\"fmt\\\"\\n\\nfunc main() {\\n\\tfmt.Println(\\\"NeverLauncher backend extension\\\")\\n}\\n"
+		return backendTemplate02010("ru.example.neverlauncher.backend")
 	case "cli":
-		return `package main
-
-import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "os"
-    "strings"
-    "time"
-)
-
-func main() {
-    host := strings.TrimRight(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL"), "/")
-    token := os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")
-    instance := os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID")
-    extensionID := os.Getenv("NEVERLAUNCHER_EXTENSION_ID")
-    if host == "" || token == "" || instance == "" || extensionID == "" {
-        fmt.Fprintln(os.Stderr, "NeverLauncher Extension Host environment is incomplete")
-        os.Exit(70)
-    }
-    body, _ := json.Marshal(map[string]string{"protocolVersion": "1.0", "instanceId": instance, "extensionId": extensionID})
-    req, err := http.NewRequest(http.MethodPost, host+"/v1/hello", bytes.NewReader(body))
-    if err != nil { fatal(err) }
-    req.Header.Set("Authorization", "Bearer "+token)
-    req.Header.Set("Content-Type", "application/json")
-    client := &http.Client{Timeout: 5 * time.Second}
-    resp, err := client.Do(req)
-    if err != nil { fatal(err) }
-    _ = resp.Body.Close()
-    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-        fmt.Fprintf(os.Stderr, "Host hello rejected: HTTP %d\\n", resp.StatusCode)
-        os.Exit(77)
-    }
-    if len(os.Args) < 2 {
-        fmt.Fprintln(os.Stderr, "command is required")
-        os.Exit(64)
-    }
-    switch os.Args[1] {
-    case "status":
-        fmt.Printf("%s: ready\\n", extensionID)
-    default:
-        fmt.Fprintf(os.Stderr, "unknown command: %s\\n", os.Args[1])
-        os.Exit(64)
-    }
-}
-
-func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(70) }
-`
+		return cliTemplate02010()
 	case "admin":
-		return `<!doctype html><html><head><meta charset="utf-8"><title>NeverLauncher extension</title><style>body{font:14px system-ui;margin:0;padding:16px;color:#111}pre{white-space:pre-wrap}</style></head><body><h2>NeverLauncher Admin extension</h2><pre id="out">Waiting for host…</pre><script>(()=>{const P='neverextensions.admin-rpc.v1';let seq=0,pending=new Map();const out=document.getElementById('out');window.addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.protocol!==P)return;const m=e.data;if(m.type==='rpc.response'){const p=pending.get(m.id);if(!p)return;pending.delete(m.id);m.error?p.reject(new Error(m.error)):p.resolve(m.result)}if(m.type==='host.context'){rpc('context.get',{}).then(async ctx=>{const projects=await rpc('projects.list',{});out.textContent=JSON.stringify({ctx,projects},null,2)}).catch(err=>out.textContent=String(err))}});function rpc(method,params){const id='rpc-'+Date.now()+'-'+(++seq);parent.postMessage({protocol:P,type:'rpc.request',id,method,params},'*');return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});setTimeout(()=>{if(pending.delete(id))reject(new Error('RPC timeout'))},10000)})}})();</script></body></html>`
+		return uiTemplate02010("admin", "NeverLauncher Admin extension")
 	case "desktop":
-		return `<!doctype html><html><head><meta charset="utf-8"><title>NeverLauncher Desktop extension</title><style>body{font:14px system-ui;margin:0;padding:16px;color:#111}button{margin:4px}pre{white-space:pre-wrap}</style></head><body><h2>Desktop extension</h2><button id="platform">Platform</button><button id="game">Open game directory</button><pre id="out">Waiting for host…</pre><script>(()=>{const P='neverextensions.desktop-rpc.v1';let seq=0,pending=new Map();const out=document.getElementById('out');window.addEventListener('message',e=>{if(e.source!==parent||!e.data||e.data.protocol!==P)return;const m=e.data;if(m.type==='rpc.response'){const p=pending.get(m.id);if(!p)return;pending.delete(m.id);m.error?p.reject(new Error(m.error)):p.resolve(m.result)}if(m.type==='host.context')out.textContent=JSON.stringify(m.context,null,2);if(m.type==='host.action')out.textContent='Action: '+m.actionId});function rpc(method,params){const id='rpc-'+Date.now()+'-'+(++seq);parent.postMessage({protocol:P,type:'rpc.request',id,method,params},'*');return new Promise((resolve,reject)=>{pending.set(id,{resolve,reject});setTimeout(()=>{if(pending.delete(id))reject(new Error('RPC timeout'))},10000)})}document.getElementById('platform').onclick=()=>rpc('tauri.platform',{}).then(v=>out.textContent=JSON.stringify(v,null,2)).catch(e=>out.textContent=String(e));document.getElementById('game').onclick=()=>rpc('tauri.openGameDirectory',{}).catch(e=>out.textContent=String(e))})();</script></body></html>`
+		return uiTemplate02010("desktop", "NeverLauncher Desktop extension")
 	default:
 		return ""
 	}

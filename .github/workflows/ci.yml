@@ -145,6 +145,9 @@ jobs:
       - name: Build Desktop frontend
         working-directory: apps/desktop
         run: npm ci && npm run build
+      - name: Type-check NeverExtensions TypeScript SDKs
+        run: |
+          apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts
 
   rust-desktop:
     name: NeverRuntime and Tauri
@@ -855,6 +858,22 @@ jobs:
           npm ci --prefix apps/desktop
           npm run build --prefix apps/desktop
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+          python3 scripts/contracts/validate-openapi.py
+      - name: NeverExtensions SDK 0.20.10 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-sdk-02010.py
+          python3 scripts/sdk/generate-types.py
+          git diff --exit-code -- sdk/backend/go/types_generated.go sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/rust/src/generated.rs sdk/api/openapi-operations-generated.json
+          (cd sdk/backend/go && go test ./... && go vet ./...)
+          (cd sdk/cli/go && go test ./... && go vet ./...)
+          cargo check --manifest-path sdk/desktop/rust/Cargo.toml
+          (cd cli && go test -run '02010|ExtensionPackageFourTargets0209' ./cmd/neverlauncher && go vet ./cmd/neverlauncher && go build -trimpath -o /tmp/nl-sdk ./cmd/neverlauncher)
+          /tmp/nl-sdk extension test examples/extensions/backend-health --sdk-root sdk
+          /tmp/nl-sdk extension test examples/extensions/cli-status --sdk-root sdk
+          /tmp/nl-sdk extension test examples/extensions/admin-dashboard --sdk-root sdk
+          /tmp/nl-sdk extension test examples/extensions/desktop-tool --sdk-root sdk
+          /tmp/nl-sdk extension dev examples/extensions/backend-health --target backend --sdk-root sdk --duration 2s
+          /tmp/nl-sdk extension dev examples/extensions/cli-status --target cli --sdk-root sdk --duration 5s -- status
           python3 scripts/contracts/validate-openapi.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py

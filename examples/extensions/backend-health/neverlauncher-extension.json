@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "2.0",
+  "id": "ru.example.neverlauncher.backend-health",
+  "name": "Backend Health Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "api": "3.7",
+  "targets": [
+    {
+      "kind": "backend",
+      "entrypoint": "backend/bin/extension-backend"
+    }
+  ],
+  "permissions": [
+    "telemetry:write"
+  ]
+}

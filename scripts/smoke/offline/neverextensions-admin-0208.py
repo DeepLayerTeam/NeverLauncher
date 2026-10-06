@@ -22,8 +22,8 @@ for token in ('sandbox="allow-scripts"','postMessage','rpc.request','rpc.respons
     require(token in ui, f"Admin SPA extension runtime missing {token}")
 main=read("apps/admin/src/main.tsx")
 require("extensions-manager" in main and "<AdminExtensions" in main, "Admin SPA did not wire Extension Manager/widgets")
-cli_scaffold=read("cli/cmd/neverlauncher/project_commands.go")
-for token in ('case "admin":','return "index.html"','ui:contribute','neverextensions.admin-rpc.v1'):
+cli_scaffold=read("cli/cmd/neverlauncher/project_commands.go") + read("cli/cmd/neverlauncher/extension_sdk_02010.go")
+for token in ('case "admin":','admin/index.html','ui:contribute','uiTemplate02010'):
     require(token in cli_scaffold, f"Admin SDK scaffold missing {token}")
 sdk=read("sdk/admin/typescript/neverlauncher-admin.ts")
 for token in ("NeverLauncherAdminBridge","projects.list","releases.list","telemetry.emit"):
