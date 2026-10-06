@@ -106,6 +106,14 @@ type Repository interface {
 	GetExtensionSecret(ctx context.Context, extensionID, scope, scopeID, name string) (model.ExtensionSecret, error)
 	ListExtensionSecrets(ctx context.Context, extensionID, scope, scopeID string) ([]model.ExtensionSecretMetadata, error)
 	DeleteExtensionSecret(ctx context.Context, extensionID, scope, scopeID, name string) error
+	ListExtensionUpdatePins(ctx context.Context, scope, scopeID string) ([]model.ExtensionUpdatePin, error)
+	SetExtensionUpdatePin(ctx context.Context, pin model.ExtensionUpdatePin) (model.ExtensionUpdatePin, error)
+	DeleteExtensionUpdatePin(ctx context.Context, extensionID, scope, scopeID string) error
+	AcquireExtensionUpdateLease(ctx context.Context, scope, scopeID, owner string, ttl time.Duration) (bool, error)
+	ReleaseExtensionUpdateLease(ctx context.Context, scope, scopeID, owner string) error
+	SaveExtensionUpdateTransaction(ctx context.Context, tx model.ExtensionUpdateTransaction) (model.ExtensionUpdateTransaction, error)
+	GetExtensionUpdateTransaction(ctx context.Context, id string) (model.ExtensionUpdateTransaction, error)
+	ListExtensionUpdateTransactions(ctx context.Context, scope, scopeID, status string) ([]model.ExtensionUpdateTransaction, error)
 }
 
 type MemoryRepository struct {
@@ -142,8 +150,11 @@ type MemoryRepository struct {
 	extensionEventSubscriptions    []model.ExtensionEventSubscription
 	extensionEventDeliveries       []model.ExtensionEventDelivery
 	extensionEventDeadLetters      []model.ExtensionEventDeadLetter
-	extensionPermissionGrants       []model.ExtensionPermissionGrant
-	extensionSecrets                []model.ExtensionSecret
+	extensionPermissionGrants      []model.ExtensionPermissionGrant
+	extensionSecrets               []model.ExtensionSecret
+	extensionUpdatePins            []model.ExtensionUpdatePin
+	extensionUpdateTransactions    []model.ExtensionUpdateTransaction
+	extensionUpdateLeases          map[string]extensionUpdateLease02011
 	nextExtensionInstallRevisionID int64
 	nextExtensionEventSequence     int64
 	nextExtensionSubscriptionID    int64
@@ -190,6 +201,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 
 	return &MemoryRepository{
 		nextExtensionInstallRevisionID: 1,
+		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
 		projects: []model.Project{
 			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта NeverLauncher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
 		},

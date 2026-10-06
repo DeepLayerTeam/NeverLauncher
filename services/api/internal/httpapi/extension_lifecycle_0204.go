@@ -11,6 +11,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionresolver"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -261,54 +262,31 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
-	item, err := s.resolveLifecycleRegistryVersion0204(r, r.PathValue("extensionId"), req.Version, req.Channel)
+	channel := strings.TrimSpace(req.Channel)
+	if channel == "" && strings.TrimSpace(req.Version) == "" {
+		channel = "stable"
+	}
+	root := model.ExtensionUpdateRoot{ExtensionID: r.PathValue("extensionId"), Version: strings.TrimSpace(req.Version), Channel: channel}
+	plan, err := s.resolver02011(channel).Resolve(r.Context(), extensionresolver.Scope{Scope: req.Scope, ScopeID: req.ScopeID}, []model.ExtensionUpdateRoot{root})
 	if err != nil {
 		writeLifecycleError0204(w, err)
 		return
 	}
-	if s.ExtensionSecurity == nil {
-		writeError(w, http.StatusServiceUnavailable, "extension capability security unavailable")
-		return
-	}
-	currentInstall, err := s.Repo.GetExtensionInstallState(r.Context(), item.ExtensionID, scope.Scope, scope.ScopeID)
+	tx, err := s.updateManager02011().Apply(r.Context(), plan)
 	if err != nil {
-		writeLifecycleError0204(w, err)
+		s.audit(r, s.adminActor(r), "extension:lifecycle:update-failed", tx.ID+":"+tx.Status)
+		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": err.Error(), "data": map[string]any{"transaction": tx, "plan": plan}})
 		return
 	}
-	diff, err := s.ExtensionSecurity.PermissionDiff(r.Context(), item.ExtensionID, currentInstall.CurrentVersion, item.Version, scope.Scope, scope.ScopeID)
-	if err != nil {
-		writeLifecycleError0204(w, err)
-		return
-	}
-	if len(diff.AddedNotGranted) > 0 {
-		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": "extension update requires explicit permission grants", "data": map[string]any{"permissionDiff": diff}})
-		return
-	}
-	before, wasRunning, err := s.stopExtensionHostForLifecycle0205(r, r.PathValue("extensionId"), scope)
-	if err != nil {
-		writeLifecycleError0204(w, err)
-		return
-	}
-	install, err := s.lifecycleManager0204().Update(r.Context(), item, scope)
-	if err != nil {
-		s.restoreExtensionHostAfterLifecycleFailure0205(before, wasRunning)
-		writeLifecycleError0204(w, err)
-		return
-	}
-	if err := s.startEnabledExtensionHost0205(r.Context(), install); err != nil {
-		rolled, rbErr := s.lifecycleManager0204().Rollback(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
-		if rbErr != nil {
-			writeError(w, http.StatusInternalServerError, "updated extension failed to start and rollback failed: "+err.Error()+"; "+rbErr.Error())
-			return
-		}
-		_ = s.startEnabledExtensionHost0205(context.Background(), rolled)
-		writeError(w, http.StatusConflict, "updated extension failed host activation; payload/state rolled back: "+err.Error())
+	install, getErr := s.Repo.GetExtensionInstallState(r.Context(), root.ExtensionID, plan.Scope, plan.ScopeID)
+	if getErr != nil {
+		writeError(w, http.StatusInternalServerError, "update committed but final install state could not be loaded: "+getErr.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:update", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "updated", "verified": true, "install": install, "permissionDiff": diff}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "updated", "verified": true, "install": install, "transaction": tx, "plan": plan}})
 }
+
 func (s Server) extensionRollback0204(w http.ResponseWriter, r *http.Request) {
 	req, err := decodeLifecycleWrite0204(r)
 	if err != nil {

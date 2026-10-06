@@ -70,6 +70,8 @@ func normalizeRegistryPublisherKey0203(in model.ExtensionRegistryPublisherKey) (
 func normalizeRegistryCompatibility0203(in model.ExtensionRegistryCompatibility) (model.ExtensionRegistryCompatibility, error) {
 	in.MinNeverLauncher = strings.TrimSpace(in.MinNeverLauncher)
 	in.MaxNeverLauncher = strings.TrimSpace(in.MaxNeverLauncher)
+	in.MinAPI = strings.TrimSpace(in.MinAPI)
+	in.MaxAPI = strings.TrimSpace(in.MaxAPI)
 	if in.MinNeverLauncher != "" && !extensionSemver0201.MatchString(in.MinNeverLauncher) {
 		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid minNeverLauncher %q", in.MinNeverLauncher)
 	}
@@ -78,6 +80,13 @@ func normalizeRegistryCompatibility0203(in model.ExtensionRegistryCompatibility)
 	}
 	if in.MinNeverLauncher != "" && in.MaxNeverLauncher != "" && compareRegistrySemver0203(in.MinNeverLauncher, in.MaxNeverLauncher) > 0 {
 		return model.ExtensionRegistryCompatibility{}, errors.New("minNeverLauncher cannot be greater than maxNeverLauncher")
+	}
+	apiVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+(?:\.[0-9]+)?$`)
+	if in.MinAPI != "" && !apiVersion.MatchString(in.MinAPI) {
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid minApi %q", in.MinAPI)
+	}
+	if in.MaxAPI != "" && !apiVersion.MatchString(in.MaxAPI) {
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid maxApi %q", in.MaxAPI)
 	}
 	normalizePlatform := func(values []string, field string) ([]string, error) {
 		seen := map[string]struct{}{}
@@ -282,7 +291,7 @@ func compareRegistrySemver0203(a, b string) int {
 }
 
 func equalRegistryCompatibility0203(a, b model.ExtensionRegistryCompatibility) bool {
-	return a.MinNeverLauncher == b.MinNeverLauncher && a.MaxNeverLauncher == b.MaxNeverLauncher && strings.Join(a.SupportedOS, "\x00") == strings.Join(b.SupportedOS, "\x00") && strings.Join(a.SupportedArchitectures, "\x00") == strings.Join(b.SupportedArchitectures, "\x00")
+	return a.MinNeverLauncher == b.MinNeverLauncher && a.MaxNeverLauncher == b.MaxNeverLauncher && a.MinAPI == b.MinAPI && a.MaxAPI == b.MaxAPI && strings.Join(a.SupportedOS, "\x00") == strings.Join(b.SupportedOS, "\x00") && strings.Join(a.SupportedArchitectures, "\x00") == strings.Join(b.SupportedArchitectures, "\x00")
 }
 
 func (r *MemoryRepository) SaveExtensionRegistryPublisher(ctx context.Context, publisher model.ExtensionRegistryPublisher) (model.ExtensionRegistryPublisher, error) {
@@ -807,17 +816,18 @@ func (r *SQLRepository) PublishExtensionRegistryVersion(ctx context.Context, pub
 	if _, err := saveExtensionVersionTx0203(ctx, tx, publication.Manifest, manifestDigest); err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
-	var existingPublisher, existingIdentity, existingSHA, existingMin, existingMax string
+	var existingPublisher, existingIdentity, existingSHA, existingMin, existingMax, existingMinAPI, existingMaxAPI string
 	var existingSize int64
 	var existingOS, existingArch []byte
-	err = tx.QueryRowContext(ctx, `SELECT rv.publisher_id,a.package_identity,a.sha256,a.size_bytes,c.min_neverlauncher,c.max_neverlauncher,c.supported_os,c.supported_architectures
+	err = tx.QueryRowContext(ctx, `SELECT rv.publisher_id,a.package_identity,a.sha256,a.size_bytes,c.min_neverlauncher,c.max_neverlauncher,c.min_api,c.max_api,c.supported_os,c.supported_architectures
 FROM extension_registry_versions rv
 JOIN extension_registry_artifacts a ON a.extension_id=rv.extension_id AND a.version=rv.version
 JOIN extension_registry_compatibility c ON c.extension_id=rv.extension_id AND c.version=rv.version
-WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID, publication.Manifest.Version).Scan(&existingPublisher, &existingIdentity, &existingSHA, &existingSize, &existingMin, &existingMax, &existingOS, &existingArch)
+WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID, publication.Manifest.Version).Scan(&existingPublisher, &existingIdentity, &existingSHA, &existingSize, &existingMin, &existingMax, &existingMinAPI, &existingMaxAPI, &existingOS, &existingArch)
 	if err == nil {
 		var existingCompatibility model.ExtensionRegistryCompatibility
 		existingCompatibility.MinNeverLauncher, existingCompatibility.MaxNeverLauncher = existingMin, existingMax
+		existingCompatibility.MinAPI, existingCompatibility.MaxAPI = existingMinAPI, existingMaxAPI
 		if json.Unmarshal(existingOS, &existingCompatibility.SupportedOS) != nil || json.Unmarshal(existingArch, &existingCompatibility.SupportedArchitectures) != nil {
 			return model.ExtensionRegistryVersion{}, errors.New("registry contains invalid compatibility metadata")
 		}
@@ -835,7 +845,7 @@ WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID,
 		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_versions(extension_id,version,publisher_id) VALUES($1,$2,$3)`, publication.Manifest.ID, publication.Manifest.Version, publication.PublisherID); err != nil {
 			return model.ExtensionRegistryVersion{}, err
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_neverlauncher,max_neverlauncher,supported_os,supported_architectures) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)`, publication.Manifest.ID, publication.Manifest.Version, publication.Compatibility.MinNeverLauncher, publication.Compatibility.MaxNeverLauncher, string(compatOS), string(compatArch)); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_neverlauncher,max_neverlauncher,min_api,max_api,supported_os,supported_architectures) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb)`, publication.Manifest.ID, publication.Manifest.Version, publication.Compatibility.MinNeverLauncher, publication.Compatibility.MaxNeverLauncher, publication.Compatibility.MinAPI, publication.Compatibility.MaxAPI, string(compatOS), string(compatArch)); err != nil {
 			return model.ExtensionRegistryVersion{}, err
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_artifacts(package_identity,extension_id,version,sha256,size_bytes,storage_project,storage_version,storage_path,signature_key_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, publication.Artifact.PackageIdentity, publication.Manifest.ID, publication.Manifest.Version, publication.Artifact.SHA256, publication.Artifact.Size, publication.Artifact.StorageProject, publication.Artifact.StorageVersion, publication.Artifact.StoragePath, publication.Artifact.SignatureKeyFingerprint); err != nil {
@@ -863,7 +873,7 @@ func scanRegistryVersionBase0203(scanner interface{ Scan(...any) error }) (model
 	var item model.ExtensionRegistryVersion
 	var rawManifest, rawOS, rawArch []byte
 	var yanked sql.NullTime
-	if err := scanner.Scan(&item.ExtensionID, &item.Version, &item.PublisherID, &rawManifest, &item.Compatibility.MinNeverLauncher, &item.Compatibility.MaxNeverLauncher, &rawOS, &rawArch, &item.Artifact.PackageIdentity, &item.Artifact.SHA256, &item.Artifact.Size, &item.Artifact.StorageProject, &item.Artifact.StorageVersion, &item.Artifact.StoragePath, &item.Artifact.SignatureKeyFingerprint, &item.Artifact.CreatedAt, &item.PublishedAt, &yanked, &item.YankReason); err != nil {
+	if err := scanner.Scan(&item.ExtensionID, &item.Version, &item.PublisherID, &rawManifest, &item.Compatibility.MinNeverLauncher, &item.Compatibility.MaxNeverLauncher, &item.Compatibility.MinAPI, &item.Compatibility.MaxAPI, &rawOS, &rawArch, &item.Artifact.PackageIdentity, &item.Artifact.SHA256, &item.Artifact.Size, &item.Artifact.StorageProject, &item.Artifact.StorageVersion, &item.Artifact.StoragePath, &item.Artifact.SignatureKeyFingerprint, &item.Artifact.CreatedAt, &item.PublishedAt, &yanked, &item.YankReason); err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
 	if err := json.Unmarshal(rawManifest, &item.Manifest); err != nil {
@@ -886,7 +896,7 @@ func (r *SQLRepository) GetExtensionRegistryVersion(ctx context.Context, extensi
 	if err := r.check(); err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
-	item, err := scanRegistryVersionBase0203(r.db.QueryRowContext(ctx, `SELECT rv.extension_id,rv.version,rv.publisher_id,ev.manifest,c.min_neverlauncher,c.max_neverlauncher,c.supported_os,c.supported_architectures,
+	item, err := scanRegistryVersionBase0203(r.db.QueryRowContext(ctx, `SELECT rv.extension_id,rv.version,rv.publisher_id,ev.manifest,c.min_neverlauncher,c.max_neverlauncher,c.min_api,c.max_api,c.supported_os,c.supported_architectures,
 a.package_identity,a.sha256,a.size_bytes,a.storage_project,a.storage_version,a.storage_path,a.signature_key_fingerprint,a.created_at,rv.published_at,rv.yanked_at,rv.yank_reason
 FROM extension_registry_versions rv
 JOIN extension_versions ev ON ev.extension_id=rv.extension_id AND ev.version=rv.version

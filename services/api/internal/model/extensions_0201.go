@@ -103,6 +103,13 @@ type ExtensionDependency struct {
 	Optional bool   `json:"optional,omitempty"`
 }
 
+// ExtensionConflict declares an incompatible extension/version range.
+// Version uses the NeverExtensions SemVer range grammar introduced in 0.20.11.
+type ExtensionConflict struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+
 // ExtensionManifest is the canonical NeverExtensions manifest introduced in
 // NeverLauncher 0.20.1. It replaces newly-authored neverlauncher-plugin.json
 // manifests while the CLI can still import the legacy format.
@@ -120,6 +127,7 @@ type ExtensionManifest struct {
 	Permissions   []string                       `json:"permissions,omitempty"`
 	Hooks         []string                       `json:"hooks,omitempty"`
 	Dependencies  []ExtensionDependency          `json:"dependencies,omitempty"`
+	Conflicts     []ExtensionConflict            `json:"conflicts,omitempty"`
 	Metadata      map[string]string              `json:"metadata,omitempty"`
 	Admin         *ExtensionAdminContributions   `json:"admin,omitempty"`
 	Desktop       *ExtensionDesktopContributions `json:"desktop,omitempty"`

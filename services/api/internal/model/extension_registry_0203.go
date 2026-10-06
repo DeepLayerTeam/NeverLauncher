@@ -29,6 +29,8 @@ type ExtensionRegistryPublisherKey struct {
 type ExtensionRegistryCompatibility struct {
 	MinNeverLauncher       string   `json:"minNeverLauncher,omitempty"`
 	MaxNeverLauncher       string   `json:"maxNeverLauncher,omitempty"`
+	MinAPI                 string   `json:"minApi,omitempty"`
+	MaxAPI                 string   `json:"maxApi,omitempty"`
 	SupportedOS            []string `json:"supportedOs,omitempty"`
 	SupportedArchitectures []string `json:"supportedArchitectures,omitempty"`
 }

@@ -141,6 +141,25 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	sort.Slice(deps, func(i, j int) bool { return deps[i].ID < deps[j].ID })
 	m.Dependencies = deps
+	conflicts := make([]model.ExtensionConflict, 0, len(m.Conflicts))
+	seenConflicts := map[string]struct{}{}
+	for _, conflict := range m.Conflicts {
+		conflict.ID = strings.ToLower(strings.TrimSpace(conflict.ID))
+		conflict.Version = strings.TrimSpace(conflict.Version)
+		if !extensionID0201.MatchString(conflict.ID) || conflict.ID == m.ID {
+			return model.ExtensionManifest{}, "", fmt.Errorf("invalid conflict id %q", conflict.ID)
+		}
+		if conflict.Version == "" || len(conflict.Version) > 128 {
+			return model.ExtensionManifest{}, "", fmt.Errorf("conflict %s requires a version constraint", conflict.ID)
+		}
+		if _, ok := seenConflicts[conflict.ID]; ok {
+			return model.ExtensionManifest{}, "", fmt.Errorf("duplicate conflict %q", conflict.ID)
+		}
+		seenConflicts[conflict.ID] = struct{}{}
+		conflicts = append(conflicts, conflict)
+	}
+	sort.Slice(conflicts, func(i, j int) bool { return conflicts[i].ID < conflicts[j].ID })
+	m.Conflicts = conflicts
 	if m.Admin != nil {
 		if _, ok := seenTargets["admin"]; !ok {
 			return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require an admin target")

@@ -33,8 +33,10 @@ for token in ('extensionhost.HardenBackendProcess()', 'extensionhost.New(', 'hos
     require(token in main, f"Backend Extension Host wiring missing {token}")
 
 lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
-for token in ('stopExtensionHostForLifecycle0205', 'startEnabledExtensionHost0205', 'restoreExtensionHostAfterLifecycleFailure0205', 'failed host activation; payload/state rolled back', 'enable was compensated to disabled'):
+for token in ('stopExtensionHostForLifecycle0205', 'startEnabledExtensionHost0205', 'restoreExtensionHostAfterLifecycleFailure0205', 'enable was compensated to disabled'):
     require(token in lifecycle, f"lifecycle/host integration missing {token}")
+updates = read('services/api/internal/extensionupdates/updates_02011.go') if (ROOT/'services/api/internal/extensionupdates/updates_02011.go').is_file() else ''
+require('failed host activation; payload/state rolled back' in lifecycle or ('waitHealthy' in updates and 'm.rollback' in updates), 'lifecycle/host integration missing failed host activation rollback')
 
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for suffix in ('', '/{extensionId}', '/{extensionId}/logs', '/{extensionId}/start', '/{extensionId}/stop', '/{extensionId}/restart'):

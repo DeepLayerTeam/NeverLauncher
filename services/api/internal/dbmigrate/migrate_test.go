@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0046_neverextensions_capability_security_0207" {
+	if st.Current != "0047_neverextensions_dependencies_updates_02011" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0046_neverextensions_capability_security_0207" {
+		if k != "0047_neverextensions_dependencies_updates_02011" {
 			pending[k] = v
 		}
 	}
@@ -627,6 +627,22 @@ func TestNeverExtensionsCapabilitySecurityMigration0207(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.7 capability security migration missing %q", required)
+		}
+	}
+}
+
+func TestNeverExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
+	b, err := os.ReadFile("sql/0047_neverextensions_dependencies_updates_02011.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"min_api", "max_api", "extension_update_pins", "extension_update_leases", "extension_update_transactions",
+		"rolled_back", "rollback_failed", "expires_at",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.20.11 dependency/update migration missing %q", required)
 		}
 	}
 }

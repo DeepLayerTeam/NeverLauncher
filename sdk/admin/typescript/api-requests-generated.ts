@@ -2,6 +2,7 @@
 import type * as Components from './api-types-generated';
 
 export interface NeverExtensionsAPIRequestMap {
+  "delete_admin_extension_updates_pins_by_extensionId": undefined;
   "delete_admin_extensions_by_extensionId_permissions_by_permission": undefined;
   "delete_admin_extensions_by_extensionId_secrets_by_secretName": undefined;
   "get_admin_extension_capabilities": undefined;
@@ -20,6 +21,8 @@ export interface NeverExtensionsAPIRequestMap {
   "get_admin_extension_registry_extensions_by_extensionId_versions_by_version_artifact": undefined;
   "get_admin_extension_registry_publishers": undefined;
   "get_admin_extension_registry_publishers_by_publisherId_keys": undefined;
+  "get_admin_extension_updates_pins": undefined;
+  "get_admin_extension_updates_transactions_by_transactionId": undefined;
   "get_admin_extensions": undefined;
   "get_admin_extensions_by_extensionId": undefined;
   "get_admin_extensions_by_extensionId_permissions": undefined;
@@ -46,10 +49,13 @@ export interface NeverExtensionsAPIRequestMap {
   "post_admin_extension_registry_publish": undefined;
   "post_admin_extension_registry_publishers": Components.ExtensionRegistryPublisherWrite;
   "post_admin_extension_registry_publishers_by_publisherId_keys": Components.ExtensionRegistryPublisherKeyWrite;
+  "post_admin_extension_updates_apply": Components.FreeFormObject;
+  "post_admin_extension_updates_plan": Components.FreeFormObject;
   "post_admin_extensions_by_extensionId_permissions": Components.ExtensionPermissionGrantWrite;
   "post_admin_extensions_by_extensionId_rpc": Components.FreeFormObject;
   "post_admin_extensions_versions": Components.CreateVersionRequest;
   "post_desktop_extensions_by_extensionId_rpc": Components.DesktopExtensionRPCRequest0209;
   "put_admin_extension_registry_extensions_by_extensionId_channels_by_channel": Components.ExtensionRegistryChannelWrite;
+  "put_admin_extension_updates_pins_by_extensionId": Components.FreeFormObject;
   "put_admin_extensions_by_extensionId_secrets_by_secretName": Components.ExtensionSecretWrite;
 }

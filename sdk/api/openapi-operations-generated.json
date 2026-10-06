@@ -1,5 +1,10 @@
 [
   {
+    "id": "delete_admin_extension_updates_pins_by_extensionId",
+    "method": "DELETE",
+    "path": "/api/v1/admin/extension-updates/pins/{extensionId}"
+  },
+  {
     "id": "delete_admin_extensions_by_extensionId_permissions_by_permission",
     "method": "DELETE",
     "path": "/api/v1/admin/extensions/{extensionId}/permissions/{permission}"
@@ -88,6 +93,16 @@
     "id": "get_admin_extension_registry_publishers_by_publisherId_keys",
     "method": "GET",
     "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
+  },
+  {
+    "id": "get_admin_extension_updates_pins",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-updates/pins"
+  },
+  {
+    "id": "get_admin_extension_updates_transactions_by_transactionId",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-updates/transactions/{transactionId}"
   },
   {
     "id": "get_admin_extensions",
@@ -220,6 +235,16 @@
     "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
   },
   {
+    "id": "post_admin_extension_updates_apply",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-updates/apply"
+  },
+  {
+    "id": "post_admin_extension_updates_plan",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-updates/plan"
+  },
+  {
     "id": "post_admin_extensions_by_extensionId_permissions",
     "method": "POST",
     "path": "/api/v1/admin/extensions/{extensionId}/permissions"
@@ -243,6 +268,11 @@
     "id": "put_admin_extension_registry_extensions_by_extensionId_channels_by_channel",
     "method": "PUT",
     "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}"
+  },
+  {
+    "id": "put_admin_extension_updates_pins_by_extensionId",
+    "method": "PUT",
+    "path": "/api/v1/admin/extension-updates/pins/{extensionId}"
   },
   {
     "id": "put_admin_extensions_by_extensionId_secrets_by_secretName",

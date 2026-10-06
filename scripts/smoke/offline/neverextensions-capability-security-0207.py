@@ -39,7 +39,8 @@ for token in ("https", "IsLoopback", "IsPrivate", "CheckRedirect", "Proxy: nil",
     require(token in http_broker, f"secure HTTP broker missing {token}")
 
 lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
-require("AddedNotGranted" in lifecycle and "permissionDiff" in lifecycle, "update permission-diff gate missing")
+updates = read('services/api/internal/extensionupdates/updates_02011.go') if (ROOT/'services/api/internal/extensionupdates/updates_02011.go').is_file() else ''
+require(("AddedNotGranted" in lifecycle and "permissionDiff" in lifecycle) or ("AddedNotGranted" in updates and "PermissionDiff" in updates), "update permission-diff gate missing")
 
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for path in (

@@ -1,3 +1,12 @@
+## [0.20.11] - 2026-10-06
+
+- Added a production SemVer dependency resolver with exact, wildcard, comparator, caret, tilde and OR constraints, required/optional dependencies, bidirectional conflicts, graph cycle detection and dependency-first ordering.
+- Added compatibility resolution across NeverLauncher version, Extension API version, operating system and architecture, with stable/beta/dev channel fallback and backtracking when a newer candidate produces an unsatisfied dependency or conflict.
+- Added persistent global/project exact version pins and migration `0047_neverextensions_dependencies_updates_02011`; pins are enforced both during resolution and again immediately before activation.
+- Added durable multi-extension update transactions with cross-replica scope leases, stale-plan/artifact checks, permission preflight for updates and auto-installed dependencies, dependency-first staged application and transaction journals with crash-safe `inFlight` fencing/recovery.
+- Added automatic compensation rollback in reverse dependency order when install/update, Host startup or health verification fails; previously enabled extension processes are restored from the pre-transaction snapshots.
+- Routed the legacy single-extension update API through the same dependency-aware transaction engine so dependency/conflict/pin policy cannot be bypassed. Added update plan/apply/transaction/pin REST APIs, `nl extension updates ...`, registry API compatibility metadata and the mandatory 0.20.11 production gate.
+
 ## [0.20.10] - 2026-10-06
 
 - Added the real NeverExtensions SDK distribution under `sdk/`: Backend Go, CLI Go, Admin TypeScript, Desktop TypeScript and Desktop Rust SDKs with generated protocol/OpenAPI metadata.

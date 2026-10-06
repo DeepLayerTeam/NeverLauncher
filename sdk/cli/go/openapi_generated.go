@@ -7,6 +7,7 @@ type APIOperation struct {
 }
 
 var NeverExtensionsAPIOperations = map[string]APIOperation{
+	"delete_admin_extension_updates_pins_by_extensionId":                                  {Method: "DELETE", Path: "/api/v1/admin/extension-updates/pins/{extensionId}"},
 	"delete_admin_extensions_by_extensionId_permissions_by_permission":                    {Method: "DELETE", Path: "/api/v1/admin/extensions/{extensionId}/permissions/{permission}"},
 	"delete_admin_extensions_by_extensionId_secrets_by_secretName":                        {Method: "DELETE", Path: "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"},
 	"get_admin_extension_capabilities":                                                    {Method: "GET", Path: "/api/v1/admin/extension-capabilities"},
@@ -25,6 +26,8 @@ var NeverExtensionsAPIOperations = map[string]APIOperation{
 	"get_admin_extension_registry_extensions_by_extensionId_versions_by_version_artifact": {Method: "GET", Path: "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/artifact"},
 	"get_admin_extension_registry_publishers":                                             {Method: "GET", Path: "/api/v1/admin/extension-registry/publishers"},
 	"get_admin_extension_registry_publishers_by_publisherId_keys":                         {Method: "GET", Path: "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"},
+	"get_admin_extension_updates_pins":                                                    {Method: "GET", Path: "/api/v1/admin/extension-updates/pins"},
+	"get_admin_extension_updates_transactions_by_transactionId":                           {Method: "GET", Path: "/api/v1/admin/extension-updates/transactions/{transactionId}"},
 	"get_admin_extensions":                                                                {Method: "GET", Path: "/api/v1/admin/extensions"},
 	"get_admin_extensions_by_extensionId":                                                 {Method: "GET", Path: "/api/v1/admin/extensions/{extensionId}"},
 	"get_admin_extensions_by_extensionId_permissions":                                     {Method: "GET", Path: "/api/v1/admin/extensions/{extensionId}/permissions"},
@@ -51,10 +54,13 @@ var NeverExtensionsAPIOperations = map[string]APIOperation{
 	"post_admin_extension_registry_publish":                                               {Method: "POST", Path: "/api/v1/admin/extension-registry/publish"},
 	"post_admin_extension_registry_publishers":                                            {Method: "POST", Path: "/api/v1/admin/extension-registry/publishers"},
 	"post_admin_extension_registry_publishers_by_publisherId_keys":                        {Method: "POST", Path: "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"},
+	"post_admin_extension_updates_apply":                                                  {Method: "POST", Path: "/api/v1/admin/extension-updates/apply"},
+	"post_admin_extension_updates_plan":                                                   {Method: "POST", Path: "/api/v1/admin/extension-updates/plan"},
 	"post_admin_extensions_by_extensionId_permissions":                                    {Method: "POST", Path: "/api/v1/admin/extensions/{extensionId}/permissions"},
 	"post_admin_extensions_by_extensionId_rpc":                                            {Method: "POST", Path: "/api/v1/admin/extensions/{extensionId}/rpc"},
 	"post_admin_extensions_versions":                                                      {Method: "POST", Path: "/api/v1/admin/extensions/versions"},
 	"post_desktop_extensions_by_extensionId_rpc":                                          {Method: "POST", Path: "/api/v1/desktop/extensions/{extensionId}/rpc"},
 	"put_admin_extension_registry_extensions_by_extensionId_channels_by_channel":          {Method: "PUT", Path: "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}"},
+	"put_admin_extension_updates_pins_by_extensionId":                                     {Method: "PUT", Path: "/api/v1/admin/extension-updates/pins/{extensionId}"},
 	"put_admin_extensions_by_extensionId_secrets_by_secretName":                           {Method: "PUT", Path: "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"},
 }

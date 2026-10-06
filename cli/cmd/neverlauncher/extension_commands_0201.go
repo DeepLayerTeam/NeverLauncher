@@ -96,6 +96,11 @@ type CanonicalExtensionDependency0201 struct {
 	Optional bool   `json:"optional,omitempty"`
 }
 
+type CanonicalExtensionConflict02011 struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+
 type CanonicalExtensionManifest0201 struct {
 	SchemaVersion string                                      `json:"schemaVersion"`
 	ID            string                                      `json:"id"`
@@ -110,6 +115,7 @@ type CanonicalExtensionManifest0201 struct {
 	Permissions   []string                                    `json:"permissions,omitempty"`
 	Hooks         []string                                    `json:"hooks,omitempty"`
 	Dependencies  []CanonicalExtensionDependency0201          `json:"dependencies,omitempty"`
+	Conflicts     []CanonicalExtensionConflict02011           `json:"conflicts,omitempty"`
 	Metadata      map[string]string                           `json:"metadata,omitempty"`
 	Admin         *CanonicalExtensionAdminContributions0208   `json:"admin,omitempty"`
 	Desktop       *CanonicalExtensionDesktopContributions0209 `json:"desktop,omitempty"`
@@ -118,7 +124,7 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
+		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
 	}
 	switch args[0] {
 	case "init", "dev", "test", "build":
@@ -178,6 +184,8 @@ func handleExtension0201(args []string) error {
 		return handleExtensionPackage0202(args)
 	case "registry":
 		return handleExtensionRegistry0203(args[1:])
+	case "updates":
+		return handleExtensionUpdates02011(args[1:])
 	case "host":
 		return handleExtensionHost0205(args[1:])
 	case "cli":
@@ -350,6 +358,23 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		seenDeps[d.ID] = struct{}{}
 	}
 	sort.Slice(m.Dependencies, func(i, j int) bool { return m.Dependencies[i].ID < m.Dependencies[j].ID })
+	seenConflicts := map[string]struct{}{}
+	for i := range m.Conflicts {
+		c := &m.Conflicts[i]
+		c.ID = strings.ToLower(strings.TrimSpace(c.ID))
+		c.Version = strings.TrimSpace(c.Version)
+		if !canonicalExtensionID0201.MatchString(c.ID) || c.ID == m.ID {
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный conflict %q", c.ID)
+		}
+		if c.Version == "" || len(c.Version) > 128 {
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %s требует version constraint", c.ID)
+		}
+		if _, ok := seenConflicts[c.ID]; ok {
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %q указан повторно", c.ID)
+		}
+		seenConflicts[c.ID] = struct{}{}
+	}
+	sort.Slice(m.Conflicts, func(i, j int) bool { return m.Conflicts[i].ID < m.Conflicts[j].ID })
 	if m.Admin != nil {
 		if _, ok := seenTargets["admin"]; !ok {
 			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require an admin target")

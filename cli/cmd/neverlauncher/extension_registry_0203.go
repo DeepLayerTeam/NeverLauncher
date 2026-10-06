@@ -206,6 +206,7 @@ func extensionRegistryPublishCLI0203(backend, token, packagePath string, args []
 	fields := map[string]string{
 		"publisher": flagValue(args, "--publisher", ""), "channels": flagValue(args, "--channels", flagValue(args, "--channel", "stable")),
 		"minNeverLauncher": flagValue(args, "--min-launcher", ""), "maxNeverLauncher": flagValue(args, "--max-launcher", ""),
+		"minApi": flagValue(args, "--min-api", ""), "maxApi": flagValue(args, "--max-api", ""),
 		"os": flagValue(args, "--os", ""), "arch": flagValue(args, "--arch", ""),
 	}
 	for key, value := range fields {

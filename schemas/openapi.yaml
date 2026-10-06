@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.20.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.20.11. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -2149,6 +2149,256 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/extension-updates/apply": {
+      "post": {
+        "operationId": "post_admin_extension_updates_apply",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-updates/apply",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-updates/pins": {
+      "get": {
+        "operationId": "get_admin_extension_updates_pins",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extension-updates/pins",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/extension-updates/pins/{extensionId}": {
+      "delete": {
+        "operationId": "delete_admin_extension_updates_pins_by_extensionId",
+        "tags": [
+          "admin"
+        ],
+        "summary": "DELETE /api/v1/admin/extension-updates/pins/{extensionId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "put_admin_extension_updates_pins_by_extensionId",
+        "tags": [
+          "admin"
+        ],
+        "summary": "PUT /api/v1/admin/extension-updates/pins/{extensionId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-updates/plan": {
+      "post": {
+        "operationId": "post_admin_extension_updates_plan",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-updates/plan",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/extension-updates/transactions/{transactionId}": {
+      "get": {
+        "operationId": "get_admin_extension_updates_transactions_by_transactionId",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extension-updates/transactions/{transactionId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/admin/extensions": {
