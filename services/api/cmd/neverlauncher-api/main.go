@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -23,6 +25,7 @@ var version = "dev"
 
 func main() {
 	cfg := config.Load()
+	noExtensions := hasCommandArg02012(os.Args[1:], "--no-extensions")
 
 	if err := config.ValidateProduction(cfg); err != nil {
 		log.Fatal(err)
@@ -100,7 +103,7 @@ func main() {
 	}
 
 	var events *eventbus.Bus
-	if cfg.ExtensionEventsEnabled {
+	if cfg.ExtensionEventsEnabled && !noExtensions {
 		events, err = eventbus.New(eventbus.Config{
 			WorkerInterval: time.Duration(cfg.ExtensionEventsWorkerIntervalMilliseconds) * time.Millisecond,
 			LeaseDuration:  time.Duration(cfg.ExtensionEventsLeaseSeconds) * time.Second,
@@ -123,7 +126,7 @@ func main() {
 	}
 
 	var host *extensionhost.Supervisor
-	if cfg.ExtensionHostEnabled {
+	if cfg.ExtensionHostEnabled && !noExtensions {
 		if err := extensionhost.HardenBackendProcess(); err != nil {
 			log.Fatalf("extension host backend memory hardening failed: %v", err)
 		}
@@ -148,6 +151,16 @@ func main() {
 			RestartBackoff:       time.Duration(cfg.ExtensionHostRestartBackoffMilliseconds) * time.Millisecond,
 		}, repo, store)
 		host.SetSecurity(extSecurity)
+		lifecycle := extensionlifecycle.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
+		host.SetCrashLoopHandler(func(ctx context.Context, key extensionhost.Key, reason string) {
+			if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: key.ExtensionID, Scope: key.Scope, ScopeID: key.ScopeID, Reason: reason, Source: "crash-loop"}); err != nil {
+				log.Printf("extension crash-loop emergency-disable persistence failed %s: %v", key.ExtensionID, err)
+				return
+			}
+			if _, err := lifecycle.Disable(ctx, key.ExtensionID, extensionlifecycle.Scope{Scope: key.Scope, ScopeID: key.ScopeID}); err != nil {
+				log.Printf("extension crash-loop lifecycle disable failed %s: %v", key.ExtensionID, err)
+			}
+		})
 		if events != nil {
 			host.SetEventBus(events)
 			events.SetDispatcher(host)
@@ -174,6 +187,7 @@ func main() {
 
 	server := httpapi.Server{
 		Version:           version,
+		ExtensionSafeMode: noExtensions,
 		Config:            cfg,
 		Repo:              repo,
 		Storage:           store,
@@ -184,6 +198,9 @@ func main() {
 		EventBus:          events,
 	}
 
+	if noExtensions {
+		log.Printf("NeverExtensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
+	}
 	log.Printf(
 		"NeverLauncher API %s слушает %s repository=%s storage=%s environment=%s",
 		version,
@@ -235,4 +252,13 @@ func newStorage(cfg config.Config) (storage.Storage, error) {
 	default:
 		return nil, fmt.Errorf("неизвестный NEVERLAUNCHER_STORAGE_DRIVER=%q", cfg.StorageDriver)
 	}
+}
+
+func hasCommandArg02012(args []string, wanted string) bool {
+	for _, arg := range args {
+		if arg == wanted {
+			return true
+		}
+	}
+	return false
 }

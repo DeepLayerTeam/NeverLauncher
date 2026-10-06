@@ -1,0 +1,86 @@
+name: NeverExtensions Trust Recovery 0.20.12
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-platform-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux
+            runner: ubuntu-latest
+            os: linux
+          - target: windows
+            runner: windows-latest
+            os: windows
+          - target: macos
+            runner: macos-latest
+            os: macos
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: |
+            services/api/go.sum
+            cli/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Validate certification target definition
+        shell: bash
+        run: python3 scripts/compatibility/neverextensions_trust_02012.py validate
+      - name: Trust, malicious-package and crash-loop E2E
+        shell: bash
+        run: |
+          (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/neverlauncher-api)
+          (cd cli && go test ./internal/dbmigrate && go test ./cmd/neverlauncher -run '^$')
+      - name: Build production binaries
+        shell: bash
+        run: |
+          (cd services/api && go build ./cmd/neverlauncher-api)
+          (cd cli && go build ./cmd/neverlauncher)
+          python3 scripts/contracts/validate-openapi.py
+      - name: Write signed-by-run evidence input
+        shell: bash
+        run: |
+          mkdir -p evidence
+          GOOS_ACTUAL="$(go env GOOS)" GOARCH_ACTUAL="$(go env GOARCH)" GOVERSION="$(go version | awk '{print $3}')" python3 - <<'PY'
+          import json,os
+          checks={k:True for k in ["malicious-package-tests","trust-policy-tests","crash-loop-kill-switch-tests","safe-mode-build","cli-build","backend-build","openapi-contract"]}
+          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":os.environ['GOOS_ACTUAL'],"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
+          open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverextensions-trust-evidence-${{ matrix.target }}
+          path: evidence/${{ matrix.target }}.json
+
+  public-matrix:
+    needs: cross-platform-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: neverextensions-trust-evidence-*
+          path: evidence-raw
+          merge-multiple: true
+      - name: Aggregate fail-closed public matrix
+        run: |
+          python3 scripts/compatibility/neverextensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_TRUST_COMPATIBILITY.json --out-md NEVEREXTENSIONS_TRUST_COMPATIBILITY.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverextensions-0.20.12-public-compatibility-matrix
+          path: |
+            NEVEREXTENSIONS_TRUST_COMPATIBILITY.json
+            NEVEREXTENSIONS_TRUST_COMPATIBILITY.md

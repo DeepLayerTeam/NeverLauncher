@@ -114,6 +114,18 @@ type Repository interface {
 	SaveExtensionUpdateTransaction(ctx context.Context, tx model.ExtensionUpdateTransaction) (model.ExtensionUpdateTransaction, error)
 	GetExtensionUpdateTransaction(ctx context.Context, id string) (model.ExtensionUpdateTransaction, error)
 	ListExtensionUpdateTransactions(ctx context.Context, scope, scopeID, status string) ([]model.ExtensionUpdateTransaction, error)
+	GetExtensionTrustPolicy(ctx context.Context) (model.ExtensionTrustPolicy, error)
+	SaveExtensionTrustPolicy(ctx context.Context, policy model.ExtensionTrustPolicy) (model.ExtensionTrustPolicy, error)
+	RevokeExtensionRegistryPublisherKey(ctx context.Context, publisherID, fingerprint string) (model.ExtensionRegistryPublisherKey, error)
+	SaveExtensionQuarantine(ctx context.Context, entry model.ExtensionQuarantineEntry) (model.ExtensionQuarantineEntry, error)
+	ListExtensionQuarantine(ctx context.Context, activeOnly bool) ([]model.ExtensionQuarantineEntry, error)
+	GetExtensionQuarantine(ctx context.Context, id string) (model.ExtensionQuarantineEntry, error)
+	ReleaseExtensionQuarantine(ctx context.Context, id, actor string) (model.ExtensionQuarantineEntry, error)
+	IsExtensionPackageQuarantined(ctx context.Context, packageIdentity string) (bool, error)
+	SetExtensionEmergencyDisable(ctx context.Context, item model.ExtensionEmergencyDisable) (model.ExtensionEmergencyDisable, error)
+	GetExtensionEmergencyDisable(ctx context.Context, extensionID, scope, scopeID string) (model.ExtensionEmergencyDisable, error)
+	ListExtensionEmergencyDisables(ctx context.Context, activeOnly bool) ([]model.ExtensionEmergencyDisable, error)
+	ClearExtensionEmergencyDisable(ctx context.Context, extensionID, scope, scopeID, actor string) (model.ExtensionEmergencyDisable, error)
 }
 
 type MemoryRepository struct {
@@ -155,6 +167,9 @@ type MemoryRepository struct {
 	extensionUpdatePins            []model.ExtensionUpdatePin
 	extensionUpdateTransactions    []model.ExtensionUpdateTransaction
 	extensionUpdateLeases          map[string]extensionUpdateLease02011
+	extensionTrustPolicy           model.ExtensionTrustPolicy
+	extensionQuarantine            []model.ExtensionQuarantineEntry
+	extensionEmergencyDisables     []model.ExtensionEmergencyDisable
 	nextExtensionInstallRevisionID int64
 	nextExtensionEventSequence     int64
 	nextExtensionSubscriptionID    int64
@@ -202,6 +217,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 	return &MemoryRepository{
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
+		extensionTrustPolicy:           model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeStrict, AllowedPublishers: []string{}, UpdatedAt: now},
 		projects: []model.Project{
 			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта NeverLauncher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
 		},

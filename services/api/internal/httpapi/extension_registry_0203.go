@@ -246,6 +246,10 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	defer os.Remove(tmpPath)
 	inspected, err := extensionpackage.InspectSignedFile(tmpPath)
 	if err != nil {
+		if _, qerr := s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "invalid signed .nlext: "+err.Error(), nil); qerr != nil {
+			writeError(w, http.StatusInternalServerError, "artifact rejected; quarantine persistence failed: "+qerr.Error())
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid signed .nlext: "+err.Error())
 		return
 	}
@@ -254,11 +258,18 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		publisherID = inspected.Manifest.Publisher
 	}
 	if publisherID != inspected.Manifest.Publisher {
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "publisher field does not match signed manifest publisher", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: inspected.Manifest.Publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusBadRequest, "publisher field must match neverlauncher-extension.json publisher")
+		return
+	}
+	if trustErr := s.enforcePublisherTrust02012(r.Context(), publisherID); trustErr != nil {
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "registry trust policy rejected publisher: "+trustErr.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
+		writeError(w, http.StatusForbidden, "registry trust policy rejected publisher: "+trustErr.Error())
 		return
 	}
 	key, err := s.Repo.GetExtensionRegistryPublisherKey(r.Context(), publisherID, inspected.KeyFingerprint)
 	if errors.Is(err, repository.ErrNotFound) {
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "artifact signing key is not trusted for publisher", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusForbidden, "artifact signing key is not trusted for publisher")
 		return
 	}
@@ -268,11 +279,13 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	publicKey, err := registryPublicKey0203(key)
 	if err != nil {
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "publisher signing key inactive/revoked: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusForbidden, err.Error())
 		return
 	}
 	verified, err := extensionpackage.VerifyFile(tmpPath, publicKey)
 	if err != nil {
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "artifact signature verification failed: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: publisherID, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
 		writeError(w, http.StatusBadRequest, "artifact signature verification failed: "+err.Error())
 		return
 	}

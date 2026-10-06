@@ -138,6 +138,14 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := New(Config{ExtensionRoot: root, StartupTimeout: 3 * time.Second, HeartbeatTimeout: 2 * time.Second, StopTimeout: time.Second, CrashLimit: 2, CrashWindow: 10 * time.Second, RestartBackoff: 40 * time.Millisecond, MaxMemoryBytes: 128 << 20, MaxProcesses: 4}, repo, store)
+	crashLoopPersisted := make(chan struct{}, 1)
+	host.SetCrashLoopHandler(func(ctx context.Context, key Key, reason string) {
+		_, _ = repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: key.ExtensionID, Scope: key.Scope, ScopeID: key.ScopeID, Reason: reason, Source: "crash-loop-test"})
+		select {
+		case crashLoopPersisted <- struct{}{}:
+		default:
+		}
+	})
 	if err := host.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +162,17 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 	for time.Now().Before(deadline) {
 		st, e := host.Get(Key{ExtensionID: install.ExtensionID, Scope: "global"})
 		if e == nil && st.State == "crashloop" {
+			select {
+			case <-crashLoopPersisted:
+			case <-time.After(2 * time.Second):
+				t.Fatal("crash-loop handler did not persist emergency disable")
+			}
+			if _, err := repo.GetExtensionEmergencyDisable(context.Background(), install.ExtensionID, "global", ""); err != nil {
+				t.Fatalf("persistent emergency disable missing: %v", err)
+			}
+			if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
+				t.Fatalf("crash-loop extension restarted despite kill-switch: %v", err)
+			}
 			return
 		}
 		time.Sleep(50 * time.Millisecond)

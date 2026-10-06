@@ -135,6 +135,10 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 }
 
 func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		return
+	}
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, 401, "invalid session")
@@ -187,6 +191,10 @@ func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Reque
 }
 
 func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	scope, scopeID := securityScope0207(r)
 	install, manifest, err := s.desktopInstallManifest0209(r, r.PathValue("extensionId"), scope, scopeID)
 	if err != nil {
@@ -222,6 +230,10 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	scope, scopeID := securityScope0207(r)
 	install, _, err := s.desktopInstallManifest0209(r, r.PathValue("extensionId"), scope, scopeID)
 	if err != nil {
@@ -323,6 +335,10 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		return
+	}
 	installs, err := s.Repo.ListExtensionInstallStates(r.Context(), "", "")
 	if err != nil {
 		writeError(w, 500, err.Error())
@@ -360,6 +376,10 @@ func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	if s.ExtensionHost == nil {
 		writeError(w, 503, "extension host unavailable")
 		return

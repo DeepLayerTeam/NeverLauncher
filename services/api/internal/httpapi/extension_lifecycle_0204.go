@@ -191,6 +191,10 @@ func (s Server) extensionInstall0204(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "install": install, "permissionDiff": permissionDiff}})
 }
 func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	req, err := decodeLifecycleWrite0204(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

@@ -227,24 +227,25 @@ type processState struct {
 }
 
 type Supervisor struct {
-	cfg            Config
-	repo           repository.Repository
-	storage        storage.Storage
-	mu             sync.RWMutex
-	processes      map[string]*processState
-	transients     map[string]map[string]*processState
-	tokens         map[string]*processState
-	crashes        map[string][]time.Time
-	restarts       map[string]int
-	listener       net.Listener
-	server         *http.Server
-	baseURL        string
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
-	eventBus       *eventbus.Bus
-	security       *extensionsecurity.Manager
-	callbackClient *http.Client
+	cfg              Config
+	repo             repository.Repository
+	storage          storage.Storage
+	mu               sync.RWMutex
+	processes        map[string]*processState
+	transients       map[string]map[string]*processState
+	tokens           map[string]*processState
+	crashes          map[string][]time.Time
+	restarts         map[string]int
+	listener         net.Listener
+	server           *http.Server
+	baseURL          string
+	ctx              context.Context
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+	eventBus         *eventbus.Bus
+	security         *extensionsecurity.Manager
+	callbackClient   *http.Client
+	crashLoopHandler func(context.Context, Key, string)
 }
 
 func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervisor {
@@ -258,6 +259,11 @@ func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervi
 func (s *Supervisor) SetSecurity(security *extensionsecurity.Manager) {
 	s.mu.Lock()
 	s.security = security
+	s.mu.Unlock()
+}
+func (s *Supervisor) SetCrashLoopHandler(handler func(context.Context, Key, string)) {
+	s.mu.Lock()
+	s.crashLoopHandler = handler
 	s.mu.Unlock()
 }
 func (s *Supervisor) securityValue0207() *extensionsecurity.Manager {
@@ -402,6 +408,16 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		return errors.New("extension must be persistently enabled before host start")
 	}
 	key := Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized()
+	if _, emergencyErr := s.repo.GetExtensionEmergencyDisable(ctx, key.ExtensionID, key.Scope, key.ScopeID); emergencyErr == nil {
+		return errors.New("extension is emergency-disabled")
+	} else if !errors.Is(emergencyErr, repository.ErrNotFound) {
+		return emergencyErr
+	}
+	if quarantined, quarantineErr := s.repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity); quarantineErr != nil {
+		return quarantineErr
+	} else if quarantined {
+		return errors.New("extension package is quarantined")
+	}
 	k := key.String()
 	manifestVersion, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
@@ -666,11 +682,16 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 	s.crashes[k] = n
 	if len(n) > s.cfg.CrashLimit {
 		s.restarts[k] = len(n) - 1
+		handler := s.crashLoopHandler
 		s.mu.Unlock()
 		st.mu.Lock()
 		st.state = "crashloop"
 		st.lastError = fmt.Sprintf("crash loop: %d crashes within %s", len(n), s.cfg.CrashWindow)
+		reason := st.lastError
 		st.mu.Unlock()
+		if handler != nil {
+			go handler(context.Background(), st.key, reason)
+		}
 		return
 	}
 	s.restarts[k]++

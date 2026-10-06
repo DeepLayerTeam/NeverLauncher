@@ -124,7 +124,7 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
+		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, trust, quarantine, emergency, recovery, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
 	}
 	switch args[0] {
 	case "init", "dev", "test", "build":
@@ -186,6 +186,14 @@ func handleExtension0201(args []string) error {
 		return handleExtensionRegistry0203(args[1:])
 	case "updates":
 		return handleExtensionUpdates02011(args[1:])
+	case "trust":
+		return handleExtensionTrust02012(args[1:])
+	case "quarantine":
+		return handleExtensionQuarantine02012(args[1:])
+	case "emergency":
+		return handleExtensionEmergency02012(args[1:])
+	case "recovery":
+		return handleExtensionRecovery02012(args[1:])
 	case "host":
 		return handleExtensionHost0205(args[1:])
 	case "cli":

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0",
+  "feature": "NeverExtensions Trust, Recovery & Certification",
+  "targets": [
+    {"id":"linux","runner":"ubuntu-latest","os":"linux","required":true},
+    {"id":"windows","runner":"windows-latest","os":"windows","required":true},
+    {"id":"macos","runner":"macos-latest","os":"macos","required":true}
+  ],
+  "requiredChecks": [
+    "malicious-package-tests",
+    "trust-policy-tests",
+    "crash-loop-kill-switch-tests",
+    "safe-mode-build",
+    "cli-build",
+    "backend-build",
+    "openapi-contract"
+  ]
+}

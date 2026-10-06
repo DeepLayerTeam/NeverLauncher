@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpackage"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensiontrust"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
@@ -296,6 +297,9 @@ func publisherKey0204(key model.ExtensionRegistryPublisherKey) (ed25519.PublicKe
 }
 
 func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionRegistryVersion) (preparedArtifact0204, error) {
+	if _, err := extensiontrust.EvaluatePublication(ctx, m.Repo, item); err != nil {
+		return preparedArtifact0204{}, fmt.Errorf("extension trust policy rejected artifact: %w", err)
+	}
 	if item.YankedAt != nil {
 		return preparedArtifact0204{}, errors.New("yanked registry version cannot be installed")
 	}
@@ -653,6 +657,13 @@ func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, en
 	}
 	if before.CurrentState == model.ExtensionInstallStateAbsent {
 		return model.ExtensionInstall{}, errors.New("extension is not installed")
+	}
+	if enabled {
+		if _, emergencyErr := m.Repo.GetExtensionEmergencyDisable(ctx, id, scope.Scope, scope.ScopeID); emergencyErr == nil {
+			return model.ExtensionInstall{}, errors.New("extension is emergency-disabled; clear the persistent kill-switch before enabling")
+		} else if !errors.Is(emergencyErr, repository.ErrNotFound) {
+			return model.ExtensionInstall{}, emergencyErr
+		}
 	}
 	if before.CurrentState == state {
 		return before, nil

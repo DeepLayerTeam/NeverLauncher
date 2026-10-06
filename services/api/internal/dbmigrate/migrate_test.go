@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0047_neverextensions_dependencies_updates_02011" {
+	if st.Current != "0048_neverextensions_trust_recovery_certification_02012" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0047_neverextensions_dependencies_updates_02011" {
+		if k != "0048_neverextensions_trust_recovery_certification_02012" {
 			pending[k] = v
 		}
 	}
@@ -643,6 +643,22 @@ func TestNeverExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.11 dependency/update migration missing %q", required)
+		}
+	}
+}
+
+func TestNeverExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
+	b, err := os.ReadFile("sql/0048_neverextensions_trust_recovery_certification_02012.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"extension_trust_policy", "allowed_publishers", "extension_quarantine", "extension_emergency_disables",
+		"revoked_at", "released_at", "source", "neverlauncher_revoke_extension_key_02012",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.20.12 trust/recovery migration missing %q", required)
 		}
 	}
 }

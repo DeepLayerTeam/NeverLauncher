@@ -3,10 +3,12 @@ import type * as Components from './api-types-generated';
 
 export interface NeverExtensionsAPIRequestMap {
   "delete_admin_extension_updates_pins_by_extensionId": undefined;
+  "delete_admin_extensions_by_extensionId_emergency_disable": undefined;
   "delete_admin_extensions_by_extensionId_permissions_by_permission": undefined;
   "delete_admin_extensions_by_extensionId_secrets_by_secretName": undefined;
   "get_admin_extension_capabilities": undefined;
   "get_admin_extension_cli_catalog": undefined;
+  "get_admin_extension_emergency_disables": undefined;
   "get_admin_extension_events": undefined;
   "get_admin_extension_events_dead_letters": undefined;
   "get_admin_extension_events_subscriptions": undefined;
@@ -15,12 +17,15 @@ export interface NeverExtensionsAPIRequestMap {
   "get_admin_extension_hosts_by_extensionId_logs": undefined;
   "get_admin_extension_installs": undefined;
   "get_admin_extension_installs_by_extensionId": undefined;
+  "get_admin_extension_quarantine": undefined;
+  "get_admin_extension_recovery_export": undefined;
   "get_admin_extension_registry_extensions": undefined;
   "get_admin_extension_registry_extensions_by_extensionId": undefined;
   "get_admin_extension_registry_extensions_by_extensionId_versions_by_version": undefined;
   "get_admin_extension_registry_extensions_by_extensionId_versions_by_version_artifact": undefined;
   "get_admin_extension_registry_publishers": undefined;
   "get_admin_extension_registry_publishers_by_publisherId_keys": undefined;
+  "get_admin_extension_trust_policy": undefined;
   "get_admin_extension_updates_pins": undefined;
   "get_admin_extension_updates_transactions_by_transactionId": undefined;
   "get_admin_extensions": undefined;
@@ -44,18 +49,25 @@ export interface NeverExtensionsAPIRequestMap {
   "post_admin_extension_installs_by_extensionId_rollback": Components.ExtensionLifecycleWrite;
   "post_admin_extension_installs_by_extensionId_uninstall": Components.ExtensionLifecycleWrite;
   "post_admin_extension_installs_by_extensionId_update": Components.ExtensionLifecycleWrite;
+  "post_admin_extension_quarantine_by_quarantineId_release": Components.FreeFormObject;
+  "post_admin_extension_recovery_backup": Components.FreeFormObject;
+  "post_admin_extension_recovery_import": Components.FreeFormObject;
+  "post_admin_extension_recovery_restore": Components.FreeFormObject;
   "post_admin_extension_registry_extensions_by_extensionId_versions_by_version_install": Components.ExtensionRegistryInstallWrite;
   "post_admin_extension_registry_extensions_by_extensionId_versions_by_version_yank": Components.ExtensionRegistryYankWrite;
   "post_admin_extension_registry_publish": undefined;
   "post_admin_extension_registry_publishers": Components.ExtensionRegistryPublisherWrite;
   "post_admin_extension_registry_publishers_by_publisherId_keys": Components.ExtensionRegistryPublisherKeyWrite;
+  "post_admin_extension_registry_publishers_by_publisherId_keys_by_fingerprint_revoke": Components.FreeFormObject;
   "post_admin_extension_updates_apply": Components.FreeFormObject;
   "post_admin_extension_updates_plan": Components.FreeFormObject;
+  "post_admin_extensions_by_extensionId_emergency_disable": Components.FreeFormObject;
   "post_admin_extensions_by_extensionId_permissions": Components.ExtensionPermissionGrantWrite;
   "post_admin_extensions_by_extensionId_rpc": Components.FreeFormObject;
   "post_admin_extensions_versions": Components.CreateVersionRequest;
   "post_desktop_extensions_by_extensionId_rpc": Components.DesktopExtensionRPCRequest0209;
   "put_admin_extension_registry_extensions_by_extensionId_channels_by_channel": Components.ExtensionRegistryChannelWrite;
+  "put_admin_extension_trust_policy": Components.FreeFormObject;
   "put_admin_extension_updates_pins_by_extensionId": Components.FreeFormObject;
   "put_admin_extensions_by_extensionId_secrets_by_secretName": Components.ExtensionSecretWrite;
 }

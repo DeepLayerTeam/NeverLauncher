@@ -5,6 +5,11 @@
     "path": "/api/v1/admin/extension-updates/pins/{extensionId}"
   },
   {
+    "id": "delete_admin_extensions_by_extensionId_emergency_disable",
+    "method": "DELETE",
+    "path": "/api/v1/admin/extensions/{extensionId}/emergency-disable"
+  },
+  {
     "id": "delete_admin_extensions_by_extensionId_permissions_by_permission",
     "method": "DELETE",
     "path": "/api/v1/admin/extensions/{extensionId}/permissions/{permission}"
@@ -23,6 +28,11 @@
     "id": "get_admin_extension_cli_catalog",
     "method": "GET",
     "path": "/api/v1/admin/extension-cli/catalog"
+  },
+  {
+    "id": "get_admin_extension_emergency_disables",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-emergency-disables"
   },
   {
     "id": "get_admin_extension_events",
@@ -65,6 +75,16 @@
     "path": "/api/v1/admin/extension-installs/{extensionId}"
   },
   {
+    "id": "get_admin_extension_quarantine",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-quarantine"
+  },
+  {
+    "id": "get_admin_extension_recovery_export",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-recovery/export"
+  },
+  {
     "id": "get_admin_extension_registry_extensions",
     "method": "GET",
     "path": "/api/v1/admin/extension-registry/extensions"
@@ -93,6 +113,11 @@
     "id": "get_admin_extension_registry_publishers_by_publisherId_keys",
     "method": "GET",
     "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
+  },
+  {
+    "id": "get_admin_extension_trust_policy",
+    "method": "GET",
+    "path": "/api/v1/admin/extension-trust/policy"
   },
   {
     "id": "get_admin_extension_updates_pins",
@@ -210,6 +235,26 @@
     "path": "/api/v1/admin/extension-installs/{extensionId}/update"
   },
   {
+    "id": "post_admin_extension_quarantine_by_quarantineId_release",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-quarantine/{quarantineId}/release"
+  },
+  {
+    "id": "post_admin_extension_recovery_backup",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-recovery/backup"
+  },
+  {
+    "id": "post_admin_extension_recovery_import",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-recovery/import"
+  },
+  {
+    "id": "post_admin_extension_recovery_restore",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-recovery/restore"
+  },
+  {
     "id": "post_admin_extension_registry_extensions_by_extensionId_versions_by_version_install",
     "method": "POST",
     "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install"
@@ -235,6 +280,11 @@
     "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys"
   },
   {
+    "id": "post_admin_extension_registry_publishers_by_publisherId_keys_by_fingerprint_revoke",
+    "method": "POST",
+    "path": "/api/v1/admin/extension-registry/publishers/{publisherId}/keys/{fingerprint}/revoke"
+  },
+  {
     "id": "post_admin_extension_updates_apply",
     "method": "POST",
     "path": "/api/v1/admin/extension-updates/apply"
@@ -243,6 +293,11 @@
     "id": "post_admin_extension_updates_plan",
     "method": "POST",
     "path": "/api/v1/admin/extension-updates/plan"
+  },
+  {
+    "id": "post_admin_extensions_by_extensionId_emergency_disable",
+    "method": "POST",
+    "path": "/api/v1/admin/extensions/{extensionId}/emergency-disable"
   },
   {
     "id": "post_admin_extensions_by_extensionId_permissions",
@@ -268,6 +323,11 @@
     "id": "put_admin_extension_registry_extensions_by_extensionId_channels_by_channel",
     "method": "PUT",
     "path": "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}"
+  },
+  {
+    "id": "put_admin_extension_trust_policy",
+    "method": "PUT",
+    "path": "/api/v1/admin/extension-trust/policy"
   },
   {
     "id": "put_admin_extension_updates_pins_by_extensionId",

@@ -121,6 +121,10 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 }
 
 func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"safeMode": true, "items": []any{}}})
+		return
+	}
 	claims, err := s.adminClaims(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid admin session")
@@ -212,6 +216,10 @@ func hardenAdminHTML0208(raw string) string {
 }
 
 func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	id := r.PathValue("extensionId")
 	scope, scopeID := securityScope0207(r)
 	install, manifest, err := s.adminInstallManifest0208(r, id, scope, scopeID)
@@ -248,6 +256,10 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 }
 
 func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	id := strings.ToLower(strings.TrimSpace(r.PathValue("extensionId")))
 	scope, scopeID := securityScope0207(r)
 	install, _, err := s.adminInstallManifest0208(r, id, scope, scopeID)

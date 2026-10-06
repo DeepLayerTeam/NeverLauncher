@@ -17,6 +17,7 @@ import (
 
 type Server struct {
 	Version           string
+	ExtensionSafeMode bool
 	Config            config.Config
 	Repo              repository.Repository
 	Storage           storage.Storage

@@ -1,3 +1,12 @@
+## [0.20.12] - 2026-10-06
+
+- Added production NeverExtensions publisher trust and revocation: persistent strict/audit registry policy, publisher allow-lists, irreversible key revocation, fail-closed lifecycle verification and immediate runtime enforcement for active registry extensions that lose trust.
+- Added persistent forensic extension quarantine. Rejected/malicious uploads and artifacts signed by revoked keys are retained in configured storage, blocked from lifecycle/Host execution and require an explicit fresh-auth administrative release.
+- Made crash-loop protection survive Backend restarts: the Extension Host now invokes a durable kill-switch callback, persists an emergency disable, disables lifecycle state and refuses later start/enable attempts until an administrator explicitly clears the incident.
+- Added Backend Safe Mode `--no-extensions`; event workers, extension process hosts, Admin/Desktop extension UI/RPC, CLI-extension invocation and lifecycle enable/start are suppressed while core recovery/trust administration stays available.
+- Added trust/recovery Admin API and `nl extension trust|quarantine|emergency|recovery ...`. Recovery export/import preserves publisher identities, public keys/revocation, trust policy, quarantine, emergency disables and pins; backup/restore adds a canonical SHA-256 envelope and re-verifies registry artifacts through the normal lifecycle before restoring installations. Private signing keys and extension secret plaintext are excluded.
+- Added migration `0048_neverextensions_trust_recovery_certification_02012`, malicious `.nlext` regression tests (traversal, absolute paths, Windows aliases, symlink and case collisions), recovery/fail-closed trust tests, and a Linux/Windows/macOS evidence-driven CI certification workflow that publishes the public compatibility matrix only after all required runner checks pass.
+
 ## [0.20.11] - 2026-10-06
 
 - Added a production SemVer dependency resolver with exact, wildcard, comparator, caret, tilde and OR constraints, required/optional dependencies, bidirectional conflicts, graph cycle detection and dependency-first ordering.

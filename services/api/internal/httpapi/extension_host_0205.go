@@ -59,6 +59,10 @@ func (s Server) extensionHostLogs0205(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"items": items}})
 }
 func (s Server) extensionHostStart0205(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	if s.ExtensionHost == nil {
 		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
 		return
@@ -92,6 +96,10 @@ func (s Server) extensionHostStop0205(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"host": item}})
 }
 func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request) {
+	if s.ExtensionSafeMode {
+		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		return
+	}
 	if s.ExtensionHost == nil {
 		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
 		return
