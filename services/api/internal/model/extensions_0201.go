@@ -51,6 +51,50 @@ type ExtensionAdminContributions struct {
 	Actions          []ExtensionAdminAction     `json:"actions,omitempty"`
 }
 
+// ExtensionDesktopPage declares one sandboxed Desktop page.
+type ExtensionDesktopPage struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+}
+
+// ExtensionDesktopNavigation contributes a Desktop sidebar entry.
+type ExtensionDesktopNavigation struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	PageID string `json:"pageId"`
+	Order  int    `json:"order,omitempty"`
+}
+
+// ExtensionDesktopAction contributes an action delivered to the sandboxed page.
+type ExtensionDesktopAction struct {
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	PageID    string `json:"pageId"`
+	Placement string `json:"placement,omitempty"`
+}
+
+// ExtensionDesktopContributions bind an isolated Desktop target to launcher slots.
+type ExtensionDesktopContributions struct {
+	Pages      []ExtensionDesktopPage       `json:"pages,omitempty"`
+	Navigation []ExtensionDesktopNavigation `json:"navigation,omitempty"`
+	Actions    []ExtensionDesktopAction     `json:"actions,omitempty"`
+}
+
+// ExtensionCLICommand is one namespaced command exposed by a CLI target.
+type ExtensionCLICommand struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Usage       string `json:"usage,omitempty"`
+}
+
+// ExtensionCLIContributions describe the namespace that nl resolves before
+// starting the isolated CLI target through the Extension Host Protocol.
+type ExtensionCLIContributions struct {
+	Namespace string                `json:"namespace"`
+	Commands  []ExtensionCLICommand `json:"commands"`
+}
+
 // ExtensionDependency declares another extension required by a concrete
 // immutable extension version.
 type ExtensionDependency struct {
@@ -63,21 +107,23 @@ type ExtensionDependency struct {
 // NeverLauncher 0.20.1. It replaces newly-authored neverlauncher-plugin.json
 // manifests while the CLI can still import the legacy format.
 type ExtensionManifest struct {
-	SchemaVersion string                       `json:"schemaVersion"`
-	ID            string                       `json:"id"`
-	Name          string                       `json:"name"`
-	Version       string                       `json:"version"`
-	Publisher     string                       `json:"publisher"`
-	Description   string                       `json:"description,omitempty"`
-	Homepage      string                       `json:"homepage,omitempty"`
-	Repository    string                       `json:"repository,omitempty"`
-	API           string                       `json:"api"`
-	Targets       []ExtensionTarget            `json:"targets"`
-	Permissions   []string                     `json:"permissions,omitempty"`
-	Hooks         []string                     `json:"hooks,omitempty"`
-	Dependencies  []ExtensionDependency        `json:"dependencies,omitempty"`
-	Metadata      map[string]string            `json:"metadata,omitempty"`
-	Admin         *ExtensionAdminContributions `json:"admin,omitempty"`
+	SchemaVersion string                         `json:"schemaVersion"`
+	ID            string                         `json:"id"`
+	Name          string                         `json:"name"`
+	Version       string                         `json:"version"`
+	Publisher     string                         `json:"publisher"`
+	Description   string                         `json:"description,omitempty"`
+	Homepage      string                         `json:"homepage,omitempty"`
+	Repository    string                         `json:"repository,omitempty"`
+	API           string                         `json:"api"`
+	Targets       []ExtensionTarget              `json:"targets"`
+	Permissions   []string                       `json:"permissions,omitempty"`
+	Hooks         []string                       `json:"hooks,omitempty"`
+	Dependencies  []ExtensionDependency          `json:"dependencies,omitempty"`
+	Metadata      map[string]string              `json:"metadata,omitempty"`
+	Admin         *ExtensionAdminContributions   `json:"admin,omitempty"`
+	Desktop       *ExtensionDesktopContributions `json:"desktop,omitempty"`
+	CLI           *ExtensionCLIContributions     `json:"cli,omitempty"`
 }
 
 // Extension is the stable identity shared by all immutable versions.

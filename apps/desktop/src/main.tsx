@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import './styles.css';
+import { DesktopExtensions0209 } from './extensions_0209';
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
-type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'download' | 'settings' | 'logs' | 'diagnostics';
+type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'download' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
 
 type DesktopSettings = {
   schemaVersion?: string;
@@ -1222,7 +1223,7 @@ function App() {
         <nav>
           {[
             ['firstRun', 'Первый запуск'], ['overview', 'Обзор'], ['auth', 'Вход'], ['projects', 'Проекты'], ['profile', 'Профиль'],
-            ['download', 'Загрузка'], ['settings', 'Настройки'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
+            ['download', 'Загрузка'], ['settings', 'Настройки'], ['extensions', 'Расширения'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
           ].map(([id, title]) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id as Screen)}>{title}</button>)}
         </nav>
       </aside>
@@ -1263,6 +1264,7 @@ function App() {
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} />}
+        {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
       </section>

@@ -164,6 +164,33 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			return model.ExtensionManifest{}, "", err
 		}
 	}
+	if m.Desktop != nil {
+		if _, ok := seenTargets["desktop"]; !ok {
+			return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require a desktop target")
+		}
+		for _, target := range m.Targets {
+			if target.Kind == "desktop" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
+				return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require a standalone .html entrypoint")
+			}
+		}
+		if !containsNormalized0209(m.Permissions, "desktop:contribute") {
+			return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require desktop:contribute permission")
+		}
+		if err := normalizeDesktopContributions0209(m.Desktop); err != nil {
+			return model.ExtensionManifest{}, "", err
+		}
+	}
+	if m.CLI != nil {
+		if _, ok := seenTargets["cli"]; !ok {
+			return model.ExtensionManifest{}, "", fmt.Errorf("cli contributions require a cli target")
+		}
+		if !containsNormalized0209(m.Permissions, "cli:contribute") {
+			return model.ExtensionManifest{}, "", fmt.Errorf("cli contributions require cli:contribute permission")
+		}
+		if err := normalizeCLIContributions0209(m.CLI); err != nil {
+			return model.ExtensionManifest{}, "", err
+		}
+	}
 	if m.Metadata == nil {
 		m.Metadata = map[string]string{}
 	}
@@ -844,5 +871,111 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		}
 		seen[x.ID] = struct{}{}
 	}
+	return nil
+}
+
+func containsNormalized0209(values []string, wanted string) bool {
+	for _, value := range values {
+		if strings.EqualFold(strings.TrimSpace(value), wanted) {
+			return true
+		}
+	}
+	return false
+}
+func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) error {
+	if d == nil {
+		return nil
+	}
+	if len(d.Pages) == 0 || len(d.Pages) > 64 || len(d.Navigation) > 64 || len(d.Actions) > 64 {
+		return fmt.Errorf("desktop contributions exceed limits or have no pages")
+	}
+	pages := map[string]struct{}{}
+	for i := range d.Pages {
+		p := &d.Pages[i]
+		p.ID = strings.ToLower(strings.TrimSpace(p.ID))
+		p.Title = strings.TrimSpace(p.Title)
+		p.Description = strings.TrimSpace(p.Description)
+		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
+			return fmt.Errorf("invalid desktop page %q", p.ID)
+		}
+		if _, ok := pages[p.ID]; ok {
+			return fmt.Errorf("duplicate desktop page %q", p.ID)
+		}
+		pages[p.ID] = struct{}{}
+	}
+	seen := map[string]struct{}{}
+	for i := range d.Navigation {
+		n := &d.Navigation[i]
+		n.ID = strings.ToLower(strings.TrimSpace(n.ID))
+		n.Label = strings.TrimSpace(n.Label)
+		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
+		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
+			return fmt.Errorf("invalid desktop navigation %q", n.ID)
+		}
+		if _, ok := pages[n.PageID]; !ok {
+			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
+		}
+		if _, ok := seen[n.ID]; ok {
+			return fmt.Errorf("duplicate desktop navigation %q", n.ID)
+		}
+		seen[n.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range d.Actions {
+		a := &d.Actions[i]
+		a.ID = strings.ToLower(strings.TrimSpace(a.ID))
+		a.Label = strings.TrimSpace(a.Label)
+		a.PageID = strings.ToLower(strings.TrimSpace(a.PageID))
+		a.Placement = strings.ToLower(strings.TrimSpace(a.Placement))
+		if a.Placement == "" {
+			a.Placement = "toolbar"
+		}
+		if !validAdminContributionID0208(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
+			return fmt.Errorf("invalid desktop action %q", a.ID)
+		}
+		if _, ok := pages[a.PageID]; !ok {
+			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
+		}
+		if _, ok := seen[a.ID]; ok {
+			return fmt.Errorf("duplicate desktop action %q", a.ID)
+		}
+		seen[a.ID] = struct{}{}
+	}
+	sort.Slice(d.Pages, func(i, j int) bool { return d.Pages[i].ID < d.Pages[j].ID })
+	sort.Slice(d.Navigation, func(i, j int) bool {
+		if d.Navigation[i].Order == d.Navigation[j].Order {
+			return d.Navigation[i].ID < d.Navigation[j].ID
+		}
+		return d.Navigation[i].Order < d.Navigation[j].Order
+	})
+	sort.Slice(d.Actions, func(i, j int) bool { return d.Actions[i].ID < d.Actions[j].ID })
+	return nil
+}
+func normalizeCLIContributions0209(c *model.ExtensionCLIContributions) error {
+	if c == nil {
+		return nil
+	}
+	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
+	if !validAdminContributionID0208(c.Namespace) {
+		return fmt.Errorf("invalid cli namespace %q", c.Namespace)
+	}
+	if len(c.Commands) == 0 || len(c.Commands) > 64 {
+		return fmt.Errorf("cli contributions require 1..64 commands")
+	}
+	seen := map[string]struct{}{}
+	for i := range c.Commands {
+		cmd := &c.Commands[i]
+		cmd.Name = strings.ToLower(strings.TrimSpace(cmd.Name))
+		cmd.Description = strings.TrimSpace(cmd.Description)
+		cmd.Usage = strings.TrimSpace(cmd.Usage)
+		if !validAdminContributionID0208(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
+			return fmt.Errorf("invalid cli command %q", cmd.Name)
+		}
+		if _, ok := seen[cmd.Name]; ok {
+			return fmt.Errorf("duplicate cli command %q", cmd.Name)
+		}
+		seen[cmd.Name] = struct{}{}
+	}
+	sort.Slice(c.Commands, func(i, j int) bool { return c.Commands[i].Name < c.Commands[j].Name })
 	return nil
 }

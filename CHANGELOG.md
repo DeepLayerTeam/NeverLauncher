@@ -1,3 +1,12 @@
+## [0.20.9] - 2026-10-06
+
+- Added production Desktop extensions: enabled immutable `desktop` targets are exposed through the authenticated Desktop API, loaded only from the active payload and rendered in opaque-origin `sandbox="allow-scripts"` iframes with the same restrictive no-network CSP used by the Admin host.
+- Added typed `neverextensions.desktop-rpc.v1` postMessage bridging with source/in-flight validation. Backend RPC re-checks extension capability grants plus the current user's project access; the iframe never receives the Desktop access token or raw Tauri `invoke`.
+- Added a deliberately narrow Tauri parent bridge gated by the separate `desktop:bridge` capability: extensions may query platform metadata and request opening the already configured game directory, but cannot supply arbitrary filesystem paths or invoke arbitrary native commands.
+- Added production CLI extensions through the authenticated Extension Host Protocol. `nl x <namespace> <command>` resolves enabled immutable CLI contributions, launches the declared executable as a short-lived supervised process, requires authenticated Host `hello`, sanitizes its environment, enforces process/RSS/output/time bounds and keeps capability access deny-by-default.
+- Added `nl extension cli list|run|completion`, Bash/Zsh/Fish completion generation and runnable Desktop/CLI SDK scaffolds. A single `.nlext` is now regression-tested with `backend`, `admin`, `desktop` and `cli` targets together.
+- Added canonical Desktop/CLI contribution validation, `desktop:contribute`, `desktop:bridge` and `cli:contribute` capability catalog entries, Desktop RPC schema/OpenAPI coverage, subprocess/sandbox/multi-target tests and the mandatory 0.20.9 production gate. No database migration is required.
+
 ## [0.20.8] - 2026-10-06
 
 - Added the production NeverExtensions Admin Extension Host with declarative pages, navigation, dashboard widgets and actions backed by enabled immutable extension versions.

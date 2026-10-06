@@ -844,6 +844,18 @@ jobs:
           npm ci --prefix apps/admin
           npm run build --prefix apps/admin
           python3 scripts/contracts/validate-openapi.py
+      - name: NeverExtensions Desktop & CLI Extensions 0.20.9 gate
+        run: |
+          python3 scripts/smoke/offline/neverextensions-desktop-cli-0209.py
+          (cd services/api && go test -run 'TestDesktop.*0209|TestCLIExtension.*0209|TestLifecycleStopTerminatesTransientCLI0209' ./internal/httpapi ./internal/extensionhost)
+          (cd services/api && go test -run 'TestDesktopAndCLIContributions0209|TestCanonicalFourTargetManifest0209' ./internal/repository)
+          (cd services/api && go vet ./internal/httpapi ./internal/extensionhost ./internal/repository)
+          (cd cli && go test -run '0209|ExtensionPackageFourTargets0209' ./cmd/neverlauncher)
+          (cd cli && go vet ./cmd/neverlauncher)
+          npm ci --prefix apps/desktop
+          npm run build --prefix apps/desktop
+          cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+          python3 scripts/contracts/validate-openapi.py
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

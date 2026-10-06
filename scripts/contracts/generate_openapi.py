@@ -134,6 +134,11 @@ def path_parameters(path):
           {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
           {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
         ]
+    if path in {"/api/v1/desktop/extensions/{extensionId}/ui", "/api/v1/desktop/extensions/{extensionId}/rpc"}:
+        out += [
+          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
+          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+        ]
     if path == "/api/v1/admin/extension-events/subscriptions":
         out += [
           {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
@@ -194,6 +199,8 @@ def body_schema(path):
       "/api/v1/admin/extension-installs/{extensionId}/rollback":"ExtensionLifecycleWrite",
       "/api/v1/admin/extensions/{extensionId}/permissions":"ExtensionPermissionGrantWrite",
       "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}":"ExtensionSecretWrite",
+      "/api/v1/desktop/extensions/{extensionId}/rpc":"DesktopExtensionRPCRequest0209",
+      "/api/v1/admin/extension-cli/{extensionId}/invoke":"ExtensionCLIInvokeRequest0209",
       "/api/v1/admin/projects/import":"FreeFormObject",
       "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
       "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
@@ -336,6 +343,8 @@ schemas={
 "ExtensionLifecycleWrite":{"type":"object","properties":{"version":{"type":"string","description":"Exact registry version for install/update."},"channel":{"type":"string","description":"Registry channel used when version is omitted; defaults to stable for install/update."},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string","description":"Required when scope=project."}},"additionalProperties":False},
 "ExtensionPermissionGrantWrite":{"type":"object","required":["permission"],"properties":{"version":{"type":"string"},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"permission":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{1,127}$"},"reason":{"type":"string","maxLength":1000}},"additionalProperties":False},
 "ExtensionSecretWrite":{"type":"object","required":["valueBase64"],"properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"valueBase64":{"type":"string","description":"Secret plaintext encoded as standard Base64; never returned by list/read admin APIs."}},"additionalProperties":False},
+"DesktopExtensionRPCRequest0209":{"type":"object","required":["protocol","id","method"],"properties":{"protocol":{"type":"string","const":"neverextensions.desktop-rpc.v1"},"id":{"type":"string","minLength":1,"maxLength":160},"method":{"type":"string","minLength":1,"maxLength":64},"params":{"type":"object","additionalProperties":True}},"additionalProperties":False},
+"ExtensionCLIInvokeRequest0209":{"type":"object","required":["scope","command"],"properties":{"scope":{"type":"string","enum":["global","project"]},"scopeId":{"type":"string"},"command":{"type":"string","minLength":1,"maxLength":64},"args":{"type":"array","maxItems":127,"items":{"type":"string","maxLength":16384}}},"additionalProperties":False},
 "ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
 "Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
 "LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},

@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.20.8. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.20.9. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -470,6 +470,90 @@
             "BearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/admin/extension-cli/catalog": {
+      "get": {
+        "operationId": "get_admin_extension_cli_catalog",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/extension-cli/catalog",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/extension-cli/{extensionId}/invoke": {
+      "post": {
+        "operationId": "post_admin_extension_cli_by_extensionId_invoke",
+        "tags": [
+          "admin"
+        ],
+        "summary": "POST /api/v1/admin/extension-cli/{extensionId}/invoke",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionCLIInvokeRequest0209"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/extension-events": {
@@ -7189,6 +7273,173 @@
         }
       }
     },
+    "/api/v1/desktop/extensions/catalog": {
+      "get": {
+        "operationId": "get_desktop_extensions_catalog",
+        "tags": [
+          "api"
+        ],
+        "summary": "GET /api/v1/desktop/extensions/catalog",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/desktop/extensions/{extensionId}/rpc": {
+      "post": {
+        "operationId": "post_desktop_extensions_by_extensionId_rpc",
+        "tags": [
+          "api"
+        ],
+        "summary": "POST /api/v1/desktop/extensions/{extensionId}/rpc",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "project"
+              ],
+              "default": "global"
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesktopExtensionRPCRequest0209"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/desktop/extensions/{extensionId}/ui": {
+      "get": {
+        "operationId": "get_desktop_extensions_by_extensionId_ui",
+        "tags": [
+          "api"
+        ],
+        "summary": "GET /api/v1/desktop/extensions/{extensionId}/ui",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "extensionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "global",
+                "project"
+              ],
+              "default": "global"
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/diagnostics/policy": {
       "get": {
         "operationId": "get_diagnostics_policy",
@@ -10758,6 +11009,68 @@
           "valueBase64": {
             "type": "string",
             "description": "Secret plaintext encoded as standard Base64; never returned by list/read admin APIs."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DesktopExtensionRPCRequest0209": {
+        "type": "object",
+        "required": [
+          "protocol",
+          "id",
+          "method"
+        ],
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "const": "neverextensions.desktop-rpc.v1"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExtensionCLIInvokeRequest0209": {
+        "type": "object",
+        "required": [
+          "scope",
+          "command"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "project"
+            ]
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "args": {
+            "type": "array",
+            "maxItems": 127,
+            "items": {
+              "type": "string",
+              "maxLength": 16384
+            }
           }
         },
         "additionalProperties": false

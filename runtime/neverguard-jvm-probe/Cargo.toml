@@ -1,6 +1,6 @@
 [package]
 name = "neverguard-jvm-probe"
-version = "0.20.8"
+version = "0.20.9"
 description = "Windows-only NeverGuard JVM-Aware Protection adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

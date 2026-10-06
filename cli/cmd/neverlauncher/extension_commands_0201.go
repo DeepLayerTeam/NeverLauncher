@@ -58,6 +58,38 @@ type CanonicalExtensionAdminContributions0208 struct {
 	Actions          []CanonicalExtensionAdminAction0208     `json:"actions,omitempty"`
 }
 
+type CanonicalExtensionDesktopPage0209 struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+}
+type CanonicalExtensionDesktopNavigation0209 struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	PageID string `json:"pageId"`
+	Order  int    `json:"order,omitempty"`
+}
+type CanonicalExtensionDesktopAction0209 struct {
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	PageID    string `json:"pageId"`
+	Placement string `json:"placement,omitempty"`
+}
+type CanonicalExtensionDesktopContributions0209 struct {
+	Pages      []CanonicalExtensionDesktopPage0209       `json:"pages,omitempty"`
+	Navigation []CanonicalExtensionDesktopNavigation0209 `json:"navigation,omitempty"`
+	Actions    []CanonicalExtensionDesktopAction0209     `json:"actions,omitempty"`
+}
+type CanonicalExtensionCLICommand0209 struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Usage       string `json:"usage,omitempty"`
+}
+type CanonicalExtensionCLIContributions0209 struct {
+	Namespace string                             `json:"namespace"`
+	Commands  []CanonicalExtensionCLICommand0209 `json:"commands"`
+}
+
 type CanonicalExtensionDependency0201 struct {
 	ID       string `json:"id"`
 	Version  string `json:"version"`
@@ -65,26 +97,28 @@ type CanonicalExtensionDependency0201 struct {
 }
 
 type CanonicalExtensionManifest0201 struct {
-	SchemaVersion string                                    `json:"schemaVersion"`
-	ID            string                                    `json:"id"`
-	Name          string                                    `json:"name"`
-	Version       string                                    `json:"version"`
-	Publisher     string                                    `json:"publisher"`
-	Description   string                                    `json:"description,omitempty"`
-	Homepage      string                                    `json:"homepage,omitempty"`
-	Repository    string                                    `json:"repository,omitempty"`
-	API           string                                    `json:"api"`
-	Targets       []CanonicalExtensionTarget0201            `json:"targets"`
-	Permissions   []string                                  `json:"permissions,omitempty"`
-	Hooks         []string                                  `json:"hooks,omitempty"`
-	Dependencies  []CanonicalExtensionDependency0201        `json:"dependencies,omitempty"`
-	Metadata      map[string]string                         `json:"metadata,omitempty"`
-	Admin         *CanonicalExtensionAdminContributions0208 `json:"admin,omitempty"`
+	SchemaVersion string                                      `json:"schemaVersion"`
+	ID            string                                      `json:"id"`
+	Name          string                                      `json:"name"`
+	Version       string                                      `json:"version"`
+	Publisher     string                                      `json:"publisher"`
+	Description   string                                      `json:"description,omitempty"`
+	Homepage      string                                      `json:"homepage,omitempty"`
+	Repository    string                                      `json:"repository,omitempty"`
+	API           string                                      `json:"api"`
+	Targets       []CanonicalExtensionTarget0201              `json:"targets"`
+	Permissions   []string                                    `json:"permissions,omitempty"`
+	Hooks         []string                                    `json:"hooks,omitempty"`
+	Dependencies  []CanonicalExtensionDependency0201          `json:"dependencies,omitempty"`
+	Metadata      map[string]string                           `json:"metadata,omitempty"`
+	Admin         *CanonicalExtensionAdminContributions0208   `json:"admin,omitempty"`
+	Desktop       *CanonicalExtensionDesktopContributions0209 `json:"desktop,omitempty"`
+	CLI           *CanonicalExtensionCLIContributions0209     `json:"cli,omitempty"`
 }
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete")
+		return errors.New("доступные extension-подкоманды: template, validate, import-legacy, pack, sign, verify, inspect, registry, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
 	}
 	switch args[0] {
 	case "template":
@@ -111,6 +145,14 @@ func handleExtension0201(args []string) error {
 				DashboardWidgets: []CanonicalExtensionAdminWidget0208{{ID: "summary", Title: "Example extension", PageID: "main", Height: 280}},
 			}
 		}
+		if target == "desktop" {
+			manifest.Permissions = []string{"desktop:contribute", "project:read"}
+			manifest.Desktop = &CanonicalExtensionDesktopContributions0209{Pages: []CanonicalExtensionDesktopPage0209{{ID: "main", Title: "Example Desktop extension"}}, Navigation: []CanonicalExtensionDesktopNavigation0209{{ID: "main-nav", Label: "Example extension", PageID: "main"}}}
+		}
+		if target == "cli" {
+			manifest.Permissions = []string{"cli:contribute"}
+			manifest.CLI = &CanonicalExtensionCLIContributions0209{Namespace: "example", Commands: []CanonicalExtensionCLICommand0209{{Name: "status", Description: "Show extension status", Usage: "nl x example status"}}}
+		}
 		manifest, _, err := normalizeCanonicalExtension0201(manifest)
 		if err != nil {
 			return err
@@ -136,6 +178,8 @@ func handleExtension0201(args []string) error {
 		return handleExtensionRegistry0203(args[1:])
 	case "host":
 		return handleExtensionHost0205(args[1:])
+	case "cli":
+		return handleExtensionCLI0209(args[1:])
 	case "capabilities", "permissions", "permission-grant", "permission-revoke", "secrets", "secret-set", "secret-delete":
 		return handleExtensionSecurity0207(args[0], args[1:])
 	case "installed", "installations", "status", "install", "enable", "disable", "uninstall", "update", "rollback":
@@ -320,6 +364,33 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 			return CanonicalExtensionManifest0201{}, "", err
 		}
 	}
+	if m.Desktop != nil {
+		if _, ok := seenTargets["desktop"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a desktop target")
+		}
+		for _, target := range m.Targets {
+			if target.Kind == "desktop" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
+				return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a standalone .html entrypoint")
+			}
+		}
+		if _, ok := setOfStrings0208(m.Permissions)["desktop:contribute"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require desktop:contribute permission")
+		}
+		if err := normalizeDesktopContributions0209(m.Desktop); err != nil {
+			return CanonicalExtensionManifest0201{}, "", err
+		}
+	}
+	if m.CLI != nil {
+		if _, ok := seenTargets["cli"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require a cli target")
+		}
+		if _, ok := setOfStrings0208(m.Permissions)["cli:contribute"]; !ok {
+			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require cli:contribute permission")
+		}
+		if err := normalizeCLIContributions0209(m.CLI); err != nil {
+			return CanonicalExtensionManifest0201{}, "", err
+		}
+	}
 	if m.Metadata == nil {
 		m.Metadata = map[string]string{}
 	}
@@ -329,6 +400,118 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	sum := sha256.Sum256(canonical)
 	return m, hex.EncodeToString(sum[:]), nil
+}
+
+func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions0209) error {
+	if d == nil {
+		return nil
+	}
+	if len(d.Pages) == 0 || len(d.Pages) > 64 || len(d.Navigation) > 64 || len(d.Actions) > 64 {
+		return errors.New("desktop contributions contain invalid item count")
+	}
+	pages := map[string]struct{}{}
+	for i := range d.Pages {
+		p := &d.Pages[i]
+		p.ID = strings.ToLower(strings.TrimSpace(p.ID))
+		p.Title = strings.TrimSpace(p.Title)
+		p.Description = strings.TrimSpace(p.Description)
+		if !validAdminContributionID0208CLI(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
+			return fmt.Errorf("invalid desktop page %q", p.ID)
+		}
+		if _, ok := pages[p.ID]; ok {
+			return fmt.Errorf("duplicate desktop page %q", p.ID)
+		}
+		pages[p.ID] = struct{}{}
+	}
+	seen := map[string]struct{}{}
+	for i := range d.Navigation {
+		n := &d.Navigation[i]
+		n.ID = strings.ToLower(strings.TrimSpace(n.ID))
+		n.Label = strings.TrimSpace(n.Label)
+		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
+		if !validAdminContributionID0208CLI(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
+			return fmt.Errorf("invalid desktop navigation %q", n.ID)
+		}
+		if _, ok := pages[n.PageID]; !ok {
+			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
+		}
+		if _, ok := seen[n.ID]; ok {
+			return fmt.Errorf("duplicate desktop navigation %q", n.ID)
+		}
+		seen[n.ID] = struct{}{}
+	}
+	seen = map[string]struct{}{}
+	for i := range d.Actions {
+		a := &d.Actions[i]
+		a.ID = strings.ToLower(strings.TrimSpace(a.ID))
+		a.Label = strings.TrimSpace(a.Label)
+		a.PageID = strings.ToLower(strings.TrimSpace(a.PageID))
+		a.Placement = strings.ToLower(strings.TrimSpace(a.Placement))
+		if a.Placement == "" {
+			a.Placement = "toolbar"
+		}
+		if !validAdminContributionID0208CLI(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
+			return fmt.Errorf("invalid desktop action %q", a.ID)
+		}
+		if _, ok := pages[a.PageID]; !ok {
+			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
+		}
+		if _, ok := seen[a.ID]; ok {
+			return fmt.Errorf("duplicate desktop action %q", a.ID)
+		}
+		seen[a.ID] = struct{}{}
+	}
+	sort.Slice(d.Pages, func(i, j int) bool { return d.Pages[i].ID < d.Pages[j].ID })
+	sort.Slice(d.Navigation, func(i, j int) bool {
+		if d.Navigation[i].Order == d.Navigation[j].Order {
+			return d.Navigation[i].ID < d.Navigation[j].ID
+		}
+		return d.Navigation[i].Order < d.Navigation[j].Order
+	})
+	sort.Slice(d.Actions, func(i, j int) bool { return d.Actions[i].ID < d.Actions[j].ID })
+	return nil
+}
+func validAdminContributionID0208CLI(v string) bool {
+	if len(v) < 2 || len(v) > 64 {
+		return false
+	}
+	for i, r := range v {
+		if i == 0 && !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9') {
+			return false
+		}
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
+}
+func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) error {
+	if c == nil {
+		return nil
+	}
+	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
+	if !validAdminContributionID0208CLI(c.Namespace) {
+		return errors.New("cli namespace must match [a-z0-9][a-z0-9._-]{1,63}")
+	}
+	if len(c.Commands) == 0 || len(c.Commands) > 64 {
+		return errors.New("cli contributions require 1..64 commands")
+	}
+	seen := map[string]struct{}{}
+	for i := range c.Commands {
+		cmd := &c.Commands[i]
+		cmd.Name = strings.ToLower(strings.TrimSpace(cmd.Name))
+		cmd.Description = strings.TrimSpace(cmd.Description)
+		cmd.Usage = strings.TrimSpace(cmd.Usage)
+		if !validAdminContributionID0208CLI(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
+			return fmt.Errorf("invalid cli command %q", cmd.Name)
+		}
+		if _, ok := seen[cmd.Name]; ok {
+			return fmt.Errorf("duplicate cli command %q", cmd.Name)
+		}
+		seen[cmd.Name] = struct{}{}
+	}
+	sort.Slice(c.Commands, func(i, j int) bool { return c.Commands[i].Name < c.Commands[j].Name })
+	return nil
 }
 
 func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionManifest0201, string, error) {

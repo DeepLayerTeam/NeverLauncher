@@ -232,6 +232,7 @@ type Supervisor struct {
 	storage        storage.Storage
 	mu             sync.RWMutex
 	processes      map[string]*processState
+	transients     map[string]map[string]*processState
 	tokens         map[string]*processState
 	crashes        map[string][]time.Time
 	restarts       map[string]int
@@ -251,7 +252,7 @@ func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervi
 	transport := &http.Transport{Proxy: nil, DialContext: (&net.Dialer{Timeout: time.Second}).DialContext, MaxIdleConns: 16, MaxIdleConnsPerHost: 2, IdleConnTimeout: 30 * time.Second}
 	client := &http.Client{Transport: transport, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
 	security, _ := extensionsecurity.New(repo, nil)
-	return &Supervisor{cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, security: security, callbackClient: client}
+	return &Supervisor{cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, transients: map[string]map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, security: security, callbackClient: client}
 }
 
 func (s *Supervisor) SetSecurity(security *extensionsecurity.Manager) {
@@ -528,7 +529,78 @@ func (s *Supervisor) removeProcessToken(st *processState) {
 	if st.token != "" {
 		delete(s.tokens, st.token)
 	}
+	key := st.key.String()
+	if items := s.transients[key]; items != nil {
+		delete(items, st.instanceID)
+		if len(items) == 0 {
+			delete(s.transients, key)
+		}
+	}
 	s.mu.Unlock()
+}
+
+func (s *Supervisor) registerTransient0209(st *processState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.baseURL == "" {
+		return errors.New("extension host protocol server is not started")
+	}
+	key := st.key.String()
+	if s.transients[key] == nil {
+		s.transients[key] = map[string]*processState{}
+	}
+	s.transients[key][st.instanceID] = st
+	s.tokens[st.token] = st
+	return nil
+}
+
+func (s *Supervisor) stopTransients0209(ctx context.Context, key Key) error {
+	key = key.normalized()
+	s.mu.RLock()
+	items := make([]*processState, 0, len(s.transients[key.String()]))
+	for _, st := range s.transients[key.String()] {
+		items = append(items, st)
+	}
+	s.mu.RUnlock()
+	for _, st := range items {
+		st.mu.Lock()
+		st.expectedStop = true
+		st.state = "stopping"
+		cmd := st.cmd
+		done := st.doneCh
+		st.mu.Unlock()
+		if cmd != nil && cmd.Process != nil {
+			_ = terminateProcessTree(cmd.Process)
+		}
+		timer := time.NewTimer(s.cfg.StopTimeout)
+		select {
+		case <-done:
+			if !timer.Stop() {
+				<-timer.C
+			}
+		case <-timer.C:
+			if cmd != nil && cmd.Process != nil {
+				_ = killProcessTree(cmd.Process)
+			}
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				return errors.New("CLI extension process did not exit after kill")
+			}
+		case <-ctx.Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			if cmd != nil && cmd.Process != nil {
+				_ = killProcessTree(cmd.Process)
+			}
+			return ctx.Err()
+		}
+	}
+	return nil
 }
 func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader) {
 	defer s.wg.Done()
@@ -644,6 +716,9 @@ func (s *Supervisor) failProcess(st *processState, reason string, expected bool)
 
 func (s *Supervisor) Stop(ctx context.Context, key Key) error {
 	key = key.normalized()
+	if err := s.stopTransients0209(ctx, key); err != nil {
+		return err
+	}
 	s.mu.RLock()
 	st := s.processes[key.String()]
 	s.mu.RUnlock()
