@@ -334,10 +334,30 @@ func (r *SQLRepository) ListUsers() []model.User {
 	for rows.Next() {
 		item, err := scanUser(rows)
 		if err == nil {
+			item.ProjectRoles, _ = r.loadUserProjectRoles(item.ID)
 			result = append(result, item)
 		}
 	}
 	return result
+}
+
+func (r *SQLRepository) loadUserProjectRoles(userID string) (map[string]string, error) {
+	roles := map[string]string{}
+	rows, err := r.db.Query(`SELECT project_id, role_id FROM project_user_roles WHERE user_id=$1 ORDER BY project_id`, strings.TrimSpace(userID))
+	if err != nil {
+		return roles, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var projectID, roleID string
+		if err := rows.Scan(&projectID, &roleID); err != nil {
+			return nil, err
+		}
+		if projectID != "" && projectID != "*" && roleID != "" {
+			roles[projectID] = roleID
+		}
+	}
+	return roles, rows.Err()
 }
 
 func (r *SQLRepository) GetUser(id string) (model.User, error) {
@@ -349,6 +369,10 @@ func (r *SQLRepository) GetUser(id string) (model.User, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.User{}, ErrNotFound
 	}
+	if err != nil {
+		return model.User{}, err
+	}
+	item.ProjectRoles, err = r.loadUserProjectRoles(item.ID)
 	return item, err
 }
 
@@ -361,6 +385,10 @@ func (r *SQLRepository) GetUserByEmail(email string) (model.User, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.User{}, ErrNotFound
 	}
+	if err != nil {
+		return model.User{}, err
+	}
+	item.ProjectRoles, err = r.loadUserProjectRoles(item.ID)
 	return item, err
 }
 
@@ -381,6 +409,19 @@ func (r *SQLRepository) SaveUser(user model.User) (model.User, error) {
 	if user.ProjectRoles == nil {
 		user.ProjectRoles = map[string]string{}
 	}
+	canonicalProjectRoles := make(map[string]string, len(user.ProjectRoles))
+	for projectID, roleID := range user.ProjectRoles {
+		projectID = strings.TrimSpace(projectID)
+		roleID = strings.TrimSpace(roleID)
+		if projectID == "*" {
+			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
+		}
+		if projectID == "" || roleID == "" {
+			continue
+		}
+		canonicalProjectRoles[projectID] = roleID
+	}
+	user.ProjectRoles = canonicalProjectRoles
 	if user.CreatedAt.IsZero() {
 		user.CreatedAt = now
 	}
@@ -398,6 +439,14 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 		user.ID, user.Email, user.DisplayName, user.RoleID, user.Status, string(projectRoles), user.PasswordHash, nullTime(user.PasswordUpdatedAt), nullTime(user.LastLoginAt), nullTime(user.DisabledAt), user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return model.User{}, err
+	}
+	if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1`, user.ID); err != nil {
+		return model.User{}, err
+	}
+	for projectID, roleID := range user.ProjectRoles {
+		if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())`, projectID, user.ID, roleID); err != nil {
+			return model.User{}, fmt.Errorf("project role %s/%s: %w", projectID, roleID, err)
+		}
 	}
 	if strings.TrimSpace(user.PasswordHash) != "" {
 		identityID := "identity-local-" + user.ID
@@ -708,7 +757,7 @@ func (r *SQLRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error)
 }
 
 func (r *SQLRepository) ListRoles() []model.Role {
-	fallback := []model.Role{{ID: "owner", Name: "Владелец", Permissions: []string{"*"}}, {ID: "admin", Name: "Администратор", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "audit:read", "serverbridge:control", "serverbridge:console"}}, {ID: "developer", Name: "Разработчик", Permissions: []string{"project:read", "release:prepare", "file:write"}}, {ID: "viewer", Name: "Наблюдатель", Permissions: []string{"project:read"}}}
+	fallback := []model.Role{{ID: "owner", Name: "Владелец", Permissions: []string{"*"}}, {ID: "admin", Name: "Администратор", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "roles:manage", "audit:read", "diagnostics:read", "storage:manage", "settings:manage", "security:read", "extension:manage", "serverbridge:control", "serverbridge:console"}}, {ID: "release-manager", Name: "Release Manager", Permissions: []string{"project:read", "release:prepare", "release:publish", "audit:read"}}, {ID: "operator", Name: "Оператор", Permissions: []string{"project:read", "project:write", "release:prepare", "file:write", "diagnostics:read"}}, {ID: "support", Name: "Поддержка", Permissions: []string{"project:read", "diagnostics:read", "audit:read"}}, {ID: "developer", Name: "Разработчик (legacy)", Permissions: []string{"project:read", "release:prepare", "file:write"}}, {ID: "viewer", Name: "Наблюдатель", Permissions: []string{"project:read"}}, {ID: "player", Name: "Игрок", Permissions: []string{"launcher:login", "profile:download", "profile:launch"}}}
 	if err := r.check(); err != nil {
 		return fallback
 	}
@@ -1368,7 +1417,7 @@ func (r *SQLRepository) GetMinecraftProfileByUser(userID string) (model.Minecraf
 		return model.MinecraftProfile{}, err
 	}
 	var item model.MinecraftProfile
-	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE user_id=$1`, strings.TrimSpace(userID)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE user_id=$1`, strings.TrimSpace(userID)).Scan(&item.UserID, &item.UUID, &item.Name, &item.Issuer, &item.Realm, &item.Subject, &item.IdentityVersion, &item.CreatedAt, &item.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftProfile{}, ErrNotFound
 	}
@@ -1379,7 +1428,7 @@ func (r *SQLRepository) GetMinecraftProfileByUUID(uuid string) (model.MinecraftP
 		return model.MinecraftProfile{}, err
 	}
 	var item model.MinecraftProfile
-	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE lower(uuid)=lower($1)`, strings.TrimSpace(uuid)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE lower(uuid)=lower($1)`, strings.TrimSpace(uuid)).Scan(&item.UserID, &item.UUID, &item.Name, &item.Issuer, &item.Realm, &item.Subject, &item.IdentityVersion, &item.CreatedAt, &item.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftProfile{}, ErrNotFound
 	}
@@ -1390,7 +1439,7 @@ func (r *SQLRepository) GetMinecraftProfileByName(name string) (model.MinecraftP
 		return model.MinecraftProfile{}, err
 	}
 	var item model.MinecraftProfile
-	err := r.db.QueryRow(`SELECT user_id, uuid, name, created_at, updated_at FROM minecraft_profiles WHERE lower(name)=lower($1)`, strings.TrimSpace(name)).Scan(&item.UserID, &item.UUID, &item.Name, &item.CreatedAt, &item.UpdatedAt)
+	err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE lower(name)=lower($1)`, strings.TrimSpace(name)).Scan(&item.UserID, &item.UUID, &item.Name, &item.Issuer, &item.Realm, &item.Subject, &item.IdentityVersion, &item.CreatedAt, &item.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftProfile{}, ErrNotFound
 	}
@@ -1403,6 +1452,22 @@ func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model
 	item.UserID = strings.TrimSpace(item.UserID)
 	item.UUID = strings.ToLower(strings.TrimSpace(item.UUID))
 	item.Name = strings.TrimSpace(item.Name)
+	item.Issuer = strings.ToLower(strings.TrimSpace(item.Issuer))
+	item.Realm = strings.ToLower(strings.TrimSpace(item.Realm))
+	item.Subject = strings.TrimSpace(item.Subject)
+	item.IdentityVersion = strings.TrimSpace(item.IdentityVersion)
+	if item.Issuer == "" {
+		item.Issuer = "neverlauncher"
+	}
+	if item.Realm == "" {
+		item.Realm = "local"
+	}
+	if item.Subject == "" {
+		item.Subject = item.UUID
+	}
+	if item.IdentityVersion == "" {
+		item.IdentityVersion = "independent-v1"
+	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
 		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
 	}
@@ -1411,8 +1476,8 @@ func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model
 		item.CreatedAt = now
 	}
 	item.UpdatedAt = now
-	_, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,created_at,updated_at) VALUES($1,$2,$3,$4,$5)
-ON CONFLICT (user_id) DO UPDATE SET uuid=EXCLUDED.uuid,name=EXCLUDED.name,updated_at=EXCLUDED.updated_at`, item.UserID, item.UUID, item.Name, item.CreatedAt, item.UpdatedAt)
+	_, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+ON CONFLICT (user_id) DO UPDATE SET uuid=EXCLUDED.uuid,name=EXCLUDED.name,issuer=EXCLUDED.issuer,realm=EXCLUDED.realm,subject=EXCLUDED.subject,identity_version=EXCLUDED.identity_version,updated_at=EXCLUDED.updated_at`, item.UserID, item.UUID, item.Name, item.Issuer, item.Realm, item.Subject, item.IdentityVersion, item.CreatedAt, item.UpdatedAt)
 	if err != nil {
 		return model.MinecraftProfile{}, err
 	}

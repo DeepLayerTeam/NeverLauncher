@@ -244,8 +244,9 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "owner", Name: "Владелец", Description: "Полный доступ к проекту", Permissions: []string{"*"}},
 			{ID: "admin", Name: "Администратор", Description: "Управление проектами, версиями, файлами, пользователями и аудитом", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "roles:manage", "audit:read", "diagnostics:read", "storage:manage", "settings:manage", "security:read", "extension:manage", "serverbridge:control", "serverbridge:console"}},
 			{ID: "release-manager", Name: "Release Manager", Description: "Подготовка, публикация и откат релизов", Permissions: []string{"project:read", "release:prepare", "release:publish", "audit:read"}},
-			{ID: "support", Name: "Поддержка", Description: "Диагностика, чтение проекта и отзыв проблемных сессий", Permissions: []string{"project:read", "diagnostics:read", "sessions:revoke", "audit:read"}},
-			{ID: "developer", Name: "Разработчик", Description: "Подготовка версий и загрузка файлов", Permissions: []string{"project:read", "release:prepare", "file:write"}},
+			{ID: "operator", Name: "Оператор", Description: "Работа с профилями, пакетами и файлами без финальной публикации", Permissions: []string{"project:read", "project:write", "release:prepare", "file:write", "diagnostics:read"}},
+			{ID: "support", Name: "Поддержка", Description: "Чтение проекта, диагностика и аудит без права изменения", Permissions: []string{"project:read", "diagnostics:read", "audit:read"}},
+			{ID: "developer", Name: "Разработчик (legacy)", Description: "Совместимая ограниченная роль подготовки версий", Permissions: []string{"project:read", "release:prepare", "file:write"}},
 			{ID: "viewer", Name: "Наблюдатель", Description: "Только чтение", Permissions: []string{"project:read"}},
 			{ID: "player", Name: "Игрок", Description: "Вход в desktop и запуск доступных профилей", Permissions: []string{"launcher:login", "profile:download", "profile:launch"}},
 		},
@@ -458,9 +459,42 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 	if user.Status == "" {
 		user.Status = "active"
 	}
+	if user.RoleID == "" {
+		user.RoleID = "viewer"
+	}
 	if user.ProjectRoles == nil {
 		user.ProjectRoles = map[string]string{}
 	}
+	roleExists := func(roleID string) bool {
+		for _, role := range r.roles {
+			if role.ID == roleID {
+				return true
+			}
+		}
+		return false
+	}
+	if !roleExists(strings.TrimSpace(user.RoleID)) {
+		return model.User{}, fmt.Errorf("неизвестная глобальная роль %q", user.RoleID)
+	}
+	canonicalProjectRoles := make(map[string]string, len(user.ProjectRoles))
+	for projectID, roleID := range user.ProjectRoles {
+		projectID = strings.TrimSpace(projectID)
+		roleID = strings.TrimSpace(roleID)
+		if projectID == "*" {
+			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
+		}
+		if projectID == "" || roleID == "" {
+			continue
+		}
+		if _, err := r.GetProject(projectID); err != nil {
+			return model.User{}, fmt.Errorf("неизвестный проект %q для project role", projectID)
+		}
+		if !roleExists(roleID) {
+			return model.User{}, fmt.Errorf("неизвестная проектная роль %q", roleID)
+		}
+		canonicalProjectRoles[projectID] = roleID
+	}
+	user.ProjectRoles = canonicalProjectRoles
 	for _, existing := range r.users {
 		if existing.ID != user.ID && strings.EqualFold(existing.Email, user.Email) {
 			return model.User{}, fmt.Errorf("пользователь с таким email уже существует")
@@ -1075,6 +1109,22 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 	item.UserID = strings.TrimSpace(item.UserID)
 	item.UUID = strings.ToLower(strings.TrimSpace(item.UUID))
 	item.Name = strings.TrimSpace(item.Name)
+	item.Issuer = strings.ToLower(strings.TrimSpace(item.Issuer))
+	item.Realm = strings.ToLower(strings.TrimSpace(item.Realm))
+	item.Subject = strings.TrimSpace(item.Subject)
+	item.IdentityVersion = strings.TrimSpace(item.IdentityVersion)
+	if item.Issuer == "" {
+		item.Issuer = "neverlauncher"
+	}
+	if item.Realm == "" {
+		item.Realm = "local"
+	}
+	if item.Subject == "" {
+		item.Subject = item.UUID
+	}
+	if item.IdentityVersion == "" {
+		item.IdentityVersion = "independent-v1"
+	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
 		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
 	}

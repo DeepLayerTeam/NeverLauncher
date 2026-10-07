@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -70,13 +71,17 @@ func (s Server) minecraftRepo119() (repository.MinecraftRepository, error) {
 	return repo, nil
 }
 
-func minecraftUUID119(userID string) string {
-	sum := sha256.Sum256([]byte("neverlauncher:minecraft-profile:v2:" + strings.TrimSpace(userID)))
-	b := append([]byte(nil), sum[:16]...)
-	b[6] = (b[6] & 0x0f) | 0x80 // RFC 9562 UUIDv8/custom name-derived UUID.
+func newMinecraftProfileUUID119() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	// Local GameProfile identity is deliberately independent from Never user IDs.
+	// UUIDv4 is persisted once and remains stable for the lifetime of the profile.
+	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
 	h := hex.EncodeToString(b)
-	return h[:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
+	return h[:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32], nil
 }
 
 func minecraftID119(uuid string) string {
@@ -128,7 +133,14 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 		if existing, err := repo.GetMinecraftProfileByName(name); err == nil && existing.UserID != user.ID {
 			continue
 		}
-		profile, err := repo.SaveMinecraftProfile(model.MinecraftProfile{UserID: user.ID, UUID: minecraftUUID119(user.ID), Name: name})
+		uuid, uuidErr := newMinecraftProfileUUID119()
+		if uuidErr != nil {
+			return model.MinecraftProfile{}, uuidErr
+		}
+		profile, err := repo.SaveMinecraftProfile(model.MinecraftProfile{
+			UserID: user.ID, UUID: uuid, Name: name,
+			Issuer: "neverlauncher", Realm: "local", Subject: uuid, IdentityVersion: "independent-v1",
+		})
 		if err == nil {
 			return profile, nil
 		}

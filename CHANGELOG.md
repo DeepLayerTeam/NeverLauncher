@@ -1,3 +1,13 @@
+## [0.21.1] - 2026-10-07
+
+- Replaced JWT-embedded permission decisions with a live `AuthorizationService` that resolves the current user, global role and concrete project membership for every protected request. Project roles cannot become global permissions and resource/project scope mismatches fail closed.
+- Made `project_user_roles` the authoritative project-membership store. Migration `0050_authorization_scopes_identity_0211` safely imports concrete legacy memberships, refuses invalid references, drops wildcard project authority, adds role/project/user foreign keys and keeps the legacy JSON column synchronized only as a compatibility projection.
+- Applied project/package-aware authorization to project/profile/channel CRUD, package upload/validate/sign/stage/publish, project import/export, telemetry/crash reporting, ServerBridge control/console and extension project RPC. Role or membership revocation now takes effect for already-issued access tokens.
+- Decoupled user-owned passkey/MFA/session operations from global project permissions while preserving live account-status checks; disabling an account invalidates existing authenticated requests immediately.
+- Made new local Minecraft GameProfile UUIDs random persisted identities independent from Never user IDs while preserving existing UUIDs as legacy identities. Added issuer/realm/subject/identity-version persistence without rewriting existing profiles.
+- Added executable frozen-coverage certification for G01-G35/M01-M19, pinned GravitLauncher `v5.7.12` and `v5.7.13` commits plus their 42-commit/90-file delta and anchor blob SHAs, sealed authorization source hashes, offline security-invariant validation and an online GitHub CI drift check.
+- Added cross-project, live-revocation, resource-scope and migration regression tests plus a mandatory 0.21.1 CI gate.
+
 ## [0.21.0] - 2026-10-06
 
 - Shipped NeverExtensions GA with frozen Extension Package v1, Manifest v2, Host Protocol v1 and Extension API v1. New registry publications must use `api: 1.0`; existing signed 0.20 packages with `api: 3.7` remain runnable through an explicit compatibility alias without signature mutation.

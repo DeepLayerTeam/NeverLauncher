@@ -1,3 +1,9 @@
+## Authorization Foundation & Frozen Coverage — 0.21.1
+
+`0.21.1` moves authorization decisions out of JWT snapshots and into the live repository-backed policy path. Global roles and project memberships are evaluated separately, `project_user_roles` is authoritative, project/package handlers resolve the concrete resource scope before mutation, and role/membership revocation applies to already-issued sessions. New local Minecraft GameProfile identities are persisted independently from internal Never user IDs.
+
+The release also ships an executable frozen-coverage gate under `scripts/compatibility/authorization_frozen_coverage_0211.py`. It seals the security-sensitive 0.21.1 sources, enforces G01-G35/M01-M19 evidence references and verifies the pinned GravitLauncher v5.7.12→v5.7.13 upstream delta in CI.
+
 ## NeverExtensions GA — 0.21.0
 
 `0.21.0` freezes the production NeverExtensions contract: Extension Package `1.0`, Manifest `2.0`, Host Protocol `1.0` and Extension API `1.0`. New registry publications use `api: 1.0`; already signed 0.20 packages with the legacy `api: 3.7` marker are accepted only as a compatibility alias so their signed payload is never rewritten. Backend startup performs fail-closed GA reconciliation of lifecycle state, lockfiles, registry identity, publisher/key trust, quarantine/emergency state, permissions, dependencies and conflicts before extensions are allowed to run.

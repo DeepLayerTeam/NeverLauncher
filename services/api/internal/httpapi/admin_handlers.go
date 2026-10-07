@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
@@ -102,7 +103,21 @@ func (s Server) adminMe(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": user, "permissions": claims.Permissions, "expiresAt": time.Unix(claims.Exp, 0).UTC()})
+	projectPermissions := map[string][]string{}
+	for projectID, roleID := range user.ProjectRoles {
+		permissions := s.permissionsForRole(roleID)
+		projectScoped := make([]string, 0, len(permissions))
+		for _, permission := range permissions {
+			if authorization.IsProjectAction(permission) {
+				projectScoped = append(projectScoped, permission)
+			}
+		}
+		projectPermissions[projectID] = projectScoped
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user": user, "permissions": s.permissionsForRole(user.RoleID), "projectPermissions": projectPermissions,
+		"authorizationSource": "live-repository", "expiresAt": time.Unix(claims.Exp, 0).UTC(),
+	})
 }
 
 func (s Server) adminLogout(w http.ResponseWriter, r *http.Request) {
@@ -210,16 +225,56 @@ func (s Server) adminUserEnable(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, user)
 }
 func (s Server) adminOverview(w http.ResponseWriter, r *http.Request) {
-	projects := s.Repo.ListProjects()
-	var projectID string
-	if len(projects) > 0 {
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	allProjects := s.Repo.ListProjects()
+	projects := make([]model.Project, 0, len(allProjects))
+	allowedProjects := map[string]bool{}
+	for _, project := range allProjects {
+		if s.authorizeClaims(r, claims, "project:read", project.ID, "project", project.ID).Allowed {
+			projects = append(projects, project)
+			allowedProjects[project.ID] = true
+		}
+	}
+	projectID := strings.TrimSpace(r.URL.Query().Get("projectId"))
+	if projectID == "" && len(projects) > 0 {
 		projectID = projects[0].ID
+	}
+	if projectID != "" && !allowedProjects[projectID] {
+		writeError(w, http.StatusForbidden, "нет доступа к выбранному проекту")
+		return
 	}
 	profiles, _ := s.Repo.ListProfiles(projectID)
 	channels, _ := s.Repo.ListChannels(projectID)
 	versions, _ := s.Repo.ListVersions(projectID)
 	files, _ := s.Repo.ListFiles(projectID, "")
-	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "projects": projects, "profiles": profiles, "channels": channels, "versions": versions, "files": files, "users": s.Repo.ListUsers(), "roles": s.Repo.ListRoles(), "audit": s.Repo.ListAuditEvents(), "telemetry": s.Repo.ListTelemetryEvents(), "crashReports": s.Repo.ListCrashReports()})
+
+	users := []model.User{}
+	roles := []model.Role{}
+	if s.authorizeClaims(r, claims, "users:manage", "", "users", "").Allowed {
+		users = s.Repo.ListUsers()
+		roles = s.Repo.ListRoles()
+	}
+	audit := []model.AuditEvent{}
+	if s.authorizeClaims(r, claims, "audit:read", "", "audit", "").Allowed {
+		audit = s.Repo.ListAuditEvents()
+	}
+	telemetry := make([]model.TelemetryEvent, 0)
+	for _, item := range s.Repo.ListTelemetryEvents() {
+		if allowedProjects[item.ProjectID] {
+			telemetry = append(telemetry, item)
+		}
+	}
+	crashes := make([]model.CrashReport, 0)
+	for _, item := range s.Repo.ListCrashReports() {
+		if allowedProjects[item.ProjectID] {
+			crashes = append(crashes, item)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "projects": projects, "profiles": profiles, "channels": channels, "versions": versions, "files": files, "users": users, "roles": roles, "audit": audit, "telemetry": telemetry, "crashReports": crashes})
 }
 
 func (s Server) adminUsers(w http.ResponseWriter, r *http.Request) {
@@ -411,10 +466,34 @@ func (s Server) adminProjectImport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
+	projectRaw, ok := payload["project"].(map[string]any)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "поле project обязательно для импорта")
+		return
+	}
+	projectID, _ := projectRaw["id"].(string)
+	projectID = strings.TrimSpace(projectID)
+	if projectID == "" {
+		writeError(w, http.StatusBadRequest, "импортируемый проект должен содержать id")
+		return
+	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if _, getErr := s.Repo.GetProject(projectID); getErr == nil {
+		if !s.authorizeProjectAction(w, r, claims, "project:write", projectID, "project", projectID) {
+			return
+		}
+	} else if !s.authorizeClaims(r, claims, "project:write", "", "project", projectID).Allowed {
+		writeError(w, http.StatusForbidden, "создание нового проекта требует глобального project:write")
+		return
+	}
 	if err := s.Repo.ImportProject(payload); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	s.audit(r, s.adminActor(r), "project:import", "import")
+	s.audit(r, s.adminActor(r), "project:import", projectID)
 	writeJSON(w, http.StatusCreated, map[string]any{"status": "imported"})
 }

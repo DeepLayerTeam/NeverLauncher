@@ -205,7 +205,7 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 		return
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Type))
-	if kind == "server.console" && !claims.HasPermission("serverbridge:console") {
+	if kind == "server.console" && !s.authorizeClaims(r, claims, "serverbridge:console", node.ProjectID, "server", serverID).Allowed {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("control-console-denied"), Actor: claims.Email, Action: "serverbridge:control:denied", Target: serverID + ":" + kind, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusForbidden, "serverbridge_console_permission_required")
 		return

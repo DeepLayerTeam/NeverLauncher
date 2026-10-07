@@ -296,10 +296,6 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			respond(nil, errors.New("project access denied"))
 			return
 		}
-		if !claims.HasPermission("project:read") {
-			respond(nil, errors.New("user project:read denied"))
-			return
-		}
 		if e := allow("project:read", p.ProjectID); e != nil {
 			respond(nil, e)
 			return
@@ -315,10 +311,6 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		if json.Unmarshal(req.Params, &p) != nil || !projectAllowed(strings.TrimSpace(p.ProjectID)) {
 			respond(nil, errors.New("project access denied"))
-			return
-		}
-		if !claims.HasPermission("project:read") {
-			respond(nil, errors.New("user project:read denied"))
 			return
 		}
 		if e := allow("release:read", p.ProjectID); e != nil {

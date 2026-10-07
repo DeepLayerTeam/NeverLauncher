@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
@@ -21,6 +22,7 @@ type Server struct {
 	ExtensionSafeMode bool
 	Config            config.Config
 	Repo              repository.Repository
+	Authorization     *authorization.Service
 	Storage           storage.Storage
 	State             *RuntimeState
 	Federation        *federation.Core

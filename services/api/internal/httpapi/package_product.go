@@ -131,6 +131,14 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "projectId обязателен")
 		return
 	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if !s.authorizeProjectAction(w, r, claims, "release:prepare", req.ProjectID, "package", "") {
+		return
+	}
 	if _, err := s.Repo.GetProject(req.ProjectID); err != nil {
 		writeError(w, http.StatusNotFound, "проект не найден")
 		return
@@ -144,7 +152,13 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !profileExists {
-		_, _ = s.Repo.SaveProfile(model.Profile{ID: req.ProfileID, ProjectID: req.ProjectID, Name: req.ProfileID, Loader: firstNonEmpty(req.Loader, "vanilla")})
+		if !s.authorizeProjectAction(w, r, claims, "project:write", req.ProjectID, "profile", req.ProfileID) {
+			return
+		}
+		if _, err := s.Repo.SaveProfile(model.Profile{ID: req.ProfileID, ProjectID: req.ProjectID, Name: req.ProfileID, Loader: firstNonEmpty(req.Loader, "vanilla")}); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 	release, err := s.Repo.CreateVersion(req.ProjectID, req.ProfileID, req.Channel, req.Version)
 	if err != nil {
@@ -460,6 +474,14 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 	toVersion := firstNonEmpty(req.ToVersion, queryDefault(r, "toVersion", ""))
 	if projectID == "" || toVersion == "" {
 		writeError(w, http.StatusBadRequest, "projectId и toVersion обязательны")
+		return
+	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if !s.authorizeProjectAction(w, r, claims, "release:publish", projectID, "channel", channel) {
 		return
 	}
 	var target *model.ReleaseVersion

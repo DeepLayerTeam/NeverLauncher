@@ -18,6 +18,14 @@ func (s Server) telemetryEvent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "projectId и event обязательны")
 		return
 	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if !s.authorizeProjectAction(w, r, claims, "project:read", req.ProjectID, "telemetry", req.ProfileID) {
+		return
+	}
 	s.Repo.AddTelemetryEvent(model.TelemetryEvent{ProjectID: req.ProjectID, ProfileID: req.ProfileID, LauncherVersion: req.LauncherVersion, ProfileVersion: req.ProfileVersion, Event: req.Event, Status: req.Status, CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusAccepted, map[string]any{"status": "accepted"})
 }
@@ -30,6 +38,14 @@ func (s Server) crashReport(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ProjectID == "" || req.Message == "" {
 		writeError(w, http.StatusBadRequest, "projectId и message обязательны")
+		return
+	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if !s.authorizeProjectAction(w, r, claims, "project:read", req.ProjectID, "crash-report", req.ProfileID) {
 		return
 	}
 	s.Repo.AddCrashReport(model.CrashReport{ProjectID: req.ProjectID, ProfileID: req.ProfileID, LauncherVersion: req.LauncherVersion, ProfileVersion: req.ProfileVersion, Message: req.Message, Log: req.Log, CreatedAt: time.Now().UTC()})

@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0049_neverextensions_ga_0210" {
+	if st.Current != "0050_authorization_scopes_identity_0211" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0049_neverextensions_ga_0210" {
+		if k != "0050_authorization_scopes_identity_0211" {
 			pending[k] = v
 		}
 	}
@@ -672,6 +672,23 @@ func TestNeverExtensionsGAMigration0210(t *testing.T) {
 	for _, required := range []string{"extension_ga_contract", "package_format_version", "manifest_schema_version", "host_protocol_version", "extension_api_version", "legacy_api_aliases", "3.7"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.21.0 GA migration missing %q", required)
+		}
+	}
+}
+
+func TestAuthorizationFoundationMigration0211(t *testing.T) {
+	b, err := os.ReadFile("sql/0050_authorization_scopes_identity_0211.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"project_user_roles_project_fk", "project_user_roles_user_fk", "project_user_roles_role_fk",
+		"users_global_role_fk", "project_user_roles_project_not_wildcard", "nl_sync_user_project_roles_0211",
+		"identity_version", "issuer", "realm", "subject", "legacy-user-derived-v2",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.21.1 authorization migration missing %q", required)
 		}
 	}
 }

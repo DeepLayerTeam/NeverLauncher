@@ -3,6 +3,8 @@ package httpapi
 import (
 	"context"
 	"net/http"
+
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 )
 
 func (s Server) Handler() http.Handler {
@@ -10,6 +12,9 @@ func (s Server) Handler() http.Handler {
 		s.State = NewRuntimeState()
 		// Test/development servers created directly in unit tests use the safe
 		// in-memory limiter and do not trust forwarded headers by default.
+	}
+	if s.Authorization == nil && s.Repo != nil {
+		s.Authorization = authorization.New(s.Repo)
 	}
 	if s.State.ServerBridge != nil && s.Repo != nil {
 		s.State.ServerBridge.configureRepositoryV2(s.Repo)

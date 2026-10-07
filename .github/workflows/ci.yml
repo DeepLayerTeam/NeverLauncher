@@ -903,6 +903,14 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
+      - name: Authorization Foundation & Frozen Coverage 0.21.1 gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/compatibility/authorization_frozen_coverage_0211.py validate --online
+          (cd services/api && go test -run '0211|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate)
+          (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository)
+          (cd cli && go test ./internal/dbmigrate && go vet ./internal/dbmigrate)
       - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
       - name: Signed Windows x64 + ARM64 0.15.2 gate

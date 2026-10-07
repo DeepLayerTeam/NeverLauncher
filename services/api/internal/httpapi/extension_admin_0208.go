@@ -59,9 +59,6 @@ func (s Server) requireAdminAuthenticated0208(next http.HandlerFunc) http.Handle
 }
 
 func (s Server) adminUserCanProject0208(claims authClaims, projectID string) bool {
-	if claims.HasPermission("*") || claims.HasPermission("project:read") {
-		return true
-	}
 	return s.canAccessProject(claims, projectID)
 }
 
@@ -317,10 +314,6 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	case "context.get":
 		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}}, nil)
 	case "projects.list":
-		if !claims.HasPermission("project:read") {
-			respond(nil, errors.New("user project:read denied"))
-			return
-		}
 		if err := allow("project:read", ""); err != nil {
 			respond(nil, err)
 			return
@@ -349,7 +342,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			respond(nil, errors.New("extension project scope denied"))
 			return
 		}
-		if !claims.HasPermission("project:read") || !s.adminUserCanProject0208(claims, p.ProjectID) {
+		if !s.adminUserCanProject0208(claims, p.ProjectID) {
 			respond(nil, errors.New("user project access denied"))
 			return
 		}
@@ -367,7 +360,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			respond(nil, errors.New("global audit data is unavailable to project-scoped extensions"))
 			return
 		}
-		if !claims.HasPermission("audit:read") {
+		if !s.authorizeClaims(r, claims, "audit:read", "", "audit", "").Allowed {
 			respond(nil, errors.New("user audit:read denied"))
 			return
 		}
@@ -382,7 +375,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		audit()
 		respond(items, nil)
 	case "storage.info":
-		if !claims.HasPermission("project:read") {
+		if !s.hasAnyProjectPermission(r, claims, "project:read") {
 			respond(nil, errors.New("user project:read denied"))
 			return
 		}
@@ -406,7 +399,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			respond(nil, errors.New("extension project scope denied"))
 			return
 		}
-		if !claims.HasPermission("project:read") || !s.adminUserCanProject0208(claims, p.ProjectID) {
+		if !s.adminUserCanProject0208(claims, p.ProjectID) {
 			respond(nil, errors.New("user project access denied"))
 			return
 		}

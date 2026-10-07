@@ -637,18 +637,65 @@ func writeStepUpRequired117(w http.ResponseWriter, strength string) {
 	writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": errorBody})
 }
 
+func (s Server) freshAuthAllowed117(w http.ResponseWriter, r *http.Request, strength string, maxAge time.Duration) bool {
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return false
+	}
+	if s.writeRiskRequirement0126(w, claims) {
+		return false
+	}
+	if !freshAuth117(claims, strength, maxAge) {
+		writeStepUpRequired117(w, strength)
+		return false
+	}
+	return true
+}
+
 func (s Server) requireFreshAuth117(permission, strength string, maxAge time.Duration, next http.HandlerFunc) http.Handler {
 	return s.requirePermission(permission, func(w http.ResponseWriter, r *http.Request) {
-		claims, err := s.adminClaims(r)
-		if err != nil {
+		if !s.freshAuthAllowed117(w, r, strength, maxAge) {
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s Server) requireProjectFreshAuth117(permission, projectParam, resourceKind, strength string, maxAge time.Duration, next http.HandlerFunc) http.Handler {
+	return s.requireProjectPermission(permission, projectParam, resourceKind, func(w http.ResponseWriter, r *http.Request) {
+		if !s.freshAuthAllowed117(w, r, strength, maxAge) {
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s Server) requireServerBridgeFreshAuth117(permission, strength string, maxAge time.Duration, next http.HandlerFunc) http.Handler {
+	return s.requireServerBridgePermission(permission, func(w http.ResponseWriter, r *http.Request) {
+		if !s.freshAuthAllowed117(w, r, strength, maxAge) {
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s Server) requirePackageFreshAuth117(permission, strength string, maxAge time.Duration, next http.HandlerFunc) http.Handler {
+	return s.requirePackagePermission(permission, func(w http.ResponseWriter, r *http.Request) {
+		if !s.freshAuthAllowed117(w, r, strength, maxAge) {
+			return
+		}
+		next(w, r)
+	})
+}
+
+func (s Server) requireFreshSession117(strength string, maxAge time.Duration, next http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := s.verifyAdminTokenFromRequest(r); err != nil {
 			writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 			return
 		}
-		if s.writeRiskRequirement0126(w, claims) {
-			return
-		}
-		if !freshAuth117(claims, strength, maxAge) {
-			writeStepUpRequired117(w, strength)
+		if !s.freshAuthAllowed117(w, r, strength, maxAge) {
 			return
 		}
 		next(w, r)

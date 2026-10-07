@@ -188,7 +188,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()
-	user := model.User{ID: userID, Email: email, DisplayName: firstNonEmpty(displayName, "Administrator"), RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"*": "owner"}, PasswordHash: hashPassword(password), PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now}
+	user := model.User{ID: userID, Email: email, DisplayName: firstNonEmpty(displayName, "Administrator"), RoleID: "owner", Status: "active", ProjectRoles: map[string]string{}, PasswordHash: hashPassword(password), PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		if len(s.Repo.ListUsers()) > 0 {
 			return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
@@ -232,7 +232,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	if exists {
 		return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
 	}
-	rolesRaw := `{"*":"owner"}`
+	rolesRaw := `{}`
 	_, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at) VALUES($1,$2,$3,'owner','active',$4::jsonb,$5,$6,$6,$6)`, user.ID, user.Email, user.DisplayName, rolesRaw, user.PasswordHash, now)
 	if err != nil {
 		return model.User{}, err

@@ -332,11 +332,15 @@ type DeviceRevocationBatch struct {
 // MinecraftProfile is the stable Minecraft identity owned by a canonical Never user.
 // UUID/name are independent from mutable email and from any external provider subject.
 type MinecraftProfile struct {
-	UserID    string    `json:"userId"`
-	UUID      string    `json:"uuid"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	UserID          string    `json:"userId"`
+	UUID            string    `json:"uuid"`
+	Name            string    `json:"name"`
+	Issuer          string    `json:"issuer"`
+	Realm           string    `json:"realm"`
+	Subject         string    `json:"subject"`
+	IdentityVersion string    `json:"identityVersion"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 // MinecraftSession is an opaque Minecraft/Yggdrasil session derived from a Never
