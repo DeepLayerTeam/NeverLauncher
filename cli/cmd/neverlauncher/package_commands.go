@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -15,9 +17,61 @@ import (
 	"time"
 )
 
+type runtimeEvidenceCLI0212 struct {
+	SchemaVersion    string            `json:"schemaVersion"`
+	PackageID        string            `json:"packageId"`
+	ManifestDigest   string            `json:"manifestDigest"`
+	TargetID         string            `json:"targetId"`
+	MinecraftVersion string            `json:"minecraftVersion"`
+	Loader           string            `json:"loader"`
+	OS               string            `json:"os"`
+	Arch             string            `json:"arch"`
+	Java             string            `json:"java"`
+	ActualClient     bool              `json:"actualClient"`
+	ExitCode         int               `json:"exitCode"`
+	ServerJoin       bool              `json:"serverJoin"`
+	RunID            string            `json:"runId"`
+	Commit           string            `json:"commit"`
+	EvidenceHashes   map[string]string `json:"evidenceHashes"`
+	StartedAt        time.Time         `json:"startedAt"`
+	FinishedAt       time.Time         `json:"finishedAt"`
+}
+
+type runtimeSignedCLI0212 struct {
+	KeyID     string                 `json:"keyId"`
+	Evidence  runtimeEvidenceCLI0212 `json:"evidence"`
+	Signature string                 `json:"signature"`
+}
+
+func loadRuntimePrivateKey0212(path string) (ed25519.PrivateKey, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	value := strings.TrimSpace(string(raw))
+	var decoded []byte
+	if b, e := hex.DecodeString(value); e == nil {
+		decoded = b
+	} else {
+		for _, enc := range []*base64.Encoding{base64.RawURLEncoding, base64.URLEncoding, base64.RawStdEncoding, base64.StdEncoding} {
+			if b, e := enc.DecodeString(value); e == nil {
+				decoded = b
+				break
+			}
+		}
+	}
+	if len(decoded) == ed25519.SeedSize {
+		return ed25519.NewKeyFromSeed(decoded), nil
+	}
+	if len(decoded) == ed25519.PrivateKeySize {
+		return ed25519.PrivateKey(decoded), nil
+	}
+	return nil, errors.New("runtime signing key must contain Ed25519 seed/private key as hex/base64")
+}
+
 func handlePipeline(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные pipeline-подкоманды: plan, channels, status, stage, smoke-test, publish, rollback, audit")
+		return errors.New("доступные pipeline-подкоманды: plan, channels, status, stage, integrity-check, smoke-test, validations, runtime-sign, runtime-submit, policy-get, policy-set, publish, rollback, audit")
 	}
 	out := flagValue(args, "--output", "")
 	project := flagValue(args, "--project", "")
@@ -45,17 +99,19 @@ func handlePipeline(args []string) error {
 				"POST /api/v1/packages/{packageId}/validate",
 				"POST /api/v1/packages/{packageId}/sign",
 				"POST /api/v1/packages/{packageId}/stage",
-				"POST /api/v1/packages/{packageId}/smoke-test",
+				"POST /api/v1/packages/{packageId}/integrity-check",
+				"POST /api/v1/packages/{packageId}/runtime-validations/evidence",
+				"GET /api/v1/packages/{packageId}/validations",
 				"POST /api/v1/packages/{packageId}/publish",
 				"POST /api/v1/channels/{channel}/rollback",
 			},
 		}
 		return writeOrPrintJSON(out, payload)
 	}
-	if backend == "" {
+	if backend == "" && args[0] != "runtime-sign" {
 		return errors.New("pipeline operation требует --backend")
 	}
-	if token == "" && args[0] != "channels" {
+	if token == "" && args[0] != "channels" && args[0] != "runtime-sign" {
 		return errors.New("pipeline operation требует --token или NEVERLAUNCHER_TOKEN")
 	}
 
@@ -95,11 +151,101 @@ func handlePipeline(args []string) error {
 			return fmt.Errorf("package stage failed: %w", err)
 		}
 		return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "validate": validate, "sign": sign, "stage": staged})
+	case "integrity-check":
+		if packageID == "" {
+			return errors.New("pipeline integrity-check требует --package-id")
+		}
+		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/integrity-check", map[string]any{}, token)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
 	case "smoke-test":
 		if packageID == "" {
 			return errors.New("pipeline smoke-test требует --package-id")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/smoke-test", map[string]any{}, token)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, map[string]any{"legacyCommand": "smoke-test", "validationKind": "integrity", "runtimeExecuted": false, "warning": "legacy smoke-test performs integrity validation only; no Minecraft runtime was executed", "response": payload})
+	case "validations":
+		if packageID == "" {
+			return errors.New("pipeline validations требует --package-id")
+		}
+		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/validations", nil, token)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
+	case "runtime-sign":
+		inputPath := flagValue(args, "--input", "")
+		keyPath := flagValue(args, "--private-key", "")
+		keyID := flagValue(args, "--key-id", "")
+		if inputPath == "" || keyPath == "" || keyID == "" {
+			return errors.New("pipeline runtime-sign требует --input <evidence.json> --private-key <file> --key-id <id>")
+		}
+		raw, err := os.ReadFile(inputPath)
+		if err != nil {
+			return err
+		}
+		var evidence runtimeEvidenceCLI0212
+		if err := json.Unmarshal(raw, &evidence); err != nil {
+			return fmt.Errorf("runtime evidence JSON: %w", err)
+		}
+		if evidence.SchemaVersion != "neverlauncher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
+			return errors.New("runtime evidence missing canonical schema/package/manifest/target")
+		}
+		privateKey, err := loadRuntimePrivateKey0212(keyPath)
+		if err != nil {
+			return err
+		}
+		canonical, err := json.Marshal(evidence)
+		if err != nil {
+			return err
+		}
+		signed := runtimeSignedCLI0212{KeyID: keyID, Evidence: evidence, Signature: base64.RawURLEncoding.EncodeToString(ed25519.Sign(privateKey, canonical))}
+		return writeOrPrintJSON(out, signed)
+	case "runtime-submit":
+		if packageID == "" {
+			return errors.New("pipeline runtime-submit требует --package-id")
+		}
+		evidencePath := flagValue(args, "--evidence", "")
+		if evidencePath == "" {
+			return errors.New("pipeline runtime-submit требует --evidence <signed-json>")
+		}
+		raw, err := os.ReadFile(evidencePath)
+		if err != nil {
+			return err
+		}
+		var body map[string]any
+		if err := json.Unmarshal(raw, &body); err != nil {
+			return fmt.Errorf("runtime evidence JSON: %w", err)
+		}
+		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/runtime-validations/evidence", body, token)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
+	case "policy-get":
+		if project == "" {
+			return errors.New("pipeline policy-get требует --project")
+		}
+		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/projects/"+url.PathEscape(project)+"/validation-policy", nil, token)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(out, payload)
+	case "policy-set":
+		if project == "" {
+			return errors.New("pipeline policy-set требует --project")
+		}
+		level := strings.ToLower(flagValue(args, "--level", "integrity"))
+		if level != "integrity" && level != "runtime" {
+			return errors.New("--level должен быть integrity или runtime")
+		}
+		body := map[string]any{"requiredLevel": level, "requireServerJoin": flagValue(args, "--require-server-join", "false") == "true"}
+		payload, err := httpJSONWithAuth("PUT", backend+"/api/v1/projects/"+url.PathEscape(project)+"/validation-policy", body, token)
 		if err != nil {
 			return err
 		}
@@ -283,6 +429,8 @@ func handleClient(args []string) error {
 		return handlePipeline(append([]string{"stage"}, args[1:]...))
 	case "package-smoke-test":
 		return handlePipeline(append([]string{"smoke-test"}, args[1:]...))
+	case "package-integrity-check":
+		return handlePipeline(append([]string{"integrity-check"}, args[1:]...))
 	case "package-promote":
 		return handlePipeline(append([]string{"publish"}, args[1:]...))
 	case "rollback-snapshot":

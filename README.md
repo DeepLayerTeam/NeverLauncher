@@ -1,3 +1,11 @@
+## Honest Validation & Trust Boundaries — 0.21.2
+
+`0.21.2` separates package integrity from real runtime evidence. `POST /api/v1/packages/{packageId}/integrity-check` verifies stored bytes, SHA-256 metadata, the Ed25519 manifest signature and compatibility metadata, but never launches Minecraft. The legacy `/smoke-test` alias uses that same path and reports `runtimeExecuted=false` / `runtimeStatus=not-checked`.
+
+Projects can keep the default `integrity` publish policy or require `runtime` validation, optionally including a real server join. Runtime evidence is an Ed25519-signed `neverlauncher/runtime-validation/v1` document tied to the exact current manifest digest and a trusted key from `NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON`. CI can create the signed payload with `nl pipeline runtime-sign` and submit it with `nl pipeline runtime-submit`; publish rejects missing, stale, mismatched or untrusted evidence.
+
+Device responses now expose a structured `trustAssessment`. Local hardware-bound P-256 key possession remains distinct from remote TPM/Secure-Enclave provenance; existing devices are migrated as `remoteHardwareProvenance=not-verified` and do not gain assurance automatically. Backend extension processes are reported as `trusted-process`; existing process-tree/resource limits are not described as an OS sandbox.
+
 ## Authorization Foundation & Frozen Coverage — 0.21.1
 
 `0.21.1` moves authorization decisions out of JWT snapshots and into the live repository-backed policy path. Global roles and project memberships are evaluated separately, `project_user_roles` is authoritative, project/package handlers resolve the concrete resource scope before mutation, and role/membership revocation applies to already-issued sessions. New local Minecraft GameProfile identities are persisted independently from internal Never user IDs.

@@ -167,6 +167,11 @@ type Status struct {
 	MemoryBytes       int64      `json:"memoryBytes,omitempty"`
 	ProcessCount      int        `json:"processCount,omitempty"`
 	ResourceIsolation string     `json:"resourceIsolation"`
+	ExecutionTrust    string     `json:"executionTrust"`
+	ProcessIsolation  string     `json:"processIsolation"`
+	OSSandbox         string     `json:"osSandbox"`
+	NetworkSandbox    string     `json:"networkSandbox"`
+	FilesystemSandbox string     `json:"filesystemSandbox"`
 	Permissions       []string   `json:"permissions,omitempty"`
 	Entrypoint        string     `json:"entrypoint,omitempty"`
 }
@@ -858,7 +863,7 @@ func (s *Supervisor) Logs(key Key, limit int) ([]LogEntry, error) {
 func (s *Supervisor) statusOf(st *processState) Status {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), Entrypoint: st.entrypoint}
+	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), ExecutionTrust: "trusted-process", ProcessIsolation: resourceIsolationMode(), OSSandbox: "none", NetworkSandbox: "none", FilesystemSandbox: "none", Entrypoint: st.entrypoint}
 	if st.cmd != nil && st.cmd.Process != nil {
 		status.PID = st.cmd.Process.Pid
 	}

@@ -49,6 +49,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0048_neverextensions_trust_recovery_certification_02012",
 		"0049_neverextensions_ga_0210",
 		"0050_authorization_scopes_identity_0211",
+		"0051_honest_validation_trust_0212",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

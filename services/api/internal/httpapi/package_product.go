@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,6 +52,9 @@ func (s Server) packageProductStatus(w http.ResponseWriter, r *http.Request) {
 			"POST /api/v1/packages/{packageId}/files",
 			"POST /api/v1/packages/{packageId}/validate",
 			"POST /api/v1/packages/{packageId}/stage",
+			"POST /api/v1/packages/{packageId}/integrity-check",
+			"POST /api/v1/packages/{packageId}/runtime-validations/evidence",
+			"GET /api/v1/packages/{packageId}/validations",
 			"POST /api/v1/packages/{packageId}/publish",
 			"POST /api/v1/channels/{channel}/rollback",
 			"GET /api/v1/packages/{packageId}",
@@ -371,47 +375,6 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(updated, lookup.Files, updated.Status)})
 }
 
-func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	lookup, err := s.lookupPackage(r.PathValue("packageId"))
-	if err != nil {
-		writeError(w, http.StatusNotFound, "package не найден")
-		return
-	}
-	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
-		return
-	}
-	if lookup.Release.Status != "staged" && lookup.Release.Status != "smoke-failed" {
-		writeError(w, http.StatusConflict, "package должен быть staged перед smoke-test")
-		return
-	}
-	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
-		writeError(w, http.StatusConflict, "package manifest signature недействительна: "+err.Error())
-		return
-	}
-	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
-	status := "smoke-passed"
-	for _, check := range checks {
-		if check["status"] != "ok" {
-			status = "smoke-failed"
-		}
-	}
-	updated, updateErr := s.Repo.UpdateVersionStatus(lookup.Release.ProjectID, lookup.Release.ID, status)
-	if updateErr != nil {
-		writeError(w, http.StatusInternalServerError, updateErr.Error())
-		return
-	}
-	s.audit(r, s.adminActor(r), "package:smoke-test", lookup.Release.ID)
-	s.packageEvent0206(r, "package.smoke-tested", updated.Status, updated)
-	code := http.StatusOK
-	if status == "smoke-failed" {
-		code = http.StatusConflict
-	}
-	writeJSON(w, code, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": updated.ID, "status": updated.Status, "checks": checks, "desktopConsumePlan": "/api/v1/projects/" + lookup.Release.ProjectID + "/profiles/" + lookup.Release.ProfileID + "/manifest"}})
-}
-
 func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 	unlock := s.lockPackageMutation()
 	defer unlock()
@@ -424,8 +387,8 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return
 	}
-	if lookup.Release.Status != "smoke-passed" {
-		writeError(w, http.StatusConflict, "publish разрешён только после успешного smoke-test")
+	if err := s.validatePublishEvidence0212(r, lookup); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
@@ -509,19 +472,58 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "rollback target не имеет криптографически доверенной Ed25519-подписи manifest: "+err.Error())
 		return
 	}
-	// Immutable rollback никогда не изменяет уже опубликованный target. Вместо
-	// этого создаётся новая release-version с тем же проверенным содержимым; URLs
-	// остаются привязаны к immutable storage objects исходного target.
+	targetFiles, err := s.Repo.ListFiles(projectID, target.ID)
+	if err != nil || len(targetFiles) == 0 {
+		writeError(w, http.StatusConflict, "rollback target не имеет канонических file records для повторной integrity-проверки")
+		return
+	}
+
+	// Rollback is a new immutable release, therefore it receives a new manifest
+	// digest and MUST obtain its own validation evidence. File records point to
+	// the already immutable storage objects of the target release.
 	rollbackVersion := toVersion + "-rollback-" + time.Now().UTC().Format("20060102T150405.000000000Z")
 	created, err := s.Repo.CreateVersion(projectID, profileID, channel, rollbackVersion)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	for _, source := range targetFiles {
+		reader, sourceSize, openErr := s.Storage.Open(projectID, target.ID, source.Path)
+		if openErr != nil {
+			writeError(w, http.StatusConflict, "rollback source storage object недоступен: "+openErr.Error())
+			return
+		}
+		_, copiedSize, saveErr := s.Storage.Save(projectID, created.ID, source.Path, reader)
+		_ = reader.Close()
+		if saveErr != nil || copiedSize != sourceSize || copiedSize != source.Size {
+			if saveErr == nil {
+				saveErr = fmt.Errorf("copied size=%d source size=%d metadata size=%d", copiedSize, sourceSize, source.Size)
+			}
+			writeError(w, http.StatusInternalServerError, "не удалось материализовать rollback storage object: "+saveErr.Error())
+			return
+		}
+		clone := source
+		clone.ID = ""
+		clone.VersionID = created.ID
+		clone.URL = s.deliveryURL(projectID, created.ID, source.Path)
+		if _, err := s.Repo.AddFile(clone); err != nil {
+			writeError(w, http.StatusInternalServerError, "не удалось клонировать rollback file metadata: "+err.Error())
+			return
+		}
+	}
+	files, err := s.Repo.ListFiles(projectID, created.ID)
+	if err != nil || len(files) != len(targetFiles) {
+		writeError(w, http.StatusInternalServerError, "rollback file metadata incomplete")
+		return
+	}
 	manifest := target.Manifest
 	manifest.Version = rollbackVersion
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	manifest.Signature = nil
+	manifest.Files = make([]model.ManifestFile, 0, len(files))
+	for _, f := range files {
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...)})
+	}
 	if err := validateCompatibilityManifest(manifest); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -531,8 +533,39 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "не удалось подписать rollback manifest: "+err.Error())
 		return
 	}
-	if _, err := s.Repo.UpdateVersionManifest(projectID, created.ID, signed); err != nil {
+	updated, err := s.Repo.UpdateVersionManifest(projectID, created.ID, signed)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	updated, err = s.Repo.UpdateVersionStatus(projectID, created.ID, "staged")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	lookup := packageLookup{Release: updated, Files: files}
+	integrity, err := s.runPackageIntegrityCheck0212(r, lookup)
+	if err != nil || integrity.Result != "passed" {
+		if err == nil {
+			err = errors.New("rollback integrity check failed")
+		}
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	lookup.Release.Status = "integrity-passed"
+
+	policy, policyErr := s.Repo.GetProjectValidationPolicy(r.Context(), projectID)
+	if policyErr == nil && policy.RequiredLevel == "runtime" {
+		s.audit(r, s.adminActor(r), "channel:rollback:validation-required", projectID+":"+profileID+":"+channel+":"+toVersion+"->"+rollbackVersion)
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "packageId": created.ID, "release": lookup.Release, "integrity": integrity, "requiredValidationLevel": "runtime", "status": "rollback-staged-runtime-validation-required"}})
+		return
+	}
+	if err := s.validatePublishEvidence0212(r, lookup); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
 	release, err := s.Repo.PublishVersionWithManifest(projectID, profileID, channel, rollbackVersion, signed)
@@ -541,7 +574,9 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "channel:rollback", projectID+":"+profileID+":"+channel+":"+toVersion+"->"+rollbackVersion)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "release": release, "status": "rolled-back-as-new-immutable-release"}})
+	s.packageEvent0206(r, "package.published", "rollback-published", release)
+	s.releasePublished0206(r, release)
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "release": release, "integrity": integrity, "status": "rolled-back-as-new-validated-immutable-release"}})
 }
 
 func (s Server) lookupPackage(packageID string) (packageLookup, error) {

@@ -1,3 +1,13 @@
+## [0.21.2] - 2026-10-07
+
+- Replaced the historical package smoke state with durable `IntegrityCheckResult` and cryptographically verified `RuntimeValidationResult`. The legacy `/smoke-test` route now executes only the canonical integrity path and explicitly reports `runtimeExecuted=false`; it can never create runtime PASS evidence.
+- Added Ed25519-signed actual-client runtime evidence bound to the exact package manifest digest, trusted signer key ID, target, CI run and evidence hashes. Runtime-required project policy blocks publish until matching signed evidence exists; optional server-join policy is enforced at publish time.
+- Closed alternate publication bypasses: canonical package publish, Admin publish/version publish and rollback all enforce current integrity/runtime evidence. Installer first-project now creates a draft instead of publishing an empty unvalidated release; strict-policy rollback stages a newly validated candidate for its own runtime evidence.
+- Added durable validation/policy storage and migration `0051_honest_validation_trust_0212`. Legacy `smoke-passed`/`smoke-failed` states are downgraded to `staged` so the next publish must obtain canonical integrity evidence.
+- Added explicit `TrustAssessment` dimensions for key possession, local hardware binding, remote hardware provenance, artifact integrity, runtime evidence and policy decision. Existing device records remain `remoteHardwareProvenance=not-verified`; challenge-response does not elevate remote hardware provenance.
+- Reclassified Backend extensions as `trusted-process`: process-tree/resource controls remain enforced, while API/Admin now state OS/network/filesystem sandbox=`none` until a real OS sandbox exists.
+- Added `nl pipeline integrity-check|validations|runtime-sign|runtime-submit|policy-get|policy-set`, OpenAPI/SDK contracts, regression coverage and a mandatory 0.21.2 Honest Validation & Trust Boundaries gate.
+
 ## [0.21.1] - 2026-10-07
 
 - Replaced JWT-embedded permission decisions with a live `AuthorizationService` that resolves the current user, global role and concrete project membership for every protected request. Project roles cannot become global permissions and resource/project scope mismatches fail closed.

@@ -37,6 +37,7 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	device.KeyAlgorithm = strings.ToLower(strings.TrimSpace(device.KeyAlgorithm))
 	device.KeyBinding = strings.ToLower(strings.TrimSpace(device.KeyBinding))
 	device.HardwareProvider = strings.TrimSpace(device.HardwareProvider)
+	device.RemoteHardwareProvenance = strings.ToLower(strings.TrimSpace(device.RemoteHardwareProvenance))
 	device.AttestationState = strings.ToLower(strings.TrimSpace(device.AttestationState))
 	device.AttestationMethod = strings.ToLower(strings.TrimSpace(device.AttestationMethod))
 	device.PublicKey = strings.TrimSpace(device.PublicKey)
@@ -60,6 +61,12 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	}
 	if device.KeyBinding == "" {
 		device.KeyBinding = "software"
+	}
+	if device.RemoteHardwareProvenance == "" {
+		device.RemoteHardwareProvenance = "not-verified"
+	}
+	if device.RemoteHardwareProvenance != "not-verified" && device.RemoteHardwareProvenance != "verified" {
+		return model.TrustedDevice{}, fmt.Errorf("unsupported remote hardware provenance %q", device.RemoteHardwareProvenance)
 	}
 	if device.AttestationState == "" {
 		device.AttestationState = "unattested"
@@ -361,13 +368,13 @@ func (r *MemoryRepository) ConsumeDeviceChallenge(ctx context.Context, id, userI
 	return model.DeviceChallenge{}, ErrNotFound
 }
 
-const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason`
+const trustedDeviceColumns0121 = `id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,remote_hardware_provenance,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason,replaced_at,replaced_by_device_id,replacement_reason`
 
 func scanTrustedDevice0121(row interface{ Scan(...any) error }) (model.TrustedDevice, error) {
 	var d model.TrustedDevice
 	var lastSeen, lastVerified, attested, attestationExpires, revoked, replaced sql.NullTime
 	var replacedBy sql.NullString
-	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.AttestationState, &d.AttestationMethod, &attested, &attestationExpires, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason, &replaced, &replacedBy, &d.ReplacementReason)
+	err := row.Scan(&d.ID, &d.UserID, &d.Name, &d.Status, &d.TrustState, &d.Assurance, &d.KeyAlgorithm, &d.KeyBinding, &d.HardwareProvider, &d.AttestationState, &d.AttestationMethod, &attested, &attestationExpires, &d.RemoteHardwareProvenance, &d.PublicKey, &d.KeyFingerprint, &d.Platform, &d.ClientVersion, &d.CreatedAt, &d.UpdatedAt, &lastSeen, &lastVerified, &d.LastIP, &d.LastUserAgent, &revoked, &d.RevokedReason, &replaced, &replacedBy, &d.ReplacementReason)
 	if err != nil {
 		return model.TrustedDevice{}, err
 	}

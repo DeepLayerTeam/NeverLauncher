@@ -125,7 +125,7 @@ func (s Server) installFirstProject(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	release, err := s.publishSigned(req.ProjectID, req.ProfileID, req.Channel, req.Version)
+	release, err := s.Repo.CreateVersion(req.ProjectID, req.ProfileID, req.Channel, req.Version)
 	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -135,7 +135,7 @@ func (s Server) installFirstProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: fmt.Sprintf("install-project-%d", now.UnixNano()), Actor: firstNonEmpty(s.adminActor(r), req.Actor, "installer"), Action: "install.first-project", Target: release.ID, UserAgent: s.Version, CreatedAt: now})
-	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "projectId": project.ID, "profileId": req.ProfileID, "channel": req.Channel, "version": release.Version, "releaseId": release.ID, "status": "installation-completed", "installationCompleted": true}})
+	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "projectId": project.ID, "profileId": req.ProfileID, "channel": req.Channel, "version": release.Version, "releaseId": release.ID, "status": "installation-completed-draft-created", "installationCompleted": true}})
 }
 
 func installWizardAPI(toolVersion, profile string) map[string]any {

@@ -66,6 +66,12 @@ type Repository interface {
 	PublishVersionWithManifest(projectID, profileID, channel, version string, manifest model.Manifest) (model.ReleaseVersion, error)
 	UpdateVersionManifest(projectID, versionID string, manifest model.Manifest) (model.ReleaseVersion, error)
 	UpdateVersionStatus(projectID, versionID, status string) (model.ReleaseVersion, error)
+	SaveIntegrityCheck(ctx context.Context, result model.IntegrityCheckResult) (model.IntegrityCheckResult, error)
+	LatestIntegrityCheck(ctx context.Context, packageID string) (model.IntegrityCheckResult, error)
+	SaveRuntimeValidation(ctx context.Context, result model.RuntimeValidationResult) (model.RuntimeValidationResult, error)
+	ListRuntimeValidations(ctx context.Context, packageID string) ([]model.RuntimeValidationResult, error)
+	GetProjectValidationPolicy(ctx context.Context, projectID string) (model.ProjectValidationPolicy, error)
+	SaveProjectValidationPolicy(ctx context.Context, policy model.ProjectValidationPolicy) (model.ProjectValidationPolicy, error)
 	AddFile(file model.FileObject) (model.FileObject, error)
 	ExportProject(projectID string) (map[string]any, error)
 	ImportProject(payload map[string]any) error
@@ -129,6 +135,7 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	validationMu                   sync.Mutex
 	deviceMu                       sync.Mutex
 	minecraftMu                    sync.Mutex
 	extensionMu                    sync.Mutex
@@ -138,6 +145,9 @@ type MemoryRepository struct {
 	profiles                       []model.Profile
 	channels                       []model.ReleaseChannel
 	releases                       []model.ReleaseVersion
+	integrityChecks                []model.IntegrityCheckResult
+	runtimeValidations             []model.RuntimeValidationResult
+	validationPolicies             map[string]model.ProjectValidationPolicy
 	files                          []model.FileObject
 	users                          []model.User
 	identities                     []model.AuthIdentity
@@ -217,6 +227,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 	return &MemoryRepository{
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
+		validationPolicies:             map[string]model.ProjectValidationPolicy{"demo-project": {ProjectID: "demo-project", RequiredLevel: "integrity", UpdatedAt: now}},
 		extensionTrustPolicy:           model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeStrict, AllowedPublishers: []string{}, UpdatedAt: now},
 		projects: []model.Project{
 			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта NeverLauncher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},

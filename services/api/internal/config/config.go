@@ -88,6 +88,7 @@ type Config struct {
 	DatabaseAutoMigrate                          bool
 	BootstrapToken                               string
 	ManifestSigningPrivateKey                    string
+	RuntimeValidationKeysJSON                    string
 	ServerBridgeControlSigningPrivateKey         string
 	ServerBridgeControlPreviousSigningPrivateKey string
 	AuthSQLProvidersJSON                         string
@@ -275,6 +276,7 @@ func Load() Config {
 		DatabaseAutoMigrate:                          envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
 		BootstrapToken:                               env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
 		ManifestSigningPrivateKey:                    manifestSigningPrivateKey,
+		RuntimeValidationKeysJSON:                    env("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON", ""),
 		ServerBridgeControlSigningPrivateKey:         serverBridgeControlSigningPrivateKey,
 		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
 		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),

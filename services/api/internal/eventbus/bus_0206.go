@@ -42,6 +42,8 @@ var specs0206 = map[string]EventSpec{
 	"package.validated":           {"package.validated", "release:read", false},
 	"package.signed":              {"package.signed", "release:read", false},
 	"package.staged":              {"package.staged", "release:read", false},
+	"package.integrity-checked":   {"package.integrity-checked", "release:read", false},
+	"package.runtime-validated":   {"package.runtime-validated", "release:read", false},
 	"package.smoke-tested":        {"package.smoke-tested", "release:read", false},
 	"package.before-publish":      {"package.before-publish", "release:read", true},
 	"package.published":           {"package.published", "release:read", false},

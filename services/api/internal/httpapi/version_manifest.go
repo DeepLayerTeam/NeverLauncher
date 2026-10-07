@@ -69,67 +69,6 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, updated)
 }
 
-func (s Server) publishSigned(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	if profileID == "" {
-		profileID = "vanilla"
-	}
-	if channel == "" {
-		channel = "stable"
-	}
-	if version == "" {
-		version = time.Now().UTC().Format("20060102150405")
-	}
-
-	versions, err := s.Repo.ListVersions(projectID)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	var release *model.ReleaseVersion
-	for i := range versions {
-		item := &versions[i]
-		if item.ProfileID == profileID && item.Channel == channel && item.Version == version {
-			release = item
-			break
-		}
-	}
-	if release == nil {
-		created, createErr := s.Repo.CreateVersion(projectID, profileID, channel, version)
-		if createErr != nil {
-			return model.ReleaseVersion{}, createErr
-		}
-		release = &created
-	}
-	if release.Status == "published" {
-		return model.ReleaseVersion{}, errors.New("release уже опубликован; published manifest immutable")
-	}
-
-	manifest := release.Manifest
-	manifest.SchemaVersion = "1.0"
-	manifest.ProjectID = projectID
-	manifest.ProfileID = profileID
-	manifest.Channel = channel
-	manifest.Version = version
-	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-	files, err := s.Repo.ListFiles(projectID, release.ID)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	manifest.Files = make([]model.ManifestFile, 0, len(files))
-	for _, file := range files {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
-	}
-	if err = validateCompatibilityManifest(manifest); err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	signed, err := s.signManifest(manifest)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	return s.Repo.PublishVersionWithManifest(projectID, profileID, channel, version, signed)
-}
-
 func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.RuntimeInfo) (string, bool, error) {
 	strategy := strings.ToLower(strings.TrimSpace(runtime.Launch.ClasspathStrategy))
 	if strategy != "compatibility" && strategy != "mojang" {

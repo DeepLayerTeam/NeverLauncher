@@ -81,7 +81,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
-	if payload == "" || begin["attestationMethod"] != deviceAttestationMethod0124 || begin["hardwareProvenance"] != "not-remotely-verified" {
+	if payload == "" || begin["attestationMethod"] != deviceAttestationMethod0124 || begin["hardwareProvenance"] != "not-verified" {
 		t.Fatalf("bad attestation begin contract: %#v", begin)
 	}
 	completeBody := map[string]any{
@@ -103,7 +103,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	if device["attestationState"] != "verified" || device["attestationMethod"] != deviceAttestationMethod0124 || device["assurance"] != "challenge-response-attested" {
 		t.Fatalf("attestation was not persisted into trusted device: %#v", device)
 	}
-	if complete["hardwareProvenance"] != "not-remotely-verified" || complete["authorizationElevation"] != false || complete["phishingResistantElevation"] != false {
+	if complete["hardwareProvenance"] != "not-verified" || complete["authorizationElevation"] != false || complete["phishingResistantElevation"] != false {
 		t.Fatalf("attestation overstated authorization/vendor semantics: %#v", complete)
 	}
 

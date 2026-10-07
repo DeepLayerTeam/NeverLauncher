@@ -23,7 +23,7 @@ func (s Server) extensionHosts0205(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "extension host is disabled")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocolVersion": extensionhost.ProtocolVersion, "resourceIsolation": s.ExtensionHost.ResourceIsolation(), "limits": s.ExtensionHost.Limits(), "items": s.ExtensionHost.List()}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"protocolVersion": extensionhost.ProtocolVersion, "executionTrust": "trusted-process", "resourceIsolation": s.ExtensionHost.ResourceIsolation(), "osSandbox": "none", "networkSandbox": "none", "filesystemSandbox": "none", "limits": s.ExtensionHost.Limits(), "items": s.ExtensionHost.List()}})
 }
 func (s Server) extensionHostDetail0205(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionHost == nil {

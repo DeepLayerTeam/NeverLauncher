@@ -8,7 +8,7 @@
   "properties": {
     "sequence": {"type": "integer", "minimum": 1},
     "id": {"type": "string", "pattern": "^evt_[0-9a-f]{32}$"},
-    "type": {"enum": ["project.before-save", "project.saved", "release.created", "release.before-publish", "release.published", "package.created", "package.file-added", "package.validated", "package.signed", "package.staged", "package.smoke-tested", "package.before-publish", "package.published", "storage.before-write", "storage.file-written", "serverbridge.event.received", "audit.event.created"]},
+    "type": {"enum": ["project.before-save", "project.saved", "release.created", "release.before-publish", "release.published", "package.created", "package.file-added", "package.validated", "package.signed", "package.staged", "package.integrity-checked", "package.runtime-validated", "package.smoke-tested", "package.before-publish", "package.published", "storage.before-write", "storage.file-written", "serverbridge.event.received", "audit.event.created"]},
     "schemaVersion": {"const": 1},
     "projectId": {"type": "string"},
     "aggregateType": {"type": "string", "minLength": 1, "maxLength": 128},

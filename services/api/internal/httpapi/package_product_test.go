@@ -170,7 +170,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 	if err := json.Unmarshal(res.Body.Bytes(), &rollback); err != nil {
 		t.Fatal(err)
 	}
-	if rollback.Data.TargetVersion != "immutable-v4-test" || rollback.Data.RollbackVersion == "" || rollback.Data.RollbackVersion == rollback.Data.TargetVersion || rollback.Data.Status != "rolled-back-as-new-immutable-release" {
+	if rollback.Data.TargetVersion != "immutable-v4-test" || rollback.Data.RollbackVersion == "" || rollback.Data.RollbackVersion == rollback.Data.TargetVersion || rollback.Data.Status != "rolled-back-as-new-validated-immutable-release" {
 		t.Fatalf("unexpected immutable rollback response: %+v", rollback.Data)
 	}
 }

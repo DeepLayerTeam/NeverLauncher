@@ -210,6 +210,34 @@ func metadataString0121(m map[string]any, key string) string {
 
 func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
 	d = sanitizeAttestationFreshness0124(d)
+	now := time.Now().UTC()
+	assessment := model.TrustAssessment{
+		KeyPossession: "not-verified", LocalHardwareBinding: "not-verified",
+		RemoteHardwareProvenance: "not-verified", ArtifactIntegrity: "unknown",
+		RuntimeEvidence: "none", PolicyDecision: "deny", AssessedAt: now,
+	}
+	if d.Status == "active" && d.TrustState == "verified" {
+		assessment.KeyPossession = "verified"
+		assessment.PolicyDecision = "allow"
+	}
+	if d.KeyBinding == "hardware" && d.KeyAlgorithm == "p256" && strings.TrimSpace(d.HardwareProvider) != "" {
+		assessment.LocalHardwareBinding = "verified-local"
+	}
+	if d.RemoteHardwareProvenance == "verified" {
+		assessment.RemoteHardwareProvenance = "verified"
+	} else {
+		d.RemoteHardwareProvenance = "not-verified"
+	}
+	if d.AttestationState == "verified" && d.AttestationExpiresAt.After(now) {
+		assessment.EvidenceExpiresAt = d.AttestationExpiresAt
+	}
+	if assessment.RemoteHardwareProvenance != "verified" && d.KeyBinding == "hardware" {
+		assessment.ReasonCodes = append(assessment.ReasonCodes, "remote-hardware-provenance-not-verified")
+	}
+	if d.Status != "active" || d.TrustState != "verified" {
+		assessment.ReasonCodes = append(assessment.ReasonCodes, "device-not-active")
+	}
+	d.TrustAssessment = assessment
 	d.PublicKey = ""
 	return d
 }

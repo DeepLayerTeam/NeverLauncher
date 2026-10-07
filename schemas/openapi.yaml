@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.21.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.21.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9344,6 +9344,51 @@
         }
       }
     },
+    "/api/v1/packages/{packageId}/integrity-check": {
+      "post": {
+        "operationId": "post_packages_by_packageId_integrity_check",
+        "tags": [
+          "api"
+        ],
+        "summary": "Run package integrity validation",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Verifies exact stored package bytes, SHA-256 metadata, manifest signature and compatibility metadata. This operation never starts Minecraft and cannot produce runtime PASS evidence."
+      }
+    },
     "/api/v1/packages/{packageId}/publish": {
       "post": {
         "operationId": "post_packages_by_packageId_publish",
@@ -9395,6 +9440,61 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/packages/{packageId}/runtime-validations/evidence": {
+      "post": {
+        "operationId": "post_packages_by_packageId_runtime_validations_evidence",
+        "tags": [
+          "api"
+        ],
+        "summary": "Submit signed actual-client runtime evidence",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuntimeValidationSubmission0212"
+              }
+            }
+          }
+        },
+        "description": "Accepts only Ed25519-signed evidence from a configured trusted signer and binds it to the exact current package manifest digest."
       }
     },
     "/api/v1/packages/{packageId}/sign": {
@@ -9457,7 +9557,7 @@
         "tags": [
           "api"
         ],
-        "summary": "POST /api/v1/packages/{packageId}/smoke-test",
+        "summary": "Legacy integrity-only smoke-test compatibility route",
         "responses": {
           "200": {
             "description": "Success",
@@ -9493,16 +9593,7 @@
             "BearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FreeFormObject"
-              }
-            }
-          }
-        }
+        "description": "Deprecated alias for integrity-check. It verifies stored files and the signed manifest only; it never launches Minecraft and explicitly reports runtimeExecuted=false and runtimeStatus=not-checked."
       }
     },
     "/api/v1/packages/{packageId}/stage": {
@@ -9611,6 +9702,48 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/packages/{packageId}/validations": {
+      "get": {
+        "operationId": "get_packages_by_packageId_validations",
+        "tags": [
+          "api"
+        ],
+        "summary": "Get package validation evidence",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Returns the latest integrity result, durable runtime evidence history, and effective project validation policy."
       }
     },
     "/api/v1/projects": {
@@ -9829,6 +9962,93 @@
           }
         ],
         "security": []
+      }
+    },
+    "/api/v1/projects/{projectId}/validation-policy": {
+      "get": {
+        "operationId": "get_projects_by_projectId_validation_policy",
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get project validation policy",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      },
+      "put": {
+        "operationId": "put_projects_by_projectId_validation_policy",
+        "tags": [
+          "projects"
+        ],
+        "summary": "Set project validation policy",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectValidationPolicyRequest0212"
+              }
+            }
+          }
+        },
+        "description": "Runtime policy can only be enabled when trusted runtime validation signer keys are configured."
       }
     },
     "/api/v1/projects/{projectId}/versions": {
@@ -14391,6 +14611,273 @@
             "$ref": "#/components/schemas/ValidateJoinRequestV3"
           }
         ]
+      },
+      "IntegrityCheckResult0212": {
+        "type": "object",
+        "required": [
+          "id",
+          "packageId",
+          "projectId",
+          "manifestDigest",
+          "artifactDigest",
+          "signatureVerified",
+          "storageVerified",
+          "filesVerified",
+          "compatibilityVerified",
+          "result",
+          "checkedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "packageId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "artifactDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "signatureVerified": {
+            "type": "boolean"
+          },
+          "storageVerified": {
+            "type": "boolean"
+          },
+          "filesVerified": {
+            "type": "boolean"
+          },
+          "compatibilityVerified": {
+            "type": "boolean"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed"
+            ]
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeFormObject"
+            }
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RuntimeValidationEvidence0212": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "packageId",
+          "manifestDigest",
+          "targetId",
+          "actualClient",
+          "exitCode",
+          "serverJoin",
+          "evidenceHashes",
+          "startedAt",
+          "finishedAt",
+          "runId"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "neverlauncher/runtime-validation/v1"
+          },
+          "packageId": {
+            "type": "string"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minecraftVersion": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "string"
+          },
+          "os": {
+            "type": "string"
+          },
+          "arch": {
+            "type": "string"
+          },
+          "java": {
+            "type": "string"
+          },
+          "actualClient": {
+            "type": "boolean"
+          },
+          "exitCode": {
+            "type": "integer"
+          },
+          "serverJoin": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string"
+          },
+          "evidenceHashes": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{64}$"
+            }
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RuntimeValidationSubmission0212": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "keyId",
+          "evidence",
+          "signature"
+        ],
+        "properties": {
+          "keyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/RuntimeValidationEvidence0212"
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "ProjectValidationPolicy0212": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "requiredLevel",
+          "requireServerJoin",
+          "updatedAt"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "requiredLevel": {
+            "type": "string",
+            "enum": [
+              "integrity",
+              "runtime"
+            ]
+          },
+          "requireServerJoin": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProjectValidationPolicyRequest0212": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requiredLevel"
+        ],
+        "properties": {
+          "requiredLevel": {
+            "type": "string",
+            "enum": [
+              "integrity",
+              "runtime"
+            ]
+          },
+          "requireServerJoin": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "TrustAssessment0212": {
+        "type": "object",
+        "required": [
+          "keyPossession",
+          "localHardwareBinding",
+          "remoteHardwareProvenance",
+          "artifactIntegrity",
+          "runtimeEvidence",
+          "policyDecision",
+          "assessedAt"
+        ],
+        "properties": {
+          "keyPossession": {
+            "type": "string"
+          },
+          "localHardwareBinding": {
+            "type": "string"
+          },
+          "remoteHardwareProvenance": {
+            "type": "string",
+            "enum": [
+              "not-verified",
+              "verified"
+            ]
+          },
+          "artifactIntegrity": {
+            "type": "string"
+          },
+          "runtimeEvidence": {
+            "type": "string"
+          },
+          "policyDecision": {
+            "type": "string"
+          },
+          "reasonCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assessedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidenceExpiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
       }
     },
     "responses": {

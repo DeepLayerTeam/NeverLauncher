@@ -312,14 +312,42 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 	if req.Version == "" {
 		req.Version = time.Now().UTC().Format("20060102150405")
 	}
-	candidate := model.ReleaseVersion{ID: req.Version, ProjectID: r.PathValue("projectId"), ProfileID: req.ProfileID, Channel: req.Channel, Version: req.Version, Status: "draft"}
-	if err := s.beforeReleasePublish0206(r, candidate); err != nil {
+	projectID := r.PathValue("projectId")
+	unlock := s.lockPackageMutation()
+	defer unlock()
+
+	versions, err := s.Repo.ListVersions(projectID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "проект не найден")
+		return
+	}
+	var candidate *model.ReleaseVersion
+	for i := range versions {
+		if versions[i].ProfileID == req.ProfileID && versions[i].Channel == req.Channel && versions[i].Version == req.Version {
+			candidate = &versions[i]
+			break
+		}
+	}
+	if candidate == nil {
+		created, createErr := s.Repo.CreateVersion(projectID, req.ProfileID, req.Channel, req.Version)
+		if createErr != nil {
+			writeError(w, http.StatusBadRequest, createErr.Error())
+			return
+		}
+		candidate = &created
+	}
+	lookup, err := s.prepareAdminPublish0212(r, *candidate)
+	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	release, err := s.publishSigned(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
+	if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	release, err := s.Repo.PublishVersionWithManifest(projectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "проект или профиль не найден")
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "release:publish", release.ID)
@@ -352,6 +380,8 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 	projectID := r.PathValue("projectId")
 	versionID := r.PathValue("versionId")
+	unlock := s.lockPackageMutation()
+	defer unlock()
 	versions, err := s.Repo.ListVersions(projectID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "проект не найден")
@@ -359,13 +389,18 @@ func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, item := range versions {
 		if item.ID == versionID {
-			if err := s.beforeReleasePublish0206(r, item); err != nil {
+			lookup, prepareErr := s.prepareAdminPublish0212(r, item)
+			if prepareErr != nil {
+				writeError(w, http.StatusConflict, prepareErr.Error())
+				return
+			}
+			if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
 				writeError(w, http.StatusConflict, err.Error())
 				return
 			}
-			release, err := s.publishSigned(projectID, item.ProfileID, item.Channel, item.Version)
-			if err != nil {
-				writeError(w, http.StatusBadRequest, err.Error())
+			release, publishErr := s.Repo.PublishVersionWithManifest(projectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
+			if publishErr != nil {
+				writeError(w, http.StatusBadRequest, publishErr.Error())
 				return
 			}
 			s.audit(r, s.adminActor(r), "release:publish", release.ID)
