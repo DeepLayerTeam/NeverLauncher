@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/base64"
@@ -125,13 +126,16 @@ func (s Server) runPackageIntegrityCheck0212(r *http.Request, lookup packageLook
 }
 
 func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	lookup, err := s.lookupPackage(r.PathValue("packageId"))
+	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package не найден")
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "package не найден")
+		} else {
+			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+		}
 		return
 	}
+	defer unlock()
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; integrity history доступна через validations")
 		return
@@ -362,6 +366,10 @@ func (s Server) projectValidationPolicyPut0212(w http.ResponseWriter, r *http.Re
 }
 
 func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLookup) error {
+	return s.validatePublishEvidenceContext0213(r.Context(), lookup)
+}
+
+func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup packageLookup) error {
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil {
 		return err
@@ -370,14 +378,14 @@ func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLooku
 	if err != nil {
 		return err
 	}
-	integrity, err := s.Repo.LatestIntegrityCheck(r.Context(), lookup.Release.ID)
+	integrity, err := s.Repo.LatestIntegrityCheck(ctx, lookup.Release.ID)
 	if err != nil {
 		return errors.New("publish требует integrity-check текущего package")
 	}
 	if integrity.Result != "passed" || integrity.ManifestDigest != manifestDigest || integrity.ArtifactDigest != artifactDigest {
 		return errors.New("publish требует актуальный integrity PASS для текущих manifest/files")
 	}
-	policy, err := s.Repo.GetProjectValidationPolicy(r.Context(), lookup.Release.ProjectID)
+	policy, err := s.Repo.GetProjectValidationPolicy(ctx, lookup.Release.ProjectID)
 	if err != nil {
 		policy = model.ProjectValidationPolicy{ProjectID: lookup.Release.ProjectID, RequiredLevel: "integrity"}
 	}
@@ -388,7 +396,7 @@ func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLooku
 	if err != nil {
 		return fmt.Errorf("publish runtime trust set unavailable: %w", err)
 	}
-	items, err := s.Repo.ListRuntimeValidations(r.Context(), lookup.Release.ID)
+	items, err := s.Repo.ListRuntimeValidations(ctx, lookup.Release.ID)
 	if err != nil {
 		return err
 	}

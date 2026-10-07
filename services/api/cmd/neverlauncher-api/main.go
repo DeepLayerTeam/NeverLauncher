@@ -210,6 +210,13 @@ func main() {
 		EventBus:          events,
 	}
 
+	durableCancel, durableErr := server.StartDurableControlPlane0213(context.Background())
+	if durableErr != nil {
+		log.Fatalf("durable control-plane initialization failed: %v", durableErr)
+	}
+	defer durableCancel()
+	log.Printf("Durable control-plane active: publish jobs, fenced package leases and outbox recovery enabled")
+
 	if noExtensions {
 		log.Printf("NeverExtensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
 	}

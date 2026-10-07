@@ -111,6 +111,7 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/projects/{projectId}/validation-policy", s.requireProjectPermission("project:read", "projectId", "project", s.projectValidationPolicyGet0212))
 	mux.Handle("PUT /api/v1/projects/{projectId}/validation-policy", s.requireProjectFreshAuth117("release:publish", "projectId", "project", "mfa", 5*time.Minute, s.projectValidationPolicyPut0212))
 	mux.Handle("POST /api/v1/packages/{packageId}/publish", s.requirePackageFreshAuth117("release:publish", "mfa", 5*time.Minute, s.packagePublishProduct))
+	mux.Handle("GET /api/v1/jobs/{jobId}", s.requireAuthenticated(s.durableJobGet0213))
 	mux.Handle("POST /api/v1/channels/{channel}/rollback", s.requireFreshSession117("mfa", 5*time.Minute, s.channelRollbackProduct))
 	mux.Handle("GET /api/v1/storage/delivery-policy", s.requireAnyProjectPermission("project:read", s.storageDeliveryPolicy))
 }

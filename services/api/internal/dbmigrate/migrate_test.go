@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0051_honest_validation_trust_0212" {
+	if st.Current != "0052_durable_boundaries_0213" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -38,7 +38,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 
 	pending := make(map[string]string, len(base))
 	for k, v := range base {
-		if k != "0051_honest_validation_trust_0212" {
+		if k != "0052_durable_boundaries_0213" {
 			pending[k] = v
 		}
 	}
@@ -705,6 +705,27 @@ func TestAuthorizationFoundationMigration0211(t *testing.T) {
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.21.1 authorization migration missing %q", required)
+		}
+	}
+}
+
+func TestDurableBoundariesMigration0213(t *testing.T) {
+	b, err := os.ReadFile("sql/0052_durable_boundaries_0213.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, required := range []string{
+		"durable_jobs",
+		"durable_job_attempts",
+		"durable_scope_leases",
+		"event_outbox",
+		"used_nonces",
+		"idempotency_records",
+		"recovered expired lease",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("0.21.3 durable boundaries migration missing %q", required)
 		}
 	}
 }

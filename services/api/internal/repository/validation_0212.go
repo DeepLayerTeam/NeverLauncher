@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"sort"
@@ -91,6 +93,16 @@ func (r *MemoryRepository) SaveRuntimeValidation(ctx context.Context, result mod
 	if err != nil {
 		return model.RuntimeValidationResult{}, err
 	}
+	nonce := sha256.Sum256([]byte(result.SignerKeyID + "\x00" + result.RunID))
+	nonceKey := "runtime-validation-run\x00" + hex.EncodeToString(nonce[:])
+	r.durableMu.Lock()
+	if expires, exists := r.durableNonces[nonceKey]; exists && expires.After(time.Now().UTC()) {
+		r.durableMu.Unlock()
+		return model.RuntimeValidationResult{}, ErrConflict
+	}
+	r.durableNonces[nonceKey] = result.FinishedAt.Add(90 * 24 * time.Hour)
+	r.durableMu.Unlock()
+
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()
 	for _, existing := range r.runtimeValidations {
@@ -176,8 +188,32 @@ func (r *SQLRepository) SaveRuntimeValidation(ctx context.Context, result model.
 	if err != nil {
 		return model.RuntimeValidationResult{}, err
 	}
-	_, err = r.db.ExecContext(ctx, `INSERT INTO package_runtime_validations(id,package_id,project_id,manifest_digest,target_id,minecraft_version,loader,os,arch,java_runtime,actual_client,exit_code,server_join,run_id,commit_sha,evidence_hashes,signer_key_id,signer_key_fingerprint,evidence_digest,started_at,finished_at,result,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17,$18,$19,$20,$21,$22,$23)`, result.ID, result.PackageID, result.ProjectID, result.ManifestDigest, result.TargetID, result.MinecraftVersion, result.Loader, result.OS, result.Arch, result.Java, result.ActualClient, result.ExitCode, result.ServerJoin, result.RunID, result.Commit, string(hashes), result.SignerKeyID, result.SignerKeyFingerprint, result.EvidenceDigest, result.StartedAt, result.FinishedAt, result.Result, result.CreatedAt)
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
+		return model.RuntimeValidationResult{}, err
+	}
+	defer tx.Rollback()
+	nonce := sha256.Sum256([]byte(result.SignerKeyID + "\x00" + result.RunID))
+	nonceHash := hex.EncodeToString(nonce[:])
+	metadata, _ := json.Marshal(map[string]any{"packageId": result.PackageID, "targetId": result.TargetID, "signerKeyId": result.SignerKeyID})
+	if _, err := tx.ExecContext(ctx, `DELETE FROM used_nonces WHERE namespace='runtime-validation-run' AND nonce_hash=$1 AND expires_at<=now()`, nonceHash); err != nil {
+		return model.RuntimeValidationResult{}, err
+	}
+	res, err := tx.ExecContext(ctx, `INSERT INTO used_nonces(namespace,nonce_hash,subject_id,metadata,consumed_at,expires_at) VALUES('runtime-validation-run',$1,$2,$3::jsonb,now(),$4) ON CONFLICT(namespace,nonce_hash) DO NOTHING`, nonceHash, result.PackageID, string(metadata), result.FinishedAt.Add(90*24*time.Hour))
+	if err != nil {
+		return model.RuntimeValidationResult{}, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return model.RuntimeValidationResult{}, ErrConflict
+	}
+	res, err = tx.ExecContext(ctx, `INSERT INTO package_runtime_validations(id,package_id,project_id,manifest_digest,target_id,minecraft_version,loader,os,arch,java_runtime,actual_client,exit_code,server_join,run_id,commit_sha,evidence_hashes,signer_key_id,signer_key_fingerprint,evidence_digest,started_at,finished_at,result,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17,$18,$19,$20,$21,$22,$23) ON CONFLICT DO NOTHING`, result.ID, result.PackageID, result.ProjectID, result.ManifestDigest, result.TargetID, result.MinecraftVersion, result.Loader, result.OS, result.Arch, result.Java, result.ActualClient, result.ExitCode, result.ServerJoin, result.RunID, result.Commit, string(hashes), result.SignerKeyID, result.SignerKeyFingerprint, result.EvidenceDigest, result.StartedAt, result.FinishedAt, result.Result, result.CreatedAt)
+	if err != nil {
+		return model.RuntimeValidationResult{}, err
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return model.RuntimeValidationResult{}, ErrConflict
+	}
+	if err := tx.Commit(); err != nil {
 		return model.RuntimeValidationResult{}, err
 	}
 	return result, nil

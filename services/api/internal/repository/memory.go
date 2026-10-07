@@ -141,6 +141,13 @@ type MemoryRepository struct {
 	extensionMu                    sync.Mutex
 	auditSinkMu                    sync.RWMutex
 	auditSink                      func(model.AuditEvent)
+	durableMu                      sync.Mutex
+	durableJobs                    map[string]model.DurableJob
+	durableJobKeys                 map[string]string
+	durableScopeLeases             map[string]model.DurableScopeLease
+	durableOutbox                  map[string]model.DurableOutboxEvent
+	durableNonces                  map[string]time.Time
+	idempotencyDigests             map[string]string
 	projects                       []model.Project
 	profiles                       []model.Profile
 	channels                       []model.ReleaseChannel
@@ -227,6 +234,12 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 	return &MemoryRepository{
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
+		durableJobs:                    map[string]model.DurableJob{},
+		durableJobKeys:                 map[string]string{},
+		durableScopeLeases:             map[string]model.DurableScopeLease{},
+		durableOutbox:                  map[string]model.DurableOutboxEvent{},
+		durableNonces:                  map[string]time.Time{},
+		idempotencyDigests:             map[string]string{},
 		validationPolicies:             map[string]model.ProjectValidationPolicy{"demo-project": {ProjectID: "demo-project", RequiredLevel: "integrity", UpdatedAt: now}},
 		extensionTrustPolicy:           model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeStrict, AllowedPublishers: []string{}, UpdatedAt: now},
 		projects: []model.Project{

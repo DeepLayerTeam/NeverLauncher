@@ -19,9 +19,13 @@ type versionManifestRequest struct {
 }
 
 func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
 	projectID, versionID := r.PathValue("projectId"), r.PathValue("versionId")
+	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+versionID)
+	if lockErr != nil {
+		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		return
+	}
+	defer unlock()
 	versions, err := s.Repo.ListVersions(projectID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "проект не найден")

@@ -1,3 +1,10 @@
+## [0.21.3] - 2026-10-07
+
+- Replaced process-local package publication serialization with PostgreSQL scope leases and monotonically increasing fencing tokens; the local mutex remains only a fallback for non-production repository implementations.
+- Added persisted idempotent publish jobs with lease expiry/recovery, per-attempt fencing, live authorization re-check immediately before irreversible commit, manifest/artifact/status CAS and restart-safe retry semantics.
+- Made release publication, audit state, job completion and `package.published`/`release.published` transactional outbox creation one PostgreSQL transaction; outbox delivery uses cross-replica `FOR UPDATE SKIP LOCKED` leases and retries.
+- Added durable one-time runtime-validation nonces, API job status inspection, PostgreSQL multi-replica restart/fencing certification, migration `0052_durable_boundaries_0213` and the mandatory Durable Boundaries & Certification gate.
+
 ## [0.21.2] - 2026-10-07
 
 - Replaced the historical package smoke state with durable `IntegrityCheckResult` and cryptographically verified `RuntimeValidationResult`. The legacy `/smoke-test` route now executes only the canonical integrity path and explicitly reports `runtimeExecuted=false`; it can never create runtime PASS evidence.

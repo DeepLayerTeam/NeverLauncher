@@ -161,8 +161,13 @@ def validate_migration_and_contract() -> None:
 
 
 def validate(online: bool) -> None:
-    if text("VERSION").strip() != "0.21.2":
-        fail("VERSION must be 0.21.2")
+    version = text("VERSION").strip()
+    try:
+        parts = tuple(int(x) for x in version.split(".")[:3])
+    except ValueError:
+        fail("VERSION is not semantic version")
+    if parts < (0, 21, 2):
+        fail("VERSION must be 0.21.2 or newer")
     doc = validate_frozen_coverage_registry()
     validate_validation_pipeline()
     validate_trust_boundaries()

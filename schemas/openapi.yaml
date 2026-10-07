@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.21.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.21.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9398,11 +9398,12 @@
         "summary": "POST /api/v1/packages/{packageId}/publish",
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Publication committed durably",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReleaseVersion"
+                  "type": "object",
+                  "additionalProperties": true
                 }
               }
             }
@@ -9412,6 +9413,17 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "202": {
+            "description": "Publication job persisted and queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
           }
         },
         "parameters": [
@@ -9439,7 +9451,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Enqueues a durable, idempotent publication job. Publication re-checks live authorization, validation evidence, manifest/artifact digests and a PostgreSQL fencing lease immediately before atomic commit. A queued job survives API process restart."
       }
     },
     "/api/v1/packages/{packageId}/runtime-validations/evidence": {
@@ -11822,6 +11835,57 @@
           }
         ],
         "security": []
+      }
+    },
+    "/api/v1/jobs/{jobId}": {
+      "get": {
+        "operationId": "get_jobs_by_jobId",
+        "tags": [
+          "operations"
+        ],
+        "summary": "Get durable job state",
+        "description": "Returns persisted job state. The requesting actor may read its own job; other users require current project read authorization.",
+        "responses": {
+          "200": {
+            "description": "Durable job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DurableJobEnvelope0213"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Job not found or outside the caller scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     }
   },
@@ -14878,6 +14942,137 @@
             "format": "date-time"
           }
         }
+      },
+      "DurableJob0213": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "actorType",
+          "actorId",
+          "action",
+          "resourceType",
+          "resourceId",
+          "idempotencyKey",
+          "payloadDigest",
+          "status",
+          "leaseFence",
+          "attemptCount",
+          "maxAttempts",
+          "availableAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "actorType": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "payloadDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "revoked",
+              "dead"
+            ]
+          },
+          "leaseOwner": {
+            "type": "string"
+          },
+          "leaseToken": {
+            "type": "string"
+          },
+          "leaseFence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "leaseExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "availableAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DurableJobEnvelope0213": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "data"
+        ],
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DurableJob0213"
+          }
+        },
+        "additionalProperties": false
       }
     },
     "responses": {

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -313,8 +314,6 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 		req.Version = time.Now().UTC().Format("20060102150405")
 	}
 	projectID := r.PathValue("projectId")
-	unlock := s.lockPackageMutation()
-	defer unlock()
 
 	versions, err := s.Repo.ListVersions(projectID)
 	if err != nil {
@@ -336,7 +335,13 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 		}
 		candidate = &created
 	}
+	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+candidate.ID)
+	if lockErr != nil {
+		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		return
+	}
 	lookup, err := s.prepareAdminPublish0212(r, *candidate)
+	unlock()
 	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -345,14 +350,21 @@ func (s Server) adminPublish(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	release, err := s.Repo.PublishVersionWithManifest(projectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
+	release, job, pending, err := s.publishDurably0213(r, lookup)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, errDurableAuthorizationRevoked0213) {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	s.audit(r, s.adminActor(r), "release:publish", release.ID)
-	s.releasePublished0206(r, release)
-	writeJSON(w, http.StatusCreated, release)
+	if pending {
+		w.Header().Set("Location", "/api/v1/jobs/"+job.ID)
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"job": job, "status": "publish-queued"}})
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"release": release, "job": job})
 }
 
 func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
@@ -380,34 +392,46 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 	projectID := r.PathValue("projectId")
 	versionID := r.PathValue("versionId")
-	unlock := s.lockPackageMutation()
-	defer unlock()
 	versions, err := s.Repo.ListVersions(projectID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "проект не найден")
 		return
 	}
 	for _, item := range versions {
-		if item.ID == versionID {
-			lookup, prepareErr := s.prepareAdminPublish0212(r, item)
-			if prepareErr != nil {
-				writeError(w, http.StatusConflict, prepareErr.Error())
-				return
-			}
-			if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
-				writeError(w, http.StatusConflict, err.Error())
-				return
-			}
-			release, publishErr := s.Repo.PublishVersionWithManifest(projectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
-			if publishErr != nil {
-				writeError(w, http.StatusBadRequest, publishErr.Error())
-				return
-			}
-			s.audit(r, s.adminActor(r), "release:publish", release.ID)
-			s.releasePublished0206(r, release)
-			writeJSON(w, http.StatusOK, release)
+		if item.ID != versionID {
+			continue
+		}
+		unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+item.ID)
+		if lockErr != nil {
+			writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
 			return
 		}
+		lookup, prepareErr := s.prepareAdminPublish0212(r, item)
+		unlock()
+		if prepareErr != nil {
+			writeError(w, http.StatusConflict, prepareErr.Error())
+			return
+		}
+		if err := s.beforeReleasePublish0206(r, lookup.Release); err != nil {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		release, job, pending, publishErr := s.publishDurably0213(r, lookup)
+		if publishErr != nil {
+			if errors.Is(publishErr, errDurableAuthorizationRevoked0213) {
+				writeError(w, http.StatusForbidden, publishErr.Error())
+				return
+			}
+			writeError(w, http.StatusConflict, publishErr.Error())
+			return
+		}
+		if pending {
+			w.Header().Set("Location", "/api/v1/jobs/"+job.ID)
+			writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"job": job, "status": "publish-queued"}})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"release": release, "job": job})
+		return
 	}
 	writeError(w, http.StatusNotFound, "версия не найдена")
 }
@@ -415,6 +439,32 @@ func (s Server) adminVersionPublish(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 	projectID := r.PathValue("projectId")
 	versionID := r.PathValue("versionId")
+	unlock, lockErr := s.lockPackageMutation(r.Context(), "package:"+versionID)
+	if lockErr != nil {
+		writeError(w, http.StatusConflict, "package mutation already in progress: "+lockErr.Error())
+		return
+	}
+	defer unlock()
+	versions, versionErr := s.Repo.ListVersions(projectID)
+	if versionErr != nil {
+		writeError(w, http.StatusNotFound, "проект не найден")
+		return
+	}
+	foundMutable := false
+	for _, version := range versions {
+		if version.ID == versionID {
+			if version.Status == "published" {
+				writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
+				return
+			}
+			foundMutable = true
+			break
+		}
+	}
+	if !foundMutable {
+		writeError(w, http.StatusNotFound, "версия не найдена")
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes())
 	// ParseMultipartForm keeps only a bounded prefix in RAM and spools larger
 	// file parts to disk. Storage.Save then consumes the file as a stream.

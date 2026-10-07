@@ -184,13 +184,16 @@ func (s Server) packageGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	lookup, err := s.lookupPackage(r.PathValue("packageId"))
+	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package не найден")
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "package не найден")
+		} else {
+			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+		}
 		return
 	}
+	defer unlock()
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return
@@ -295,13 +298,16 @@ func (s Server) validatePackageFiles(release model.ReleaseVersion, files []model
 }
 
 func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	lookup, err := s.lookupPackage(r.PathValue("packageId"))
+	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package не найден")
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "package не найден")
+		} else {
+			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+		}
 		return
 	}
+	defer unlock()
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return
@@ -343,13 +349,16 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
-	lookup, err := s.lookupPackage(r.PathValue("packageId"))
+	lookup, unlock, err := s.lockPackageLookupMutation(r.Context(), r.PathValue("packageId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "package не найден")
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "package не найден")
+		} else {
+			writeError(w, http.StatusConflict, "package mutation already in progress: "+err.Error())
+		}
 		return
 	}
+	defer unlock()
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return
@@ -376,8 +385,6 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
 	lookup, err := s.lookupPackage(r.PathValue("packageId"))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "package не найден")
@@ -406,6 +413,8 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Synchronous extension vetoes run before a durable job is accepted. After
+	// enqueue, the job is recoverable and the irreversible DB commit is fenced.
 	if err := s.beforePackagePublish0206(r, lookup.Release); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -414,21 +423,25 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	release, err := s.Repo.PublishVersionWithManifest(lookup.Release.ProjectID, lookup.Release.ProfileID, lookup.Release.Channel, lookup.Release.Version, lookup.Release.Manifest)
+	release, job, pending, err := s.publishDurably0213(r, lookup)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, errDurableAuthorizationRevoked0213) {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	s.audit(r, s.adminActor(r), "package:publish", release.ID)
-	s.packageEvent0206(r, "package.published", "published", release)
-	s.releasePublished0206(r, release)
+	if pending {
+		w.Header().Set("Location", "/api/v1/jobs/"+job.ID)
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"job": job, "status": "publish-queued"}})
+		return
+	}
 	files, _ := s.Repo.ListFiles(release.ProjectID, release.ID)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(release, files, "published")})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"package": s.packagePayload(release, files, "published"), "job": job}})
 }
 
 func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
-	unlock := s.lockPackageMutation()
-	defer unlock()
 	channel := r.PathValue("channel")
 	var req packageActionRequest
 	_ = json.NewDecoder(r.Body).Decode(&req)
@@ -487,6 +500,17 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	unlockRollback, lockErr := s.lockPackageMutation(r.Context(), "package:"+created.ID)
+	if lockErr != nil {
+		writeError(w, http.StatusConflict, "rollback package mutation already in progress: "+lockErr.Error())
+		return
+	}
+	rollbackLeaseReleased := false
+	defer func() {
+		if !rollbackLeaseReleased {
+			unlockRollback()
+		}
+	}()
 	for _, source := range targetFiles {
 		reader, sourceSize, openErr := s.Storage.Open(projectID, target.ID, source.Path)
 		if openErr != nil {
@@ -568,15 +592,26 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	release, err := s.Repo.PublishVersionWithManifest(projectID, profileID, channel, rollbackVersion, signed)
+	// Release the preparation lease before the durable worker acquires the same
+	// fenced package scope for the irreversible publish commit.
+	unlockRollback()
+	rollbackLeaseReleased = true
+	release, job, pending, err := s.publishDurably0213(r, lookup)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, errDurableAuthorizationRevoked0213) {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if pending {
+		w.Header().Set("Location", "/api/v1/jobs/"+job.ID)
+		writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "packageId": created.ID, "job": job, "integrity": integrity, "status": "rollback-publish-queued"}})
 		return
 	}
 	s.audit(r, s.adminActor(r), "channel:rollback", projectID+":"+profileID+":"+channel+":"+toVersion+"->"+rollbackVersion)
-	s.packageEvent0206(r, "package.published", "rollback-published", release)
-	s.releasePublished0206(r, release)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "release": release, "integrity": integrity, "status": "rolled-back-as-new-validated-immutable-release"}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "projectId": projectID, "profileId": profileID, "channel": channel, "targetVersion": toVersion, "rollbackVersion": rollbackVersion, "release": release, "job": job, "integrity": integrity, "status": "rolled-back-as-new-validated-immutable-release"}})
 }
 
 func (s Server) lookupPackage(packageID string) (packageLookup, error) {

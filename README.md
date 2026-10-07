@@ -1,3 +1,9 @@
+## Durable Boundaries & Certification — 0.21.3
+
+`0.21.3` moves publication correctness out of process memory. Package mutations use PostgreSQL distributed leases with monotonically increasing fencing tokens; publish is a persisted idempotent job that survives API restart, re-checks live authorization immediately before commit and atomically CAS-publishes the exact validated manifest/status while writing its audit/outbox state in the same transaction. Multiple API replicas claim work and outbox delivery with `FOR UPDATE SKIP LOCKED`.
+
+Runtime validation `runId` values are durable single-use nonces, so restart cannot make signed evidence reusable. Publication events are written to a transactional outbox and delivered into the existing NeverExtensions event bus with retry leases. `GET /api/v1/jobs/{jobId}` exposes persisted job state without granting cross-project visibility. CI includes PostgreSQL multi-replica lease/restart certification and a source gate that rejects direct publish bypasses.
+
 ## Honest Validation & Trust Boundaries — 0.21.2
 
 `0.21.2` separates package integrity from real runtime evidence. `POST /api/v1/packages/{packageId}/integrity-check` verifies stored bytes, SHA-256 metadata, the Ed25519 manifest signature and compatibility metadata, but never launches Minecraft. The legacy `/smoke-test` alias uses that same path and reports `runtimeExecuted=false` / `runtimeStatus=not-checked`.
