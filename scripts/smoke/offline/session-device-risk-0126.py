@@ -79,9 +79,9 @@ if api_migration.is_file() and cli_migration.is_file() and api_migration.read_by
     errors.append("0015 migration drift: API и CLI содержат разные SQL")
 
 if errors:
-    print("Сессия <-> Привязка устройства + риск интеграционный контроль FAILED:", file=sys.stderr)
+    print("Session <-> Device binding + risk integration gate FAILED:", file=sys.stderr)
     for item in errors:
         print(" - " + item, file=sys.stderr)
     raise SystemExit(1)
 
-print("Сессия <-> Привязка устройства + риск интеграционный контроль OK: привязка эпоха invalidate устаревший доступ токены, привязанный обновление требует текущий ключ устройства доказательство, и риск действия применять step-up/reattest/revoke")
+print("Session <-> Device binding + risk integration gate OK: binding epochs invalidate stale access tokens, bound refresh requires current device-key proof, and risk actions enforce step-up/reattest/revoke")

@@ -23,7 +23,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	policy := microsoftIssuerPolicy{authorityBase: cfg.AuthorityBase, tenant: cfg.Tenant, tenantMode: cfg.TenantMode, allowedTenantIDs: cfg.AllowedTenantSet}
 	base, err := oidcconnector.NewWithIssuerPolicy(ctx, cfg.OIDC, policy)
 	if err != nil {
-		return nil, fmt.Errorf("Microsoft коннектор %q: %w", cfg.ID, err)
+		return nil, fmt.Errorf("Microsoft connector %q: %w", cfg.ID, err)
 	}
 	return &Connector{cfg: cfg, oidc: base}, nil
 }
@@ -96,9 +96,9 @@ func (c *Connector) normalizeAuthentication(auth authconnector.Authentication) (
 	if !validGUID(tid) || !validGUID(oid) {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Microsoft identity requires immutable tid and oid GUID claims")
 	}
-	// tid+oid является стабильный через приложение внутри tenant и не может быть без уведомления
-	// заменять через изменяемый электронная почта/UPN. Это также сохраняет identically-форма объекты из
-	// другой tenants отдельный.
+	// tid+oid is stable across applications inside a tenant and cannot be silently
+	// replaced by a mutable email/UPN. It also keeps identically-shaped objects from
+	// different tenants distinct.
 	auth.Identity.Subject = tid + ":" + oid
 	if auth.Identity.Username == "" {
 		auth.Identity.Username = strings.TrimSpace(stringClaim(claims, "preferred_username"))

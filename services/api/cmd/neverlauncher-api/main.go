@@ -46,7 +46,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("database migration failed: %v", err)
 			}
-			log.Printf("база данных схема готовый миграция=%s применённый=%d/%d", status.Current, status.Applied, status.Total)
+			log.Printf("database schema ready migration=%s applied=%d/%d", status.Current, status.Applied, status.Total)
 		} else {
 			status, err := migrator.MigrationStatus(ctx)
 			if err != nil {
@@ -86,7 +86,7 @@ func main() {
 		if strings.EqualFold(cfg.Environment, "production") || strings.EqualFold(cfg.Environment, "prod") {
 			log.Fatal(err)
 		}
-		log.Printf("хранение инициализировать 0.10.0 пропущен: %v", err)
+		log.Printf("persistence bootstrap 0.10.0 пропущен: %v", err)
 	}
 
 	store, err := newStorage(cfg)
@@ -109,7 +109,7 @@ func main() {
 			log.Fatalf("NeverExtensions GA reconciliation failed: %v", reconcileErr)
 		}
 		if len(report.Issues) > 0 {
-			log.Printf("NeverExtensions GA согласование проверен=%d работоспособный=%d отключённый=%d выдача=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
+			log.Printf("NeverExtensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
 		}
 	}
 
@@ -130,7 +130,7 @@ func main() {
 		if sinkRepo, ok := repo.(interface{ SetAuditEventSink(func(model.AuditEvent)) }); ok {
 			sinkRepo.SetAuditEventSink(func(a model.AuditEvent) {
 				if err := events.AuditCreated(context.Background(), a); err != nil {
-					log.Printf("NeverExtensions событие аудита публикация ошибка: %v", err)
+					log.Printf("NeverExtensions audit event publish failed: %v", err)
 				}
 			})
 		}
@@ -165,11 +165,11 @@ func main() {
 		lifecycle := extensionlifecycle.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
 		host.SetCrashLoopHandler(func(ctx context.Context, key extensionhost.Key, reason string) {
 			if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: key.ExtensionID, Scope: key.Scope, ScopeID: key.ScopeID, Reason: reason, Source: "crash-loop"}); err != nil {
-				log.Printf("расширение сбой-loop аварийный-отключить хранение ошибка %s: %v", key.ExtensionID, err)
+				log.Printf("extension crash-loop emergency-disable persistence failed %s: %v", key.ExtensionID, err)
 				return
 			}
 			if _, err := lifecycle.Disable(ctx, key.ExtensionID, extensionlifecycle.Scope{Scope: key.Scope, ScopeID: key.ScopeID}); err != nil {
-				log.Printf("расширение сбой-loop жизненный цикл отключить ошибка %s: %v", key.ExtensionID, err)
+				log.Printf("extension crash-loop lifecycle disable failed %s: %v", key.ExtensionID, err)
 			}
 		})
 		if events != nil {
@@ -185,15 +185,15 @@ func main() {
 			_ = host.Close(ctx)
 		}()
 		for _, reconcileErr := range host.Reconcile(context.Background()) {
-			log.Printf("хост расширений согласовывать: %v", reconcileErr)
+			log.Printf("extension host reconcile: %v", reconcileErr)
 		}
-		log.Printf("NeverExtensions Хост протокол=%s изоляция=%s", host.ProtocolURL(), host.ResourceIsolation())
+		log.Printf("NeverExtensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
 	}
 
 	if events != nil {
 		events.Start(context.Background())
 		defer events.Close()
-		log.Printf("NeverExtensions Шина событий протокол=%s", eventbus.ProtocolVersion)
+		log.Printf("NeverExtensions Event Bus protocol=%s", eventbus.ProtocolVersion)
 	}
 
 	server := httpapi.Server{
@@ -215,13 +215,13 @@ func main() {
 		log.Fatalf("durable control-plane initialization failed: %v", durableErr)
 	}
 	defer durableCancel()
-	log.Printf("Долговременный управление-плоскость активный: публикация задачи, ограждённый пакет аренды и исходящая очередь восстановление включённый")
+	log.Printf("Durable control-plane active: publish jobs, fenced package leases and outbox recovery enabled")
 
 	if noExtensions {
-		log.Printf("NeverExtensions Безопасный Режим активный: --нет-расширения; расширение host/event выполнение является отключённый")
+		log.Printf("NeverExtensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
 	}
 	log.Printf(
-		"NeverLauncher API %s слушает %s репозиторий=%s хранилище=%s окружение=%s",
+		"NeverLauncher API %s слушает %s repository=%s storage=%s environment=%s",
 		version,
 		cfg.HTTPAddr,
 		cfg.RepositoryDriver+"("+cfg.SQLDriver+")",
@@ -265,7 +265,7 @@ func newStorage(cfg config.Config) (storage.Storage, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := store.Health(ctx); err != nil {
-			return nil, fmt.Errorf("S3 проверка работоспособности не пройден: %w", err)
+			return nil, fmt.Errorf("S3 health check не пройден: %w", err)
 		}
 		return store, nil
 	default:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Отказ с блокировкой публичный матрица совместимости builder для NeverExtensions 0.20.12."""
+"""Fail-closed public compatibility matrix builder for NeverExtensions 0.20.12."""
 from __future__ import annotations
 import argparse, json, sys
 from datetime import datetime, timezone

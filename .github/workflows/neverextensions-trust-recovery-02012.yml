@@ -1,4 +1,4 @@
-name: NeverExtensions Доверие Восстановление 0.20.12
+name: NeverExtensions Trust Recovery 0.20.12
 
 on:
   push:
@@ -36,21 +36,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Проверять сертификация цель определение
+      - name: Validate certification target definition
         shell: bash
         run: python3 scripts/compatibility/neverextensions_trust_02012.py validate
-      - name: Доверие, malicious-пакет и сбой-loop E2E
+      - name: Trust, malicious-package and crash-loop E2E
         shell: bash
         run: |
           (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/neverlauncher-api)
           (cd cli && go test ./internal/dbmigrate && go test ./cmd/neverlauncher -run '^$')
-      - name: Сборка рабочий бинарные файлы
+      - name: Build production binaries
         shell: bash
         run: |
           (cd services/api && go build ./cmd/neverlauncher-api)
           (cd cli && go build ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
-      - name: Запись подписанный-через-запуск свидетельство input
+      - name: Write signed-by-run evidence input
         shell: bash
         run: |
           mkdir -p evidence
@@ -62,7 +62,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-доверие-свидетельство-${{ matrix.target }}
+          name: neverextensions-trust-evidence-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
 
   public-matrix:
@@ -75,12 +75,12 @@ jobs:
           pattern: neverextensions-trust-evidence-*
           path: evidence-raw
           merge-multiple: true
-      - name: Агрегат отказ с блокировкой публичная матрица
+      - name: Aggregate fail-closed public matrix
         run: |
           python3 scripts/compatibility/neverextensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_TRUST_COMPATIBILITY.json --out-md NEVEREXTENSIONS_TRUST_COMPATIBILITY.md
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-0.20.12-публичный-совместимость-матрица
+          name: neverextensions-0.20.12-public-compatibility-matrix
           path: |
             NEVEREXTENSIONS_TRUST_COMPATIBILITY.json
             NEVEREXTENSIONS_TRUST_COMPATIBILITY.md

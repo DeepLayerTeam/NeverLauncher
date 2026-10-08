@@ -66,7 +66,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			mux.HandleFunc("/assets/"+assetHash[:2]+"/"+assetHash, func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
 			mux.HandleFunc("/installer.jar", func(w http.ResponseWriter, r *http.Request) {
 				if !installerUp.Load() {
-					http.Error(w, "установщик вышестоящий проект недоступный", http.StatusServiceUnavailable)
+					http.Error(w, "installer upstream unavailable", http.StatusServiceUnavailable)
 					return
 				}
 				_, _ = w.Write(installer)
@@ -106,7 +106,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("processor output mismatch: %q %v", gotGenerated, err)
 			}
 
-			// Идемпотентность: проверен обработчик вывод должен skip expensive обработчик на следующий запуск.
+			// Idempotency: verified processor output must skip the expensive processor on the next run.
 			second, err := installForgeLike(context.Background(), forgeMaterializeOptions{
 				Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, ClientDir: dir,
 				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar", InstallerSHA1: installerSHA1,
@@ -120,9 +120,9 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("expected processor journal cache hit: %+v", second)
 			}
 
-			// Simulate сбой после обработчик созданный проверен вывод но до
-			// его долговременный журнал может быть committed. следующий только кэш материализация
-			// должен восстанавливать тот работающий запись без executing обработчик снова.
+			// Simulate a crash after the processor produced a verified output but before
+			// its durable journal could be committed. The next cache-only materialization
+			// must recover that running entry without executing the processor again.
 			journalRaw, err := os.ReadFile(filepath.FromSlash(second.ProcessorJournalPath))
 			if err != nil {
 				t.Fatalf("read processor journal: %v", err)
@@ -391,7 +391,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 	mux.HandleFunc("/repo/com/example/clientlib/1.0/clientlib-1.0.jar.sha1", func(w http.ResponseWriter, r *http.Request) { _, _ = fmt.Fprint(w, clientSHA1) })
 	mux.HandleFunc("/repo/com/example/serverlib/1.0/serverlib-1.0.jar", func(w http.ResponseWriter, r *http.Request) {
 		serverOnlyRequested.Store(true)
-		http.Error(w, "сервер-только библиотека должен не быть запрошенный через клиент материализация", http.StatusTeapot)
+		http.Error(w, "server-only library must not be requested by client materialization", http.StatusTeapot)
 	})
 
 	profileID := "1.12.2-forge-14.23.5.2859"

@@ -47,7 +47,7 @@ func newCallbackServer(token string, events EventHandler, hooks HookHandler) (*C
 		var env EventEnvelope
 		data, err := io.ReadAll(io.LimitReader(r.Body, (1<<20)+1))
 		if err != nil || len(data) > 1<<20 || json.Unmarshal(data, &env) != nil || strings.TrimSpace(env.ProtocolVersion) == "" {
-			http.Error(w, "недопустимый событие конверт", http.StatusBadRequest)
+			http.Error(w, "invalid event envelope", http.StatusBadRequest)
 			return EventEnvelope{}, false
 		}
 		return env, true

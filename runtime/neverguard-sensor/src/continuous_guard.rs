@@ -108,9 +108,9 @@ pub fn wait_for_guard_ack(
     let deadline = Instant::now() + GUARD_ACK_TIMEOUT;
     loop {
         let mut available = 0u32;
-        // SAFETY: дескриптор comes из открытый duplex именованный pipe Файл. Все
-        // необязательный PeekNamedPipe вывод pointers except total availability являются
-        // намеренно null потому что нет байты являются использованный через этот probe.
+        // SAFETY: the handle comes from an open duplex named pipe File. All
+        // optional PeekNamedPipe output pointers except total availability are
+        // intentionally null because no bytes are consumed by this probe.
         let ok = unsafe {
             PeekNamedPipe(
                 stream.as_raw_handle(),
@@ -123,7 +123,7 @@ pub fn wait_for_guard_ack(
         };
         if ok == 0 {
             return Err(format!(
-                "Непрерывный Защита Guard-ACK pipe probe ошибка: {}",
+                "Continuous Guard Guard-ACK pipe probe failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -139,7 +139,7 @@ pub fn wait_for_guard_ack(
     let mut packet = [0u8; CONTINUOUS_GUARD_ACK_PACKET_LEN];
     stream
         .read_exact(&mut packet)
-        .map_err(|err| format!("Непрерывный Защита Guard-ACK чтение ошибка: {err}"))?;
+        .map_err(|err| format!("Continuous Guard Guard-ACK read failed: {err}"))?;
     let result = verify_guard_ack_packet(
         &packet,
         secret,
@@ -172,12 +172,12 @@ fn verify_guard_ack_packet(
     }
     if guard_sequence != expected_guard_sequence {
         return Err(format!(
-            "Непрерывный Защита Guard-ACK последовательность несоответствие: ожидаемый {expected_guard_sequence}, получил {guard_sequence}"
+            "Continuous Guard Guard-ACK sequence mismatch: expected {expected_guard_sequence}, got {guard_sequence}"
         ));
     }
     if sensor_sequence != expected_sensor_sequence {
         return Err(format!(
-            "Непрерывный Защита Guard-ACK sensor последовательность несоответствие: ожидаемый {expected_sensor_sequence}, получил {sensor_sequence}"
+            "Continuous Guard Guard-ACK sensor sequence mismatch: expected {expected_sensor_sequence}, got {sensor_sequence}"
         ));
     }
     if packet[32..64] != expected_chain[..] {

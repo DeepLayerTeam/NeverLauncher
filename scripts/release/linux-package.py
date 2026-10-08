@@ -37,15 +37,15 @@ def sha256_file(path: Path) -> tuple[str, int]:
 def inspect_elf(path: Path, expected_arch: str) -> str:
     data = path.read_bytes()[:64]
     if len(data) < 64 or data[:4] != b"\x7fELF":
-        raise SystemExit(f"{path}: не ELF файл")
+        raise SystemExit(f"{path}: not an ELF file")
     if data[4] != 2 or data[5] != 1:
-        raise SystemExit(f"{path}: рабочий пакет требует ELF64 little-endian")
+        raise SystemExit(f"{path}: production package requires ELF64 little-endian")
     elf_type, machine = struct.unpack_from("<HH", data, 16)
     if elf_type not in (2, 3):
-        raise SystemExit(f"{path}: неподдерживаемый ELF type {elf_type}")
+        raise SystemExit(f"{path}: unsupported ELF type {elf_type}")
     expected_machine, machine_name = MACHINES[expected_arch]
     if machine != expected_machine:
-        raise SystemExit(f"{path}: ELF machine={machine}, ожидаемый {expected_machine} ({machine_name})")
+        raise SystemExit(f"{path}: ELF machine={machine}, expected {expected_machine} ({machine_name})")
     return machine_name
 
 
@@ -72,7 +72,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
         name = pattern.format(arch=arch)
         path = out / name
         if not path.is_file():
-            raise SystemExit(f"отсутствующий Linux рабочий артефакт: {path}")
+            raise SystemExit(f"missing Linux production artifact: {path}")
         machine = inspect_elf(path, arch)
         digest, size = sha256_file(path)
         artifacts.append({
@@ -153,7 +153,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Сборка детерминированный NeverLauncher Linux рабочий tar.gz пакет")
+    parser = argparse.ArgumentParser(description="Build deterministic NeverLauncher Linux production tar.gz package")
     parser.add_argument("--out", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--architecture", required=True, choices=sorted(MACHINES))

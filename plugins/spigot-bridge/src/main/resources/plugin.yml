@@ -3,23 +3,23 @@ main: ru.neverlauncher.bridge.spigot.NeverLauncherSpigotBridge
 version: ${version}
 api-version: '1.21'
 author: SkiF4er
-description: NeverLauncher ServerBridge/AuthBridge интеграционный для Spigot серверы.
+description: NeverLauncher ServerBridge/AuthBridge integration for Spigot servers.
 
 commands:
   nlbridge:
-    description: NeverLauncher мост диагностика и команда управления
+    description: NeverLauncher bridge diagnostics and control command
     usage: /nlbridge <status|test|reload|diagnostics>
     permission: neverlauncher.bridge.status
 permissions:
   neverlauncher.bridge.admin:
-    description: Trigger NeverLauncher мост сеть диагностика
+    description: Trigger NeverLauncher bridge network diagnostics
     default: op
   neverlauncher.bridge.status:
-    description: Чтение NeverLauncher мост состояние
+    description: Read NeverLauncher bridge status
     default: op
   neverlauncher.bridge.reload:
-    description: Перезагрузка NeverLauncher мост конфигурация
+    description: Reload NeverLauncher bridge configuration
     default: op
   neverlauncher.bridge.diagnostics:
-    description: Чтение NeverLauncher мост диагностика
+    description: Read NeverLauncher bridge diagnostics
     default: op

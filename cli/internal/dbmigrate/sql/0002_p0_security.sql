@@ -1,4 +1,4 @@
--- NeverLauncher 0.10.0-P0 installation/bootstrap безопасность состояние.
+-- NeverLauncher 0.10.0-P0 installation/bootstrap security state.
 CREATE TABLE IF NOT EXISTS neverlauncher_installation_state (
  singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(singleton),
  bootstrap_token_hash TEXT NOT NULL DEFAULT '',

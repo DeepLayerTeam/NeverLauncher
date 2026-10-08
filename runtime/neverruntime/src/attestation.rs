@@ -131,7 +131,7 @@ pub(crate) fn validate_attestation_shape(attestation: &NeverGuardRemoteAttestati
         if !value.is_empty()
             && (value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()))
         {
-            return Err(format!("NeverGuard удалённый аттестация {label} повреждённый"));
+            return Err(format!("NeverGuard remote attestation {label} malformed"));
         }
     }
     if !attestation.process_policy.enforced {

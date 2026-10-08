@@ -5,7 +5,7 @@ import json
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 13, 10):
-    raise SystemExit("VERSION является старый чем 0.13.10")
+    raise SystemExit("VERSION is older than 0.13.10")
 
 
 def read(path: str) -> str:
@@ -15,13 +15,13 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.13.10 API/CLI миграция копирует differ")
+    raise SystemExit("0.13.10 API/CLI migration copies differ")
 require(api_migration, [
     "minecraft_sessions_guard_snapshot_shape_01310",
     "minecraft_sessions_guard_snapshot_freshness_01310",
@@ -85,19 +85,20 @@ require(ci, [
     "neverlauncher-guard-migration-e2e-evidence",
 ], "CI gate")
 if "neverguard-macos:\n    name: NeverGuard macOS production implementation\n    runs-on: macos-14\n    timeout-minutes: 45\n    steps:\n    steps:" in ci:
-    raise SystemExit("macOS CI задача по-прежнему содержит дубликат steps ключ")
+    raise SystemExit("macOS CI job still contains duplicate steps key")
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
+latest_migration = sorted((root / "services/api/internal/dbmigrate/sql").glob("*.sql"))[-1].stem
 require(migration_tests, [
-    'st.Current != "0032_guard_attestation_v2_01810"',
+    f'st.Current != "{latest_migration}"',
     "TestGuardMigrationCompatibilityStabilization01310",
 ], "Backend migration catalog tests")
 cli_migration_tests = read("cli/internal/dbmigrate/migrate_test.go")
 require(cli_migration_tests, ["0020_guard_migration_compatibility_stabilization_01310", "0021_serverbridge_protocol_v2_0141", "0022_serverbridge_crypto_node_identities_0142", "0023_one_time_join_tickets_0143", "0024_bukkit_family_0144", "0025_proxy_family_0145", "0026_fabric_server_bridge_0146", "0027_forge_neoforge_server_bridge_0147", "0028_zero_patch_topology_handoff_0148", "0029_serverbridge_public_matrix_ha_hardening_0149", "0030_serverbridge_migration_stabilization_01410", "0031_guard_attestation_challenge_purposes_0161"], "CLI migration catalog tests")
 
-# Версия диспетчер должен имеют распространять 0.13.10 к Защита политика метаданные.
+# Version manager must have propagated 0.13.10 to Guard policy metadata.
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("productVersion") != version:
-    raise SystemExit("Защита CI цели являются не aligned с VERSION")
+    raise SystemExit("Guard CI targets are not aligned with VERSION")
 
-print(f"NeverLauncher 0.13.10 Защита миграция + совместимость + стабилизация контроль: OK ({version})")
+print(f"NeverLauncher 0.13.10 Guard migration + compatibility + stabilization gate: OK ({version})")

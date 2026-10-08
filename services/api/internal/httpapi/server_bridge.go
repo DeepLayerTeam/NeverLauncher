@@ -515,7 +515,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 		req.ID = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(req.Name), " ", "-"))
 	}
 	if req.ID == "" || strings.TrimSpace(req.ProjectID) == "" {
-		return bridgeServerRecord{}, fmt.Errorf("ID и projectId сервера обязательны")
+		return bridgeServerRecord{}, fmt.Errorf("id и projectId сервера обязательны")
 	}
 	if strings.TrimSpace(req.Name) == "" {
 		req.Name = req.ID
@@ -525,7 +525,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	if !validBridgeServerKindV2(kind) {
-		return bridgeServerRecord{}, fmt.Errorf("тип должен быть Velocity, BungeeCord, Waterfall, Bukkit, Spigot, Paper, Purpur, Folia, Fabric, Quilt, Forge, NeoForge, sponge или Vanilla")
+		return bridgeServerRecord{}, fmt.Errorf("kind должен быть velocity, bungeecord, waterfall, bukkit, spigot, paper, purpur, folia, fabric, quilt, forge, neoforge, sponge или vanilla")
 	}
 	algorithm, publicKey, keyFingerprint, err := validateBridgeNodeIdentity0142(req.KeyAlgorithm, req.PublicKey)
 	if err != nil {
@@ -540,7 +540,7 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
 		if _, err := backend.GetServerBridgeNode(ctx, server.ID); err == nil {
-			return bridgeServerRecord{}, fmt.Errorf("ServerBridge узел уже зарегистрирован; используйте ротировать-идентичность")
+			return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
 		} else if !isBridgeNotFoundV2(err) {
 			return bridgeServerRecord{}, err
 		}
@@ -553,11 +553,11 @@ func (b *serverBridgeStore) registerServer(req registerBridgeServerRequest) (bri
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, ok := b.servers[server.ID]; ok {
-		return bridgeServerRecord{}, fmt.Errorf("ServerBridge узел уже зарегистрирован; используйте ротировать-идентичность")
+		return bridgeServerRecord{}, fmt.Errorf("ServerBridge node уже зарегистрирован; используйте rotate-identity")
 	}
 	for _, existing := range b.servers {
 		if existing.KeyFingerprint == server.KeyFingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("этот узел открытый ключ уже зарегистрирован")
+			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
 		}
 	}
 	b.servers[server.ID] = server
@@ -578,7 +578,7 @@ func (b *serverBridgeStore) rotateIdentity(serverID string, req rotateBridgeIden
 			return bridgeServerRecord{}, err
 		}
 		if current.KeyFingerprint != "" && current.KeyFingerprint == fingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("новый открытый ключ должен отличаться от текущей узел идентичность")
+			return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
 		}
 		server, err := backend.RotateServerBridgeNodeIdentity(ctx, strings.TrimSpace(serverID), algorithm, publicKey, fingerprint, now)
 		if err != nil {
@@ -593,11 +593,11 @@ func (b *serverBridgeStore) rotateIdentity(serverID string, req rotateBridgeIden
 		return bridgeServerRecord{}, repository.ErrNotFound
 	}
 	if server.KeyFingerprint != "" && server.KeyFingerprint == fingerprint {
-		return bridgeServerRecord{}, fmt.Errorf("новый открытый ключ должен отличаться от текущей узел идентичность")
+		return bridgeServerRecord{}, fmt.Errorf("новый public key должен отличаться от текущей node identity")
 	}
 	for id, existing := range b.servers {
 		if id != serverID && existing.KeyFingerprint == fingerprint {
-			return bridgeServerRecord{}, fmt.Errorf("этот узел открытый ключ уже зарегистрирован")
+			return bridgeServerRecord{}, fmt.Errorf("этот node public key уже зарегистрирован")
 		}
 	}
 	server.TokenHash = ""
@@ -708,7 +708,7 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 		defer cancel()
 		node, err := backend.GetServerBridgeNode(ctx, req.ServerID)
 		if err != nil {
-			return bridgeJoinRecord{}, fmt.Errorf("сервер мост запись не найден или не активен")
+			return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
 		}
 		server = bridgeServerFromModelV2(node)
 	} else {
@@ -717,13 +717,13 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 		b.mu.Unlock()
 	}
 	if server.ID == "" || server.Status != "active" {
-		return bridgeJoinRecord{}, fmt.Errorf("сервер мост запись не найден или не активен")
+		return bridgeJoinRecord{}, fmt.Errorf("server bridge record не найден или не активен")
 	}
 	if server.ProjectID != "" && server.ProjectID != req.ProjectID {
-		return bridgeJoinRecord{}, fmt.Errorf("сервер не привязан к projectId %s", req.ProjectID)
+		return bridgeJoinRecord{}, fmt.Errorf("server не привязан к projectId %s", req.ProjectID)
 	}
 	if server.ProfileID != "" && server.ProfileID != req.ProfileID {
-		return bridgeJoinRecord{}, fmt.Errorf("сервер не привязан к profileId %s", req.ProfileID)
+		return bridgeJoinRecord{}, fmt.Errorf("server не привязан к profileId %s", req.ProfileID)
 	}
 	username := strings.TrimSpace(req.Username)
 	if username == "" {
@@ -738,7 +738,7 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 		bindingEpoch = 1
 	}
 	if server.IdentityEpoch < 1 || len(server.KeyFingerprint) != 64 {
-		return bridgeJoinRecord{}, fmt.Errorf("сервер мост узел криптографический идентичность является не регистрировать")
+		return bridgeJoinRecord{}, fmt.Errorf("server bridge node cryptographic identity is not enrolled")
 	}
 	ticketID, err := newServerBridgeJoinTicketID0143()
 	if err != nil {
@@ -760,13 +760,13 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	// Сохранять в памяти процесса dev/test путь aligned с PostgreSQL: идентичность ротация
-	// между initial поиск и билет insertion должен отказ с блокировкой вместо чем
-	// minting билет привязанный к выведенный из эксплуатации ключ эпоха.
+	// Keep the in-memory dev/test path aligned with PostgreSQL: identity rotation
+	// between the initial lookup and ticket insertion must fail closed rather than
+	// minting a ticket bound to a retired key epoch.
 	current := b.servers[req.ServerID]
 	if current.ID == "" || current.Status != "active" || current.IdentityEpoch != server.IdentityEpoch ||
 		!strings.EqualFold(current.KeyFingerprint, server.KeyFingerprint) {
-		return bridgeJoinRecord{}, fmt.Errorf("сервер мост узел идентичность изменён пока выдача подключение билет")
+		return bridgeJoinRecord{}, fmt.Errorf("server bridge node identity changed while issuing join ticket")
 	}
 	b.joins[b.joinKey(username, req.ServerID)] = join
 	b.textures[uuid] = b.textureForLocked(uuid, username)
@@ -971,7 +971,7 @@ func validBridgeServerKindV2(kind string) bool {
 func newPlayerSessionCorrelationID0197() (string, error) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("игрок сессия корреляция entropy недоступный: %w", err)
+		return "", fmt.Errorf("player session correlation entropy unavailable: %w", err)
 	}
 	return hex.EncodeToString(buf), nil
 }

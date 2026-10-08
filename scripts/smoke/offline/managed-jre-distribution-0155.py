@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 5):
-    raise SystemExit(f"Управляемый JRE Дистрибутив контроль требует VERSION>=0.15.5, получил {VERSION}")
+    raise SystemExit(f"Managed JRE Distribution gate requires VERSION>=0.15.5, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 builder = read("scripts/release/managed-jre-distribution.py")
@@ -142,4 +142,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Управляемый JRE Дистрибутив контроль: OK")
+print(f"NeverLauncher {VERSION} Managed JRE Distribution gate: OK")

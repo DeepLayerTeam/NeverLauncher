@@ -22,12 +22,12 @@ func normalizeSecurityScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("расширение безопасность область должен быть глобальный или проект")
+		return "", "", errors.New("extension security scope must be global or project")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("проект безопасность область требует scopeId")
+		return "", "", errors.New("project security scope requires scopeId")
 	}
 	return scope, scopeID, nil
 }
@@ -44,13 +44,13 @@ func normalizeGrant0207(in model.ExtensionPermissionGrant) (model.ExtensionPermi
 		return model.ExtensionPermissionGrant{}, err
 	}
 	if !extensionID0201.MatchString(g.ExtensionID) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("недопустимый расширение ID %q", g.ExtensionID)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("invalid extension id %q", g.ExtensionID)
 	}
 	if !extensionPermission0201.MatchString(g.Permission) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("недопустимый расширение разрешение %q", g.Permission)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("invalid extension permission %q", g.Permission)
 	}
 	if g.GrantedBy == "" || len(g.GrantedBy) > 255 {
-		return model.ExtensionPermissionGrant{}, errors.New("grantedBy является обязательный")
+		return model.ExtensionPermissionGrant{}, errors.New("grantedBy is required")
 	}
 	if len(g.Reason) > 1000 {
 		return model.ExtensionPermissionGrant{}, errors.New("grant reason exceeds 1000 characters")
@@ -70,22 +70,22 @@ func normalizeSecret0207(in model.ExtensionSecret) (model.ExtensionSecret, error
 		return model.ExtensionSecret{}, err
 	}
 	if !extensionID0201.MatchString(s.ExtensionID) {
-		return model.ExtensionSecret{}, fmt.Errorf("недопустимый расширение ID %q", s.ExtensionID)
+		return model.ExtensionSecret{}, fmt.Errorf("invalid extension id %q", s.ExtensionID)
 	}
 	if !extensionSecretName0207.MatchString(s.Name) {
-		return model.ExtensionSecret{}, fmt.Errorf("недопустимый расширение секрет имя %q", s.Name)
+		return model.ExtensionSecret{}, fmt.Errorf("invalid extension secret name %q", s.Name)
 	}
 	if len(s.Nonce) != 12 {
-		return model.ExtensionSecret{}, errors.New("расширение секрет одноразовое значение должен быть 12 байты")
+		return model.ExtensionSecret{}, errors.New("extension secret nonce must be 12 bytes")
 	}
 	if len(s.Ciphertext) < 16 || len(s.Ciphertext) > (1<<20)+16 {
-		return model.ExtensionSecret{}, errors.New("расширение секрет ciphertext размер является недопустимый")
+		return model.ExtensionSecret{}, errors.New("extension secret ciphertext size is invalid")
 	}
 	if s.KeyVersion == "" || len(s.KeyVersion) > 64 {
-		return model.ExtensionSecret{}, errors.New("расширение секрет keyVersion является обязательный")
+		return model.ExtensionSecret{}, errors.New("extension secret keyVersion is required")
 	}
 	if s.UpdatedBy == "" || len(s.UpdatedBy) > 255 {
-		return model.ExtensionSecret{}, errors.New("расширение секрет updatedBy является обязательный")
+		return model.ExtensionSecret{}, errors.New("extension secret updatedBy is required")
 	}
 	return s, nil
 }

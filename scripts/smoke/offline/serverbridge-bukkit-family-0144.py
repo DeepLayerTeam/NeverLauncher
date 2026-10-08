@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 4):
-    raise SystemExit("VERSION является старый чем 0.14.4")
+    raise SystemExit("VERSION is older than 0.14.4")
 
 
 def read(path: str) -> str:
@@ -14,13 +14,13 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0024_bukkit_family_0144.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0024_bukkit_family_0144.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.4 API/CLI Bukkit-семейство миграция differ")
+    raise SystemExit("0.14.4 API/CLI Bukkit-family migrations differ")
 require(api_migration, [
     "server_bridge_nodes_v2_kind_check",
     "'velocity','bukkit','spigot','paper','purpur','folia'",
@@ -52,7 +52,7 @@ require(runtime, [
 ], "shared production Bukkit-family runtime")
 for forbidden in ("Bukkit.getScheduler()", "runTask(", "runTaskAsynchronously("):
     if forbidden in runtime:
-        raise SystemExit(f"Folia-безопасный среда выполнения должен не использовать устаревший Bukkit планировщик: {forbidden}")
+        raise SystemExit(f"Folia-safe runtime must not use legacy Bukkit scheduler: {forbidden}")
 
 platform = read("plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyPlatform.java")
 require(platform, [
@@ -76,7 +76,7 @@ for kind, (java_rel, expected) in wrappers.items():
     require(descriptor, ["main:", "version: ${version}", "api-version: '1.21'", "nlbridge:"], f"{kind} plugin descriptor")
     require(build, ['implementation(project(":plugins:bukkit-family-common"))', 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT', 'attributes["paperweight-mappings-namespace"] = "mojang"'], f"{kind} Gradle build")
 if "folia-supported: true" not in read("plugins/folia-bridge/src/main/resources/plugin.yml"):
-    raise SystemExit("Folia плагин.yml должен явно объявлять Folia-поддерживаемый: true")
+    raise SystemExit("Folia plugin.yml must explicitly declare folia-supported: true")
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
@@ -164,7 +164,7 @@ for marker in (
 ):
     position = runtime_e2e.index(marker, folia_materialize_start)
     if position >= folia_apply:
-        raise SystemExit("Закреплённый Folia Git идентичность является не inherited через paperweight patch subprocesses")
+        raise SystemExit("Pinned Folia Git identity is not inherited by paperweight patch subprocesses")
 
 bytesocks_helper = runtime_e2e.index("materialize_pinned_bytesocks_dependency() {")
 bytesocks_commit_check = runtime_e2e.index('[[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]]', bytesocks_helper)
@@ -172,7 +172,7 @@ bytesocks_api_check = runtime_e2e.index("BytesocksClient.create API", bytesocks_
 bytesocks_build = runtime_e2e.index("mvn --batch-mode --no-transfer-progress -Dmaven.test.skip=true package", bytesocks_helper)
 bytesocks_evidence = runtime_e2e.index('> "$RUNTIME_DIR/bytesocks-build.json"', bytesocks_helper)
 if not (bytesocks_commit_check < bytesocks_api_check < bytesocks_build < bytesocks_evidence):
-    raise SystemExit("Закреплённый bytesocks исходник/API проверка должен precede Maven сборка и свидетельство")
+    raise SystemExit("Pinned bytesocks source/API verification must precede Maven build and evidence")
 
 spark_helper = runtime_e2e.index("materialize_pinned_spark_paper_dependency() {")
 spark_commit_check = runtime_e2e.index('[[ "$resolved_commit" == "$SPARK_SOURCE_COMMIT" ]]', spark_helper)
@@ -182,14 +182,14 @@ folia_spark_call = runtime_e2e.index("materialize_pinned_spark_paper_dependency"
 folia_paperclip = runtime_e2e.index("createMojmapPaperclipJar", folia_materialize_start)
 folia_paperclip_lookup = runtime_e2e.index("find \"$source_dir/build/libs\" -maxdepth 1 -type f -name '*paperclip*.jar'", folia_materialize_start)
 if 'find "$source_dir/Folia-Server/build/libs"' in runtime_e2e[folia_materialize_start:]:
-    raise SystemExit("Закреплённый Folia среда выполнения по-прежнему searches устаревший Folia-Server/build/libs paperclip путь")
+    raise SystemExit("Pinned Folia runtime still searches the obsolete Folia-Server/build/libs paperclip path")
 if folia_paperclip_lookup <= folia_paperclip:
-    raise SystemExit("Закреплённый Folia paperclip артефакт обнаружение должен запуск после createMojmapPaperclipJar")
+    raise SystemExit("Pinned Folia paperclip artifact discovery must run after createMojmapPaperclipJar")
 spark_bytesocks_call = runtime_e2e.index("materialize_pinned_bytesocks_dependency", spark_helper)
 if not (spark_bytesocks_call < spark_commit_check < spark_patch_check < spark_build):
-    raise SystemExit("Закреплённый spark-Paper source/version проверка должен precede его сборка")
+    raise SystemExit("Pinned spark-paper source/version verification must precede its build")
 if folia_spark_call >= folia_paperclip:
-    raise SystemExit("Закреплённый spark-Paper зависимость должен быть материализовать до Folia paperclip сборка")
+    raise SystemExit("Pinned spark-paper dependency must be materialized before Folia paperclip build")
 
 require(compose_e2e, [
     "TYPE: SPIGOT", "TYPE: FOLIA",
@@ -203,7 +203,7 @@ allow_marker = 'wait_log "$service" "neverlauncher.join.allowed username=$PLAYER
 deny_marker = 'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"'
 cooldown_marker = 'NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5'
 if not (runtime_e2e.index(allow_marker) < runtime_e2e.index(cooldown_marker) < runtime_e2e.index(deny_marker)):
-    raise SystemExit("Bukkit-семейство E2E переподключение cooldown является не между разрешать и запрещать сеть утверждение")
+    raise SystemExit("Bukkit-family E2E reconnect cooldown is not between allow and deny network assertions")
 
 migration_e2e = read("e2e/scripts/run-bukkit-family-migration-e2e.sh")
 require(migration_e2e, [
@@ -219,4 +219,4 @@ for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(text, ["serverbridge-bukkit-family-0144.py", "run-bukkit-family-migration-e2e.sh"], f"0.14.4 {label} wiring")
 require(ci, ["foliaPinnedBuildDependency", "bytesocksPinnedBuildDependency", "spark-paper-build.json", "bytesocks-build.json", "f06de5761a5dee3c809ab9c6ebae6f052c55f7eb", "b6147dcc8a9f1265ccf1491147d427fcfa7d2e27", "1.10.105-SNAPSHOT", "1.0-20230828.145440-5"], "pinned Folia build dependency CI evidence")
 
-print(f"NeverLauncher 0.14.4 Bukkit семейство контроль: OK ({version})")
+print(f"NeverLauncher 0.14.4 Bukkit family gate: OK ({version})")

@@ -70,14 +70,14 @@ type BackendReadiness = { status?: string; version?: string; storage?: unknown; 
 type BackendServiceStatus = { name?: string; version?: string; status?: string; environment?: string; message?: string; storage?: unknown };
 type DesktopReadiness = { status: string; readiness: BackendReadiness; serviceStatus: BackendServiceStatus; apiVersion: 'v1'; runtime: 'NeverRuntime' };
 type DesktopDiagnosticsPolicy = { enabled?: boolean; version?: string; privacyMode?: string; allowedFields?: string[]; redactedFields?: string[]; status?: string };
-type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Требуется закреплённый ключ Ed25519'; runtime: 'NeverRuntime' };
+type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Ed25519 pinned-key required'; runtime: 'NeverRuntime' };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
-type DeviceKeyInfo = { userId: string; publicKey: string; отпечаток: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
-type DeviceSignatureResult = { отпечаток: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
+type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
+type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; replacedAt?: string; replacedByDeviceId?: string; replacementReason?: string; current: boolean; revocationPermanent: boolean };
 type MinecraftLaunchCredentials = { username: string; uuid: string; accessToken: string; userType: string; authServerBaseUrl: string };
-type GuardAttestationSubmission = { launcherVersion: string; аттестация: any; signature: string; отпечаток: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
+type GuardAttestationSubmission = { launcherVersion: string; attestation: any; signature: string; fingerprint: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 
 type SettingsCheck = { valid: boolean; status: string; messages: string[]; normalizedGameDirectory: string };
 type DiagnosticsExport = { path: string; message: string };
@@ -181,7 +181,7 @@ function App() {
   const [launchHistory, setLaunchHistory] = useState<LaunchHistoryEntry[]>([]);
   const [launchPlan, setLaunchPlan] = useState<LaunchPlan | null>(null);
   const [launchResult, setLaunchResult] = useState<ProcessStatus | null>(null);
-  const [logs, setLogs] = useState<string[]>([`NeverLauncher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Серверная часть API.`]);
+  const [logs, setLogs] = useState<string[]>([`NeverLauncher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Backend API.`]);
   const [backendStatus, setBackendStatus] = useState<string>('не проверен');
   const [projects, setProjects] = useState<BackendProject[]>([]);
   const [profiles, setProfiles] = useState<BackendProfile[]>([]);
@@ -319,7 +319,7 @@ function App() {
 
   function endpoint(path: string) {
     const base = settings.backendUrl.trim();
-    if (!base) throw new Error('URL Серверная часть не задан: выполните привязку при первом запуске.');
+    if (!base) throw new Error('URL Backend не задан: выполните привязку при первом запуске.');
     return `${base.replace(/\/$/, '')}${path}`;
   }
 
@@ -383,10 +383,10 @@ function App() {
   async function passkeyStepUp(session: AuthSession): Promise<AuthSession> {
     if (!navigator.credentials?.get) throw new Error('WebAuthn/passkey недоступен в текущем desktop webview.');
     const beginResponse = await postDeviceJson('/api/v1/auth/passkeys/step-up/begin', session.accessToken);
-    if (!beginResponse.ok) throw new Error(`Ключ доступа step-up begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(`Passkey step-up begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
-    if (!begin.transactionToken || !begin.publicKey?.challenge) throw new Error('Серверная часть вернула неполный passkey step-up challenge.');
+    if (!begin.transactionToken || !begin.publicKey?.challenge) throw new Error('Backend вернул неполный passkey step-up challenge.');
     const credential = await navigator.credentials.get({ publicKey: decodeWebAuthnRequestOptions(begin.publicKey) }) as PublicKeyCredential | null;
     if (!credential) throw new Error('Passkey step-up отменён.');
     const assertion = credential.response as AuthenticatorAssertionResponse;
@@ -402,11 +402,11 @@ function App() {
         },
       },
     });
-    if (!completeResponse.ok) throw new Error(`Ключ доступа step-up полный: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(`Passkey step-up complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
-    if (!data.accessToken) throw new Error('Серверная часть не вернула access token после passkey step-up.');
-    log('Выполнена свежая phishing-resistant step-up authentication для восстановления ключ устройства.');
+    if (!data.accessToken) throw new Error('Backend не вернул access token после passkey step-up.');
+    log('Выполнена свежая phishing-resistant step-up authentication для восстановления device key.');
     return persistTrustedAccess(session, data.accessToken);
   }
 
@@ -436,8 +436,8 @@ function App() {
       }
       const beginPayload = await beginResponse.json();
       const begin = beginPayload.data ?? beginPayload;
-      if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.newDeviceId) throw new Error('Серверная часть вернула неполный key replacement challenge.');
-      if (begin.newFingerprint !== staged.fingerprint) throw new Error('Серверная часть replacement fingerprint не совпадает со staged key.');
+      if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.newDeviceId) throw new Error('Backend вернул неполный key replacement challenge.');
+      if (begin.newFingerprint !== staged.fingerprint) throw new Error('Backend replacement fingerprint не совпадает со staged key.');
       const newProof = await callTauri<DeviceSignatureResult>('sign_staged_device_replacement', { backendUrl: settings.backendUrl, userId, payload: begin.signingPayload });
       if (newProof.fingerprint !== staged.fingerprint) throw new Error('Staged signer вернул другую identity.');
       let oldSignature = '';
@@ -451,7 +451,7 @@ function App() {
       const completePayload = await completeResponse.json().catch(() => null);
       if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `${mode} complete: ${completeResponse.status} ${completeResponse.statusText}`);
       const data = completePayload.data ?? completePayload;
-      if (!data.accessToken || !data.device?.id) throw new Error('Серверная часть не вернула replacement device/access token.');
+      if (!data.accessToken || !data.device?.id) throw new Error('Backend не вернул replacement device/access token.');
       serverCommitted = true;
       session = await persistTrustedAccess(session, data.accessToken);
       const committed = await callTauri<DeviceKeyInfo>('commit_staged_device_key', { backendUrl: settings.backendUrl, userId, deviceId: data.device.id });
@@ -462,7 +462,7 @@ function App() {
       await loadManagedDevices(session);
     } catch (error) {
       if (!serverCommitted) await callTauri<void>('abort_staged_device_key', { backendUrl: settings.backendUrl, userId }).catch(() => undefined);
-      else log('Серверная часть уже завершил replacement; staged key сохранён для повторного commit/reconciliation после ошибки native storage.');
+      else log('Backend уже завершил replacement; staged key сохранён для повторного commit/reconciliation после ошибки native storage.');
       throw error;
     }
   }
@@ -491,11 +491,11 @@ function App() {
     if (!key.deviceId) throw new Error('Hardware attestation требует зарегистрированный deviceId.');
     setDeviceTrustStatus('hardware attestation');
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/attest/begin`, session.accessToken);
-    if (!beginResponse.ok) throw new Error(`Устройство аттестация begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(`Device attestation begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
-    if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.attestationValidUntil) throw new Error('Серверная часть вернула неполный device attestation challenge.');
-    if (begin.hardwareProvenance !== 'not-remotely-verified') throw new Error('Серверная часть вернул неизвестную hardware provenance semantics; fail-closed.');
+    if (!begin.challengeId || !begin.challenge || !begin.signingPayload || !begin.attestationValidUntil) throw new Error('Backend вернул неполный device attestation challenge.');
+    if (begin.hardwareProvenance !== 'not-remotely-verified') throw new Error('Backend вернул неизвестную hardware provenance semantics; fail-closed.');
 
     const signature = await callTauri<DeviceSignatureResult>('attest_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
     if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey || signature.keyAlgorithm !== 'p256' || signature.keyBinding !== 'hardware' || !signature.hardwareBound) {
@@ -507,12 +507,12 @@ function App() {
       challenge: begin.challenge,
       signature: signature.signature,
     });
-    if (!completeResponse.ok) throw new Error(`Устройство аттестация полный: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(`Device attestation complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
-    if (!data.accessToken || data.attestationState !== 'verified' || data.attestationMethod !== 'challenge-response-v1') throw new Error('Серверная часть не подтвердила challenge-response attestation.');
+    if (!data.accessToken || data.attestationState !== 'verified' || data.attestationMethod !== 'challenge-response-v1') throw new Error('Backend не подтвердил challenge-response attestation.');
     if (data.hardwareProvenance !== 'not-remotely-verified' || data.authorizationElevation !== false || data.phishingResistantElevation !== false) {
-      throw new Error('Серверная часть изменил security semantics device attestation; fail-closed.');
+      throw new Error('Backend изменил security semantics device attestation; fail-closed.');
     }
     setDeviceTrustStatus(`attested · до ${new Date(data.attestationExpiresAt).toLocaleString()}`);
     log(`Challenge-response attestation подтверждён для ${key.deviceId}; freshness=${data.attestationExpiresAt}. Проверено владение зарегистрированным hardware key; vendor TPM/Secure Enclave provenance не заявляется.`);
@@ -528,12 +528,12 @@ function App() {
       keyBinding: key.keyBinding,
       hardwareProvider: key.hardwareProvider || undefined,
     });
-    if (!beginResponse.ok) throw new Error(`Устройство регистрация begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(`Device registration begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
-    if (!begin.challengeId || !begin.deviceId || !begin.challenge || !begin.signingPayload) throw new Error('Серверная часть вернула неполный device registration challenge.');
+    if (!begin.challengeId || !begin.deviceId || !begin.challenge || !begin.signingPayload) throw new Error('Backend вернул неполный device registration challenge.');
     const signature = await callTauri<DeviceSignatureResult>('sign_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
-    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey || signature.keyAlgorithm !== key.keyAlgorithm || signature.keyBinding !== key.keyBinding) throw new Error('Native ключ устройства backend вернул другую identity.');
+    if (signature.fingerprint !== key.fingerprint || signature.publicKey !== key.publicKey || signature.keyAlgorithm !== key.keyAlgorithm || signature.keyBinding !== key.keyBinding) throw new Error('Native device key backend вернул другую identity.');
     const completeResponse = await postDeviceJson('/api/v1/auth/devices/register/complete', session.accessToken, {
       challengeId: begin.challengeId,
       deviceId: begin.deviceId,
@@ -544,13 +544,13 @@ function App() {
     if (completeResponse.status === 409 && retryOnConflict) {
       const replacement = await callTauri<DeviceKeyInfo>('reset_device_key', { backendUrl: settings.backendUrl, userId: session.userId });
       setDeviceKey(replacement);
-      log('Локальный ключ устройства уже зарегистрирован в другом server record; создан новый ключ в защищённое хранилище ОС и регистрация повторяется.');
+      log('Локальный device key уже зарегистрирован в другом server record; создан новый ключ в OS secure storage и регистрация повторяется.');
       return registerDesktopDeviceKey(session, replacement, false);
     }
-    if (!completeResponse.ok) throw new Error(`Устройство регистрация полный: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(`Device registration complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
-    if (!data.accessToken) throw new Error('Серверная часть не вернула токен доступа после регистрации устройства.');
+    if (!data.accessToken) throw new Error('Backend не вернул access token после device registration.');
     const bound = await callTauri<DeviceKeyInfo>('bind_device_key', { backendUrl: settings.backendUrl, userId: session.userId, deviceId: begin.deviceId });
     setDeviceKey(bound);
     setDeviceTrustStatus('verified');
@@ -564,40 +564,40 @@ function App() {
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/begin`, session.accessToken);
     if (beginResponse.status === 404) {
       setDeviceTrustStatus('требуется recovery');
-      throw new Error('Серверная запись устройства отсутствует или отозвана. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.');
+      throw new Error('Server device record отсутствует или отозван. Локальный ключ сохранён; используйте «Восстановить ключ», чтобы заменить identity через phishing-resistant recovery без потери rollback-возможности.');
     }
-    if (!beginResponse.ok) throw new Error(`Устройство проверка begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(`Device verification begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
-    if (!begin.challengeId || !begin.challenge || !begin.signingPayload) throw new Error('Серверная часть вернула неполный device verification challenge.');
+    if (!begin.challengeId || !begin.challenge || !begin.signingPayload) throw new Error('Backend вернул неполный device verification challenge.');
     const signature = await callTauri<DeviceSignatureResult>('sign_device_payload', { backendUrl: settings.backendUrl, userId: session.userId, payload: begin.signingPayload });
-    if (signature.fingerprint !== key.fingerprint) throw new Error('Отпечаток ключа устройства изменился во время доказательства владения ключом.');
+    if (signature.fingerprint !== key.fingerprint) throw new Error('Device key fingerprint изменился во время proof-of-possession.');
     const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(key.deviceId)}/verify/complete`, session.accessToken, {
       challengeId: begin.challengeId,
       deviceId: key.deviceId,
       challenge: begin.challenge,
       signature: signature.signature,
     });
-    if (!completeResponse.ok) throw new Error(`Устройство проверка полный: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(`Device verification complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
-    if (!data.accessToken) throw new Error('Серверная часть не вернула access token после device verification.');
+    if (!data.accessToken) throw new Error('Backend не вернул access token после device verification.');
     setDeviceTrustStatus('verified');
-    log(`Владение ключом подтверждено устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`);
+    log(`Proof-of-possession подтверждён устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`);
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, key);
   }
 
   async function ensureDesktopDeviceTrust(session: AuthSession): Promise<AuthSession> {
     const userId = session.userId || accessTokenSubject(session.accessToken);
-    if (!userId) throw new Error('Не удалось определить канонический ID пользователя для ключ устройства.');
+    if (!userId) throw new Error('Не удалось определить canonical user id для device key.');
     const normalized = session.userId ? session : { ...session, userId };
     if (!session.userId) await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: normalized });
     setDeviceTrustStatus('проверяется');
     const reconciled = await reconcileStagedReplacement(normalized);
     if (reconciled) return verifyDesktopDeviceKey(normalized, reconciled);
     const key = await callTauri<DeviceKeyInfo>('ensure_device_key', { backendUrl: settings.backendUrl, userId });
-    if (key.privateKeyExposedToFrontend) throw new Error('Серверная часть ключа устройства сообщила, что закрытый ключ доступен интерфейсу; операция заблокирована.');
+    if (key.privateKeyExposedToFrontend) throw new Error('Device key backend сообщил private key exposed to frontend; fail-closed.');
     setDeviceKey(key);
     return verifyDesktopDeviceKey(normalized, key);
   }
@@ -614,7 +614,7 @@ function App() {
   async function loadManagedDevices(session: AuthSession | null = authSession) {
     if (!session?.accessToken) { setManagedDevices([]); return; }
     const response = await fetch(endpoint('/api/v1/auth/devices'), { headers: { Authorization: `Bearer ${session.accessToken}` } });
-    if (!response.ok) throw new Error(`Устройство список: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error(`Device list: ${response.status} ${response.statusText}`);
     const payload = await response.json();
     const data = payload.data ?? payload;
     setManagedDevices(Array.isArray(data.items) ? data.items : []);
@@ -629,19 +629,19 @@ function App() {
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
-    if (!response.ok) throw new Error(`Устройство переименование: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error(`Device rename: ${response.status} ${response.statusText}`);
     await loadManagedDevices(authSession);
-    log(`Доверенное устройство ${device.id} переименован.`);
+    log(`Trusted device ${device.id} переименован.`);
   }
 
   async function revokeManagedDevice(device: ManagedDevice) {
     if (!authSession?.accessToken || device.status !== 'active') return;
     const warning = device.current
-      ? 'Отозвать текущее устройство? Текущая сессия NeverLauncher, refresh token, сессия Minecraft и ключ устройства станут недействительными. Для повторной регистрации будет создан новый ключ.'
+      ? 'Отозвать текущее устройство? Текущая Never session, refresh token, Minecraft session и device key станут недействительными. Для повторной регистрации будет создан новый ключ.'
       : `Отозвать устройство «${device.name}»? Все связанные с ним сессии будут немедленно завершены, а старый ключ нельзя будет зарегистрировать повторно.`;
     if (!window.confirm(warning)) return;
     const response = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(device.id)}/revoke`, authSession.accessToken, { reason: device.current ? 'desktop-self-revoke' : 'desktop-device-revoke' });
-    if (!response.ok) throw new Error(`Устройство отзыв: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error(`Device revoke: ${response.status} ${response.statusText}`);
     const payload = await response.json();
     const data = payload.data ?? payload;
     log(`Устройство ${device.id} отозвано: sessions=${data.revokedSessions ?? 0}, refreshFamilies=${data.revokedRefreshFamilies ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}.`);
@@ -651,7 +651,7 @@ function App() {
       setAuthSession(null);
       setDeviceKey(null);
       setManagedDevices([]);
-      setDeviceTrustStatus('revoked · требуется новый вход и новый ключ устройства');
+      setDeviceTrustStatus('revoked · требуется новый вход и новый device key');
       return;
     }
     await loadManagedDevices(authSession);
@@ -659,9 +659,9 @@ function App() {
 
   async function revokeOtherManagedDevices() {
     if (!authSession?.accessToken) return;
-    if (!window.confirm('Отозвать все остальные доверенные устройства? Текущее устройство останется активным; остальные ключ устройстваs и связанные сессии будут отозваны без возможности восстановления ключа.')) return;
+    if (!window.confirm('Отозвать все остальные trusted devices? Текущее устройство останется активным; остальные device keys и связанные сессии будут отозваны без возможности восстановления ключа.')) return;
     const response = await postDeviceJson('/api/v1/auth/devices/revoke-others', authSession.accessToken, { reason: 'desktop-revoke-other-devices' });
-    if (!response.ok) throw new Error(`Отзыв другой устройства: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error(`Revoke other devices: ${response.status} ${response.statusText}`);
     const payload = await response.json();
     const data = payload.data ?? payload;
     log(`Другие устройства отозваны: devices=${data.revokedDevices ?? 0}, sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}.`);
@@ -684,7 +684,7 @@ function App() {
       email,
       userId: payload.data.user?.id || payload.data.session?.userId || accessTokenSubject(payload.data.tokens.accessToken),
     };
-    if (!next.userId) throw new Error('Серверная часть не вернула канонический ID пользователя.');
+    if (!next.userId) throw new Error('Backend не вернул canonical user id.');
     await callTauri<void>('store_auth_session', { backendUrl: settings.backendUrl, session: next });
     setAuthSession(next);
     log(`Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; refresh token не записывается в конфигурацию/localStorage.`);
@@ -705,7 +705,7 @@ function App() {
     if (userId && tokenDeviceId) {
       const key = await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
       if (!key?.deviceId || key.deviceId !== tokenDeviceId) {
-        throw new Error('сессия привязана к trusted device, но соответствующий ключ устройства отсутствует в защищённое хранилище ОС');
+        throw new Error('сессия привязана к trusted device, но соответствующий device key отсутствует в OS secure storage');
       }
       const proof = await callTauri<DeviceSignatureResult>('sign_session_refresh', {
         backendUrl: settings.backendUrl,
@@ -715,7 +715,7 @@ function App() {
         bindingEpoch: accessTokenBindingEpoch(session.accessToken),
         refreshToken: session.refreshToken,
       });
-      if (proof.fingerprint !== key.fingerprint) throw new Error('refresh proof подписан неожиданным ключ устройства');
+      if (proof.fingerprint !== key.fingerprint) throw new Error('refresh proof подписан неожиданным device key');
       body.deviceId = tokenDeviceId;
       body.deviceSignature = proof.signature;
       setDeviceKey(key);
@@ -749,13 +749,13 @@ function App() {
     setAuthSession(null);
     setManagedDevices([]);
     setDeviceTrustStatus(deviceKey ? 'ключ сохранён локально' : 'не инициализирован');
-    log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в защищённое хранилище ОС для следующего входа.');
+    log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в OS secure storage для следующего входа.');
   }
 
   async function checkBackend() {
     setStage('connecting');
     try {
-      if (!settings.backendUrl.trim()) throw new Error('URL серверной части не задан');
+      if (!settings.backendUrl.trim()) throw new Error('Backend URL не задан');
       await fetchBackendJson('/health');
       const readiness = await fetchBackendJson('/ready');
       const status = await fetchBackendJson('/api/v1/status');
@@ -769,13 +769,13 @@ function App() {
         runtime: 'NeverRuntime',
       });
       setDiagnosticsPolicy(diagnostics ? { ...diagnostics, status: diagnostics.enabled === false ? 'disabled' : 'enabled' } : null);
-      setBindingPolicy({ apiVersion: 'v1', manifestVerification: 'Требуется закреплённый ключ Ed25519', runtime: 'NeverRuntime' });
+      setBindingPolicy({ apiVersion: 'v1', manifestVerification: 'Ed25519 pinned-key required', runtime: 'NeverRuntime' });
       setBackendStatus('ready');
-      log('API серверной части v1 готов: проверки работоспособности, готовности, состояния, требований среды выполнения и политики диагностики отвечают.');
+      log('Backend API v1 готов: health, readiness, status, требования runtime и политика диагностики отвечают.');
     } catch (error) {
       setBackendStatus('failed');
       setStage('failed');
-      log(`API серверной части недоступен: ${String(error)}`);
+      log(`Backend API недоступен: ${String(error)}`);
     }
   }
 
@@ -795,7 +795,7 @@ function App() {
         }
       } catch {
         const rotated = await rotateDesktopSession({ ...stored, userId: stored.userId || accessTokenSubject(stored.accessToken) });
-        log('Токен доступа истёк; сессия восстановлена через ротацию refresh token из системного хранилища учётных данных.');
+        log('Access token истёк; сессия восстановлена через ротацию refresh token из системного хранилища учётных данных.');
         if (rotated.userId) {
           try { const trusted = await ensureDesktopDeviceTrust(rotated); await loadManagedDevices(trusted); } catch (error) { setDeviceTrustStatus('ошибка'); log(`Device Trust после refresh не подтверждён: ${String(error)}`); }
         }
@@ -991,23 +991,23 @@ function App() {
   }
 
   async function createGuardLaunchTicket(): Promise<string> {
-    if (!authSession?.accessToken) throw new Error('Аттестация NeverGuard требует активную сессия NeverLauncher.');
+    if (!authSession?.accessToken) throw new Error('Guard Attestation требует активную Never session.');
     const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
-    if (!userId || !deviceId) throw new Error('Аттестация NeverGuard требует session, привязанную к trusted device.');
+    if (!userId || !deviceId) throw new Error('Guard Attestation требует session, привязанную к trusted device.');
     const key = deviceKey ?? await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
     if (!key?.deviceId || key.deviceId !== deviceId || key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256' || !key.hardwareBound) {
-      throw new Error('Аттестация NeverGuard требует локальный hardware-bound P-256 ключ устройства текущего trusted device.');
+      throw new Error('Guard Attestation требует локальный hardware-bound P-256 device key текущего trusted device.');
     }
 
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest/begin`, authSession.accessToken, {
       launcherVersion: DESKTOP_VERSION,
     });
     const beginPayload = await beginResponse.json().catch(() => null);
-    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Аттестация NeverGuard begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Guard Attestation begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const begin = beginPayload?.data ?? beginPayload;
     if (!begin?.challengeId || !begin?.challenge || !begin?.expiresAt || begin.launcherVersion !== DESKTOP_VERSION) {
-      throw new Error('Серверная часть вернула неполный или несовместимый Аттестация NeverGuard challenge.');
+      throw new Error('Backend вернул неполный или несовместимый Guard Attestation challenge.');
     }
 
     const submission = await callTauri<GuardAttestationSubmission>('neverguard_guard_attestation', {
@@ -1024,7 +1024,7 @@ function App() {
       },
     });
     if (submission.launcherVersion !== DESKTOP_VERSION || submission.fingerprint !== key.fingerprint || submission.keyAlgorithm !== 'p256' || submission.keyBinding !== 'hardware' || !submission.hardwareBound) {
-      throw new Error('Native Аттестация NeverGuard signer вернул неожиданную release/device identity.');
+      throw new Error('Native Guard Attestation signer вернул неожиданную release/device identity.');
     }
 
     const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest/complete`, authSession.accessToken, {
@@ -1032,34 +1032,34 @@ function App() {
       challenge: begin.challenge,
       challengeExpiresAt: begin.expiresAt,
       launcherVersion: DESKTOP_VERSION,
-      аттестация: submission.attestation,
+      attestation: submission.attestation,
       signature: submission.signature,
     });
     const completePayload = await completeResponse.json().catch(() => null);
-    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Аттестация NeverGuard complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Guard Attestation complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const data = completePayload?.data ?? completePayload;
-    if (!data?.verified || !data?.launchTicket || !data?.oneTime) throw new Error('Серверная часть не выдала одноразовый Guard launch ticket.');
+    if (!data?.verified || !data?.launchTicket || !data?.oneTime) throw new Error('Backend не выдал одноразовый Guard launch ticket.');
     log(`NeverGuard attestation подтверждена Backend: evidence=${String(data.evidenceSha256 || '').slice(0, 16)}…, ticket до ${data.expiresAt}.`);
     return data.launchTicket;
   }
 
   async function createContinuousGuardTicket(processId: string): Promise<string> {
-    if (!authSession?.accessToken) throw new Error('Аттестация NeverGuard v2 требует активную сессия NeverLauncher.');
+    if (!authSession?.accessToken) throw new Error('Guard Attestation v2 требует активную Never session.');
     const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
-    if (!userId || !deviceId) throw new Error('Аттестация NeverGuard v2 требует trusted-device binding.');
+    if (!userId || !deviceId) throw new Error('Guard Attestation v2 требует trusted-device binding.');
     const key = deviceKey ?? await callTauri<DeviceKeyInfo | null>('device_key_status', { backendUrl: settings.backendUrl, userId });
     if (!key?.deviceId || key.deviceId !== deviceId || key.keyBinding !== 'hardware' || key.keyAlgorithm !== 'p256' || !key.hardwareBound) {
-      throw new Error('Аттестация NeverGuard v2 требует hardware-bound P-256 ключ устройства текущего trusted device.');
+      throw new Error('Guard Attestation v2 требует hardware-bound P-256 device key текущего trusted device.');
     }
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest-v2/begin`, authSession.accessToken, {
       launcherVersion: DESKTOP_VERSION,
     });
     const beginPayload = await beginResponse.json().catch(() => null);
-    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Аттестация NeverGuard v2 begin: ${beginResponse.status} ${beginResponse.statusText}`);
+    if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Guard Attestation v2 begin: ${beginResponse.status} ${beginResponse.statusText}`);
     const begin = beginPayload?.data ?? beginPayload;
     if (!begin?.challengeId || !begin?.challenge || !begin?.expiresAt || begin.attestationSchema !== 'neverguard/windows-guard-attestation/v2') {
-      throw new Error('Серверная часть вернула неполный или несовместимый Аттестация NeverGuard v2 challenge.');
+      throw new Error('Backend вернул неполный или несовместимый Guard Attestation v2 challenge.');
     }
     const submission = await callTauri<GuardAttestationSubmission>('neverguard_guard_attestation_v2', {
       request: {
@@ -1076,37 +1076,37 @@ function App() {
       },
     });
     if (submission.launcherVersion !== DESKTOP_VERSION || submission.fingerprint !== key.fingerprint || submission.keyAlgorithm !== 'p256' || submission.keyBinding !== 'hardware' || !submission.hardwareBound) {
-      throw new Error('Native Аттестация NeverGuard v2 signer вернул неожиданную release/device identity.');
+      throw new Error('Native Guard Attestation v2 signer вернул неожиданную release/device identity.');
     }
     const completeResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest-v2/complete`, authSession.accessToken, {
       challengeId: begin.challengeId,
       challenge: begin.challenge,
       challengeExpiresAt: begin.expiresAt,
       launcherVersion: DESKTOP_VERSION,
-      аттестация: submission.attestation,
+      attestation: submission.attestation,
       signature: submission.signature,
     });
     const completePayload = await completeResponse.json().catch(() => null);
-    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Аттестация NeverGuard v2 complete: ${completeResponse.status} ${completeResponse.statusText}`);
+    if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Guard Attestation v2 complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const data = completePayload?.data ?? completePayload;
     if (!data?.verified || data.attestationVersion !== 2 || !data?.continuousGuardTicket || !data?.oneTime) {
-      throw new Error('Серверная часть не подтвердила Continuous Аттестация NeverGuard v2.');
+      throw new Error('Backend не подтвердил Continuous Guard Attestation v2.');
     }
-    log(`Continuous Аттестация NeverGuard v2 подтверждена: evidence=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
+    log(`Continuous Guard Attestation v2 подтверждена: evidence=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
     return data.continuousGuardTicket;
   }
 
   async function createMinecraftLaunchSession(guardAttestationTicket: string): Promise<MinecraftLaunchCredentials> {
-    if (!authSession?.accessToken) throw new Error('Для запуска Minecraft требуется активная сессия NeverLauncher.');
+    if (!authSession?.accessToken) throw new Error('Для запуска Minecraft требуется активная Never session.');
     const response = await fetch(endpoint('/api/v1/minecraft/session'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ clientToken: `desktop-${authSession.sessionId}`, guardAttestationTicket }),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.error?.message || `Не удалось получить сессия Minecraft: ${response.status} ${response.statusText}`);
+    if (!response.ok) throw new Error(payload?.error?.message || `Не удалось получить Minecraft session: ${response.status} ${response.statusText}`);
     const data = payload?.data ?? payload;
-    if (!data.accessToken || !data.profile?.id || !data.profile?.name) throw new Error('Серверная часть вернул неполную сессия Minecraft.');
+    if (!data.accessToken || !data.profile?.id || !data.profile?.name) throw new Error('Backend вернул неполную Minecraft session.');
     return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
   }
 
@@ -1150,14 +1150,14 @@ function App() {
           continuousGuardTicket = await createContinuousGuardTicket(result.id);
         } catch (attestationError) {
           await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
-          throw new Error(`Среда выполнения Windows остановлен: Непрерывный Защита Аттестация v2 не подтверждена: ${String(attestationError)}`);
+          throw new Error(`Windows runtime остановлен: Continuous Guard Attestation v2 не подтверждена: ${String(attestationError)}`);
         }
       }
       try {
         await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket);
       } catch (joinError) {
         await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
-        throw new Error(`Среда выполнения остановлен: ServerBridge подключение после Аттестация v2 не подтверждён: ${String(joinError)}`);
+        throw new Error(`Runtime остановлен: ServerBridge join после Attestation v2 не подтверждён: ${String(joinError)}`);
       }
       setLaunchResult(result);
       setStage('running');
@@ -1174,7 +1174,7 @@ function App() {
       const result = await callTauri<ProcessStatus>('stop_runtime_process', { processId: launchResult.id });
       setLaunchResult(result);
       log(result.message);
-    } catch (error) { log(`Процесс среды выполнения не остановлен: ${String(error)}`); }
+    } catch (error) { log(`Runtime process не остановлен: ${String(error)}`); }
   }
 
   async function exportDiagnostics() {
@@ -1231,7 +1231,7 @@ function App() {
       <section className="content">
         <header className="hero">
           <div>
-            <p className="eyebrow">Рабочий Настольное приложение Лаунчер</p>
+            <p className="eyebrow">Рабочий Desktop Launcher</p>
             <h1>Движок запуска и восстановление клиента</h1>
             <p>Desktop {DESKTOP_VERSION} выполняет реальную проверку файлов, восстановление повреждённых объектов, безопасную очистку, сборку плана запуска, запуск Minecraft, запись логов и историю запусков.</p>
           </div>
@@ -1250,7 +1250,7 @@ function App() {
 
         <section className="settings compact">
           <label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} /></label>
-          <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/профили/{profile}/манифест?канал=стабильный" /></label>
+          <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/profiles/{profile}/manifest?channel=stable" /></label>
           <label>Каталог игры<input value={settings.gameDirectory} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('gameDirectory', event.target.value)} /></label>
           <label>Имя игрока<input value={settings.username} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('username', event.target.value)} /></label>
           <label>Память, МБ<input type="number" value={settings.memoryMb} min={512} max={32768} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(event.target.value))} /></label>
@@ -1274,19 +1274,19 @@ function App() {
 
 
 function FirstRunPanel({ settings, patchSettings, bindingPolicy, checkBackend, loadProjects, loadProfiles, persistDesktopConfig, resetDesktopBinding, selectedProject, selectedProfile }: any) {
-  return <section className="panel"><h3>Первый запуск</h3><p>NeverLauncher {DESKTOP_VERSION} требует явной привязки Desktop к Серверная часть API и реальному проекту; запуск проходит через рабочий движок запуска и режим восстановления.</p><div className="settings"><label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} placeholder="https://launcher.example.ru" /></label><label>ID проекта<input value={settings.projectId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('projectId', event.target.value)} placeholder="выберите из Серверная часть API" /></label><label>ID профиля<input value={settings.profileId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('profileId', event.target.value)} placeholder="выберите из Серверная часть API" /></label><label>ID ServerBridge<input value={settings.serverId ?? ''} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverId', event.target.value)} placeholder="Velocity-главный / Purpur-главный" /></label><label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>1. Проверить Серверная часть</button><button onClick={loadProjects}>2. Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject || settings.projectId)}>3. Загрузить профили</button><button className="primary" onClick={persistDesktopConfig}>4. Сохранить привязку</button><button onClick={resetDesktopBinding}>Сбросить</button></div><pre>{JSON.stringify({ configPath: settings.configPath || 'будет создан Tauri-командой', selectedProject, selectedProfile, bindingPolicy }, null, 2)}</pre></section>;
+  return <section className="panel"><h3>Первый запуск</h3><p>NeverLauncher {DESKTOP_VERSION} требует явной привязки Desktop к Backend API и реальному проекту; запуск проходит через рабочий движок запуска и режим восстановления.</p><div className="settings"><label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} placeholder="https://launcher.example.ru" /></label><label>ID проекта<input value={settings.projectId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('projectId', event.target.value)} placeholder="выберите из Backend API" /></label><label>ID профиля<input value={settings.profileId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('profileId', event.target.value)} placeholder="выберите из Backend API" /></label><label>ID ServerBridge<input value={settings.serverId ?? ''} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverId', event.target.value)} placeholder="velocity-main / purpur-main" /></label><label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>1. Проверить Backend</button><button onClick={loadProjects}>2. Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject || settings.projectId)}>3. Загрузить профили</button><button className="primary" onClick={persistDesktopConfig}>4. Сохранить привязку</button><button onClick={resetDesktopBinding}>Сбросить</button></div><pre>{JSON.stringify({ configPath: settings.configPath || 'будет создан Tauri-командой', selectedProject, selectedProfile, bindingPolicy }, null, 2)}</pre></section>;
 }
 
 function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, launchPlan, readinessContract, diagnosticsPolicy }: any) {
   return (
     <>
       <section className="grid">
-        <article className="card"><h3>Серверная часть</h3><strong>{backendStatus}</strong><p>Проверки health/readiness и готовность Настольное приложение.</p></article>
+        <article className="card"><h3>Backend</h3><strong>{backendStatus}</strong><p>Проверки health/readiness и готовность Desktop.</p></article>
         <article className="card"><h3>Манифест</h3><strong>{manifest ? manifest.version : 'не загружен'}</strong><p>{manifest ? `${manifest.projectId}/${manifest.profileId} · ${manifest.minecraft.loader} ${manifest.minecraft.version}` : 'Загрузите профиль клиента.'}</p></article>
         <article className="card"><h3>Java</h3><strong>{javaInfo?.compatible ? 'OK' : 'не проверена'}</strong><p>{javaInfo?.message ?? 'Проверка Java не выполнялась.'}</p></article>
         <article className="card"><h3>Файлы</h3><strong>{fileSummary.ok}/{fileSummary.total}</strong><p>Повреждено или отсутствует: {fileSummary.broken}.</p></article>
-        <article className="card"><h3>План запуска</h3><strong>{launchPlan ? 'готов' : 'нет'}</strong><p>Путь классов, аргументы JVM и игры.</p></article>
-        <article className="card"><h3>Контракт</h3><strong>{readinessContract?.status ?? 'не загружен'}</strong><p>Модель готовности Настольное приложение из Серверная часть API.</p></article>
+        <article className="card"><h3>План запуска</h3><strong>{launchPlan ? 'готов' : 'нет'}</strong><p>Classpath, аргументы JVM и игры.</p></article>
+        <article className="card"><h3>Контракт</h3><strong>{readinessContract?.status ?? 'не загружен'}</strong><p>Модель готовности Desktop из Backend API.</p></article>
         <article className="card"><h3>Диагностика</h3><strong>{diagnosticsPolicy?.status ?? 'не загружена'}</strong><p>{diagnosticsPolicy?.privacyMode ?? 'приватность по умолчанию'}.</p></article>
       </section>
       <section className="panel">
@@ -1299,7 +1299,7 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
 }
 
 function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices, replaceDesktopDeviceKey }: any) {
-  return <section className="panel"><h3>Вход, сессия и Устройство Управление</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Серверная часть отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового ключ устройства.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Серверная часть</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить ключ устройства</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && deviceKey?.deviceId && <button onClick={() => replaceDesktopDeviceKey('rotate').catch((error: Error) => console.error(error))}>Ротировать ключ</button>}{session && <button onClick={() => replaceDesktopDeviceKey('recover').catch((error: Error) => console.error(error))}>Восстановить ключ</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, отпечаток: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'платформа: нет данных'} · {device.clientVersion || 'версия: нет данных'} · последняя активность: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>отпечаток: {device.keyFingerprint.slice(0, 20)}… · аттестация: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>отозвано: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'причина: нет данных'}{device.replacedByDeviceId ? ` · заменено на ${device.replacedByDeviceId}` : ''}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
+  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && deviceKey?.deviceId && <button onClick={() => replaceDesktopDeviceKey('rotate').catch((error: Error) => console.error(error))}>Ротировать ключ</button>}{session && <button onClick={() => replaceDesktopDeviceKey('recover').catch((error: Error) => console.error(error))}>Восстановить ключ</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}{device.replacedByDeviceId ? ` · replaced by ${device.replacedByDeviceId}` : ''}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {
@@ -1307,7 +1307,7 @@ function ActionPanel({ title, description, actions }: { title: string; descripti
 }
 
 function ProjectPanel({ projects, selectedProject, setSelectedProject, loadProjects, loadProfiles }: any) {
-  return <section className="panel"><h3>Проекты</h3><p>Список проектов загружается из Серверная часть API.</p><div className="toolbar inline"><button onClick={loadProjects}>Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject)}>Загрузить профили</button></div><div className="list">{projects.map((project: BackendProject) => <button key={project.id} className={selectedProject === project.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProject(project.id)}><strong>{project.title ?? project.name ?? project.id}</strong><span>{project.id}</span></button>)}</div></section>;
+  return <section className="panel"><h3>Проекты</h3><p>Список проектов загружается из Backend API.</p><div className="toolbar inline"><button onClick={loadProjects}>Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject)}>Загрузить профили</button></div><div className="list">{projects.map((project: BackendProject) => <button key={project.id} className={selectedProject === project.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProject(project.id)}><strong>{project.title ?? project.name ?? project.id}</strong><span>{project.id}</span></button>)}</div></section>;
 }
 
 function ProfilePanel({ profiles, selectedProfile, setSelectedProfile, loadManifest, manifest }: any) {

@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Windows Защита GA 0.19.0 контроль: {path} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection GA 0.19.0 gate: {path} missing: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 19, 0):
-    raise SystemExit(f"Windows Защита GA контроль требует >=0.19.0, получил {version}")
+    raise SystemExit(f"Windows Protection GA gate requires >=0.19.0, got {version}")
 
 impl = read("cli/cmd/neverlauncher/windows_protection_ga_0190.go")
 require(impl, "cli/cmd/neverlauncher/windows_protection_ga_0190.go", [
@@ -115,12 +115,12 @@ ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 for text, path in [(ci, ".github/workflows/ci.yml"), (preflight, "scripts/release/preflight.sh")]:
     if "neverguard-windows-protection-ga-0190.py" not in text:
-        raise SystemExit(f"[NeverLauncher] Windows Защита GA 0.19.0 контроль: обязательный контроль не wired в {path}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection GA 0.19.0 gate: mandatory gate not wired into {path}")
 if "TestWindowsProtectionGA" not in ci:
-    raise SystemExit("[NeverLauncher] Windows Защита GA 0.19.0 контроль: Go GA тесты являются не wired в CI")
+    raise SystemExit("[NeverLauncher] Windows Protection GA 0.19.0 gate: Go GA tests are not wired into CI")
 
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in impl.lower():
-        raise SystemExit(f"[NeverLauncher] Windows Защита GA 0.19.0 контроль: placeholder {marker!r} в реализация")
+        raise SystemExit(f"[NeverLauncher] Windows Protection GA 0.19.0 gate: placeholder {marker!r} in implementation")
 
-print(f"[NeverLauncher] NeverGuard Windows Защита GA 0.19.0 рабочий контроль: OK ({version})")
+print(f"[NeverLauncher] NeverGuard Windows Protection GA 0.19.0 production gate: OK ({version})")

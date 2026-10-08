@@ -13,25 +13,25 @@ def version_tuple(value: str) -> tuple[int, int, int]:
     core = value.split("-", 1)[0].split("+", 1)[0]
     parts = core.split(".")
     if len(parts) != 3:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
 def read(path: str) -> str:
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"отсутствующий обязательный файл: {path}")
+        raise SystemExit(f"missing required file: {path}")
     return p.read_text(encoding="utf-8")
 
 
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 if version_tuple(VERSION) < (0, 15, 10):
-    raise SystemExit(f"VERSION является старый чем 0.15.10: {VERSION}")
+    raise SystemExit(f"VERSION is older than 0.15.10: {VERSION}")
 
 stabilization = read("cli/cmd/neverlauncher/migration_stabilization_01510.go")
 trust = read("cli/cmd/neverlauncher/release_verification_v2.go")
@@ -89,4 +89,4 @@ require(policy, ["0.15.10 Migration + stabilization", "migration-stabilization-0
 subprocess.run(["go", "test", "./cmd/neverlauncher", "-run", "01510", "-count=1"], cwd=ROOT / "cli", check=True)
 subprocess.run(["go", "run", "./cmd/neverlauncher", "update", "stabilization-self-test"], cwd=ROOT / "cli", check=True, stdout=subprocess.DEVNULL)
 
-print(f"[NeverLauncher] Миграция + стабилизация 0.15.10 контроль: OK ({VERSION})")
+print(f"[NeverLauncher] Migration + stabilization 0.15.10 gate: OK ({VERSION})")

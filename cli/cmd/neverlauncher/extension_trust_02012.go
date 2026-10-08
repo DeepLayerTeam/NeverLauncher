@@ -13,11 +13,11 @@ import (
 func extensionTrustBackend02012(args []string) (string, string, error) {
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return "", "", errors.New("расширение trust/recovery требует --серверная часть <URL>")
+		return "", "", errors.New("extension trust/recovery требует --backend <url>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return "", "", errors.New("расширение trust/recovery требует --токен или NEVERLAUNCHER_TOKEN")
+		return "", "", errors.New("extension trust/recovery требует --token или NEVERLAUNCHER_TOKEN")
 	}
 	return backend, token, nil
 }
@@ -25,18 +25,18 @@ func extensionTrustBackend02012(args []string) (string, string, error) {
 func responseDataField02012(payload map[string]any, field string) (any, error) {
 	data, ok := payload["data"].(map[string]any)
 	if !ok {
-		return nil, errors.New("серверная часть ответ делает не contain данные объект")
+		return nil, errors.New("backend response does not contain data object")
 	}
 	value, ok := data[field]
 	if !ok {
-		return nil, fmt.Errorf("серверная часть ответ делает не contain данные.%s", field)
+		return nil, fmt.Errorf("backend response does not contain data.%s", field)
 	}
 	return value, nil
 }
 
 func handleExtensionTrust02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные расширение trust-подкоманды: показывать, задать, ключ-отзыв")
+		return errors.New("доступные extension trust-подкоманды: show, set, key-revoke")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {
@@ -53,7 +53,7 @@ func handleExtensionTrust02012(args []string) error {
 	case "set":
 		mode := strings.ToLower(strings.TrimSpace(flagValue(args, "--mode", "strict")))
 		if mode != "strict" && mode != "audit" {
-			return errors.New("--режим должен быть строгий или аудит")
+			return errors.New("--mode должен быть strict или audit")
 		}
 		allowed := []string{}
 		for _, item := range strings.Split(flagValue(args, "--allow", ""), ",") {
@@ -70,7 +70,7 @@ func handleExtensionTrust02012(args []string) error {
 		publisher := strings.TrimSpace(flagValue(args, "--publisher", ""))
 		fingerprint := strings.TrimSpace(flagValue(args, "--fingerprint", ""))
 		if publisher == "" || fingerprint == "" {
-			return errors.New("доверие ключ-отзыв требует --издатель <ID> --отпечаток <sha256:...>")
+			return errors.New("trust key-revoke требует --publisher <id> --fingerprint <sha256:...>")
 		}
 		p, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-registry/publishers/"+url.PathEscape(publisher)+"/keys/"+url.PathEscape(fingerprint)+"/revoke", map[string]any{}, token)
 		if err != nil {
@@ -78,13 +78,13 @@ func handleExtensionTrust02012(args []string) error {
 		}
 		return writeOrPrintJSON(out, p)
 	default:
-		return fmt.Errorf("неизвестная расширение trust-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная extension trust-подкоманда: %s", args[0])
 	}
 }
 
 func handleExtensionQuarantine02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные расширение quarantine-подкоманды: список, релиз")
+		return errors.New("доступные extension quarantine-подкоманды: list, release")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {
@@ -104,7 +104,7 @@ func handleExtensionQuarantine02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "release":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("карантин релиз требует карантин ID")
+			return errors.New("quarantine release требует quarantine id")
 		}
 		p, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-quarantine/"+url.PathEscape(args[1])+"/release", map[string]any{}, token)
 		if err != nil {
@@ -112,13 +112,13 @@ func handleExtensionQuarantine02012(args []string) error {
 		}
 		return writeOrPrintJSON(out, p)
 	default:
-		return fmt.Errorf("неизвестная расширение quarantine-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная extension quarantine-подкоманда: %s", args[0])
 	}
 }
 
 func handleExtensionEmergency02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные расширение emergency-подкоманды: список, отключить, clear")
+		return errors.New("доступные extension emergency-подкоманды: list, disable, clear")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {
@@ -136,11 +136,11 @@ func handleExtensionEmergency02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "disable":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("аварийный отключить требует расширение ID")
+			return errors.New("emergency disable требует extension id")
 		}
 		reason := strings.TrimSpace(flagValue(args, "--reason", ""))
 		if reason == "" {
-			return errors.New("аварийный отключить требует --reason")
+			return errors.New("emergency disable требует --reason")
 		}
 		p, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extensions/"+url.PathEscape(args[1])+"/emergency-disable", map[string]any{"scope": scope, "scopeId": scopeID, "reason": reason}, token)
 		if err != nil {
@@ -149,7 +149,7 @@ func handleExtensionEmergency02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "clear":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("аварийный clear требует расширение ID")
+			return errors.New("emergency clear требует extension id")
 		}
 		q := url.Values{}
 		q.Set("scope", scope)
@@ -162,13 +162,13 @@ func handleExtensionEmergency02012(args []string) error {
 		}
 		return writeOrPrintJSON(out, p)
 	default:
-		return fmt.Errorf("неизвестная расширение emergency-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная extension emergency-подкоманда: %s", args[0])
 	}
 }
 
 func handleExtensionRecovery02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные расширение recovery-подкоманды: экспорт, импорт, резервное копирование, восстановление")
+		return errors.New("доступные extension recovery-подкоманды: export, import, backup, restore")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {
@@ -194,7 +194,7 @@ func handleExtensionRecovery02012(args []string) error {
 		return writeOrPrintJSON(out, value)
 	case "import", "restore":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return fmt.Errorf("восстановление %s требует путь к JSON", args[0])
+			return fmt.Errorf("recovery %s требует путь к JSON", args[0])
 		}
 		raw, err := os.ReadFile(args[1])
 		if err != nil {
@@ -202,7 +202,7 @@ func handleExtensionRecovery02012(args []string) error {
 		}
 		var value any
 		if err := json.Unmarshal(raw, &value); err != nil {
-			return fmt.Errorf("недопустимый восстановление JSON: %w", err)
+			return fmt.Errorf("invalid recovery JSON: %w", err)
 		}
 		body := value
 		if args[0] == "import" {
@@ -214,7 +214,7 @@ func handleExtensionRecovery02012(args []string) error {
 		}
 		return writeOrPrintJSON(out, p)
 	default:
-		return fmt.Errorf("неизвестная расширение recovery-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная extension recovery-подкоманда: %s", args[0])
 	}
 }
 

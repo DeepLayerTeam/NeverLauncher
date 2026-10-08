@@ -91,7 +91,7 @@ func TestTransactionalUpdaterPostVerifyFailureRollsBack0156(t *testing.T) {
 			updaterTestSpec0156(t, "app.bin", filepath.Join(source, "app.bin"), false),
 			updaterTestSpec0156(t, "created.bin", filepath.Join(source, "created.bin"), false),
 		},
-		Verify: func() error { return errors.New("synthetic проверка ошибка") },
+		Verify: func() error { return errors.New("synthetic verification failure") },
 	})
 	if err == nil || !strings.Contains(err.Error(), "rolled back") {
 		t.Fatalf("expected rollback error, got %v", err)

@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// ExtensionEventStore является хранение граница используется через 0.20.6 шина событий.
-// SQLRepository implements это с долговременный PostgreSQL состояние; MemoryRepository
-// существует для tests/development с equivalent ordering/idempotency семантика.
+// ExtensionEventStore is the persistence boundary used by the 0.20.6 event bus.
+// SQLRepository implements it with durable PostgreSQL state; MemoryRepository
+// exists for tests/development with equivalent ordering/idempotency semantics.
 type ExtensionEventStore interface {
 	PublishExtensionEvent(context.Context, model.ExtensionEvent) (model.ExtensionEvent, bool, error)
 	SaveExtensionEventSubscription(context.Context, model.ExtensionEventSubscription) (model.ExtensionEventSubscription, error)
@@ -36,7 +36,7 @@ type ExtensionEventStore interface {
 func newEventLeaseToken0206() (string, error) {
 	var raw [24]byte
 	if _, err := rand.Read(raw[:]); err != nil {
-		return "", fmt.Errorf("генерировать доставка событий токен аренды: %w", err)
+		return "", fmt.Errorf("generate event delivery lease token: %w", err)
 	}
 	return hex.EncodeToString(raw[:]), nil
 }
@@ -54,13 +54,13 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 		in.SchemaVersion = 1
 	}
 	if in.ID == "" || in.Type == "" || in.AggregateType == "" || in.AggregateID == "" || in.OrderingKey == "" || in.IdempotencyKey == "" || in.Source == "" {
-		return model.ExtensionEvent{}, errors.New("расширение событие identity/type/aggregate/ordering/idempotency/source являются обязательный")
+		return model.ExtensionEvent{}, errors.New("extension event identity/type/aggregate/ordering/idempotency/source are required")
 	}
 	if len(in.ID) > 128 || len(in.Type) > 128 || len(in.OrderingKey) > 256 || len(in.IdempotencyKey) > 256 || len(in.AggregateID) > 256 || len(in.Source) > 128 {
-		return model.ExtensionEvent{}, errors.New("расширение событие метаданные exceeds ограничения")
+		return model.ExtensionEvent{}, errors.New("extension event metadata exceeds limits")
 	}
 	if in.SchemaVersion < 1 {
-		return model.ExtensionEvent{}, errors.New("расширение событие schemaVersion должен быть positive")
+		return model.ExtensionEvent{}, errors.New("extension event schemaVersion must be positive")
 	}
 	var payload any
 	if len(in.Payload) == 0 {
@@ -69,14 +69,14 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 	dec := json.NewDecoder(strings.NewReader(string(in.Payload)))
 	dec.UseNumber()
 	if err := dec.Decode(&payload); err != nil {
-		return model.ExtensionEvent{}, fmt.Errorf("недопустимый расширение полезная нагрузка события: %w", err)
+		return model.ExtensionEvent{}, fmt.Errorf("invalid extension event payload: %w", err)
 	}
 	canonical, err := json.Marshal(payload)
 	if err != nil {
 		return model.ExtensionEvent{}, err
 	}
 	if len(canonical) > 1<<20 {
-		return model.ExtensionEvent{}, errors.New("расширение полезная нагрузка события exceeds 1 MiB")
+		return model.ExtensionEvent{}, errors.New("extension event payload exceeds 1 MiB")
 	}
 	in.Payload = canonical
 	sum := sha256.Sum256(canonical)
@@ -101,19 +101,19 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		in.ScopeID = ""
 	}
 	if !extensionID0201.MatchString(in.ExtensionID) {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("недопустимый расширение ID %q", in.ExtensionID)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("invalid extension id %q", in.ExtensionID)
 	}
 	if in.Scope != "global" && in.Scope != "project" {
-		return model.ExtensionEventSubscription{}, errors.New("subscription область должен быть глобальный или проект")
+		return model.ExtensionEventSubscription{}, errors.New("subscription scope must be global or project")
 	}
 	if in.Scope == "project" && in.ScopeID == "" {
-		return model.ExtensionEventSubscription{}, errors.New("проект subscription требует scopeId")
+		return model.ExtensionEventSubscription{}, errors.New("project subscription requires scopeId")
 	}
 	if !extensionPermission0201.MatchString(in.EventType) {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("недопустимый тип события %q", in.EventType)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("invalid event type %q", in.EventType)
 	}
 	if in.Mode != model.ExtensionEventModeAsync && in.Mode != model.ExtensionEventModeSync {
-		return model.ExtensionEventSubscription{}, errors.New("subscription режим должен быть асинхронный или синхронизация")
+		return model.ExtensionEventSubscription{}, errors.New("subscription mode must be async or sync")
 	}
 	return in, nil
 }
@@ -131,12 +131,12 @@ func (r *MemoryRepository) PublishExtensionEvent(ctx context.Context, in model.E
 	for _, existing := range r.extensionEvents {
 		if existing.Type == in.Type && existing.IdempotencyKey == in.IdempotencyKey {
 			if existing.PayloadSHA256 != in.PayloadSHA256 || existing.AggregateID != in.AggregateID || existing.OrderingKey != in.OrderingKey {
-				return model.ExtensionEvent{}, false, fmt.Errorf("%w: событие ключ идемпотентности повторное использование с другой content", ErrConflict)
+				return model.ExtensionEvent{}, false, fmt.Errorf("%w: event idempotency key reused with different content", ErrConflict)
 			}
 			return existing, false, nil
 		}
 		if existing.ID == in.ID {
-			return model.ExtensionEvent{}, false, fmt.Errorf("%w: дубликат событие ID", ErrConflict)
+			return model.ExtensionEvent{}, false, fmt.Errorf("%w: duplicate event id", ErrConflict)
 		}
 	}
 	r.nextExtensionEventSequence++
@@ -446,7 +446,7 @@ func (r *MemoryRepository) ListExtensionEventDeadLetters(ctx context.Context, ex
 	return out, nil
 }
 
-// SQL реализация.
+// SQL implementation.
 func (r *SQLRepository) PublishExtensionEvent(ctx context.Context, in model.ExtensionEvent) (model.ExtensionEvent, bool, error) {
 	if err := r.check(); err != nil {
 		return model.ExtensionEvent{}, false, err
@@ -473,7 +473,7 @@ func (r *SQLRepository) PublishExtensionEvent(ctx context.Context, in model.Exte
 			return model.ExtensionEvent{}, false, err
 		}
 		if in.PayloadSHA256 != desiredPayloadSHA || in.AggregateID != desiredAggregateID || in.OrderingKey != desiredOrderingKey {
-			return model.ExtensionEvent{}, false, fmt.Errorf("%w: событие ключ идемпотентности повторное использование с другой content", ErrConflict)
+			return model.ExtensionEvent{}, false, fmt.Errorf("%w: event idempotency key reused with different content", ErrConflict)
 		}
 	} else if err != nil {
 		return model.ExtensionEvent{}, false, err

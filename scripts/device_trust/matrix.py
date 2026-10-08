@@ -270,7 +270,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
 
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(f"Доверие к устройству цели OK: {len(payload['targets'])} цели для {PRODUCT_VERSION}")
+    print(f"Device Trust targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}")
     return 0
 
 
@@ -321,14 +321,14 @@ def command_aggregate(args: argparse.Namespace) -> int:
     (args.output_dir / "matrix.md").write_text(render_markdown(PRODUCT_VERSION, targets, records, args.commit, args.run_id, args.repository), encoding="utf-8")
     if errors:
         for item in errors:
-            print(f"доверие к устройству матрица: {item}", flush=True)
+            print(f"device trust matrix: {item}", flush=True)
         return 1
-    print(f"Доверие к устройству матрица PASS: {len(targets)} цели, фиксация={args.commit}, запуск={args.run_id}")
+    print(f"Device Trust matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher публичный Доверие к устройству CI матрица")
+    parser = argparse.ArgumentParser(description="NeverLauncher public Device Trust CI matrix")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")
     p.add_argument("--targets", type=Path, required=True)

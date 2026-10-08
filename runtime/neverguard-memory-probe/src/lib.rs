@@ -22,10 +22,10 @@ pub extern "C" fn neverguard_memory_probe_target() -> u32 {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i32 {
-    // Delay до NeverGuard имеет наблюдаемый и базовая линия этот вновь загружен образ.
-    // фикстура затем mutates его собственный unused экспорт код byte и восстанавливает 
-    // исходный страница защита. Память Целостность должен по-прежнему обнаруживать content
-    // расхождение на его следующий исполняемый-образ хеш успешно и отказ с блокировкой.
+    // Delay until NeverGuard has observed and baselined this newly loaded image.
+    // The fixture then mutates its own unused exported code byte and restores the
+    // original page protection. Memory Integrity must still detect the content
+    // drift on its next executable-image hash pass and fail closed.
     let spawned = thread::Builder::new()
         .name("neverguard-memory-tamper-probe".to_string())
         .spawn(|| {

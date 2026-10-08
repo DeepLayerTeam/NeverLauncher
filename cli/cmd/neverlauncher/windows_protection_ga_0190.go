@@ -59,10 +59,10 @@ func windowsProtectionGARequired0190(ver string) bool {
 
 func windowsProtectionGAStableVersion0190(ver string) error {
 	if !windowsProtectionGARequired0190(ver) {
-		return fmt.Errorf("Windows Защита GA требует 0.19.0+, получил %s", ver)
+		return fmt.Errorf("Windows Protection GA requires 0.19.0+, got %s", ver)
 	}
 	if strings.ContainsAny(strings.TrimSpace(ver), "-+") {
-		return fmt.Errorf("Windows Защита GA требует стабильный неизменяемый SemVer без prerelease/build suffix: %q", ver)
+		return fmt.Errorf("Windows Protection GA requires stable immutable SemVer without prerelease/build suffix: %q", ver)
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func expectedWindowsProtectionGACapabilities0190() []string {
 
 func readWindowsProtectionRCCertificate0190(dir, ver string) (windowsProtectionReleaseCertificate01812, string, error) {
 	if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
-		return windowsProtectionReleaseCertificate01812{}, "", fmt.Errorf("Windows Защита RC prerequisite: %w", err)
+		return windowsProtectionReleaseCertificate01812{}, "", fmt.Errorf("Windows Protection RC prerequisite: %w", err)
 	}
 	path := filepath.Join(dir, windowsProtectionReleaseFile01812)
 	raw, err := os.ReadFile(path)
@@ -89,7 +89,7 @@ func readWindowsProtectionRCCertificate0190(dir, ver string) (windowsProtectionR
 	}
 	var cert windowsProtectionReleaseCertificate01812
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return cert, "", fmt.Errorf("недопустимый %s: %w", windowsProtectionReleaseFile01812, err)
+		return cert, "", fmt.Errorf("invalid %s: %w", windowsProtectionReleaseFile01812, err)
 	}
 	sum, _, err := hashFile(path)
 	return cert, strings.ToLower(sum), err
@@ -100,7 +100,7 @@ func verifyWindowsUserModeOnlyPackages0190(dir, ver string) error {
 		packageName, manifestName := expectedWindowsPackage0152(ver, arch)
 		manifestRaw, err := os.ReadFile(filepath.Join(dir, manifestName))
 		if err != nil {
-			return fmt.Errorf("Windows Защита GA чтение %s: %w", manifestName, err)
+			return fmt.Errorf("Windows Protection GA read %s: %w", manifestName, err)
 		}
 		var manifest struct {
 			Artifacts []struct {
@@ -109,29 +109,29 @@ func verifyWindowsUserModeOnlyPackages0190(dir, ver string) error {
 			} `json:"artifacts"`
 		}
 		if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
-			return fmt.Errorf("Windows Защита GA недопустимый %s: %w", manifestName, err)
+			return fmt.Errorf("Windows Protection GA invalid %s: %w", manifestName, err)
 		}
 		for _, artifact := range manifest.Artifacts {
 			lower := strings.ToLower(strings.TrimSpace(artifact.Name))
 			if strings.HasSuffix(lower, ".sys") || strings.Contains(strings.ToLower(artifact.Component), "driver") {
-				return fmt.Errorf("Windows Защита GA отклоняет ядро-драйвер артефакт в %s: %s", manifestName, artifact.Name)
+				return fmt.Errorf("Windows Protection GA rejects kernel-driver artifact in %s: %s", manifestName, artifact.Name)
 			}
 		}
 
 		packagePath := filepath.Join(dir, packageName)
 		archive, err := zip.OpenReader(packagePath)
 		if err != nil {
-			return fmt.Errorf("Windows Защита GA открытый %s: %w", packageName, err)
+			return fmt.Errorf("Windows Protection GA open %s: %w", packageName, err)
 		}
 		for _, entry := range archive.File {
 			clean := strings.ToLower(filepath.ToSlash(filepath.Clean(entry.Name)))
 			if strings.HasSuffix(clean, ".sys") {
 				_ = archive.Close()
-				return fmt.Errorf("Windows Защита GA отклоняет ядро-драйвер полезная нагрузка в %s: %s", packageName, entry.Name)
+				return fmt.Errorf("Windows Protection GA rejects kernel-driver payload in %s: %s", packageName, entry.Name)
 			}
 		}
 		if err := archive.Close(); err != nil {
-			return fmt.Errorf("Windows Защита GA закрытие %s: %w", packageName, err)
+			return fmt.Errorf("Windows Protection GA close %s: %w", packageName, err)
 		}
 	}
 	return nil
@@ -158,18 +158,18 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if rc.Status != windowsProtectionReleaseStatus01812 || rc.ProtectionProfile != "aggressive" || rc.ScenarioExecutions != 55 {
-		return windowsProtectionGACertificate0190{}, errors.New("Windows Защита GA требует полный агрессивный RC сертификат")
+		return windowsProtectionGACertificate0190{}, errors.New("Windows Protection GA requires a complete aggressive RC certificate")
 	}
 	if err := verifyWindowsUserModeOnlyPackages0190(dir, ver); err != nil {
 		return windowsProtectionGACertificate0190{}, err
 	}
 	if len(rc.JavaMajors) != 5 {
-		return windowsProtectionGACertificate0190{}, errors.New("Windows Защита GA Java группа неполный")
+		return windowsProtectionGACertificate0190{}, errors.New("Windows Protection GA Java cohort incomplete")
 	}
 	expectedJava := []int{8, 16, 17, 21, 25}
 	for i, major := range expectedJava {
 		if rc.JavaMajors[i] != major {
-			return windowsProtectionGACertificate0190{}, fmt.Errorf("Windows Защита GA Java группа несоответствие в индекс %d", i)
+			return windowsProtectionGACertificate0190{}, fmt.Errorf("Windows Protection GA Java cohort mismatch at index %d", i)
 		}
 	}
 	artifacts := append([]windowsProtectionArtifact01812(nil), rc.Artifacts...)
@@ -234,54 +234,54 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, windowsProtectionGAFile0190))
 	if err != nil {
-		return fmt.Errorf("чтение %s: %w", windowsProtectionGAFile0190, err)
+		return fmt.Errorf("read %s: %w", windowsProtectionGAFile0190, err)
 	}
 	var cert windowsProtectionGACertificate0190
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("недопустимый %s: %w", windowsProtectionGAFile0190, err)
+		return fmt.Errorf("invalid %s: %w", windowsProtectionGAFile0190, err)
 	}
 	expected, err := buildWindowsProtectionGADocument0190(dir, ver)
 	if err != nil {
 		return err
 	}
 	if cert.SchemaVersion != expected.SchemaVersion || cert.Product != expected.Product || cert.Version != expected.Version || cert.Status != windowsProtectionGAStatus0190 || cert.ReleaseStage != windowsProtectionGAStage0190 || cert.ProtectionModel != windowsProtectionGAModel0190 || cert.ProtectionProfile != "aggressive" || cert.EnforcementMode != windowsProtectionGAEnforcement0190 {
-		return errors.New("Windows Защита GA метаданные несоответствие")
+		return errors.New("Windows Protection GA metadata mismatch")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || !strings.EqualFold(cert.RCCertificateSHA256, expected.RCCertificateSHA256) || !strings.EqualFold(cert.RCBoundarySHA256, expected.RCBoundarySHA256) || cert.RCCertificateID != expected.RCCertificateID {
-		return errors.New("Windows Защита GA RC/source привязка несоответствие")
+		return errors.New("Windows Protection GA RC/source binding mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
-		return fmt.Errorf("Windows Защита GA createdAt недопустимый: %w", err)
+		return fmt.Errorf("Windows Protection GA createdAt invalid: %w", err)
 	}
 	if !strings.EqualFold(cert.AdversarialCertificateSHA256, expected.AdversarialCertificateSHA256) || !strings.EqualFold(cert.AdversarialEvidenceRootSHA256, expected.AdversarialEvidenceRootSHA256) || cert.ScenarioExecutions != 55 {
-		return errors.New("Windows Защита GA атакующий свидетельство несоответствие")
+		return errors.New("Windows Protection GA adversarial evidence mismatch")
 	}
 	if len(cert.JavaMajors) != len(expected.JavaMajors) || len(cert.RequiredCapabilities) != len(expected.RequiredCapabilities) || len(cert.Artifacts) != len(expected.Artifacts) {
-		return errors.New("Windows Защита GA группа размер несоответствие")
+		return errors.New("Windows Protection GA cohort size mismatch")
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
-			return fmt.Errorf("Windows Защита GA Java крупный #%d несоответствие", i+1)
+			return fmt.Errorf("Windows Protection GA Java major #%d mismatch", i+1)
 		}
 	}
 	for i := range expected.RequiredCapabilities {
 		if cert.RequiredCapabilities[i] != expected.RequiredCapabilities[i] {
-			return fmt.Errorf("Windows Защита GA возможность #%d несоответствие", i+1)
+			return fmt.Errorf("Windows Protection GA capability #%d mismatch", i+1)
 		}
 	}
 	for i := range expected.Artifacts {
 		a, b := cert.Artifacts[i], expected.Artifacts[i]
 		if a.Name != b.Name || a.Size != b.Size || !strings.EqualFold(a.SHA256, b.SHA256) {
-			return fmt.Errorf("Windows Защита GA артефакт несоответствие: %s", b.Name)
+			return fmt.Errorf("Windows Protection GA artifact mismatch: %s", b.Name)
 		}
 	}
 	for key := range expected.Invariants {
 		if !cert.Invariants[key] {
-			return fmt.Errorf("Windows Защита GA инвариант %s является не satisfied", key)
+			return fmt.Errorf("Windows Protection GA invariant %s is not satisfied", key)
 		}
 	}
 	if !strings.EqualFold(cert.BoundarySHA256, expected.BoundarySHA256) || cert.CertificateID != "sha256:"+strings.ToLower(expected.BoundarySHA256) {
-		return errors.New("Windows Защита GA boundary/certificateId несоответствие")
+		return errors.New("Windows Protection GA boundary/certificateId mismatch")
 	}
 	return nil
 }

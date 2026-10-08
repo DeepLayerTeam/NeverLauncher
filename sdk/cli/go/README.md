@@ -1,3 +1,3 @@
 # NeverExtensions CLI Go SDK
 
-SDK для краткоживущий `cli` цели запущен через `nl x <namespace> <command>`. Это аутентифицировать к Хост расширений Протокол v1 до dispatching объявлять команда и предоставляет одинаковый запрет по умолчанию возможность broker.
+SDK for short-lived `cli` targets started by `nl x <namespace> <command>`. It authenticates to Extension Host Protocol v1 before dispatching the declared command and exposes the same deny-by-default capability broker.

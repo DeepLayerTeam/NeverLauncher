@@ -7,7 +7,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 2):
-    raise SystemExit("VERSION является старый чем 0.14.2")
+    raise SystemExit("VERSION is older than 0.14.2")
 
 
 def read(path: str) -> str:
@@ -17,13 +17,13 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.2 API/CLI криптографический узел идентичность миграция differ")
+    raise SystemExit("0.14.2 API/CLI cryptographic node identity migrations differ")
 require(api_migration, [
     "server_bridge_node_nonces_v2",
     "identity-enrollment-required",
@@ -52,7 +52,7 @@ require(identity, [
 repo = read("services/api/internal/repository/server_bridge_v2.go")
 registration_repo = repo.split("func (r *SQLRepository) SaveServerBridgeNode", 1)[1].split("func timeArg", 1)[0]
 if "ON CONFLICT" in registration_repo:
-    raise SystemExit("ServerBridge узел регистрация должен оставаться создавать-только; SQL upsert будет обход идентичность ротация step-up")
+    raise SystemExit("ServerBridge node registration must remain create-only; SQL upsert would bypass identity rotation step-up")
 require(repo, [
     "RotateServerBridgeNodeIdentity",
     "ConsumeServerBridgeNodeNonce",
@@ -75,7 +75,7 @@ require(bridge, [
 ], "ServerBridge identity lifecycle")
 require(routes, ["/rotate-identity", "serverBridgeRotateIdentity"], "identity rotation route")
 if "rotate-token" in routes or "serverBridgeRotateToken" in bridge:
-    raise SystemExit("устаревший bearer токен ротация является по-прежнему предоставлять")
+    raise SystemExit("legacy bearer token rotation is still exposed")
 
 java_identity = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NodeIdentity.java")
 java_client = read("plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java")
@@ -100,7 +100,7 @@ require(java_client, [
 ], "ServerBridge Java request signing")
 require(java_config, ["identity.file", "NEVERLAUNCHER_NODE_IDENTITY_FILE"], "ServerBridge identity configuration")
 if "X-NeverLauncher-Server-Token" in java_client or "server.token" in java_config:
-    raise SystemExit("устаревший общий ServerBridge bearer секрет остаётся в плагин среда выполнения")
+    raise SystemExit("legacy shared ServerBridge bearer secret remains in plugin runtime")
 
 regression = read("services/api/internal/httpapi/server_bridge_identity_0142_test.go")
 require(regression, [
@@ -122,7 +122,7 @@ require(openapi, [
     '"const": "ed25519"',
 ], "OpenAPI node identity contract")
 if '"ServerToken"' in openapi or "X-NeverLauncher-Server-Token" in openapi:
-    raise SystemExit("OpenAPI по-прежнему advertises устаревший ServerBridge bearer аутентификация")
+    raise SystemExit("OpenAPI still advertises legacy ServerBridge bearer authentication")
 
 
 migration_e2e = read("e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh")
@@ -150,10 +150,10 @@ require(crypto_helper, [
     "invalid Ed25519 signature length",
 ], "ServerBridge E2E Ed25519 signer")
 
-# Регрессия для OpenSSL Ed25519 одноразовый подписание. стандартный ввод является не seekable на
-# affected OpenSSL собирает и ранее созданный zero-byte подпись пока
-# E2E continued к HTTP 401. Exercise фактический вспомогательный модуль и проверять 
-# результат 64-byte подпись против сгенерированный открытый ключ.
+# Regression for OpenSSL Ed25519 one-shot signing. stdin is not seekable on
+# affected OpenSSL builds and previously produced a zero-byte signature while
+# the E2E continued to an HTTP 401. Exercise the actual helper and verify the
+# resulting 64-byte signature against the generated public key.
 with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
     td = Path(td)
     key = td / "node.pem"
@@ -179,7 +179,7 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
     ).stdout.strip()
     raw_signature = base64.urlsafe_b64decode(signed + "=" * ((4 - len(signed) % 4) % 4))
     if len(raw_signature) != 64:
-        raise SystemExit(f"ServerBridge вспомогательный модуль возвращён {len(raw_signature)}-byte Ed25519 подпись")
+        raise SystemExit(f"ServerBridge helper returned {len(raw_signature)}-byte Ed25519 signature")
     payload.write_text(canonical, encoding="utf-8")
     signature_file.write_bytes(raw_signature)
     subprocess.run(
@@ -194,8 +194,8 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     if verified.returncode != 0:
-        raise SystemExit(f"ServerBridge вспомогательный модуль Ed25519 проверка ошибка: {verified.stderr.strip()}")
+        raise SystemExit(f"ServerBridge helper Ed25519 verification failed: {verified.stderr.strip()}")
 if "X-NeverLauncher-Server-Token" in main_e2e or ".data.serverToken" in main_e2e:
-    raise SystemExit("Minecraft E2E по-прежнему использует устаревший ServerBridge bearer аутентификация")
+    raise SystemExit("Minecraft E2E still uses legacy ServerBridge bearer authentication")
 
-print(f"NeverLauncher 0.14.2 Криптографический Узел Идентичности контроль: OK ({version})")
+print(f"NeverLauncher 0.14.2 Cryptographic Node Identities gate: OK ({version})")

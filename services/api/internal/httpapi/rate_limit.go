@@ -17,7 +17,7 @@ import (
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	trusted, err := newTrustedProxySet(cfg.TrustedProxyCIDRs)
 	if err != nil {
-		return fmt.Errorf("недопустимый NEVERLAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
+		return fmt.Errorf("invalid NEVERLAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
 	}
 	s.TrustedProxies = trusted
 	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired
@@ -31,8 +31,8 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		s.ServerBridgeReplicaID = fmt.Sprintf("%s-%d", hostname, os.Getpid())
 	}
 
-	// ServerBridge HA имеет его собственный Redis fence. Это является независимый из ограничение частоты:
-	// рабочий управление доставка должен не без уведомления fall back к локальный для процесса состояние.
+	// ServerBridge HA has its own Redis fence. It is independent from rate limiting:
+	// production control delivery must not silently fall back to process-local state.
 	if strings.TrimSpace(cfg.RedisURL) != "" {
 		coordinator, coordErr := serverbridgeha.NewRedis(cfg.RedisURL)
 		if coordErr == nil {
@@ -43,10 +43,10 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		if coordErr == nil {
 			s.ServerBridgeCoordinator = coordinator
 		} else if cfg.ServerBridgeHARequired {
-			return fmt.Errorf("Redis ServerBridge HA coordinator является обязательный но недоступный: %w", coordErr)
+			return fmt.Errorf("Redis ServerBridge HA coordinator is required but unavailable: %w", coordErr)
 		}
 	} else if cfg.ServerBridgeHARequired {
-		return fmt.Errorf("Redis ServerBridge HA coordinator является обязательный но NEVERLAUNCHER_REDIS_URL является пустой")
+		return fmt.Errorf("Redis ServerBridge HA coordinator is required but NEVERLAUNCHER_REDIS_URL is empty")
 	}
 
 	s.RateLimitEnabled = cfg.RateLimitEnabled
@@ -70,7 +70,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		return nil
 	}
 	if cfg.RateLimitFailClosed {
-		return fmt.Errorf("Redis rate ограничитель является обязательный но недоступный: %w", err)
+		return fmt.Errorf("Redis rate limiter is required but unavailable: %w", err)
 	}
 	s.RateLimiter = ratelimit.NewMemory()
 	return nil

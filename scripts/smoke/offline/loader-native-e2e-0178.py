@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 8):
-    raise SystemExit(f"Нативный для загрузчика E2E требует VERSION>=0.17.8, получил {version}")
+    raise SystemExit(f"Loader-native E2E requires VERSION>=0.17.8, got {version}")
 
 
 def read(rel: str) -> str:
@@ -17,7 +17,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 compose = read("e2e/docker-compose.minecraft-e2e.yml")
 require(compose, [
@@ -80,6 +80,6 @@ for required in [
     "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
 ]:
     if f"e2e/runtime/{required}" not in workflow:
-        raise SystemExit(f"совместимость процесс делает не сохранять нативный для загрузчика свидетельство: {required}")
+        raise SystemExit(f"compatibility workflow does not retain loader-native evidence: {required}")
 
-print("Нативный для загрузчика E2E 0.17.8 контроль: OK (Fabric/Quilt/Forge/NeoForge реальный клиент ↔ точная версия выделенный загрузчик сервер + реальный подключение свидетельство)")
+print("Loader-native E2E 0.17.8 gate: OK (Fabric/Quilt/Forge/NeoForge actual client ↔ exact-version dedicated loader server + real join evidence)")

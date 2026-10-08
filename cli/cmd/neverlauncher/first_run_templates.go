@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-// productionTemplates содержит точный канонический рабочее развёртывание файлы
-// так установленный nl бинарный файл может создавать автономный первый запуск каталог без
-// depending на исходник checkout.
+// productionTemplates contains the exact canonical production deployment files
+// so an installed nl binary can create a standalone first-run directory without
+// depending on a source checkout.
 //
-//Go:embed templates/production/*
+//go:embed templates/production/*
 var productionTemplates embed.FS
 
 func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
@@ -24,7 +24,7 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 	path := "templates/production/" + name
 	data, err := productionTemplates.ReadFile(path)
 	if err != nil {
-		return nil, path, fmt.Errorf("встроенный рабочий template %s: %w", name, err)
+		return nil, path, fmt.Errorf("embedded production template %s: %w", name, err)
 	}
 	return data, "embedded:" + path, nil
 }

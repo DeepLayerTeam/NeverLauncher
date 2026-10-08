@@ -44,4 +44,4 @@ signature_schema = json.loads(read("schemas/neverlauncher-extension-signature.sc
 require(package_schema["properties"]["formatVersion"]["const"] == "1.0", "package schema formatVersion mismatch")
 require(signature_schema["properties"]["algorithm"]["const"] == "Ed25519", "signature schema algorithm mismatch")
 
-print("NeverExtensions Пакет расширения 0.20.2 рабочий контроль: OK")
+print("NeverExtensions Extension Package 0.20.2 production gate: OK")

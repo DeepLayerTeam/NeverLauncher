@@ -25,7 +25,7 @@ func (d *testDispatcher0206) DeliverExtensionEvent(ctx context.Context, sub mode
 	defer d.mu.Unlock()
 	if d.failures > 0 {
 		d.failures--
-		return errors.New("synthetic доставка ошибка")
+		return errors.New("synthetic delivery failure")
 	}
 	d.delivered = append(d.delivered, e.Sequence)
 	return nil

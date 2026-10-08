@@ -48,7 +48,7 @@ func resolveReleaseTrustStatePath01510(path string) string {
 func withReleaseTrustStateLock01510(path string, fn func() error) error {
 	path = resolveReleaseTrustStatePath01510(path)
 	if path == "" {
-		return errors.New("0.15.10 Релиз Проверка требует постоянный доверие состояние для сериализованный проверка")
+		return errors.New("0.15.10 Release Verification требует persistent trust state для serialized verification")
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -85,46 +85,46 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 			return fn()
 		}
 		if !errors.Is(openErr, os.ErrExist) {
-			return fmt.Errorf("релиз доверие-состояние блокировка: %w", openErr)
+			return fmt.Errorf("release trust-state lock: %w", openErr)
 		}
 		existingRaw, readErr := os.ReadFile(lockPath)
 		if readErr != nil {
-			return fmt.Errorf("релиз доверие-состояние блокировка unreadable: %w", readErr)
+			return fmt.Errorf("release trust-state lock unreadable: %w", readErr)
 		}
 		var existing releaseTrustStateLock01510
 		if err := json.Unmarshal(existingRaw, &existing); err != nil || existing.PID <= 0 {
-			return errors.New("релиз доверие-состояние блокировка повреждён; удалите блокировка только после проверки отсутствия активного проверяющий модуль")
+			return errors.New("release trust-state lock повреждён; удалите lock только после проверки отсутствия активного verifier")
 		}
 		if updaterProcessAlive0156(existing.PID) {
-			return fmt.Errorf("релиз доверие состояние занят проверяющий модуль процесс PID=%d", existing.PID)
+			return fmt.Errorf("release trust state занят verifier process pid=%d", existing.PID)
 		}
 		if err := os.Remove(lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("удалять устаревший релиз доверие-состояние блокировка: %w", err)
+			return fmt.Errorf("remove stale release trust-state lock: %w", err)
 		}
 	}
-	return errors.New("не удалось получить релиз доверие-состояние блокировка")
+	return errors.New("не удалось получить release trust-state lock")
 }
 
 func validateComponentUpdateState01510(state componentUpdateState0157) error {
 	if state.SchemaVersion != "1.0" {
-		return fmt.Errorf("компонент состояние schemaVersion=%q неподдерживаемый", state.SchemaVersion)
+		return fmt.Errorf("component state schemaVersion=%q unsupported", state.SchemaVersion)
 	}
 	if _, _, _, ok := parseCoreVersion(state.Version); !ok {
-		return fmt.Errorf("компонент состояние версия недопустимый: %q", state.Version)
+		return fmt.Errorf("component state version invalid: %q", state.Version)
 	}
 	if strings.TrimSpace(state.Platform) == "" || strings.TrimSpace(state.Architecture) == "" {
-		return errors.New("компонент состояние цель является неполный")
+		return errors.New("component state target is incomplete")
 	}
 	if len(state.Components) != 3 {
-		return fmt.Errorf("компонент состояние требует точно three компонент, получил %d", len(state.Components))
+		return fmt.Errorf("component state requires exactly three components, got %d", len(state.Components))
 	}
 	seen := map[string]bool{}
 	for _, item := range state.Components {
 		if item.Component != "desktop" && item.Component != "guard" && item.Component != "runtime" {
-			return fmt.Errorf("компонент состояние содержит неизвестный компонент %q", item.Component)
+			return fmt.Errorf("component state contains unknown component %q", item.Component)
 		}
 		if seen[item.Component] || !validSHA256Hex0157(item.SHA256) || item.Size <= 0 {
-			return fmt.Errorf("компонент состояние метаданные недопустимый для %s", item.Component)
+			return fmt.Errorf("component state metadata invalid for %s", item.Component)
 		}
 		if err := validateComponentRelativePath0157(item.TargetPath); err != nil {
 			return err
@@ -144,10 +144,10 @@ func readComponentUpdateStateOptional01510(path string) (componentUpdateState015
 	}
 	var state componentUpdateState0157
 	if err := json.Unmarshal(raw, &state); err != nil {
-		return state, false, fmt.Errorf("компонент обновление состояние %s: %w", path, err)
+		return state, false, fmt.Errorf("component update state %s: %w", path, err)
 	}
 	if err := validateComponentUpdateState01510(state); err != nil {
-		return state, false, fmt.Errorf("компонент обновление состояние %s: %w", path, err)
+		return state, false, fmt.Errorf("component update state %s: %w", path, err)
 	}
 	return state, true, nil
 }
@@ -173,7 +173,7 @@ func compareComponentStateVersion01510(a, b string) (int, error) {
 	av, okA := parseVersionTriple0158(a)
 	bv, okB := parseVersionTriple0158(b)
 	if !okA || !okB {
-		return 0, errors.New("компонент состояние содержит недопустимый semantic версия")
+		return 0, errors.New("component state contains invalid semantic version")
 	}
 	return compareVersionTriple0158(av, bv), nil
 }
@@ -214,16 +214,16 @@ func migrateComponentUpdateState01510(root string) (componentStateMigrationRepor
 		case cmp > 0:
 			selected = current
 		case cmp == 0 && !componentStateEquivalent01510(current, old):
-			return report, errors.New("канонический и устаревший компонент состояния disagree для одинаковый версия")
+			return report, errors.New("canonical and legacy component states disagree for the same version")
 		case cmp == 0:
 			selected = current
 		}
 	}
 	if err := writeJSONFileAtomicMode(canonical, selected, 0o600); err != nil {
-		return report, fmt.Errorf("сохранять канонический компонент состояние: %w", err)
+		return report, fmt.Errorf("persist canonical component state: %w", err)
 	}
 	if err := os.Remove(legacy); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return report, fmt.Errorf("удалять устаревший компонент состояние после канонический фиксация: %w", err)
+		return report, fmt.Errorf("remove legacy component state after canonical commit: %w", err)
 	}
 	syncDirBestEffort0156(filepath.Dir(canonical))
 	syncDirBestEffort0156(filepath.Dir(legacy))
@@ -368,10 +368,10 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	}
 	migration, err := migrateComponentUpdateState01510(root)
 	if err != nil || !migration.Migrated {
-		return nil, fmt.Errorf("компонент состояние миграция ошибка: %v отчёт=%+v", err, migration)
+		return nil, fmt.Errorf("component state migration failed: %v report=%+v", err, migration)
 	}
 	if _, err := os.Stat(legacyPath); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("устаревший компонент состояние переживать миграция")
+		return nil, errors.New("legacy component state survived migration")
 	}
 
 	live := filepath.Join(root, "live")
@@ -396,13 +396,13 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := updater.apply(updaterRequest0156{Root: live, Namespace: "01510-rollback", Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("intentional откат") }}); err == nil {
-		return nil, errors.New("стабилизация откат self-тест unexpectedly committed")
+	if _, err := updater.apply(updaterRequest0156{Root: live, Namespace: "01510-rollback", Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("intentional rollback") }}); err == nil {
+		return nil, errors.New("stabilization rollback self-test unexpectedly committed")
 	}
 	txRoot := filepath.Join(updater.controlDir, "transactions")
 	entries, err := os.ReadDir(txRoot)
 	if err != nil || len(entries) == 0 {
-		return nil, errors.New("стабилизация self-тест транзакция журнал отсутствующий")
+		return nil, errors.New("stabilization self-test transaction journal missing")
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -410,7 +410,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		}
 		for _, payload := range []string{"stage", "backup"} {
 			if _, err := os.Stat(filepath.Join(txRoot, entry.Name(), payload)); !errors.Is(err, os.ErrNotExist) {
-				return nil, fmt.Errorf("конечный транзакция сохранённый %s полезная нагрузка", payload)
+				return nil, fmt.Errorf("terminal transaction retained %s payload", payload)
 			}
 		}
 	}
@@ -430,10 +430,10 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		return nil, err
 	}
 	if migratedTrust.SchemaVersion != releaseTrustStateSchema01510 || migratedTrust.HighestReleaseManifestSHA256 != manifestHash || migratedTrust.StateRevision == 0 {
-		return nil, fmt.Errorf("доверие состояние миграция неполный: %+v", migratedTrust)
+		return nil, fmt.Errorf("trust state migration incomplete: %+v", migratedTrust)
 	}
 	if err := precheckTrustState0158(trustStatePath, oldTrustState.RootFingerprint, 10, "0.15.10", strings.Repeat("d", 64)); err == nil {
-		return nil, errors.New("одинаковый-версия релиз манифест equivocation был не отклонён")
+		return nil, errors.New("same-version release manifest equivocation was not rejected")
 	}
 
 	lockPath := filepath.Join(root, "lock-test-state.json")
@@ -451,7 +451,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	if err := withReleaseTrustStateLock01510(lockPath, func() error { return nil }); err == nil {
 		close(releaseLock)
 		<-errCh
-		return nil, errors.New("конкурентный доверие-состояние проверяющий модуль блокировка был не отклонён")
+		return nil, errors.New("concurrent trust-state verifier lock was not rejected")
 	}
 	close(releaseLock)
 	if err := <-errCh; err != nil {

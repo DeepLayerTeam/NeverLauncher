@@ -1,4 +1,4 @@
-//Go:сборка neverlauncher_nopgx && (!Linux ||!cgo)
+//go:build neverlauncher_nopgx && (!linux || !cgo)
 
 package sqlconnector
 

@@ -1,4 +1,4 @@
-//Go:сборка!Linux
+//go:build !linux
 
 package sqlconnector
 

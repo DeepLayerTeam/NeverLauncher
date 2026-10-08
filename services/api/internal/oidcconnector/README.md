@@ -1,18 +1,18 @@
-# NeverLauncher OIDC Коннектор 0.11.5
+# NeverLauncher OIDC Connector 0.11.5
 
-Рабочий коннектор implements OpenID Подключение Авторизация Код Поток с PKCE S256.
+Production connector implements OpenID Connect Authorization Code Flow with PKCE S256.
 
-Безопасность инварианты:
+Security invariants:
 
-- издатель является настраивать из band и должен точно соответствовать Обнаружение и ID Токен `iss`;
-- Обнаружение требует HTTPS `authorization_endpoint`, `token_endpoint` и `jwks_uri`;
-- outbound трафик использует явный список разрешений, DNS/IP валидация, TLS 1.2+, нет окружение прокси и нет перенаправления;
-- PKCE всегда использует `S256`; `plain` является никогда emitted;
-- каждый вход использует high-entropy `state` и `nonce`;
-- ID Токены отклонять `alg=none` и symmetric `HS*` algorithms и являются проверен с издатель JWKS;
-- `aud`, multi-audience `azp`, `exp`, необязательный `nbf`/`iat`, подпись и вход `nonce` являются проверен до захватывает являются доверенный;
-- UserInfo, когда включённый, должен возвращать одинаковый `sub` как проверен ID Токен;
-- внешний roles/groups никогда становиться Никогда глобальная роль неявно; локальный предоставление учётной записи политика владеет `defaultRole`;
-- провайдер access/refresh токены являются внутренний коннектор учётные данные и никогда становиться Никогда access/refresh токены.
+- issuer is configured out of band and must exactly match Discovery and ID Token `iss`;
+- Discovery requires HTTPS `authorization_endpoint`, `token_endpoint` and `jwks_uri`;
+- outbound traffic uses an explicit allowlist, DNS/IP validation, TLS 1.2+, no environment proxy and no redirects;
+- PKCE always uses `S256`; `plain` is never emitted;
+- every login uses high-entropy `state` and `nonce`;
+- ID Tokens reject `alg=none` and symmetric `HS*` algorithms and are verified with issuer JWKS;
+- `aud`, multi-audience `azp`, `exp`, optional `nbf`/`iat`, signature and login `nonce` are verified before claims are trusted;
+- UserInfo, when enabled, must return the same `sub` as the validated ID Token;
+- external roles/groups never become a Never global role implicitly; local provisioning policy owns `defaultRole`;
+- provider access/refresh tokens are internal connector credentials and never become Never access/refresh tokens.
 
-Настраивать клиент аутентификация методы: `none`, `client_secret_basic`, `client_secret_post`. Публичный клиенты по-прежнему использовать PKCE S256.
+Configured client authentication methods: `none`, `client_secret_basic`, `client_secret_post`. Public clients still use PKCE S256.

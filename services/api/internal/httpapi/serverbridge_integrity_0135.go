@@ -60,91 +60,91 @@ func (s Server) bridgeIntegrityRequired0135() bool {
 func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135, error) {
 	raw := strings.TrimSpace(s.Config.BridgeReleaseAllowlistJSON)
 	if raw == "" {
-		return nil, errors.New("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON является не настраивать")
+		return nil, errors.New("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON is not configured")
 	}
 	policies := map[string]bridgeReleasePolicy0135{}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &probe); err != nil {
-		return nil, fmt.Errorf("недопустимый ServerBridge релиз список разрешений: %w", err)
+		return nil, fmt.Errorf("invalid ServerBridge release allowlist: %w", err)
 	}
 	if _, v3 := probe["schemaVersion"]; v3 {
 		var document bridgeReleaseAllowlistDocument01912
 		if err := json.Unmarshal([]byte(raw), &document); err != nil {
-			return nil, fmt.Errorf("недопустимый ServerBridge 3 релиз список разрешений: %w", err)
+			return nil, fmt.Errorf("invalid ServerBridge 3 release allowlist: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != serverBridgeProtocolV3 || document.MinimumProtocolVersion != serverBridgeProtocolV3 ||
 			document.SecurityProfile != serverBridgeSecurityProfile01912 || !strings.EqualFold(document.SecurityCapabilityDigest, serverBridgeExpectedSecurityCapabilityDigest01912()) ||
 			!serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-			return nil, errors.New("ServerBridge 3 релиз список разрешений безопасность сертификация метаданные является недопустимый")
+			return nil, errors.New("ServerBridge 3 release allowlist security certification metadata is invalid")
 		}
 		policies = document.Releases
 	} else if err := json.Unmarshal([]byte(raw), &policies); err != nil {
-		return nil, fmt.Errorf("недопустимый устаревший ServerBridge релиз список разрешений: %w", err)
+		return nil, fmt.Errorf("invalid legacy ServerBridge release allowlist: %w", err)
 	}
 	if len(policies) == 0 {
-		return nil, errors.New("ServerBridge релиз список разрешений является пустой")
+		return nil, errors.New("ServerBridge release allowlist is empty")
 	}
 	out := make(map[string]bridgeReleasePolicy0135, len(policies))
 	for version, policy := range policies {
 		version = strings.TrimSpace(version)
 		if version == "" || len(version) > 64 {
-			return nil, errors.New("ServerBridge релиз список разрешений содержит недопустимый версия")
+			return nil, errors.New("ServerBridge release allowlist contains invalid version")
 		}
 		velocity, err := normalizeHashList0134(policy.VelocitySHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Velocity релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge velocity release %s: %w", version, err)
 		}
 		bungeecord, err := normalizeOptionalBridgeHashes0144(policy.BungeeCordSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge BungeeCord релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge bungeecord release %s: %w", version, err)
 		}
 		waterfall, err := normalizeOptionalBridgeHashes0144(policy.WaterfallSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Waterfall релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge waterfall release %s: %w", version, err)
 		}
 		paper, err := normalizeHashList0134(policy.PaperSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Paper релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge paper release %s: %w", version, err)
 		}
 		purpur, err := normalizeHashList0134(policy.PurpurSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Purpur релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge purpur release %s: %w", version, err)
 		}
 		bukkit, err := normalizeOptionalBridgeHashes0144(policy.BukkitSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Bukkit релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge bukkit release %s: %w", version, err)
 		}
 		spigot, err := normalizeOptionalBridgeHashes0144(policy.SpigotSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Spigot релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge spigot release %s: %w", version, err)
 		}
 		folia, err := normalizeOptionalBridgeHashes0144(policy.FoliaSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Folia релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge folia release %s: %w", version, err)
 		}
 		fabric, err := normalizeOptionalBridgeHashes0144(policy.FabricSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Fabric релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge fabric release %s: %w", version, err)
 		}
 		forge, err := normalizeOptionalBridgeHashes0144(policy.ForgeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Forge релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge forge release %s: %w", version, err)
 		}
 		neoforge, err := normalizeOptionalBridgeHashes0144(policy.NeoForgeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge NeoForge релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge neoforge release %s: %w", version, err)
 		}
 		quilt, err := normalizeOptionalBridgeHashes0144(policy.QuiltSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Quilt релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge quilt release %s: %w", version, err)
 		}
 		sponge, err := normalizeOptionalBridgeHashes0144(policy.SpongeSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge sponge релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge sponge release %s: %w", version, err)
 		}
 		vanilla, err := normalizeOptionalBridgeHashes0144(policy.VanillaSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("ServerBridge Vanilla релиз %s: %w", version, err)
+			return nil, fmt.Errorf("ServerBridge vanilla release %s: %w", version, err)
 		}
 		policy.VelocitySHA256 = velocity
 		policy.BungeeCordSHA256 = bungeecord

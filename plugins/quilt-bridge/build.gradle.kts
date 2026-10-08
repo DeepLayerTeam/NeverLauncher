@@ -21,7 +21,7 @@ dependencies {
     minecraft("com.mojang:minecraft:1.21.1")
     mappings("net.fabricmc:yarn:1.21.1+build.3:v2")
     modImplementation("org.quiltmc:quilt-loader:0.26.4")
-    // QFAPI предоставляет Fabric-compatible event/networking APIs используется через этот адаптер.
+    // QFAPI exposes the Fabric-compatible event/networking APIs used by this adapter.
     modImplementation("org.quiltmc.quilted-fabric-api:quilted-fabric-api:11.0.0-alpha.3+0.102.0-1.21")
 
     implementation(project(":plugins:bridge-common"))

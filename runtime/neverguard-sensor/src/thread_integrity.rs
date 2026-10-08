@@ -186,8 +186,8 @@ pub fn reconcile_and_verify() -> Result<ThreadIntegritySnapshot, String> {
                     && previous.allocation_base == record.allocation_base
                     && previous.module_path.eq_ignore_ascii_case(&record.module_path) => {}
             Some(_) => {
-                // TID повторное использование является возможный после поток выход. вновь наблюдаемый
-                // запуск адрес имеет уже пройден исполняемый-образ валидация.
+                // TID reuse is possible after a thread exits. The newly observed
+                // start address has already passed the executable-image validation.
                 state.retired_thread_count = state.retired_thread_count.saturating_add(1);
                 state.new_thread_count = state.new_thread_count.saturating_add(1);
             }
@@ -217,7 +217,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
     if snapshot == INVALID_HANDLE_VALUE || snapshot.is_null() {
         return Err(format!(
-            "NeverGuard Поток Целостность поток снимок ошибка: {}",
+            "NeverGuard Thread Integrity thread snapshot failed: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -229,7 +229,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let mut has_entry = unsafe { Thread32First(snapshot.0, &mut entry) } != 0;
     if !has_entry {
         return Err(format!(
-            "NeverGuard Поток Целостность не может enumerate потоки: {}",
+            "NeverGuard Thread Integrity cannot enumerate threads: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -258,8 +258,8 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         )
     };
     if thread.is_null() {
-        // поток может legitimately выход между ToolHelp снимок и OpenThread.
-        // Повторить с ограничение right потому что некоторые Windows собирает отклонять combined mask.
+        // A thread can legitimately exit between the ToolHelp snapshot and OpenThread.
+        // Retry with the limited right because some Windows builds reject the combined mask.
         thread = unsafe { OpenThread(THREAD_QUERY_LIMITED_INFORMATION, 0, thread_id) };
         if thread.is_null() {
             return Ok(None);
@@ -278,15 +278,15 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         )
     };
     if status < 0 || start_address.is_null() {
-        // ToolHelp снимок является inherently racy с обычный JVM поток teardown.
-        // поток тот имеет уже выход является не целостность нарушение.
+        // The ToolHelp snapshot is inherently racy with normal JVM thread teardown.
+        // A thread that has already exited is not an integrity violation.
         let mut exit_code = 0u32;
         let exit_known = unsafe { GetExitCodeThread(thread.0, &mut exit_code) } != 0;
         if exit_known && exit_code != STILL_ACTIVE {
             return Ok(None);
         }
         return Err(format!(
-            "NeverGuard Поток Целостность не может query Win32 запуск адрес для актуальный TID {thread_id}: NTSTATUS=0x{:08X}",
+            "NeverGuard Thread Integrity cannot query Win32 start address for live TID {thread_id}: NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
@@ -301,7 +301,7 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
     };
     if queried == 0 {
         return Err(format!(
-            "NeverGuard Поток Целостность не может query запуск память для TID {thread_id}: {}",
+            "NeverGuard Thread Integrity cannot query start memory for TID {thread_id}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -310,13 +310,13 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         || memory.protect & (PAGE_GUARD | PAGE_NOACCESS) != 0
     {
         return Err(format!(
-            "NeverGuard Поток Целостность suspicious среда выполнения переход: TID {thread_id} запуск 0x{:X} является не committed исполняемый память (состояние=0x{:X}, защищать=0x{:X})",
+            "NeverGuard Thread Integrity suspicious runtime transition: TID {thread_id} start 0x{:X} is not committed executable memory (state=0x{:X}, protect=0x{:X})",
             start_address as usize, memory.state, memory.protect
         ));
     }
     if memory.kind != MEM_IMAGE {
         return Err(format!(
-            "NeverGuard Поток Целостность suspicious среда выполнения переход: TID {thread_id} запускает из non-образ исполняемый память в 0x{:X} (type=0x{:X})",
+            "NeverGuard Thread Integrity suspicious runtime transition: TID {thread_id} starts from non-image executable memory at 0x{:X} (type=0x{:X})",
             start_address as usize, memory.kind
         ));
     }
@@ -342,7 +342,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Поток Целостность не может разрешать запуск модуль для 0x{address:X}: {}",
+            "NeverGuard Thread Integrity cannot resolve start module for 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -357,7 +357,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     } as usize;
     if len == 0 || len >= buffer.len() {
         return Err(format!(
-            "NeverGuard Поток Целостность не может obtain запуск модуль путь для 0x{address:X}: {}",
+            "NeverGuard Thread Integrity cannot obtain start module path for 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }

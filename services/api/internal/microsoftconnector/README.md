@@ -1,19 +1,19 @@
-# Microsoft Коннектор (0.11.6)
+# Microsoft Connector (0.11.6)
 
-Рабочий Microsoft идентичность провайдер для NeverLauncher Федерация Ядро. Это delegates standard OpenID Подключение mechanics к `internal/oidcconnector` и добавляет Microsoft-specific tenant, издатель, cloud и стабильный-идентичность правила.
+Production Microsoft identity provider for NeverLauncher Federation Core. It delegates standard OpenID Connect mechanics to `internal/oidcconnector` and adds Microsoft-specific tenant, issuer, cloud and stable-identity rules.
 
-## Доверие модель
+## Trust model
 
-- Авторизация Код + PKCE `S256`; нет implicit поток.
-- `tid + oid` является внешний идентичность ключ. Электронная почта, `preferred_username` и отображать имя являются профиль attributes только.
-- `common` / `organizations` / `consumers` метаданные является проверен с tenant-specific токен издатель и `issuer` подключение к фактический JWKS ключ подписи.
-- Необязательный `allowedTenantIds` narrows multitenant authorities.
-- Только RS256 ID токены являются принят через Microsoft specialization.
-- `offline_access` является всегда запрошенный так обновление учётные данные может быть ротировать на стороне сервера.
-- Microsoft обновление учётные данные никогда становиться Никогда access/refresh токены и являются зашифрованный до хранение.
-- Внешний groups/roles не может assign Никогда роль except через явный локальный `roleMappings` политика во время JIT создание.
+- Authorization Code + PKCE `S256`; no implicit flow.
+- `tid + oid` is the external identity key. Email, `preferred_username` and display name are profile attributes only.
+- `common` / `organizations` / `consumers` metadata is validated with tenant-specific token issuer and the `issuer` attached to the actual JWKS signing key.
+- Optional `allowedTenantIds` narrows multitenant authorities.
+- Only RS256 ID tokens are accepted by the Microsoft specialization.
+- `offline_access` is always requested so refresh credentials can be rotated server-side.
+- Microsoft refresh credentials never become Never access/refresh tokens and are encrypted before persistence.
+- External groups/roles cannot assign a Never role except through explicit local `roleMappings` policy during JIT creation.
 
-## Конфигурация
+## Configuration
 
 ```json
 [
@@ -31,18 +31,18 @@
 ]
 ```
 
-Использовать `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Секреты оставаться вне провайдер JSON через `clientSecretEnv` или `clientSecretFile`.
+Use `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` or `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Secrets stay outside provider JSON through `clientSecretEnv` or `clientSecretFile`.
 
-Поддерживаемый clouds: `global`, `usgov`, `china`. `custom` существует для controlled testing/private-compatible authorities и требует `allowCustomAuthority=true` плюс обычный OIDC TLS/SSRF restrictions.
+Supported clouds: `global`, `usgov`, `china`. `custom` exists for controlled testing/private-compatible authorities and requires `allowCustomAuthority=true` plus normal OIDC TLS/SSRF restrictions.
 
-## Учётная запись связывание и учётные данные
+## Account linking and credentials
 
-`explicit-only` является по умолчанию. уже аутентифицировать Никогда пользователь доказывает управление Microsoft учётная запись через `/api/v1/auth/microsoft/{providerId}/link/begin` и `/link/complete`. Equality электронная почта адрес является никогда sufficient к связь учётные записи.
+`explicit-only` is the default. An already authenticated Never user proves control of the Microsoft account through `/api/v1/auth/microsoft/{providerId}/link/begin` and `/link/complete`. Equality of email addresses is never sufficient to link accounts.
 
-Обновление учётные данные являются сохранённый в `provider_credentials` только как AES-GCM конверт привязанный к пользователь, аутентификация идентичность, провайдер и субъект. Ротация является performed через `/api/v1/auth/providers/{providerId}/credential/refresh`; обновление идентичность должен сохранять точный одинаковый субъект.
+Refresh credentials are persisted in `provider_credentials` only as an AES-GCM envelope bound to user, auth identity, provider and subject. Rotation is performed through `/api/v1/auth/providers/{providerId}/credential/refresh`; the refreshed identity must keep the exact same subject.
 
-Провайдер front-канал выход и Никогда сессия выход являются отдельный эксплуатация. `/api/v1/auth/microsoft/{providerId}/logout-url` только возвращает список разрешений Microsoft выход URL.
+Provider front-channel logout and Never session logout are separate operations. `/api/v1/auth/microsoft/{providerId}/logout-url` only returns an allowlisted Microsoft logout URL.
 
-## Minecraft граница
+## Minecraft boundary
 
-Успешный Microsoft аутентификация является не treated как Minecraft владение. Этот коннектор делает не вызов Xbox/Minecraft entitlement/profile APIs и делает не manufacture Профиль Minecraft из Microsoft идентичность. Entitlement/profile проверка является отдельный совместимость слой.
+Successful Microsoft authentication is not treated as Minecraft ownership. This connector does not call Xbox/Minecraft entitlement/profile APIs and does not manufacture a Minecraft profile from Microsoft identity. Entitlement/profile verification is a separate compatibility layer.

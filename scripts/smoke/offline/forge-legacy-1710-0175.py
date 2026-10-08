@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 5):
-    raise SystemExit(f"Forge Устаревший 1.7.10 требует VERSION>=0.17.5, получил {version}")
+    raise SystemExit(f"Forge Legacy 1.7.10 requires VERSION>=0.17.5, got {version}")
 
 
 def read(rel: str) -> str:
@@ -19,18 +19,18 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 if dict(matrix_globals["FORGE_LEGACY_1710_0175"]) != {"1.7.10": 8}:
-    raise SystemExit("Forge Устаревший 1.7.10 канонический сетка несоответствие")
+    raise SystemExit("Forge Legacy 1.7.10 canonical grid mismatch")
 
 rows = [row for row in json.loads(read("compatibility/targets.json"))["targets"] if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") == "1.7.10"]
 if len(rows) != 1:
-    raise SystemExit(f"Forge Устаревший 0.17.5 требует точно один Forge 1.7.10 цель, получил {len(rows)}")
+    raise SystemExit(f"Forge Legacy 0.17.5 requires exactly one Forge 1.7.10 target, got {len(rows)}")
 row = rows[0]
 if row.get("javaMajor") != 8 or row.get("scope") != "client" or row.get("os") != "linux" or row.get("arch") != "x86_64" or row.get("loaderVersion") != "latest-stable":
-    raise SystemExit("Forge Устаревший 1.7.10 должен быть последний-стабильный Java 8 клиент linux/x86_64")
+    raise SystemExit("Forge Legacy 1.7.10 must be latest-stable Java 8 client linux/x86_64")
 
 runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
 require(runtime, [
@@ -72,4 +72,4 @@ require(tests, [
     "TestForgeLegacy1710V1LaunchWrapperInstaller", "TestCanonicalLegacyForgeRepositoryURL",
 ], "Forge 1.7.10 regression coverage")
 
-print("Forge Устаревший 1.7.10 0.17.5 контроль: OK (реальный V1 универсальный + LaunchWrapper/cpw FML + Java 8 реальный клиент сертификация)")
+print("Forge Legacy 1.7.10 0.17.5 gate: OK (real V1 universal + LaunchWrapper/cpw FML + Java 8 actual-client certification)")

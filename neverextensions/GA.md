@@ -1,38 +1,38 @@
 # NeverExtensions GA — NeverLauncher 0.21.0
 
-NeverLauncher 0.21.0 фиксирует первый рабочий NeverExtensions совместимость строка. фиксировать является behavioral, не только declarative: реестр, жизненный цикл диспетчер, хосты, SDK и запуск reconciler применять одинаковый контракт.
+NeverLauncher 0.21.0 freezes the first production NeverExtensions compatibility line. The freeze is behavioral, not only declarative: the registry, lifecycle manager, hosts, SDKs and startup reconciler enforce the same contract.
 
-## Зафиксированный совместимость поверхность
+## Frozen compatibility surface
 
-| Поверхность | GA версия | Принудительное применение |
+| Surface | GA version | Enforcement |
 | --- | --- | --- |
-| Пакет расширения | v1 (`1.0`) | детерминированный `.nlext`, контрольные суммы, SBOM, Ed25519 подпись, неизменяемый пакет идентичность |
-| Манифест | v2 (`2.0`) | канонический валидация в CLI и Серверная часть |
-| Хост Протокол | v1 (`1.0`) | аутентифицировать локальная петля рукопожатие, PID/экземпляр привязка, API согласование, сигнал состояния |
-| Расширение API | v1 (`1.0`) | обязательный для новый 0.21+ публикация и новый SDK проекты |
+| Extension Package | v1 (`1.0`) | deterministic `.nlext`, checksums, SBOM, Ed25519 signature, immutable package identity |
+| Manifest | v2 (`2.0`) | canonical validation in CLI and Backend |
+| Host Protocol | v1 (`1.0`) | authenticated loopback handshake, PID/instance binding, API negotiation, heartbeat |
+| Extension API | v1 (`1.0`) | required for new 0.21+ publications and new SDK projects |
 
-`api: "3.7"` является сохранённый только как 0.20.x совместимость псевдоним. Существующий подписанный пакеты являются никогда перезаписан: Серверная часть сопоставляет тот устаревший маркер к Расширение API v1 пока загрузка их. 0.21 реестр refuses новый `3.7` публикация так новый артефакты converge на `1.0`.
+`api: "3.7"` is retained only as the 0.20.x compatibility alias. Existing signed packages are never rewritten: the Backend maps that legacy marker to Extension API v1 while loading them. The 0.21 registry refuses new `3.7` publications so new artifacts converge on `1.0`.
 
-## Рабочий жизненный цикл
+## Production lifecycle
 
-Реестр публикация проверяет издатель идентичность, trusted/non-revoked Ed25519 ключ, детерминированный пакет идентичность и подпись до неизменяемый хранилище. Установка и обновление подготавливать полезные нагрузки до атомарный активация, сохранять генерация-проверен жизненный цикл состояние и файлы блокировок, сохранять откат резервное копирование, и сохранять пакет идентичность привязанный к активный версия.
+Registry publication verifies publisher identity, trusted/non-revoked Ed25519 key, deterministic package identity and signature before immutable storage. Installation and update stage payloads before atomic activation, persist generation-checked lifecycle state and lockfiles, retain rollback backups, and keep package identity bound to the active version.
 
-На Серверная часть запуск, GA согласование валидирует каждый установленный расширение против его постоянный lockfile, манифест/API контракт, реестр пакет идентичность, доверие политика, отзыв ключа, карантин, аварийный-отключить состояние, разрешение каталог, зависимость диапазон и конфликты. Недопустимый включённый установка являются отказ с блокировкой: постоянный аварийный-отключить является запись, жизненный цикл является переход к отключённый, и событие аудита является emitted. Администратор API предоставляет только для чтения GA состояние плюс MFA-защищать manual согласовывать действие.
+On Backend startup, GA reconciliation validates every installed extension against its persistent lockfile, manifest/API contract, registry package identity, trust policy, key revocation, quarantine, emergency-disable state, permission catalog, dependency ranges and conflicts. Invalid enabled installations are fail-closed: a persistent emergency-disable is recorded, the lifecycle is transitioned to disabled, and an audit event is emitted. The Admin API exposes read-only GA status plus an MFA-protected manual reconcile action.
 
-## Хосты
+## Hosts
 
-Серверная часть и CLI исполняемый цели использовать Хост Протокол v1. хост injects `NEVERLAUNCHER_EXTENSION_API_VERSION=1.0`; GA SDK отправлять `extensionApiVersion` в `/v1/hello`, и хост валидирует это. Устаревший 0.20 SDK hello полезные нагрузки без этот field являются принят только для манифесты carrying устаревший `3.7` маркер.
+Backend and CLI executable targets use Host Protocol v1. The host injects `NEVERLAUNCHER_EXTENSION_API_VERSION=1.0`; GA SDKs send `extensionApiVersion` in `/v1/hello`, and the host validates it. Legacy 0.20 SDK hello payloads without this field are accepted only for manifests carrying the legacy `3.7` marker.
 
-Администратор и Настольное приложение цели оставаться непрозрачный-источник песочница UI поверхности. Их типизированный мост context теперь включает `extensionApiVersion: "1.0"`. Настольное приложение `host.context` использует одинаковый вложенный конверт использованный через Настольное приложение SDK. Возможность доступ остаётся запрет по умолчанию и разрешение-gated.
+Admin and Desktop targets remain opaque-origin sandboxed UI surfaces. Their typed bridge context now includes `extensionApiVersion: "1.0"`. Desktop `host.context` uses the same nested envelope consumed by the Desktop SDK. Capability access remains deny-by-default and permission-gated.
 
-## SDK и исходник обновление
+## SDK and source upgrade
 
-Новый scaffolds использовать Расширение API `1.0` и SDK `0.21.0`. `nl extension upgrade-source <dir>` атомарно обновление unpacked 0.20 исходник манифест из `3.7` к `1.0` и обновляет known Go SDK модуль ссылки. Подписанный `.nlext` файлы являются отклонён через этот команда потому что пакет байты являются неизменяемый; они должен быть пересобран и повторно подписанный из исходник.
+New scaffolds use Extension API `1.0` and SDK `0.21.0`. `nl extension upgrade-source <dir>` atomically upgrades an unpacked 0.20 source manifest from `3.7` to `1.0` and updates known Go SDK module references. Signed `.nlext` files are rejected by this command because package bytes are immutable; they must be rebuilt and re-signed from source.
 
-Использовать `nl extension ga status` к print зафиксированный контракт. база данных миграция `0049_neverextensions_ga_0210.sql` записывает активный GA контракт и blocks обновление containing расширение API значения вне поддерживаемый GA/legacy задать.
+Use `nl extension ga status` to print the frozen contract. The database migration `0049_neverextensions_ga_0210.sql` records the active GA contract and blocks upgrades containing extension API values outside the supported GA/legacy set.
 
-## Сертификация
+## Certification
 
-`neverextensions/ga-targets-0210.json` defines обязательный Linux, Windows и macOS контроли. `.github/workflows/neverextensions-ga-0210.yml` executes contract/package/trust/lifecycle/host/dependency/update/security/reconcile/SDK/UI/migration/OpenAPI/build проверяет на каждый обязательный OS. `scripts/compatibility/neverextensions_ga_0210.py` агрегат только полный PASS свидетельство и emits публичный матрица совместимости плюс сертификат чей свидетельство SHA-256 значения привязывать результат к individual исполнитель артефакты.
+`neverextensions/ga-targets-0210.json` defines the required Linux, Windows and macOS gates. `.github/workflows/neverextensions-ga-0210.yml` executes contract/package/trust/lifecycle/host/dependency/update/security/reconcile/SDK/UI/migration/OpenAPI/build checks on every required OS. `scripts/compatibility/neverextensions_ga_0210.py` aggregates only complete PASS evidence and emits a public compatibility matrix plus a certificate whose evidence SHA-256 values bind the result to the individual runner artifacts.
 
- проверен-в репозиторий делает не захватывать кроссплатформенный сертификация до CI свидетельство существует. Сертификация является созданный только через агрегация задача после все обязательный исполнители успешно.
+The checked-in repository does not claim cross-platform certification before CI evidence exists. Certification is produced only by the aggregation job after all required runners pass.

@@ -19,7 +19,7 @@
     "pages": [
       {
         "id": "main",
-        "title": "Администратор Dashboard Пример"
+        "title": "Admin Dashboard Example"
       }
     ],
     "navigation": [
@@ -32,7 +32,7 @@
     "dashboardWidgets": [
       {
         "id": "summary",
-        "title": "Администратор Dashboard Пример",
+        "title": "Admin Dashboard Example",
         "pageId": "main",
         "height": 280
       }

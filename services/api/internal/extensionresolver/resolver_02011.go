@@ -59,12 +59,12 @@ func normalizeScope(s Scope) (Scope, error) {
 		s.Scope = "global"
 	}
 	if s.Scope != "global" && s.Scope != "project" {
-		return s, errors.New("область должен быть глобальный или проект")
+		return s, errors.New("scope must be global or project")
 	}
 	if s.Scope == "global" {
 		s.ScopeID = ""
 	} else if s.ScopeID == "" {
-		return s, errors.New("область проекта требует scopeId")
+		return s, errors.New("project scope requires scopeId")
 	}
 	return s, nil
 }
@@ -193,7 +193,7 @@ func cloneState(in state) state {
 
 func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.ExtensionUpdateRoot) (model.ExtensionUpdatePlan, error) {
 	if r == nil || r.Repo == nil {
-		return model.ExtensionUpdatePlan{}, errors.New("расширение разрешатель репозиторий является недоступный")
+		return model.ExtensionUpdatePlan{}, errors.New("extension resolver repository is unavailable")
 	}
 	var err error
 	scope, err = normalizeScope(scope)
@@ -201,7 +201,7 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 		return model.ExtensionUpdatePlan{}, err
 	}
 	if !allowedChannel(normalizeChannel(r.Env.DefaultChannel)) {
-		return model.ExtensionUpdatePlan{}, errors.New("по умолчанию канал должен быть стабильный, beta или dev")
+		return model.ExtensionUpdatePlan{}, errors.New("default channel must be stable, beta or dev")
 	}
 	installs, err := r.Repo.ListExtensionInstallStates(ctx, scope.Scope, scope.ScopeID)
 	if err != nil {
@@ -221,7 +221,7 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 		}
 	}
 	if len(roots) == 0 {
-		return model.ExtensionUpdatePlan{}, errors.New("нет установленный расширения или обновление корни")
+		return model.ExtensionUpdatePlan{}, errors.New("no installed extensions or update roots")
 	}
 	pins, err := r.Repo.ListExtensionUpdatePins(ctx, scope.Scope, scope.ScopeID)
 	if err != nil {
@@ -235,11 +235,11 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 	for _, root := range roots {
 		id := strings.ToLower(strings.TrimSpace(root.ExtensionID))
 		if id == "" {
-			return model.ExtensionUpdatePlan{}, errors.New("обновление корень extensionId является обязательный")
+			return model.ExtensionUpdatePlan{}, errors.New("update root extensionId is required")
 		}
 		ch := normalizeChannel(root.Channel)
 		if !allowedChannel(ch) {
-			return model.ExtensionUpdatePlan{}, fmt.Errorf("неподдерживаемый обновление канал %q", ch)
+			return model.ExtensionUpdatePlan{}, fmt.Errorf("unsupported update channel %q", ch)
 		}
 		c := "*"
 		if strings.TrimSpace(root.Version) != "" {
@@ -310,7 +310,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 			if req.optional {
 				return r.solve(rest, st, byID, pins)
 			}
-			return state{}, fmt.Errorf("зависимость %s selected %s делает не satisfy %s обязательный через %s", req.id, existing.item.Version, req.constraint, req.from)
+			return state{}, fmt.Errorf("dependency %s selected %s does not satisfy %s required by %s", req.id, existing.item.Version, req.constraint, req.from)
 		}
 		cp := cloneState(st)
 		x := cp.selected[req.id]
@@ -324,7 +324,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 	}
 	constraint, err := ParseConstraint(req.constraint)
 	if err != nil {
-		return state{}, fmt.Errorf("%s ограничение %q: %w", req.id, req.constraint, err)
+		return state{}, fmt.Errorf("%s constraint %q: %w", req.id, req.constraint, err)
 	}
 	candidates := append([]model.ExtensionRegistryVersion(nil), byID[req.id]...)
 	var filtered []model.ExtensionRegistryVersion
@@ -362,14 +362,14 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 			return r.solve(rest, st, byID, pins)
 		}
 		if pin := pins[req.id]; pin != "" {
-			return state{}, fmt.Errorf("закреплённый расширение %s@%s не может satisfy %s/channel %s/platform совместимость", req.id, pin, req.constraint, req.channel)
+			return state{}, fmt.Errorf("pinned extension %s@%s cannot satisfy %s/channel %s/platform compatibility", req.id, pin, req.constraint, req.channel)
 		}
-		return state{}, fmt.Errorf("нет compatible реестр версия для %s %s в канал %s", req.id, req.constraint, req.channel)
+		return state{}, fmt.Errorf("no compatible registry version for %s %s in channel %s", req.id, req.constraint, req.channel)
 	}
 	var last error
 	for _, cand := range filtered {
 		if conflictsSelected02011(cand, st.selected) {
-			last = fmt.Errorf("кандидат %s@%s конфликты с selected graph", cand.ExtensionID, cand.Version)
+			last = fmt.Errorf("candidate %s@%s conflicts with selected graph", cand.ExtensionID, cand.Version)
 			continue
 		}
 		cp := cloneState(st)
@@ -397,7 +397,7 @@ func (r *Resolver) solve(tasks []requirement, st state, byID map[string][]model.
 	if last != nil {
 		return state{}, last
 	}
-	return state{}, fmt.Errorf("unable к разрешать %s", req.id)
+	return state{}, fmt.Errorf("unable to resolve %s", req.id)
 }
 
 func conflictMatch(m model.ExtensionManifest, otherID, otherVersion string) bool {
@@ -421,7 +421,7 @@ func (r *Resolver) validateFinalConflicts(ctx context.Context, selected map[stri
 		}
 		v, e := r.Repo.GetExtensionVersion(ctx, id, ins.CurrentVersion)
 		if e != nil {
-			return fmt.Errorf("загрузка установленный манифест %s@%s: %w", id, ins.CurrentVersion, e)
+			return fmt.Errorf("load installed manifest %s@%s: %w", id, ins.CurrentVersion, e)
 		}
 		finals[id] = v.Manifest
 		versions[id] = ins.CurrentVersion
@@ -434,7 +434,7 @@ func (r *Resolver) validateFinalConflicts(ctx context.Context, selected map[stri
 	for i, a := range ids {
 		for _, b := range ids[i+1:] {
 			if conflictMatch(finals[a], b, versions[b]) || conflictMatch(finals[b], a, versions[a]) {
-				return fmt.Errorf("расширение конфликт: %s@%s конфликты с %s@%s", a, versions[a], b, versions[b])
+				return fmt.Errorf("extension conflict: %s@%s conflicts with %s@%s", a, versions[a], b, versions[b])
 			}
 		}
 	}
@@ -450,7 +450,7 @@ func topologicalOrder(selected map[string]selection) ([]string, error) {
 			return nil
 		}
 		if marks[id] == 1 {
-			return fmt.Errorf("зависимость cycle обнаруживать: %s -> %s", strings.Join(stack, " -> "), id)
+			return fmt.Errorf("dependency cycle detected: %s -> %s", strings.Join(stack, " -> "), id)
 		}
 		marks[id] = 1
 		stack = append(stack, id)

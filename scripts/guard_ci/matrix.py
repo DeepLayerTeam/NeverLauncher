@@ -263,7 +263,7 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
 
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(f"Защита CI цели OK: {len(payload['targets'])} цели для {PRODUCT_VERSION}")
+    print(f"Guard CI targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}")
     return 0
 
 
@@ -311,7 +311,7 @@ def command_result(args: argparse.Namespace) -> int:
         die("generated Guard CI result failed self-validation: " + "; ".join(errors))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Защита CI результат PASS: {target['id']} -> {args.output}")
+    print(f"Guard CI result PASS: {target['id']} -> {args.output}")
     return 0
 
 
@@ -396,14 +396,14 @@ def command_aggregate(args: argparse.Namespace) -> int:
     (args.output_dir / "matrix.md").write_text(render_markdown(targets, records, args.commit, args.run_id, args.repository), encoding="utf-8")
     if errors:
         for item in errors:
-            print(f"Защита CI матрица: {item}")
+            print(f"Guard CI matrix: {item}")
         return 1
-    print(f"Защита CI матрица PASS: {len(targets)} цели, фиксация={args.commit}, запуск={args.run_id}")
+    print(f"Guard CI matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher кроссплатформенный NeverGuard CI сертификация матрица")
+    parser = argparse.ArgumentParser(description="NeverLauncher cross-platform NeverGuard CI certification matrix")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")
     p.add_argument("--targets", type=Path, required=True)

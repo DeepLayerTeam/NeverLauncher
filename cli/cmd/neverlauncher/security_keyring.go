@@ -154,7 +154,7 @@ func securityRevocations(args []string) (map[string]any, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("ключ %s не найден", revokeID)
+			return nil, fmt.Errorf("key %s не найден", revokeID)
 		}
 		reg.TrustEpoch++
 		if err := saveKeyRegistry(dir, reg); err != nil {
@@ -188,7 +188,7 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 		publicKeyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if publicKeyPath == "" {
-		return errors.New("отзыв проверка требует доверенный открытый ключ")
+		return errors.New("revocation check требует trusted public key")
 	}
 	pub, err := loadEd25519PublicKey(publicKeyPath)
 	if err != nil {
@@ -202,7 +202,7 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 	}
 	for _, k := range reg.Keys {
 		if strings.EqualFold(k.Fingerprint, fp) && k.Status == "revoked" {
-			return fmt.Errorf("доверенный ключ отозванный: %s", k.ID)
+			return fmt.Errorf("trusted key revoked: %s", k.ID)
 		}
 	}
 	return nil
@@ -211,11 +211,11 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 func securityAttest(args []string) (map[string]any, error) {
 	path := flagValue(args, "--path", "")
 	if path == "" {
-		return nil, errors.New("безопасность attest требует --путь <PROVENANCE.JSON или артефакт>")
+		return nil, errors.New("security attest требует --path <PROVENANCE.json или artifact>")
 	}
 	privateKeyPath := flagValue(args, "--private-key", os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE"))
 	if privateKeyPath == "" {
-		return nil, errors.New("безопасность attest требует --закрытый-ключ")
+		return nil, errors.New("security attest требует --private-key")
 	}
 	priv, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {

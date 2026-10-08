@@ -56,7 +56,7 @@ func TestProductionDeliveryRelease0160BindsCandidateAndAnchors(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyProductionDeliveryReleaseDocument0160(dir, ver); err == nil || !strings.Contains(err.Error(), "candidate") {
-		// Кандидат группа обнаруживает изменён якорь до GA якорь comparison.
+		// Candidate cohort detects the changed anchor before the GA anchor comparison.
 		if err == nil {
 			t.Fatal("expected tamper rejection")
 		}

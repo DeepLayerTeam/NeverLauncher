@@ -143,7 +143,7 @@ func strictJSON0203(data []byte, out any) error {
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("след JSON value")
+			return errors.New("trailing JSON value")
 		}
 		return err
 	}
@@ -152,29 +152,29 @@ func strictJSON0203(data []byte, out any) error {
 
 func validateArchivePath0203(name string) error {
 	if name == "" || len(name) > 1024 {
-		return errors.New("путь в архиве является пустой или слишком long")
+		return errors.New("archive path is empty or too long")
 	}
 	if strings.ContainsRune(name, '\x00') || strings.Contains(name, "\\") || strings.HasPrefix(name, "/") || path.IsAbs(name) {
-		return errors.New("путь в архиве должен быть relative POSIX путь")
+		return errors.New("archive path must be a relative POSIX path")
 	}
 	if path.Clean(name) != name || name == "." || name == ".." || strings.HasPrefix(name, "../") || strings.Contains(name, "/../") || strings.HasSuffix(name, "/") {
-		return errors.New("путь в архиве содержит traversal/non-canonical компонент")
+		return errors.New("archive path contains traversal/non-canonical components")
 	}
 	for _, segment := range strings.Split(name, "/") {
 		if segment == "" || segment == "." || segment == ".." || len(segment) > 255 {
-			return errors.New("путь в архиве содержит недопустимый segment")
+			return errors.New("archive path contains invalid segment")
 		}
 		if strings.HasSuffix(segment, ".") || strings.HasSuffix(segment, " ") || strings.Contains(segment, ":") {
-			return errors.New("путь в архиве является не Windows-безопасный")
+			return errors.New("archive path is not Windows-safe")
 		}
 		for _, r := range segment {
 			if r < 0x20 {
-				return errors.New("путь в архиве содержит управление character")
+				return errors.New("archive path contains control character")
 			}
 		}
 		base := strings.ToUpper(strings.TrimSuffix(segment, path.Ext(segment)))
 		if base == "CON" || base == "PRN" || base == "AUX" || base == "NUL" || (len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) && base[3] >= '1' && base[3] <= '9') {
-			return fmt.Errorf("путь в архиве использует reserved Windows имя %q", segment)
+			return fmt.Errorf("archive path uses reserved Windows name %q", segment)
 		}
 	}
 	return nil
@@ -182,10 +182,10 @@ func validateArchivePath0203(name string) error {
 
 func readEntry0203(entry *zip.File, limit int64) ([]byte, error) {
 	if entry == nil {
-		return nil, errors.New("отсутствующий ZIP запись")
+		return nil, errors.New("missing ZIP entry")
 	}
 	if entry.UncompressedSize64 > uint64(limit) {
-		return nil, fmt.Errorf("запись %s exceeds размер ограничение", entry.Name)
+		return nil, fmt.Errorf("entry %s exceeds size limit", entry.Name)
 	}
 	r, err := entry.Open()
 	if err != nil {
@@ -197,7 +197,7 @@ func readEntry0203(entry *zip.File, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(data)) > limit || uint64(len(data)) != entry.UncompressedSize64 {
-		return nil, fmt.Errorf("запись %s размер несоответствие", entry.Name)
+		return nil, fmt.Errorf("entry %s size mismatch", entry.Name)
 	}
 	return data, nil
 }
@@ -214,7 +214,7 @@ func hashEntry0203(entry *zip.File, limit int64) (string, int64, error) {
 		return "", written, err
 	}
 	if written > limit || uint64(written) != entry.UncompressedSize64 {
-		return "", written, fmt.Errorf("запись %s exceeds размер ограничение или изменён размер", entry.Name)
+		return "", written, fmt.Errorf("entry %s exceeds size limit or changed size", entry.Name)
 	}
 	return hex.EncodeToString(h.Sum(nil)), written, nil
 }
@@ -270,27 +270,27 @@ type spdxDocument0203 struct {
 func validateSBOM0203(data []byte, manifest model.ExtensionManifest, canonicalDigest string, payload PackagePayload, buildTime time.Time) error {
 	var doc spdxDocument0203
 	if err := strictJSON0203(data, &doc); err != nil {
-		return fmt.Errorf("decode SBOM.spdx.JSON: %w", err)
+		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
 	}
 	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://neverlauncher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
-		return errors.New("SBOM.spdx.JSON документ метаданные делает не соответствовать пакет")
+		return errors.New("SBOM.spdx.json document metadata does not match package")
 	}
 	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: NeverLauncher CLI ") {
-		return errors.New("SBOM.spdx.JSON creationInfo является недопустимый")
+		return errors.New("SBOM.spdx.json creationInfo is invalid")
 	}
 	pkgID := "SPDXRef-Package-Extension"
 	if len(doc.Packages) != 1 {
-		return errors.New("SBOM.spdx.JSON должен описывать точно один пакет расширения")
+		return errors.New("SBOM.spdx.json must describe exactly one extension package")
 	}
 	pkg := doc.Packages[0]
 	if pkg.SPDXID != pkgID || pkg.Name != manifest.Name || pkg.VersionInfo != manifest.Version || pkg.DownloadLocation != "NOASSERTION" || !pkg.FilesAnalyzed || pkg.LicenseConcluded != "NOASSERTION" || pkg.LicenseDeclared != "NOASSERTION" {
-		return errors.New("SBOM.spdx.JSON пакет метаданные делает не соответствовать манифест")
+		return errors.New("SBOM.spdx.json package metadata does not match manifest")
 	}
 	if len(doc.Files) != len(payload.Files) || len(doc.Relationships) != len(payload.Files)+1 {
-		return errors.New("SBOM.spdx.JSON file/relationship счётчик делает не соответствовать полезная нагрузка")
+		return errors.New("SBOM.spdx.json file/relationship count does not match payload")
 	}
 	if doc.Relationships[0] != (spdxRelationship0203{SPDXElementID: "SPDXRef-DOCUMENT", RelationshipType: "DESCRIBES", RelatedSPDXElement: pkgID}) {
-		return errors.New("SBOM.spdx.JSON DESCRIBES relationship является недопустимый")
+		return errors.New("SBOM.spdx.json DESCRIBES relationship is invalid")
 	}
 	for i, file := range payload.Files {
 		pathDigest := sha256.Sum256([]byte(file.Path))
@@ -298,11 +298,11 @@ func validateSBOM0203(data []byte, manifest model.ExtensionManifest, canonicalDi
 		expectedFile := spdxFile0203{SPDXID: fileID, FileName: "./" + payloadPrefix0203 + file.Path, Checksums: []spdxChecksum0203{{Algorithm: "SHA256", ChecksumValue: file.SHA256}}}
 		actual := doc.Files[i]
 		if actual.SPDXID != expectedFile.SPDXID || actual.FileName != expectedFile.FileName || len(actual.Checksums) != 1 || actual.Checksums[0] != expectedFile.Checksums[0] {
-			return fmt.Errorf("SBOM.spdx.JSON файл запись %d делает не соответствовать полезная нагрузка", i)
+			return fmt.Errorf("SBOM.spdx.json file entry %d does not match payload", i)
 		}
 		expectedRel := spdxRelationship0203{SPDXElementID: pkgID, RelationshipType: "CONTAINS", RelatedSPDXElement: fileID}
 		if doc.Relationships[i+1] != expectedRel {
-			return fmt.Errorf("SBOM.spdx.JSON relationship %d делает не соответствовать полезная нагрузка", i+1)
+			return fmt.Errorf("SBOM.spdx.json relationship %d does not match payload", i+1)
 		}
 	}
 	return nil
@@ -326,7 +326,7 @@ func sameZipTimestamp0203(actual, expected time.Time) bool {
 func analyze0203(packagePath string) (*analysis0203, error) {
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
-		return nil, fmt.Errorf("открытый.nlext: %w", err)
+		return nil, fmt.Errorf("open .nlext: %w", err)
 	}
 	a := &analysis0203{reader: reader, entries: map[string]*zip.File{}}
 	failed := true
@@ -336,47 +336,47 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		}
 	}()
 	if len(reader.File) == 0 || len(reader.File) > maxFiles0203+5 {
-		return nil, fmt.Errorf("недопустимый.nlext запись счётчик: %d", len(reader.File))
+		return nil, fmt.Errorf("invalid .nlext entry count: %d", len(reader.File))
 	}
 	caseFolded := map[string]string{}
 	var total uint64
 	for _, entry := range reader.File {
 		if err := validateArchivePath0203(entry.Name); err != nil {
-			return nil, fmt.Errorf("unsafe.nlext запись %q: %w", entry.Name, err)
+			return nil, fmt.Errorf("unsafe .nlext entry %q: %w", entry.Name, err)
 		}
 		fold := strings.ToLower(entry.Name)
 		if previous, exists := caseFolded[fold]; exists {
-			return nil, fmt.Errorf("duplicate/case-colliding.nlext записи: %q и %q", previous, entry.Name)
+			return nil, fmt.Errorf("duplicate/case-colliding .nlext entries: %q and %q", previous, entry.Name)
 		}
 		caseFolded[fold] = entry.Name
 		if entry.FileInfo().Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() {
-			return nil, fmt.Errorf("symlink/special запись является forbidden в.nlext: %s", entry.Name)
+			return nil, fmt.Errorf("symlink/special entry is forbidden in .nlext: %s", entry.Name)
 		}
 		perm := entry.FileInfo().Mode().Perm()
 		if perm != 0o644 && perm != 0o755 {
-			return nil, fmt.Errorf("non-канонический файл режим %04o для %s", perm, entry.Name)
+			return nil, fmt.Errorf("non-canonical file mode %04o for %s", perm, entry.Name)
 		}
 		if entry.Method != zip.Deflate {
-			return nil, fmt.Errorf("non-канонический compression метод для %s", entry.Name)
+			return nil, fmt.Errorf("non-canonical compression method for %s", entry.Name)
 		}
 		if entry.UncompressedSize64 > uint64(maxSingleFile0203) {
-			return nil, fmt.Errorf("запись %s exceeds на-файл ограничение", entry.Name)
+			return nil, fmt.Errorf("entry %s exceeds per-file limit", entry.Name)
 		}
 		total += entry.UncompressedSize64
 		if total > uint64(maxTotalBytes0203+4*maxMetadata0203) {
-			return nil, errors.New(".nlext exceeds uncompressed размер ограничение")
+			return nil, errors.New(".nlext exceeds uncompressed size limit")
 		}
 		if entry.UncompressedSize64 > 0 && entry.CompressedSize64 == 0 {
-			return nil, fmt.Errorf("suspicious compression ratio для %s", entry.Name)
+			return nil, fmt.Errorf("suspicious compression ratio for %s", entry.Name)
 		}
 		if entry.CompressedSize64 > 0 && entry.UncompressedSize64/entry.CompressedSize64 > maxCompressionRatio03 {
-			return nil, fmt.Errorf("compression ratio ограничение exceeded для %s", entry.Name)
+			return nil, fmt.Errorf("compression ratio limit exceeded for %s", entry.Name)
 		}
 		a.entries[entry.Name] = entry
 	}
 	for _, required := range []string{manifestName0203, checksumsName0203, sbomName0203, descriptorName0203, signatureName0203} {
 		if _, ok := a.entries[required]; !ok {
-			return nil, fmt.Errorf(".nlext делает не contain обязательный подписанный-реестр файл %s", required)
+			return nil, fmt.Errorf(".nlext does not contain required signed-registry file %s", required)
 		}
 	}
 	for name := range a.entries {
@@ -384,7 +384,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 			continue
 		}
 		if _, allowed := reservedRoot0203[name]; !allowed {
-			return nil, fmt.Errorf("unexpected top-уровень.nlext запись: %s", name)
+			return nil, fmt.Errorf("unexpected top-level .nlext entry: %s", name)
 		}
 	}
 	manifestBytes, err := readEntry0203(a.entries[manifestName0203], maxMetadata0203)
@@ -393,7 +393,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var manifest model.ExtensionManifest
 	if err := strictJSON0203(manifestBytes, &manifest); err != nil {
-		return nil, fmt.Errorf("decode пакет манифест: %w", err)
+		return nil, fmt.Errorf("decode packaged manifest: %w", err)
 	}
 	normalized, canonicalDigest, err := repository.NormalizeExtensionManifest(manifest)
 	if err != nil {
@@ -404,7 +404,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		return nil, err
 	}
 	if !bytes.Equal(manifestBytes, expectedManifestBytes) {
-		return nil, errors.New("neverlauncher-расширение.JSON внутри.nlext является не канонический")
+		return nil, errors.New("neverlauncher-extension.json inside .nlext is not canonical")
 	}
 	a.manifest, a.manifestBytes, a.canonicalDigest = normalized, manifestBytes, canonicalDigest
 	payloadFiles := make([]PackageFile, 0)
@@ -427,7 +427,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	payload := PackagePayload{FileCount: len(payloadFiles), TotalBytes: payloadTotal, Files: payloadFiles}
 	if payload.FileCount == 0 {
-		return nil, errors.New(".nlext полезная нагрузка является пустой")
+		return nil, errors.New(".nlext payload is empty")
 	}
 	for _, target := range normalized.Targets {
 		found := false
@@ -438,7 +438,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("цель %s entrypoint %s является отсутствующий из полезная нагрузка", target.Kind, target.Entrypoint)
+			return nil, fmt.Errorf("target %s entrypoint %s is missing from payload", target.Kind, target.Entrypoint)
 		}
 	}
 	checksumsBytes, err := readEntry0203(a.entries[checksumsName0203], maxMetadata0203)
@@ -447,7 +447,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	manifestStoredDigest := sha256.Sum256(manifestBytes)
 	if !bytes.Equal(checksumsBytes, checksumBytes0203(hex.EncodeToString(manifestStoredDigest[:]), payloadFiles)) {
-		return nil, errors.New("контрольные суммы.sha256 делает не соответствовать manifest/payload")
+		return nil, errors.New("checksums.sha256 does not match manifest/payload")
 	}
 	descriptorBytes, err := readEntry0203(a.entries[descriptorName0203], maxMetadata0203)
 	if err != nil {
@@ -455,15 +455,15 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var descriptor Descriptor
 	if err := strictJSON0203(descriptorBytes, &descriptor); err != nil {
-		return nil, fmt.Errorf("decode neverlauncher-пакет.JSON: %w", err)
+		return nil, fmt.Errorf("decode neverlauncher-package.json: %w", err)
 	}
 	if descriptor.Format != formatName0203 || descriptor.FormatVersion != formatVersion0203 || descriptor.BuildEpoch < 315532800 {
-		return nil, errors.New("unsupported/invalid.nlext пакет дескриптор")
+		return nil, errors.New("unsupported/invalid .nlext package descriptor")
 	}
 	buildTime := time.Unix(descriptor.BuildEpoch, 0).UTC()
 	for _, entry := range reader.File {
 		if !sameZipTimestamp0203(entry.Modified.UTC(), buildTime) {
-			return nil, fmt.Errorf("non-канонический ZIP метка времени для %s", entry.Name)
+			return nil, fmt.Errorf("non-canonical ZIP timestamp for %s", entry.Name)
 		}
 	}
 	sbomBytes, err := readEntry0203(a.entries[sbomName0203], maxMetadata0203)
@@ -483,7 +483,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		return nil, err
 	}
 	if !bytes.Equal(descriptorBytes, expectedDescriptorBytes) {
-		return nil, errors.New("neverlauncher-package.json/package идентичность делает не соответствовать.nlext content")
+		return nil, errors.New("neverlauncher-package.json/package identity does not match .nlext content")
 	}
 	a.descriptor = descriptor
 	signatureBytes, err := readEntry0203(a.entries[signatureName0203], maxMetadata0203)
@@ -492,38 +492,38 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var signature Signature
 	if err := strictJSON0203(signatureBytes, &signature); err != nil {
-		return nil, fmt.Errorf("decode подпись.ed25519: %w", err)
+		return nil, fmt.Errorf("decode signature.ed25519: %w", err)
 	}
 	if signature.SchemaVersion != "1.0" || signature.Algorithm != "Ed25519" || signature.SigningDomain != signingDomain0203() || signature.PackageIdentity != descriptor.PackageIdentity {
-		return nil, errors.New("подпись.ed25519 метаданные делает не соответствовать пакет identity/format")
+		return nil, errors.New("signature.ed25519 metadata does not match package identity/format")
 	}
 	sig, err := base64.StdEncoding.DecodeString(signature.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return nil, errors.New("подпись.ed25519 содержит недопустимый Ed25519 подпись")
+		return nil, errors.New("signature.ed25519 contains invalid Ed25519 signature")
 	}
 	if !strings.HasPrefix(signature.KeyFingerprint, "sha256:") || len(signature.KeyFingerprint) != len("sha256:")+64 {
-		return nil, errors.New("подпись.ed25519 содержит недопустимый keyFingerprint")
+		return nil, errors.New("signature.ed25519 contains invalid keyFingerprint")
 	}
 	if _, err := hex.DecodeString(strings.TrimPrefix(signature.KeyFingerprint, "sha256:")); err != nil {
-		return nil, errors.New("подпись.ed25519 keyFingerprint является не SHA-256 hex")
+		return nil, errors.New("signature.ed25519 keyFingerprint is not SHA-256 hex")
 	}
 	expectedSignatureBytes, err := canonicalJSON0203(signature)
 	if err != nil {
 		return nil, err
 	}
 	if !bytes.Equal(signatureBytes, expectedSignatureBytes) {
-		return nil, errors.New("подпись.ed25519 является не канонический")
+		return nil, errors.New("signature.ed25519 is not canonical")
 	}
 	a.signature = &signature
 	failed = false
 	return a, nil
 }
 
-// VerifyFile проверяет полный.nlext целостность и его Ed25519 подпись против
-// точный доверенный сырой открытый ключ регистрировать для издатель.
+// VerifyFile verifies complete .nlext integrity and its Ed25519 signature against
+// the exact trusted raw public key registered for the publisher.
 func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackage, error) {
 	if len(publicKey) != ed25519.PublicKeySize {
-		return VerifiedPackage{}, errors.New("доверенный Ed25519 открытый ключ должен быть 32 байты")
+		return VerifiedPackage{}, errors.New("trusted Ed25519 public key must be 32 bytes")
 	}
 	a, err := analyze0203(packagePath)
 	if err != nil {
@@ -533,11 +533,11 @@ func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackag
 	pubDigest := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(pubDigest[:])
 	if a.signature == nil || !strings.EqualFold(fingerprint, a.signature.KeyFingerprint) {
-		return VerifiedPackage{}, fmt.Errorf("подпись ключ несоответствие: пакет=%s доверенный=%s", a.signature.KeyFingerprint, fingerprint)
+		return VerifiedPackage{}, fmt.Errorf("signature key mismatch: package=%s trusted=%s", a.signature.KeyFingerprint, fingerprint)
 	}
 	sig, _ := base64.StdEncoding.DecodeString(a.signature.Signature)
 	if !ed25519.Verify(publicKey, signingMessage0203(a.descriptor.PackageIdentity), sig) {
-		return VerifiedPackage{}, errors.New("Ed25519 проверка ошибка для.nlext пакет идентичность")
+		return VerifiedPackage{}, errors.New("Ed25519 verification failed for .nlext package identity")
 	}
 	file, err := os.Open(packagePath)
 	if err != nil {
@@ -552,9 +552,9 @@ func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackag
 	return VerifiedPackage{Manifest: a.manifest, Descriptor: a.descriptor, Signature: *a.signature, SHA256: hex.EncodeToString(h.Sum(nil)), Size: size, PackageIdentity: a.descriptor.PackageIdentity, KeyFingerprint: fingerprint}, nil
 }
 
-// InspectSignedFile валидирует пакет structure/identity и возвращает подпись
-// метаданные без making доверие решение. Реестр публикация использует этот к select
-// точный издатель ключ и затем вызов VerifyFile с тот доверенный ключ.
+// InspectSignedFile validates package structure/identity and returns signature
+// metadata without making a trust decision. Registry publish uses this to select
+// the exact publisher key and then calls VerifyFile with that trusted key.
 func InspectSignedFile(packagePath string) (VerifiedPackage, error) {
 	a, err := analyze0203(packagePath)
 	if err != nil {
@@ -574,12 +574,12 @@ func InspectSignedFile(packagePath string) (VerifiedPackage, error) {
 	return VerifiedPackage{Manifest: a.manifest, Descriptor: a.descriptor, Signature: *a.signature, SHA256: hex.EncodeToString(h.Sum(nil)), Size: size, PackageIdentity: a.descriptor.PackageIdentity, KeyFingerprint: a.signature.KeyFingerprint}, nil
 }
 
-// ExtractPayloadFile re-валидирует канонический.nlext structure и extracts
-// только полезная нагрузка/ записи в пустой назначение каталог. Это refuses к
-// extract когда packageIdentity делает не соответствовать ожидаемый неизменяемый идентичность.
-// Пути были уже отклонён для traversal/symlink/case-collision через analyze0203;
-// этот routine additionally создаёт каждый вывод файл с O_EXCL так 
-// unexpected pre-существующий путь не может быть overwritten.
+// ExtractPayloadFile re-validates the canonical .nlext structure and extracts
+// only payload/ entries into an empty destination directory. It refuses to
+// extract when packageIdentity does not match the expected immutable identity.
+// Paths were already rejected for traversal/symlink/case-collision by analyze0203;
+// this routine additionally creates every output file with O_EXCL so an
+// unexpected pre-existing path cannot be overwritten.
 func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string) (model.ExtensionManifest, error) {
 	a, err := analyze0203(packagePath)
 	if err != nil {
@@ -588,18 +588,18 @@ func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string
 	defer a.close()
 	expectedPackageIdentity = strings.ToLower(strings.TrimSpace(expectedPackageIdentity))
 	if expectedPackageIdentity == "" || a.descriptor.PackageIdentity != expectedPackageIdentity {
-		return model.ExtensionManifest{}, errors.New(".nlext пакет идентичность делает не соответствовать ожидаемый неизменяемый идентичность")
+		return model.ExtensionManifest{}, errors.New(".nlext package identity does not match expected immutable identity")
 	}
 	if info, err := os.Lstat(destination); err == nil {
 		if !info.IsDir() {
-			return model.ExtensionManifest{}, errors.New("расширение подготовка назначение существует и является не каталог")
+			return model.ExtensionManifest{}, errors.New("extension staging destination exists and is not a directory")
 		}
 		entries, err := os.ReadDir(destination)
 		if err != nil {
 			return model.ExtensionManifest{}, err
 		}
 		if len(entries) != 0 {
-			return model.ExtensionManifest{}, errors.New("расширение подготовка назначение должен быть пустой")
+			return model.ExtensionManifest{}, errors.New("extension staging destination must be empty")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return model.ExtensionManifest{}, err
@@ -626,7 +626,7 @@ func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string
 			return model.ExtensionManifest{}, err
 		}
 		if outAbs == rootAbs || !strings.HasPrefix(outAbs, rootAbs+string(os.PathSeparator)) {
-			return model.ExtensionManifest{}, errors.New("расширение полезная нагрузка escaped подготовка корень")
+			return model.ExtensionManifest{}, errors.New("extension payload escaped staging root")
 		}
 		if err := os.MkdirAll(filepath.Dir(outAbs), 0o750); err != nil {
 			return model.ExtensionManifest{}, err
@@ -650,10 +650,10 @@ func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string
 			return model.ExtensionManifest{}, copyErr
 		}
 		if closeReadErr != nil || syncErr != nil || closeWriteErr != nil {
-			return model.ExtensionManifest{}, errors.New("ошибка к долговременно extract расширение полезная нагрузка")
+			return model.ExtensionManifest{}, errors.New("failed to durably extract extension payload")
 		}
 		if written != int64(entry.UncompressedSize64) || written > maxSingleFile0203 {
-			return model.ExtensionManifest{}, fmt.Errorf("extracted полезная нагрузка размер несоответствие для %s", rel)
+			return model.ExtensionManifest{}, fmt.Errorf("extracted payload size mismatch for %s", rel)
 		}
 		expected := ""
 		for _, f := range a.descriptor.Payload.Files {
@@ -663,7 +663,7 @@ func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string
 			}
 		}
 		if expected == "" || hex.EncodeToString(h.Sum(nil)) != expected {
-			return model.ExtensionManifest{}, fmt.Errorf("extracted полезная нагрузка хеш несоответствие для %s", rel)
+			return model.ExtensionManifest{}, fmt.Errorf("extracted payload digest mismatch for %s", rel)
 		}
 	}
 	manifestBytes, err := canonicalJSON0203(a.manifest)

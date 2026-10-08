@@ -20,10 +20,10 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 	if cfg.CAFile != "" {
 		pemBytes, err := os.ReadFile(cfg.CAFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("чтение CA файл: %w", err)
+			return nil, nil, fmt.Errorf("read CA file: %w", err)
 		}
 		if !roots.AppendCertsFromPEM(pemBytes) {
-			return nil, nil, fmt.Errorf("CA файл содержит нет сертификаты")
+			return nil, nil, fmt.Errorf("CA file contains no certificates")
 		}
 	}
 	dialer := &net.Dialer{Timeout: cfg.ConnectTimeoutValue, KeepAlive: 30 * time.Second}
@@ -35,14 +35,14 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 		}
 		host = strings.TrimSuffix(strings.ToLower(host), ".")
 		if !hostAllowed(host, cfg.HostAllowlist) {
-			return nil, fmt.Errorf("OIDC SSRF защита отклонён хост %q", host)
+			return nil, fmt.Errorf("OIDC SSRF protection rejected host %q", host)
 		}
 		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("OIDC разрешать %q: %w", host, err)
+			return nil, fmt.Errorf("OIDC resolve %q: %w", host, err)
 		}
 		if len(ips) == 0 {
-			return nil, fmt.Errorf("OIDC хост %q разрешённый к нет адрес", host)
+			return nil, fmt.Errorf("OIDC host %q resolved to no addresses", host)
 		}
 		var last error
 		for _, item := range ips {
@@ -57,7 +57,7 @@ func newHTTPClient(cfg RuntimeConfig) (*http.Client, *http.Transport, error) {
 			last = err
 		}
 		if last == nil {
-			last = fmt.Errorf("нет permitted адрес")
+			last = fmt.Errorf("no permitted addresses")
 		}
 		return nil, last
 	}
@@ -70,11 +70,11 @@ func validateTargetIP(ip net.IP, allowed []*net.IPNet) error {
 		}
 	}
 	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-		return fmt.Errorf("OIDC SSRF защита отклонён non-публичный адрес %s", ip)
+		return fmt.Errorf("OIDC SSRF protection rejected non-public address %s", ip)
 	}
 	if v4 := ip.To4(); v4 != nil {
 		if v4[0] == 0 || v4[0] >= 224 || v4[0] == 100 && (v4[1]&0xc0) == 64 || v4[0] == 192 && v4[1] == 0 && v4[2] == 0 || v4[0] == 198 && (v4[1] == 18 || v4[1] == 19) {
-			return fmt.Errorf("OIDC SSRF защита отклонён special-использовать адрес %s", ip)
+			return fmt.Errorf("OIDC SSRF protection rejected special-use address %s", ip)
 		}
 	}
 	return nil

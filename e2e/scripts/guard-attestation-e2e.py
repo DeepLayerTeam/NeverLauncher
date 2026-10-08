@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Сборка действительный Linux NeverGuard аттестация для PostgreSQL протокол E2E.
+"""Build a valid Linux NeverGuard attestation for the PostgreSQL protocol E2E.
 
-Этот является протокол фикстура, не происхождение захватывать: серверная часть по-прежнему проверяет
-запрос актуальность, P-256 устройство подпись, точный список разрешений Guard/Desktop
-хеш пара, процесс-граница fields, evidence/attestation хеши и одноразовый
-запускать-билет consumption.
+This is a protocol fixture, not a provenance claim: the backend still verifies
+challenge freshness, the P-256 device signature, exact allowlisted Guard/Desktop
+hash pair, process-boundary fields, evidence/attestation digests and one-time
+launch-ticket consumption.
 """
 from __future__ import annotations
 

@@ -1,3 +1,3 @@
-# NeverExtensions Настольное приложение TypeScript SDK
+# NeverExtensions Desktop TypeScript SDK
 
-Типизированный клиент для непрозрачный-источник Настольное приложение песочница. Tauri доступ является только доступный через явно разрешение RPC методы предоставлять через NeverLauncher; iframe никогда получает прямой `invoke` доступ.
+Typed client for the opaque-origin Desktop sandbox. Tauri access is only available through explicitly permissioned RPC methods exposed by NeverLauncher; the iframe never receives direct `invoke` access.

@@ -2,4 +2,4 @@ name: NeverLauncherBungeeBridge
 main: ru.neverlauncher.bridge.bungeecord.NeverLauncherBungeeCordBridge
 version: "${version}"
 author: SkiF4er
-description: NeverLauncher ServerBridge 3 интеграционный для BungeeCord с Протокол v3 согласование и Протокол v2 поэтапный-обновление совместимость.
+description: NeverLauncher ServerBridge 3 integration for BungeeCord with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.

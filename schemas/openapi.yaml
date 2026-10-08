@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.21.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.21.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -8536,6 +8536,47 @@
         "security": []
       }
     },
+    "/api/v1/jobs/{jobId}": {
+      "get": {
+        "operationId": "get_jobs_by_jobId",
+        "tags": [
+          "api"
+        ],
+        "summary": "GET /api/v1/jobs/{jobId}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/loaders": {
       "get": {
         "operationId": "get_loaders",
@@ -9350,7 +9391,7 @@
         "tags": [
           "api"
         ],
-        "summary": "Run package integrity validation",
+        "summary": "POST /api/v1/packages/{packageId}/integrity-check",
         "responses": {
           "200": {
             "description": "Success",
@@ -9386,7 +9427,16 @@
             "BearerAuth": []
           }
         ],
-        "description": "Verifies exact stored package bytes, SHA-256 metadata, manifest signature and compatibility metadata. This operation never starts Minecraft and cannot produce runtime PASS evidence."
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/packages/{packageId}/publish": {
@@ -9398,12 +9448,11 @@
         "summary": "POST /api/v1/packages/{packageId}/publish",
         "responses": {
           "200": {
-            "description": "Publication committed durably",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "$ref": "#/components/schemas/ReleaseVersion"
                 }
               }
             }
@@ -9413,17 +9462,6 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
-          },
-          "202": {
-            "description": "Publication job persisted and queued",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            }
           }
         },
         "parameters": [
@@ -9451,8 +9489,7 @@
               }
             }
           }
-        },
-        "description": "Enqueues a durable, idempotent publication job. Publication re-checks live authorization, validation evidence, manifest/artifact digests and a PostgreSQL fencing lease immediately before atomic commit. A queued job survives API process restart."
+        }
       }
     },
     "/api/v1/packages/{packageId}/runtime-validations/evidence": {
@@ -9461,7 +9498,7 @@
         "tags": [
           "api"
         ],
-        "summary": "Submit signed actual-client runtime evidence",
+        "summary": "POST /api/v1/packages/{packageId}/runtime-validations/evidence",
         "responses": {
           "200": {
             "description": "Success",
@@ -9502,12 +9539,11 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RuntimeValidationSubmission0212"
+                "$ref": "#/components/schemas/FreeFormObject"
               }
             }
           }
-        },
-        "description": "Accepts only Ed25519-signed evidence from a configured trusted signer and binds it to the exact current package manifest digest."
+        }
       }
     },
     "/api/v1/packages/{packageId}/sign": {
@@ -9570,7 +9606,7 @@
         "tags": [
           "api"
         ],
-        "summary": "Legacy integrity-only smoke-test compatibility route",
+        "summary": "POST /api/v1/packages/{packageId}/smoke-test",
         "responses": {
           "200": {
             "description": "Success",
@@ -9606,7 +9642,16 @@
             "BearerAuth": []
           }
         ],
-        "description": "Deprecated alias for integrity-check. It verifies stored files and the signed manifest only; it never launches Minecraft and explicitly reports runtimeExecuted=false and runtimeStatus=not-checked."
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/packages/{packageId}/stage": {
@@ -9723,7 +9768,7 @@
         "tags": [
           "api"
         ],
-        "summary": "Get package validation evidence",
+        "summary": "GET /api/v1/packages/{packageId}/validations",
         "responses": {
           "200": {
             "description": "Success",
@@ -9755,8 +9800,7 @@
           {
             "BearerAuth": []
           }
-        ],
-        "description": "Returns the latest integrity result, durable runtime evidence history, and effective project validation policy."
+        ]
       }
     },
     "/api/v1/projects": {
@@ -9983,7 +10027,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Get project validation policy",
+        "summary": "GET /api/v1/projects/{projectId}/validation-policy",
         "responses": {
           "200": {
             "description": "Success",
@@ -10015,7 +10059,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Set project validation policy",
+        "summary": "PUT /api/v1/projects/{projectId}/validation-policy",
         "responses": {
           "200": {
             "description": "Success",
@@ -10056,12 +10100,11 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProjectValidationPolicyRequest0212"
+                "$ref": "#/components/schemas/FreeFormObject"
               }
             }
           }
-        },
-        "description": "Runtime policy can only be enabled when trusted runtime validation signer keys are configured."
+        }
       }
     },
     "/api/v1/projects/{projectId}/versions": {
@@ -11835,57 +11878,6 @@
           }
         ],
         "security": []
-      }
-    },
-    "/api/v1/jobs/{jobId}": {
-      "get": {
-        "operationId": "get_jobs_by_jobId",
-        "tags": [
-          "operations"
-        ],
-        "summary": "Get durable job state",
-        "description": "Returns persisted job state. The requesting actor may read its own job; other users require current project read authorization.",
-        "responses": {
-          "200": {
-            "description": "Durable job state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DurableJobEnvelope0213"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "Job not found or outside the caller scope",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "jobId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ]
       }
     }
   },
@@ -14675,404 +14667,6 @@
             "$ref": "#/components/schemas/ValidateJoinRequestV3"
           }
         ]
-      },
-      "IntegrityCheckResult0212": {
-        "type": "object",
-        "required": [
-          "id",
-          "packageId",
-          "projectId",
-          "manifestDigest",
-          "artifactDigest",
-          "signatureVerified",
-          "storageVerified",
-          "filesVerified",
-          "compatibilityVerified",
-          "result",
-          "checkedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "packageId": {
-            "type": "string"
-          },
-          "projectId": {
-            "type": "string"
-          },
-          "manifestDigest": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "artifactDigest": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "signatureVerified": {
-            "type": "boolean"
-          },
-          "storageVerified": {
-            "type": "boolean"
-          },
-          "filesVerified": {
-            "type": "boolean"
-          },
-          "compatibilityVerified": {
-            "type": "boolean"
-          },
-          "result": {
-            "type": "string",
-            "enum": [
-              "passed",
-              "failed"
-            ]
-          },
-          "checks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FreeFormObject"
-            }
-          },
-          "checkedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "RuntimeValidationEvidence0212": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "schemaVersion",
-          "packageId",
-          "manifestDigest",
-          "targetId",
-          "actualClient",
-          "exitCode",
-          "serverJoin",
-          "evidenceHashes",
-          "startedAt",
-          "finishedAt",
-          "runId"
-        ],
-        "properties": {
-          "schemaVersion": {
-            "type": "string",
-            "const": "neverlauncher/runtime-validation/v1"
-          },
-          "packageId": {
-            "type": "string"
-          },
-          "manifestDigest": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "targetId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minecraftVersion": {
-            "type": "string"
-          },
-          "loader": {
-            "type": "string"
-          },
-          "os": {
-            "type": "string"
-          },
-          "arch": {
-            "type": "string"
-          },
-          "java": {
-            "type": "string"
-          },
-          "actualClient": {
-            "type": "boolean"
-          },
-          "exitCode": {
-            "type": "integer"
-          },
-          "serverJoin": {
-            "type": "boolean"
-          },
-          "runId": {
-            "type": "string"
-          },
-          "commit": {
-            "type": "string"
-          },
-          "evidenceHashes": {
-            "type": "object",
-            "minProperties": 1,
-            "additionalProperties": {
-              "type": "string",
-              "pattern": "^[0-9a-fA-F]{64}$"
-            }
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "finishedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "RuntimeValidationSubmission0212": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "keyId",
-          "evidence",
-          "signature"
-        ],
-        "properties": {
-          "keyId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "evidence": {
-            "$ref": "#/components/schemas/RuntimeValidationEvidence0212"
-          },
-          "signature": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
-      },
-      "ProjectValidationPolicy0212": {
-        "type": "object",
-        "required": [
-          "projectId",
-          "requiredLevel",
-          "requireServerJoin",
-          "updatedAt"
-        ],
-        "properties": {
-          "projectId": {
-            "type": "string"
-          },
-          "requiredLevel": {
-            "type": "string",
-            "enum": [
-              "integrity",
-              "runtime"
-            ]
-          },
-          "requireServerJoin": {
-            "type": "boolean"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ProjectValidationPolicyRequest0212": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "requiredLevel"
-        ],
-        "properties": {
-          "requiredLevel": {
-            "type": "string",
-            "enum": [
-              "integrity",
-              "runtime"
-            ]
-          },
-          "requireServerJoin": {
-            "type": "boolean",
-            "default": false
-          }
-        }
-      },
-      "TrustAssessment0212": {
-        "type": "object",
-        "required": [
-          "keyPossession",
-          "localHardwareBinding",
-          "remoteHardwareProvenance",
-          "artifactIntegrity",
-          "runtimeEvidence",
-          "policyDecision",
-          "assessedAt"
-        ],
-        "properties": {
-          "keyPossession": {
-            "type": "string"
-          },
-          "localHardwareBinding": {
-            "type": "string"
-          },
-          "remoteHardwareProvenance": {
-            "type": "string",
-            "enum": [
-              "not-verified",
-              "verified"
-            ]
-          },
-          "artifactIntegrity": {
-            "type": "string"
-          },
-          "runtimeEvidence": {
-            "type": "string"
-          },
-          "policyDecision": {
-            "type": "string"
-          },
-          "reasonCodes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "assessedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "evidenceExpiresAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "DurableJob0213": {
-        "type": "object",
-        "required": [
-          "id",
-          "kind",
-          "actorType",
-          "actorId",
-          "action",
-          "resourceType",
-          "resourceId",
-          "idempotencyKey",
-          "payloadDigest",
-          "status",
-          "leaseFence",
-          "attemptCount",
-          "maxAttempts",
-          "availableAt",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "actorType": {
-            "type": "string"
-          },
-          "actorId": {
-            "type": "string"
-          },
-          "action": {
-            "type": "string"
-          },
-          "projectId": {
-            "type": "string"
-          },
-          "resourceType": {
-            "type": "string"
-          },
-          "resourceId": {
-            "type": "string"
-          },
-          "idempotencyKey": {
-            "type": "string"
-          },
-          "payload": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "payloadDigest": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "succeeded",
-              "failed",
-              "revoked",
-              "dead"
-            ]
-          },
-          "leaseOwner": {
-            "type": "string"
-          },
-          "leaseToken": {
-            "type": "string"
-          },
-          "leaseFence": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "leaseExpiresAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "attemptCount": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "maxAttempts": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "availableAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "lastError": {
-            "type": "string"
-          },
-          "result": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false
-      },
-      "DurableJobEnvelope0213": {
-        "type": "object",
-        "required": [
-          "apiVersion",
-          "data"
-        ],
-        "properties": {
-          "apiVersion": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/DurableJob0213"
-          }
-        },
-        "additionalProperties": false
       }
     },
     "responses": {

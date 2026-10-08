@@ -43,7 +43,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 	keys := map[string]string{}
 	if raw := strings.TrimSpace(s.Config.AuthTokenKeysJSON); raw != "" {
 		if err := json.Unmarshal([]byte(raw), &keys); err != nil {
-			return "", nil, fmt.Errorf("недопустимый аутентификация токен хранилище ключей: %w", err)
+			return "", nil, fmt.Errorf("invalid auth token keyring: %w", err)
 		}
 	}
 	if len(keys) == 0 {
@@ -53,7 +53,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 		nk := strings.TrimSpace(kid)
 		sv := strings.TrimSpace(secret)
 		if nk == "" || sv == "" {
-			return "", nil, errors.New("аутентификация токен хранилище ключей содержит пустой kid/secret")
+			return "", nil, errors.New("auth token keyring contains empty kid/secret")
 		}
 		if nk != kid {
 			delete(keys, kid)
@@ -63,7 +63,7 @@ func (s Server) authTokenKeys118() (string, map[string]string, error) {
 		}
 	}
 	if strings.TrimSpace(keys[active]) == "" {
-		return "", nil, fmt.Errorf("активный аутентификация токен kid %q является отсутствующий из хранилище ключей", active)
+		return "", nil, fmt.Errorf("active auth token kid %q is absent from keyring", active)
 	}
 	return active, keys, nil
 }

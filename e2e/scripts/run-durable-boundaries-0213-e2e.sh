@@ -13,7 +13,7 @@ cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cleanup
 
-echo "[durable-0213] запуск изолированный PostgreSQL"
+echo "[durable-0213] starting isolated PostgreSQL"
 docker run -d --rm --name "$CONTAINER" \
   -e POSTGRES_DB=neverlauncher \
   -e POSTGRES_USER=neverlauncher \
@@ -28,7 +28,7 @@ for _ in $(seq 1 60); do
 done
 docker exec "$CONTAINER" pg_isready -U neverlauncher -d neverlauncher >/dev/null
 
-echo "[durable-0213] работающий многорепликовый lease/restart/fencing тесты"
+echo "[durable-0213] running multi-replica lease/restart/fencing tests"
 (
   cd "$ROOT/services/api"
   NEVERLAUNCHER_DURABLE_DSN="$DSN" go test ./internal/repository \

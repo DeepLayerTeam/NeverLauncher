@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3])
 if core < (0, 17, 10):
-    raise SystemExit(f"Загрузчик Усиление защиты требует VERSION>=0.17.10, получил {version}")
+    raise SystemExit(f"Loader Hardening requires VERSION>=0.17.10, got {version}")
 
 
 def read(rel: str) -> str:
@@ -17,7 +17,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 cache = read("cli/cmd/neverlauncher/loader_hardening.go")
 require(cache, [
@@ -56,4 +56,4 @@ require(tests, [
 workflow = read(".github/workflows/compatibility.yml")
 require(workflow, ["e2e/runtime/loader-hardening.json", "e2e/runtime/loader-hardening-package.json"], "compatibility hardening artifacts")
 
-print("Загрузчик Усиление защиты 0.17.10 контроль: OK (адресуемый по содержимому загрузчик кэш, закреплённый вышестоящий проект independence, установщик восстановление, долговременный обработчик восстановление после сбоя)")
+print("Loader Hardening 0.17.10 gate: OK (content-addressed loader cache, pinned upstream independence, installer restore, durable processor crash recovery)")

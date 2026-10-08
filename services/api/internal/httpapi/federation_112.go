@@ -21,7 +21,7 @@ func (c localAuthConnector112) Metadata() authconnector.Metadata {
 }
 func (c localAuthConnector112) Health(ctx context.Context) error {
 	if c.repo == nil {
-		return errors.New("репозиторий недоступный")
+		return errors.New("repository unavailable")
 	}
 	if health, ok := c.repo.(interface{ Health(context.Context) error }); ok {
 		return health.Health(ctx)

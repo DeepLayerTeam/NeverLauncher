@@ -69,7 +69,7 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 	oldSig := base64.RawURLEncoding.EncodeToString(ed25519.Sign(old.Private, []byte(payload)))
 	newSig := base64.RawURLEncoding.EncodeToString(ed25519.Sign(newPriv, []byte(payload)))
 
-	// Новый-ключ доказательство alone должен не авторизовать continuity-сохраняя ротация.
+	// New-key proof alone must not authorize a continuity-preserving rotation.
 	code, _ := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+old.ID+"/key-rotation/complete", old.Access, map[string]any{
 		"challengeId": begin["challengeId"], "challenge": begin["challenge"], "newSignature": newSig,
 	})
@@ -77,7 +77,7 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 		t.Fatalf("rotation without old-key proof accepted: %d", code)
 	}
 
-	// Burned запрос является intentional; begin актуальный процедура и полный оба доказательство.
+	// Burned challenge is intentional; begin a fresh ceremony and complete both proofs.
 	begin = beginReplacement0128(t, h, "/api/v1/auth/devices/key-rotation/begin", old.Access, old.ID, newPub)
 	payload, _ = begin["signingPayload"].(string)
 	oldSig = base64.RawURLEncoding.EncodeToString(ed25519.Sign(old.Private, []byte(payload)))

@@ -143,15 +143,15 @@ func neverGuardReleasePolicyV2Required0140(ver string) bool {
 
 func embedGuardCICertification(out, matrixPath, targetsPath, ver, expectedCommit string) error {
 	if strings.TrimSpace(matrixPath) == "" || strings.TrimSpace(targetsPath) == "" {
-		return errors.New("Защита CI matrix/targets путь пуст")
+		return errors.New("Guard CI matrix/targets path пуст")
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
-		return fmt.Errorf("чтение Защита CI матрица: %w", err)
+		return fmt.Errorf("read Guard CI matrix: %w", err)
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("чтение Защита CI цели: %w", err)
+		return fmt.Errorf("read Guard CI targets: %w", err)
 	}
 	certification, err := validateGuardCIEvidence(matrixRaw, targetsRaw, ver, expectedCommit)
 	if err != nil {
@@ -203,26 +203,26 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit string) (releaseGuardCICertification, error) {
 	var targets releaseGuardCITargets
 	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
-		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_TARGETS недопустимый: %w", err)
+		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_TARGETS invalid: %w", err)
 	}
 	var matrix releaseGuardCIMatrix
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
-		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_MATRIX недопустимый: %w", err)
+		return releaseGuardCICertification{}, fmt.Errorf("GUARD_CI_MATRIX invalid: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
-		return releaseGuardCICertification{}, errors.New("Защита CI свидетельство требует schemaVersion=1.0")
+		return releaseGuardCICertification{}, errors.New("Guard CI evidence требует schemaVersion=1.0")
 	}
 	if strings.TrimSpace(ver) == "" || targets.ProductVersion != ver || matrix.ProductVersion != ver {
-		return releaseGuardCICertification{}, fmt.Errorf("Защита CI productVersion несоответствие: релиз=%s цели=%s матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
+		return releaseGuardCICertification{}, fmt.Errorf("Guard CI productVersion mismatch: release=%s targets=%s matrix=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
-		return releaseGuardCICertification{}, errors.New("Защита CI матрица не имеет отказ с блокировкой состояние=пройден")
+		return releaseGuardCICertification{}, errors.New("Guard CI matrix не имеет fail-closed status=passed")
 	}
 	if strings.TrimSpace(matrix.Repository) == "" || strings.TrimSpace(matrix.Commit) == "" || strings.TrimSpace(matrix.RunID) == "" {
-		return releaseGuardCICertification{}, errors.New("Защита CI матрица не содержит repository/commit/runId")
+		return releaseGuardCICertification{}, errors.New("Guard CI matrix не содержит repository/commit/runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
-		return releaseGuardCICertification{}, fmt.Errorf("Защита CI матрица фиксация несоответствие: ожидаемый=%s фактический=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
+		return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix commit mismatch: expected=%s actual=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
 	}
 
 	commonChecks := map[string]bool{
@@ -245,25 +245,25 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		id := strings.TrimSpace(target.ID)
 		osName := strings.ToLower(strings.TrimSpace(target.OS))
 		if id == "" || targetByID[id].ID != "" {
-			return releaseGuardCICertification{}, fmt.Errorf("недопустимый или дубликат Защита CI цель: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("invalid or duplicate Guard CI target: %s", id)
 		}
 		if osCheck[osName] == "" || target.Arch != expectedArch[osName] || strings.TrimSpace(target.Runner) == "" || target.CISigningMode != expectedSigning[osName] {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель identity/policy недопустимый: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target identity/policy invalid: %s", id)
 		}
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {
 			if strings.TrimSpace(check) == "" || checks[check] {
-				return releaseGuardCICertification{}, fmt.Errorf("цель %s содержит пустой/дубликат обязательный проверка", id)
+				return releaseGuardCICertification{}, fmt.Errorf("target %s содержит пустой/duplicate required check", id)
 			}
 			checks[check] = true
 		}
 		for check := range commonChecks {
 			if !checks[check] {
-				return releaseGuardCICertification{}, fmt.Errorf("цель %s ослабляет Защита сертификация: отсутствующий %s", id, check)
+				return releaseGuardCICertification{}, fmt.Errorf("target %s ослабляет Guard certification: missing %s", id, check)
 			}
 		}
 		if !checks[osCheck[osName]] {
-			return releaseGuardCICertification{}, fmt.Errorf("цель %s ослабляет платформа Защита контроль: отсутствующий %s", id, osCheck[osName])
+			return releaseGuardCICertification{}, fmt.Errorf("target %s ослабляет platform Guard gate: missing %s", id, osCheck[osName])
 		}
 		targetByID[id] = target
 		if target.Required {
@@ -273,22 +273,22 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 	}
 	for _, osName := range []string{"linux", "windows", "macos"} {
 		if !requiredOS[osName] {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита сертификация релиза требует обязательный цель для %s", osName)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard release certification требует required target для %s", osName)
 		}
 	}
 
 	resultByID := map[string]releaseGuardCIResult{}
 	for _, result := range matrix.Targets {
 		if _, ok := targetByID[result.TargetID]; !ok {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI матрица содержит unexpected цель: %s", result.TargetID)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix содержит unexpected target: %s", result.TargetID)
 		}
 		if _, exists := resultByID[result.TargetID]; exists {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI матрица содержит дубликат цель: %s", result.TargetID)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix содержит duplicate target: %s", result.TargetID)
 		}
 		resultByID[result.TargetID] = result
 	}
 	if len(resultByID) != len(targetByID) {
-		return releaseGuardCICertification{}, fmt.Errorf("Защита CI матрица цель счётчик несоответствие: ожидаемый=%d фактический=%d", len(targetByID), len(resultByID))
+		return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix target count mismatch: expected=%d actual=%d", len(targetByID), len(resultByID))
 	}
 
 	roles := []string{"package", "launcher", "guard", "manifest", "allowlist"}
@@ -298,27 +298,27 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 	for id, target := range targetByID {
 		result := resultByID[id]
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s не имеет валидный PASS/exitCode=0", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не имеет валидный PASS/exitCode=0", id)
 		}
 		if result.Runner != target.Runner || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" || result.Repository != matrix.Repository || result.Commit != matrix.Commit || result.RunID != matrix.RunID {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s identity/commit/runId несоответствие", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s identity/commit/runId mismatch", id)
 		}
 		for _, check := range target.RequiredChecks {
 			if result.Checks == nil || result.Checks[check] != true {
-				return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s обязательный проверка %s!= true", id, check)
+				return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s required check %s != true", id, check)
 			}
 		}
 		if !guardCISHA256RE.MatchString(strings.ToLower(result.EvidenceSHA256)) {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s не содержит действительный evidenceSha256", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не содержит valid evidenceSha256", id)
 		}
 		if fmt.Sprint(result.Claims["guardProtocolVersion"]) != "4" || fmt.Sprint(result.Claims["releaseCertification"]) != ver || fmt.Sprint(result.Claims["ciSigningMode"]) != target.CISigningMode || fmt.Sprint(result.Claims["vendorSigningProvenance"]) != "not-certified-by-ci" {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s содержит неверные release/security захватывает", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s содержит неверные release/security claims", id)
 		}
 		if neverGuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s не подтверждает NeverGuard 0.14 релиз идентичность", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает NeverGuard 0.14 release identity", id)
 		}
 		if result.Claims["packageManifestBound"] != true || result.Claims["artifactSetComplete"] != true {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s не подтверждает пакет manifest/artifact задать", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает package manifest/artifact set", id)
 		}
 		limitationFound := false
 		for _, limitation := range result.Limitations {
@@ -328,19 +328,19 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 			}
 		}
 		if !limitationFound {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s overclaims поставщик подписание происхождение", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s overclaims vendor signing provenance", id)
 		}
 		expectedNames := expectedGuardArtifactNames0139(result.OS, ver)
 		if len(result.Artifacts) != len(roles) {
-			return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s артефакт задать неполный", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s artifact set incomplete", id)
 		}
 		for _, role := range roles {
 			artifact, ok := result.Artifacts[role]
 			if !ok || artifact.Name != expectedNames[role] || artifact.Size <= 0 || !guardCISHA256RE.MatchString(strings.ToLower(artifact.SHA256)) {
-				return releaseGuardCICertification{}, fmt.Errorf("Защита CI цель %s недопустимый сертифицированный артефакт %s", id, role)
+				return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s invalid certified artifact %s", id, role)
 			}
 			if filepath.Base(artifact.Name) != artifact.Name || artifactNames[artifact.Name] {
-				return releaseGuardCICertification{}, fmt.Errorf("Защита CI артефакт имя unsafe/duplicate: %s", artifact.Name)
+				return releaseGuardCICertification{}, fmt.Errorf("Guard CI artifact name unsafe/duplicate: %s", artifact.Name)
 			}
 			artifactNames[artifact.Name] = true
 			certifiedArtifacts = append(certifiedArtifacts, releaseGuardCertifiedArtifact{TargetID: id, Role: role, Name: artifact.Name, Size: artifact.Size, SHA256: strings.ToLower(artifact.SHA256)})
@@ -371,14 +371,14 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedArtifact) error {
 	for _, artifact := range artifacts {
 		if filepath.Base(artifact.Name) != artifact.Name {
-			return fmt.Errorf("unsafe сертифицированный Защита артефакт путь: %s", artifact.Name)
+			return fmt.Errorf("unsafe certified Guard artifact path: %s", artifact.Name)
 		}
 		actual, size, err := hashFile(filepath.Join(dir, artifact.Name))
 		if err != nil {
-			return fmt.Errorf("сертифицированный Защита артефакт %s отсутствующий: %w", artifact.Name, err)
+			return fmt.Errorf("certified Guard artifact %s missing: %w", artifact.Name, err)
 		}
 		if size != artifact.Size || !strings.EqualFold(actual, artifact.SHA256) {
-			return fmt.Errorf("сертифицированный Защита артефакт несоответствие: %s", artifact.Name)
+			return fmt.Errorf("certified Guard artifact mismatch: %s", artifact.Name)
 		}
 	}
 	return nil
@@ -387,29 +387,29 @@ func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedAr
 func verifyGuardCICertificationInBundle(dir, ver string) error {
 	matrixRaw, err := os.ReadFile(filepath.Join(dir, guardCIMatrixReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s отсутствующий: %w", guardCIMatrixReleaseFile, err)
+		return fmt.Errorf("%s missing: %w", guardCIMatrixReleaseFile, err)
 	}
 	targetsRaw, err := os.ReadFile(filepath.Join(dir, guardCITargetsReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s отсутствующий: %w", guardCITargetsReleaseFile, err)
+		return fmt.Errorf("%s missing: %w", guardCITargetsReleaseFile, err)
 	}
 	certRaw, err := os.ReadFile(filepath.Join(dir, guardCICertificationReleaseFile))
 	if err != nil {
-		return fmt.Errorf("%s отсутствующий: %w", guardCICertificationReleaseFile, err)
+		return fmt.Errorf("%s missing: %w", guardCICertificationReleaseFile, err)
 	}
 	var stored releaseGuardCICertification
 	if err := json.Unmarshal(certRaw, &stored); err != nil {
-		return fmt.Errorf("%s недопустимый: %w", guardCICertificationReleaseFile, err)
+		return fmt.Errorf("%s invalid: %w", guardCICertificationReleaseFile, err)
 	}
 	expected, err := validateGuardCIEvidence(matrixRaw, targetsRaw, ver, stored.Commit)
 	if err != nil {
 		return err
 	}
 	if stored.SchemaVersion != expected.SchemaVersion || stored.ProductVersion != expected.ProductVersion || stored.Repository != expected.Repository || stored.Commit != expected.Commit || stored.RunID != expected.RunID || stored.MatrixSHA256 != expected.MatrixSHA256 || stored.TargetsSHA256 != expected.TargetsSHA256 || stored.Policy != expected.Policy || stored.VendorSigningClaim != expected.VendorSigningClaim {
-		return errors.New("GUARD_CI_CERTIFICATION не соответствует встроенный matrix/targets")
+		return errors.New("GUARD_CI_CERTIFICATION не соответствует embedded matrix/targets")
 	}
 	if !reflect.DeepEqual(stored.RequiredTargetIDs, expected.RequiredTargetIDs) || !reflect.DeepEqual(stored.PassedTargetIDs, expected.PassedTargetIDs) || !reflect.DeepEqual(stored.CertifiedArtifacts, expected.CertifiedArtifacts) {
-		return errors.New("GUARD_CI_CERTIFICATION target/artifact задаёт несоответствие")
+		return errors.New("GUARD_CI_CERTIFICATION target/artifact sets mismatch")
 	}
 	return verifyGuardCIArtifactsInDir(dir, stored.CertifiedArtifacts)
 }

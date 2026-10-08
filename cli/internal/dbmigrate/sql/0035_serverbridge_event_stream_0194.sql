@@ -1,4 +1,4 @@
--- NeverLauncher 0.19.4: долговременный упорядоченный ServerBridge v3 событие поток.
+-- NeverLauncher 0.19.4: durable ordered ServerBridge v3 event stream.
 CREATE TABLE IF NOT EXISTS server_bridge_event_cursors_v3 (
     server_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id) ON DELETE CASCADE,
     runtime_epoch BIGINT NOT NULL CHECK (runtime_epoch > 0),

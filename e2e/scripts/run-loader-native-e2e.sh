@@ -49,7 +49,7 @@ trap cleanup EXIT
 rm -rf "$SERVER_DIR"
 mkdir -p "$SERVER_DIR"
 compose rm -sf loader-native >/dev/null 2>&1 || true
-printf '[нативный для загрузчика] запуск %s %s / загрузчик %s выделенный сервер\n' "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
+printf '[loader-native] start %s %s / loader %s dedicated server\n' "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
 compose up -d loader-native >/dev/null
 CONTAINER_ID="$(compose ps -q loader-native)"
 [[ -n "$CONTAINER_ID" ]] || { echo "[loader-native] container was not created" >&2; exit 1; }
@@ -64,7 +64,7 @@ for _ in $(seq 1 120); do
 done
 compose logs --no-color loader-native > "$RUNTIME_DIR/loader-native-server.log" 2>&1 || true
 if [[ "$HEALTH" != healthy ]]; then
-  echo "[нативный для загрузчика] выделенный сервер сделал не становиться работоспособный" >&2
+  echo "[loader-native] dedicated server did not become healthy" >&2
   cat "$RUNTIME_DIR/loader-native-server.log" >&2
   exit 1
 fi
@@ -86,7 +86,7 @@ if not any(needle in p.replace('\\','/') or version in p.rsplit('/',1)[-1] for p
     raise SystemExit(f'exact loader version {version!r} is not present in server runtime artifact paths')
 PY
 
-printf '[нативный для загрузчика] запускать фактический %s клиент профиль %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
+printf '[loader-native] launch actual %s client profile %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -155,4 +155,4 @@ payload={
 open(out_p,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[нативный для загрузчика] PASS %s клиент ↔ %s сервер / Minecraft %s / загрузчик %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
+printf '[loader-native] PASS %s client ↔ %s server / Minecraft %s / loader %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"

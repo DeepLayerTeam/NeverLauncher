@@ -117,19 +117,19 @@ impl ProcessSupervisor {
         let log_path = logs_dir.join(format!("neverruntime-launch-{started_at}.log"));
 
         let mut log_file = OpenOptions::new().create(true).append(true).open(&log_path)
-            .map_err(|err| format!("не удалось открыть среда выполнения журнал {}: {err}", log_path.display()))?;
+            .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
         writeln!(log_file, "NeverRuntime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
         writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
         writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
         log_file.flush().map_err(|e| e.to_string())?;
-        let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать среда выполнения журнал дескриптор: {e}"))?;
+        let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
 
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
         command.args(&plan.jvm_args);
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
-            .map_err(|err| format!("запускать заблокирован: NeverGuard Sensor prepare ошибка: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
         command
             .arg("-cp")
             .arg(join_classpath(&plan.classpath_entries))
@@ -146,17 +146,17 @@ impl ProcessSupervisor {
         crate::macos_policy::prepare_runtime_command(&mut command);
         let mut child = command
             .spawn()
-            .map_err(|err| format!("не удалось запустить среда выполнения: {err}"))?;
+            .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
         #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
-            .map_err(|err| format!("запускать заблокирован: Windows runtime/process политика принудительное применение ошибка: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
         #[cfg(windows)]
         sensor_bootstrap.bind_runtime_policy(&runtime_policy);
         #[cfg(windows)]
         let windows_sensor_session = Some(
             crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
                 .await
-                .map_err(|err| format!("запускать заблокирован: NeverGuard Sensor/Module Защита аутентификация ошибка: {err}"))?,
+                .map_err(|err| format!("launch заблокирован: NeverGuard Sensor/Module Guard authentication failed: {err}"))?,
         );
         #[cfg(windows)]
         let windows_sensor = windows_sensor_session.as_ref().map(|session| session.report());
@@ -164,10 +164,10 @@ impl ProcessSupervisor {
         let windows_sensor = None;
         #[cfg(target_os = "linux")]
         let linux_runtime_policy = crate::linux_policy::runtime_policy(&mut child)
-            .map_err(|err| format!("запускать заблокирован: Linux runtime/process политика принудительное применение ошибка: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: Linux runtime/process policy enforcement failed: {err}"))?;
         #[cfg(target_os = "macos")]
         let macos_runtime_policy = crate::macos_policy::runtime_policy(&mut child)
-            .map_err(|err| format!("запускать заблокирован: macOS runtime/process политика принудительное применение ошибка: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: macOS runtime/process policy enforcement failed: {err}"))?;
 
         let pid = child.id();
         #[cfg(windows)]
@@ -242,7 +242,7 @@ impl ProcessSupervisor {
                 let finished_at = now_unix().unwrap_or_default().to_string();
                 let (exit_code, success, message) = match exit {
                     Ok(status) => (status.code(), status.success(), if status.success() { "Runtime завершился успешно".to_string() } else { "Runtime завершился с ошибкой".to_string() }),
-                    Err(err) => (None, false, format!("Не удалось получить статус среда выполнения: {err}")),
+                    Err(err) => (None, false, format!("Не удалось получить статус runtime: {err}")),
                 };
                 {
                     let mut map = processes.lock().await;
@@ -277,7 +277,7 @@ impl ProcessSupervisor {
         let map = self.processes.lock().await;
         map.get(id)
             .map(process_status_snapshot)
-            .ok_or_else(|| format!("среда выполнения процесс {id} не найден"))
+            .ok_or_else(|| format!("runtime process {id} не найден"))
     }
 
     pub async fn list(&self) -> Vec<ProcessStatus> {
@@ -290,26 +290,26 @@ impl ProcessSupervisor {
     pub async fn stop(&self, id: &str) -> Result<ProcessStatus, String> {
         let child = {
             let map = self.processes.lock().await;
-            map.get(id).map(|p| p.child.clone()).ok_or_else(|| format!("среда выполнения процесс {id} не найден"))?
+            map.get(id).map(|p| p.child.clone()).ok_or_else(|| format!("runtime process {id} не найден"))?
         };
         {
             let mut guard = child.lock().await;
-            let process = guard.as_mut().ok_or_else(|| format!("среда выполнения процесс {id} уже завершён"))?;
+            let process = guard.as_mut().ok_or_else(|| format!("runtime process {id} уже завершён"))?;
             #[cfg(target_os = "linux")]
             {
-                let pid = process.id().ok_or_else(|| format!("среда выполнения процесс {id} PID недоступен"))?;
+                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
                 crate::linux_policy::terminate_runtime_process_group(pid)?;
             }
             #[cfg(target_os = "macos")]
             {
-                let pid = process.id().ok_or_else(|| format!("среда выполнения процесс {id} PID недоступен"))?;
+                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
                 crate::macos_policy::terminate_runtime_process_group(pid)?;
             }
             #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
-            process.start_kill().map_err(|err| format!("не удалось остановить среда выполнения процесс {id}: {err}"))?;
+            process.start_kill().map_err(|err| format!("не удалось остановить runtime process {id}: {err}"))?;
         }
         let mut map = self.processes.lock().await;
-        let process = map.get_mut(id).ok_or_else(|| format!("среда выполнения процесс {id} не найден"))?;
+        let process = map.get_mut(id).ok_or_else(|| format!("runtime process {id} не найден"))?;
         process.status.state = "stopping".to_string();
         process.status.message = "Отправлен сигнал остановки runtime".to_string();
         Ok(process.status.clone())

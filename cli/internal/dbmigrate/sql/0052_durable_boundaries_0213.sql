@@ -1,6 +1,6 @@
--- NeverLauncher 0.21.3 — долговременный управление-плоскость границы.
--- Публикация работа, распределённый изменение аренды, исходящая очередь доставка, идемпотентность и
--- одноразовый одноразовые значения являются PostgreSQL состояние и переживать API процесс перезапуск.
+-- NeverLauncher 0.21.3 — durable control-plane boundaries.
+-- Publish work, distributed mutation leases, outbox delivery, idempotency and
+-- one-time nonces are PostgreSQL state and survive API process restart.
 
 CREATE TABLE IF NOT EXISTS durable_jobs (
     id TEXT PRIMARY KEY,
@@ -114,8 +114,8 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
 );
 CREATE INDEX IF NOT EXISTS idx_idempotency_expiry_0213 ON idempotency_records(expires_at);
 
--- сбой обработчик должен не сохранять работа permanently работающий. Восстановление является безопасный
--- потому что публикация является ограждённый/CAS-защищать и задача является идемпотентный.
+-- A crashed worker must not keep work permanently running. Recovery is safe
+-- because publication is fenced/CAS-protected and the job is idempotent.
 UPDATE durable_jobs
 SET status='pending', lease_owner='', lease_token='', lease_expires_at=NULL,
     available_at=now(), updated_at=now(), last_error='recovered expired lease'

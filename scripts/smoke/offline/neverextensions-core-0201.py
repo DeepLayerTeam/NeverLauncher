@@ -11,15 +11,15 @@ def require(rel, tokens):
     text = read(rel)
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{rel}: отсутствующий {missing}")
+        raise SystemExit(f"{rel}: missing {missing}")
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 if version < (0, 20, 1):
-    raise SystemExit("VERSION должен быть >= 0.20.1")
+    raise SystemExit("VERSION must be >= 0.20.1")
 
 schema = json.loads(read("schemas/neverlauncher-extension.schema.json"))
 if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":
-    raise SystemExit("канонический расширение схема должен быть 2.0")
+    raise SystemExit("canonical extension schema must be 2.0")
 
 require("services/api/internal/dbmigrate/sql/0042_neverextensions_core_0201.sql", [
     "CREATE TABLE IF NOT EXISTS extensions",
@@ -55,6 +55,6 @@ require("cli/cmd/neverlauncher/release_commands.go", [
     '"extension_installs"',
 ])
 if "registry_entries" in read("cli/cmd/neverlauncher/release_commands.go") or "desktop_packages" in read("cli/cmd/neverlauncher/release_commands.go"):
-    raise SystemExit("productionTables по-прежнему содержит nonexistent расширение-era таблица")
+    raise SystemExit("productionTables still contains nonexistent extension-era tables")
 
-print("NeverExtensions Ядро 0.20.1 рабочий контроль: OK")
+print("NeverExtensions Core 0.20.1 production gate: OK")

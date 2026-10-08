@@ -293,7 +293,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
     generated = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     targets = []
     for platform, arch, vendor_os, vendor_arch, fmt in TARGETS:
-        print(f"[ManagedJRE] разрешать Temurin {major} {platform}/{arch}", file=sys.stderr)
+        print(f"[ManagedJRE] resolving Temurin {major} {platform}/{arch}", file=sys.stderr)
         asset = resolve_asset(major, vendor_os, vendor_arch)
         name = archive_name(version, major, platform, arch, fmt)
         path = out / name
@@ -357,24 +357,24 @@ def build_distribution(out: Path, version: str, major: int) -> None:
         ],
     }
     write_json_atomic(out / "MANAGED_JRE_EVIDENCE.json", evidence)
-    print(f"[ManagedJRE] дистрибутив готовый: {out}", file=sys.stderr)
+    print(f"[ManagedJRE] distribution ready: {out}", file=sys.stderr)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Сборка NeverLauncher Управляемый JRE Дистрибутив из точный Eclipse Temurin поставщик архивы")
+    parser = argparse.ArgumentParser(description="Build NeverLauncher Managed JRE Distribution from exact Eclipse Temurin vendor archives")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--version", required=True)
     parser.add_argument("--major", type=int, default=21)
     args = parser.parse_args()
     if args.major != 21:
-        parser.error("0.15.5 рабочий дистрибутив является закреплённый к Temurin 21")
+        parser.error("0.15.5 production distribution is pinned to Temurin 21")
     if not args.version.strip():
-        parser.error("--версия является пустой")
+        parser.error("--version is empty")
     try:
         build_distribution(args.out.resolve(), args.version.strip(), args.major)
         return 0
     except (OSError, ValueError, KeyError, json.JSONDecodeError, urllib.error.URLError, RuntimeError) as exc:
-        print(f"управляемый-JRE-дистрибутив: {exc}", file=sys.stderr)
+        print(f"managed-jre-distribution: {exc}", file=sys.stderr)
         return 1
 
 

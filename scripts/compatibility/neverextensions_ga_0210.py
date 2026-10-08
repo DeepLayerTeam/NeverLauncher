@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Отказ с блокировкой NeverExtensions 0.21.0 GA compatibility/certificate builder."""
+"""Fail-closed NeverExtensions 0.21.0 GA compatibility/certificate builder."""
 from __future__ import annotations
 import argparse, hashlib, json
 from datetime import datetime, timezone
@@ -7,6 +7,10 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_TARGETS=ROOT/'neverextensions/ga-targets-0210.json'
+BASELINE_VERSION='0.21.0'
+
+def current_version(): return (ROOT/'VERSION').read_text().strip()
+def semver(value): return tuple(int(x) for x in value.split('.')[:3])
 
 def load(path:Path): return json.loads(path.read_text(encoding='utf-8'))
 def sha256(path:Path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -21,8 +25,8 @@ def validate_targets(path:Path):
     expected={'packageFormatVersion':'1.0','manifestSchemaVersion':'2.0','hostProtocolVersion':'1.0','extensionApiVersion':'1.0'}
     if any(contract.get(k)!=v for k,v in expected.items()) or contract.get('legacyApiAliases')!=['3.7']:
         raise SystemExit('NeverExtensions GA frozen contract mismatch')
-    if (ROOT/'VERSION').read_text().strip()!='0.21.0':
-        raise SystemExit('NeverExtensions GA certification requires VERSION=0.21.0')
+    if semver(current_version()) < semver(BASELINE_VERSION):
+        raise SystemExit(f'NeverExtensions GA certification requires VERSION >= {BASELINE_VERSION}')
     print(f'NeverExtensions GA targets OK: {len(rows)} required platforms, {len(checks)} checks')
     return doc
 
@@ -39,13 +43,14 @@ def aggregate(targets:Path,evidence_dir:Path,out_json:Path,out_md:Path,out_certi
         if e.get('contract') != doc['contract']: raise SystemExit(f'{target["id"]} contract mismatch')
         results.append(e); evidence_hashes[target['id']]=sha256(p)
     generated=datetime.now(timezone.utc).isoformat()
-    matrix={'schemaVersion':'1.0','productVersion':'0.21.0','feature':doc['feature'],'contract':doc['contract'],'generatedAt':generated,'status':'certified','targets':results}
+    product=current_version()
+    matrix={'schemaVersion':'1.0','productVersion':product,'baselineVersion':BASELINE_VERSION,'feature':doc['feature'],'contract':doc['contract'],'generatedAt':generated,'status':'certified','targets':results}
     out_json.parent.mkdir(parents=True,exist_ok=True); out_json.write_text(json.dumps(matrix,indent=2,sort_keys=True)+'\n',encoding='utf-8')
-    lines=['# NeverExtensions GA — public compatibility matrix','', 'Version: `0.21.0`  ','Status: **certified**','', '| Target | OS | Architecture | Go | Status |','| --- | --- | --- | --- | --- |']
+    lines=['# NeverExtensions GA — public compatibility matrix','', f'Version: `{product}`  ',f'Frozen contract baseline: `{BASELINE_VERSION}`  ','Status: **certified**','', '| Target | OS | Architecture | Go | Status |','| --- | --- | --- | --- | --- |']
     for e in results: lines.append(f"| `{e['targetId']}` | {e['os']} | {e.get('arch','')} | {e.get('goVersion','')} | **PASS** |")
     lines += ['','The certificate is emitted only after every required GA check has PASS evidence on Linux, Windows and macOS.','']
     out_md.write_text('\n'.join(lines),encoding='utf-8')
-    cert={'schemaVersion':'1.0','productVersion':'0.21.0','feature':'NeverExtensions GA','status':'certified','generatedAt':generated,'contract':doc['contract'],'matrixSHA256':sha256(out_json),'evidenceSHA256':evidence_hashes,'targets':sorted(evidence_hashes)}
+    cert={'schemaVersion':'1.0','productVersion':product,'baselineVersion':BASELINE_VERSION,'feature':'NeverExtensions GA','status':'certified','generatedAt':generated,'contract':doc['contract'],'matrixSHA256':sha256(out_json),'evidenceSHA256':evidence_hashes,'targets':sorted(evidence_hashes)}
     out_certificate.write_text(json.dumps(cert,indent=2,sort_keys=True)+'\n',encoding='utf-8')
     print(f'NeverExtensions GA certified: {len(results)}/{len(results)} targets')
 

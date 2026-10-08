@@ -55,7 +55,7 @@ func decodeSingleJSON0203(r *http.Request, out any) error {
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("след JSON value")
+			return errors.New("trailing JSON value")
 		}
 		return err
 	}
@@ -204,7 +204,7 @@ func copyMultipartArtifact0203(file io.Reader) (string, string, int64, error) {
 		return "", "", size, err
 	}
 	if size <= 0 || size > extensionRegistryMaxUpload0203 {
-		return "", "", size, errors.New(".nlext загрузка является пустой или exceeds реестр ограничение")
+		return "", "", size, errors.New(".nlext upload is empty or exceeds registry limit")
 	}
 	if err := tmp.Sync(); err != nil {
 		return "", "", size, err
@@ -218,11 +218,11 @@ func copyMultipartArtifact0203(file io.Reader) (string, string, int64, error) {
 
 func registryPublicKey0203(key model.ExtensionRegistryPublisherKey) (ed25519.PublicKey, error) {
 	if !key.Active || key.RevokedAt != nil || key.Algorithm != "Ed25519" {
-		return nil, errors.New("издатель ключ подписи является inactive/revoked")
+		return nil, errors.New("publisher signing key is inactive/revoked")
 	}
 	raw, err := base64.StdEncoding.DecodeString(key.PublicKeyBase64)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
-		return nil, errors.New("реестр содержит недопустимый Ed25519 открытый ключ")
+		return nil, errors.New("registry contains invalid Ed25519 public key")
 	}
 	return ed25519.PublicKey(raw), nil
 }
@@ -433,7 +433,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 	}
 	defer reader.Close()
 	if size != item.Artifact.Size {
-		return "", errors.New("реестр артефакт хранилище размер несоответствие")
+		return "", errors.New("registry artifact storage size mismatch")
 	}
 	tmp, err := os.CreateTemp("", "neverlauncher-registry-install-*.nlext")
 	if err != nil {
@@ -453,7 +453,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if written != item.Artifact.Size || hex.EncodeToString(h.Sum(nil)) != item.Artifact.SHA256 {
-		return "", errors.New("реестр артефакт байты делать не соответствовать неизменяемый метаданные")
+		return "", errors.New("registry artifact bytes do not match immutable metadata")
 	}
 	if err := tmp.Sync(); err != nil {
 		return "", err
@@ -474,7 +474,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if verified.PackageIdentity != item.Artifact.PackageIdentity || verified.SHA256 != item.Artifact.SHA256 || verified.Manifest.ID != item.ExtensionID || verified.Manifest.Version != item.Version || verified.Manifest.Publisher != item.PublisherID {
-		return "", errors.New("проверен артефакт идентичность делает не соответствовать реестр версия")
+		return "", errors.New("verified artifact identity does not match registry version")
 	}
 	ok = true
 	return path, nil
@@ -515,8 +515,8 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "enabled": false, "install": install, "artifact": item.Artifact}})
 }
 
-// Сохранён локальный к HTTP слой: установка Исходник является informational/auditable и
-// является не используется как файл-system путь.
+// Kept local to the HTTP layer: install Source is informational/auditable and
+// is not used as a file-system path.
 func registryInstallSource0203(item model.ExtensionRegistryVersion) string {
 	return item.PublisherID + "/" + item.ExtensionID + "@" + item.Version + "#" + item.Artifact.PackageIdentity
 }

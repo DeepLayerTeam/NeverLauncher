@@ -97,7 +97,7 @@ type bridgeIdentityMaterial0199 struct {
 
 func handleServerBridge0199(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl сервер-мост обнаруживать|установка|регистрировать|состояние|обновление|migrate-v3|откат|хост [параметры]")
+		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host [параметры]")
 	}
 	switch args[0] {
 	case "detect":
@@ -125,7 +125,7 @@ func handleServerBridge0199(args []string) error {
 	case "host":
 		return handleServerBridgeHost01910(args[1:])
 	default:
-		return fmt.Errorf("неизвестная сервер-мост-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная server-bridge-подкоманда: %s", args[0])
 	}
 }
 
@@ -139,10 +139,10 @@ func canonicalServerRoot0199(raw string) (string, error) {
 	}
 	info, err := os.Stat(abs)
 	if err != nil {
-		return "", fmt.Errorf("сервер корень %s: %w", abs, err)
+		return "", fmt.Errorf("server root %s: %w", abs, err)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("сервер корень является не каталог: %s", abs)
+		return "", fmt.Errorf("server root is not a directory: %s", abs)
 	}
 	return filepath.Clean(abs), nil
 }
@@ -151,17 +151,17 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 	explicit = strings.ToLower(strings.TrimSpace(explicit))
 	if explicit != "" {
 		if !bridgeSupportedPlatform0199(explicit) {
-			return bridgeDetection0199{}, fmt.Errorf("неподдерживаемая ServerBridge платформа: %s", explicit)
+			return bridgeDetection0199{}, fmt.Errorf("неподдерживаемая ServerBridge platform: %s", explicit)
 		}
 		hybrid, evidence := detectHybridCore0199(root)
 		if hybrid != "" {
-			return bridgeDetection0199{}, fmt.Errorf("обнаружен гибридный ядро %s (%s): универсальный адаптер %s нельзя устанавливать без отдельной сертификация матрица", hybrid, strings.Join(evidence, ", "), explicit)
+			return bridgeDetection0199{}, fmt.Errorf("обнаружен hybrid core %s (%s): universal adapter %s нельзя устанавливать без отдельной certification matrix", hybrid, strings.Join(evidence, ", "), explicit)
 		}
 		return bridgeDetectionForPlatform0199(root, explicit, "explicit", []string{"--platform=" + explicit}), nil
 	}
 
 	if hybrid, evidence := detectHybridCore0199(root); hybrid != "" {
-		return bridgeDetection0199{}, fmt.Errorf("обнаружен несертифицированный гибридный ядро %s (%s); автоматический универсальный предоставление учётной записи отказ с блокировкой", hybrid, strings.Join(evidence, ", "))
+		return bridgeDetection0199{}, fmt.Errorf("обнаружен несертифицированный hybrid core %s (%s); automatic universal provisioning fail-closed", hybrid, strings.Join(evidence, ", "))
 	}
 
 	scores := map[string]int{}
@@ -246,7 +246,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		}
 	}
 
-	// Загрузчик структура может предоставлять unambiguous платформа даже когда launcher/server JAR является инициализировать обёртка.
+	// Loader layouts can expose an unambiguous platform even when the launcher/server JAR is a bootstrap wrapper.
 	pathHints := []struct {
 		rel, platform string
 		score         int
@@ -268,7 +268,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		}
 	}
 	if len(scores) == 0 {
-		return bridgeDetection0199{}, errors.New("не удалось автоматически определить поддерживаемое Minecraft/proxy ядро; укажите --платформа только если платформа действительно входит в сертифицированный ServerBridge группа")
+		return bridgeDetection0199{}, errors.New("не удалось автоматически определить поддерживаемое Minecraft/proxy ядро; укажите --platform только если платформа действительно входит в certified ServerBridge cohort")
 	}
 
 	type ranked struct {
@@ -286,7 +286,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		return ranks[i].score > ranks[j].score
 	})
 	if len(ranks) > 1 && ranks[0].score == ranks[1].score && ranks[0].platform != ranks[1].platform {
-		return bridgeDetection0199{}, fmt.Errorf("ядро определяется неоднозначно: %s и %s имеют одинаковую достоверность; автоматический предоставление учётной записи остановлен", ranks[0].platform, ranks[1].platform)
+		return bridgeDetection0199{}, fmt.Errorf("ядро определяется неоднозначно: %s и %s имеют одинаковую достоверность; automatic provisioning остановлен", ranks[0].platform, ranks[1].platform)
 	}
 	confidence := "medium"
 	if ranks[0].score >= 95 {
@@ -489,10 +489,10 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, currentErr := readBridgeProvisionState0199(statePath)
 	if requireExisting && currentErr != nil {
-		return errors.New("сервер-мост обновление требует ранее установленный управляемый мост; сначала выполните nl сервер-мост установка")
+		return errors.New("server-bridge upgrade требует ранее установленный managed bridge; сначала выполните nl server-bridge install")
 	}
 	if currentErr == nil && current.Platform != "" && current.Platform != detection.Platform {
-		return fmt.Errorf("управляемый мост платформа=%s, обнаруживать платформа=%s; автоматический кроссплатформенный обновление запрещён", current.Platform, detection.Platform)
+		return fmt.Errorf("managed bridge platform=%s, detected platform=%s; автоматический cross-platform upgrade запрещён", current.Platform, detection.Platform)
 	}
 
 	bridgeVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
@@ -531,7 +531,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 			{"--backend", backend}, {"--server-id", serverID}, {"--project", projectID}, {"--profile", profileID}, {"--channel", channel},
 		} {
 			if requested := strings.TrimSpace(flagValue(args, conflict.flag, "")); requested != "" && strings.TrimRight(requested, "/") != strings.TrimRight(conflict.actual, "/") {
-				return fmt.Errorf("существующий ServerBridge конфигурация %s задаёт %s=%q; запрошенный %q будет не соответствовать среда выполнения конфигурация", detection.ConfigPath, conflict.flag, conflict.actual, requested)
+				return fmt.Errorf("existing ServerBridge config %s sets %s=%q; requested %q would not match runtime configuration", detection.ConfigPath, conflict.flag, conflict.actual, requested)
 			}
 		}
 	}
@@ -562,7 +562,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 		}
 	}()
 
-	// Удалять старый управляемый мост артефакты transactionally до placing точный платформа артефакт.
+	// Remove old managed bridge artifacts transactionally before placing the exact platform artifact.
 	for _, old := range oldArtifacts {
 		if filepath.Clean(old) == filepath.Clean(target) {
 			continue
@@ -582,7 +582,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 		return err
 	}
 	if !strings.EqualFold(copiedHash, artifact.SHA256) || copiedSize != artifact.Bytes {
-		return errors.New("установленный ServerBridge артефакт hash/size несоответствие после атомарный копировать")
+		return errors.New("installed ServerBridge artifact hash/size mismatch after atomic copy")
 	}
 
 	if err := txSnapshotPath0199(root, &tx, detection.ConfigPath); err != nil {
@@ -655,7 +655,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 			enrollArgs = append(enrollArgs, "--rotate")
 		}
 		if err := enrollServerBridge0199(enrollArgs); err != nil {
-			return fmt.Errorf("мост установленный но регистрация ошибка: %w", err)
+			return fmt.Errorf("bridge installed but enrollment failed: %w", err)
 		}
 		plan["enrollment"] = "completed"
 	}
@@ -679,7 +679,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		path = explicit
 	} else {
 		if artifactDir == "" {
-			return bridgeArtifact0199{}, errors.New("укажите --артефакт <JAR> или --артефакт-dir <release/artifact каталог>")
+			return bridgeArtifact0199{}, errors.New("укажите --artifact <jar> или --artifact-dir <release/artifact directory>")
 		}
 		entries, err := os.ReadDir(artifactDir)
 		if err != nil {
@@ -698,7 +698,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 			}
 		}
 		if len(matches) == 0 {
-			return bridgeArtifact0199{}, fmt.Errorf("в %s нет артефакт для платформа=%s", artifactDir, platform)
+			return bridgeArtifact0199{}, fmt.Errorf("в %s нет artifact для platform=%s", artifactDir, platform)
 		}
 		sort.Slice(matches, func(i, j int) bool {
 			return compareSemver0199(extractBridgeVersion0199(matches[i], platform), extractBridgeVersion0199(matches[j], platform)) > 0
@@ -714,7 +714,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 				}
 			}
 			if !found {
-				return bridgeArtifact0199{}, fmt.Errorf("артефакт точная версия %s для %s не found в %s", requestedVersion, platform, artifactDir)
+				return bridgeArtifact0199{}, fmt.Errorf("artifact exact version %s for %s not found in %s", requestedVersion, platform, artifactDir)
 			}
 		} else {
 			path = filepath.Join(artifactDir, matches[0])
@@ -729,16 +729,16 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		return bridgeArtifact0199{}, err
 	}
 	if !info.Mode().IsRegular() || info.Size() == 0 {
-		return bridgeArtifact0199{}, fmt.Errorf("недопустимый мост артефакт: %s", abs)
+		return bridgeArtifact0199{}, fmt.Errorf("invalid bridge artifact: %s", abs)
 	}
 	file := filepath.Base(abs)
 	expectedPrefix := "neverlauncher-" + platform + "-bridge-"
 	if !strings.HasPrefix(file, expectedPrefix) || !strings.HasSuffix(file, ".jar") {
-		return bridgeArtifact0199{}, fmt.Errorf("артефакт filename делает не соответствовать обнаруживать платформа %s: %s", platform, file)
+		return bridgeArtifact0199{}, fmt.Errorf("artifact filename does not match detected platform %s: %s", platform, file)
 	}
 	artifactVersion := extractBridgeVersion0199(file, platform)
 	if requestedVersion != "" && requestedVersion != "dev" && artifactVersion != requestedVersion {
-		return bridgeArtifact0199{}, fmt.Errorf("артефакт версия %s делает не соответствовать запрошенный %s", artifactVersion, requestedVersion)
+		return bridgeArtifact0199{}, fmt.Errorf("artifact version %s does not match requested %s", artifactVersion, requestedVersion)
 	}
 	if err := verifyBridgeArtifactShape0199(abs, platform); err != nil {
 		return bridgeArtifact0199{}, err
@@ -763,7 +763,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	if raw, err := os.ReadFile(certPath); err == nil {
 		var cert serverBridge2Certification0150
 		if err := json.Unmarshal(raw, &cert); err != nil {
-			return "", fmt.Errorf("недопустимый %s: %w", certPath, err)
+			return "", fmt.Errorf("invalid %s: %w", certPath, err)
 		}
 		targets := serverBridgeReleaseTargetsForVersion0150(artifactVersion)
 		expectedSchema := "1.0"
@@ -771,50 +771,50 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 			expectedSchema = "1.1"
 		}
 		if cert.SchemaVersion != expectedSchema || cert.Release != "ServerBridge 3" || cert.Version != artifactVersion || cert.Status != "certified" || cert.ProtocolVersion != 3 || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin || cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
-			return "", fmt.Errorf("%s делает не contain полный сертифицированный ServerBridge 3 группа для версия %s", certPath, artifactVersion)
+			return "", fmt.Errorf("%s does not contain a complete certified ServerBridge 3 cohort for version %s", certPath, artifactVersion)
 		}
 		if serverBridgeSecurityCertificationRequired01912(artifactVersion) {
 			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
-				return "", errors.New("ServerBridge 3 безопасность сертификация метаданные несоответствие")
+				return "", errors.New("ServerBridge 3 security certification metadata mismatch")
 			}
 		}
 		if serverBridgeGARequired0200(artifactVersion) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
-			return "", errors.New("ServerBridge 3 GA сертификация метаданные несоответствие")
+			return "", errors.New("ServerBridge 3 GA certification metadata mismatch")
 		}
 		for _, item := range cert.Artifacts {
 			if item.ID != platform {
 				continue
 			}
 			if item.File != filepath.Base(path) || !strings.EqualFold(item.SHA256, digest) || item.Bytes != size {
-				return "", fmt.Errorf("сертифицированный метаданные несоответствие для %s", platform)
+				return "", fmt.Errorf("certified metadata mismatch for %s", platform)
 			}
 			return serverBridge3CertificationReleaseFile, nil
 		}
-		return "", fmt.Errorf("%s делает не contain платформа %s", certPath, platform)
+		return "", fmt.Errorf("%s does not contain platform %s", certPath, platform)
 	}
 	allowPath := filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json")
 	raw, err := os.ReadFile(allowPath)
 	if err != nil {
-		return "", errors.New("рабочий предоставление учётной записи требует sibling SERVERBRIDGE3_CERTIFICATION.JSON или BRIDGE_RELEASE_ALLOWLIST.JSON; использовать --разрешать-unverified-артефакт только для разработка")
+		return "", errors.New("production provisioning requires sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
 	}
 	var document serverBridgeReleaseAllowlist01912
 	if err := json.Unmarshal(raw, &document); err != nil {
-		return "", fmt.Errorf("недопустимый %s: %w", allowPath, err)
+		return "", fmt.Errorf("invalid %s: %w", allowPath, err)
 	}
 	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-		return "", errors.New("ServerBridge 3 релиз список разрешений безопасность метаданные несоответствие")
+		return "", errors.New("ServerBridge 3 release allowlist security metadata mismatch")
 	}
 	if serverBridgeGARequired0200(artifactVersion) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
-		return "", errors.New("ServerBridge 3 GA релиз список разрешений метаданные несоответствие")
+		return "", errors.New("ServerBridge 3 GA release allowlist metadata mismatch")
 	}
 	policy := document.Releases[artifactVersion]
 	if policy == nil {
-		return "", fmt.Errorf("релиз список разрешений делает не contain точная версия %s", artifactVersion)
+		return "", fmt.Errorf("release allowlist does not contain exact version %s", artifactVersion)
 	}
 	field := bridgeAllowlistField0199(platform)
 	values := policy[field]
 	if len(values) != 1 || !strings.EqualFold(strings.TrimSpace(values[0]), digest) {
-		return "", fmt.Errorf("релиз список разрешений field %s делает не соответствовать артефакт SHA-256", field)
+		return "", fmt.Errorf("release allowlist field %s does not match artifact SHA-256", field)
 	}
 	return "BRIDGE_RELEASE_ALLOWLIST.json", nil
 }
@@ -893,7 +893,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 	}
 	r, err := zip.OpenReader(path)
 	if err != nil {
-		return fmt.Errorf("недопустимый ServerBridge JAR %s: %w", path, err)
+		return fmt.Errorf("invalid ServerBridge JAR %s: %w", path, err)
 	}
 	defer r.Close()
 	entries := make(map[string]*zip.File, len(r.File))
@@ -902,7 +902,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 	}
 	for _, entry := range required[platform] {
 		if entries[entry] == nil {
-			return fmt.Errorf("%s артефакт является отсутствующий обязательный платформа запись %s", platform, entry)
+			return fmt.Errorf("%s artifact is missing required platform entry %s", platform, entry)
 		}
 	}
 	if platform == "folia" {
@@ -911,7 +911,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 			return err
 		}
 		if !strings.Contains(text, "folia-supported: true") {
-			return errors.New("Folia артефакт является не marked Folia-поддерживаемый")
+			return errors.New("Folia artifact is not marked folia-supported")
 		}
 	}
 	if platform == "vanilla" {
@@ -920,7 +920,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 			return err
 		}
 		if !strings.Contains(text, "Main-Class: ru.neverlauncher.bridge.vanilla.NeverLauncherVanillaBridge") {
-			return errors.New("Vanilla ServerBridge вспомогательный процесс Главный-Класс является отсутствующий")
+			return errors.New("Vanilla ServerBridge sidecar Main-Class is missing")
 		}
 	}
 	return nil
@@ -1011,10 +1011,10 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		return bridgeIdentityMaterial0199{}, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("узел идентичность должен быть regular non-символическая ссылка файл: %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity must be a regular non-symlink file: %s", path)
 	}
 	if info.Mode().Perm()&0o077 != 0 {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("узел идентичность разрешения должен быть закрытый (0600): %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity permissions must be private (0600): %s", path)
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -1031,29 +1031,29 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		}
 	}
 	if values["formatVersion"] != "1" || strings.ToLower(values["keyAlgorithm"]) != "ed25519" {
-		return bridgeIdentityMaterial0199{}, errors.New("неподдерживаемый узел идентичность формат")
+		return bridgeIdentityMaterial0199{}, errors.New("unsupported node identity format")
 	}
 	pub, err := base64.RawURLEncoding.DecodeString(values["publicKey"])
 	if err != nil || len(pub) != ed25519.PublicKeySize {
-		return bridgeIdentityMaterial0199{}, errors.New("недопустимый узел идентичность publicKey")
+		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity publicKey")
 	}
 	sum := sha256.Sum256(pub)
 	fp := hex.EncodeToString(sum[:])
 	if !strings.EqualFold(fp, values["keyFingerprint"]) {
-		return bridgeIdentityMaterial0199{}, errors.New("узел идентичность отпечаток несоответствие")
+		return bridgeIdentityMaterial0199{}, errors.New("node identity fingerprint mismatch")
 	}
-	// Гарантировать Java среда выполнения будет быть able к parse закрытый ключ материал до предоставление учётной записи succeeds.
+	// Ensure Java runtime will be able to parse the private key material before provisioning succeeds.
 	privDER, err := base64.RawURLEncoding.DecodeString(values["privateKeyPkcs8"])
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("недопустимый узел идентичность privateKeyPkcs8")
+		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity privateKeyPkcs8")
 	}
 	parsed, err := x509.ParsePKCS8PrivateKey(privDER)
 	if err != nil {
-		return bridgeIdentityMaterial0199{}, errors.New("недопустимый узел идентичность PKCS#8 закрытый ключ")
+		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity PKCS#8 private key")
 	}
 	privateKey, ok := parsed.(ed25519.PrivateKey)
 	if !ok || !privateKey.Public().(ed25519.PublicKey).Equal(ed25519.PublicKey(pub)) {
-		return bridgeIdentityMaterial0199{}, errors.New("узел идентичность keypair несоответствие")
+		return bridgeIdentityMaterial0199{}, errors.New("node identity keypair mismatch")
 	}
 	return bridgeIdentityMaterial0199{PublicKey: values["publicKey"], Fingerprint: fp}, nil
 }
@@ -1066,14 +1066,14 @@ func enrollServerBridge0199(args []string) error {
 	requestPath := flagValue(args, "--request", filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "enrollment-request.json"))
 	raw, err := os.ReadFile(requestPath)
 	if err != nil {
-		return fmt.Errorf("чтение регистрация запрос: %w", err)
+		return fmt.Errorf("read enrollment request: %w", err)
 	}
 	var req bridgeEnrollmentRequest0199
 	if err := json.Unmarshal(raw, &req); err != nil {
-		return fmt.Errorf("недопустимый регистрация запрос: %w", err)
+		return fmt.Errorf("invalid enrollment request: %w", err)
 	}
 	if req.ID == "" || req.Kind == "" || req.PublicKey == "" || req.KeyFingerprint == "" {
-		return errors.New("регистрация запрос является неполный")
+		return errors.New("enrollment request is incomplete")
 	}
 	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), req.BackendURL, os.Getenv("NEVERLAUNCHER_BACKEND_URL")), "/")
 	token := backendToken(args)
@@ -1089,14 +1089,14 @@ func enrollServerBridge0199(args []string) error {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "backend": backend, "endpoint": endpoint, "request": body, "keyFingerprint": req.KeyFingerprint})
 	}
 	if backend == "" {
-		return errors.New("регистрировать требует --серверная часть или backendUrl в регистрация-запрос.JSON")
+		return errors.New("enroll requires --backend or backendUrl in enrollment-request.json")
 	}
 	if token == "" {
-		return errors.New("регистрировать требует --токен или NEVERLAUNCHER_TOKEN")
+		return errors.New("enroll requires --token or NEVERLAUNCHER_TOKEN")
 	}
 	payload, err := httpJSONWithAuth("POST", backend+endpoint, body, token)
 	if err != nil && !rotate {
-		// Регистрация является намеренно идемпотентный когда точный узел идентичность является уже present.
+		// Registration is intentionally idempotent when the exact node identity is already present.
 		listed, listErr := httpJSONWithAuth("GET", backend+"/api/v1/server-bridge/servers", nil, token)
 		if listErr == nil {
 			if node := findBackendBridgeNode0199(listed, req.ID); node != nil {
@@ -1126,14 +1126,14 @@ func serverBridgeMigrateV30200(args []string) error {
 	statePath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	current, err := readBridgeProvisionState0199(statePath)
 	if err != nil {
-		return errors.New("сервер-мост migrate-v3 требует существующий управляемый ServerBridge установка; запуск `nl server-bridge install` первый")
+		return errors.New("server-bridge migrate-v3 requires an existing managed ServerBridge installation; run `nl server-bridge install` first")
 	}
 	if compareSemver0199(version, "0.20.0") < 0 {
-		return fmt.Errorf("сервер-мост migrate-v3 требует nl >= 0.20.0; текущий CLI является %s", version)
+		return fmt.Errorf("server-bridge migrate-v3 requires nl >= 0.20.0; current CLI is %s", version)
 	}
 	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
 	if compareSemver0199(targetVersion, "0.20.0") < 0 {
-		return fmt.Errorf("ServerBridge 3 GA миграция цель должен быть >= 0.20.0, получил %s", targetVersion)
+		return fmt.Errorf("ServerBridge 3 GA migration target must be >= 0.20.0, got %s", targetVersion)
 	}
 
 	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), os.Getenv("NEVERLAUNCHER_BACKEND_URL")), "/")
@@ -1143,7 +1143,7 @@ func serverBridgeMigrateV30200(args []string) error {
 		}
 	}
 	if backend == "" {
-		return errors.New("сервер-мост migrate-v3 требует Серверная часть URL к проверять Протокол v3 GA возможность до заменять артефакт")
+		return errors.New("server-bridge migrate-v3 requires a Backend URL to verify Protocol v3 GA capability before replacing the artifact")
 	}
 	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
 		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",
@@ -1154,11 +1154,11 @@ func serverBridgeMigrateV30200(args []string) error {
 	}, ",")
 	capabilities, err := httpJSONWithAuth("GET", capURL, nil, "")
 	if err != nil {
-		return fmt.Errorf("Протокол v3 GA Серверная часть предварительная проверка ошибка: %w", err)
+		return fmt.Errorf("Protocol v3 GA Backend preflight failed: %w", err)
 	}
 	data, _ := capabilities["data"].(map[string]any)
 	if intFromJSON0200(data["negotiatedProtocolVersion"]) != 3 || data["protocolV3Frozen"] != true || fmt.Sprint(data["protocolV3Status"]) != "ga-frozen" || fmt.Sprint(data["protocolV3FeatureDigest"]) != "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc" {
-		return errors.New("Серверная часть делает не предоставлять зафиксированный ServerBridge 3 GA Протокол v3 возможность задать; миграция aborted до touching сервер файлы")
+		return errors.New("Backend does not expose the frozen ServerBridge 3 GA Protocol v3 capability set; migration aborted before touching server files")
 	}
 
 	upgradeArgs := append([]string{}, args...)
@@ -1178,10 +1178,10 @@ func serverBridgeMigrateV30200(args []string) error {
 	}
 	updated, err := readBridgeProvisionState0199(statePath)
 	if err != nil {
-		return fmt.Errorf("чтение post-миграция ServerBridge состояние: %w", err)
+		return fmt.Errorf("read post-migration ServerBridge state: %w", err)
 	}
 	if compareSemver0199(updated.Version, "0.20.0") < 0 {
-		return fmt.Errorf("ServerBridge миграция committed unexpected версия %s", updated.Version)
+		return fmt.Errorf("ServerBridge migration committed unexpected version %s", updated.Version)
 	}
 	record := map[string]any{
 		"schemaVersion": "1.0", "toolVersion": version, "status": "artifact-migrated",
@@ -1191,7 +1191,7 @@ func serverBridgeMigrateV30200(args []string) error {
 	}
 	migrationPath := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "protocol-v3-ga-migration.json")
 	if err := writeJSONSecure0199(migrationPath, record, 0o644); err != nil {
-		return fmt.Errorf("ServerBridge артефакт мигрировать но миграция запись может не быть сохранённый: %w", err)
+		return fmt.Errorf("ServerBridge artifact migrated but migration record could not be persisted: %w", err)
 	}
 	return nil
 }
@@ -1287,7 +1287,7 @@ func rollbackServerBridge0199(args []string) error {
 	if txID == "" {
 		state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 		if err != nil {
-			return errors.New("откат требует --транзакция или активный управляемый ServerBridge состояние")
+			return errors.New("rollback requires --transaction or an active managed ServerBridge state")
 		}
 		txID = state.TransactionID
 	}
@@ -1301,7 +1301,7 @@ func rollbackServerBridge0199(args []string) error {
 		return err
 	}
 	if tx.RolledBackAt != "" {
-		return fmt.Errorf("транзакция %s является уже rolled back", tx.ID)
+		return fmt.Errorf("transaction %s is already rolled back", tx.ID)
 	}
 	if flagBool(args, "--dry-run", false) {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "transaction": tx})
@@ -1343,7 +1343,7 @@ func txSnapshotPath0199(root string, tx *bridgeProvisionTransaction0199, path st
 	change := bridgeProvisionChange0199{Path: path}
 	if info, err := os.Lstat(path); err == nil {
 		if info.IsDir() {
-			return fmt.Errorf("транзакция цель является каталог, ожидаемый файл: %s", path)
+			return fmt.Errorf("transaction target is a directory, expected file: %s", path)
 		}
 		change.Existed = true
 		relHash := sha256.Sum256([]byte(path))
@@ -1374,7 +1374,7 @@ func restoreBridgeTransaction0199(root string, tx *bridgeProvisionTransaction019
 		change := tx.Changes[i]
 		if change.Existed {
 			if change.BackupPath == "" {
-				return fmt.Errorf("транзакция %s отсутствующий резервное копирование для %s", tx.ID, change.Path)
+				return fmt.Errorf("transaction %s missing backup for %s", tx.ID, change.Path)
 			}
 			info, err := os.Stat(change.BackupPath)
 			if err != nil {
@@ -1492,10 +1492,10 @@ func atomicWrite0199(path string, data []byte, mode os.FileMode) error {
 	return nil
 }
 
-// replaceFile0199 сохраняет одинаковый-каталог temp-файл запись атомарный на платформы
-// где переименование-над-существующий является поддерживаемый. Windows делает не guarantee тот
-// behaviour, так fall back к удалять+переименование; предоставление учётной записи транзакция имеет
-// уже snapshotted управляемый назначение до этот вспомогательный модуль является используется.
+// replaceFile0199 keeps the same-directory temp-file write atomic on platforms
+// where rename-over-existing is supported. Windows does not guarantee that
+// behaviour, so fall back to remove+rename; the provisioning transaction has
+// already snapshotted managed destinations before this helper is used.
 func replaceFile0199(tempName, dst string) error {
 	err := os.Rename(tempName, dst)
 	if err == nil {
@@ -1505,10 +1505,10 @@ func replaceFile0199(tempName, dst string) error {
 		return err
 	}
 	if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-		return fmt.Errorf("заменять %s: переименование ошибка: %v; удалять назначение ошибка: %w", dst, err, removeErr)
+		return fmt.Errorf("replace %s: rename failed: %v; remove destination failed: %w", dst, err, removeErr)
 	}
 	if retryErr := os.Rename(tempName, dst); retryErr != nil {
-		return fmt.Errorf("заменять %s: переименование ошибка: %v; повторить ошибка: %w", dst, err, retryErr)
+		return fmt.Errorf("replace %s: rename failed: %v; retry failed: %w", dst, err, retryErr)
 	}
 	return nil
 }
@@ -1532,7 +1532,7 @@ func readBridgeProvisionState0199(path string) (bridgeProvisionState0199, error)
 		return state, err
 	}
 	if state.SchemaVersion != "1.0" || state.Platform == "" || state.ArtifactPath == "" {
-		return state, errors.New("недопустимый управляемый ServerBridge состояние")
+		return state, errors.New("invalid managed ServerBridge state")
 	}
 	return state, nil
 }

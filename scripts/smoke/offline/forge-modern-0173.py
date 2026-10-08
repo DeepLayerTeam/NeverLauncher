@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 3):
-    raise SystemExit(f"Forge Современный требует VERSION>=0.17.3, получил {version}")
+    raise SystemExit(f"Forge Modern requires VERSION>=0.17.3, got {version}")
 
 
 def read(rel: str) -> str:
@@ -19,13 +19,13 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["FORGE_MODERN_0173"])
 if len(expected) != 43 or expected.get("1.13.2") != 8 or expected.get("1.17.1") != 16 or expected.get("1.20.6") != 21 or expected.get("26.3") != 25:
-    raise SystemExit("Forge Современный 0.17.3 канонический основанный на обработчиках релиз сетка является неполный")
+    raise SystemExit("Forge Modern 0.17.3 canonical processor-based release grid is incomplete")
 
 target_doc = json.loads(read("compatibility/targets.json"))
 forge_rows = [
@@ -34,24 +34,24 @@ forge_rows = [
     and row.get("os") == "linux" and row.get("arch") == "x86_64"
 ]
 if len(forge_rows) != len(expected):
-    raise SystemExit(f"Forge Современный 0.17.3 требует точно {len(expected)} обязательный цели, получил {len(forge_rows)}")
+    raise SystemExit(f"Forge Modern 0.17.3 requires exactly {len(expected)} required targets, got {len(forge_rows)}")
 by_version: dict[str, dict] = {}
 for row in forge_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Forge Современный 0.17.3 дубликат Minecraft цель: {minecraft}")
+        raise SystemExit(f"Forge Modern 0.17.3 duplicate Minecraft target: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
-    raise SystemExit(f"Forge Современный 0.17.3 релиз сетка несоответствие: отсутствующий={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
+    raise SystemExit(f"Forge Modern 0.17.3 release grid mismatch: missing={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
-        raise SystemExit(f"Forge {minecraft} должен быть Java {java_major} область={expected_scope}")
+        raise SystemExit(f"Forge {minecraft} must be Java {java_major} scope={expected_scope}")
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
-        raise SystemExit(f"Forge {minecraft} должен быть сертифицированный на linux/x86_64")
+        raise SystemExit(f"Forge {minecraft} must be certified on linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
-        raise SystemExit(f"Forge {minecraft} должен разрешать последний-стабильный в выполнение время")
+        raise SystemExit(f"Forge {minecraft} must resolve latest-stable at execution time")
 
 runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
 require(runtime, [
@@ -110,4 +110,4 @@ require(tests, [
     "TestForgeInstallV1ProcessorTokens",
 ], "Forge 0.17.3 regression coverage")
 
-print(f"Forge Современный 0.17.3 контроль: OK ({len(forge_rows)} основанный на обработчиках Forge релизы, 1.13.2..26.3, Java 8/16/17/21/25)")
+print(f"Forge Modern 0.17.3 gate: OK ({len(forge_rows)} processor-based Forge releases, 1.13.2..26.3, Java 8/16/17/21/25)")

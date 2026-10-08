@@ -21,8 +21,8 @@ import (
 const ProtocolVersion = "1.0"
 
 var (
-	ErrHookRejected = errors.New("расширение синхронизация хук отклонён операция")
-	ErrHookTimeout  = errors.New("расширение синхронизация хук тайм-аут")
+	ErrHookRejected = errors.New("extension sync hook rejected operation")
+	ErrHookTimeout  = errors.New("extension sync hook timeout")
 )
 
 type EventSpec struct {
@@ -121,7 +121,7 @@ type Bus struct {
 func New(cfg Config, repo repository.Repository) (*Bus, error) {
 	store, ok := repo.(repository.ExtensionEventStore)
 	if !ok {
-		return nil, errors.New("репозиторий делает не implement долговременный NeverExtensions событие хранилище")
+		return nil, errors.New("repository does not implement durable NeverExtensions event store")
 	}
 	return &Bus{cfg: cfg.normalized(), store: store}, nil
 }
@@ -166,7 +166,7 @@ func (b *Bus) Publish(ctx context.Context, in PublishInput) (model.ExtensionEven
 func buildEvent0206(in PublishInput) (model.ExtensionEvent, error) {
 	t := strings.ToLower(strings.TrimSpace(in.Type))
 	if _, ok := specs0206[t]; !ok {
-		return model.ExtensionEvent{}, fmt.Errorf("неподдерживаемый расширение тип события %q", t)
+		return model.ExtensionEvent{}, fmt.Errorf("unsupported extension event type %q", t)
 	}
 	raw, err := json.Marshal(in.Payload)
 	if err != nil {
@@ -198,10 +198,10 @@ func randomID0206() (string, error) {
 func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 	spec, ok := Spec(in.Type)
 	if !ok {
-		return fmt.Errorf("неподдерживаемый расширение тип события %q", in.Type)
+		return fmt.Errorf("unsupported extension event type %q", in.Type)
 	}
 	if !spec.SyncAllowed {
-		return fmt.Errorf("событие %s не может быть используется как синхронизация хук", in.Type)
+		return fmt.Errorf("event %s cannot be used as sync hook", in.Type)
 	}
 	event, _, err := b.Publish(ctx, in)
 	if err != nil {
@@ -213,7 +213,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 	}
 	d := b.dispatcherValue()
 	if len(subs) > 0 && d == nil {
-		return errors.New("синхронизация хук dispatcher недоступный")
+		return errors.New("sync hook dispatcher unavailable")
 	}
 	for _, sub := range subs {
 		if sub.Scope == "project" && sub.ScopeID != event.ProjectID {
@@ -226,7 +226,7 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 			return fmt.Errorf("%w: %s/%s", ErrHookTimeout, sub.ExtensionID, event.Type)
 		}
 		if callErr != nil {
-			return fmt.Errorf("синхронизация хук %s/%s ошибка: %w", sub.ExtensionID, event.Type, callErr)
+			return fmt.Errorf("sync hook %s/%s failed: %w", sub.ExtensionID, event.Type, callErr)
 		}
 		if !result.OK {
 			return fmt.Errorf("%w: %s: %s", ErrHookRejected, sub.ExtensionID, strings.TrimSpace(result.Message))
@@ -237,12 +237,12 @@ func (b *Bus) DispatchSync(ctx context.Context, in PublishInput) error {
 
 func (b *Bus) Subscribe(ctx context.Context, sub model.ExtensionEventSubscription) (model.ExtensionEventSubscription, error) {
 	if _, ok := Spec(sub.EventType); !ok {
-		return model.ExtensionEventSubscription{}, fmt.Errorf("неподдерживаемый расширение тип события %q", sub.EventType)
+		return model.ExtensionEventSubscription{}, fmt.Errorf("unsupported extension event type %q", sub.EventType)
 	}
 	if sub.Mode == model.ExtensionEventModeSync {
 		spec, _ := Spec(sub.EventType)
 		if !spec.SyncAllowed {
-			return model.ExtensionEventSubscription{}, fmt.Errorf("событие %s является асинхронный-только", sub.EventType)
+			return model.ExtensionEventSubscription{}, fmt.Errorf("event %s is async-only", sub.EventType)
 		}
 	}
 	sub.Enabled = true
@@ -284,7 +284,7 @@ func (b *Bus) processBatch(ctx context.Context) {
 	}
 	items, err := b.store.LeaseExtensionEventDeliveries(ctx, b.cfg.BatchSize, time.Now().UTC().Add(b.cfg.LeaseDuration))
 	if err != nil {
-		log.Printf("NeverExtensions событие аренда ошибка: %v", err)
+		log.Printf("NeverExtensions event lease failed: %v", err)
 		return
 	}
 	for _, env := range items {
@@ -294,19 +294,19 @@ func (b *Bus) processBatch(ctx context.Context) {
 		now := time.Now().UTC()
 		if err == nil {
 			if ackErr := b.store.CompleteExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now); ackErr != nil {
-				log.Printf("NeverExtensions событие подтверждение ошибка доставка=%d: %v", env.Delivery.ID, ackErr)
+				log.Printf("NeverExtensions event ack failed delivery=%d: %v", env.Delivery.ID, ackErr)
 			}
 			continue
 		}
 		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts {
 			if dlqErr := b.store.DeadLetterExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, err.Error(), now); dlqErr != nil {
-				log.Printf("NeverExtensions DLQ ошибка доставка=%d: %v", env.Delivery.ID, dlqErr)
+				log.Printf("NeverExtensions DLQ failed delivery=%d: %v", env.Delivery.ID, dlqErr)
 			}
 			continue
 		}
 		delay := b.retryDelay(env.Delivery.AttemptCount)
 		if retryErr := b.store.RetryExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now.Add(delay), err.Error()); retryErr != nil {
-			log.Printf("NeverExtensions повторить scheduling ошибка доставка=%d: %v", env.Delivery.ID, retryErr)
+			log.Printf("NeverExtensions retry scheduling failed delivery=%d: %v", env.Delivery.ID, retryErr)
 		}
 	}
 }
@@ -322,9 +322,9 @@ func (b *Bus) retryDelay(attempt int) time.Duration {
 	return d
 }
 
-// Типизированный домен полезные нагрузки. Они намеренно contain identifiers и неизменяемый
-// снимки только; аутентификация токены, Guard/device учётные данные и серверная часть секреты являются
-// никогда copied в расширение события.
+// Typed domain payloads. They intentionally contain identifiers and immutable
+// snapshots only; auth tokens, Guard/device credentials and backend secrets are
+// never copied into extension events.
 type ProjectPayload struct {
 	Action  string        `json:"action"`
 	Actor   string        `json:"actor,omitempty"`

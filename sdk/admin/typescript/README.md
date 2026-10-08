@@ -1,3 +1,3 @@
-# NeverExtensions Администратор TypeScript SDK
+# NeverExtensions Admin TypeScript SDK
 
-Типизированный клиент для песочница Администратор `postMessage` мост. SDK никогда получает NeverLauncher доступ токены и не может вызов Tauri мост.
+Typed client for the sandboxed Admin `postMessage` bridge. The SDK never receives NeverLauncher access tokens and cannot call the Tauri bridge.

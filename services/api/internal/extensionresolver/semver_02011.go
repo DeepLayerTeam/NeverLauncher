@@ -16,28 +16,28 @@ type Version struct {
 func ParseVersion(raw string) (Version, error) {
 	raw = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(raw), "v"))
 	if raw == "" {
-		return Version{}, errors.New("пустой SemVer")
+		return Version{}, errors.New("empty semver")
 	}
 	corePre := strings.SplitN(strings.SplitN(raw, "+", 2)[0], "-", 2)
 	core := strings.Split(corePre[0], ".")
 	if len(core) < 2 || len(core) > 3 {
-		return Version{}, fmt.Errorf("недопустимый SemVer %q", raw)
+		return Version{}, fmt.Errorf("invalid semver %q", raw)
 	}
 	vals := []int{0, 0, 0}
 	for i, p := range core {
 		if p == "" {
-			return Version{}, fmt.Errorf("недопустимый SemVer %q", raw)
+			return Version{}, fmt.Errorf("invalid semver %q", raw)
 		}
 		n, err := strconv.Atoi(p)
 		if err != nil || n < 0 {
-			return Version{}, fmt.Errorf("недопустимый SemVer %q", raw)
+			return Version{}, fmt.Errorf("invalid semver %q", raw)
 		}
 		vals[i] = n
 	}
 	v := Version{Major: vals[0], Minor: vals[1], Patch: vals[2], Raw: raw}
 	if len(corePre) == 2 {
 		if corePre[1] == "" {
-			return Version{}, fmt.Errorf("недопустимый SemVer предварительный релиз %q", raw)
+			return Version{}, fmt.Errorf("invalid semver prerelease %q", raw)
 		}
 		v.Pre = strings.Split(corePre[1], ".")
 	}
@@ -123,7 +123,7 @@ type Constraint struct {
 func ParseConstraint(raw string) (Constraint, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return Constraint{}, errors.New("пустой SemVer ограничение")
+		return Constraint{}, errors.New("empty semver constraint")
 	}
 	if raw == "*" || strings.EqualFold(raw, "x") {
 		return Constraint{Raw: raw, alternatives: [][]predicate{{func(Version) bool { return true }}}}, nil
@@ -133,7 +133,7 @@ func ParseConstraint(raw string) (Constraint, error) {
 	for _, altRaw := range ors {
 		altRaw = strings.TrimSpace(strings.ReplaceAll(altRaw, ",", " "))
 		if altRaw == "" {
-			return Constraint{}, fmt.Errorf("недопустимый ограничение %q", raw)
+			return Constraint{}, fmt.Errorf("invalid constraint %q", raw)
 		}
 		toks := strings.Fields(altRaw)
 		var preds []predicate
@@ -167,7 +167,7 @@ func parseConstraintToken(tok string) ([]predicate, error) {
 			}
 			n, e := strconv.Atoi(p)
 			if e != nil {
-				return nil, fmt.Errorf("недопустимый маска ограничение %q", tok)
+				return nil, fmt.Errorf("invalid wildcard constraint %q", tok)
 			}
 			nums = append(nums, n)
 		}
@@ -198,7 +198,7 @@ func parseConstraintToken(tok string) ([]predicate, error) {
 	}
 	v, err := normalizeConstraintVersion(val)
 	if err != nil {
-		return nil, fmt.Errorf("недопустимый ограничение %q: %w", tok, err)
+		return nil, fmt.Errorf("invalid constraint %q: %w", tok, err)
 	}
 	switch op {
 	case "=":
@@ -225,7 +225,7 @@ func parseConstraintToken(tok string) ([]predicate, error) {
 		upper := Version{Major: v.Major, Minor: v.Minor + 1}
 		return []predicate{func(x Version) bool { return Compare(x, v) >= 0 }, func(x Version) bool { return Compare(x, upper) < 0 }}, nil
 	default:
-		return nil, fmt.Errorf("неподдерживаемый ограничение оператор %q", op)
+		return nil, fmt.Errorf("unsupported constraint operator %q", op)
 	}
 }
 

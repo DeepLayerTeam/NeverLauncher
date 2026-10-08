@@ -6,9 +6,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// MinecraftRepository сохраняет Minecraft совместимость identity/session слой
-// отдельный из канонический аутентификация репозиторий контракт. Рабочий PostgreSQL и
-// в памяти процесса тест репозиторий implement это.
+// MinecraftRepository keeps the Minecraft compatibility identity/session layer
+// separate from the canonical auth repository contract. Production PostgreSQL and
+// the in-memory test repository implement it.
 type MinecraftRepository interface {
 	GetMinecraftProfileByUser(userID string) (model.MinecraftProfile, error)
 	GetMinecraftProfileByUUID(uuid string) (model.MinecraftProfile, error)

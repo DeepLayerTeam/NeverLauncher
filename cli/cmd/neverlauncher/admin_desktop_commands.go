@@ -12,11 +12,11 @@ import (
 
 func handleAdmin(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные admin-подкоманды: обзор, пользователи, роли, аудит, хранилище-работоспособность, создавать-проект, обновление-проект, создавать-профиль, обновление-профиль, создавать-канал, обновление-канал, создавать-пользователь")
+		return errors.New("доступные admin-подкоманды: overview, users, roles, audit, storage-health, create-project, update-project, create-profile, update-profile, create-channel, update-channel, create-user")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("admin-команды требуют --серверная часть <URL>")
+		return errors.New("admin-команды требуют --backend <url>")
 	}
 	out := flagValue(args, "--output", "")
 	var payload map[string]any
@@ -38,28 +38,28 @@ func handleAdmin(args []string) error {
 	case "update-project":
 		project := flagValue(args, "--project", "")
 		if project == "" {
-			return errors.New("обновление-проект требует --проект")
+			return errors.New("update-project требует --project")
 		}
 		body := map[string]any{"name": flagValue(args, "--name", ""), "description": flagValue(args, "--description", ""), "homepage": flagValue(args, "--homepage", ""), "repository": flagValue(args, "--repository", ""), "defaultChannel": flagValue(args, "--channel", "")}
 		payload, _, err = adminBackendPatch(args, "/api/v1/admin/projects/"+project, body)
 	case "create-profile":
 		project := flagValue(args, "--project", "")
 		if project == "" {
-			return errors.New("создавать-профиль требует --проект")
+			return errors.New("create-profile требует --project")
 		}
 		body := map[string]any{"id": flagValue(args, "--profile", "vanilla"), "name": flagValue(args, "--name", "Vanilla"), "description": flagValue(args, "--description", ""), "loader": flagValue(args, "--loader", "vanilla"), "preset": flagValue(args, "--preset", "recommended")}
 		payload, _, err = adminBackendPost(args, "/api/v1/admin/projects/"+project+"/profiles", body)
 	case "update-profile":
 		project, profile := flagValue(args, "--project", ""), flagValue(args, "--profile", "")
 		if project == "" || profile == "" {
-			return errors.New("обновление-профиль требует --проект и --профиль")
+			return errors.New("update-profile требует --project и --profile")
 		}
 		body := map[string]any{"name": flagValue(args, "--name", ""), "description": flagValue(args, "--description", ""), "loader": flagValue(args, "--loader", ""), "preset": flagValue(args, "--preset", "")}
 		payload, _, err = adminBackendPatch(args, "/api/v1/admin/projects/"+project+"/profiles/"+profile, body)
 	case "create-channel":
 		project := flagValue(args, "--project", "")
 		if project == "" {
-			return errors.New("создавать-канал требует --проект")
+			return errors.New("create-channel требует --project")
 		}
 		channel := flagValue(args, "--channel", "stable")
 		body := map[string]any{"id": channel, "name": flagValue(args, "--name", channel), "description": flagValue(args, "--description", ""), "protected": flagValue(args, "--protected", "false") == "true"}
@@ -67,7 +67,7 @@ func handleAdmin(args []string) error {
 	case "update-channel":
 		project, channel := flagValue(args, "--project", ""), flagValue(args, "--channel", "")
 		if project == "" || channel == "" {
-			return errors.New("обновление-канал требует --проект и --канал")
+			return errors.New("update-channel требует --project и --channel")
 		}
 		body := map[string]any{"name": flagValue(args, "--name", ""), "description": flagValue(args, "--description", ""), "protected": flagValue(args, "--protected", "false") == "true"}
 		payload, _, err = adminBackendPatch(args, "/api/v1/admin/projects/"+project+"/channels/"+channel, body)
@@ -75,7 +75,7 @@ func handleAdmin(args []string) error {
 		email := flagValue(args, "--email", "")
 		password := flagValue(args, "--password", "")
 		if email == "" || password == "" {
-			return errors.New("создавать-пользователь требует --электронная почта и --пароль")
+			return errors.New("create-user требует --email и --password")
 		}
 		body := map[string]any{"email": email, "displayName": flagValue(args, "--name", email), "roleId": flagValue(args, "--role", "viewer"), "password": password}
 		payload, _, err = adminBackendPost(args, "/api/v1/admin/users", body)
@@ -133,7 +133,7 @@ func adminBackendRequest(args []string, method string, path string, body map[str
 
 func handleDesktop(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные desktop-подкоманды: подключение, конфигурация, платформы, пакет, проверять")
+		return errors.New("доступные desktop-подкоманды: connect, config, platforms, package, verify")
 	}
 	switch args[0] {
 	case "connect":
@@ -150,7 +150,7 @@ func handleDesktop(args []string) error {
 		return buildDesktopPackage(ver, artifactDir, out, flagValue(args, "--platform", "all"))
 	case "verify":
 		if len(args) < 2 {
-			return errors.New("настольное приложение проверять требует путь к каталогу настольное приложение пакет")
+			return errors.New("desktop verify требует путь к каталогу desktop package")
 		}
 		return verifyDesktopPackage(args[1])
 	default:
@@ -228,7 +228,7 @@ func filterDesktopPlatforms(items []DesktopPackagePlatform, platform string) []D
 
 func handlePackaging(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные packaging-подкоманды: prepare, проверять, подпись")
+		return errors.New("доступные packaging-подкоманды: prepare, verify, sign")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -238,7 +238,7 @@ func handlePackaging(args []string) error {
 		if err := packaging940Prepare(root, dir); err != nil {
 			return err
 		}
-		fmt.Printf("Рабочий пакет комплект prepared: %s\n", dir)
+		fmt.Printf("Production packaging bundle prepared: %s\n", dir)
 		return nil
 	case "verify":
 		dir := flagValue(args, "--bundle", "")
@@ -246,7 +246,7 @@ func handlePackaging(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("пакет проверять требует путь к комплект релиза")
+			return errors.New("packaging verify требует путь к release bundle")
 		}
 		report, err := packaging940Verify(dir)
 		if err != nil {
@@ -259,7 +259,7 @@ func handlePackaging(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("пакет подпись требует путь к комплект релиза")
+			return errors.New("packaging sign требует путь к release bundle")
 		}
 		if err := signReleaseBundle(dir, flagValue(args, "--private-key", "")); err != nil {
 			return err
@@ -326,7 +326,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 	}
 	sort.Slice(entries, func(i, j int) bool { return fmt.Sprint(entries[i]["path"]) < fmt.Sprint(entries[j]["path"]) })
 	if len(entries) < 5 {
-		return fmt.Errorf("рабочий пакет исходник неполный: только %d артефакты собирать", len(entries))
+		return fmt.Errorf("production packaging source incomplete: only %d artifacts collected", len(entries))
 	}
 	if err := writeJSONFile(filepath.Join(absOut, "SBOM.spdx.json"), packaging940SBOM(entries)); err != nil {
 		return err
@@ -352,7 +352,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 		return err
 	}
 	if len(checksums) == 0 {
-		return errors.New("SHA256SUMS является пустой")
+		return errors.New("SHA256SUMS is empty")
 	}
 	if err := os.WriteFile(filepath.Join(absOut, "SHA256SUMS"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644); err != nil {
 		return err

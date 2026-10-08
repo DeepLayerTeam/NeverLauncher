@@ -10,17 +10,17 @@ def read(path: str) -> str:
 def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Аттестация v2 0.18.10 контроль: {path} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"[NeverLauncher] Attestation v2 0.18.10 gate: {path} missing: {', '.join(missing)}")
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 10):
-    raise SystemExit(f"Аттестация v2 контроль требует >=0.18.10, получил {version}")
+    raise SystemExit(f"Attestation v2 gate requires >=0.18.10, got {version}")
 
 runtime = read("runtime/neverruntime/src/windows_attestation_v2.rs")
 require(runtime, "runtime/neverruntime/src/windows_attestation_v2.rs", [
@@ -101,7 +101,7 @@ require(frontend, "apps/desktop/src/main.tsx", [
 migration_api = read("services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 migration_cli = read("cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 if migration_api != migration_cli:
-    raise SystemExit("[NeverLauncher] Аттестация v2 0.18.10 контроль: API/CLI миграция 0032 differs")
+    raise SystemExit("[NeverLauncher] Attestation v2 0.18.10 gate: API/CLI migration 0032 differs")
 require(migration_api, "0032_guard_attestation_v2_01810.sql", [
     'guard-attest-v2', 'guard-continuous-join-v2', 'guard-attest-v1', 'guard-launch-v1',
 ])
@@ -127,7 +127,7 @@ require(ci, ".github/workflows/ci.yml", [
     'windows_attestation_v2::tests',
 ])
 if "neverguard-attestation-v2-01810.py" not in preflight:
-    raise SystemExit("[NeverLauncher] Аттестация v2 0.18.10 контроль: релиз предварительная проверка wiring отсутствующий")
+    raise SystemExit("[NeverLauncher] Attestation v2 0.18.10 gate: release preflight wiring missing")
 
 for rel, text in [
     ("runtime/neverruntime/src/windows_attestation_v2.rs", runtime),
@@ -136,6 +136,6 @@ for rel, text in [
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
-            raise SystemExit(f"[NeverLauncher] Аттестация v2 0.18.10 контроль: placeholder {placeholder!r} в {rel}")
+            raise SystemExit(f"[NeverLauncher] Attestation v2 0.18.10 gate: placeholder {placeholder!r} in {rel}")
 
-print(f"[NeverLauncher] Защита Аттестация v2 + непрерывный Windows свидетельство 0.18.10 контроль: OK ({version})")
+print(f"[NeverLauncher] Guard Attestation v2 + continuous Windows evidence 0.18.10 gate: OK ({version})")

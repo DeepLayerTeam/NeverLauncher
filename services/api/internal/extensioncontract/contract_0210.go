@@ -15,7 +15,7 @@ const (
 	LegacyExtensionAPIVersion = "3.7"
 )
 
-// Контракт является зафиксированный NeverExtensions 0.21 GA совместимость поверхность.
+// Contract is the frozen NeverExtensions 0.21 GA compatibility surface.
 type Contract struct {
 	PackageFormatName     string   `json:"packageFormatName"`
 	PackageFormatVersion  string   `json:"packageFormatVersion"`
@@ -33,9 +33,9 @@ func Frozen() Contract {
 	}
 }
 
-// CanonicalAPIVersion принимает 0.20 API маркер как совместимость псевдоним, но
-// всегда сопоставляет это к зафиксированный Расширение API v1 поверхность. Этот сохраняет подписанный
-// 0.20 пакеты runnable без изменяющий их манифесты.
+// CanonicalAPIVersion accepts the 0.20 API marker as a compatibility alias, but
+// always maps it to the frozen Extension API v1 surface. This keeps signed
+// 0.20 packages runnable without mutating their manifests.
 func CanonicalAPIVersion(raw string) (string, error) {
 	switch strings.TrimSpace(raw) {
 	case "1.0", "1.0.0", "v1", "v1.0", "v1.0.0":
@@ -43,9 +43,9 @@ func CanonicalAPIVersion(raw string) (string, error) {
 	case "3.7", "3.7.0":
 		return ExtensionAPIVersion, nil
 	case "":
-		return "", errors.New("API расширений является обязательный")
+		return "", errors.New("extension api is required")
 	default:
-		return "", fmt.Errorf("неподдерживаемый API расширений %q; ожидаемый %s (устаревший %s является принят только для 0.20 совместимость)", raw, ExtensionAPIVersion, LegacyExtensionAPIVersion)
+		return "", fmt.Errorf("unsupported extension api %q; expected %s (legacy %s is accepted only for 0.20 compatibility)", raw, ExtensionAPIVersion, LegacyExtensionAPIVersion)
 	}
 }
 
@@ -54,12 +54,12 @@ func IsLegacyAPIVersion(raw string) bool {
 	return raw == LegacyExtensionAPIVersion || raw == LegacyExtensionAPIVersion+".0"
 }
 
-// RequireGAAPIVersion является используется для вновь published/created 0.21 артефакты. 
-// устаревший псевдоним является намеренно отклонён так реестр converges к API v1.
+// RequireGAAPIVersion is used for newly published/created 0.21 artifacts. The
+// legacy alias is intentionally rejected so the registry converges to API v1.
 func RequireGAAPIVersion(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw != ExtensionAPIVersion {
-		return fmt.Errorf("новый NeverExtensions публикация требовать Расширение API %s; получил %q", ExtensionAPIVersion, raw)
+		return fmt.Errorf("new NeverExtensions publications require Extension API %s; got %q", ExtensionAPIVersion, raw)
 	}
 	return nil
 }
@@ -71,7 +71,7 @@ func SupportsHostHello(manifestAPI, helloAPI string) bool {
 	}
 	helloAPI = strings.TrimSpace(helloAPI)
 	if IsLegacyAPIVersion(manifestAPI) && helloAPI == "" {
-		// 0.20 SDK сделал не отправлять extensionApiVersion в hello полезная нагрузка.
+		// 0.20 SDKs did not send extensionApiVersion in the hello payload.
 		return true
 	}
 	if IsLegacyAPIVersion(manifestAPI) && (helloAPI == LegacyExtensionAPIVersion || helloAPI == LegacyExtensionAPIVersion+".0") {

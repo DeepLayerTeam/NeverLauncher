@@ -19,7 +19,7 @@
     "commands": [
       {
         "name": "status",
-        "description": "Показывать расширение состояние",
+        "description": "Show extension status",
         "usage": "nl x example status"
       }
     ]

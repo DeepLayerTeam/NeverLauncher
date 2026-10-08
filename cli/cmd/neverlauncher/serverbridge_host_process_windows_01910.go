@@ -1,4 +1,4 @@
-//Go:сборка Windows
+//go:build windows
 
 package main
 
@@ -30,7 +30,7 @@ func hostTerminateProcess01910(pid int) error {
 
 func hostKillProcess01910(pid int) error {
 	if pid <= 0 {
-		return errors.New("недопустимый процесс PID")
+		return errors.New("invalid process pid")
 	}
 	process, err := os.FindProcess(pid)
 	if err != nil {

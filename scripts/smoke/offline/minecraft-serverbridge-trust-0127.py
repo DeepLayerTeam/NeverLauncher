@@ -6,14 +6,14 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"Minecraft/ServerBridge доверие принудительное применение контроль ошибка: отсутствующий {rel}")
+        raise SystemExit(f"Minecraft/ServerBridge trust enforcement gate failed: missing {rel}")
     return path.read_text(encoding="utf-8")
 
 def require(rel: str, needles: list[str]) -> None:
     text = read(rel)
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"Minecraft/ServerBridge доверие принудительное применение контроль ошибка: {rel} отсутствующий {needle!r}")
+            raise SystemExit(f"Minecraft/ServerBridge trust enforcement gate failed: {rel} missing {needle!r}")
 
 require("services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go", [
     'gameplayTrustPolicy0127 = "session-device-risk-v1"',
@@ -100,4 +100,4 @@ require("e2e/scripts/run-minecraft-e2e.sh", [
     "compose up -d --force-recreate paper",
 ])
 
-print("Minecraft/ServerBridge доверие принудительное применение контроль OK: актуальный родительский session/device/risk проверяет, привязка-эпоха снимки, канал закрепление и плагин запрещать reasons являются применять")
+print("Minecraft/ServerBridge trust enforcement gate OK: live parent session/device/risk checks, binding-epoch snapshots, channel pinning and plugin deny reasons are enforced")

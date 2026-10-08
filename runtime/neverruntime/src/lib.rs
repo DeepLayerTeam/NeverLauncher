@@ -361,7 +361,7 @@ pub async fn load_manifest(url: &str, pinned_public_key: &str) -> Result<Manifes
         .await
         .map_err(|err| format!("не удалось запросить манифест: {err}"))?;
     if !response.status().is_success() {
-        return Err(format!("серверная часть вернул статус {}", response.status()));
+        return Err(format!("backend вернул статус {}", response.status()));
     }
     let manifest = response
         .json::<Manifest>()
@@ -412,7 +412,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
 }
 
 pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: &str) -> Result<String, String> {
-    let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("закрытый ключ не является hex: {err}"))?;
+    let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("private key не является hex: {err}"))?;
     let seed: [u8; 32] = bytes.try_into().map_err(|_| "Ed25519 private key seed должен быть 32 байта".to_string())?;
     manifest.signature = None;
     let payload = manifest_signing_payload(manifest)?;
@@ -431,7 +431,7 @@ pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: 
 fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
     let mut unsigned = manifest.clone();
     unsigned.signature = None;
-    serde_json::to_vec(&unsigned).map_err(|err| format!("не удалось сериализовать полезная нагрузка подписи: {err}"))
+    serde_json::to_vec(&unsigned).map_err(|err| format!("не удалось сериализовать payload подписи: {err}"))
 }
 
 pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileCheckResult>, String> {
@@ -463,8 +463,8 @@ const FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS: u64 = 65;
 
 fn bounded_rate_limit_delay_seconds(values: impl IntoIterator<Item = Option<u64>>) -> u64 {
     let longest = values.into_iter().flatten().filter(|value| *value > 0).max().unwrap_or(1);
-    // API использует фиксированный один-minute окно. Waiting один extra второй avoids
-    // racing Redis истечение пока сохранять hard привязанный против повреждённый прокси.
+    // The API uses a fixed one-minute window. Waiting one extra second avoids
+    // racing Redis expiry while keeping a hard bound against malformed proxies.
     longest.saturating_add(1).min(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS)
 }
 
@@ -531,7 +531,7 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
         let mut output = fs::File::create(&part_path).await.map_err(|err| format!("не удалось создать временный файл {}: {err}", part_path.display()))?;
         let mut hasher = Sha256::new();
         let mut written: u64 = 0;
-        while let Some(chunk) = response.chunk().await.map_err(|err| format!("{}: ошибка чтения ответ поток: {err}", file.path))? {
+        while let Some(chunk) = response.chunk().await.map_err(|err| format!("{}: ошибка чтения response stream: {err}", file.path))? {
             hasher.update(&chunk);
             output.write_all(&chunk).await.map_err(|err| format!("не удалось записать {}: {err}", part_path.display()))?;
             written += chunk.len() as u64;
@@ -542,7 +542,7 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
             let _ = fs::remove_file(&part_path).await;
             result.failed += 1;
             result.failed_files.push(file.path.clone());
-            result.messages.push(format!("{}: скачанный файл не прошёл размер/SHA-256 проверка", file.path));
+            result.messages.push(format!("{}: скачанный файл не прошёл size/SHA-256 verification", file.path));
             continue;
         }
         fs::rename(&part_path, &local_path).await.map_err(|err| format!("не удалось атомарно заменить {}: {err}", local_path.display()))?;
@@ -594,7 +594,7 @@ pub async fn clean_unused_files(manifest: &Manifest, root: &Path) -> Result<Clea
             let top = rel.split('/').next().unwrap_or("");
             if expected.contains(&rel) || preserve_prefixes.contains(&top) || preserve_files.contains(&rel.as_str()) { preserved += 1; continue; }
             let target = quarantine.join(&rel);
-            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|err| format!("не удалось создать карантин: {err}"))?; }
+            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|err| format!("не удалось создать quarantine: {err}"))?; }
             match std::fs::rename(&path, &target) { Ok(_) => { moved += 1; messages.push(format!("{} → {}", rel, target.display())); }, Err(err) => messages.push(format!("{}: {err}", rel)) }
         }
     }
@@ -654,7 +654,7 @@ pub async fn certify_vanilla_compatibility(
     if max_runtime_seconds < 5 {
         return Err("Vanilla certification требует max-runtime-seconds >= 5".to_string());
     }
-    fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть клиент корень: {err}"))?;
+    fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть client root: {err}"))?;
     let version = safe_component(version)?;
     let natives_base = root.join("natives");
     let natives_dir = platform_natives_directory(&natives_base).await;
@@ -674,14 +674,14 @@ pub async fn certify_vanilla_compatibility(
     if let Some(metadata_java) = resolution.java_major_version {
         if metadata_java != required_java_major {
             return Err(format!(
-                "Vanilla {version} Mojang метаданные требует Java {metadata_java}, сертификация цель требует Java {required_java_major}"
+                "Vanilla {version} Mojang metadata требует Java {metadata_java}, certification target требует Java {required_java_major}"
             ));
         }
     }
     let java_info = check_java(Some(java_path.clone()), Some(required_java_major)).await?;
     if !java_info.found || java_info.detected_major_version != Some(required_java_major) {
         return Err(format!(
-            "Vanilla {version} сертификация Java несоответствие: требуется Java {required_java_major}, {}",
+            "Vanilla {version} certification Java mismatch: требуется Java {required_java_major}, {}",
             java_info.message
         ));
     }
@@ -691,7 +691,7 @@ pub async fn certify_vanilla_compatibility(
         .map(|entry| safe_join(root, entry).map(|path| path.to_string_lossy().to_string()))
         .collect::<Result<Vec<_>, _>>()?;
     if classpath_entries.is_empty() {
-        return Err(format!("Vanilla {version} сертификация путь классов пуст"));
+        return Err(format!("Vanilla {version} certification classpath пуст"));
     }
     let mut game_args = resolution.game_args.clone();
     let normalized_matching_server = matching_server.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
@@ -731,19 +731,19 @@ pub async fn certify_vanilla_compatibility(
     let started_at = now_unix()?;
     let log_path = logs_dir.join(format!("neverruntime-vanilla-certification-{version}-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
-        .map_err(|err| format!("не удалось открыть сертификация журнал {}: {err}", log_path.display()))?;
+        .map_err(|err| format!("не удалось открыть certification log {}: {err}", log_path.display()))?;
     use std::io::Write as _;
     writeln!(log_file, "NeverRuntime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
-    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать сертификация журнал дескриптор: {e}"))?;
+    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("Vanilla сертификация заблокирован NeverGuard Sensor: {err}"))?;
+        .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
     command
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
@@ -755,17 +755,17 @@ pub async fn certify_vanilla_compatibility(
     windows_policy::prepare_runtime_command(&mut command);
     let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
-        .map_err(|err| format!("Vanilla сертификация заблокирован среда выполнения политика: {err}"))?;
+        .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
     #[cfg(windows)]
     sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("Vanilla сертификация заблокирован NeverGuard Sensor: {err}"))?;
+        .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
-        Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla среда выполнения: {err}"))?), false),
+        Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla runtime: {err}"))?), false),
         Err(_) => {
-            child.kill().await.map_err(|err| format!("Vanilla среда выполнения не удалось остановить после тайм-аут: {err}"))?;
+            child.kill().await.map_err(|err| format!("Vanilla runtime не удалось остановить после timeout: {err}"))?;
             let _ = child.wait().await;
             (None, true)
         }
@@ -776,11 +776,11 @@ pub async fn certify_vanilla_compatibility(
     let runtime_seconds = finished_at.saturating_sub(started_at);
     let passed = timed_out || success;
     let message = if timed_out {
-        format!("Vanilla {version} оставался работоспособным до сертификация тайм-аут {max_runtime_seconds}s")
+        format!("Vanilla {version} оставался работоспособным до certification timeout {max_runtime_seconds}s")
     } else if success {
         format!("Vanilla {version} завершился успешно")
     } else {
-        format!("Vanilla {version} завершился с ошибкой до сертификация тайм-аут")
+        format!("Vanilla {version} завершился с ошибкой до certification timeout")
     };
     Ok(VanillaCompatibilityProbeResult {
         status: if passed { "passed".to_string() } else { "failed".to_string() },
@@ -822,19 +822,19 @@ pub async fn launch_with_timeout(
     let started_at = now_unix()?;
     let log_path = logs_dir.join(format!("neverruntime-launch-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
-        .map_err(|err| format!("не удалось открыть среда выполнения журнал {}: {err}", log_path.display()))?;
+        .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
     use std::io::Write as _;
     writeln!(log_file, "NeverRuntime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
-    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать среда выполнения журнал дескриптор: {e}"))?;
+    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("запускать заблокирован: NeverGuard Sensor prepare ошибка: {err}"))?;
+        .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
     command
         .arg("-cp")
         .arg(join_classpath(&plan.classpath_entries))
@@ -846,34 +846,34 @@ pub async fn launch_with_timeout(
     windows_policy::prepare_runtime_command(&mut command);
     let mut child = command
         .spawn()
-        .map_err(|err| format!("не удалось запустить среда выполнения: {err}"))?;
+        .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
-        .map_err(|err| format!("запускать заблокирован: Windows runtime/process политика принудительное применение ошибка: {err}"))?;
+        .map_err(|err| format!("launch заблокирован: Windows runtime/process policy enforcement failed: {err}"))?;
     #[cfg(windows)]
     sensor_bootstrap.bind_runtime_policy(&_runtime_policy);
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("запускать заблокирован: NeverGuard Sensor аутентификация ошибка: {err}"))?;
+        .map_err(|err| format!("launch заблокирован: NeverGuard Sensor authentication failed: {err}"))?;
 
     let (status, timed_out) = if let Some(seconds) = max_runtime_seconds.filter(|seconds| *seconds > 0) {
         match timeout(Duration::from_secs(seconds), child.wait()).await {
-            Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться среда выполнения: {err}"))?), false),
+            Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false),
             Err(_) => {
-                child.kill().await.map_err(|err| format!("среда выполнения превысил лимит {seconds}s и не был остановлен: {err}"))?;
+                child.kill().await.map_err(|err| format!("runtime превысил лимит {seconds}s и не был остановлен: {err}"))?;
                 let _ = child.wait().await;
                 (None, true)
             }
         }
     } else {
-        (Some(child.wait().await.map_err(|err| format!("не удалось дождаться среда выполнения: {err}"))?), false)
+        (Some(child.wait().await.map_err(|err| format!("не удалось дождаться runtime: {err}"))?), false)
     };
     let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
     let exit_code = status.and_then(|value| value.code());
     let stdout = read_log_tail(&log_path, 512 * 1024).await.unwrap_or_default();
     let stderr = String::new();
     let message = if timed_out {
-        format!("Среда выполнения остановлен после заданного лимита {}s", max_runtime_seconds.unwrap_or_default())
+        format!("Runtime остановлен после заданного лимита {}s", max_runtime_seconds.unwrap_or_default())
     } else if success {
         "Runtime завершился успешно".to_string()
     } else {
@@ -904,7 +904,7 @@ pub async fn launch_with_timeout(
 pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>, String> {
     let path = root.join("logs").join("launch-history.jsonl");
     if fs::metadata(&path).await.is_err() { return Ok(Vec::new()); }
-    let data = fs::read_to_string(&path).await.map_err(|err| format!("не удалось прочитать запускать история: {err}"))?;
+    let data = fs::read_to_string(&path).await.map_err(|err| format!("не удалось прочитать launch history: {err}"))?;
     Ok(data.lines().filter(|line| !line.trim().is_empty()).filter_map(|line| serde_json::from_str::<LaunchHistoryEntry>(line).ok()).collect())
 }
 
@@ -949,17 +949,17 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         if let Some(major) = resolution.java_major_version {
             if required_java > 0 && required_java != major {
                 return Err(format!(
-                    "манифест требует Java {required_java}, а Mojang метаданные требует Java {major}; релиз должен быть пересобран"
+                    "manifest требует Java {required_java}, а Mojang metadata требует Java {major}; release должен быть пересобран"
                 ));
             }
             required_java = major;
         }
         validate_compatibility_resolution_trust(manifest, &resolution)?;
         if !manifest.runtime.launch.main_class.trim().is_empty() && manifest.runtime.launch.main_class != resolution.main_class {
-            return Err(format!("манифест mainClass {} расходится с Совместимость Движок mainClass {}", manifest.runtime.launch.main_class, resolution.main_class));
+            return Err(format!("manifest mainClass {} расходится с Compatibility Engine mainClass {}", manifest.runtime.launch.main_class, resolution.main_class));
         }
         if !manifest.minecraft.main_class.trim().is_empty() && manifest.minecraft.main_class != resolution.main_class {
-            return Err(format!("Minecraft.mainClass {} расходится с Совместимость Движок mainClass {}", manifest.minecraft.main_class, resolution.main_class));
+            return Err(format!("minecraft.mainClass {} расходится с Compatibility Engine mainClass {}", manifest.minecraft.main_class, resolution.main_class));
         }
         let classpath_entries = resolution.classpath.iter().map(|path| safe_join(root, path).map(|value| value.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
         let mut jvm_args = resolution.jvm_args;
@@ -1020,7 +1020,7 @@ async fn platform_natives_directory(base: &Path) -> PathBuf {
             return candidate;
         }
     }
-    // Backward-compatible резервный вариант для пакеты материализовать до 0.16.9.
+    // Backward-compatible fallback for packages materialized before 0.16.9.
     let legacy = base.join(platform);
     if fs::metadata(&legacy).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
         legacy
@@ -1078,7 +1078,7 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
             }
         }
         if let Some(path) = injector {
-            if !tokio_path_exists119(&path) { return Err(format!("authlib-injector объявлять через подписанный манифест но отсутствующий: {}", path.display())); }
+            if !tokio_path_exists119(&path) { return Err(format!("authlib-injector declared by signed manifest but missing: {}", path.display())); }
             let base = credentials.auth_server_base_url.trim().trim_end_matches('/');
             if !(base.starts_with("https://") || base.starts_with("http://127.0.0.1") || base.starts_with("http://localhost")) {
                 return Err("authlib-injector Backend URL must use HTTPS (HTTP is allowed only for localhost)".to_string());
@@ -1114,25 +1114,25 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
     let trusted = manifest.files.iter().filter(|file| manifest_file_applies(file)).map(|file| file.path.replace('\\', "/")).collect::<HashSet<_>>();
     for path in resolution.metadata_paths.iter().chain(resolution.classpath.iter()).chain(resolution.natives.iter().map(|native| &native.path)) {
         if !trusted.contains(path) {
-            return Err(format!("Совместимость Движок отклонил неподписанный релиз путь: {path}"));
+            return Err(format!("Compatibility Engine отклонил неподписанный release path: {path}"));
         }
     }
     if let Some(path) = resolution.logging_file.as_ref() {
         if !trusted.contains(path) {
-            return Err(format!("Совместимость Движок отклонил неподписанный logging конфигурация: {path}"));
+            return Err(format!("Compatibility Engine отклонил неподписанный logging config: {path}"));
         }
     }
     Ok(())
 }
 
 async fn read_log_tail(path: &Path, max_bytes: u64) -> Result<String, String> {
-    let mut file = fs::File::open(path).await.map_err(|err| format!("не удалось открыть среда выполнения журнал: {err}"))?;
-    let len = file.metadata().await.map_err(|err| format!("не удалось получить размер среда выполнения журнал: {err}"))?.len();
+    let mut file = fs::File::open(path).await.map_err(|err| format!("не удалось открыть runtime log: {err}"))?;
+    let len = file.metadata().await.map_err(|err| format!("не удалось получить размер runtime log: {err}"))?.len();
     if len > max_bytes {
-        file.seek(SeekFrom::Start(len - max_bytes)).await.map_err(|err| format!("не удалось выполнить seek среда выполнения журнал: {err}"))?;
+        file.seek(SeekFrom::Start(len - max_bytes)).await.map_err(|err| format!("не удалось выполнить seek runtime log: {err}"))?;
     }
     let mut data = Vec::with_capacity(len.min(max_bytes) as usize);
-    file.read_to_end(&mut data).await.map_err(|err| format!("не удалось прочитать среда выполнения журнал: {err}"))?;
+    file.read_to_end(&mut data).await.map_err(|err| format!("не удалось прочитать runtime log: {err}"))?;
     Ok(String::from_utf8_lossy(&data).to_string())
 }
 
@@ -1140,10 +1140,10 @@ async fn append_launch_history(root: &Path, entry: &LaunchHistoryEntry) -> Resul
     let logs_dir = root.join("logs");
     fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
     let path = logs_dir.join("launch-history.jsonl");
-    let mut line = serde_json::to_string(entry).map_err(|err| format!("не удалось сериализовать запускать история: {err}"))?;
+    let mut line = serde_json::to_string(entry).map_err(|err| format!("не удалось сериализовать launch history: {err}"))?;
     line.push('\n');
-    let mut file = fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|err| format!("не удалось открыть запускать история: {err}"))?;
-    file.write_all(line.as_bytes()).await.map_err(|err| format!("не удалось записать запускать история: {err}"))
+    let mut file = fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|err| format!("не удалось открыть launch history: {err}"))?;
+    file.write_all(line.as_bytes()).await.map_err(|err| format!("не удалось записать launch history: {err}"))
 }
 
 async fn sha256_file(path: &Path) -> Result<String, String> {
@@ -1187,7 +1187,7 @@ fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
 
 fn safe_component(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
-    if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') || trimmed == "." || trimmed == ".." { return Err(format!("небезопасный путь компонент: {value}")); }
+    if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') || trimmed == "." || trimmed == ".." { return Err(format!("небезопасный path component: {value}")); }
     Ok(trimmed.to_string())
 }
 
@@ -1220,7 +1220,7 @@ fn now_unix() -> Result<u64, String> { SystemTime::now().duration_since(UNIX_EPO
 async fn set_executable_if_needed(path: &Path, executable: bool) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
     if !executable { return Ok(()); }
-    let meta = fs::metadata(path).await.map_err(|err| format!("разрешения {}: {err}", path.display()))?;
+    let meta = fs::metadata(path).await.map_err(|err| format!("permissions {}: {err}", path.display()))?;
     let mut permissions = meta.permissions();
     permissions.set_mode(permissions.mode() | 0o111);
     fs::set_permissions(path, permissions).await.map_err(|err| format!("chmod {}: {err}", path.display()))

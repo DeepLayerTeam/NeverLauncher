@@ -1,7 +1,7 @@
--- NeverLauncher 0.14.9: Публичный ServerBridge Матрица + HA/hardening.
--- Среда выполнения состояние остаётся PostgreSQL-нативный. Эти индексы поддержка active/active
--- health/freshness queries и ограниченный рекомендательный-блокировка обслуживание без добавляя
--- реплика-локальный владение состояние.
+-- NeverLauncher 0.14.9: Public ServerBridge Matrix + HA/hardening.
+-- Runtime state remains PostgreSQL-native. These indexes support active/active
+-- health/freshness queries and bounded advisory-lock maintenance without adding
+-- replica-local ownership state.
 
 CREATE INDEX IF NOT EXISTS idx_server_bridge_nodes_active_heartbeat_0149
     ON server_bridge_nodes_v2(last_heartbeat_at DESC, id)

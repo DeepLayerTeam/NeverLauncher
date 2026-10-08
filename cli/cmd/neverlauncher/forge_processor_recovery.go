@@ -37,7 +37,7 @@ func forgeProcessorJournalPath(pc forgeProcessorContext) string {
 func loadForgeProcessorJournal(pc forgeProcessorContext) (forgeProcessorJournal, bool, error) {
 	_, installerSHA, _, err := hashFileSHA1SHA256(pc.InstallerPath)
 	if err != nil {
-		return forgeProcessorJournal{}, false, fmt.Errorf("обработчик журнал установщик хеш: %w", err)
+		return forgeProcessorJournal{}, false, fmt.Errorf("processor journal installer hash: %w", err)
 	}
 	fresh := forgeProcessorJournal{
 		SchemaVersion:    forgeProcessorJournalSchema,
@@ -87,7 +87,7 @@ func quarantineProcessorJournal(pc forgeProcessorContext, reason string) error {
 	path := forgeProcessorJournalPath(pc)
 	rel, err := filepath.Rel(pc.ClientDir, path)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return fmt.Errorf("обработчик журнал является вне клиент корень: %s", path)
+		return fmt.Errorf("processor journal is outside client root: %s", path)
 	}
 	_, err = quarantineCompatibilityArtifact(pc.ClientDir, filepath.ToSlash(rel), reason)
 	return err
@@ -155,7 +155,7 @@ func quarantineProcessorOutputs(pc forgeProcessorContext, processor forgeProcess
 		}
 		rel, err := filepath.Rel(root, abs)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return fmt.Errorf("обработчик вывод вышел за клиент корень: %s", outputPath)
+			return fmt.Errorf("processor output вышел за client root: %s", outputPath)
 		}
 		if _, err := os.Lstat(abs); errors.Is(err, os.ErrNotExist) {
 			continue

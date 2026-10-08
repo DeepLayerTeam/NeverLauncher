@@ -1,4 +1,4 @@
-name: Публичный Рабочий Доставка E2E
+name: Public Production Delivery E2E
 
 on:
   release:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       matrix_url:
-        description: Необязательный явный PUBLIC_PRODUCTION_DELIVERY_MATRIX.JSON URL
+        description: Optional explicit PUBLIC_PRODUCTION_DELIVERY_MATRIX.json URL
         required: false
         type: string
 
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   public-delivery-e2e:
-    name: Публичный six-цель релиз загрузка + проверка
+    name: Public six-target release download + verification
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -27,7 +27,7 @@ jobs:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
 
-      - name: Разрешать публичная матрица URL и релиз версия
+      - name: Resolve public matrix URL and release version
         shell: bash
         env:
           INPUT_MATRIX_URL: ${{ inputs.matrix_url }}
@@ -44,7 +44,7 @@ jobs:
           printf 'PUBLIC_MATRIX_URL=%s\n' "${MATRIX_URL}" >> "$GITHUB_ENV"
           printf 'PUBLIC_VERSION=%s\n' "${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Материализовать внешний релиз доверие inputs
+      - name: Materialize external release trust inputs
         shell: bash
         env:
           RELEASE_ROOT_PUBLIC_KEY_BASE64: ${{ secrets.NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64 }}
@@ -59,12 +59,12 @@ jobs:
           printf 'NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-current-trust-policy.json" >> "$GITHUB_ENV"
           printf 'NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
 
-      - name: Сборка публичный E2E проверяющий модуль
+      - name: Build public E2E verifier
         working-directory: cli
         shell: bash
         run: go build -trimpath -ldflags "-s -w -X main.version=${PUBLIC_VERSION}" -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher
 
-      - name: Загрузка и проверять публичный рабочий релиз сквозной
+      - name: Download and verify the public production release end-to-end
         shell: bash
         run: |
           set -euo pipefail
@@ -95,15 +95,15 @@ jobs:
             "$RUNNER_TEMP/nl" release production-verify "$RUNNER_TEMP/public-release"
           fi
 
-      - name: Загрузка публичный доставка E2E свидетельство
+      - name: Upload public delivery E2E evidence
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-публичный-доставка-e2e-${{ github.sha }}
+          name: neverlauncher-public-delivery-e2e-${{ github.sha }}
           path: dist/PUBLIC_DELIVERY_E2E_REPORT.json
           if-no-files-found: error
           retention-days: 90
 
-      - name: Удалять внешний доверие материал
+      - name: Remove external trust material
         if: always()
         shell: bash
         run: |

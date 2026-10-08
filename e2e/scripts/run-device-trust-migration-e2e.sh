@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[устройство-доверие-миграция-e2e] запуск PostgreSQL и материализовать точный 0.12.9 схема (0001..0017)\n'
+printf '[device-trust-migration-e2e] start PostgreSQL and materialize exact 0.12.9 schema (0001..0017)\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -69,7 +69,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc "SELECT max(version) FROM schema_migrations")"
 [[ "$latest_before" == "0017_device_key_recovery_rotation_0128" ]] || { echo "unexpected pre-upgrade migration: $latest_before" >&2; exit 1; }
 
-printf '[устройство-доверие-миграция-e2e] начальное значение действительный 0.12.9 устаревший состояния и prove замена запрос является blocked до 0018\n'
+printf '[device-trust-migration-e2e] seed valid 0.12.9 legacy states and prove replacement challenge is blocked before 0018\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -113,11 +113,11 @@ COMMIT;
 SQL
 
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-pre-rotate','dtmig-user','dtmig-old','key-rotate',repeat('c',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null 2>&1; then
-  echo '[устройство-доверие-миграция-e2e] 0.12.9 unexpectedly принят ключ-ротировать назначение' >&2
+  echo '[device-trust-migration-e2e] 0.12.9 unexpectedly accepted key-rotate purpose' >&2
   exit 1
 fi
 
-printf '[устройство-доверие-миграция-e2e] обновление с поставка CLI и проверять запечатанный 0018 + 0031 + 0032\n'
+printf '[device-trust-migration-e2e] upgrade with shipping CLI and verify sealed 0018 + 0031 + 0032\n'
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.json"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.json"
@@ -133,7 +133,7 @@ guard_purpose_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND descripti
 guard_v2_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0032_guard_attestation_v2_01810'")"
 [[ "$guard_v2_sealed" == "true" ]]
 
-printf '[устройство-доверие-миграция-e2e] проверять normalization и новый реляционный границы\n'
+printf '[device-trust-migration-e2e] verify normalization and new relational boundaries\n'
 legacy_revoked="$(psql "$DB_DSN" -Atqc "SELECT (attestation_state='revoked' AND assurance='proof-of-possession' AND revoked_at IS NOT NULL AND revoked_reason<>'')::text FROM trusted_devices WHERE id='dtmig-old'")"
 [[ "$legacy_revoked" == "true" ]]
 replacement_null="$(psql "$DB_DSN" -Atqc "SELECT (replaced_by_device_id IS NULL)::text FROM trusted_devices WHERE id='dtmig-new'")"
@@ -151,15 +151,15 @@ psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,d
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES('dtmig-guard-continuous-v2','dtmig-user','dtmig-new','guard-continuous-join-v2',repeat('2',64),'{}'::jsonb,now(),now()+interval '5 minutes')" >/dev/null
 
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_sessions SET trusted_device_id='dtmig-new',device_trust_state='verified',device_verified_at=now() WHERE id='dtmig-other-session'" >/dev/null 2>&1; then
-  echo '[устройство-доверие-миграция-e2e] межпользовательский аутентификация session/device привязка unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] cross-user auth session/device binding unexpectedly succeeded' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE trusted_devices SET replaced_by_device_id='dtmig-other-device' WHERE id='dtmig-old'" >/dev/null 2>&1; then
-  echo '[устройство-доверие-миграция-e2e] межпользовательский замена связь unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] cross-user replacement link unexpectedly succeeded' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET trusted_device_id='dtmig-other-device' WHERE id='dtmig-mc-unbound'" >/dev/null 2>&1; then
-  echo '[устройство-доверие-миграция-e2e] межпользовательский Minecraft устройство снимок unexpectedly succeeded' >&2
+  echo '[device-trust-migration-e2e] cross-user Minecraft device snapshot unexpectedly succeeded' >&2
   exit 1
 fi
 
@@ -174,4 +174,4 @@ jq -n \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true,guardPurposeMigrationSealed:true,guardAttestationV2MigrationSealed:true},normalization:{revokedDevice:true,emptyReplacementToNull:true,emptyMinecraftDeviceToNull:true,expiredChallengeConsumed:true},replacementChallenges:{pre01210Rejected:true,keyRotateAccepted:true,keyRecoverAccepted:true},guardChallenges:{guardAttestAccepted:true,guardLaunchAccepted:true,guardAttestV2Accepted:true,guardContinuousJoinV2Accepted:true},ownershipEnforcement:{authSessionDevice:true,replacementChain:true,minecraftDevice:true,constraints:$constraints}}' \
   > "$RESULT_DIR/migration-stabilization.json"
 
-printf '[устройство-доверие-миграция-e2e] PASS 0.12.9 базовая линия -> текущий запечатанный Доверие к устройству каталог\n'
+printf '[device-trust-migration-e2e] PASS 0.12.9 baseline -> current sealed Device Trust catalog\n'

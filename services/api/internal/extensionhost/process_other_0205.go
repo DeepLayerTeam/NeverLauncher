@@ -1,4 +1,4 @@
-//Go:сборка!Linux
+//go:build !linux
 
 package extensionhost
 
@@ -23,6 +23,6 @@ func killProcessTree(p *os.Process) error {
 func resourceIsolationMode() string                { return "single-process+protocol-bounds" }
 func processTreeUsage(pid int) (int64, int, error) { return 0, 1, nil }
 
-// HardenBackendProcess является платформа хук. Linux применяет PR_SET_DUMPABLE=0;
-// другой платформы сохранять процесс separation и секрет-free окружение.
+// HardenBackendProcess is a platform hook. Linux enforces PR_SET_DUMPABLE=0;
+// other platforms retain the process separation and secret-free environment.
 func HardenBackendProcess() error { return nil }

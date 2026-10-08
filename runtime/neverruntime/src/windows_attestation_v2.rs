@@ -77,13 +77,13 @@ fn is_sha256_hex(value: &str) -> bool {
 fn now_unix_ms() -> Result<u64, String> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|err| format!("system clock до UNIX эпоха: {err}"))?
+        .map_err(|err| format!("system clock before UNIX epoch: {err}"))?
         .as_millis() as u64)
 }
 
 fn require_hash(label: &str, value: &str) -> Result<(), String> {
     if !is_sha256_hex(value) {
-        return Err(format!("NeverGuard Аттестация v2 {label} повреждённый"));
+        return Err(format!("NeverGuard Attestation v2 {label} malformed"));
     }
     Ok(())
 }
@@ -376,7 +376,7 @@ mod tests {
     use super::*;
 
     fn hash(ch: char) -> String {
-        std::iter::repeat(ch).take(64).collect()
+        std::iter::repeat_n(ch, 64).collect()
     }
 
     fn evidence(now: u64) -> WindowsContinuousEvidenceV2 {

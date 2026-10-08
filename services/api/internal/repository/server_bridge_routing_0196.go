@@ -24,7 +24,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 	routing.State = strings.ToLower(strings.TrimSpace(routing.State))
 	routing.Health = strings.ToLower(strings.TrimSpace(routing.Health))
 	if serverID == "" || runtimeEpoch < 1 || len(routing.RuntimeID) != 64 || len(routing.Digest) != 64 || routing.Signature == "" {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: недопустимый маршрутизация снимок", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: invalid routing snapshot", ErrConflict)
 	}
 	observedAt := time.UnixMilli(routing.ObservedAtUnixMillis).UTC()
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -48,10 +48,10 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, routing.RuntimeID) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: маршрутизация среда выполнения является не активный", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: routing runtime is not active", ErrConflict)
 	}
 	if oldObserved.Valid && observedAt.Before(oldObserved.Time) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: устаревший маршрутизация снимок", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: stale routing snapshot", ErrConflict)
 	}
 	if oldObserved.Valid && observedAt.Equal(oldObserved.Time) {
 		if strings.EqualFold(oldDigest, routing.Digest) {
@@ -59,7 +59,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 			routing.ObservedAt = oldObserved.Time
 			return routing, tx.Commit()
 		}
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: маршрутизация доказательство изменён в одинаковый observation время", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: routing proof changed at same observation time", ErrConflict)
 	}
 	revision := oldRevision + 1
 	if revision < 1 {
@@ -72,11 +72,11 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: активный среда выполнения изменён во время маршрутизация обновление", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: active runtime changed during routing update", ErrConflict)
 	}
-	// Один раз серверная часть останавливает принимающий маршруты, invalidate outstanding передачи теперь
-	// вместо этого waiting для использование. captured цель доказательство остаётся аудит
-	// свидетельство, пока нет устаревший учётные данные может enter draining/unhealthy сервер.
+	// Once a backend stops accepting routes, invalidate outstanding handoffs now
+	// instead of waiting for redemption. The captured target proof remains audit
+	// evidence, while no stale credential can enter a draining/unhealthy server.
 	if !routing.AcceptingConnections || routing.State != "ready" || routing.Health == "unhealthy" {
 		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE target_node_id=$1 AND status='active'`, serverID, now.UTC()); err != nil {
 			return model.ServerBridgeRoutingSnapshot{}, err
@@ -110,7 +110,7 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	if sourceStatus != "active" || !isProxyBridgeKind0148(sourceKind) || sourceRuntimeEpoch < 1 || len(sourceRuntimeID) != 64 || !sourceHeartbeat.Valid || sourceHeartbeat.Time.Before(freshAfter) || !sourceRoutingObserved.Valid || sourceRoutingObserved.Time.Before(freshAfter) || sourceState != "ready" || !sourceAccepting || sourceHealth == "unhealthy" {
-		return nil, fmt.Errorf("%w: исходник прокси является не routable", ErrConflict)
+		return nil, fmt.Errorf("%w: source proxy is not routable", ErrConflict)
 	}
 
 	rows, err := r.db.QueryContext(ctx, `SELECT n.id,n.name,n.kind,n.project_id,n.profile_id,n.runtime_id,n.runtime_epoch,n.routing_health,n.routing_state,n.routing_players_online,n.routing_capacity_max,n.routing_revision,n.routing_digest,n.routing_observed_at,n.last_heartbeat_at,
@@ -148,10 +148,10 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 	return out, rows.Err()
 }
 
-// EnsureServerBridgeNodeRoutable является итоговый допуск защита используется через прямой
-// проверять-подключение и передача consumers. 0.19.6 серверная часть не может принимать игрок
-// всего лишь потому что launcher/session доказательство является действительный; точный среда выполнения должен также
-// по-прежнему advertise актуальный, принимающий и non-полный маршрут состояние.
+// EnsureServerBridgeNodeRoutable is the final admission guard used by direct
+// validate-join and handoff consumers. A 0.19.6 backend cannot accept a player
+// merely because a launcher/session proof is valid; the exact runtime must also
+// still advertise a fresh, accepting and non-full route state.
 func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, now time.Time) error {
 	if err := r.check(); err != nil {
 		return err
@@ -159,7 +159,7 @@ func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serv
 	serverID = strings.TrimSpace(serverID)
 	runtimeID = strings.ToLower(strings.TrimSpace(runtimeID))
 	if serverID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 {
-		return fmt.Errorf("%w: среда выполнения маршрутизация привязка отсутствующий", ErrConflict)
+		return fmt.Errorf("%w: runtime routing binding missing", ErrConflict)
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	var ok bool
@@ -168,7 +168,7 @@ func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serv
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("%w: узел является устаревший, unhealthy, draining, в обслуживание, или в ёмкость", ErrConflict)
+		return fmt.Errorf("%w: node is stale, unhealthy, draining, in maintenance, or at capacity", ErrConflict)
 	}
 	return nil
 }

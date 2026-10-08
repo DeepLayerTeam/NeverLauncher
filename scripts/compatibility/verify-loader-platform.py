@@ -15,21 +15,21 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def fail(message: str) -> None:
-    raise SystemExit(f"загрузчик-платформа: {message}")
+    raise SystemExit(f"loader-platform: {message}")
 
 
 def load(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        fail(f"не может чтение {path}: {exc}")
+        fail(f"cannot read {path}: {exc}")
     if not isinstance(value, dict):
-        fail(f"{path} должен contain объект")
+        fail(f"{path} must contain an object")
     return value
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Проверять загрузчик пакет нативный материализация для один OS/architecture")
+    parser = argparse.ArgumentParser(description="Verify loader package native materialization for one OS/architecture")
     parser.add_argument("--install", type=Path, required=True)
     parser.add_argument("--certification", type=Path, required=True)
     parser.add_argument("--loader", required=True)
@@ -42,37 +42,37 @@ def main() -> int:
     os_name = args.os_name.strip().lower()
     arch = args.arch.strip().lower()
     if loader not in ALLOWED_LOADERS:
-        fail(f"неподдерживаемый загрузчик {loader!r}")
+        fail(f"unsupported loader {loader!r}")
     if os_name not in ALLOWED_OS:
-        fail(f"неподдерживаемый OS {os_name!r}")
+        fail(f"unsupported OS {os_name!r}")
     if arch not in ALLOWED_ARCH:
-        fail(f"неподдерживаемый архитектура {arch!r}")
+        fail(f"unsupported architecture {arch!r}")
 
     install = load(args.install)
     cert = load(args.certification)
     if install.get("status") != "installed-and-verified" or install.get("loader") != loader:
-        fail("загрузчик установка свидетельство является не установленный-и-проверен")
+        fail("loader install evidence is not installed-and-verified")
     if cert.get("status") != "passed":
-        fail("NeverRuntime сертификация сделал не успешно")
+        fail("NeverRuntime certification did not pass")
 
     vanilla = install.get("vanilla")
     if not isinstance(vanilla, dict) or vanilla.get("status") != "installed-and-verified":
-        fail("встроенный Vanilla материализация свидетельство является отсутствующий")
+        fail("embedded Vanilla materialization evidence is missing")
     internal_os = "osx" if os_name == "macos" else os_name
     targets = vanilla.get("targets")
     if not isinstance(targets, list):
-        fail("Vanilla цель свидетельство является отсутствующий")
+        fail("Vanilla target evidence is missing")
     expected_target = {"os": internal_os, "arch": arch}
     normalized_targets = [
         {"os": str(row.get("os", "")), "arch": str(row.get("arch", ""))}
         for row in targets if isinstance(row, dict)
     ]
     if normalized_targets != [expected_target]:
-        fail(f"материализатор цель несоответствие: получил={normalized_targets!r} ожидаемый={[expected_target]!r}")
+        fail(f"materializer target mismatch: got={normalized_targets!r} expected={[expected_target]!r}")
 
     files = vanilla.get("files")
     if not isinstance(files, list):
-        fail("Vanilla файл свидетельство является отсутствующий")
+        fail("Vanilla file evidence is missing")
     prefix = f"natives/{internal_os}/{arch}/"
     native_rows: list[dict[str, Any]] = []
     for row in files:
@@ -80,20 +80,20 @@ def main() -> int:
             continue
         path = str(row.get("path", "")).replace("\\", "/")
         if not path.startswith(prefix):
-            fail(f"внешний нативный путь в единый-цель пакет: {path!r}, ожидаемый prefix {prefix!r}")
+            fail(f"foreign native path in single-target package: {path!r}, expected prefix {prefix!r}")
         sha = str(row.get("sha256", "")).lower()
         if not SHA256_RE.fullmatch(sha):
-            fail(f"нативный файл {path!r} имеет недопустимый SHA-256")
+            fail(f"native file {path!r} has invalid SHA-256")
         native_rows.append({"path": path, "size": int(row.get("size") or 0), "sha256": sha})
     if not native_rows:
-        fail(f"нет материализовать нативный файлы found ниже {prefix}")
+        fail(f"no materialized native files found below {prefix}")
 
     expected_suffix = f"/natives/{internal_os}/{arch}".lower()
     actual_natives = str(cert.get("nativesDirectory") or "").replace("\\", "/").rstrip("/").lower()
     if not actual_natives.endswith(expected_suffix):
-        fail(f"NeverRuntime selected nativesDirectory={actual_natives!r}, ожидаемый suffix {expected_suffix!r}")
+        fail(f"NeverRuntime selected nativesDirectory={actual_natives!r}, expected suffix {expected_suffix!r}")
     if int(cert.get("classpathEntries") or 0) <= 0:
-        fail("NeverRuntime путь классов является пустой")
+        fail("NeverRuntime classpath is empty")
 
     native_rows.sort(key=lambda row: row["path"])
     identity = hashlib.sha256()

@@ -206,7 +206,7 @@ func serverBridgeSigningKeyFromPrivate01912(privateKey ed25519.PrivateKey) serve
 func serverBridgeSigningKeyFromSeed01912(seedHex string) (serverBridgeSigningKey01912, error) {
 	seed, err := hex.DecodeString(strings.TrimSpace(seedHex))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return serverBridgeSigningKey01912{}, fmt.Errorf("ServerBridge предыдущий управление ключ подписи должен быть 32-byte Ed25519 начальное значение в hex")
+		return serverBridgeSigningKey01912{}, fmt.Errorf("ServerBridge previous control signing key must be a 32-byte Ed25519 seed in hex")
 	}
 	return serverBridgeSigningKeyFromPrivate01912(ed25519.NewKeyFromSeed(seed)), nil
 }
@@ -226,7 +226,7 @@ func (s Server) serverBridgeSigningKeys01912() (serverBridgeSigningKey01912, *se
 		return serverBridgeSigningKey01912{}, nil, err
 	}
 	if previous.Fingerprint == active.Fingerprint {
-		return serverBridgeSigningKey01912{}, nil, fmt.Errorf("ServerBridge активный и предыдущий управление ключи подписи должен differ")
+		return serverBridgeSigningKey01912{}, nil, fmt.Errorf("ServerBridge active and previous control signing keys must differ")
 	}
 	return active, &previous, nil
 }

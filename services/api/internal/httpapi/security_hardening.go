@@ -457,7 +457,7 @@ func (s *securityHardeningStore) generateRecoveryCodesForMethod117(userID string
 	if s.persistent != nil {
 		return s.persistent.generateRecoveryCodesForMethod117(userID, count, methodID)
 	}
-	// Память режим имеет нет реляционный метод внешний ключ; повторное использование существующий одноразовый хранилище.
+	// Memory mode has no relational method foreign key; reuse the existing single-use store.
 	s.mu.Lock()
 	rec := s.mfa[userID]
 	if rec.Recovery == nil {

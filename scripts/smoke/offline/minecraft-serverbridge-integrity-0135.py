@@ -10,22 +10,22 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     m = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not m:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(map(int, m.groups()))
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 5):
-    raise SystemExit(f"Minecraft/ServerBridge целостность контроль требует >=0.13.5, получил {version}")
+    raise SystemExit(f"Minecraft/ServerBridge integrity gate requires >=0.13.5, got {version}")
 
 api_mig = read("services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql")
 cli_mig = read("cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql")
 if api_mig != cli_mig:
-    raise SystemExit("0.13.5 API/CLI миграция 0019 differs")
+    raise SystemExit("0.13.5 API/CLI migration 0019 differs")
 require(api_mig, ["integrity_verified", "guard_attestation_sha256", "guard_evidence_sha256", "guard_sha256", "launcher_sha256", "launcher_version", "integrity_verified_at"], "Minecraft integrity migration")
 
 model = read("services/api/internal/model/model.go")
@@ -95,13 +95,13 @@ require(tests, [
 ], "0.13.5 enforcement tests")
 
 security = read("SECURITY.md")
-require(security, ["Minecraft/ServerBridge integrity enforcement — 0.13.5", "application-level artifact allowlisting", "live revoke"], "0.13.5 security boundary")
+require(security, ["Minecraft/ServerBridge целостность принудительное применение — 0.13.5", "уровень приложения артефакт список разрешений", "отозвать"], "0.13.5 security boundary")
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "minecraft-serverbridge-integrity-0135.py" not in ci:
-    raise SystemExit("0.13.5 целостность контроль является не wired в CI")
+    raise SystemExit("0.13.5 integrity gate is not wired into CI")
 if "minecraft-serverbridge-integrity-0135.py" not in preflight:
-    raise SystemExit("0.13.5 целостность контроль является не wired в предварительная проверка")
+    raise SystemExit("0.13.5 integrity gate is not wired into preflight")
 
-print(f"[NeverLauncher] Minecraft/ServerBridge целостность принудительное применение 0.13.5 контроль OK: {version}")
+print(f"[NeverLauncher] Minecraft/ServerBridge integrity enforcement 0.13.5 gate OK: {version}")

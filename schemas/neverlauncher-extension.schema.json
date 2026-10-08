@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://neverlauncher.local/schemas/neverlauncher-extension.schema.json",
-  "title": "NeverLauncher Расширение Манифест",
+  "title": "NeverLauncher Extension Manifest",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -50,7 +50,7 @@
         "1.0",
         "3.7"
       ],
-      "description": "Расширение API v1. Новый 0.21+ публикация MUST использовать 1.0; 3.7 является read/run совместимость псевдоним для неизменяемый 0.20.x артефакты."
+      "description": "Extension API v1. New 0.21+ publications MUST use 1.0; 3.7 is a read/run compatibility alias for immutable 0.20.x artifacts."
     },
     "targets": {
       "type": "array",

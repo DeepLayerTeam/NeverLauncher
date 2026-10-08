@@ -136,7 +136,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 	report := Report{SchemaVersion: "1.0", GeneratedAt: time.Now().UTC(), Contract: extensioncontract.Frozen(), Issues: []Issue{}}
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
-		return report, errors.New("NeverExtensions GA диспетчер является не настраивать")
+		return report, errors.New("NeverExtensions GA manager is not configured")
 	}
 	installs, err := m.Repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
@@ -187,8 +187,8 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 	return report, nil
 }
 
-// Проверять выполняет все GA integrity/trust/dependency проверяет без изменение.
+// Validate performs all GA integrity/trust/dependency checks without mutation.
 func (m *Manager) Validate(ctx context.Context) (Report, error) { return m.run(ctx, false) }
 
-// Согласовывать завершаться ошибкой-закрывает недопустимый включённый установка через сохранять kill-переключение и отключить их.
+// Reconcile fail-closes invalid enabled installations by persisting the kill-switch and disabling them.
 func (m *Manager) Reconcile(ctx context.Context) (Report, error) { return m.run(ctx, true) }

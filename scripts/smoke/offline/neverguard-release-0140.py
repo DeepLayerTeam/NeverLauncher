@@ -5,7 +5,7 @@ import json
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 0):
-    raise SystemExit("VERSION является старый чем 0.14.0")
+    raise SystemExit("VERSION is older than 0.14.0")
 
 
 def read(path: str) -> str:
@@ -16,7 +16,7 @@ def require(path: str, needles: list[str]) -> None:
     text = read(path)
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{path}: отсутствующий {missing}")
+        raise SystemExit(f"{path}: missing {missing}")
 
 
 for path, platform in [
@@ -73,16 +73,16 @@ require("scripts/release/merge-guard-release-policy.py", [
 matrix = read("scripts/guard_ci/matrix.py")
 for needle in ["neverGuardRelease0140", 'releasePolicySchema', 'releaseIdentityAuthenticated']:
     if needle not in matrix:
-        raise SystemExit(f"Защита CI матрица отсутствующий {needle}")
+        raise SystemExit(f"Guard CI matrix missing {needle}")
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("productVersion") != version:
-    raise SystemExit("Защита CI цель productVersion является не aligned с VERSION")
+    raise SystemExit("Guard CI target productVersion is not aligned with VERSION")
 for target in targets.get("targets", []):
     if "neverGuardRelease0140" not in target.get("requiredChecks", []):
-        raise SystemExit(f"{target.get('id')}: NeverGuard 0.14 релиз проверка является отсутствующий")
+        raise SystemExit(f"{target.get('id')}: NeverGuard 0.14 release check is missing")
 
 require("scripts/release/preflight.sh", ["neverguard-release-0140.py"])
 require(".github/workflows/ci.yml", ["neverguard-release-0140.py"])
 require("cli/cmd/neverlauncher/release_commands.go", ["neverguard-release-0140.py", '"neverguard-release"'])
 
-print(f"NeverLauncher 0.14.0 NeverGuard Контроль выпуска: OK ({version})")
+print(f"NeverLauncher 0.14.0 NeverGuard Release gate: OK ({version})")

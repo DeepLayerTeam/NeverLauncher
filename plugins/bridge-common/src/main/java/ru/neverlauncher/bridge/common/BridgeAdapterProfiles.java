@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/** Канонический рабочий возможность профили для Универсальный Сервер Адаптеры. */
+/** Canonical production capability profiles for Universal Server Adapters. */
 public final class BridgeAdapterProfiles {
     private static final Set<BridgeAdapterCapability> SERVER_COMMON = EnumSet.of(
         BridgeAdapterCapability.LOGIN_GATE,
@@ -104,9 +104,9 @@ public final class BridgeAdapterProfiles {
     }
 
     /**
-     * Универсальный группа является намеренно отказ с блокировкой на гибридный ядра. Гибридный
-     * продукт требовать их собственный evidence/certification матрица и должен не
-     * inherit Bukkit/Forge сертификация всего лишь потому что их APIs resemble это.
+     * Universal cohort is intentionally fail-closed on hybrid cores. Hybrid
+     * products require their own evidence/certification matrix and must not
+     * inherit a Bukkit/Forge certification merely because their APIs resemble it.
      */
     public static void rejectUncertifiedHybrid(String platformId, String serverBrand) {
         String brand = normalize(serverBrand);

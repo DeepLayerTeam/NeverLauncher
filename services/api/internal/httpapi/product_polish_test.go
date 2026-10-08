@@ -29,8 +29,8 @@ func TestClientIPWalksTrustedProxyChainFromRight(t *testing.T) {
 		t.Fatalf("unexpected client IP: %q", got)
 	}
 
-	// Если недоверенный hop injects earlier адрес, nearest недоверенный hop
-	// wins и spoofed адрес на его left является ignored.
+	// If an untrusted hop injects an earlier address, the nearest untrusted hop
+	// wins and the spoofed address on its left is ignored.
 	req.Header.Set("X-Forwarded-For", "192.0.2.44, 198.51.100.88")
 	if got := resolveClientIP(req, trusted); got != "198.51.100.88" {
 		t.Fatalf("trusted chain accepted spoofed left-most IP: %q", got)

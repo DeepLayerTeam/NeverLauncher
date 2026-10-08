@@ -32,14 +32,14 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 		privateKeyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE"))
 	}
 	if privateKeyPath == "" {
-		return errors.New("релиз подписание требует --закрытый-ключ или NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE")
+		return errors.New("release signing требует --private-key или NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, privateKeyPath); err != nil {
 		return err
 	}
 	privateKey, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {
-		return fmt.Errorf("релиз ключ подписи: %w", err)
+		return fmt.Errorf("release signing key: %w", err)
 	}
 	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
 		return signReleaseBundleV20158(dir, privateKey)
@@ -69,7 +69,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	}
 	provenance := filepath.Join(dir, "PROVENANCE.json")
 	if _, err := os.Stat(provenance); err != nil {
-		return fmt.Errorf("PROVENANCE.JSON обязателен для подписанный аттестация: %w", err)
+		return fmt.Errorf("PROVENANCE.json обязателен для signed attestation: %w", err)
 	}
 	return signDetachedFileWithKey(provenance, filepath.Join(dir, "PROVENANCE.json.sig"), privateKey)
 }
@@ -80,14 +80,14 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 		publicKeyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if publicKeyPath == "" {
-		return errors.New("релиз проверка требует --публичный-ключ или NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE; комплект ключ не считается якорь доверия")
+		return errors.New("release verification требует --public-key или NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE; bundled key не считается trust anchor")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, publicKeyPath); err != nil {
 		return err
 	}
 	publicKey, err := loadEd25519PublicKey(publicKeyPath)
 	if err != nil {
-		return fmt.Errorf("релиз проверка ключ: %w", err)
+		return fmt.Errorf("release verification key: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {
@@ -95,33 +95,33 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	}
 	sigRaw, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS.sig"))
 	if err != nil {
-		return errors.New("SHA256SUMS.sig отсутствует: комплект релиза должен быть подписан Ed25519")
+		return errors.New("SHA256SUMS.sig отсутствует: release bundle должен быть подписан Ed25519")
 	}
 	var envelope releaseSignatureEnvelope
 	if err := json.Unmarshal(sigRaw, &envelope); err != nil {
-		return fmt.Errorf("SHA256SUMS.sig не является NeverLauncher Ed25519 подпись конверт: %w", err)
+		return fmt.Errorf("SHA256SUMS.sig не является NeverLauncher Ed25519 signature envelope: %w", err)
 	}
 	if envelope.Algorithm != "Ed25519" || envelope.SignedFile != "SHA256SUMS" {
-		return fmt.Errorf("неподдерживаемая релиз подпись: algorithm=%q signedFile=%q", envelope.Algorithm, envelope.SignedFile)
+		return fmt.Errorf("неподдерживаемая release signature: algorithm=%q signedFile=%q", envelope.Algorithm, envelope.SignedFile)
 	}
 	digest := sha256.Sum256(data)
 	if !strings.EqualFold(envelope.SHA256, hex.EncodeToString(digest[:])) {
-		return errors.New("SHA256SUMS хеш не совпадает с SHA256SUMS.sig")
+		return errors.New("SHA256SUMS digest не совпадает с SHA256SUMS.sig")
 	}
 	pubDigest := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(pubDigest[:])
 	if !strings.EqualFold(envelope.KeyFingerprint, fingerprint) {
-		return fmt.Errorf("релиз подпись создана другим ключом: получил=%s доверенный=%s", envelope.KeyFingerprint, fingerprint)
+		return fmt.Errorf("release signature создана другим ключом: got=%s trusted=%s", envelope.KeyFingerprint, fingerprint)
 	}
 	signature, err := base64.StdEncoding.DecodeString(envelope.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return errors.New("некорректная Ed25519 подпись encoding")
+		return errors.New("некорректная Ed25519 signature encoding")
 	}
 	if !ed25519.Verify(publicKey, data, signature) {
-		return errors.New("Ed25519 проверка ошибка для SHA256SUMS")
+		return errors.New("Ed25519 verification failed для SHA256SUMS")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), publicKey); err != nil {
-		return fmt.Errorf("SLSA происхождение аттестация: %w", err)
+		return fmt.Errorf("SLSA provenance attestation: %w", err)
 	}
 	return nil
 }
@@ -140,7 +140,7 @@ func ensureKeyOutsideReleaseBundle(dir, keyPath string) error {
 		return err
 	}
 	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-		return errors.New("релиз signing/verification ключ должен находиться вне комплект релиза")
+		return errors.New("release signing/verification key должен находиться вне release bundle")
 	}
 	return nil
 }
@@ -158,7 +158,7 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 		}
 		ed, ok := key.(ed25519.PrivateKey)
 		if !ok {
-			return nil, errors.New("PEM закрытый ключ не Ed25519")
+			return nil, errors.New("PEM private key не Ed25519")
 		}
 		return ed, nil
 	}
@@ -172,7 +172,7 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 	case ed25519.PrivateKeySize:
 		return ed25519.PrivateKey(decoded), nil
 	default:
-		return nil, fmt.Errorf("Ed25519 закрытый ключ должен иметь 32-byte начальное значение или 64-byte закрытый ключ, получено %d байты", len(decoded))
+		return nil, fmt.Errorf("Ed25519 private key должен иметь 32-byte seed или 64-byte private key, получено %d bytes", len(decoded))
 	}
 }
 
@@ -189,7 +189,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 		}
 		ed, ok := key.(ed25519.PublicKey)
 		if !ok {
-			return nil, errors.New("PEM открытый ключ не Ed25519")
+			return nil, errors.New("PEM public key не Ed25519")
 		}
 		return ed, nil
 	}
@@ -198,7 +198,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 		return nil, err
 	}
 	if len(decoded) != ed25519.PublicKeySize {
-		return nil, fmt.Errorf("Ed25519 открытый ключ должен иметь 32 байты, получено %d", len(decoded))
+		return nil, fmt.Errorf("Ed25519 public key должен иметь 32 bytes, получено %d", len(decoded))
 	}
 	return ed25519.PublicKey(decoded), nil
 }
@@ -206,7 +206,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 func decodeKeyMaterial(value string) ([]byte, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return nil, errors.New("ключ файл пуст")
+		return nil, errors.New("key file пуст")
 	}
 	if decoded, err := hex.DecodeString(value); err == nil {
 		return decoded, nil
@@ -214,13 +214,13 @@ func decodeKeyMaterial(value string) ([]byte, error) {
 	if decoded, err := base64.StdEncoding.DecodeString(value); err == nil {
 		return decoded, nil
 	}
-	return nil, errors.New("ключ должен быть PEM, hex или основа64")
+	return nil, errors.New("key должен быть PEM, hex или base64")
 }
 
 func verifyDetachedEd25519(path, signaturePath, publicKeyPath string) (map[string]any, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
-		return nil, errors.New("--путь обязателен")
+		return nil, errors.New("--path обязателен")
 	}
 	if signaturePath == "" {
 		signaturePath = path + ".sig"
@@ -230,7 +230,7 @@ func verifyDetachedEd25519(path, signaturePath, publicKeyPath string) (map[strin
 		publicKeyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if publicKeyPath == "" {
-		return nil, errors.New("--публичный-ключ или NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE обязателен")
+		return nil, errors.New("--public-key или NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE обязателен")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -251,10 +251,10 @@ func verifyDetachedEd25519(path, signaturePath, publicKeyPath string) (map[strin
 	} else if decoded, err := hex.DecodeString(text); err == nil {
 		sig = decoded
 	} else {
-		return nil, errors.New("отсоединённый подпись должна быть основа64 или hex")
+		return nil, errors.New("detached signature должна быть base64 или hex")
 	}
 	if len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, data, sig) {
-		return nil, errors.New("Ed25519 подпись проверка ошибка")
+		return nil, errors.New("Ed25519 signature verification failed")
 	}
 	digest := sha256.Sum256(data)
 	pubDigest := sha256.Sum256(pub)
@@ -293,7 +293,7 @@ func verifyDetachedFileWithKey(path, signaturePath string, publicKey ed25519.Pub
 		return err
 	}
 	if len(sig) != ed25519.SignatureSize || !ed25519.Verify(publicKey, data, sig) {
-		return errors.New("Ed25519 отсоединённый подпись проверка ошибка")
+		return errors.New("Ed25519 detached signature verification failed")
 	}
 	return nil
 }

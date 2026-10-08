@@ -12,14 +12,14 @@ import (
 
 var fallbackPackageMutation sync.Mutex
 
-// lockPackageMutation является распределённый изменение граница в 0.21.3. SQL-основанный
-// развёртывание acquire сохранённый ограждение аренда, так два API обрабатывает не может
-// mutate одинаковый пакет storage/metadata concurrently. mutex остаётся только
-// как совместимость резервный вариант для репозиторий тот predate DurableControlPlane.
+// lockPackageMutation is a distributed mutation boundary in 0.21.3. SQL-backed
+// deployments acquire a persisted fencing lease, so two API processes cannot
+// mutate the same package storage/metadata concurrently. The mutex remains only
+// as a compatibility fallback for repositories that predate DurableControlPlane.
 func (s Server) lockPackageMutation(ctx context.Context, scope string) (func(), error) {
 	scope = strings.TrimSpace(scope)
 	if scope == "" {
-		return nil, errors.New("изменение пакета область обязательный")
+		return nil, errors.New("package mutation scope required")
 	}
 	if cp, ok := s.Repo.(repository.DurableControlPlane); ok {
 		owner := randomWorkerID0213("mutation")
@@ -59,10 +59,10 @@ func (s Server) lockPackageMutation(ctx context.Context, scope string) (func(), 
 	return mu.Unlock, nil
 }
 
-// lockPackageLookupMutation разрешает псевдонимы (для пример версия string) к
-// канонический релиз ID до acquiring распределённый аренда, затем перезагрузка
-// пакет под тот аренда. Этот предотвращает ID-vs-версия псевдонимы из создавать
-// два другой блокировка область для одинаковый релиз.
+// lockPackageLookupMutation resolves aliases (for example a version string) to
+// the canonical release ID before acquiring the distributed lease, then reloads
+// the package under that lease. This prevents ID-vs-version aliases from creating
+// two different lock scopes for the same release.
 func (s Server) lockPackageLookupMutation(ctx context.Context, packageID string) (packageLookup, func(), error) {
 	lookup, err := s.lookupPackage(packageID)
 	if err != nil {

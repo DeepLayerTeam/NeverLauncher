@@ -13,13 +13,13 @@ import (
 )
 
 var ErrNotFound = errors.New("запись не найдена")
-var ErrImmutable = errors.New("опубликованный релиз неизменяемый")
-var ErrConflict = errors.New("репозиторий конфликт")
+var ErrImmutable = errors.New("published release immutable")
+var ErrConflict = errors.New("repository conflict")
 
-// DeviceKeyReplacementRepository является implemented через репозиторий тот может
-// атомарно заменять доверенное устройство идентичность together с текущий
-// аутентификация-сессия привязка и отзыв каскад. PostgreSQL implements это; 
-// в памяти процесса разработка репозиторий использует HTTP-слой транзакционный резервный вариант.
+// DeviceKeyReplacementRepository is implemented by repositories that can
+// atomically replace a trusted-device identity together with the current
+// auth-session binding and revocation cascade. PostgreSQL implements it; the
+// in-memory development repository uses the HTTP-layer transactional fallback.
 type DeviceKeyReplacementRepository interface {
 	ReplaceTrustedDeviceKey(ctx context.Context, userID, oldDeviceID, currentSessionID, mode, reason string, replacement model.TrustedDevice, now time.Time) (model.DeviceKeyReplacementResult, error)
 }
@@ -309,7 +309,7 @@ func (r *MemoryRepository) SaveProject(project model.Project) (model.Project, er
 		project.ID = strings.ToLower(strings.ReplaceAll(project.Name, " ", "-"))
 	}
 	if project.ID == "" || project.Name == "" {
-		return model.Project{}, fmt.Errorf("ID и имя проекта обязательны")
+		return model.Project{}, fmt.Errorf("id и name проекта обязательны")
 	}
 	if project.DefaultChannel == "" {
 		project.DefaultChannel = "stable"
@@ -359,7 +359,7 @@ func (r *MemoryRepository) SaveProfile(profile model.Profile) (model.Profile, er
 		profile.ID = strings.ToLower(strings.ReplaceAll(profile.Name, " ", "-"))
 	}
 	if profile.ID == "" || profile.ProjectID == "" || profile.Name == "" {
-		return model.Profile{}, fmt.Errorf("projectId, ID и имя профиля обязательны")
+		return model.Profile{}, fmt.Errorf("projectId, id и name профиля обязательны")
 	}
 	if profile.Loader == "" {
 		profile.Loader = "vanilla"
@@ -411,7 +411,7 @@ func (r *MemoryRepository) SaveChannel(channel model.ReleaseChannel) (model.Rele
 		channel.Name = channel.ID
 	}
 	if channel.ID == "" || channel.ProjectID == "" {
-		return model.ReleaseChannel{}, fmt.Errorf("projectId и ID канала обязательны")
+		return model.ReleaseChannel{}, fmt.Errorf("projectId и id канала обязательны")
 	}
 	for i := range r.channels {
 		if r.channels[i].ProjectID == channel.ProjectID && r.channels[i].ID == channel.ID {
@@ -505,13 +505,13 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 		projectID = strings.TrimSpace(projectID)
 		roleID = strings.TrimSpace(roleID)
 		if projectID == "*" {
-			return model.User{}, fmt.Errorf("маска проектная роль является не поддерживаемый; использовать глобальная роль")
+			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
 		}
 		if projectID == "" || roleID == "" {
 			continue
 		}
 		if _, err := r.GetProject(projectID); err != nil {
-			return model.User{}, fmt.Errorf("неизвестный проект %q для проектная роль", projectID)
+			return model.User{}, fmt.Errorf("неизвестный проект %q для project role", projectID)
 		}
 		if !roleExists(roleID) {
 			return model.User{}, fmt.Errorf("неизвестная проектная роль %q", roleID)
@@ -521,7 +521,7 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 	user.ProjectRoles = canonicalProjectRoles
 	for _, existing := range r.users {
 		if existing.ID != user.ID && strings.EqualFold(existing.Email, user.Email) {
-			return model.User{}, fmt.Errorf("пользователь с таким электронная почта уже существует")
+			return model.User{}, fmt.Errorf("пользователь с таким email уже существует")
 		}
 	}
 	updatedExisting := false
@@ -630,7 +630,7 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
-		return model.AuthIdentity{}, fmt.Errorf("userId, провайдер и субъект идентичность обязательны")
+		return model.AuthIdentity{}, fmt.Errorf("userId, provider и subject identity обязательны")
 	}
 	if _, err := r.GetUser(identity.UserID); err != nil {
 		return model.AuthIdentity{}, err
@@ -638,11 +638,11 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	for i := range r.identities {
 		item := r.identities[i]
 		if item.Provider == identity.Provider && item.Subject == identity.Subject && item.UserID != identity.UserID {
-			return model.AuthIdentity{}, fmt.Errorf("идентичность %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
+			return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
 		}
 		if item.UserID == identity.UserID && item.Provider == identity.Provider {
 			if item.Subject != identity.Subject {
-				return model.AuthIdentity{}, fmt.Errorf("провайдер %s уже связан с другим субъект для пользователя", identity.Provider)
+				return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
 			}
 			if identity.ID == "" {
 				identity.ID = item.ID
@@ -671,16 +671,16 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated пользователь id/email и provider/subject являются обязательный")
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
 	}
 	existingUserIndex := -1
 	for i, existing := range r.users {
 		if strings.EqualFold(existing.Email, user.Email) && existing.ID != user.ID {
-			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: канонический электронная почта является уже используется через другой Никогда пользователь", ErrConflict)
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
 		}
 		if existing.ID == user.ID {
 			if !strings.EqualFold(existing.Email, user.Email) {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: детерминированный канонический пользователь ID уже существует с другой электронная почта", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
 			}
 			existingUserIndex = i
 		}
@@ -688,7 +688,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	for _, existing := range r.identities {
 		if existing.Provider == identity.Provider && existing.Subject == identity.Subject {
 			if existing.UserID != user.ID {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: внешний идентичность является уже связь", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked", ErrConflict)
 			}
 			canonical, err := r.GetUser(existing.UserID)
 			return canonical, existing, err
@@ -899,7 +899,7 @@ func (r *MemoryRepository) CreateVersion(projectID, profileID, channel, version 
 func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status string) (model.ReleaseVersion, error) {
 	status = strings.TrimSpace(status)
 	if status == "" {
-		return model.ReleaseVersion{}, errors.New("состояние обязателен")
+		return model.ReleaseVersion{}, errors.New("status обязателен")
 	}
 	for i := range r.releases {
 		if r.releases[i].ProjectID == projectID && r.releases[i].ID == versionID {
@@ -993,12 +993,12 @@ func (r *MemoryRepository) ExportProject(projectID string) (map[string]any, erro
 func (r *MemoryRepository) ImportProject(payload map[string]any) error {
 	project, ok := payload["project"].(map[string]any)
 	if !ok {
-		return errors.New("поле проект обязательно для импорта")
+		return errors.New("поле project обязательно для импорта")
 	}
 	id, _ := project["id"].(string)
 	name, _ := project["name"].(string)
 	if id == "" || name == "" {
-		return errors.New("импортируемый проект должен содержать ID и имя")
+		return errors.New("импортируемый проект должен содержать id и name")
 	}
 	now := time.Now().UTC()
 	r.projects = append(r.projects, model.Project{ID: id, Name: name, Description: fmt.Sprint(project["description"]), DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now})
@@ -1055,14 +1055,14 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
 	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
-		return model.ProviderCredential{}, fmt.Errorf("провайдер учётные данные fields являются обязательный")
+		return model.ProviderCredential{}, fmt.Errorf("provider credential fields are required")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.ProviderCredential{}, err
 	}
 	identity, err := r.GetAuthIdentity(item.Provider, item.Subject)
 	if err != nil || identity.UserID != item.UserID || identity.ID != item.IdentityID {
-		return model.ProviderCredential{}, fmt.Errorf("провайдер учётные данные идентичность несоответствие")
+		return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
 	}
 	now := time.Now().UTC()
 	for i := range r.providerCredentials {
@@ -1150,7 +1150,7 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 		item.IdentityVersion = "independent-v1"
 	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
-		return model.MinecraftProfile{}, fmt.Errorf("профиль Minecraft fields являются обязательный")
+		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
 	}
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.MinecraftProfile{}, err
@@ -1185,7 +1185,7 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	}
 	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
 	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
-		return model.MinecraftSession{}, fmt.Errorf("Minecraft сессия fields являются обязательный")
+		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {
@@ -1292,7 +1292,7 @@ func (r *MemoryRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
 	item.ServerID = strings.TrimSpace(item.ServerID)
 	if item.Username == "" || item.ProfileUUID == "" || item.UserID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
-		return fmt.Errorf("Minecraft подключение fields являются обязательный")
+		return fmt.Errorf("minecraft join fields are required")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {

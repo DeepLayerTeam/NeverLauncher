@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 3):
-    raise SystemExit(f"Linux x64+ARM64 рабочий пакет контроль требует VERSION>=0.15.3, получил {VERSION}")
+    raise SystemExit(f"Linux x64+ARM64 production package gate requires VERSION>=0.15.3, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 builder = read("scripts/release/build-linux-production.sh")
@@ -131,4 +131,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Linux x64 + ARM64 рабочий пакеты контроль: OK")
+print(f"NeverLauncher {VERSION} Linux x64 + ARM64 production packages gate: OK")

@@ -140,12 +140,12 @@ mod imp {
         if err.raw_os_error() == Some(libc::ESRCH) {
             return Ok(());
         }
-        Err(format!("Linux kill группа процессов {pid} ошибка: {err}"))
+        Err(format!("Linux kill process group {pid} failed: {err}"))
     }
 
     pub fn runtime_policy(child: &mut Child) -> Result<LinuxRuntimeProcessPolicyReport, String> {
         let pid = child.id().ok_or_else(|| "Linux runtime PID unavailable".to_string())?;
-        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("чтение /proc/{pid}/состояние ошибка: {e}"))?;
+        let status = std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("read /proc/{pid}/status failed: {e}"))?;
         let no_new_privs = status.lines().find_map(|l| l.strip_prefix("NoNewPrivs:\t")).map(str::trim) == Some("1");
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
         if pgid < 0 { return Err(os_err("Linux getpgid failed")); }

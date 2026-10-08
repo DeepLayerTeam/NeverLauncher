@@ -1,7 +1,7 @@
--- NeverLauncher 0.12.6 — авторитетный Сессия <-> Привязка устройства + риск интеграционный.
--- привязка_эпоха инвалидирует доступ токены minted до устройство bind/re-bind.
--- risk_score/risk_action создавать device/network риск применять сессия решение вместо
--- чем informational метка.
+-- NeverLauncher 0.12.6 — authoritative Session <-> Device binding + risk integration.
+-- binding_epoch invalidates access tokens minted before a device bind/re-bind.
+-- risk_score/risk_action make device/network risk an enforced session decision rather
+-- than an informational label.
 
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS binding_epoch BIGINT NOT NULL DEFAULT 1;
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS risk_score SMALLINT NOT NULL DEFAULT 0;

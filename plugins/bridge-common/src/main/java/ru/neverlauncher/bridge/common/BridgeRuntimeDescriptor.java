@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TreeSet;
 
-/** Неизменяемый платформа facts contributed через конкретный ServerBridge адаптер. */
+/** Immutable platform facts contributed by the concrete ServerBridge adapter. */
 public record BridgeRuntimeDescriptor(
     String minecraftVersion,
     String platform,

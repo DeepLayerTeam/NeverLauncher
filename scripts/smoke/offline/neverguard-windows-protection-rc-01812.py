@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Windows Защита RC 0.18.12 контроль: {path} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection RC 0.18.12 gate: {path} missing: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 12):
-    raise SystemExit(f"Windows Защита RC контроль требует >=0.18.12, получил {version}")
+    raise SystemExit(f"Windows Protection RC gate requires >=0.18.12, got {version}")
 
 impl = read("cli/cmd/neverlauncher/windows_protection_release_01812.go")
 require(impl, "cli/cmd/neverlauncher/windows_protection_release_01812.go", [
@@ -99,13 +99,13 @@ ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 for text, path in [(ci, ".github/workflows/ci.yml"), (preflight, "scripts/release/preflight.sh")]:
     if "neverguard-windows-protection-rc-01812.py" not in text:
-        raise SystemExit(f"[NeverLauncher] Windows Защита RC 0.18.12 контроль: обязательный контроль не wired в {path}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection RC 0.18.12 gate: mandatory gate not wired into {path}")
 if "TestWindowsProtection" not in ci:
-    raise SystemExit("[NeverLauncher] Windows Защита RC 0.18.12 контроль: Go сертификат тесты являются не wired в CI")
+    raise SystemExit("[NeverLauncher] Windows Protection RC 0.18.12 gate: Go certificate tests are not wired into CI")
 
 lowered = impl.lower()
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in lowered:
-        raise SystemExit(f"[NeverLauncher] Windows Защита RC 0.18.12 контроль: placeholder {marker!r} в cli/cmd/neverlauncher/windows_protection_release_01812.go")
+        raise SystemExit(f"[NeverLauncher] Windows Protection RC 0.18.12 gate: placeholder {marker!r} in cli/cmd/neverlauncher/windows_protection_release_01812.go")
 
-print(f"[NeverLauncher] Windows Защита RC релиз сертификат + рабочий контроли 0.18.12 контроль: OK ({version})")
+print(f"[NeverLauncher] Windows Protection RC release certificate + production gates 0.18.12 gate: OK ({version})")

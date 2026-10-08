@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch точный-фиксация Совместимость и Доверие к устройству сертификация matrices.
+"""Fetch exact-commit Compatibility and Device Trust certification matrices.
 
-Этот вспомогательный модуль является намеренно отказ с блокировкой. Это только принимает успешный процесс
-запускает для запрошенный фиксация и валидирует загрузка публичная матрица до
-релиз assembly. Это никогда falls back к предыдущий успешный запуск.
+This helper is intentionally fail-closed. It only accepts successful workflow
+runs for the requested commit and validates the downloaded public matrix before
+release assembly. It never falls back to a previous successful run.
 """
 from __future__ import annotations
 
@@ -37,8 +37,8 @@ def _artifact_redirect_request(req: urllib.request.Request, newurl: str) -> urll
         raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
     if not any(host.endswith(suffix) or host == suffix[1:] for suffix in ARTIFACT_REDIRECT_SUFFIXES):
         raise RuntimeError(f"artifact redirect host is not trusted: {host}")
-    # Никогда forward GitHub bearer токен к подписанный артефакт источник.
-    # redirect URL уже содержит его собственный краткоживущий авторизация query.
+    # Never forward the GitHub bearer token to the signed artifact origin.
+    # The redirect URL already carries its own short-lived authorization query.
     return urllib.request.Request(
         newurl,
         headers={
@@ -126,8 +126,8 @@ def select_exact_run(runs: list[dict[str, Any]], commit: str) -> dict[str, Any] 
     exact = [r for r in runs if str(r.get("head_sha", "")).lower() == commit.lower()]
     if not exact:
         return None
-    # GitHub может предоставлять re-запускает для одинаковый SHA. Prefer newest запуск так 
-    # устаревший ошибка попытка может никогда mask новый точный-фиксация повторить.
+    # GitHub may expose re-runs for the same SHA. Prefer the newest run so a
+    # stale failed attempt can never mask a newer exact-commit retry.
     exact.sort(key=lambda r: (str(r.get("created_at", "")), int(r.get("id", 0))), reverse=True)
     return exact[0]
 
@@ -182,7 +182,7 @@ def workflow_runs(api: GitHubAPI, repository: str, workflow: str, commit: str) -
 def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, label: str, workflow: str, artifact_prefix: str, output: Path) -> bool:
     run = select_exact_run(workflow_runs(api, repository, workflow, commit), commit)
     if run is None:
-        print(f"[релиз-сертификация] {label}: точный-фиксация процесс запуск не visible yet", flush=True)
+        print(f"[release-certification] {label}: exact-commit workflow run not visible yet", flush=True)
         return False
     status = str(run.get("status", ""))
     conclusion = run.get("conclusion")
@@ -190,7 +190,7 @@ def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, 
     if run_id <= 0:
         raise RuntimeError(f"{label} exact-commit workflow run has invalid id")
     if status != "completed":
-        print(f"[релиз-сертификация] {label}: запуск {run_id} состояние={status}; waiting", flush=True)
+        print(f"[release-certification] {label}: run {run_id} status={status}; waiting", flush=True)
         return False
     if conclusion != "success":
         raise RuntimeError(f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback")
@@ -217,7 +217,7 @@ def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, 
     validate_matrix_document(matrix, repository=repository, commit=commit, version=version, run_id=run_id, label=label)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(matrix_raw)
-    print(f"[релиз-сертификация] {label}: принят точный фиксация {commit} из запуск {run_id}", flush=True)
+    print(f"[release-certification] {label}: accepted exact commit {commit} from run {run_id}", flush=True)
     return True
 
 
@@ -233,13 +233,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.repository or "/" not in args.repository:
-        raise SystemExit("недопустимый --репозиторий")
+        raise SystemExit("invalid --repository")
     if len(args.commit) not in (40, 64) or any(ch not in "0123456789abcdefABCDEF" for ch in args.commit):
-        raise SystemExit("--фиксация должен быть точный 40/64-hex исходник фиксация")
+        raise SystemExit("--commit must be an exact 40/64-hex source commit")
     if args.timeout_seconds < 1 or args.timeout_seconds > 3600:
-        raise SystemExit("--тайм-аут-второй должен быть между 1 и 3600")
+        raise SystemExit("--timeout-seconds must be between 1 and 3600")
     if args.poll_seconds < 1 or args.poll_seconds > 60:
-        raise SystemExit("--poll-второй должен быть между 1 и 60")
+        raise SystemExit("--poll-seconds must be between 1 and 60")
 
     api = GitHubAPI(args.token)
     outputs = {

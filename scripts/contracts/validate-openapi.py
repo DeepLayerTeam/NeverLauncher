@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Завершаться ошибкой CI когда канонический Go маршруты и проверен-в OpenAPI контракт diverge."""
+"""Fail CI when canonical Go routes and the checked-in OpenAPI contract diverge."""
 from __future__ import annotations
 import json,re,sys
 from pathlib import Path
@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[2]
 SPEC=ROOT/'schemas/openapi.yaml'
 HTTP=ROOT/'services/api/internal/httpapi'
 try: spec=json.loads(SPEC.read_text())
-except Exception as exc: raise SystemExit(f"OpenAPI parse ошибка: {exc}")
+except Exception as exc: raise SystemExit(f"OpenAPI parse failed: {exc}")
 errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
 if spec.get('info',{}).get('version')!='1.0.0': errors.append('info.version must be 1.0.0')
@@ -34,7 +34,7 @@ for path,item in spec.get('paths',{}).items():
 for missing in sorted(code-doc): errors.append(f'route missing from OpenAPI: {missing[0].upper()} {missing[1]}')
 for extra in sorted(doc-code): errors.append(f'OpenAPI operation missing from canonical router: {extra[0].upper()} {extra[1]}')
 if len(ids)!=len(set(ids)): errors.append('operationId values must be unique')
-# P3 инвариант: исторический routers являются physically удалён из канонический сервер.
+# P3 invariant: historical routers are physically removed from the canonical server.
 config=(HTTP/'handler.go').read_text()
 if 'registerLegacy' in config or 'EnableLegacyAPI' in config: errors.append('legacy API registration must be removed in P3')
 if errors:

@@ -74,7 +74,7 @@ func hostKey02011(x model.ExtensionInstall) extensionhost.Key {
 
 func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (model.ExtensionUpdateTransaction, error) {
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
-		return model.ExtensionUpdateTransaction{}, errors.New("расширение обновление диспетчер является не настраивать")
+		return model.ExtensionUpdateTransaction{}, errors.New("extension update manager is not configured")
 	}
 	cfg := m.normalized()
 	owner, err := token02011()
@@ -91,11 +91,11 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		return model.ExtensionUpdateTransaction{}, err
 	}
 	if !got {
-		return model.ExtensionUpdateTransaction{}, fmt.Errorf("%w: другой расширение обновление транзакция владеет этот область", repository.ErrConflict)
+		return model.ExtensionUpdateTransaction{}, fmt.Errorf("%w: another extension update transaction owns this scope", repository.ErrConflict)
 	}
 	defer m.Repo.ReleaseExtensionUpdateLease(context.Background(), plan.Scope, plan.ScopeID, owner)
 	if err := m.recoverInterrupted02011(ctx, plan.Scope, plan.ScopeID, cfg.HealthTimeout); err != nil {
-		return model.ExtensionUpdateTransaction{}, fmt.Errorf("восстанавливать прерванный расширение обновление: %w", err)
+		return model.ExtensionUpdateTransaction{}, fmt.Errorf("recover interrupted extension update: %w", err)
 	}
 	tx := model.ExtensionUpdateTransaction{ID: txid, Scope: plan.Scope, ScopeID: plan.ScopeID, Status: "running", Plan: plan, StartedAt: time.Now().UTC(), LeaseOwner: owner}
 	if _, err = m.Repo.SaveExtensionUpdateTransaction(ctx, tx); err != nil {
@@ -120,25 +120,25 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		}
 		snapshots[item.ExtensionID] = cur
 		if item.Operation == "update" && cur.CurrentVersion != item.FromVersion {
-			return m.fail(tx, fmt.Errorf("%w: устаревший обновление plan для %s: planned из %s, текущий является %s", repository.ErrConflict, item.ExtensionID, item.FromVersion, cur.CurrentVersion))
+			return m.fail(tx, fmt.Errorf("%w: stale update plan for %s: planned from %s, current is %s", repository.ErrConflict, item.ExtensionID, item.FromVersion, cur.CurrentVersion))
 		}
 		if item.Operation == "install" && cur.CurrentState != model.ExtensionInstallStateAbsent {
-			return m.fail(tx, fmt.Errorf("%w: устаревший обновление plan для %s: расширение является уже установленный", repository.ErrConflict, item.ExtensionID))
+			return m.fail(tx, fmt.Errorf("%w: stale update plan for %s: extension is already installed", repository.ErrConflict, item.ExtensionID))
 		}
 		if pinned := pinMap[item.ExtensionID]; pinned != "" && pinned != item.ToVersion {
-			return m.fail(tx, fmt.Errorf("%w: %s является закреплённый к %s, plan цели %s", repository.ErrConflict, item.ExtensionID, pinned, item.ToVersion))
+			return m.fail(tx, fmt.Errorf("%w: %s is pinned to %s, plan targets %s", repository.ErrConflict, item.ExtensionID, pinned, item.ToVersion))
 		}
 		reg, e := m.Repo.GetExtensionRegistryVersion(ctx, item.ExtensionID, item.ToVersion)
 		if e != nil {
 			return m.fail(tx, e)
 		}
 		if reg.YankedAt != nil || reg.Artifact.PackageIdentity != item.PackageIdentity {
-			return m.fail(tx, errors.New("разрешённый реестр артефакт изменён или был yanked после planning"))
+			return m.fail(tx, errors.New("resolved registry artifact changed or was yanked after planning"))
 		}
 		if item.Operation == "update" || item.Operation == "install" {
 			if m.Security == nil {
 				if len(reg.Manifest.Permissions) > 0 {
-					return m.fail(tx, fmt.Errorf("возможность политика недоступный для %s", item.ExtensionID))
+					return m.fail(tx, fmt.Errorf("capability policy unavailable for %s", item.ExtensionID))
 				}
 			} else {
 				fromVersion := ""
@@ -150,7 +150,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 					return m.fail(tx, e)
 				}
 				if len(d.AddedNotGranted) > 0 {
-					return m.fail(tx, fmt.Errorf("%w: %s %s needs разрешения: %s", repository.ErrConflict, item.ExtensionID, item.Operation, strings.Join(d.AddedNotGranted, ",")))
+					return m.fail(tx, fmt.Errorf("%w: %s %s needs grants: %s", repository.ErrConflict, item.ExtensionID, item.Operation, strings.Join(d.AddedNotGranted, ",")))
 				}
 			}
 		}
@@ -162,16 +162,16 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		}
 	}
 	if requiresHost && m.Host == nil {
-		return m.fail(tx, errors.New("хост расширений является обязательный для серверное расширение работоспособность проверка"))
+		return m.fail(tx, errors.New("extension host is required for backend extension health verification"))
 	}
-	// Остановка все включённый selected хосты до touching любой полезная нагрузка так dependants никогда запуск против half-обновлён graph.
+	// Stop all enabled selected hosts before touching any payload so dependants never run against a half-updated graph.
 	if m.Host != nil {
 		for _, item := range plan.Items {
 			cur := snapshots[item.ExtensionID]
 			if cur.CurrentState == model.ExtensionInstallStateEnabled && cur.Enabled {
 				if e := m.Host.Stop(ctx, hostKey02011(cur)); e != nil && !errors.Is(e, repository.ErrNotFound) && !errors.Is(e, extensionhost.ErrHostNotRunning) {
 					m.restartSnapshots02011(snapshots, plan.Items)
-					return m.fail(tx, fmt.Errorf("остановка %s: %w", item.ExtensionID, e))
+					return m.fail(tx, fmt.Errorf("stop %s: %w", item.ExtensionID, e))
 				}
 			}
 		}
@@ -188,7 +188,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		before := snapshots[item.ExtensionID]
 		tx.InFlight = item.ExtensionID
 		if _, e = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); e != nil {
-			return m.rollback(tx, applied, snapshots, fmt.Errorf("журнал в-flight %s: %w", item.ExtensionID, e))
+			return m.rollback(tx, applied, snapshots, fmt.Errorf("journal in-flight %s: %w", item.ExtensionID, e))
 		}
 		var after model.ExtensionInstall
 		switch item.Operation {
@@ -200,7 +200,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		case "update":
 			after, e = m.Lifecycle.Update(ctx, reg, scope02011(plan))
 		default:
-			e = fmt.Errorf("неподдерживаемый обновление операция %q", item.Operation)
+			e = fmt.Errorf("unsupported update operation %q", item.Operation)
 		}
 		if e != nil {
 			tx.InFlight = ""
@@ -211,11 +211,11 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		tx.Applied = append(tx.Applied, item.ExtensionID)
 		tx.InFlight = ""
 		if _, e = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx); e != nil {
-			return m.rollback(tx, applied, snapshots, fmt.Errorf("журнал применённый %s: %w", item.ExtensionID, e))
+			return m.rollback(tx, applied, snapshots, fmt.Errorf("journal applied %s: %w", item.ExtensionID, e))
 		}
 		_ = after
 	}
-	// Запуск все включённый итоговый устанавливает зависимость-первый и требовать работоспособный Хост handshake/heartbeat для серверная часть цели.
+	// Start all enabled final installs dependency-first and require a healthy Host handshake/heartbeat for backend targets.
 	if m.Host != nil {
 		for _, item := range plan.Items {
 			cur, e := m.Repo.GetExtensionInstallState(ctx, item.ExtensionID, plan.Scope, plan.ScopeID)
@@ -230,7 +230,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 				continue
 			}
 			if e != nil {
-				return m.rollback(tx, applied, snapshots, fmt.Errorf("хост запуск %s: %w", item.ExtensionID, e))
+				return m.rollback(tx, applied, snapshots, fmt.Errorf("host start %s: %w", item.ExtensionID, e))
 			}
 			if e = m.waitHealthy(ctx, cur, cfg.HealthTimeout); e != nil {
 				return m.rollback(tx, applied, snapshots, e)
@@ -258,7 +258,7 @@ func (m *Manager) waitHealthy(ctx context.Context, install model.ExtensionInstal
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-deadline.C:
-			return fmt.Errorf("расширение %s ошибка проверка работоспособности в пределах %s", install.ExtensionID, timeout)
+			return fmt.Errorf("extension %s failed health check within %s", install.ExtensionID, timeout)
 		case <-tick.C:
 		}
 	}
@@ -294,10 +294,10 @@ func planItem02011(plan model.ExtensionUpdatePlan, id string) (model.ExtensionUp
 	return model.ExtensionUpdatePlanItem{}, false
 }
 
-// recoverInterrupted02011 является invoked только после этот реплика владеет область
-// аренда. предыдущий работающий транзакция поэтому не может по-прежнему быть активный на 
-// работоспособный реплика. долговременный в-flight маркер закрывает сбой окно между
-// filesystem/lifecycle изменение и применённый журнал запись.
+// recoverInterrupted02011 is invoked only after this replica owns the scope
+// lease. A previous running transaction therefore cannot still be active on a
+// healthy replica. The durable in-flight marker closes the crash window between
+// filesystem/lifecycle mutation and the applied journal write.
 func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID string, healthTimeout time.Duration) error {
 	txs, err := m.Repo.ListExtensionUpdateTransactions(ctx, scope, scopeID, "running")
 	if err != nil {
@@ -305,7 +305,7 @@ func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID st
 	}
 	for _, tx := range txs {
 		if err := m.recoverTransaction02011(ctx, tx, healthTimeout); err != nil {
-			return fmt.Errorf("транзакция %s: %w", tx.ID, err)
+			return fmt.Errorf("transaction %s: %w", tx.ID, err)
 		}
 	}
 	return nil
@@ -315,7 +315,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	if tx.InFlight != "" && !contains02011(tx.Applied, tx.InFlight) && !contains02011(tx.RolledBack, tx.InFlight) {
 		item, ok := planItem02011(tx.Plan, tx.InFlight)
 		if !ok {
-			return errors.New("в-flight расширение является отсутствующий из долговременный обновление plan")
+			return errors.New("in-flight extension is missing from durable update plan")
 		}
 		cur, err := m.Repo.GetExtensionInstallState(ctx, item.ExtensionID, tx.Scope, tx.ScopeID)
 		if errors.Is(err, repository.ErrNotFound) {
@@ -328,7 +328,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		case "install":
 			if cur.CurrentState != model.ExtensionInstallStateAbsent {
 				if cur.CurrentVersion != item.ToVersion {
-					return fmt.Errorf("в-flight установка %s имеет unexpected текущая версия %s", item.ExtensionID, cur.CurrentVersion)
+					return fmt.Errorf("in-flight install %s has unexpected current version %s", item.ExtensionID, cur.CurrentVersion)
 				}
 				mutated = true
 			}
@@ -339,10 +339,10 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 			case item.FromVersion:
 				mutated = false
 			default:
-				return fmt.Errorf("в-flight обновление %s имеет unexpected текущая версия %s", item.ExtensionID, cur.CurrentVersion)
+				return fmt.Errorf("in-flight update %s has unexpected current version %s", item.ExtensionID, cur.CurrentVersion)
 			}
 		default:
-			return fmt.Errorf("неподдерживаемый в-flight операция %q", item.Operation)
+			return fmt.Errorf("unsupported in-flight operation %q", item.Operation)
 		}
 		if mutated {
 			tx.Applied = append(tx.Applied, item.ExtensionID)
@@ -390,12 +390,12 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 				_, opErr = m.Lifecycle.Uninstall(context.Background(), id, scope02011(tx.Plan))
 			case "update":
 				if cur.CurrentVersion != item.ToVersion {
-					opErr = fmt.Errorf("не может безопасно восстанавливать из текущая версия %s; ожидаемый %s или %s", cur.CurrentVersion, item.ToVersion, item.FromVersion)
+					opErr = fmt.Errorf("cannot safely recover from current version %s; expected %s or %s", cur.CurrentVersion, item.ToVersion, item.FromVersion)
 				} else {
 					_, opErr = m.Lifecycle.Rollback(context.Background(), id, scope02011(tx.Plan))
 				}
 			default:
-				opErr = fmt.Errorf("неподдерживаемый операция %q", item.Operation)
+				opErr = fmt.Errorf("unsupported operation %q", item.Operation)
 			}
 		}
 		if opErr != nil {
@@ -500,5 +500,5 @@ func (m *Manager) rollback(tx model.ExtensionUpdateTransaction, applied []applie
 		tx.Status = "rolled_back"
 	}
 	_, _ = m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
-	return tx, fmt.Errorf("multi-расширение обновление %s: %w", tx.Status, cause)
+	return tx, fmt.Errorf("multi-extension update %s: %w", tx.Status, cause)
 }

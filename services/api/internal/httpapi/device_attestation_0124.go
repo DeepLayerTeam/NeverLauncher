@@ -17,9 +17,9 @@ const (
 )
 
 func canonicalDeviceAttestationTime0124(value time.Time) time.Time {
-	// PostgreSQL TIMESTAMPTZ сохраняет microseconds. Canonicalize до оба
-	// хранение и подписание так begin/complete полезная нагрузка оставаться побайтово идентичный
-	// после запрос является чтение back из PostgreSQL.
+	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
+	// persistence and signing so the begin/complete payload stays byte-identical
+	// after the challenge is read back from PostgreSQL.
 	return value.UTC().Truncate(time.Microsecond)
 }
 
@@ -63,13 +63,13 @@ func deviceAttestationPayload0124(challenge string, challengeRecord model.Device
 
 func attestationEligibleDevice0124(device model.TrustedDevice) error {
 	if device.Status != "active" || device.TrustState != "verified" {
-		return errors.New("устройство является не активный")
+		return errors.New("device is not active")
 	}
 	if device.KeyBinding != "hardware" || device.KeyAlgorithm != "p256" || strings.TrimSpace(device.HardwareProvider) == "" {
-		return errors.New("запрос-ответ аттестация требует регистрировать привязанный к оборудованию P-256 устройство идентичность")
+		return errors.New("challenge-response attestation requires a registered hardware-bound P-256 device identity")
 	}
 	if strings.TrimSpace(device.PublicKey) == "" || strings.TrimSpace(device.KeyFingerprint) == "" {
-		return errors.New("устройство ключ материал является неполный")
+		return errors.New("device key material is incomplete")
 	}
 	return nil
 }
@@ -77,7 +77,7 @@ func attestationEligibleDevice0124(device model.TrustedDevice) error {
 func sessionBoundToDevice0124(s Server, claims authClaims, deviceID string) (authSessionRecord, error) {
 	session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 	if !ok || session.Status != "active" || session.TrustedDeviceID != strings.TrimSpace(deviceID) || session.DeviceTrustState != "verified" {
-		return authSessionRecord{}, errors.New("текущий сессия является не привязанный к этот доверенный устройство")
+		return authSessionRecord{}, errors.New("current session is not bound to this trusted device")
 	}
 	return session, nil
 }
@@ -151,7 +151,7 @@ func (s Server) authDeviceAttestationBegin0124(w http.ResponseWriter, r *http.Re
 			"keyAlgorithm":            device.KeyAlgorithm,
 			"keyBinding":              device.KeyBinding,
 			"hardwareProvider":        device.HardwareProvider,
-			"hardwareProvenance":      firstNonEmpty(device.RemoteHardwareProvenance, "not-verified"),
+			"hardwareProvenance":      firstNonEmpty(device.RemoteHardwareProvenance, "not-remotely-verified"),
 			"signingPayload":          deviceAttestationPayload0124(challenge, entry, device, claims.SessionID, validUntil),
 			"privateKeyServerExposed": false,
 		},

@@ -167,14 +167,14 @@ FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
 }
 
 
-# Quilt Совместимость II 0.17.2 certifies одинаковый стабильный Minecraft релиз
-# span как Fabric Совместимость II, но через Quilt Мета v3 и Quilt KnotClient.
+# Quilt Compatibility II 0.17.2 certifies the same stable Minecraft release
+# span as Fabric Compatibility II, but through Quilt Meta v3 and Quilt KnotClient.
 QUILT_COMPATIBILITY_II_0172: dict[str, int] = dict(FABRIC_COMPATIBILITY_II_0171)
 
 
-# Forge Современный 0.17.3 certifies официальный основанный на обработчиках Forge строка.
-# Forge переключение к обработчик установщик модель в Minecraft 1.13.2;
-# релиз точки следить стабильный Forge promotions catalogue.
+# Forge Modern 0.17.3 certifies the official processor-based Forge line.
+# Forge switched to the processor installer model at Minecraft 1.13.2;
+# release points follow the stable Forge promotions catalogue.
 FORGE_MODERN_0173: dict[str, int] = {
     "1.13.2": 8,
     "1.14.2": 8, "1.14.3": 8, "1.14.4": 8,
@@ -193,9 +193,9 @@ FORGE_MODERN_0173: dict[str, int] = {
 FORGE_LEGACY_1122_0174: dict[str, int] = {"1.12.2": 8}
 FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 
-# NeoForge Совместимость II 0.17.6 certifies каждый стабильный NeoForge Minecraft
-# релиз из исходный 1.20.x строка через текущий стабильный 26.2 строка.
-# 26.3 является намеренно отсутствующий до стабильный net.NeoForge:NeoForge сборка существует.
+# NeoForge Compatibility II 0.17.6 certifies every stable NeoForge Minecraft
+# release from the original 1.20.x line through the current stable 26.2 line.
+# 26.3 is intentionally absent until a stable net.neoforged:neoforge build exists.
 NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
     "1.20.5": 21, "1.20.6": 21,
@@ -205,10 +205,10 @@ NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25,
 }
 
-# Кроссплатформенный Загрузчики 0.17.9 certifies реальный текущий клиент для каждый
-# загрузчик семейство на каждый поддерживаемый настольное приложение OS/architecture пара. Linux
-# x86_64 строка является существующий wide-строка цель; другой five строки являются
-# additional обязательный платформа сертификация.
+# Cross-platform Loaders 0.17.9 certifies a real current client for each
+# loader family on every supported desktop OS/architecture pair.  The Linux
+# x86_64 row is the existing wide-line target; the other five rows are
+# additional required platform certifications.
 CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
     "fabric": ("26.3", 25),
     "quilt": ("26.3", 25),
@@ -217,9 +217,9 @@ CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
 }
 CROSS_PLATFORM_LOADER_PLATFORMS_0179: tuple[tuple[str, str], ...] = CROSS_PLATFORM_VANILLA_0169
 
-# Загрузчик Усиление защиты 0.17.10 повторное использование текущий-загрузчик якоря но привязывает 
-# детерминированный Linux/x86_64 восстановление probe к каждый семейство. Нет дубликат цель
-# строки являются добавлен: существующий кроссплатформенный якорь является strengthened в place.
+# Loader Hardening 0.17.10 reuses the current-loader anchors but binds a
+# deterministic Linux/x86_64 recovery probe to each family. No duplicate target
+# rows are added: the existing cross-platform anchor is strengthened in place.
 LOADER_HARDENING_01710: dict[str, tuple[str, int]] = dict(CROSS_PLATFORM_LOADERS_0179)
 
 
@@ -718,7 +718,7 @@ def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
     vanilla = [target for target in payload["targets"] if target["loader"] == "vanilla"]
     java = sorted({target["javaMajor"] for target in vanilla})
-    print(f"Совместимость цели OK: {len(payload['targets'])} цели для {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}")
+    print(f"Compatibility targets OK: {len(payload['targets'])} targets for {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}")
     return 0
 
 
@@ -739,8 +739,8 @@ def runner_for_target(target: dict[str, Any]) -> str:
 
 
 def java_distribution_for_target(target: dict[str, Any]) -> str:
-    # Microsoft OpenJDK публикует Windows ARM64 для Java 25; Temurin остаётся
-    # по умолчанию everywhere else. Этот affects CI сертификация только.
+    # Microsoft OpenJDK publishes Windows ARM64 for Java 25; Temurin remains
+    # the default everywhere else. This affects CI certification only.
     if target["os"] == "windows" and target["arch"] == "aarch64" and target["javaMajor"] in {21, 25}:
         return "microsoft"
     return "temurin"
@@ -1028,7 +1028,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
     md_path.write_text(render_markdown(targets_doc["productVersion"], targets, records, args.commit, args.run_id, args.repository), encoding="utf-8")
     print(md_path.read_text(encoding="utf-8"))
     if errors:
-        print("Матрица совместимости валидация ошибка:", file=sys.stderr)
+        print("Compatibility matrix validation failed:", file=sys.stderr)
         for message in errors:
             print(f"- {message}", file=sys.stderr)
         return 1

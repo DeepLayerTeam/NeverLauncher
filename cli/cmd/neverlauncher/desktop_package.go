@@ -44,7 +44,7 @@ func buildDesktopPackage(ver, artifactDir, out, platform string) error {
 		checksums = append(checksums, sum+"  "+item.Artifact)
 	}
 	if len(selected) == 0 {
-		return errors.New("настольное приложение пакет не содержит ни одного реально собранного нативный артефакт")
+		return errors.New("desktop package не содержит ни одного реально собранного native artifact")
 	}
 	sort.Strings(checksums)
 	manifest := DesktopPackageManifest{SchemaVersion: cliSchemaVersion, GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), ToolVersion: version, Version: ver, Platforms: selected, ChecksumsFile: "SHA256SUMS.desktop"}
@@ -64,7 +64,7 @@ func verifyDesktopPackage(dir string) error {
 		return err
 	}
 	if manifest.SchemaVersion == "" || manifest.Version == "" || len(manifest.Platforms) == 0 {
-		return errors.New("настольное приложение пакет манифест неполон")
+		return errors.New("desktop package manifest неполон")
 	}
 	expectedLines := map[string]string{}
 	f, err := os.Open(filepath.Join(dir, manifest.ChecksumsFile))
@@ -84,19 +84,19 @@ func verifyDesktopPackage(dir string) error {
 	}
 	for _, item := range manifest.Platforms {
 		if item.Status != "packaged" || item.Artifact == "" || item.SHA256 == "" || item.Size <= 0 {
-			return fmt.Errorf("настольное приложение артефакт метаданные недопустимый: %s", item.Artifact)
+			return fmt.Errorf("desktop artifact metadata invalid: %s", item.Artifact)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, item.Artifact))
 		if err != nil {
 			return err
 		}
 		if size != item.Size || !strings.EqualFold(sum, item.SHA256) {
-			return fmt.Errorf("настольное приложение артефакт checksum/size несоответствие: %s", item.Artifact)
+			return fmt.Errorf("desktop artifact checksum/size mismatch: %s", item.Artifact)
 		}
 		if !strings.EqualFold(expectedLines[item.Artifact], sum) {
-			return fmt.Errorf("SHA256SUMS.настольное приложение несоответствие: %s", item.Artifact)
+			return fmt.Errorf("SHA256SUMS.desktop mismatch: %s", item.Artifact)
 		}
 	}
-	fmt.Printf("Настольное приложение пакет проверен: %d артефакт(s)\n", len(manifest.Platforms))
+	fmt.Printf("Desktop package проверен: %d artifact(s)\n", len(manifest.Platforms))
 	return nil
 }

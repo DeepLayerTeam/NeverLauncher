@@ -1,6 +1,6 @@
--- NeverLauncher 0.12.1 — Доверие к устройству Ядро + постоянный устройство реестр.
--- Существующий аутентификация_сессии.устройство_ID остаётся недоверенный клиент метка для совместимость.
--- доверенный_устройство_ID является populated только после Ed25519 доказательство владения процедура.
+-- NeverLauncher 0.12.1 — Device Trust Core + persistent device registry.
+-- Existing auth_sessions.device_id remains an untrusted client label for compatibility.
+-- trusted_device_id is populated only after an Ed25519 proof-of-possession ceremony.
 
 CREATE TABLE IF NOT EXISTS trusted_devices (
     id TEXT PRIMARY KEY,

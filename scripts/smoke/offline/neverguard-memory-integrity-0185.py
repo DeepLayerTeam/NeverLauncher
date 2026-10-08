@@ -12,13 +12,13 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Память Целостность 0.18.5 контроль: {label} отсутствующий {missing}")
+        raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: {label} missing {missing}")
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 5):
-        raise SystemExit(f"[NeverLauncher] Память Целостность 0.18.5 контроль: VERSION является {version}")
+        raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: VERSION is {version}")
 
     memory = read("runtime/neverguard-sensor/src/memory_integrity.rs")
     hooks = read("runtime/neverguard-sensor/src/hook_engine.rs")
@@ -54,7 +54,7 @@ def main() -> int:
     )
     for forbidden in ("WriteProcessMemory", "VirtualAllocEx", "CreateRemoteThread", "NtWriteVirtualMemory"):
         if forbidden in memory:
-            raise SystemExit(f"[NeverLauncher] Память Целостность 0.18.5 контроль: cross-процесс primitive forbidden: {forbidden}")
+            raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}")
 
     require(
         hooks,
@@ -135,7 +135,7 @@ def main() -> int:
         "Windows compilation/adversarial integration/clippy CI",
     )
     if "neverguard-memory-integrity-0185.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Память Целостность 0.18.5 контроль: предварительная проверка wiring отсутствующий")
+        raise SystemExit("[NeverLauncher] Memory Integrity 0.18.5 gate: preflight wiring missing")
 
     for path, body in [
         ("runtime/neverguard-sensor/src/memory_integrity.rs", memory),
@@ -144,9 +144,9 @@ def main() -> int:
     ]:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
-                raise SystemExit(f"[NeverLauncher] Память Целостность 0.18.5 контроль: placeholder {forbidden!r} в {path}")
+                raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}")
 
-    print("[NeverLauncher] Память Целостность 0.18.5 контроль: OK")
+    print("[NeverLauncher] Memory Integrity 0.18.5 gate: OK")
     return 0
 
 

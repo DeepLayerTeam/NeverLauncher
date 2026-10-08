@@ -8,7 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"[NeverLauncher] Непрерывный Защита 0.18.9 контроль: отсутствующий {rel}")
+        raise SystemExit(f"[NeverLauncher] Continuous Guard 0.18.9 gate: missing {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -16,12 +16,12 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Непрерывный Защита 0.18.9 контроль: {rel} отсутствующий {missing}"
+            f"[NeverLauncher] Continuous Guard 0.18.9 gate: {rel} missing {missing}"
         )
 
 
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 9):
-    raise SystemExit(f"[NeverLauncher] Непрерывный Защита 0.18.9 контроль: VERSION является {VERSION}")
+    raise SystemExit(f"[NeverLauncher] Continuous Guard 0.18.9 gate: VERSION is {VERSION}")
 
 sensor = read("runtime/neverguard-sensor/src/continuous_guard.rs")
 stream = read("runtime/neverguard-sensor/src/lib.rs")
@@ -88,7 +88,7 @@ require(ci, ".github/workflows/ci.yml", [
     "cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings",
 ])
 if "neverguard-continuous-guard-0189.py" not in preflight:
-    raise SystemExit("[NeverLauncher] Непрерывный Защита 0.18.9 контроль: предварительная проверка wiring отсутствующий")
+    raise SystemExit("[NeverLauncher] Continuous Guard 0.18.9 gate: preflight wiring missing")
 
 for rel, text in [
     ("runtime/neverguard-sensor/src/continuous_guard.rs", sensor),
@@ -98,7 +98,7 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] Непрерывный Защита 0.18.9 контроль: placeholder {placeholder!r} в {rel}"
+                f"[NeverLauncher] Continuous Guard 0.18.9 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[NeverLauncher] Непрерывный Защита 0.18.9 контроль: OK")
+print("[NeverLauncher] Continuous Guard 0.18.9 gate: OK")

@@ -12,13 +12,13 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Модуль Защита 0.18.3 контроль: {label} отсутствующий {missing}")
+        raise SystemExit(f"[NeverLauncher] Module Guard 0.18.3 gate: {label} missing {missing}")
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 3):
-        raise SystemExit(f"[NeverLauncher] Модуль Защита 0.18.3 контроль: VERSION является {version}")
+        raise SystemExit(f"[NeverLauncher] Module Guard 0.18.3 gate: VERSION is {version}")
 
     sensor = read("runtime/neverguard-sensor/src/lib.rs")
     parent = read("runtime/neverruntime/src/windows_module_guard.rs")
@@ -119,7 +119,7 @@ def main() -> int:
         "Windows CI compile/integration/clippy enforcement",
     )
     if "neverguard-module-guard-0183.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Модуль Защита 0.18.3 контроль: предварительная проверка wiring отсутствующий")
+        raise SystemExit("[NeverLauncher] Module Guard 0.18.3 gate: preflight wiring missing")
 
     for path, body in [
         ("runtime/neverguard-sensor/src/lib.rs", sensor),
@@ -129,10 +129,10 @@ def main() -> int:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Модуль Защита 0.18.3 контроль: placeholder {forbidden!r} в {path}"
+                    f"[NeverLauncher] Module Guard 0.18.3 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Модуль Защита 0.18.3 контроль: OK")
+    print("[NeverLauncher] Module Guard 0.18.3 gate: OK")
     return 0
 
 

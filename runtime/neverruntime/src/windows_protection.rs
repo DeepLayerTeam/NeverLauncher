@@ -8,11 +8,12 @@ pub const NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA: &str =
 pub const NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV: &str =
     "NEVERGUARD_WINDOWS_PROTECTION_PROFILE";
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum WindowsProtectionProfile {
     Audit,
     Compat,
+    #[default]
     Aggressive,
 }
 
@@ -30,11 +31,6 @@ impl WindowsProtectionProfile {
     }
 }
 
-impl Default for WindowsProtectionProfile {
-    fn default() -> Self {
-        Self::Aggressive
-    }
-}
 
 impl fmt::Display for WindowsProtectionProfile {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -51,7 +47,7 @@ impl FromStr for WindowsProtectionProfile {
             "compat" => Ok(Self::Compat),
             "aggressive" => Ok(Self::Aggressive),
             other => Err(format!(
-                "неподдерживаемый NeverGuard Windows защита профиль {other:?}; ожидаемый аудит, compat или агрессивный"
+                "unsupported NeverGuard Windows protection profile {other:?}; expected audit, compat or aggressive"
             )),
         }
     }
@@ -62,7 +58,7 @@ pub fn protection_profile_from_environment() -> Result<WindowsProtectionProfile,
         Ok(value) if !value.trim().is_empty() => value.parse(),
         Ok(_) | Err(std::env::VarError::NotPresent) => Ok(WindowsProtectionProfile::Aggressive),
         Err(std::env::VarError::NotUnicode(_)) => Err(format!(
-            "{NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV} является не действительный UTF-8"
+            "{NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV} is not valid UTF-8"
         )),
     }
 }

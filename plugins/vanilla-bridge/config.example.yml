@@ -1,7 +1,7 @@
-# NeverLauncher Vanilla вспомогательный процесс адаптер. Сохранять RCON привязанный к loopback/firewalled.
+# NeverLauncher Vanilla sidecar adapter. Keep RCON bound to loopback/firewalled.
 backend:
   url: http://127.0.0.1:8080
-  # Упорядоченный HA эндпоинты. единый URL выше является используется только когда URL является пустой.
+  # Ordered HA endpoints. The single url above is used only when urls is empty.
   urls: "https://launcher-a.example.com,https://launcher-b.example.com"
   failoverCooldownMs: 5000
 server:
@@ -13,6 +13,6 @@ security:
   requireLauncherSession: true
   requireIntegrity: true
 control:
-  # Серверная часть подписание открытый ключ является обязательный для Управление API команда выполнение.
+  # Backend signing public key is required for Control API command execution.
   backendPublicKey: ""
   consoleAllowlist: "say,list,whitelist,ban,ban-ip,pardon,pardon-ip,save-all,save-off,save-on,kick,time,weather,difficulty,gamerule,title,tellraw"

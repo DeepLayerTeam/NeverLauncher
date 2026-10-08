@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[serverbridge-crypto-миграция] материализовать точный 0.14.1 база данных через миграция 0021\n'
+printf '[serverbridge-crypto-migration] materialize exact 0.14.1 database through migration 0021\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -67,7 +67,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0021_serverbridge_protocol_v2_0141" ]]
 
-printf '[serverbridge-crypto-миграция] начальное значение активный 0.14.1 bearer узел и актуальный подключение билет\n'
+printf '[serverbridge-crypto-migration] seed active 0.14.1 bearer node and live join ticket\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -111,7 +111,7 @@ identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema
 [[ "$identity_sealed" == "true" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
 
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,plugin_version,plugin_sha256,integrity_status,(integrity_verified_at IS NULL)::text,(last_heartbeat_at IS NULL)::text FROM server_bridge_nodes_v2 WHERE id='paper-0141'")"
-# psql renders пустой text столбцы как adjacent delimiters.
+# psql renders empty text columns as adjacent delimiters.
 [[ "$node_state" == "identity-enrollment-required||||||0||||true|true" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
 disabled_legacy_secret="$(psql "$DB_DSN" -AtF '|' -qc "SELECT token_hash,token_prefix,status FROM server_bridge_nodes_v2 WHERE id='paper-disabled-0141'")"
 [[ "$disabled_legacy_secret" == "||disabled" ]] || { echo "disabled node retained legacy bearer material: $disabled_legacy_secret" >&2; exit 1; }
@@ -125,4 +125,4 @@ identity_index="$(psql "$DB_DSN" -Atqc "SELECT to_regclass('uq_server_bridge_nod
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyBearerRetired:true,nodeStatus:"identity-enrollment-required",activeJoinInvalidated:true,nonceReplayStoreCreated:true}' \
   > "$RESULT_DIR/serverbridge-crypto-identity-migration.json"
-printf '[serverbridge-crypto-миграция] PASS 0.14.1 -> 0.14.3 bearer retirement + идентичность регистрация + одноразовый билет семантика\n'
+printf '[serverbridge-crypto-migration] PASS 0.14.1 -> 0.14.3 bearer retirement + identity enrollment + one-time ticket semantics\n'

@@ -159,8 +159,8 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 		t.Fatalf("ServerBridge rejected integrity-bound Minecraft session: %+v", decision)
 	}
 
-	// Удалять поставляемый хеширует является immediate отзыв: уже выданный
-	// Minecraft учётные данные и ранее создан ServerBridge подключение должен завершаться ошибкой.
+	// Removing the shipped hashes is an immediate revocation: an already issued
+	// Minecraft credential and a previously created ServerBridge join must fail.
 	s.Config.GuardReleaseAllowlistJSON = `{"0.13.5":{"guardSha256":["ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],"launcherSha256":["` + launcherHash0135 + `"],"requireAuthenticode":false}}`
 	if decision := s.evaluateMinecraftIntegrity0135(session); decision.Allowed || decision.Reason != "integrity_release_revoked" {
 		t.Fatalf("revoked Guard release remained valid: %+v", decision)

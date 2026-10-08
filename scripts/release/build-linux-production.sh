@@ -16,7 +16,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "Неизвестный argument: $1" >&2
+      echo "Unknown argument: $1" >&2
       exit 2
       ;;
   esac
@@ -28,7 +28,7 @@ case "$(uname -m)" in
   *) echo "Unsupported native Linux architecture: $(uname -m)" >&2; exit 2 ;;
 esac
 if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${ARCH}" ]]; then
-  echo "Нативный исполнитель архитектура несоответствие: ожидаемый ${EXPECTED_ARCH}, получил ${ARCH}" >&2
+  echo "Native runner architecture mismatch: expected ${EXPECTED_ARCH}, got ${ARCH}" >&2
   exit 2
 fi
 
@@ -36,14 +36,14 @@ require() { command -v "$1" >/dev/null 2>&1 || { echo "$1 is required" >&2; exit
 for tool in go cargo npm python3; do require "${tool}"; done
 mkdir -p "${OUT_DIR}"
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: сборка клиентская часть"
+echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build frontend"
 (
   cd "${ROOT_DIR}/apps/desktop"
   npm ci
   npm run build
 )
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: сборка CLI/API"
+echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build CLI/API"
 (
   cd "${ROOT_DIR}/cli"
   GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" ./cmd/neverlauncher
@@ -53,7 +53,7 @@ echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: сборка CLI/API"
   GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-api-linux-${ARCH}" ./cmd/neverlauncher-api
 )
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: сборка Desktop/NeverGuard/NeverRuntime natively"
+echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build Desktop/NeverGuard/NeverRuntime natively"
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
 cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bins
 
@@ -67,4 +67,4 @@ chmod 0755 \
 python3 "${ROOT_DIR}/scripts/release/linux-package.py" \
   --out "${OUT_DIR}" --version "${VERSION}" --architecture "${ARCH}"
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH} рабочий пакет готовый: ${OUT_DIR}"
+echo "[NeverLauncher ${VERSION}] Linux ${ARCH} production package ready: ${OUT_DIR}"

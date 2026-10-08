@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 5):
-    raise SystemExit("VERSION является старый чем 0.14.5")
+    raise SystemExit("VERSION is older than 0.14.5")
 
 
 def read(path: str) -> str:
@@ -14,13 +14,13 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.5 API/CLI прокси-семейство миграция differ")
+    raise SystemExit("0.14.5 API/CLI proxy-family migrations differ")
 require(api_migration, [
     "server_bridge_nodes_v2_kind_check",
     "'velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia'",
@@ -134,14 +134,14 @@ require(compose_e2e, [
     "./runtime/plugins/bungeecord:/plugins:ro", "./runtime/plugins/waterfall:/plugins:ro",
 ], "Velocity/BungeeCord/Waterfall Docker E2E")
 if '- "25570:25565"' in compose_e2e:
-    raise SystemExit("Velocity E2E хост port 25570 является сопоставленный к 25565, но Velocity 3.4 среда выполнения привязывает 25577")
+    raise SystemExit("Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577")
 
 
 allow_marker = 'wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"'
 deny_marker = 'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"'
 cooldown_marker = 'NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5'
 if not (runtime_e2e.index(allow_marker) < runtime_e2e.index(cooldown_marker) < runtime_e2e.index(deny_marker)):
-    raise SystemExit("прокси E2E переподключение cooldown является не между разрешать и запрещать сеть утверждение")
+    raise SystemExit("proxy E2E reconnect cooldown is not between allow and deny network assertions")
 
 migration_e2e = read("e2e/scripts/run-proxy-family-migration-e2e.sh")
 require(migration_e2e, [
@@ -156,4 +156,4 @@ ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(text, ["serverbridge-proxy-family-0145.py", "run-proxy-family-migration-e2e.sh"], f"0.14.5 {label} wiring")
 
-print(f"NeverLauncher 0.14.5 Прокси семейство контроль: OK ({version})")
+print(f"NeverLauncher 0.14.5 Proxy family gate: OK ({version})")

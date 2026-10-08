@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 2):
-    raise SystemExit(f"Подписанный Windows x64+ARM64 контроль требует VERSION>=0.15.2, получил {VERSION}")
+    raise SystemExit(f"Signed Windows x64+ARM64 gate requires VERSION>=0.15.2, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 builder = read("scripts/release/build-windows-desktop.ps1")
@@ -120,9 +120,9 @@ require(
     "production release Windows signing wiring",
 )
 if 'windows-production-signed:' in ci or 'neverlauncher-windows-production-${{ github.sha }}' in ci:
-    raise SystemExit("ordinary главный CI должен не требовать рабочий Authenticode учётные данные")
+    raise SystemExit("ordinary main CI must not require production Authenticode credentials")
 if 'release-bundle' in ci.split('production-e2e:', 1)[1].split('needs:', 1)[1].split('\n', 1)[0]:
-    raise SystemExit("functional рабочий E2E должен не depend на публикация-только подписание")
+    raise SystemExit("functional production E2E must not depend on publish-only signing")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestWindows", "-count=1"],
@@ -130,4 +130,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Подписанный Windows x64 + ARM64 контроль: OK")
+print(f"NeverLauncher {VERSION} Signed Windows x64 + ARM64 gate: OK")

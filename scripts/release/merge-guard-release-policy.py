@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Merge платформа NeverGuard релиз-политика fragments в один рабочий политика.
+"""Merge platform NeverGuard release-policy fragments into one production policy.
 
- команда является намеренно отказ с блокировкой: все three платформы должен быть present для
-0.14.x, хеширует должен быть канонический SHA-256, Windows должен требовать Authenticode, и
-macOS должен originate из Разработчик ID + notarization рабочий путь.
+The command is intentionally fail-closed: all three platforms must be present for
+0.14.x, hashes must be canonical SHA-256, Windows must require Authenticode, and
+macOS must originate from the Developer ID + notarization production path.
 """
 from __future__ import annotations
 

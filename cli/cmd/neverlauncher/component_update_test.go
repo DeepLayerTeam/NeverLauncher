@@ -86,7 +86,7 @@ func TestComponentTreePostVerifyFailureRollsBack0157(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = applyComponentTree0157(u, "NeverLauncher.app", stage, "0.15.6", "0.15.7", func(string) error {
-		return errors.New("forced post-проверять ошибка")
+		return errors.New("forced post-verify failure")
 	})
 	if err == nil {
 		t.Fatal("expected rollback error")

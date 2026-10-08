@@ -63,4 +63,4 @@ for envfile in ("deploy/production/env.production.example", "cli/cmd/neverlaunch
     for key in ('NEVERLAUNCHER_EXTENSION_HOST_ENABLED=', 'NEVERLAUNCHER_EXTENSION_HOST_LISTEN=', 'NEVERLAUNCHER_EXTENSION_HOST_MAX_MEMORY_MB=', 'NEVERLAUNCHER_EXTENSION_HOST_MAX_PROCESSES=', 'NEVERLAUNCHER_EXTENSION_HOST_CRASH_LIMIT='):
         require(key in env, f"{envfile} missing {key}")
 
-print("NeverExtensions Хост расширений 1 0.20.5 рабочий контроль: OK")
+print("NeverExtensions Extension Host 1 0.20.5 production gate: OK")

@@ -80,7 +80,7 @@ func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.Runt
 	}
 	version := strings.TrimSpace(minecraft.Version)
 	if version == "" || version == "." || version == ".." || strings.ContainsAny(version, `/\`) {
-		return "", true, errors.New("Совместимость Движок: Minecraft.версия должен быть безопасным версия ID")
+		return "", true, errors.New("Compatibility Engine: minecraft.version должен быть безопасным version id")
 	}
 	metadataPath := strings.TrimSpace(runtime.Launch.VersionMetadataPath)
 	if metadataPath == "" {
@@ -89,10 +89,10 @@ func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.Runt
 	normalized := strings.ReplaceAll(metadataPath, `\`, "/")
 	clean := path.Clean(normalized)
 	if strings.HasPrefix(normalized, "/") || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || clean != normalized {
-		return "", true, fmt.Errorf("Совместимость Движок: небезопасный versionMetadataPath %q", metadataPath)
+		return "", true, fmt.Errorf("Compatibility Engine: небезопасный versionMetadataPath %q", metadataPath)
 	}
 	if !strings.HasSuffix(strings.ToLower(clean), ".json") {
-		return "", true, errors.New("Совместимость Движок: versionMetadataPath должен указывать на JSON")
+		return "", true, errors.New("Compatibility Engine: versionMetadataPath должен указывать на JSON")
 	}
 	return clean, true, nil
 }
@@ -107,5 +107,5 @@ func validateCompatibilityManifest(manifest model.Manifest) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Совместимость Движок: подписанный релиз не содержит обязательный метаданные файл %s", metadataPath)
+	return fmt.Errorf("Compatibility Engine: signed release не содержит обязательный metadata файл %s", metadataPath)
 }

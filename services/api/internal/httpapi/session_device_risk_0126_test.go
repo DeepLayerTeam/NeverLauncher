@@ -117,8 +117,8 @@ func TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126(
 		t.Fatalf("refresh token was not rotated: %#v", tokens)
 	}
 
-	// Повторное воспроизведение использованный токен по-прежнему triggers pre-существующий семейство-wide
-	// повторное использование ответ. freshly выданный замена должен затем быть unusable.
+	// Replaying the consumed token still triggers the pre-existing family-wide
+	// reuse response. The freshly issued replacement must then be unusable.
 	code, _ = deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/refresh", "", map[string]any{"refreshToken": bound.Refresh, "deviceId": bound.DeviceID, "deviceSignature": proof})
 	if code != http.StatusUnauthorized {
 		t.Fatalf("consumed refresh replay was not rejected: %d", code)
@@ -159,8 +159,8 @@ func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T)
 		t.Fatalf("user-agent drift did not become an enforceable risk decision: %#v", session)
 	}
 
-	// токен может иначе contain актуальный устойчивый к фишингу аутентификация результат, но
-	// новый риск событие должен force новый процедура до критичный эксплуатация.
+	// A token may otherwise contain a fresh phishing-resistant auth result, but
+	// a newer risk event must force a new ceremony before sensitive operations.
 	now := time.Now().UTC()
 	claims := authClaims{AuthStrength: "phishing-resistant", AuthTime: now.Add(-time.Minute).Unix(), RiskState: "elevated", RiskScore: 35, RiskAction: "step-up", RiskUpdatedAt: now.Unix()}
 	riskRR := httptest.NewRecorder()

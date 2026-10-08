@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Результат описывает один rate-ограничение решение.
+// Result describes one rate-limit decision.
 type Result struct {
 	Allowed    bool
 	Limit      int
@@ -14,7 +14,7 @@ type Result struct {
 	ResetAfter time.Duration
 }
 
-// Ограничитель является процесс-безопасный или распределённый фиксированный-окно ограничитель.
+// Limiter is a process-safe or distributed fixed-window limiter.
 type Limiter interface {
 	Allow(ctx context.Context, key string, limit int, window time.Duration) (Result, error)
 	Health(ctx context.Context) error
@@ -26,7 +26,7 @@ type memoryBucket struct {
 	reset time.Time
 }
 
-// MemoryLimiter является используется для development/tests. Рабочий следует использовать Redis.
+// MemoryLimiter is used for development/tests. Production should use Redis.
 type MemoryLimiter struct {
 	mu      sync.Mutex
 	buckets map[string]memoryBucket

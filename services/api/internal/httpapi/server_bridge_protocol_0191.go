@@ -61,9 +61,9 @@ type bridgeProtocolEnvelope0191 struct {
 	ProtocolVersion int `json:"protocolVersion"`
 }
 
-// Протокол v2 запрос контракты являются сохранённый byte-для-byte compatible для 
-// поэтапный обновление. Протокол v3 имеет отдельный сетевой контракт и содержит 
-// набор возможностей selected через /server-bridge/capabilities.
+// Protocol v2 request contracts are retained byte-for-byte compatible for a
+// rolling upgrade. Protocol v3 has a separate wire contract and carries the
+// feature set selected by /server-bridge/capabilities.
 type bridgeHeartbeatV2Contract0191 struct {
 	ProtocolVersion int    `json:"protocolVersion"`
 	ServerID        string `json:"serverId"`
@@ -174,7 +174,7 @@ func readBridgeProtocolBody0191(r io.Reader) ([]byte, bridgeProtocolEnvelope0191
 		return nil, bridgeProtocolEnvelope0191{}, err
 	}
 	if len(body) > 128*1024 {
-		return nil, bridgeProtocolEnvelope0191{}, fmt.Errorf("serverbridge тело запроса exceeds 128 KiB")
+		return nil, bridgeProtocolEnvelope0191{}, fmt.Errorf("serverbridge request body exceeds 128 KiB")
 	}
 	var envelope bridgeProtocolEnvelope0191
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -191,7 +191,7 @@ func decodeBridgeContract0191(body []byte, target any) error {
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		if err == nil {
-			return fmt.Errorf("несколько JSON значения в ServerBridge полезная нагрузка")
+			return fmt.Errorf("multiple JSON values in ServerBridge payload")
 		}
 		return err
 	}

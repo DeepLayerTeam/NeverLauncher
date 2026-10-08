@@ -187,7 +187,7 @@ func (s Server) requirePackagePermission(permission string, next http.HandlerFun
 			return
 		}
 		if !s.authorizeClaims(r, claims, permission, lookup.Release.ProjectID, "package", lookup.Release.ID).Allowed {
-			// Делать не reveal пакет existence через проект границы.
+			// Do not reveal package existence across project boundaries.
 			writeError(w, http.StatusNotFound, "package не найден")
 			return
 		}
@@ -259,9 +259,9 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 	if !session.RiskUpdatedAt.IsZero() {
 		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
-	// keyBinding/provider оставаться informational: запрос-ответ аттестация доказывает
-	// possession/freshness регистрировать ключ, не поставщик TPM/Защищённый Анклав происхождение.
-	// Устройство аттестация захватывает являются diagnostic и должен не elevate RBAC/MFA сила.
+	// keyBinding/provider stay informational: challenge-response attestation proves
+	// possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance.
+	// Device attestation claims are diagnostic and must not elevate RBAC/MFA strength.
 	if session.TrustedDeviceID != "" {
 		if device, err := s.Repo.GetTrustedDevice(user.ID, session.TrustedDeviceID); err == nil && device.Status == "active" {
 			claims.DeviceKeyBinding = device.KeyBinding
@@ -344,8 +344,8 @@ func (s Server) findUserByEmail(email string) (model.User, bool) {
 func hashPassword(password string) string {
 	encoded, err := hashPasswordArgon2id(password)
 	if err != nil {
-		// В рабочий ошибка Argon2ID должна останавливать создание/смену пароля.
-		// Сигнатура старого Репозиторий interface не возвращает ошибку, поэтому
+		// В production ошибка Argon2id должна останавливать создание/смену пароля.
+		// Сигнатура старого Repository interface не возвращает ошибку, поэтому
 		// оставляем явный panic вместо тихого возврата слабого SHA-256.
 		panic(err)
 	}
@@ -360,7 +360,7 @@ func verifyPassword(password, encoded string) bool {
 		return verifyPasswordArgon2id(password, encoded)
 	}
 	// Миграционная совместимость с пользователями, созданными до 5.0.1.
-	// Новые пароли всегда сохраняются в Argon2ID/PHC формате.
+	// Новые пароли всегда сохраняются в Argon2id/PHC формате.
 	if strings.HasPrefix(encoded, "sha256:") {
 		sum := sha256.Sum256([]byte(password))
 		legacy := "sha256:" + hex.EncodeToString(sum[:])

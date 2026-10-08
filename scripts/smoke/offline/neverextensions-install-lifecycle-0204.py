@@ -68,4 +68,4 @@ for envfile in ("deploy/production/env.production.example", "cli/cmd/neverlaunch
     require("NEVERLAUNCHER_EXTENSION_ROOT=" in env, f"{envfile} missing extension root")
     require("NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION=" in env, f"{envfile} missing backup retention")
 
-print("NeverExtensions Установка Жизненный цикл 0.20.4 рабочий контроль: OK")
+print("NeverExtensions Install Lifecycle 0.20.4 production gate: OK")

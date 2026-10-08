@@ -91,11 +91,11 @@ func releaseVerificationV2Required0158(ver string) bool { return versionAtLeast0
 func safeReleaseRelativePath0158(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || filepath.IsAbs(name) {
-		return "", errors.New("релиз путь должен быть relative")
+		return "", errors.New("release path must be relative")
 	}
 	clean := filepath.Clean(name)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", errors.New("релиз путь escapes комплект")
+		return "", errors.New("release path escapes bundle")
 	}
 	return clean, nil
 }
@@ -168,30 +168,30 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 	}
 	var p releaseTrustPolicy0158
 	if err := json.Unmarshal(raw, &p); err != nil {
-		return p, fmt.Errorf("доверие политика JSON: %w", err)
+		return p, fmt.Errorf("trust policy JSON: %w", err)
 	}
 	if p.SchemaVersion != releaseSignatureSchema0158 || p.TrustDomain != releaseTrustDomain0158 || p.Epoch == 0 {
-		return p, errors.New("доверие политика schema/domain/epoch недопустимый")
+		return p, errors.New("trust policy schema/domain/epoch invalid")
 	}
 	if len(p.Keys) == 0 {
-		return p, errors.New("доверие политика не содержит релиз ключи")
+		return p, errors.New("trust policy не содержит release keys")
 	}
 	seenID, seenFP := map[string]bool{}, map[string]bool{}
 	active := 0
 	for _, k := range p.Keys {
 		if strings.TrimSpace(k.ID) == "" || k.Purpose != "release-signing" || !strings.EqualFold(k.Algorithm, "Ed25519") {
-			return p, fmt.Errorf("недопустимый доверие ключ запись %q", k.ID)
+			return p, fmt.Errorf("invalid trust key record %q", k.ID)
 		}
 		pubRaw, err := hex.DecodeString(strings.TrimSpace(k.PublicKey))
 		if err != nil || len(pubRaw) != ed25519.PublicKeySize {
-			return p, fmt.Errorf("доверие ключ %s publicKey недопустимый", k.ID)
+			return p, fmt.Errorf("trust key %s publicKey invalid", k.ID)
 		}
 		fp := fingerprintEd255190158(ed25519.PublicKey(pubRaw))
 		if !strings.EqualFold(fp, k.Fingerprint) {
-			return p, fmt.Errorf("доверие ключ %s отпечаток несоответствие", k.ID)
+			return p, fmt.Errorf("trust key %s fingerprint mismatch", k.ID)
 		}
 		if seenID[k.ID] || seenFP[strings.ToLower(fp)] {
-			return p, errors.New("доверие политика содержит дубликат ключ id/fingerprint")
+			return p, errors.New("trust policy содержит duplicate key id/fingerprint")
 		}
 		seenID[k.ID], seenFP[strings.ToLower(fp)] = true, true
 		switch k.Status {
@@ -199,11 +199,11 @@ func loadReleaseTrustPolicy0158(path string) (releaseTrustPolicy0158, error) {
 			active++
 		case "verify-only", "revoked":
 		default:
-			return p, fmt.Errorf("доверие ключ %s состояние недопустимый: %s", k.ID, k.Status)
+			return p, fmt.Errorf("trust key %s status invalid: %s", k.ID, k.Status)
 		}
 	}
 	if active == 0 {
-		return p, errors.New("доверие политика не содержит активный релиз ключ")
+		return p, errors.New("trust policy не содержит active release key")
 	}
 	return p, nil
 }
@@ -217,7 +217,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 		rootPublicKeyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if rootPublicKeyPath == "" {
-		return "", errors.New("Релиз Проверка v2 требует внешний корень открытый ключ")
+		return "", errors.New("Release Verification v2 требует внешний root public key")
 	}
 	root, err := loadEd25519PublicKey(rootPublicKeyPath)
 	if err != nil {
@@ -225,29 +225,29 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 	}
 	fp := fingerprintEd255190158(root)
 	if policy.RootSignature == nil || !strings.EqualFold(policy.RootSignature.Algorithm, "Ed25519") || !strings.EqualFold(policy.RootSignature.RootFingerprint, fp) {
-		return "", errors.New("доверие политика корень подпись не соответствует внешнему корень якорь доверия")
+		return "", errors.New("trust policy root signature не соответствует внешнему root trust anchor")
 	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(policy.RootSignature.Signature))
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return "", errors.New("доверие политика корень подпись encoding недопустимый")
+		return "", errors.New("trust policy root signature encoding invalid")
 	}
 	payload, err := releaseTrustPolicyPayload0158(policy)
 	if err != nil {
 		return "", err
 	}
 	if !ed25519.Verify(root, payload, sig) {
-		return "", errors.New("доверие политика корень подпись проверка ошибка")
+		return "", errors.New("trust policy root signature verification failed")
 	}
 	if t, err := time.Parse(time.RFC3339Nano, policy.IssuedAt); err != nil || t.After(now.Add(5*time.Minute)) {
-		return "", errors.New("доверие политика issuedAt недопустимый или находится в будущем")
+		return "", errors.New("trust policy issuedAt invalid или находится в будущем")
 	}
 	if strings.TrimSpace(policy.ExpiresAt) != "" {
 		t, err := time.Parse(time.RFC3339Nano, policy.ExpiresAt)
 		if err != nil {
-			return "", errors.New("доверие политика expiresAt недопустимый")
+			return "", errors.New("trust policy expiresAt invalid")
 		}
 		if enforceCurrentValidity && !now.Before(t) {
-			return "", errors.New("доверие политика истёкший")
+			return "", errors.New("trust policy expired")
 		}
 	}
 	return fp, nil
@@ -259,27 +259,27 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 			continue
 		}
 		if k.Status == "revoked" {
-			return nil, fmt.Errorf("релиз ключ отозванный: %s", id)
+			return nil, fmt.Errorf("release key revoked: %s", id)
 		}
 		if k.Status != "active" && k.Status != "verify-only" {
-			return nil, fmt.Errorf("релиз ключ состояние не разрешает проверка: %s", k.Status)
+			return nil, fmt.Errorf("release key status не разрешает verification: %s", k.Status)
 		}
 		if strings.TrimSpace(k.NotBefore) != "" {
 			t, err := time.Parse(time.RFC3339Nano, k.NotBefore)
 			if err != nil || signedAt.Before(t.Add(-5*time.Minute)) {
-				return nil, fmt.Errorf("релиз подпись predates ключ активация: %s", id)
+				return nil, fmt.Errorf("release signature predates key activation: %s", id)
 			}
 		}
 		if k.Status == "verify-only" && strings.TrimSpace(k.RetiredAt) != "" {
 			t, err := time.Parse(time.RFC3339Nano, k.RetiredAt)
 			if err != nil || signedAt.After(t.Add(5*time.Minute)) {
-				return nil, fmt.Errorf("релиз подпись создана после retirement ключа: %s", id)
+				return nil, fmt.Errorf("release signature создана после retirement ключа: %s", id)
 			}
 		}
 		raw, _ := hex.DecodeString(k.PublicKey)
 		return ed25519.PublicKey(raw), nil
 	}
-	return nil, fmt.Errorf("релиз ключ отсутствует в доверенный политика: ID=%s отпечаток=%s", id, fp)
+	return nil, fmt.Errorf("release key отсутствует в trusted policy: id=%s fingerprint=%s", id, fp)
 }
 
 func loadTrustState0158(path string) (releaseTrustState0158, error) {
@@ -295,40 +295,40 @@ func loadTrustState0158(path string) (releaseTrustState0158, error) {
 		return s, err
 	}
 	if (s.SchemaVersion != releaseSignatureSchema0158 && s.SchemaVersion != releaseTrustStateSchema01510) || s.TrustDomain != releaseTrustDomain0158 {
-		return s, errors.New("релиз доверие состояние schema/domain недопустимый")
+		return s, errors.New("release trust state schema/domain invalid")
 	}
 	if s.HighestReleaseManifestSHA256 != "" && !validSHA256Hex0157(s.HighestReleaseManifestSHA256) {
-		return s, errors.New("релиз доверие состояние содержит недопустимый хеш манифеста")
+		return s, errors.New("release trust state contains invalid manifest digest")
 	}
 	return s, nil
 }
 
 func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVersion, releaseManifestSHA256 string) error {
 	if strings.TrimSpace(path) == "" {
-		return errors.New("Релиз Проверка v2 требует постоянный --доверие-состояние или NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")
+		return errors.New("Release Verification v2 требует persistent --trust-state или NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
 	s, err := loadTrustState0158(path)
 	if err != nil {
 		return err
 	}
 	if s.RootFingerprint != "" && !strings.EqualFold(s.RootFingerprint, rootFP) {
-		return errors.New("релиз доверие состояние привязан к другому корень ключ")
+		return errors.New("release trust state привязан к другому root key")
 	}
 	if policyEpoch < s.HighestTrustEpoch {
-		return fmt.Errorf("доверие эпоха откат: политика=%d принят=%d", policyEpoch, s.HighestTrustEpoch)
+		return fmt.Errorf("trust epoch rollback: policy=%d accepted=%d", policyEpoch, s.HighestTrustEpoch)
 	}
 	if s.HighestRelease != "" {
 		cur, ok1 := parseVersionTriple0158(releaseVersion)
 		old, ok2 := parseVersionTriple0158(s.HighestRelease)
 		if !ok1 || !ok2 {
-			return errors.New("anti-откат состояние содержит некорректную релиз версия")
+			return errors.New("anti-rollback state содержит некорректную release version")
 		}
 		cmp := compareVersionTriple0158(cur, old)
 		if cmp < 0 {
-			return fmt.Errorf("релиз откат blocked: релиз=%s принят=%s", releaseVersion, s.HighestRelease)
+			return fmt.Errorf("release rollback blocked: release=%s accepted=%s", releaseVersion, s.HighestRelease)
 		}
 		if cmp == 0 && s.HighestReleaseManifestSHA256 != "" && !strings.EqualFold(s.HighestReleaseManifestSHA256, releaseManifestSHA256) {
-			return fmt.Errorf("одинаковый-версия релиз манифест несоответствие: релиз=%s acceptedSha256=%s candidateSha256=%s", releaseVersion, s.HighestReleaseManifestSHA256, strings.ToLower(releaseManifestSHA256))
+			return fmt.Errorf("same-version release manifest mismatch: release=%s acceptedSha256=%s candidateSha256=%s", releaseVersion, s.HighestReleaseManifestSHA256, strings.ToLower(releaseManifestSHA256))
 		}
 	}
 	return nil
@@ -340,10 +340,10 @@ func commitTrustState0158(ctx releaseVerificationV2Context) error {
 		return err
 	}
 	if s.RootFingerprint != "" && !strings.EqualFold(s.RootFingerprint, ctx.RootFingerprint) {
-		return errors.New("релиз доверие состояние привязан к другому корень ключ")
+		return errors.New("release trust state привязан к другому root key")
 	}
 	if ctx.Policy.Epoch < s.HighestTrustEpoch {
-		return fmt.Errorf("доверие эпоха откат во время состояние фиксация: политика=%d принят=%d", ctx.Policy.Epoch, s.HighestTrustEpoch)
+		return fmt.Errorf("trust epoch rollback during state commit: policy=%d accepted=%d", ctx.Policy.Epoch, s.HighestTrustEpoch)
 	}
 	if err := precheckTrustState0158(ctx.StatePath, ctx.RootFingerprint, ctx.Policy.Epoch, ctx.Envelope.ReleaseVersion, ctx.Envelope.ReleaseManifestSHA256); err != nil {
 		return err
@@ -381,26 +381,26 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		resolvedRoot = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if resolvedRoot == "" {
-		return releaseVerificationV2Context{}, errors.New("Релиз Проверка v2 требует внешний корень открытый ключ")
+		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует внешний root public key")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, resolvedRoot); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("корень якорь доверия: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("root trust anchor: %w", err)
 	}
 	if strings.TrimSpace(trustStatePath) == "" {
-		return releaseVerificationV2Context{}, errors.New("Релиз Проверка v2 требует постоянный --доверие-состояние или NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")
+		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует persistent --trust-state или NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, trustStatePath); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("доверие состояние: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("trust state: %w", err)
 	}
 	currentPolicyPath = strings.TrimSpace(currentPolicyPath)
 	if currentPolicyPath == "" {
 		currentPolicyPath = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE"))
 	}
 	if currentPolicyPath == "" {
-		return releaseVerificationV2Context{}, errors.New("Релиз Проверка v2 требует внешний текущий доверие политика через --доверие-политика или NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")
+		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует внешний current trust policy через --trust-policy или NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, currentPolicyPath); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("текущий доверие политика: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
 	}
 
 	now := time.Now().UTC()
@@ -410,21 +410,21 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	rootFP, err := verifyReleaseTrustPolicy0158(embeddedPolicy, resolvedRoot, now, false)
 	if err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("встроенный доверие политика: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("embedded trust policy: %w", err)
 	}
 	currentPolicy, err := loadReleaseTrustPolicy0158(currentPolicyPath)
 	if err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("текущий доверие политика: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
 	}
 	currentRootFP, err := verifyReleaseTrustPolicy0158(currentPolicy, resolvedRoot, now, true)
 	if err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("текущий доверие политика: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy: %w", err)
 	}
 	if !strings.EqualFold(rootFP, currentRootFP) {
-		return releaseVerificationV2Context{}, errors.New("embedded/current доверие политики используют разные корень якоря")
+		return releaseVerificationV2Context{}, errors.New("embedded/current trust policies используют разные root anchors")
 	}
 	if currentPolicy.Epoch < embeddedPolicy.Epoch {
-		return releaseVerificationV2Context{}, fmt.Errorf("текущий доверие политика откат: текущий=%d релиз=%d", currentPolicy.Epoch, embeddedPolicy.Epoch)
+		return releaseVerificationV2Context{}, fmt.Errorf("current trust policy rollback: current=%d release=%d", currentPolicy.Epoch, embeddedPolicy.Epoch)
 	}
 
 	raw, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS.sig"))
@@ -436,41 +436,41 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, err
 	}
 	if env.SchemaVersion != releaseSignatureSchema0158 || env.TrustDomain != releaseTrustDomain0158 || env.Algorithm != "Ed25519" || env.SignedFile != "SHA256SUMS" {
-		return releaseVerificationV2Context{}, errors.New("SHA256SUMS.sig не является Релиз Проверка v2 конверт")
+		return releaseVerificationV2Context{}, errors.New("SHA256SUMS.sig не является Release Verification v2 envelope")
 	}
 	if env.TrustEpoch != embeddedPolicy.Epoch {
-		return releaseVerificationV2Context{}, errors.New("релиз подпись trustEpoch не совпадает с встроенный политика")
+		return releaseVerificationV2Context{}, errors.New("release signature trustEpoch не совпадает с embedded policy")
 	}
 	signedAt, err := time.Parse(time.RFC3339Nano, env.SignedAt)
 	if err == nil {
 		if issued, e := time.Parse(time.RFC3339Nano, embeddedPolicy.IssuedAt); e != nil || signedAt.Before(issued.Add(-5*time.Minute)) {
-			err = errors.New("подпись predates доверие политика")
+			err = errors.New("signature predates trust policy")
 		}
 		if embeddedPolicy.ExpiresAt != "" {
 			if expires, e := time.Parse(time.RFC3339Nano, embeddedPolicy.ExpiresAt); e != nil || !signedAt.Before(expires) {
-				err = errors.New("подпись вне доверие политика validity")
+				err = errors.New("signature outside trust policy validity")
 			}
 		}
 	}
 	if err != nil || signedAt.After(now.Add(5*time.Minute)) {
-		return releaseVerificationV2Context{}, errors.New("релиз подпись signedAt недопустимый")
+		return releaseVerificationV2Context{}, errors.New("release signature signedAt invalid")
 	}
 
-	// релиз-время политика должен показывать подписант как активный. текущий
-	// политика может сохранять это active/verify-only, но позже отзыв wins.
+	// The release-time policy must show the signer as active. The current
+	// policy may keep it active/verify-only, but a later revocation wins.
 	embeddedKey, err := trustedReleaseKeyRecord0158(embeddedPolicy, env.KeyID, env.KeyFingerprint)
 	if err != nil {
 		return releaseVerificationV2Context{}, err
 	}
 	if embeddedKey.Status != "active" {
-		return releaseVerificationV2Context{}, fmt.Errorf("релиз-время подписант был не активный: %s", embeddedKey.Status)
+		return releaseVerificationV2Context{}, fmt.Errorf("release-time signer was not active: %s", embeddedKey.Status)
 	}
 	pub, err := findTrustedReleaseKey0158(currentPolicy, env.KeyID, env.KeyFingerprint, signedAt)
 	if err != nil {
 		return releaseVerificationV2Context{}, err
 	}
 	if !strings.EqualFold(embeddedKey.PublicKey, hex.EncodeToString(pub)) {
-		return releaseVerificationV2Context{}, errors.New("релиз ключ материал изменён между embedded/current доверие политика")
+		return releaseVerificationV2Context{}, errors.New("release key material changed between embedded/current trust policy")
 	}
 
 	sums, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
@@ -479,7 +479,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	sum := sha256.Sum256(sums)
 	if !strings.EqualFold(env.SHA256, hex.EncodeToString(sum[:])) {
-		return releaseVerificationV2Context{}, errors.New("Релиз v2 SHA256SUMS хеш несоответствие")
+		return releaseVerificationV2Context{}, errors.New("Release v2 SHA256SUMS digest mismatch")
 	}
 	manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
 	if err != nil {
@@ -487,7 +487,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	}
 	manifestSum := sha256.Sum256(manifestRaw)
 	if !strings.EqualFold(env.ReleaseManifestSHA256, hex.EncodeToString(manifestSum[:])) {
-		return releaseVerificationV2Context{}, errors.New("Релиз v2 RELEASE_MANIFEST хеш несоответствие")
+		return releaseVerificationV2Context{}, errors.New("Release v2 RELEASE_MANIFEST digest mismatch")
 	}
 	var m struct {
 		Version string `json:"version"`
@@ -496,21 +496,21 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, err
 	}
 	if env.ReleaseVersion != m.Version {
-		return releaseVerificationV2Context{}, errors.New("Релиз v2 версия привязка несоответствие")
+		return releaseVerificationV2Context{}, errors.New("Release v2 version binding mismatch")
 	}
 	sig, err := base64.StdEncoding.DecodeString(env.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return releaseVerificationV2Context{}, errors.New("Релиз v2 подпись encoding недопустимый")
+		return releaseVerificationV2Context{}, errors.New("Release v2 signature encoding invalid")
 	}
 	payload, err := releaseSignaturePayload0158(env)
 	if err != nil {
 		return releaseVerificationV2Context{}, err
 	}
 	if !ed25519.Verify(pub, payload, sig) {
-		return releaseVerificationV2Context{}, errors.New("Релиз v2 Ed25519 проверка ошибка")
+		return releaseVerificationV2Context{}, errors.New("Release v2 Ed25519 verification failed")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), pub); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("Релиз v2 происхождение: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("Release v2 provenance: %w", err)
 	}
 	if err := precheckTrustState0158(trustStatePath, rootFP, currentPolicy.Epoch, env.ReleaseVersion, env.ReleaseManifestSHA256); err != nil {
 		return releaseVerificationV2Context{}, err
@@ -524,7 +524,7 @@ func trustedReleaseKeyRecord0158(policy releaseTrustPolicy0158, id, fp string) (
 			return k, nil
 		}
 	}
-	return releaseTrustKey0158{}, fmt.Errorf("релиз ключ отсутствует в доверие политика: ID=%s отпечаток=%s", id, fp)
+	return releaseTrustKey0158{}, fmt.Errorf("release key отсутствует в trust policy: id=%s fingerprint=%s", id, fp)
 }
 
 func signReleaseBundleV20158(dir string, privateKey ed25519.PrivateKey) error {
@@ -544,7 +544,7 @@ func signReleaseBundleV20158(dir string, privateKey ed25519.PrivateKey) error {
 		}
 	}
 	if !found || key.Status != "active" {
-		return errors.New("ключ подписи не является активный релиз ключ текущего доверие политика")
+		return errors.New("signing key не является active release key текущего trust policy")
 	}
 	sums, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {
@@ -585,11 +585,11 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		return nil, err
 	}
 	if reg.TrustEpoch == 0 {
-		return nil, errors.New("реестр trustEpoch=0; сначала создайте/ротируйте release-ключ подписи")
+		return nil, errors.New("registry trustEpoch=0; сначала создайте/ротируйте release-signing key")
 	}
 	rootPrivatePath := flagValue(args, "--root-private-key", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_ROOT_PRIVATE_KEY_FILE")))
 	if rootPrivatePath == "" {
-		return nil, errors.New("доверие-политика требует --корень-закрытый-ключ")
+		return nil, errors.New("trust-policy требует --root-private-key")
 	}
 	rootPriv, err := loadEd25519PrivateKey(rootPrivatePath)
 	if err != nil {
@@ -600,7 +600,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 	if v := flagValue(args, "--expires-hours", ""); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			return nil, errors.New("--истекает-hours недопустимый")
+			return nil, errors.New("--expires-hours invalid")
 		}
 		expiresHours = n
 	}
@@ -611,12 +611,12 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		}
 		pub, err := loadEd25519PublicKey(rec.PublicKeyFile)
 		if err != nil {
-			return nil, fmt.Errorf("ключ %s: %w", rec.ID, err)
+			return nil, fmt.Errorf("key %s: %w", rec.ID, err)
 		}
 		policy.Keys = append(policy.Keys, releaseTrustKey0158{ID: rec.ID, Purpose: rec.Purpose, Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Fingerprint: rec.Fingerprint, Status: rec.Status, NotBefore: rec.CreatedAt, RetiredAt: rec.RetiredAt, RevokedAt: rec.RevokedAt, ReplacedBy: rec.ReplacedBy})
 	}
 	if len(policy.Keys) == 0 {
-		return nil, errors.New("реестр не содержит release-ключи подписи")
+		return nil, errors.New("registry не содержит release-signing keys")
 	}
 	active := 0
 	for _, k := range policy.Keys {
@@ -625,7 +625,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		}
 	}
 	if active == 0 {
-		return nil, errors.New("реестр не содержит активный release-ключ подписи")
+		return nil, errors.New("registry не содержит active release-signing key")
 	}
 	sort.Slice(policy.Keys, func(i, j int) bool { return policy.Keys[i].ID < policy.Keys[j].ID })
 	payload, err := releaseTrustPolicyPayload0158(policy)
@@ -636,7 +636,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 	rootFP := fingerprintEd255190158(rootPub)
 	for _, k := range policy.Keys {
 		if strings.EqualFold(k.Fingerprint, rootFP) {
-			return nil, errors.New("автономный корень ключ не может одновременно быть release-ключ подписи")
+			return nil, errors.New("offline root key не может одновременно быть release-signing key")
 		}
 	}
 	policy.RootSignature = &releaseTrustRootSignature0158{Algorithm: "Ed25519", RootFingerprint: rootFP, Signature: base64.StdEncoding.EncodeToString(ed25519.Sign(rootPriv, payload)), SignedAt: now.Format(time.RFC3339Nano)}

@@ -1,7 +1,7 @@
--- NeverLauncher 0.19.7: ServerBridge Игрок Сессия Интеграционный 3.
--- Correlates лаунчер -> прокси -> серверная часть игровой сессии, записывает упорядоченный
--- переход hops, предотвращает активный-сессия клонирование и поддерживает топология-wide
--- отключаться через существующий долговременный Управление API.
+-- NeverLauncher 0.19.7: ServerBridge Player Session Integration 3.
+-- Correlates launcher -> proxy -> backend gameplay sessions, records ordered
+-- transfer hops, prevents active-session cloning and supports topology-wide
+-- disconnect through the existing durable Control API.
 
 ALTER TABLE server_bridge_join_tickets_v2
     ADD COLUMN IF NOT EXISTS session_correlation_id TEXT NOT NULL DEFAULT '';
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS server_bridge_player_sessions_v3 (
     CHECK ((backend_node_id IS NULL AND backend_runtime_id='' AND backend_runtime_epoch=0) OR (backend_node_id IS NOT NULL AND backend_runtime_id ~ '^[0-9a-f]{64}$' AND backend_runtime_epoch>0))
 );
 
--- Один Never/Minecraft учётные данные может имеют только один активный игровой корреляция.
+-- One Never/Minecraft credential may have only one active gameplay correlation.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_player_never_session_active_0197
     ON server_bridge_player_sessions_v3(never_session_id, player_uuid)
     WHERE status='active';

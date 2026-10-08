@@ -53,4 +53,4 @@ for example in ("backend-health","cli-status","admin-dashboard","desktop-tool"):
     root=ROOT/"examples/extensions"/example
     require((root/"neverlauncher-extension.json").is_file(), f"missing example {example}")
 
-print("NeverExtensions SDK 0.20.10 рабочий контроль: OK")
+print("NeverExtensions SDK 0.20.10 production gate: OK")

@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// Конфигурация содержит настройки Серверная часть API.
+// Config содержит настройки Backend API.
 type Config struct {
 	HTTPAddr                                     string
 	PublicURL                                    string
@@ -184,7 +184,7 @@ func bridgeReleaseRequiresUniversalAdapters0198(version string) bool {
 	return err == nil && patch >= 8
 }
 
-// Загрузка читает конфигурацию из переменных окружения.
+// Load читает конфигурацию из переменных окружения.
 func Load() Config {
 	environment := env("NEVERLAUNCHER_ENV", "dev")
 	redisAddr := normalizeRedisAddr(env("NEVERLAUNCHER_REDIS_ADDR", env("NEVERLAUNCHER_REDIS_URL", "localhost:6379")))
@@ -313,7 +313,7 @@ func IsProductionEnvironment(environment string) bool {
 }
 
 // ValidateProduction проверяет конфигурацию, которую нельзя безопасно исправить fallback-логикой.
-// В рабочий ошибки считаются фатальными и должны останавливать запуск API.
+// В production ошибки считаются фатальными и должны останавливать запуск API.
 func ValidateProduction(cfg Config) error {
 	if !IsProductionEnvironment(cfg.Environment) {
 		return nil
@@ -423,9 +423,9 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 
-	// Рабочий загружен через Загрузка() всегда содержит явный rate-ограничение
-	// политика. Требовать Redis-основанный отказ с блокировкой ограничение there; все-zero случай
-	// является сохранённый только для backwards-compatible прямой Конфигурация construction в
+	// Production loaded through Load() always carries an explicit rate-limit
+	// policy. Require Redis-backed fail-closed limiting there; the all-zero case
+	// is retained only for backwards-compatible direct Config construction in
 	// unit/integration harnesses.
 	haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
 	if haPolicySpecified {

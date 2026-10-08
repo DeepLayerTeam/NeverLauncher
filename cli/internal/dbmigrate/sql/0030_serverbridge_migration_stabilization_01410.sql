@@ -1,11 +1,11 @@
--- NeverLauncher 0.14.10: ServerBridge миграция + стабилизация.
--- Этот миграция сохраняет 0.14.1-0.14.9 protocol/data модель intact пока
--- запечатывать истёкший временный строки и добавляя индексы для фактический 0.14.8+
--- передача lookup/maintenance пути. Нет узел идентичности, билеты тот являются по-прежнему
--- действительный, топология привязка, или релиз-целостность состояние являются перезаписан.
+-- NeverLauncher 0.14.10: ServerBridge migration + stabilization.
+-- This migration keeps the 0.14.1-0.14.9 protocol/data model intact while
+-- sealing expired transient rows and adding indexes for the actual 0.14.8+
+-- handoff lookup/maintenance paths. No node identities, tickets that are still
+-- valid, topology bindings, or release-integrity state are rewritten.
 
--- Нормализовать временный строки тот может имеют оставаться активный когда 0.14.9 реплики
--- были остановлен до их opportunistic обслуживание успешно ran.
+-- Normalize transient rows that may have remained active when 0.14.9 replicas
+-- were stopped before their opportunistic maintenance pass ran.
 UPDATE server_bridge_join_tickets_v2
 SET status='invalidated', invalidated_at=COALESCE(invalidated_at, now())
 WHERE status='active' AND expires_at <= now();
@@ -21,17 +21,17 @@ WHERE status='active' AND last_seen_at <= now() - interval '5 minutes';
 DELETE FROM server_bridge_node_nonces_v2
 WHERE expires_at <= now();
 
--- Исходник-доказательство поиск используется когда прокси mints серверная часть передача. Этот avoids 
--- growing sort над полный билет история на long-lived установка.
+-- Source-proof lookup used when a proxy mints a backend handoff. This avoids a
+-- growing sort over the complete ticket history on long-lived installations.
 CREATE INDEX IF NOT EXISTS idx_server_bridge_join_consumed_source_01410
     ON server_bridge_join_tickets_v2(server_id, username_normalized, consumed_at DESC)
     WHERE status='consumed';
 
--- Цель разрешение принимает канонический узел ID или среда выполнения серверная часть имя.
+-- Target resolution accepts a canonical node id or runtime backend name.
 CREATE INDEX IF NOT EXISTS idx_server_bridge_nodes_name_folded_01410
     ON server_bridge_nodes_v2(lower(name), id);
 
--- Ограниченный хранение очистка scans конечный строки через age, не через primary ключ.
+-- Bounded retention cleanup scans terminal rows by age, not by the primary key.
 CREATE INDEX IF NOT EXISTS idx_server_bridge_join_terminal_retention_01410
     ON server_bridge_join_tickets_v2(COALESCE(consumed_at, invalidated_at, expires_at), id)
     WHERE status IN ('consumed','invalidated','replaced');

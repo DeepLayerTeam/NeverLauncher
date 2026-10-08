@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class NeverLauncherApiClient {
-    // Устаревший серверная часть совместимость является на стороне сервера только; сохранённый здесь как миграция происхождение для 0.14.2 подписание lineage.
+    // Legacy backend compatibility is server-side only; retained here as migration provenance for the 0.14.2 signing lineage.
     private static final String LEGACY_NODE_SIGNATURE_DOMAIN = "NeverLauncher-ServerBridge-Node-v1";
     private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION);
     private static final List<String> SUPPORTED_FEATURES = List.of(
@@ -175,8 +175,8 @@ public final class NeverLauncherApiClient {
         InterruptedException lastInterrupted = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
             try {
-                // повторить является новый аутентифицировать запрос с актуальный одноразовое значение. Повторное использование
-                // подписанный запрос будет корректно быть отклонён как повторное воспроизведение.
+                // A retry is a new authenticated request with a fresh nonce. Reusing
+                // a signed request would correctly be rejected as a replay.
                 HttpResponse<String> response = sendSignedWithFailover("POST", config.validateJoinPath(), body);
                 String raw = response.body() == null ? "" : response.body();
                 boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
@@ -357,7 +357,7 @@ public final class NeverLauncherApiClient {
         }
     }
 
-    /** Enqueue individually подписанный событие без blocking game/proxy поток на HTTP. */
+    /** Enqueue an individually signed event without blocking the game/proxy thread on HTTP. */
     public boolean publishEvent(String type, Map<String, String> payload) {
         BridgeEventJournal journal = eventJournal;
         if (journal == null || eventClosed.get()) return false;
@@ -385,7 +385,7 @@ public final class NeverLauncherApiClient {
         flushEventStream();
     }
 
-    /** Запуск аутентифицировать Серверная часть -> Мост управление обработчик. Выполнение является сериализованный и в-большинство-один раз на команда журнал. */
+    /** Start the authenticated Backend -> Bridge control worker. Execution is serialized and at-most-once per command journal. */
     public synchronized void startControlChannel(BridgeControlExecutor executor) {
         if (executor == null) throw new IllegalArgumentException("control executor is required");
         if (runtimeIdentity == null || identity == null || controlJournal == null || controlTrust == null) return;
@@ -507,7 +507,7 @@ public final class NeverLauncherApiClient {
         controlJournal.acknowledgeSequence(command.deliverySequence());
     }
 
-    /** Best-effort итоговый flush; журнал остаётся авторитетный если серверная часть является недоступный. */
+    /** Best-effort final flush; the journal remains authoritative if the backend is unavailable. */
     public void closeEventStreamCleanly() {
         closeControlChannel();
         if (!eventClosed.compareAndSet(false, true)) return;
@@ -603,8 +603,8 @@ public final class NeverLauncherApiClient {
                     last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
                     continue;
                 }
-                // Authentication/authorization ошибка являются намеренно конечный: failover должен
-                // никогда turn отклонён подписанный запрос в implicit отказ с разрешением повторить политика.
+                // Authentication/authorization failures are deliberately terminal: failover must
+                // never turn a rejected signed request into an implicit fail-open retry policy.
                 backendPool.success(endpoint.index());
                 return response;
             } catch (IOException e) {

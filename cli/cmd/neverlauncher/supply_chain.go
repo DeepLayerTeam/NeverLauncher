@@ -341,7 +341,7 @@ func slsaProvenance(sourceRoot, artifactDir, ver string, sourceCommit ...string)
 		p := filepath.Join(sourceRoot, rel)
 		sum, _, err := hashFile(p)
 		if err != nil {
-			return nil, fmt.Errorf("происхождение материал %s: %w", rel, err)
+			return nil, fmt.Errorf("provenance material %s: %w", rel, err)
 		}
 		materials = append(materials, map[string]any{"uri": "file://" + filepath.ToSlash(rel), "digest": map[string]string{"sha256": sum}})
 	}
@@ -376,5 +376,5 @@ func resolveRepositoryRoot(candidate string) (string, error) {
 		}
 		start = next
 	}
-	return "", fmt.Errorf("не найден корень NeverLauncher репозиторий от %s", candidate)
+	return "", fmt.Errorf("не найден корень NeverLauncher repository от %s", candidate)
 }

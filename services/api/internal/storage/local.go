@@ -26,7 +26,7 @@ func NewLocalStorage(root string) *LocalStorage {
 
 func (s *LocalStorage) Driver() string { return "local" }
 
-// RootPath возвращает канонический локальный-хранилище корень для обслуживание восстановление.
+// RootPath возвращает canonical local-storage root для maintenance restore.
 func (s *LocalStorage) RootPath() string { return s.root }
 
 func (s *LocalStorage) Save(projectID, versionID, relativePath string, reader io.Reader) (string, int64, error) {
@@ -140,14 +140,14 @@ func safeSegment(value, name string) (string, error) {
 func safeRelativePath(value string) (string, error) {
 	value = strings.TrimSpace(filepath.ToSlash(value))
 	if value == "" || value == "." {
-		return "", errors.New("путь обязателен")
+		return "", errors.New("path обязателен")
 	}
 	if strings.HasPrefix(value, "/") || strings.Contains(value, "\\") {
-		return "", errors.New("путь должен быть относительным POSIX-путём")
+		return "", errors.New("path должен быть относительным POSIX-путём")
 	}
 	clean := filepath.ToSlash(filepath.Clean(value))
 	if clean == "." || strings.HasPrefix(clean, "../") || clean == ".." || strings.Contains(clean, "/../") {
-		return "", errors.New("путь выходит за пределы хранилища")
+		return "", errors.New("path выходит за пределы хранилища")
 	}
 	return clean, nil
 }

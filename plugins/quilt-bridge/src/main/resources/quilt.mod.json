@@ -4,22 +4,11 @@
     "group": "ru.neverlauncher",
     "id": "neverlauncher_quilt_bridge",
     "version": "${version}",
-    "metadata": {
-      "name": "NeverLauncher Quilt Server Bridge",
-      "description": "Quilt Загрузчик ServerBridge адаптер"
-    },
+    "metadata": {"name": "NeverLauncher Quilt Server Bridge", "description": "Quilt Loader ServerBridge adapter"},
     "depends": [
-      {
-        "id": "quilt_loader",
-        "versions": ">=0.26.0"
-      },
-      {
-        "id": "minecraft",
-        "versions": "~1.21.1"
-      }
+      {"id": "quilt_loader", "versions": ">=0.26.0"},
+      {"id": "minecraft", "versions": "~1.21.1"}
     ]
   },
-  "minecraft": {
-    "environment": "dedicated_server"
-  }
+  "minecraft": {"environment": "dedicated_server"}
 }

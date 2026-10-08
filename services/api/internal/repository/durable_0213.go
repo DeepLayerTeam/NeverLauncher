@@ -15,13 +15,13 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-var ErrLeaseBusy = errors.New("долговременный область аренда busy")
-var ErrLeaseLost = errors.New("долговременный аренда потерянный")
+var ErrLeaseBusy = errors.New("durable scope lease busy")
+var ErrLeaseLost = errors.New("durable lease lost")
 
-// DurableControlPlane является implemented через репозиторий тот может сохранять работа,
-// ограждение аренды, транзакционный публикация и исходящая очередь доставка через процесс
-// перезапуски. PostgreSQL и детерминированный в памяти процесса тест репозиторий implement
-// одинаковый семантика; рабочий использует PostgreSQL.
+// DurableControlPlane is implemented by repositories that can persist work,
+// fencing leases, transactional publication and outbox delivery across process
+// restarts. PostgreSQL and the deterministic in-memory test repository implement
+// the same semantics; production uses PostgreSQL.
 type DurableControlPlane interface {
 	EnqueueDurableJob(ctx context.Context, job model.DurableJob, ttl time.Duration) (model.DurableJob, bool, error)
 	GetDurableJob(ctx context.Context, id string) (model.DurableJob, error)
@@ -62,14 +62,14 @@ func normalizeDurableJob0213(job model.DurableJob) (model.DurableJob, error) {
 	job.ResourceID = strings.TrimSpace(job.ResourceID)
 	job.IdempotencyKey = strings.TrimSpace(job.IdempotencyKey)
 	if job.Kind == "" || job.ActorType == "" || job.ActorID == "" || job.Action == "" || job.ResourceType == "" || job.ResourceID == "" || job.IdempotencyKey == "" {
-		return model.DurableJob{}, errors.New("долговременная задача identity/action/resource/idempotency fields являются обязательный")
+		return model.DurableJob{}, errors.New("durable job identity/action/resource/idempotency fields are required")
 	}
 	if len(job.Payload) == 0 {
 		job.Payload = json.RawMessage(`{}`)
 	}
 	var canonical any
 	if err := json.Unmarshal(job.Payload, &canonical); err != nil {
-		return model.DurableJob{}, fmt.Errorf("недопустимый долговременная задача полезная нагрузка: %w", err)
+		return model.DurableJob{}, fmt.Errorf("invalid durable job payload: %w", err)
 	}
 	payload, err := json.Marshal(canonical)
 	if err != nil {
@@ -142,8 +142,8 @@ func (r *SQLRepository) EnqueueDurableJob(ctx context.Context, job model.Durable
 	}
 	defer tx.Rollback()
 
-	// явный идемпотентность ledger предотвращает accidental re-использовать вызывающая сторона ключ
-	// с другой запрос байты. job's собственный уникальный ключ является второй защита.
+	// The explicit idempotency ledger prevents accidental re-use of a caller key
+	// with different request bytes. The job's own unique key is a second guard.
 	res, err := tx.ExecContext(ctx, `INSERT INTO idempotency_records(scope,idempotency_key,request_digest,status,response,created_at,updated_at,expires_at)
 VALUES($1,$2,$3,'in-progress',$4::jsonb,now(),now(),$5)
 ON CONFLICT(scope,idempotency_key) DO NOTHING`, durableJobIdempotencyScope0213(job), job.IdempotencyKey, job.PayloadDigest, `{"jobId":"`+job.ID+`"}`, time.Now().UTC().Add(ttl))
@@ -207,14 +207,14 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		ttl = 30 * time.Second
 	}
 	if strings.TrimSpace(worker) == "" {
-		return model.DurableJob{}, errors.New("обработчик ID обязательный")
+		return model.DurableJob{}, errors.New("worker id required")
 	}
 	var current model.DurableJob
 	var err error
 	if id != "" {
 		current, err = scanDurableJob0213(tx.QueryRowContext(ctx, `SELECT `+durableJobColumns0213+` FROM durable_jobs WHERE id=$1 FOR UPDATE`, id))
 	} else {
-		return model.DurableJob{}, errors.New("задача ID обязательный")
+		return model.DurableJob{}, errors.New("job id required")
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DurableJob{}, ErrNotFound
@@ -230,8 +230,8 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		return current, ErrLeaseBusy
 	}
 	if current.Status == model.DurableJobStatusRunning && !current.LeaseExpiresAt.After(now) && current.AttemptCount > 0 {
-		// Закрытие abandoned попытка до ограждение замена обработчик. Leaving
-		// это marked работающий будет создавать восстановление после перезапуска operationally ambiguous.
+		// Close the abandoned attempt before fencing a replacement worker. Leaving
+		// it marked running would make restart recovery operationally ambiguous.
 		if _, err := tx.ExecContext(ctx, `UPDATE durable_job_attempts SET status='failed',error='lease expired; recovered by another worker',finished_at=$3 WHERE job_id=$1 AND attempt=$2 AND status='running'`, current.ID, current.AttemptCount, now); err != nil {
 			return model.DurableJob{}, err
 		}
@@ -396,7 +396,7 @@ func (r *SQLRepository) FailDurableJob(ctx context.Context, id, leaseToken, work
 
 func (r *SQLRepository) TerminateDurableJob(ctx context.Context, id, leaseToken, terminalStatus, reason string) (model.DurableJob, error) {
 	if terminalStatus != model.DurableJobStatusRevoked && terminalStatus != model.DurableJobStatusFailed && terminalStatus != model.DurableJobStatusDead {
-		return model.DurableJob{}, errors.New("недопустимый конечный задача состояние")
+		return model.DurableJob{}, errors.New("invalid terminal job status")
 	}
 	if err := r.check(); err != nil {
 		return model.DurableJob{}, err
@@ -439,7 +439,7 @@ func (r *SQLRepository) AcquireDurableScopeLease(ctx context.Context, scopeKey, 
 	}
 	scopeKey, owner = strings.TrimSpace(scopeKey), strings.TrimSpace(owner)
 	if scopeKey == "" || owner == "" {
-		return model.DurableScopeLease{}, errors.New("область ключ и владелец обязательный")
+		return model.DurableScopeLease{}, errors.New("scope key and owner required")
 	}
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
@@ -738,7 +738,7 @@ func (r *SQLRepository) ConsumeDurableNonce(ctx context.Context, namespace, nonc
 	namespace = strings.TrimSpace(namespace)
 	nonceHash = strings.ToLower(strings.TrimSpace(nonceHash))
 	if namespace == "" || len(nonceHash) != 64 {
-		return errors.New("недопустимый долговременный одноразовое значение")
+		return errors.New("invalid durable nonce")
 	}
 	if expiresAt.IsZero() || !expiresAt.After(time.Now().UTC()) {
 		expiresAt = time.Now().UTC().Add(24 * time.Hour)
@@ -752,9 +752,9 @@ func (r *SQLRepository) ConsumeDurableNonce(ctx context.Context, namespace, nonc
 		return err
 	}
 	defer tx.Rollback()
-	// Истечение является part одноразовое значение контракт, не всего лишь хранение метаданные. Удалять
-	// истёкший соответствовать одноразовое значение под одинаковый транзакция до попытка 
-	// одноразовый insert; актуальный одноразовое значение остаётся конфликт-защищать через реплики.
+	// Expiry is part of the nonce contract, not merely retention metadata. Remove
+	// an expired matching nonce under the same transaction before attempting the
+	// single-use insert; a live nonce remains conflict-protected across replicas.
 	if _, err := tx.ExecContext(ctx, `DELETE FROM used_nonces WHERE namespace=$1 AND nonce_hash=$2 AND expires_at<=now()`, namespace, nonceHash); err != nil {
 		return err
 	}

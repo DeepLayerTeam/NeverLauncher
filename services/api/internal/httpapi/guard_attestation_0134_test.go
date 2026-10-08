@@ -50,8 +50,8 @@ func TestCanonicalGuardAttestationTime0134MatchesPostgresPrecision(t *testing.T)
 	if got := canonical.Format(time.RFC3339Nano); got != "2026-09-27T15:41:15.123456Z" {
 		t.Fatalf("canonical RFC3339Nano=%q", got)
 	}
-	// pgx/PostgreSQL TIMESTAMPTZ хранит microseconds, так DB round-trip должен
-	// не изменять запрос привязка string возвращён через begin.
+	// pgx/PostgreSQL TIMESTAMPTZ stores microseconds, so a DB round-trip must
+	// not change the challenge binding string returned by begin.
 	postgresRoundTrip := time.Unix(canonical.Unix(), int64(canonical.Nanosecond()/1000)*1000).UTC()
 	if got, want := postgresRoundTrip.Format(time.RFC3339Nano), canonical.Format(time.RFC3339Nano); got != want {
 		t.Fatalf("PostgreSQL round-trip changed Guard timestamp: got=%q want=%q", got, want)

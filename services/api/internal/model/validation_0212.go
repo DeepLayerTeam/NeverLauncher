@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// IntegrityCheckResult записывает на стороне сервера проверка конкретный пакет
-// байты сейчас сохранённый для релиз. Это является намеренно не среда выполнения доказательство.
+// IntegrityCheckResult records a server-side verification of the exact package
+// bytes currently stored for a release. It is intentionally not runtime proof.
 type IntegrityCheckResult struct {
 	ID                    string           `json:"id"`
 	PackageID             string           `json:"packageId"`
@@ -19,8 +19,8 @@ type IntegrityCheckResult struct {
 	CheckedAt             time.Time        `json:"checkedAt"`
 }
 
-// RuntimeValidationResult является принят только после проверка подписанный среда выполнения
-// свидетельство и является привязанный к точный package/manifest хеш.
+// RuntimeValidationResult is accepted only after verification of signed runtime
+// evidence and is bound to an exact package/manifest digest.
 type RuntimeValidationResult struct {
 	ID                   string            `json:"id"`
 	PackageID            string            `json:"packageId"`
@@ -47,8 +47,8 @@ type RuntimeValidationResult struct {
 	CreatedAt            time.Time         `json:"createdAt"`
 }
 
-// TrustAssessment является канонический доверие view. Уверенность остаётся устаревший
-// совместимость field на TrustedDevice и должен не collapse эти dimensions.
+// TrustAssessment is the canonical trust view. Assurance remains a legacy
+// compatibility field on TrustedDevice and must not collapse these dimensions.
 type TrustAssessment struct {
 	KeyPossession            string    `json:"keyPossession"`
 	LocalHardwareBinding     string    `json:"localHardwareBinding"`
@@ -61,7 +61,7 @@ type TrustAssessment struct {
 	EvidenceExpiresAt        time.Time `json:"evidenceExpiresAt,omitempty"`
 }
 
-// ProjectValidationPolicy средства управления minimum свидетельство обязательный к публикация.
+// ProjectValidationPolicy controls the minimum evidence required to publish.
 type ProjectValidationPolicy struct {
 	ProjectID         string    `json:"projectId"`
 	RequiredLevel     string    `json:"requiredLevel"`

@@ -106,50 +106,50 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 		return err
 	}
 	if cert.SchemaVersion != "1.0" || cert.Kind != "neverlauncher-windows-adversarial-certification" || cert.ProductVersion != ver {
-		return errors.New("Windows атакующий сертификат идентичность несоответствие")
+		return errors.New("Windows adversarial certificate identity mismatch")
 	}
 	if !strings.EqualFold(cert.Repository, windowsProtectionRepository01812) {
-		return fmt.Errorf("Windows атакующий сертификат репозиторий несоответствие: %q", cert.Repository)
+		return fmt.Errorf("Windows adversarial certificate repository mismatch: %q", cert.Repository)
 	}
 	certCommit, err := normalizeSourceCommit01511(cert.Commit)
 	if err != nil || !strings.EqualFold(certCommit, commit) {
-		return errors.New("Windows атакующий сертификат исходник фиксация несоответствие")
+		return errors.New("Windows adversarial certificate source commit mismatch")
 	}
 	if cert.Platform != "windows-x86_64" {
-		return fmt.Errorf("Windows атакующий сертификат платформа несоответствие: %q", cert.Platform)
+		return fmt.Errorf("Windows adversarial certificate platform mismatch: %q", cert.Platform)
 	}
 	if _, err := strconv.ParseUint(strings.TrimSpace(cert.RunID), 10, 64); err != nil {
-		return fmt.Errorf("Windows атакующий сертификат runId недопустимый: %q", cert.RunID)
+		return fmt.Errorf("Windows adversarial certificate runId invalid: %q", cert.RunID)
 	}
 	expectedJava := []int{8, 16, 17, 21, 25}
 	if len(cert.JavaMajors) != len(expectedJava) || len(cert.JavaEvidence) != len(expectedJava) {
-		return errors.New("Windows атакующий сертификат Java группа размер несоответствие")
+		return errors.New("Windows adversarial certificate Java cohort size mismatch")
 	}
 	for i, major := range expectedJava {
 		if cert.JavaMajors[i] != major || cert.JavaEvidence[i].JavaMajor != major || !sha256RE01812.MatchString(strings.ToLower(cert.JavaEvidence[i].EvidenceRootSHA256)) {
-			return fmt.Errorf("Windows атакующий сертификат Java %d свидетельство несоответствие", major)
+			return fmt.Errorf("Windows adversarial certificate Java %d evidence mismatch", major)
 		}
 	}
 	if cert.RequiredJavaMajorCount != 5 || cert.PassedJavaMajorCount != 5 || cert.ScenarioExecutions != 55 {
-		return errors.New("Windows атакующий сертификат выполнение группа несоответствие")
+		return errors.New("Windows adversarial certificate execution cohort mismatch")
 	}
 	expectedCompatibility := []string{"sensor-early-load", "trusted-module-lifecycle", "continuous-cross-check", "job-bound-process-tree", "hotspot-jit"}
 	expectedAdversarial := []string{"unsigned-module", "code-page-drift", "private-exec-thread", "startup-instrumentation", "live-debugger", "foreign-executable-allocation"}
 	if len(cert.CompatibilityScenarios) != len(expectedCompatibility) || len(cert.AdversarialScenarios) != len(expectedAdversarial) {
-		return errors.New("Windows атакующий сертификат scenario задать размер несоответствие")
+		return errors.New("Windows adversarial certificate scenario set size mismatch")
 	}
 	for i := range expectedCompatibility {
 		if cert.CompatibilityScenarios[i] != expectedCompatibility[i] {
-			return fmt.Errorf("Windows атакующий совместимость scenario #%d несоответствие", i+1)
+			return fmt.Errorf("Windows adversarial compatibility scenario #%d mismatch", i+1)
 		}
 	}
 	for i := range expectedAdversarial {
 		if cert.AdversarialScenarios[i] != expectedAdversarial[i] {
-			return fmt.Errorf("Windows атакующий scenario #%d несоответствие", i+1)
+			return fmt.Errorf("Windows adversarial scenario #%d mismatch", i+1)
 		}
 	}
 	if !sha256RE01812.MatchString(strings.ToLower(cert.EvidenceRootSHA256)) {
-		return errors.New("Windows атакующий сертификат свидетельство корень недопустимый")
+		return errors.New("Windows adversarial certificate evidence root invalid")
 	}
 	rootMaterial := make([]map[string]any, 0, len(cert.JavaEvidence))
 	for _, row := range cert.JavaEvidence {
@@ -161,18 +161,18 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 	}
 	rootDigest := sha256.Sum256(canonical)
 	if !strings.EqualFold(hex.EncodeToString(rootDigest[:]), cert.EvidenceRootSHA256) {
-		return errors.New("Windows атакующий сертификат агрегат свидетельство корень несоответствие")
+		return errors.New("Windows adversarial certificate aggregate evidence root mismatch")
 	}
 	for _, key := range []string{
 		"allCertifiedJavaMajorsPassed", "allCompatibilityScenariosPassed", "allAdversarialScenariosDetected",
 		"sensorGuardContinuousCrossCheckPassed", "failClosedAttackBoundaryPassed", "exactScenarioSetBound", "sensorAndFixtureHashesBound",
 	} {
 		if !cert.Invariants[key] {
-			return fmt.Errorf("Windows атакующий сертификат инвариант %s является не satisfied", key)
+			return fmt.Errorf("Windows adversarial certificate invariant %s is not satisfied", key)
 		}
 	}
 	if cert.Policy != "windows-adversarial-ci-0.18.11-live-jvm-attack-simulation-and-java-compatibility-certification" {
-		return fmt.Errorf("Windows атакующий сертификат политика несоответствие: %q", cert.Policy)
+		return fmt.Errorf("Windows adversarial certificate policy mismatch: %q", cert.Policy)
 	}
 	return nil
 }
@@ -181,11 +181,11 @@ func readWindowsAdversarialCertificate01812(dir, ver, expectedCommit string) (wi
 	path := filepath.Join(dir, windowsAdversarialCertificateFile01811)
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return windowsAdversarialCertificate01812{}, "", fmt.Errorf("чтение %s: %w", windowsAdversarialCertificateFile01811, err)
+		return windowsAdversarialCertificate01812{}, "", fmt.Errorf("read %s: %w", windowsAdversarialCertificateFile01811, err)
 	}
 	var cert windowsAdversarialCertificate01812
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return cert, "", fmt.Errorf("недопустимый %s: %w", windowsAdversarialCertificateFile01811, err)
+		return cert, "", fmt.Errorf("invalid %s: %w", windowsAdversarialCertificateFile01811, err)
 	}
 	if err := validateWindowsAdversarialCertificate01812(cert, ver, expectedCommit); err != nil {
 		return cert, "", err
@@ -230,14 +230,14 @@ func windowsProtectionArtifacts01812(dir, ver string) ([]windowsProtectionArtifa
 		seen[name] = true
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("Windows защита артефакт путь недопустимый: %q", name)
+			return nil, fmt.Errorf("Windows protection artifact path invalid: %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("Windows защита артефакт %s: %w", name, err)
+			return nil, fmt.Errorf("Windows protection artifact %s: %w", name, err)
 		}
 		if size <= 0 || !sha256RE01812.MatchString(strings.ToLower(sum)) {
-			return nil, fmt.Errorf("Windows защита артефакт %s является пустой или имеет недопустимый SHA-256", name)
+			return nil, fmt.Errorf("Windows protection artifact %s is empty or has invalid SHA-256", name)
 		}
 		rows = append(rows, windowsProtectionArtifact01812{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -258,14 +258,14 @@ func windowsProtectionBoundaryDigest01812(ver, commit, repository, runID, advers
 
 func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string) (windowsProtectionReleaseCertificate01812, error) {
 	if !windowsProtectionReleaseRequired01812(ver) {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Защита RC требует 0.18.12+, получил %s", ver)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Protection RC requires 0.18.12+, got %s", ver)
 	}
 	commit, err := normalizeSourceCommit01511(expectedCommit)
 	if err != nil {
 		return windowsProtectionReleaseCertificate01812{}, err
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, true); err != nil {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Authenticode рабочий граница: %w", err)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Authenticode production boundary: %w", err)
 	}
 	adversarial, adversarialHash, err := readWindowsAdversarialCertificate01812(dir, ver, commit)
 	if err != nil {
@@ -320,11 +320,11 @@ func verifyWindowsProtectionRelease01812(dir, ver string) error {
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, windowsProtectionReleaseFile01812))
 	if err != nil {
-		return fmt.Errorf("чтение %s: %w", windowsProtectionReleaseFile01812, err)
+		return fmt.Errorf("read %s: %w", windowsProtectionReleaseFile01812, err)
 	}
 	var cert windowsProtectionReleaseCertificate01812
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("недопустимый %s: %w", windowsProtectionReleaseFile01812, err)
+		return fmt.Errorf("invalid %s: %w", windowsProtectionReleaseFile01812, err)
 	}
 	commit, err := normalizeSourceCommit01511(cert.SourceCommit)
 	if err != nil {
@@ -335,46 +335,46 @@ func verifyWindowsProtectionRelease01812(dir, ver string) error {
 		return err
 	}
 	if cert.SchemaVersion != expected.SchemaVersion || cert.Product != expected.Product || cert.Version != expected.Version || cert.Status != expected.Status || cert.ProtectionProfile != "aggressive" {
-		return errors.New("Windows Защита RC метаданные несоответствие")
+		return errors.New("Windows Protection RC metadata mismatch")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || cert.AdversarialRunID != expected.AdversarialRunID {
-		return errors.New("Windows Защита RC source/repository/run привязка несоответствие")
+		return errors.New("Windows Protection RC source/repository/run binding mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
-		return fmt.Errorf("Windows Защита RC createdAt недопустимый: %w", err)
+		return fmt.Errorf("Windows Protection RC createdAt invalid: %w", err)
 	}
 	if !strings.EqualFold(cert.AdversarialCertificateSHA256, expected.AdversarialCertificateSHA256) || !strings.EqualFold(cert.AdversarialEvidenceRootSHA256, expected.AdversarialEvidenceRootSHA256) {
-		return errors.New("Windows Защита RC атакующий свидетельство привязка несоответствие")
+		return errors.New("Windows Protection RC adversarial evidence binding mismatch")
 	}
 	if cert.ScenarioExecutions != 55 || len(cert.JavaMajors) != len(expected.JavaMajors) {
-		return errors.New("Windows Защита RC Java/adversarial группа несоответствие")
+		return errors.New("Windows Protection RC Java/adversarial cohort mismatch")
 	}
 	for i := range expected.JavaMajors {
 		if cert.JavaMajors[i] != expected.JavaMajors[i] {
-			return fmt.Errorf("Windows Защита RC Java крупный #%d несоответствие", i+1)
+			return fmt.Errorf("Windows Protection RC Java major #%d mismatch", i+1)
 		}
 	}
 	if len(cert.RequiredCapabilities) != len(expected.RequiredCapabilities) || len(cert.Artifacts) != len(expected.Artifacts) {
-		return errors.New("Windows Защита RC capability/artifact группа размер несоответствие")
+		return errors.New("Windows Protection RC capability/artifact cohort size mismatch")
 	}
 	for i := range expected.RequiredCapabilities {
 		if cert.RequiredCapabilities[i] != expected.RequiredCapabilities[i] {
-			return fmt.Errorf("Windows Защита RC возможность #%d несоответствие", i+1)
+			return fmt.Errorf("Windows Protection RC capability #%d mismatch", i+1)
 		}
 	}
 	for i := range expected.Artifacts {
 		a, b := cert.Artifacts[i], expected.Artifacts[i]
 		if a.Name != b.Name || a.Size != b.Size || !strings.EqualFold(a.SHA256, b.SHA256) {
-			return fmt.Errorf("Windows Защита RC артефакт несоответствие: %s", b.Name)
+			return fmt.Errorf("Windows Protection RC artifact mismatch: %s", b.Name)
 		}
 	}
 	for key, value := range expected.Invariants {
 		if !value || !cert.Invariants[key] {
-			return fmt.Errorf("Windows Защита RC инвариант %s является не satisfied", key)
+			return fmt.Errorf("Windows Protection RC invariant %s is not satisfied", key)
 		}
 	}
 	if !strings.EqualFold(cert.BoundarySHA256, expected.BoundarySHA256) || cert.CertificateID != "sha256:"+strings.ToLower(expected.BoundarySHA256) {
-		return errors.New("Windows Защита RC boundary/certificateId несоответствие")
+		return errors.New("Windows Protection RC boundary/certificateId mismatch")
 	}
 	return nil
 }

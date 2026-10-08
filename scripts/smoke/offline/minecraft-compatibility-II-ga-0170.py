@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(p) for p in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 0):
-    raise SystemExit(f"Minecraft Совместимость II GA требует VERSION>=0.17.0, получил {version}")
+    raise SystemExit(f"Minecraft Compatibility II GA requires VERSION>=0.17.0, got {version}")
 
 def read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
@@ -16,14 +16,14 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 targets = json.loads(read("compatibility/targets.json"))
 vanilla = [row for row in targets["targets"] if row.get("required") and row.get("loader") == "vanilla"]
 if len(vanilla) < 109 or len({row["minecraft"] for row in vanilla}) < 104:
-    raise SystemExit("GA 0.17.0v3 Vanilla основа является narrower чем 109 цели / 104 уникальный релизы")
+    raise SystemExit("GA 0.17.0v3 Vanilla base is narrower than 109 targets / 104 unique releases")
 if {8,16,17,21,25} - {row["javaMajor"] for row in vanilla}:
-    raise SystemExit("GA JRE основа делает не cover Java 8/16/17/21/25")
+    raise SystemExit("GA JRE base does not cover Java 8/16/17/21/25")
 
 legacy_0170v1 = {
     "1.2.1", "1.2.2", "1.2.3", "1.2.4", "1.3.1",
@@ -40,10 +40,10 @@ legacy_rows = {
 }
 missing_legacy = sorted(legacy_0170v1 - set(legacy_rows))
 if missing_legacy:
-    raise SystemExit(f"GA 0.17.0v1 полный Устаревший Vanilla сетка отсутствующий: {missing_legacy}")
+    raise SystemExit(f"GA 0.17.0v1 complete Legacy Vanilla grid missing: {missing_legacy}")
 for minecraft, row in legacy_rows.items():
     if row["javaMajor"] != 8 or row["scope"] != "client":
-        raise SystemExit(f"GA 0.17.0v1 Устаревший Vanilla {minecraft} должен быть Java 8 область=клиент")
+        raise SystemExit(f"GA 0.17.0v1 Legacy Vanilla {minecraft} must be Java 8 scope=client")
 
 java16_17_0170v2 = {
     "1.17": 16,
@@ -57,11 +57,11 @@ modern_rows = {
 }
 missing_modern = sorted(set(java16_17_0170v2) - set(modern_rows))
 if missing_modern:
-    raise SystemExit(f"GA 0.17.0v2 полный Java 16/17 Vanilla сетка отсутствующий: {missing_modern}")
+    raise SystemExit(f"GA 0.17.0v2 complete Java 16/17 Vanilla grid missing: {missing_modern}")
 for minecraft, major in java16_17_0170v2.items():
     row = modern_rows[minecraft]
     if row["javaMajor"] != major or row["scope"] != "client":
-        raise SystemExit(f"GA 0.17.0v2 Vanilla {minecraft} должен быть Java {major} область=клиент")
+        raise SystemExit(f"GA 0.17.0v2 Vanilla {minecraft} must be Java {major} scope=client")
 
 java21_25_0170v3 = {"1.21.11": 21, "26.2": 25}
 v3_rows = {
@@ -70,11 +70,11 @@ v3_rows = {
 }
 missing_v3 = sorted(set(java21_25_0170v3) - set(v3_rows))
 if missing_v3:
-    raise SystemExit(f"GA 0.17.0v3 Java 21/25 Vanilla сетка отсутствующий: {missing_v3}")
+    raise SystemExit(f"GA 0.17.0v3 Java 21/25 Vanilla grid missing: {missing_v3}")
 for minecraft, major in java21_25_0170v3.items():
     row = v3_rows[minecraft]
     if row["javaMajor"] != major or row["scope"] != "client":
-        raise SystemExit(f"GA 0.17.0v3 Vanilla {minecraft} должен быть Java {major} область=клиент")
+        raise SystemExit(f"GA 0.17.0v3 Vanilla {minecraft} must be Java {major} scope=client")
 
 require(read("scripts/compatibility/certify-jre.py"), [
     "executableSha256", "java.runtime.version", "java.vendor", "java.vm.name", "java.home",
@@ -104,4 +104,4 @@ require(read("runtime/neverruntime/src/compatibility.rs"), [
 require(read(".github/workflows/compatibility.yml"), ["java-runtime.json", "run-compatibility-case.sh"], "GA CI evidence")
 require(read("scripts/smoke/offline/compatibility-matrix.sh"), ["test_certify_jre.py"], "GA preflight regression")
 
-print(f"Minecraft Совместимость II GA 0.17.0 контроль: OK / 0.17.0v3 Java 21/25 сетка ({len(vanilla)} Vanilla цели, {len({row['minecraft'] for row in vanilla})} релизы, Java 8/16/17/21/25)")
+print(f"Minecraft Compatibility II GA 0.17.0 gate: OK / 0.17.0v3 Java 21/25 grid ({len(vanilla)} Vanilla targets, {len({row['minecraft'] for row in vanilla})} releases, Java 8/16/17/21/25)")

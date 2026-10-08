@@ -23,9 +23,9 @@ func TestServerBridgeProtocol0191CapabilitiesNegotiation(t *testing.T) {
 		}
 	}
 
-	// клиент тот understands Протокол v3 но не его обязательный возможность-флаги
-	// должен согласовывать v2 когда это также offers v2; серверная часть никогда pretends 
-	// неполный v3 контракт является безопасный.
+	// A client that understands Protocol v3 but not its required feature-flags
+	// must negotiate v2 when it also offers v2; the backend never pretends the
+	// incomplete v3 contract is safe.
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/server-bridge/capabilities?protocols=3,2&features=security.ed25519-node-requests,integrity.sha256,join.one-time", nil)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -89,7 +89,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 		t.Fatalf("register => %d %s", res.Code, res.Body.String())
 	}
 
-	// Существующий 0.19.0/v2 мост остаётся принят во время поэтапный deploy.
+	// Existing 0.19.0/v2 bridge remains accepted during a rolling deploy.
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0191/heartbeat", strings.NewReader(`{"protocolVersion":2,"serverId":"paper-0191","serverType":"paper","pluginVersion":"0.19.0","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
 	req.Header.Set("Content-Type", "application/json")
 	signBridgeNodeRequest0142(t, req, "paper-0191", identity)
@@ -99,7 +99,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 		t.Fatalf("v2 rolling heartbeat => %d %s", res.Code, res.Body.String())
 	}
 
-	// v3 без согласовывать флаги функций является отклонён.
+	// v3 without negotiated feature flags is rejected.
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0191/heartbeat", strings.NewReader(`{"protocolVersion":3,"features":["protocol.capability-negotiation"],"serverId":"paper-0191","serverType":"paper","pluginVersion":"0.19.1","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
 	req.Header.Set("Content-Type", "application/json")
 	signBridgeNodeRequest0142(t, req, "paper-0191", identity)
@@ -109,7 +109,7 @@ func TestServerBridgeProtocol0191HeartbeatRollingUpgrade(t *testing.T) {
 		t.Fatalf("incomplete v3 heartbeat => %d %s", res.Code, res.Body.String())
 	}
 
-	// Fully согласовывать v3 становится активный узел протокол.
+	// Fully negotiated v3 becomes the active node protocol.
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/paper-0191/heartbeat", strings.NewReader(`{"protocolVersion":3,"features":["protocol.capability-negotiation","protocol.feature-flags","protocol.rolling-upgrade-v2","security.ed25519-node-requests","security.single-use-node-nonce","integrity.sha256","join.one-time","handoff.one-time","topology.runtime-learned"],"serverId":"paper-0191","serverType":"paper","pluginVersion":"0.19.1","pluginSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`))
 	req.Header.Set("Content-Type", "application/json")
 	signBridgeNodeRequest0142(t, req, "paper-0191", identity)

@@ -190,8 +190,8 @@ struct Library {
     rules: Vec<Rule>,
     #[serde(default)]
     extract: ExtractRules,
-    // Forge <=1.12.2 использует lowercase clientreq/serverreq в versionInfo.
-    // Сервер-только библиотеки должен не leak в клиент путь классов.
+    // Forge <=1.12.2 uses lowercase clientreq/serverreq in versionInfo.
+    // Server-only libraries must not leak into the client classpath.
     #[serde(default, alias = "clientreq")]
     client_req: Option<bool>,
 }
@@ -281,9 +281,9 @@ pub async fn resolve_compatibility(
         let full_path = safe_join(root, &relative_path)?;
         let bytes = fs::read(&full_path)
             .await
-            .map_err(|err| format!("не удалось прочитать Minecraft метаданные {}: {err}", full_path.display()))?;
+            .map_err(|err| format!("не удалось прочитать Minecraft metadata {}: {err}", full_path.display()))?;
         let mut metadata: VersionMetadata = serde_json::from_slice(&bytes)
-            .map_err(|err| format!("Minecraft метаданные {} повреждён: {err}", relative_path))?;
+            .map_err(|err| format!("Minecraft metadata {} повреждён: {err}", relative_path))?;
         if metadata.id.trim().is_empty() {
             metadata.id = current_id.clone();
         }
@@ -348,9 +348,9 @@ pub async fn resolve_compatibility(
         ("auth_access_token".to_string(), context.access_token.clone()),
         ("accessToken".to_string(), context.access_token.clone()),
         ("auth_session".to_string(), auth_session),
-        // Устаревший лаунчер метаданные (notably 1.7.x-1.12.x) проходит этот
-        // placeholder даже для автономный профили. официальный лаунчер использует
-        // JSON объект; пустой объект является корректный автономный value.
+        // Legacy launcher metadata (notably 1.7.x-1.12.x) passes this
+        // placeholder even for offline profiles. The official launcher uses
+        // a JSON object; an empty object is the correct offline value.
         ("user_properties".to_string(), "{}".to_string()),
         ("profile_properties".to_string(), "{}".to_string()),
         ("user_type".to_string(), context.user_type.clone()),
@@ -378,17 +378,17 @@ pub async fn resolve_compatibility(
     };
     if raw_game_args.is_empty() {
         return Err(format!(
-            "Minecraft {} метаданные делает не contain исполняемый arguments.игра или minecraftArguments",
+            "Minecraft {} metadata does not contain executable arguments.game or minecraftArguments",
             merged.id
         ));
     }
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
     let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     if raw_jvm_args.is_empty() {
-        // Minecraft релизы до arguments.JVM метаданные era relied на 
-        // лаунчер к предоставлять нативный путь, лаунчер идентичность и путь классов.
-        // Сохранять тот поведение здесь так старый Vanilla версии являются запускать через 
-        // одинаковый Совместимость Движок вместо этого требовать специальный устаревший путь.
+        // Minecraft releases before the arguments.jvm metadata era relied on the
+        // launcher to provide the native path, launcher identity and classpath.
+        // Keep that behavior here so old Vanilla versions are launched by the
+        // same Compatibility Engine instead of requiring an ad-hoc legacy path.
         raw_jvm_args = vec![
             "-Djava.library.path=${natives_directory}".to_string(),
             "-Dminecraft.launcher.brand=${launcher_name}".to_string(),
@@ -401,9 +401,9 @@ pub async fn resolve_compatibility(
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
     if is_neoforge {
-        // Современный NeoForge создаёт transformed Minecraft рабочий модуль сам.
-        // Сохранять Mojang's основа клиент на устаревший путь классов для лаунчер совместимость,
-        // но предотвращать BootstrapLauncher из turning это в второй именованный модуль.
+        // Modern NeoForge creates the transformed Minecraft production module itself.
+        // Keep Mojang's base client on the legacy classpath for launcher compatibility,
+        // but prevent BootstrapLauncher from turning it into a second named module.
         ensure_neoforge_bootstrap_ignores_base_client(&mut jvm_args, &client_jar)?;
     }
 
@@ -470,7 +470,7 @@ fn merge_layers(layers: &[(String, String, VersionMetadata)]) -> Result<MergedVe
         }
         for library in &layer.libraries {
             if library.name.trim().is_empty() {
-                return Err(format!("Minecraft метаданные {} содержит библиотека без имя", layer.id));
+                return Err(format!("Minecraft metadata {} содержит library без name", layer.id));
             }
             let key = library_identity(&library.name);
             if let Some(index) = library_positions.get(&key).copied() {
@@ -515,9 +515,9 @@ fn resolve_libraries(
         if !rules_allow(&library.rules, environment)? || !library_artifact_matches_environment(&library.name, environment) {
             continue;
         }
-        // Некоторые устаревший Mojang записи являются только классификатор нативный containers
-        // (для пример lwjgl-платформа и jinput-платформа). Они должен не быть
-        // synthesized в ordinary путь классов артефакты.
+        // Some legacy Mojang entries are classifier-only native containers
+        // (for example lwjgl-platform and jinput-platform). They must not be
+        // synthesized into ordinary classpath artifacts.
         if let Some(artifact) = library.downloads.artifact.clone() {
             let path = if artifact.path.trim().is_empty() {
                 maven_path(&library.name)?
@@ -540,9 +540,9 @@ fn resolve_libraries(
             });
             classpath.push(path);
         } else if library.downloads.classifiers.is_empty() {
-            // Сохранять совместимость с старый локальный метаданные тот predates 
-            // загрузка объект. материализатор остаётся отказ с блокировкой в
-            // строгий режим; этот резервный вариант является только для уже-present дерево.
+            // Keep compatibility with old local metadata that predates the
+            // downloads object. The materializer remains fail-closed in
+            // strict mode; this fallback is only for already-present trees.
             let path = maven_path(&library.name)?;
             let url = if !library.url.trim().is_empty() {
                 format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
@@ -561,16 +561,16 @@ fn resolve_libraries(
 
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
-            // Minecraft/Forge 1.7.x метаданные predates загрузка.классификатор.
-            // Vanilla материализатор уже places нативный классификатор JARs
-            // в Maven дерево, так derive их пути из устаревший Maven
-            // coordinate вместо этого отклонять действительный LaunchWrapper профиль.
-            // Если современный классификатор сопоставление является present но неполный, оставаться
-            // отказ с блокировкой потому что тот indicates повреждённый современный метаданные.
+            // Minecraft/Forge 1.7.x metadata predates downloads.classifiers.
+            // The Vanilla materializer already places the native classifier JARs
+            // into the Maven tree, so derive their paths from the legacy Maven
+            // coordinate instead of rejecting a valid LaunchWrapper profile.
+            // If a modern classifiers map is present but incomplete, remain
+            // fail-closed because that indicates corrupted modern metadata.
             let native = match library.downloads.classifiers.get(&classifier) {
                 Some(native) => Some(native),
                 None if library.downloads.classifiers.is_empty() => None,
-                None => return Err(format!("{}: отсутствует классификатор {}", library.name, classifier)),
+                None => return Err(format!("{}: отсутствует classifier {}", library.name, classifier)),
             };
             let native_path = if let Some(native) = native {
                 if native.path.trim().is_empty() {
@@ -627,7 +627,7 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(8) | None => Ok(Some(8)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: Устаревший Vanilla требует Java 8, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: Legacy Vanilla requires Java 8, got {}",
                 merged.id, actual
             )),
         };
@@ -637,11 +637,11 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: 0.17.0v2 ожидаемый {}, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v2 expected {}, got {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang метаданные делает не contain javaVersion.majorVersion; 0.17.0v2 требует точный Java {}",
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v2 requires exact Java {}",
                 merged.id, expected
             )),
         };
@@ -651,11 +651,11 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: 0.17.0v3 ожидаемый {}, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v3 expected {}, got {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang метаданные делает не contain javaVersion.majorVersion; 0.17.0v3 требует точный Java {}",
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v3 requires exact Java {}",
                 merged.id, expected
             )),
         };
@@ -665,11 +665,11 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: ожидаемый {}, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang метаданные делает не contain javaVersion.majorVersion; 0.16.6 требует точный Java {}",
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.6 requires exact Java {}",
                 merged.id, expected
             )),
         };
@@ -679,11 +679,11 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: ожидаемый {}, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang метаданные делает не contain javaVersion.majorVersion; 0.16.7 требует точный Java {}",
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.7 requires exact Java {}",
                 merged.id, expected
             )),
         };
@@ -693,11 +693,11 @@ fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, St
         return match metadata_major {
             Some(actual) if actual == expected => Ok(Some(actual)),
             Some(actual) => Err(format!(
-                "Minecraft {} Mojang метаданные Java несоответствие: ожидаемый {}, получил {}",
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
                 merged.id, expected, actual
             )),
             None => Err(format!(
-                "Minecraft {} Mojang метаданные делает не contain javaVersion.majorVersion; 0.16.8 требует точный Java {}",
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.8 requires exact Java {}",
                 merged.id, expected
             )),
         };
@@ -843,7 +843,7 @@ fn rules_allow(rules: &[Rule], environment: &CompatibilityEnvironment) -> Result
             match rule.action.as_str() {
                 "allow" => allowed = true,
                 "disallow" => allowed = false,
-                other => return Err(format!("неподдерживаемое Mojang правило действие: {other}")),
+                other => return Err(format!("неподдерживаемое Mojang rule action: {other}")),
             }
         }
     }
@@ -876,7 +876,7 @@ fn rule_matches(rule: &Rule, environment: &CompatibilityEnvironment) -> Result<b
 fn pattern_matches(pattern: &str, value: &str) -> Result<bool, String> {
     let anchored = format!("^(?:{pattern})$");
     Regex::new(&anchored)
-        .map_err(|err| format!("некорректный regex в Mojang правило {pattern:?}: {err}"))
+        .map_err(|err| format!("некорректный regex в Mojang rule {pattern:?}: {err}"))
         .map(|regex| regex.is_match(value))
 }
 
@@ -1031,13 +1031,13 @@ pub fn normalize_relative_path(path: &str) -> Result<String, String> {
     let path = path.replace('\\', "/");
     let candidate = Path::new(&path);
     if candidate.is_absolute() || path.is_empty() {
-        return Err(format!("небезопасный совместимость путь: {path}"));
+        return Err(format!("небезопасный compatibility path: {path}"));
     }
     let mut normalized = Vec::new();
     for component in candidate.components() {
         match component {
             Component::Normal(value) => normalized.push(value.to_string_lossy().to_string()),
-            _ => return Err(format!("небезопасный совместимость путь: {path}")),
+            _ => return Err(format!("небезопасный compatibility path: {path}")),
         }
     }
     Ok(normalized.join("/"))
@@ -1046,23 +1046,23 @@ pub fn normalize_relative_path(path: &str) -> Result<String, String> {
 fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let normalized = normalize_relative_path(relative)?;
     let root_meta = std::fs::symlink_metadata(root)
-        .map_err(|err| format!("совместимость корень {} недоступен: {err}", root.display()))?;
+        .map_err(|err| format!("compatibility root {} недоступен: {err}", root.display()))?;
     if root_meta.file_type().is_symlink() || !root_meta.is_dir() {
-        return Err(format!("совместимость корень не должен быть символическая ссылка/файлом: {}", root.display()));
+        return Err(format!("compatibility root не должен быть symlink/файлом: {}", root.display()));
     }
     let mut current = root.to_path_buf();
     for component in Path::new(&normalized).components() {
         let Component::Normal(value) = component else {
-            return Err(format!("небезопасный совместимость путь: {relative}"));
+            return Err(format!("небезопасный compatibility path: {relative}"));
         };
         current.push(value);
         match std::fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
-                return Err(format!("совместимость путь содержит символическая ссылка: {}", current.display()));
+                return Err(format!("compatibility path содержит symlink: {}", current.display()));
             }
             Ok(_) => {}
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => break,
-            Err(err) => return Err(format!("совместимость путь метаданные {}: {err}", current.display())),
+            Err(err) => return Err(format!("compatibility path metadata {}: {err}", current.display())),
         }
     }
     Ok(root.join(normalized))
@@ -1077,7 +1077,7 @@ fn safe_component(value: &str) -> Result<String, String> {
         || trimmed.contains('\\')
         || trimmed.chars().any(|ch| ch.is_control() || matches!(ch, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
     {
-        return Err(format!("небезопасный Minecraft версия ID: {value}"));
+        return Err(format!("небезопасный Minecraft version id: {value}"));
     }
     Ok(trimmed.to_string())
 }
@@ -1167,8 +1167,8 @@ fn detect_os_version() -> String {
         .unwrap_or_default();
 
     if std::env::consts::OS == "windows" {
-        // `cmd /C ver` возвращает localized prefix вокруг numeric ядро версия.
-        // Mojang правила сравнивать против Java's `os.version`, так предоставлять только версия токен.
+        // `cmd /C ver` returns a localized prefix around the numeric kernel version.
+        // Mojang rules compare against Java's `os.version`, so expose only the version token.
         if let Ok(version_re) = Regex::new(r"(?P<version>\d+(?:\.\d+){1,3})") {
             if let Some(captures) = version_re.captures(&raw) {
                 if let Some(version) = captures.name("version") {

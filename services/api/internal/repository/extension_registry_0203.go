@@ -30,10 +30,10 @@ func normalizeRegistryPublisher0203(in model.ExtensionRegistryPublisher) (model.
 	in.ID = strings.ToLower(strings.TrimSpace(in.ID))
 	in.Name = strings.TrimSpace(in.Name)
 	if !registryPublisherID0203.MatchString(in.ID) {
-		return model.ExtensionRegistryPublisher{}, fmt.Errorf("недопустимый реестр издатель ID %q", in.ID)
+		return model.ExtensionRegistryPublisher{}, fmt.Errorf("invalid registry publisher id %q", in.ID)
 	}
 	if in.Name == "" || len(in.Name) > 160 {
-		return model.ExtensionRegistryPublisher{}, errors.New("реестр издатель имя должен contain 1..160 characters")
+		return model.ExtensionRegistryPublisher{}, errors.New("registry publisher name must contain 1..160 characters")
 	}
 	return in, nil
 }
@@ -44,17 +44,17 @@ func normalizeRegistryPublisherKey0203(in model.ExtensionRegistryPublisherKey) (
 	in.Algorithm = strings.TrimSpace(in.Algorithm)
 	in.PublicKeyBase64 = strings.TrimSpace(in.PublicKeyBase64)
 	if !registryPublisherID0203.MatchString(in.PublisherID) {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("недопустимый реестр издатель ID %q", in.PublisherID)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("invalid registry publisher id %q", in.PublisherID)
 	}
 	if in.Algorithm == "" {
 		in.Algorithm = "Ed25519"
 	}
 	if in.Algorithm != "Ed25519" {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("неподдерживаемый издатель ключ algorithm %q", in.Algorithm)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("unsupported publisher key algorithm %q", in.Algorithm)
 	}
 	raw, err := base64.StdEncoding.DecodeString(in.PublicKeyBase64)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
-		return model.ExtensionRegistryPublisherKey{}, errors.New("издатель publicKeyBase64 должен contain сырой 32-byte Ed25519 открытый ключ")
+		return model.ExtensionRegistryPublisherKey{}, errors.New("publisher publicKeyBase64 must contain a raw 32-byte Ed25519 public key")
 	}
 	digest := sha256.Sum256(raw)
 	expected := "sha256:" + hex.EncodeToString(digest[:])
@@ -62,7 +62,7 @@ func normalizeRegistryPublisherKey0203(in model.ExtensionRegistryPublisherKey) (
 		in.Fingerprint = expected
 	}
 	if in.Fingerprint != expected || !registryIdentity0203.MatchString(in.Fingerprint) {
-		return model.ExtensionRegistryPublisherKey{}, errors.New("издатель отпечаток ключа делает не соответствовать открытый ключ")
+		return model.ExtensionRegistryPublisherKey{}, errors.New("publisher key fingerprint does not match public key")
 	}
 	return in, nil
 }
@@ -73,20 +73,20 @@ func normalizeRegistryCompatibility0203(in model.ExtensionRegistryCompatibility)
 	in.MinAPI = strings.TrimSpace(in.MinAPI)
 	in.MaxAPI = strings.TrimSpace(in.MaxAPI)
 	if in.MinNeverLauncher != "" && !extensionSemver0201.MatchString(in.MinNeverLauncher) {
-		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("недопустимый minNeverLauncher %q", in.MinNeverLauncher)
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid minNeverLauncher %q", in.MinNeverLauncher)
 	}
 	if in.MaxNeverLauncher != "" && !extensionSemver0201.MatchString(in.MaxNeverLauncher) {
-		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("недопустимый maxNeverLauncher %q", in.MaxNeverLauncher)
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid maxNeverLauncher %q", in.MaxNeverLauncher)
 	}
 	if in.MinNeverLauncher != "" && in.MaxNeverLauncher != "" && compareRegistrySemver0203(in.MinNeverLauncher, in.MaxNeverLauncher) > 0 {
-		return model.ExtensionRegistryCompatibility{}, errors.New("minNeverLauncher не может быть greater чем maxNeverLauncher")
+		return model.ExtensionRegistryCompatibility{}, errors.New("minNeverLauncher cannot be greater than maxNeverLauncher")
 	}
 	apiVersion := regexp.MustCompile(`^[0-9]+\.[0-9]+(?:\.[0-9]+)?$`)
 	if in.MinAPI != "" && !apiVersion.MatchString(in.MinAPI) {
-		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("недопустимый minApi %q", in.MinAPI)
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid minApi %q", in.MinAPI)
 	}
 	if in.MaxAPI != "" && !apiVersion.MatchString(in.MaxAPI) {
-		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("недопустимый maxApi %q", in.MaxAPI)
+		return model.ExtensionRegistryCompatibility{}, fmt.Errorf("invalid maxApi %q", in.MaxAPI)
 	}
 	normalizePlatform := func(values []string, field string) ([]string, error) {
 		seen := map[string]struct{}{}
@@ -97,7 +97,7 @@ func normalizeRegistryCompatibility0203(in model.ExtensionRegistryCompatibility)
 				continue
 			}
 			if !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,31}$`).MatchString(value) {
-				return nil, fmt.Errorf("недопустимый %s value %q", field, value)
+				return nil, fmt.Errorf("invalid %s value %q", field, value)
 			}
 			if _, ok := seen[value]; ok {
 				continue
@@ -129,7 +129,7 @@ func normalizeRegistryChannels0203(values []string) ([]string, error) {
 			continue
 		}
 		if !registryChannel0203.MatchString(value) {
-			return nil, fmt.Errorf("недопустимый реестр канал %q", value)
+			return nil, fmt.Errorf("invalid registry channel %q", value)
 		}
 		if _, ok := seen[value]; ok {
 			continue
@@ -152,7 +152,7 @@ func normalizeRegistryPublication0203(in model.ExtensionRegistryPublication) (mo
 	in.Manifest = manifest
 	in.PublisherID = strings.ToLower(strings.TrimSpace(in.PublisherID))
 	if !registryPublisherID0203.MatchString(in.PublisherID) || manifest.Publisher != in.PublisherID {
-		return model.ExtensionRegistryPublication{}, "", errors.New("реестр издатель ID должен точно соответствовать канонический манифест издатель")
+		return model.ExtensionRegistryPublication{}, "", errors.New("registry publisher id must exactly match canonical manifest publisher")
 	}
 	in.Compatibility, err = normalizeRegistryCompatibility0203(in.Compatibility)
 	if err != nil {
@@ -172,13 +172,13 @@ func normalizeRegistryPublication0203(in model.ExtensionRegistryPublication) (mo
 	artifact.StorageVersion = strings.TrimSpace(artifact.StorageVersion)
 	artifact.StoragePath = strings.TrimSpace(artifact.StoragePath)
 	if artifact.ExtensionID != manifest.ID || artifact.Version != manifest.Version {
-		return model.ExtensionRegistryPublication{}, "", errors.New("реестр артефакт extension/version делает не соответствовать канонический манифест")
+		return model.ExtensionRegistryPublication{}, "", errors.New("registry artifact extension/version does not match canonical manifest")
 	}
 	if !registryIdentity0203.MatchString(artifact.PackageIdentity) || !registrySHA0203.MatchString(artifact.SHA256) || !registryIdentity0203.MatchString(artifact.SignatureKeyFingerprint) {
-		return model.ExtensionRegistryPublication{}, "", errors.New("реестр артефакт содержит недопустимый пакет идентичность, SHA-256 или отпечаток ключа")
+		return model.ExtensionRegistryPublication{}, "", errors.New("registry artifact contains invalid package identity, SHA-256 or key fingerprint")
 	}
 	if artifact.Size <= 0 || artifact.StorageProject == "" || artifact.StorageVersion == "" || artifact.StoragePath == "" {
-		return model.ExtensionRegistryPublication{}, "", errors.New("реестр артефакт хранилище метаданные является неполный")
+		return model.ExtensionRegistryPublication{}, "", errors.New("registry artifact storage metadata is incomplete")
 	}
 	in.Artifact = artifact
 	return in, manifestDigest, nil
@@ -348,7 +348,7 @@ func (r *MemoryRepository) SaveExtensionRegistryPublisherKey(ctx context.Context
 		}
 	}
 	if !publisherActive {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: активный реестр издатель не found", ErrNotFound)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: active registry publisher not found", ErrNotFound)
 	}
 	for i := range r.extensionRegistryKeys {
 		existing := r.extensionRegistryKeys[i]
@@ -356,10 +356,10 @@ func (r *MemoryRepository) SaveExtensionRegistryPublisherKey(ctx context.Context
 			continue
 		}
 		if existing.PublisherID != key.PublisherID || existing.PublicKeyBase64 != key.PublicKeyBase64 {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: издатель отпечаток ключа уже belongs к другой ключ", ErrConflict)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher key fingerprint already belongs to another key", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отозванный издатель ключ не может быть reactivated", ErrImmutable)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: revoked publisher key cannot be reactivated", ErrImmutable)
 		}
 		key.CreatedAt = existing.CreatedAt
 		r.extensionRegistryKeys[i] = key
@@ -407,9 +407,9 @@ func (r *MemoryRepository) PublishExtensionRegistryVersion(ctx context.Context, 
 	if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
-	// Отклонять недоверенный публикация до touching канонический ядро состояние. 
-	// SQL путь предоставляет stronger equivalent через doing оба эксплуатация в один
-	// serializable транзакция.
+	// Reject untrusted publications before touching canonical core state. The
+	// SQL path provides the stronger equivalent by doing both operations in one
+	// serializable transaction.
 	r.extensionMu.Lock()
 	publisherActive, keyActive := false, false
 	for _, publisher := range r.extensionRegistryPublishers {
@@ -424,7 +424,7 @@ func (r *MemoryRepository) PublishExtensionRegistryVersion(ctx context.Context, 
 	}
 	r.extensionMu.Unlock()
 	if !publisherActive || !keyActive {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: издатель или ключ подписи является не активный", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: publisher or signing key is not active", ErrConflict)
 	}
 	if _, err := r.SaveExtensionVersion(ctx, publication.Manifest); err != nil {
 		return model.ExtensionRegistryVersion{}, err
@@ -433,17 +433,17 @@ func (r *MemoryRepository) PublishExtensionRegistryVersion(ctx context.Context, 
 	defer r.extensionMu.Unlock()
 	for _, existing := range r.extensionRegistryVersions {
 		if existing.Artifact.PackageIdentity == publication.Artifact.PackageIdentity && (existing.ExtensionID != publication.Manifest.ID || existing.Version != publication.Manifest.Version) {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: пакет идентичность является уже опубликованный", ErrConflict)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: package identity is already published", ErrConflict)
 		}
 	}
 	for i := range r.extensionRegistryVersions {
 		existing := r.extensionRegistryVersions[i]
 		if existing.ExtensionID == publication.Manifest.ID && existing.Version == publication.Manifest.Version {
 			if existing.PublisherID != publication.PublisherID || existing.Artifact.PackageIdentity != publication.Artifact.PackageIdentity || existing.Artifact.SHA256 != publication.Artifact.SHA256 || existing.Artifact.Size != publication.Artifact.Size || !equalRegistryCompatibility0203(existing.Compatibility, publication.Compatibility) {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: реестр версия является неизменяемый", ErrImmutable)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: registry version is immutable", ErrImmutable)
 			}
 			if existing.YankedAt != nil {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yanked реестр версия не может быть republished", ErrImmutable)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yanked registry version cannot be republished", ErrImmutable)
 			}
 			existing.Channels = mergeRegistryChannels0203(r.extensionRegistryVersions, publication.Manifest.ID, publication.Manifest.Version, publication.Channels)
 			r.extensionRegistryVersions[i].Channels = existing.Channels
@@ -555,7 +555,7 @@ func (r *MemoryRepository) SetExtensionRegistryChannel(ctx context.Context, exte
 	}
 	extensionID, channel, version = strings.ToLower(strings.TrimSpace(extensionID)), strings.ToLower(strings.TrimSpace(channel)), strings.TrimSpace(version)
 	if !registryChannel0203.MatchString(channel) {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("недопустимый реестр канал %q", channel)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("invalid registry channel %q", channel)
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -563,7 +563,7 @@ func (r *MemoryRepository) SetExtensionRegistryChannel(ctx context.Context, exte
 	for i := range r.extensionRegistryVersions {
 		if r.extensionRegistryVersions[i].ExtensionID == extensionID && r.extensionRegistryVersions[i].Version == version {
 			if r.extensionRegistryVersions[i].YankedAt != nil {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: не может цель yanked версия", ErrConflict)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: cannot target a yanked version", ErrConflict)
 			}
 			target = i
 		}
@@ -596,7 +596,7 @@ func (r *MemoryRepository) YankExtensionRegistryVersion(ctx context.Context, ext
 	}
 	extensionID, version, reason = strings.ToLower(strings.TrimSpace(extensionID)), strings.TrimSpace(version), strings.TrimSpace(reason)
 	if reason == "" || len(reason) > 500 {
-		return model.ExtensionRegistryVersion{}, errors.New("yank reason должен contain 1..500 characters")
+		return model.ExtensionRegistryVersion{}, errors.New("yank reason must contain 1..500 characters")
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -607,7 +607,7 @@ func (r *MemoryRepository) YankExtensionRegistryVersion(ctx context.Context, ext
 		}
 		if item.YankedAt != nil {
 			if item.YankReason != reason {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank состояние является необратимый", ErrImmutable)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank state is irreversible", ErrImmutable)
 			}
 			return *item, nil
 		}
@@ -678,15 +678,15 @@ func (r *SQLRepository) SaveExtensionRegistryPublisherKey(ctx context.Context, k
 	} else if err != nil {
 		return model.ExtensionRegistryPublisherKey{}, err
 	} else if !publisherActive {
-		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: издатель является inactive", ErrConflict)
+		return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher is inactive", ErrConflict)
 	}
 	existing, err := scanRegistryPublisherKey0203(r.db.QueryRowContext(ctx, `SELECT publisher_id,fingerprint,algorithm,public_key_base64,active,created_at,revoked_at FROM extension_registry_publisher_keys WHERE fingerprint=$1`, key.Fingerprint))
 	if err == nil {
 		if existing.PublisherID != key.PublisherID || existing.PublicKeyBase64 != key.PublicKeyBase64 {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: издатель отпечаток ключа уже belongs к другой ключ", ErrConflict)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: publisher key fingerprint already belongs to another key", ErrConflict)
 		}
 		if existing.RevokedAt != nil && key.Active {
-			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: отозванный издатель ключ не может быть reactivated", ErrImmutable)
+			return model.ExtensionRegistryPublisherKey{}, fmt.Errorf("%w: revoked publisher key cannot be reactivated", ErrImmutable)
 		}
 		_, err = r.db.ExecContext(ctx, `UPDATE extension_registry_publisher_keys SET active=$3 WHERE publisher_id=$1 AND fingerprint=$2`, key.PublisherID, key.Fingerprint, key.Active)
 		if err != nil {
@@ -745,7 +745,7 @@ func saveExtensionVersionTx0203(ctx context.Context, tx *sql.Tx, manifest model.
 		return model.ExtensionVersion{}, err
 	}
 	if publisher != manifest.Publisher {
-		return model.ExtensionVersion{}, fmt.Errorf("%w: расширение издатель является неизменяемый", ErrConflict)
+		return model.ExtensionVersion{}, fmt.Errorf("%w: extension publisher is immutable", ErrConflict)
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE extensions SET name=$2,description=$3,homepage=$4,repository=$5,updated_at=now() WHERE id=$1`, manifest.ID, manifest.Name, manifest.Description, manifest.Homepage, manifest.Repository); err != nil {
 		return model.ExtensionVersion{}, err
@@ -755,7 +755,7 @@ func saveExtensionVersionTx0203(ctx context.Context, tx *sql.Tx, manifest model.
 	err = tx.QueryRowContext(ctx, `SELECT manifest_sha256,created_at FROM extension_versions WHERE extension_id=$1 AND version=$2 FOR UPDATE`, manifest.ID, manifest.Version).Scan(&existingDigest, &existingCreated)
 	if err == nil {
 		if existingDigest != digest {
-			return model.ExtensionVersion{}, fmt.Errorf("%w: расширение %s версия %s уже существует с другой манифест", ErrImmutable, manifest.ID, manifest.Version)
+			return model.ExtensionVersion{}, fmt.Errorf("%w: extension %s version %s already exists with another manifest", ErrImmutable, manifest.ID, manifest.Version)
 		}
 		return extensionVersionFromManifest0201(manifest, digest, existingCreated), nil
 	}
@@ -800,18 +800,18 @@ func (r *SQLRepository) PublishExtensionRegistryVersion(ctx context.Context, pub
 	} else if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	} else if !publisherActive {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: издатель является inactive", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: publisher is inactive", ErrConflict)
 	}
 	var keyActive bool
 	var keyPublisher string
 	var revoked sql.NullTime
 	if err := tx.QueryRowContext(ctx, `SELECT publisher_id,active,revoked_at FROM extension_registry_publisher_keys WHERE fingerprint=$1 FOR SHARE`, publication.Artifact.SignatureKeyFingerprint).Scan(&keyPublisher, &keyActive, &revoked); errors.Is(err, sql.ErrNoRows) {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: доверенный издатель ключ не found", ErrNotFound)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: trusted publisher key not found", ErrNotFound)
 	} else if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
 	if keyPublisher != publication.PublisherID || !keyActive || revoked.Valid {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: ключ подписи является не активный для издатель", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: signing key is not active for publisher", ErrConflict)
 	}
 	if _, err := saveExtensionVersionTx0203(ctx, tx, publication.Manifest, manifestDigest); err != nil {
 		return model.ExtensionRegistryVersion{}, err
@@ -829,17 +829,17 @@ WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID,
 		existingCompatibility.MinNeverLauncher, existingCompatibility.MaxNeverLauncher = existingMin, existingMax
 		existingCompatibility.MinAPI, existingCompatibility.MaxAPI = existingMinAPI, existingMaxAPI
 		if json.Unmarshal(existingOS, &existingCompatibility.SupportedOS) != nil || json.Unmarshal(existingArch, &existingCompatibility.SupportedArchitectures) != nil {
-			return model.ExtensionRegistryVersion{}, errors.New("реестр содержит недопустимый метаданные совместимости")
+			return model.ExtensionRegistryVersion{}, errors.New("registry contains invalid compatibility metadata")
 		}
 		if existingPublisher != publication.PublisherID || existingIdentity != publication.Artifact.PackageIdentity || existingSHA != publication.Artifact.SHA256 || existingSize != publication.Artifact.Size || !equalRegistryCompatibility0203(existingCompatibility, publication.Compatibility) {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: реестр версия уже существует с другой неизменяемый публикация метаданные", ErrImmutable)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: registry version already exists with different immutable publication metadata", ErrImmutable)
 		}
 		var yanked bool
 		if err := tx.QueryRowContext(ctx, `SELECT yanked_at IS NOT NULL FROM extension_registry_versions WHERE extension_id=$1 AND version=$2`, publication.Manifest.ID, publication.Manifest.Version).Scan(&yanked); err != nil {
 			return model.ExtensionRegistryVersion{}, err
 		}
 		if yanked {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yanked реестр версия не может быть republished", ErrImmutable)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yanked registry version cannot be republished", ErrImmutable)
 		}
 	} else if errors.Is(err, sql.ErrNoRows) {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_versions(extension_id,version,publisher_id) VALUES($1,$2,$3)`, publication.Manifest.ID, publication.Manifest.Version, publication.PublisherID); err != nil {
@@ -850,7 +850,7 @@ WHERE rv.extension_id=$1 AND rv.version=$2 FOR UPDATE`, publication.Manifest.ID,
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_artifacts(package_identity,extension_id,version,sha256,size_bytes,storage_project,storage_version,storage_path,signature_key_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, publication.Artifact.PackageIdentity, publication.Manifest.ID, publication.Manifest.Version, publication.Artifact.SHA256, publication.Artifact.Size, publication.Artifact.StorageProject, publication.Artifact.StorageVersion, publication.Artifact.StoragePath, publication.Artifact.SignatureKeyFingerprint); err != nil {
 			if strings.Contains(strings.ToLower(err.Error()), "unique") {
-				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: пакет идентичность уже опубликованный", ErrConflict)
+				return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: package identity already published", ErrConflict)
 			}
 			return model.ExtensionRegistryVersion{}, err
 		}
@@ -1011,7 +1011,7 @@ func (r *SQLRepository) SetExtensionRegistryChannel(ctx context.Context, extensi
 	}
 	extensionID, channel, version = strings.ToLower(strings.TrimSpace(extensionID)), strings.ToLower(strings.TrimSpace(channel)), strings.TrimSpace(version)
 	if !registryChannel0203.MatchString(channel) {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("недопустимый реестр канал %q", channel)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("invalid registry channel %q", channel)
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -1024,7 +1024,7 @@ func (r *SQLRepository) SetExtensionRegistryChannel(ctx context.Context, extensi
 	} else if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	} else if yanked {
-		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: не может цель yanked версия", ErrConflict)
+		return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: cannot target a yanked version", ErrConflict)
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_channels(extension_id,channel,version) VALUES($1,$2,$3)
 ON CONFLICT(extension_id,channel) DO UPDATE SET version=EXCLUDED.version,updated_at=now()`, extensionID, channel, version); err != nil {
@@ -1042,7 +1042,7 @@ func (r *SQLRepository) YankExtensionRegistryVersion(ctx context.Context, extens
 	}
 	extensionID, version, reason = strings.ToLower(strings.TrimSpace(extensionID)), strings.TrimSpace(version), strings.TrimSpace(reason)
 	if reason == "" || len(reason) > 500 {
-		return model.ExtensionRegistryVersion{}, errors.New("yank reason должен contain 1..500 characters")
+		return model.ExtensionRegistryVersion{}, errors.New("yank reason must contain 1..500 characters")
 	}
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -1058,7 +1058,7 @@ func (r *SQLRepository) YankExtensionRegistryVersion(ctx context.Context, extens
 	}
 	if yankedAt.Valid {
 		if existingReason != reason {
-			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank состояние является необратимый", ErrImmutable)
+			return model.ExtensionRegistryVersion{}, fmt.Errorf("%w: yank state is irreversible", ErrImmutable)
 		}
 	} else {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM extension_registry_channels WHERE extension_id=$1 AND version=$2`, extensionID, version); err != nil {

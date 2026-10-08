@@ -258,9 +258,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     errors = validate_result(result, repository=args.repository, commit=args.commit, run_id=args.run_id)
     if errors:
-        print("Windows атакующий результат FAILED валидация: " + "; ".join(errors), file=sys.stderr)
+        print("Windows adversarial result FAILED validation: " + "; ".join(errors), file=sys.stderr)
         return 1
-    print(f"Windows атакующий результат PASS: Java {args.java_major}, {len(SCENARIOS)} сценарии -> {args.output}")
+    print(f"Windows adversarial result PASS: Java {args.java_major}, {len(SCENARIOS)} scenarios -> {args.output}")
     return 0
 
 
@@ -347,15 +347,15 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         lines.append(f"| {major} | {len(compatibility_ids)} | {len(adversarial_ids)} | PASS |")
     lines += ["", f"Total live scenario executions: **{certificate['scenarioExecutions']}**.", ""]
     (args.output_dir / "WINDOWS_ADVERSARIAL_CERTIFICATE.md").write_text("\n".join(lines), encoding="utf-8")
-    print(f"Windows атакующий сертификация PASS -> {cert_path}")
+    print(f"Windows adversarial certification PASS -> {cert_path}")
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="NeverLauncher Windows атакующий CI исполнитель и сертификатор")
+    parser = argparse.ArgumentParser(description="NeverLauncher Windows adversarial CI runner and certifier")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    run = sub.add_parser("run", help="запуск актуальный adversarial/compatibility сценарии для один Java крупный")
+    run = sub.add_parser("run", help="run live adversarial/compatibility scenarios for one Java major")
     run.add_argument("--java-major", type=int, required=True)
     run.add_argument("--sensor", type=Path, required=True)
     run.add_argument("--memory-probe", type=Path, required=True)
@@ -369,7 +369,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--timeout-seconds", type=int, default=180)
     run.set_defaults(func=cmd_run)
 
-    aggregate = sub.add_parser("aggregate", help="проверять все Java результаты и выдача сертификация")
+    aggregate = sub.add_parser("aggregate", help="validate all Java results and issue certification")
     aggregate.add_argument("--results-root", type=Path, required=True)
     aggregate.add_argument("--repository", required=True)
     aggregate.add_argument("--commit", required=True)

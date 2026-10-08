@@ -40,4 +40,4 @@ require("neverextensions.desktop-rpc.v1" in rpc_schema, "Desktop RPC schema miss
 openapi=read("schemas/openapi.yaml")
 for path in ('"/api/v1/desktop/extensions/catalog"','"/api/v1/desktop/extensions/{extensionId}/ui"','"/api/v1/desktop/extensions/{extensionId}/rpc"','"/api/v1/admin/extension-cli/catalog"','"/api/v1/admin/extension-cli/{extensionId}/invoke"'):
     require(path in openapi, f"OpenAPI missing {path}")
-print("NeverExtensions Настольное приложение и CLI Расширения 0.20.9 рабочий контроль: OK")
+print("NeverExtensions Desktop & CLI Extensions 0.20.9 production gate: OK")

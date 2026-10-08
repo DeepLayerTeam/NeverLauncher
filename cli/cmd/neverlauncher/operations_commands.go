@@ -13,7 +13,7 @@ import (
 
 func handleProduction(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные production-подкоманды: развёртывание, первый запуск, e2e")
+		return errors.New("доступные production-подкоманды: deployment, first-run, e2e")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -30,11 +30,11 @@ func handleProduction(args []string) error {
 
 func handleAdminOps9100(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные adminops-подкоманды: состояние, готовность, диагностика, резервное копирование")
+		return errors.New("доступные adminops-подкоманды: status, readiness, diagnostics, backup")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("adminops-команды требуют --серверная часть <URL>")
+		return errors.New("adminops-команды требуют --backend <url>")
 	}
 	out := flagValue(args, "--output", "")
 	var payload map[string]any
@@ -96,7 +96,7 @@ func productionE2E990() map[string]any {
 
 func handleLoader(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные loader-подкоманды: список, разрешать, проверять, совместимость, merge, установка-plan")
+		return errors.New("доступные loader-подкоманды: list, resolve, validate, compatibility, merge, install-plan")
 	}
 	loader := strings.ToLower(flagValue(args, "--loader", "fabric"))
 	minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
@@ -120,7 +120,7 @@ func handleLoader(args []string) error {
 		}
 	case "resolve", "install-plan":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый загрузчик: %s", loader)
+			return fmt.Errorf("неподдерживаемый loader: %s", loader)
 		}
 		payload, err = realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON, assetIndexPath)
 		if err != nil {
@@ -128,7 +128,7 @@ func handleLoader(args []string) error {
 		}
 	case "merge":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый загрузчик: %s", loader)
+			return fmt.Errorf("неподдерживаемый loader: %s", loader)
 		}
 		payload, err = realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON, assetIndexPath)
 		if err != nil {
@@ -139,7 +139,7 @@ func handleLoader(args []string) error {
 		payload = validateLoaderProfile(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON)
 	case "compatibility":
 		if !isSupportedLoader(loader) {
-			return fmt.Errorf("неподдерживаемый загрузчик: %s", loader)
+			return fmt.Errorf("неподдерживаемый loader: %s", loader)
 		}
 		payload = map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "loader": loader, "minecraftVersion": minecraftVersion, "status": "compatible", "constraints": loaderCompatibility(loader), "runtime": []string{"version-json", "loader-metadata", "installer-profile", "libraries", "natives", "launch-plan", "delivery"}}
 	default:
@@ -271,7 +271,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("загрузчик %s требует материализованный профиль метаданные или --установщик-профиль; builtin резервный вариант метаданные в текущей версии запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в текущей версии запрещены", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {
@@ -535,7 +535,7 @@ func migrationDoctorReport(items []string) map[string]any {
 
 func handleInstall(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные install-подкоманды: профиль список, wizard, env, хранилище-проверка, инициализировать-администратор, первый-проект, первый запуск, готовность, проверять")
+		return errors.New("доступные install-подкоманды: profile list, wizard, env, storage-check, bootstrap-admin, first-project, first-run, readiness, verify")
 	}
 	out := flagValue(args, "--output", "")
 	if args[0] == "profile" && len(args) > 1 && args[1] == "list" {
@@ -551,15 +551,15 @@ func handleInstall(args []string) error {
 	case "bootstrap-admin":
 		backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 		if backend == "" {
-			return errors.New("инициализировать-администратор требует --серверная часть")
+			return errors.New("bootstrap-admin требует --backend")
 		}
 		token := flagValue(args, "--bootstrap-token", os.Getenv("NEVERLAUNCHER_BOOTSTRAP_TOKEN"))
 		if strings.TrimSpace(token) == "" {
-			return errors.New("инициализировать-администратор требует --инициализировать-токен или NEVERLAUNCHER_BOOTSTRAP_TOKEN")
+			return errors.New("bootstrap-admin требует --bootstrap-token или NEVERLAUNCHER_BOOTSTRAP_TOKEN")
 		}
 		email, password := flagValue(args, "--email", ""), flagValue(args, "--password", "")
 		if email == "" || password == "" {
-			return errors.New("инициализировать-администратор требует --электронная почта и --пароль")
+			return errors.New("bootstrap-admin требует --email и --password")
 		}
 		body := map[string]any{"email": email, "displayName": flagValue(args, "--display-name", "Administrator"), "password": password, "actor": "nl install bootstrap-admin"}
 		payload, err := httpJSONWithHeaders("POST", backend+"/api/v1/install/bootstrap-admin", body, map[string]string{"X-NeverLauncher-Bootstrap-Token": token})
@@ -570,11 +570,11 @@ func handleInstall(args []string) error {
 	case "first-project":
 		backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 		if backend == "" {
-			return errors.New("первый-проект требует --серверная часть")
+			return errors.New("first-project требует --backend")
 		}
 		token := backendToken(args)
 		if token == "" {
-			return errors.New("первый-проект требует --токен или NEVERLAUNCHER_TOKEN")
+			return errors.New("first-project требует --token или NEVERLAUNCHER_TOKEN")
 		}
 		body := map[string]any{"projectId": flagValue(args, "--project", "demo-project"), "profileId": flagValue(args, "--profile", "vanilla"), "channel": flagValue(args, "--channel", "stable"), "actor": "nl install first-project"}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/install/first-project", body, token)
@@ -625,7 +625,7 @@ func installStorageCheck(args []string) error {
 	if backend != "" {
 		token := backendToken(args)
 		if token == "" {
-			return errors.New("установка хранилище-проверка --серверная часть требует --токен или NEVERLAUNCHER_TOKEN")
+			return errors.New("install storage-check --backend требует --token или NEVERLAUNCHER_TOKEN")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/admin/storage/health", nil, token)
 		if err != nil {
@@ -635,11 +635,11 @@ func installStorageCheck(args []string) error {
 	}
 	storage := strings.ToLower(strings.TrimSpace(flagValue(args, "--storage", "local")))
 	if storage != "local" {
-		return errors.New("S3 хранилище-проверка выполняется только через --серверная часть, чтобы проверять реальные рабочий credentials/bucket")
+		return errors.New("S3 storage-check выполняется только через --backend, чтобы проверять реальные production credentials/bucket")
 	}
 	rootDir := filepath.Clean(flagValue(args, "--storage-root", "./storage"))
 	if info, err := os.Lstat(rootDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return errors.New("хранилище корень не может быть символическая ссылка")
+		return errors.New("storage root не может быть symlink")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -648,7 +648,7 @@ func installStorageCheck(args []string) error {
 	}
 	probe, err := os.CreateTemp(rootDir, ".neverlauncher-storage-check-*")
 	if err != nil {
-		return fmt.Errorf("хранилище корень не writable: %w", err)
+		return fmt.Errorf("storage root не writable: %w", err)
 	}
 	name := probe.Name()
 	if _, err := probe.WriteString("neverlauncher-storage-check"); err != nil {
@@ -676,17 +676,17 @@ func installVerify(args []string) error {
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	if backend == "" {
-		return errors.New("установка проверять требует --серверная часть")
+		return errors.New("install verify требует --backend")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("установка проверять требует --токен или NEVERLAUNCHER_TOKEN")
+		return errors.New("install verify требует --token или NEVERLAUNCHER_TOKEN")
 	}
 	checks := map[string]any{}
 	for id, endpoint := range map[string]string{"health": "/health", "ready": "/ready"} {
 		payload, err := httpJSON("GET", backend+endpoint, nil)
 		if err != nil {
-			return fmt.Errorf("установка проверять %s ошибка: %w", id, err)
+			return fmt.Errorf("install verify %s failed: %w", id, err)
 		}
 		checks[id] = payload
 	}
@@ -697,13 +697,13 @@ func installVerify(args []string) error {
 	} {
 		payload, err := httpJSONWithAuth("GET", backend+endpoint, nil, token)
 		if err != nil {
-			return fmt.Errorf("установка проверять %s ошибка: %w", id, err)
+			return fmt.Errorf("install verify %s failed: %w", id, err)
 		}
 		checks[id] = payload
 	}
 	projects, err := httpJSONWithAuth("GET", backend+"/api/v1/projects", nil, token)
 	if err != nil {
-		return fmt.Errorf("установка проверять проекты ошибка: %w", err)
+		return fmt.Errorf("install verify projects failed: %w", err)
 	}
 	checks["projects"] = projects
 	return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "profile": flagValue(args, "--profile", "single-server-local"), "backend": backend, "status": "verified", "checks": checks})
@@ -716,16 +716,16 @@ func installFirstRun(args []string) error {
 	profile := flagValue(args, "--profile", "vanilla")
 	outputDir := strings.TrimSpace(flagValue(args, "--output-dir", ""))
 	if outputDir == "" {
-		return errors.New("установка первый запуск требует --вывод-dir; небезопасный встроенный generator удалён")
+		return errors.New("install first-run требует --output-dir; небезопасный встроенный generator удалён")
 	}
 	apiImage := strings.TrimSpace(flagValue(args, "--api-image", os.Getenv("NEVERLAUNCHER_API_IMAGE")))
 	adminImage := strings.TrimSpace(flagValue(args, "--admin-image", os.Getenv("NEVERLAUNCHER_ADMIN_IMAGE")))
 	allowUnpinned := flagValue(args, "--allow-unpinned-images", "false") == "true"
 	if apiImage == "" || adminImage == "" {
-		return errors.New("установка первый запуск требует --API-образ <registry/image@sha256:...> и --администратор-образ <registry/image@sha256:...>; автономный комплект не собирает исходники")
+		return errors.New("install first-run требует --api-image <registry/image@sha256:...> и --admin-image <registry/image@sha256:...>; standalone bundle не собирает исходники")
 	}
 	if !allowUnpinned && (!strings.Contains(apiImage, "@sha256:") || !strings.Contains(adminImage, "@sha256:")) {
-		return errors.New("автономный первый запуск требует хеш-закреплённый образ (@sha256:...); для dev-только допускается --разрешать-unpinned-образ true")
+		return errors.New("standalone first-run требует digest-pinned images (@sha256:...); для dev-only допускается --allow-unpinned-images true")
 	}
 	files, err := writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminImage)
 	if err != nil {
@@ -745,7 +745,7 @@ func installReadiness(args []string) error {
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	if backend == "" {
-		return errors.New("установка готовность требует --серверная часть; локальная декларативная готовность удалена")
+		return errors.New("install readiness требует --backend; локальная декларативная readiness удалена")
 	}
 	payload, err := httpJSON("GET", backend+"/api/v1/install/readiness", nil)
 	if err != nil {
@@ -834,11 +834,11 @@ func standaloneProductionCompose(template []byte, apiImage, adminImage string) (
 		out = append(out, line)
 	}
 	if !apiSeen || !adminSeen {
-		return nil, errors.New("канонический compose не содержит api/admin образ fields")
+		return nil, errors.New("canonical compose не содержит api/admin image fields")
 	}
 	result := strings.Join(out, "\n")
 	if strings.Contains(result, "context: ../..") || strings.Contains(result, "dockerfile: services/api") || strings.Contains(result, "dockerfile: apps/admin") {
-		return nil, errors.New("автономный compose всё ещё содержит сборка.context; отказ")
+		return nil, errors.New("standalone compose всё ещё содержит build.context; отказ")
 	}
 	return []byte(result), nil
 }

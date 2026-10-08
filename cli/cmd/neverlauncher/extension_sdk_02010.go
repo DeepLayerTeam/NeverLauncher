@@ -35,7 +35,7 @@ func handleExtensionSDK02010(command string, args []string) error {
 	case "dev":
 		return extensionDev02010(args)
 	default:
-		return fmt.Errorf("неизвестный NeverExtensions SDK команда %q", command)
+		return fmt.Errorf("unknown NeverExtensions SDK command %q", command)
 	}
 }
 
@@ -52,7 +52,7 @@ func extensionTargets02010(args []string) ([]string, error) {
 			continue
 		}
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, value) {
-			return nil, fmt.Errorf("--цель содержит неподдерживаемый цель %q", value)
+			return nil, fmt.Errorf("--target contains unsupported target %q", value)
 		}
 		if !seen[value] {
 			seen[value] = true
@@ -60,7 +60,7 @@ func extensionTargets02010(args []string) ([]string, error) {
 		}
 	}
 	if len(out) == 0 {
-		return nil, errors.New("в least один цель является обязательный")
+		return nil, errors.New("at least one target is required")
 	}
 	sort.Strings(out)
 	return out, nil
@@ -78,7 +78,7 @@ func extensionInit02010(args []string) error {
 	if st, err := os.Stat(out); err == nil && st.IsDir() {
 		entries, _ := os.ReadDir(out)
 		if len(entries) > 0 && !flagBool(args, "--force", false) {
-			return fmt.Errorf("вывод каталог %s является не пустой; использовать --force", out)
+			return fmt.Errorf("output directory %s is not empty; use --force", out)
 		}
 	}
 	if err := os.MkdirAll(out, 0o755); err != nil {
@@ -171,8 +171,8 @@ func writeExtensionScaffold02010(root string, targets []string, id, name string)
 func backendTemplate02010(id string) string {
 	return `package main
 
-// SDK аутентифицировать с NEVERLAUNCHER_EXTENSION_HOST_URL и NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
-// Это выполняет POST /v1/hello до запуск сигнал состояния и возможность трафик.
+// The SDK authenticates with NEVERLAUNCHER_EXTENSION_HOST_URL and NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
+// It performs POST /v1/hello before starting heartbeat and capability traffic.
 
 import (
   "context"
@@ -203,8 +203,8 @@ func main() {
 func cliTemplate02010() string {
 	return `package main
 
-// SDK аутентифицировать с NEVERLAUNCHER_EXTENSION_HOST_URL и NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
-// Это выполняет POST /v1/hello до dispatching объявлять состояние команда.
+// The SDK authenticates with NEVERLAUNCHER_EXTENSION_HOST_URL and NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
+// It performs POST /v1/hello before dispatching the declared status command.
 
 import (
   "context"
@@ -251,12 +251,12 @@ func extensionBuildCommand02010(args []string) error {
 			continue
 		}
 		if err := buildTarget02010(root, target, sdkRoot); err != nil {
-			return fmt.Errorf("сборка %s: %w", target.Kind, err)
+			return fmt.Errorf("build %s: %w", target.Kind, err)
 		}
 		built = append(built, target.Kind)
 	}
 	if len(built) == 0 {
-		return errors.New("нет соответствовать расширение цель к сборка")
+		return errors.New("no matching extension target to build")
 	}
 	printJSON(map[string]any{"built": true, "extensionId": manifest.ID, "version": manifest.Version, "targets": built, "sdkRoot": sdkRoot})
 	return nil
@@ -268,7 +268,7 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		dir := filepath.Join(root, target.Kind)
 		goMod := filepath.Join(dir, "go.mod")
 		if _, err := os.Stat(goMod); err != nil {
-			return fmt.Errorf("%s исходник Go.mod: %w", target.Kind, err)
+			return fmt.Errorf("%s source go.mod: %w", target.Kind, err)
 		}
 		out := filepath.Join(root, filepath.FromSlash(target.Entrypoint))
 		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
@@ -288,11 +288,11 @@ func buildTarget02010(root string, target CanonicalExtensionTarget0201, sdkRoot 
 		}
 		entry := filepath.Join(root, filepath.FromSlash(target.Entrypoint))
 		if st, err := os.Stat(entry); err != nil || !st.Mode().IsRegular() {
-			return fmt.Errorf("built entrypoint %s отсутствующий", target.Entrypoint)
+			return fmt.Errorf("built entrypoint %s missing", target.Entrypoint)
 		}
 		return nil
 	default:
-		return fmt.Errorf("неподдерживаемый цель %s", target.Kind)
+		return fmt.Errorf("unsupported target %s", target.Kind)
 	}
 }
 
@@ -313,7 +313,7 @@ func runGo02010(dir, sdkRoot, target string, args ...string) error {
 		defer os.Remove(modfile)
 		defer os.Remove(strings.TrimSuffix(modfile, ".mod") + ".sum")
 		if len(args) == 0 {
-			return errors.New("Go команда отсутствующий")
+			return errors.New("go command missing")
 		}
 		args = append([]string{args[0], "-modfile=" + filepath.Base(modfile)}, args[1:]...)
 	}
@@ -369,7 +369,7 @@ func extensionTest02010(args []string) error {
 		}
 		if target.Kind == "backend" || target.Kind == "cli" {
 			if err := runGo02010(filepath.Join(root, target.Kind), sdkRoot, target.Kind, "test", "./..."); err != nil {
-				return fmt.Errorf("Go тест %s: %w", target.Kind, err)
+				return fmt.Errorf("go test %s: %w", target.Kind, err)
 			}
 		}
 	}
@@ -382,18 +382,18 @@ func extensionTest02010(args []string) error {
 	_ = os.Remove(tmpPath)
 	defer os.Remove(tmpPath)
 	if _, err := packExtensionPackage0202(root, tmpPath); err != nil {
-		return fmt.Errorf("пакет тест: %w", err)
+		return fmt.Errorf("package test: %w", err)
 	}
 	if _, err := verifyExtensionPackage0202(tmpPath, "", true); err != nil {
-		return fmt.Errorf("пакет проверять тест: %w", err)
+		return fmt.Errorf("package verify test: %w", err)
 	}
 	printJSON(map[string]any{"tested": true, "extensionId": manifest.ID, "version": manifest.Version, "targets": manifest.Targets, "packageVerified": true})
 	return nil
 }
 
-// localDevHost02010 implements аутентифицировать локальная петля Хост Протокол используется через
-// расширение обрабатывает. Это является намеренно отказ с блокировкой: только intrinsic возможности
-// и разрешения явно пройден с --grant являются предоставлять.
+// localDevHost02010 implements the authenticated loopback Host Protocol used by
+// extension processes. It is intentionally fail-closed: only intrinsic capabilities
+// and permissions explicitly passed with --grant are exposed.
 type localDevHost02010 struct {
 	manifest                       CanonicalExtensionManifest0201
 	token, callbackToken, instance string
@@ -429,7 +429,7 @@ func newLocalDevHost02010(manifest CanonicalExtensionManifest0201, grants []stri
 			continue
 		}
 		if !requested[g] {
-			return nil, fmt.Errorf("локальный dev grant %s был не запрошенный через манифест", g)
+			return nil, fmt.Errorf("local dev grant %s was not requested by the manifest", g)
 		}
 		h.grants[g] = true
 	}
@@ -439,7 +439,7 @@ func newLocalDevHost02010(manifest CanonicalExtensionManifest0201, grants []stri
 			return nil, err
 		}
 		if err := json.Unmarshal(data, &h.fixtures); err != nil {
-			return nil, fmt.Errorf("decode фикстура: %w", err)
+			return nil, fmt.Errorf("decode fixtures: %w", err)
 		}
 	}
 	return h, nil
@@ -495,12 +495,12 @@ func (h *localDevHost02010) helloHandler(w http.ResponseWriter, r *http.Request)
 	}
 	var req map[string]any
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req) != nil {
-		http.Error(w, "недопустимый hello", 400)
+		http.Error(w, "invalid hello", 400)
 		return
 	}
 	helloAPI, _ := req["extensionApiVersion"].(string)
 	if fmt.Sprint(req["protocolVersion"]) != neverExtensionsHostVersion0210 || !supportsHostHello0210(h.manifest.API, helloAPI) || strings.ToLower(fmt.Sprint(req["extensionId"])) != h.manifest.ID || fmt.Sprint(req["instanceId"]) != h.instance {
-		http.Error(w, "хост identity/protocol несоответствие", 409)
+		http.Error(w, "host identity/protocol mismatch", 409)
 		return
 	}
 	h.once.Do(func() { close(h.hello) })
@@ -516,7 +516,7 @@ func (h *localDevHost02010) logHandler(w http.ResponseWriter, r *http.Request) {
 		Fields         map[string]any
 	}
 	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req) != nil {
-		http.Error(w, "недопустимый журнал", 400)
+		http.Error(w, "invalid log", 400)
 		return
 	}
 	fmt.Fprintf(os.Stderr, "[extension:%s] %s %s", h.manifest.ID, strings.ToUpper(req.Level), req.Message)
@@ -551,7 +551,7 @@ func (h *localDevHost02010) capabilityHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 	if !allowed {
-		http.Error(w, "возможность запрещён через локальный dev хост", 403)
+		http.Error(w, "capability denied by local dev host", 403)
 		return
 	}
 	if raw, ok := h.fixtures[capName]; ok {
@@ -572,7 +572,7 @@ func (h *localDevHost02010) capabilityHandler(w http.ResponseWriter, r *http.Req
 	case "telemetry.emit":
 		writeJSON02010(w, 200, map[string]any{"accepted": true})
 	default:
-		http.Error(w, "предоставлять --фикстура для этот возможность", 501)
+		http.Error(w, "provide --fixtures for this capability", 501)
 	}
 }
 func (h *localDevHost02010) subscriptionsHandler(w http.ResponseWriter, r *http.Request) {
@@ -586,7 +586,7 @@ func (h *localDevHost02010) subscribeHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if !h.grants["events:subscribe"] {
-		http.Error(w, "события:subscribe не granted", 403)
+		http.Error(w, "events:subscribe not granted", 403)
 		return
 	}
 	writeJSON02010(w, 201, map[string]any{"id": 1, "extensionId": h.manifest.ID, "eventType": "dev.event", "mode": "async"})
@@ -615,7 +615,7 @@ func extensionDev02010(args []string) error {
 		}
 	}
 	if target == nil {
-		return fmt.Errorf("расширение делает не объявлять цель %s", targetName)
+		return fmt.Errorf("extension does not declare target %s", targetName)
 	}
 	if err := buildTarget02010(root, *target, discoverSDKRoot02010(root, flagValue(args, "--sdk-root", ""))); err != nil {
 		return err
@@ -666,7 +666,7 @@ func extensionDev02010(args []string) error {
 		fmt.Fprintf(os.Stderr, "NeverExtensions dev host: %s target authenticated (%s)\n", targetName, host.url())
 	case <-time.After(10 * time.Second):
 		_ = cmd.Process.Kill()
-		return errors.New("расширение сделал не аутентифицировать к локальный Хост Протокол в пределах 10s")
+		return errors.New("extension did not authenticate to local Host Protocol within 10s")
 	case <-ctx.Done():
 		_ = cmd.Process.Kill()
 		return ctx.Err()

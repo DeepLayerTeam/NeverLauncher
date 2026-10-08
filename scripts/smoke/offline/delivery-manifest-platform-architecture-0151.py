@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 1):
-    raise SystemExit(f"Доставка Манифест контроль требует VERSION>=0.15.1, получил {VERSION}")
+    raise SystemExit(f"Delivery Manifest gate requires VERSION>=0.15.1, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 delivery = read("cli/cmd/neverlauncher/delivery_manifest.go")
@@ -95,10 +95,10 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
     )
     data = json.loads(resolved)
     if data.get("target") != {"platform": "windows", "architecture": "arm64"}:
-        raise SystemExit(f"канонический цель несоответствие: {data.get('target')}")
+        raise SystemExit(f"canonical target mismatch: {data.get('target')}")
     artifacts = data.get("artifacts", [])
     if len(artifacts) != 1 or artifacts[0].get("name") != f"neverlauncher-desktop-{VERSION}-windows-arm64.exe":
-        raise SystemExit(f"доставка разрешатель selected unexpected артефакты: {artifacts}")
+        raise SystemExit(f"delivery resolver selected unexpected artifacts: {artifacts}")
 
     (bundle / linux_cli_name).write_bytes(b"tampered\n")
     tampered = subprocess.run(
@@ -108,6 +108,6 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
         text=True,
     )
     if tampered.returncode == 0:
-        raise SystemExit("доставка проверка принят подменённый артефакт")
+        raise SystemExit("delivery verification accepted a tampered artifact")
 
-print(f"NeverLauncher {VERSION} Доставка Манифест + platform/architecture контроль: OK")
+print(f"NeverLauncher {VERSION} Delivery Manifest + platform/architecture gate: OK")

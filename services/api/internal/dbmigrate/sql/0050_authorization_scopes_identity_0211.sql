@@ -1,14 +1,14 @@
--- NeverLauncher 0.21.1 — Основа авторизации и идентичность границы.
--- проект_пользователь_роли становится авторитетный участие в проекте хранилище. устаревший
--- пользователи.проект_роли JSON остаётся совместимость projection только.
+-- NeverLauncher 0.21.1 — Authorization Foundation & identity boundaries.
+-- project_user_roles becomes the authoritative project membership store. The legacy
+-- users.project_roles JSON remains a compatibility projection only.
 
 INSERT INTO roles(id,name,description,permissions) VALUES
  ('operator','Оператор','Работа с профилями, пакетами и файлами без финальной публикации','["project:read","project:write","release:prepare","file:write","diagnostics:read"]'::jsonb),
  ('support','Поддержка','Чтение проекта, диагностика и аудит без права изменения','["project:read","diagnostics:read","audit:read"]'::jsonb)
 ON CONFLICT(id) DO NOTHING;
 
--- Никогда без уведомления widen или reinterpret pre-существующий роль с один 
--- канонический 0.21.1 ID. collision должен быть разрешённый явно через оператор.
+-- Never silently widen or reinterpret a pre-existing role with one of the
+-- canonical 0.21.1 IDs. A collision must be resolved explicitly by an operator.
 DO $$
 DECLARE broken BIGINT;
 BEGIN
@@ -42,8 +42,8 @@ BEGIN
     END IF;
 END $$;
 
--- Отклонять конкретный устаревший участие тот не может быть представленный безопасно вместо этого 
--- без уведомления сопоставление их к broader разрешения.
+-- Reject concrete legacy memberships that cannot be represented safely instead of
+-- silently mapping them to broader permissions.
 DO $$
 DECLARE broken BIGINT;
 BEGIN
@@ -68,8 +68,8 @@ BEGIN
     END IF;
 END $$;
 
--- Импорт только конкретный участие. Исторический "*" участие являются намеренно
--- не преобразован: экземпляр-wide authority comes exclusively из пользователи.роль_ID.
+-- Import only concrete memberships. Historical "*" memberships are deliberately
+-- not converted: instance-wide authority comes exclusively from users.role_id.
 INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at)
 SELECT e.project_id, u.id, e.role_id, COALESCE(u.created_at,now()), now()
 FROM users u
@@ -100,8 +100,8 @@ BEGIN
     END IF;
 END $$;
 
--- Сохранять старый JSON column synchronized как совместимость projection. Это нет дольше
--- содержит wildcard/global authority.
+-- Keep the old JSON column synchronized as a compatibility projection. It no longer
+-- contains wildcard/global authority.
 UPDATE users u
 SET project_roles = COALESCE((
     SELECT jsonb_object_agg(pur.project_id,pur.role_id ORDER BY pur.project_id)
@@ -126,9 +126,9 @@ CREATE TRIGGER trg_project_user_roles_projection_0211
 AFTER INSERT OR UPDATE OR DELETE ON project_user_roles
 FOR EACH ROW EXECUTE FUNCTION nl_sync_user_project_roles_0211();
 
--- GameProfile идентичность метаданные. Существующий UUIDs оставаться untouched; они являются marked как
--- устаревший-производный. Новый профили использовать сохранённый random UUIDv4 идентичности независимый
--- из Никогда пользователь ID.
+-- GameProfile identity metadata. Existing UUIDs stay untouched; they are marked as
+-- legacy-derived. New profiles use persisted random UUIDv4 identities independent
+-- from Never user IDs.
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS issuer TEXT NOT NULL DEFAULT 'neverlauncher';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS realm TEXT NOT NULL DEFAULT 'local';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT '';

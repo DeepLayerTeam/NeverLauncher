@@ -12,13 +12,13 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: {label} отсутствующий {missing}")
+        raise SystemExit(f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}")
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 4):
-        raise SystemExit(f"[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: VERSION является {version}")
+        raise SystemExit(f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}")
 
     engine = read("runtime/neverguard-sensor/src/hook_engine.rs")
     sensor = read("runtime/neverguard-sensor/src/lib.rs")
@@ -56,7 +56,7 @@ def main() -> int:
     for forbidden in ("SetWindowsHookEx", "WriteProcessMemory", "CreateRemoteThread", "NtWriteVirtualMemory"):
         if forbidden in engine:
             raise SystemExit(
-                f"[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: cross/global-process primitive forbidden: {forbidden}"
+                f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: cross/global-process primitive forbidden: {forbidden}"
             )
 
     require(
@@ -140,7 +140,7 @@ def main() -> int:
         "Windows compilation/integration/clippy CI",
     )
     if "neverguard-aggressive-hook-engine-0184.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: предварительная проверка wiring отсутствующий")
+        raise SystemExit("[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing")
 
     for path, body in [
         ("runtime/neverguard-sensor/src/hook_engine.rs", engine),
@@ -150,10 +150,10 @@ def main() -> int:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: placeholder {forbidden!r} в {path}"
+                    f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Агрессивный Хук Движок I 0.18.4 контроль: OK")
+    print("[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: OK")
     return 0
 
 

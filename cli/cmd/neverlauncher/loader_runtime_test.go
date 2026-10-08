@@ -81,7 +81,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			mux.HandleFunc("/"+tc.loader+"/meta/versions/loader/test-vanilla/"+tc.loaderVersion+"/profile/json", func(w http.ResponseWriter, r *http.Request) {
 				profileRequests.Add(1)
 				if !profileUp.Load() {
-					http.Error(w, "профиль вышестоящий проект недоступный", http.StatusServiceUnavailable)
+					http.Error(w, "profile upstream unavailable", http.StatusServiceUnavailable)
 					return
 				}
 				_, _ = w.Write(profileBytes)

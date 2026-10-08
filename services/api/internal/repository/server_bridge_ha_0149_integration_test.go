@@ -10,8 +10,8 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// TestServerBridgeHA0149 exercises два независимый SQLRepository дескриптор против
-// один PostgreSQL база данных. CI enables это с NEVERLAUNCHER_SERVERBRIDGE_HA_DSN.
+// TestServerBridgeHA0149 exercises two independent SQLRepository handles against
+// one PostgreSQL database. CI enables it with NEVERLAUNCHER_SERVERBRIDGE_HA_DSN.
 func TestServerBridgeHA0149(t *testing.T) {
 	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
@@ -47,8 +47,8 @@ func TestServerBridgeHA0149(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Оба API реплики гонка одинаковый подписанный-запрос одноразовое значение. PostgreSQL PK +
-	// идентичность эпоха condition должен разрешать точно один consumer.
+	// Both API replicas race the same signed-request nonce. PostgreSQL PK +
+	// identity epoch condition must allow exactly one consumer.
 	nonceHash := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -80,8 +80,8 @@ func TestServerBridgeHA0149(t *testing.T) {
 		t.Fatalf("expected exactly one nonce consumer, got %d", accepted)
 	}
 
-	// Начальное значение истёкший одноразовое значение; HA обслуживание должен clear это без touching 
-	// действительный один и общий состояние снимок должен observe zero истёкший backlog.
+	// Seed an expired nonce; HA maintenance must clear it without touching the
+	// valid one and the shared status snapshot must observe zero expired backlog.
 	_, err := r1.db.ExecContext(ctx, `INSERT INTO server_bridge_node_nonces_v2(node_id,nonce_hash,identity_epoch,consumed_at,expires_at) VALUES($1,$2,1,$3,$4) ON CONFLICT DO NOTHING`, node.ID, "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", now.Add(-4*time.Minute), now.Add(-time.Minute))
 	if err != nil {
 		t.Fatal(err)

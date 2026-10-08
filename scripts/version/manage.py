@@ -118,12 +118,12 @@ def command_check() -> int:
     if f"NeverLauncher {version}." not in schema:
         drift.append("schemas/openapi.yaml")
     if drift:
-        print(f"Версия метаданные расхождение для VERSION={version}:", file=sys.stderr)
+        print(f"Version metadata drift for VERSION={version}:", file=sys.stderr)
         for rel in drift:
             print(f" - {rel}", file=sys.stderr)
-        print("Запуск: Python3 scripts/version/manage.py синхронизация", file=sys.stderr)
+        print("Run: python3 scripts/version/manage.py sync", file=sys.stderr)
         return 1
-    print(f"NeverLauncher версия метаданные OK: {version} (исходник: VERSION)")
+    print(f"NeverLauncher version metadata OK: {version} (source: VERSION)")
     return 0
 
 
@@ -132,11 +132,11 @@ def command_sync() -> int:
     changed = sync(version, check_only=False)
     subprocess.run([sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     if changed:
-        print(f"Синхронизация VERSION={version} в {len(changed)} обязательный метаданные файлы (+ сгенерированный OpenAPI):")
+        print(f"Synced VERSION={version} into {len(changed)} required metadata files (+ generated OpenAPI):")
         for rel in changed:
             print(f" - {rel}")
     else:
-        print(f"Версия метаданные уже synchronized: {version}; OpenAPI regenerated")
+        print(f"Version metadata already synchronized: {version}; OpenAPI regenerated")
     return 0
 
 
@@ -147,12 +147,12 @@ def command_set(value: str) -> int:
     VERSION_FILE.write_text(value + "\n", encoding="utf-8")
     sync(value, check_only=False)
     subprocess.run([sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
-    print(f"NeverLauncher версия задать к {value}; VERSION является канонический исходник")
+    print(f"NeverLauncher version set to {value}; VERSION is the canonical source")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher канонический версия диспетчер")
+    parser = argparse.ArgumentParser(description="NeverLauncher canonical version manager")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("get")
     sub.add_parser("check")
@@ -170,7 +170,7 @@ def main() -> int:
             return command_sync()
         return command_set(args.version)
     except (OSError, ValueError, json.JSONDecodeError, VersionError) as exc:
-        print(f"версия-диспетчер: {exc}", file=sys.stderr)
+        print(f"version-manager: {exc}", file=sys.stderr)
         return 1
 
 

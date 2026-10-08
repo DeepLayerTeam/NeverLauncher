@@ -19,8 +19,8 @@ const (
 	releaseLeaseScript = `local v=redis.call('GET',KEYS[1]); if v==ARGV[1] then return redis.call('DEL',KEYS[1]) end; return 0`
 )
 
-// Coordinator является временный распределённый fence используется в addition к PostgreSQL's
-// долговременный строка аренда. Losing Redis никогда causes управление к завершаться ошибкой открытый.
+// Coordinator is the ephemeral distributed fence used in addition to PostgreSQL's
+// durable row lease. Losing Redis never causes control to fail open.
 type Coordinator interface {
 	Backend() string
 	Health(context.Context) error
@@ -52,17 +52,17 @@ type RedisCoordinator struct {
 func NewRedis(rawURL string) (*RedisCoordinator, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" {
-		return nil, errors.New("Redis URL является пустой")
+		return nil, errors.New("Redis URL is empty")
 	}
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "redis://" + rawURL
 	}
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("недопустимый Redis URL: %w", err)
+		return nil, fmt.Errorf("invalid Redis URL: %w", err)
 	}
 	if parsed.Scheme != "redis" && parsed.Scheme != "rediss" {
-		return nil, fmt.Errorf("неподдерживаемый Redis scheme %q", parsed.Scheme)
+		return nil, fmt.Errorf("unsupported Redis scheme %q", parsed.Scheme)
 	}
 	address := parsed.Host
 	if !strings.Contains(address, ":") {
@@ -72,7 +72,7 @@ func NewRedis(rawURL string) (*RedisCoordinator, error) {
 	if value := strings.Trim(strings.TrimSpace(parsed.Path), "/"); value != "" {
 		db, err = strconv.Atoi(value)
 		if err != nil || db < 0 {
-			return nil, fmt.Errorf("недопустимый Redis база данных %q", value)
+			return nil, fmt.Errorf("invalid Redis database %q", value)
 		}
 	}
 	username, password := "", ""
@@ -82,7 +82,7 @@ func NewRedis(rawURL string) (*RedisCoordinator, error) {
 	}
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("недопустимый Redis адрес %q: %w", address, err)
+		return nil, fmt.Errorf("invalid Redis address %q: %w", address, err)
 	}
 	return &RedisCoordinator{address: address, username: username, password: password, db: db, tls: parsed.Scheme == "rediss", serverName: host, dialTimeout: 2 * time.Second}, nil
 }
@@ -95,7 +95,7 @@ func (r *RedisCoordinator) Health(ctx context.Context) error {
 		return err
 	}
 	if s, ok := v.(string); !ok || !strings.EqualFold(s, "PONG") {
-		return fmt.Errorf("unexpected Redis PING ответ: %v", v)
+		return fmt.Errorf("unexpected Redis PING response: %v", v)
 	}
 	return nil
 }
@@ -121,7 +121,7 @@ func (r *RedisCoordinator) AcquireCommandLease(ctx context.Context, serverID, co
 	}
 	n, ok := v.(int64)
 	if !ok {
-		return false, fmt.Errorf("unexpected Redis аренда ответ: %v", v)
+		return false, fmt.Errorf("unexpected Redis lease response: %v", v)
 	}
 	return n == 1, nil
 }
@@ -177,26 +177,26 @@ func (r *RedisCoordinator) command(ctx context.Context, args ...string) (any, er
 		}
 		auth = append(auth, r.password)
 		if err := writeRESP(conn, auth...); err != nil {
-			return nil, fmt.Errorf("Redis AUTH запись ошибка: %w", err)
+			return nil, fmt.Errorf("Redis AUTH write failed: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
-			return nil, fmt.Errorf("Redis AUTH ошибка: %w", err)
+			return nil, fmt.Errorf("Redis AUTH failed: %w", err)
 		}
 	}
 	if r.db != 0 {
 		if err := writeRESP(conn, "SELECT", strconv.Itoa(r.db)); err != nil {
-			return nil, fmt.Errorf("Redis SELECT запись ошибка: %w", err)
+			return nil, fmt.Errorf("Redis SELECT write failed: %w", err)
 		}
 		if _, err := readRESP(reader); err != nil {
-			return nil, fmt.Errorf("Redis SELECT ошибка: %w", err)
+			return nil, fmt.Errorf("Redis SELECT failed: %w", err)
 		}
 	}
 	if err := writeRESP(conn, args...); err != nil {
-		return nil, fmt.Errorf("Redis команда запись ошибка: %w", err)
+		return nil, fmt.Errorf("Redis command write failed: %w", err)
 	}
 	v, err := readRESP(reader)
 	if err != nil {
-		return nil, fmt.Errorf("Redis команда ошибка: %w", err)
+		return nil, fmt.Errorf("Redis command failed: %w", err)
 	}
 	return v, nil
 }
@@ -249,7 +249,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 			return nil, err
 		}
 		if string(buf[n:]) != "\r\n" {
-			return nil, errors.New("повреждённый Redis bulk string")
+			return nil, errors.New("malformed Redis bulk string")
 		}
 		return string(buf[:n]), nil
 	case '*':
@@ -270,7 +270,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 		}
 		return items, nil
 	default:
-		return nil, fmt.Errorf("неизвестный Redis RESP prefix %q", prefix)
+		return nil, fmt.Errorf("unknown Redis RESP prefix %q", prefix)
 	}
 }
 func readLine(r *bufio.Reader) (string, error) {
@@ -279,7 +279,7 @@ func readLine(r *bufio.Reader) (string, error) {
 		return "", err
 	}
 	if !strings.HasSuffix(line, "\r\n") {
-		return "", errors.New("повреждённый Redis ответ")
+		return "", errors.New("malformed Redis response")
 	}
 	return strings.TrimSuffix(line, "\r\n"), nil
 }

@@ -253,15 +253,15 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	if atomicRepo, ok := s.Repo.(repository.DeviceKeyReplacementRepository); ok {
 		result, err = atomicRepo.ReplaceTrustedDeviceKey(r.Context(), claims.Sub, oldDeviceID, claims.SessionID, mode, reason, replacement, now)
 		if err != nil {
-			log.Printf("устройство ключ %s атомарный замена ошибка: %v", mode, err)
+			log.Printf("device key %s atomic replacement failed: %v", mode, err)
 			writeError(w, http.StatusConflict, "не удалось атомарно заменить device key")
 			return
 		}
 	} else {
-		// In-memory/dev резервный вариант сохраняет одинаковый ordering: замена первый,
-		// текущий-сессия rebind второй, старый идентичность отзыв последний. На любой ошибка
-		// до rebind замена является отозванный так это не может становиться orphaned
-		// активный идентичность.
+		// In-memory/dev fallback preserves the same ordering: replacement first,
+		// current-session rebind second, old identity revoke last. On any failure
+		// before rebind the replacement is revoked so it cannot become an orphaned
+		// active identity.
 		replacement, err = s.Repo.SaveTrustedDevice(r.Context(), replacement)
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
@@ -292,8 +292,8 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		}
 	}
 
-	// ServerBridge актуальный вне PostgreSQL, так invalidate подключается для оба 
-	// rebound текущий сессия и каждый отозванный sibling сессия после фиксация.
+	// ServerBridge lives outside PostgreSQL, so invalidate joins for both the
+	// rebound current session and every revoked sibling session after commit.
 	invalidatedBridge := s.State.ServerBridge.invalidateSession(claims.SessionID, "")
 	seen := map[string]struct{}{claims.SessionID: {}}
 	for _, sid := range result.RevokedSessionIDs {

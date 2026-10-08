@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Minimal Minecraft Java вход probe используется для мост allow/revoke/deny покрытие.
+"""Minimal Minecraft Java login probe used for bridge allow/revoke/deny coverage.
 
- primary контроль выпуска запускает фактический Mojang клиент. Этот probe является
-сохранён только для fast протокол-уровень мост проверяет после сессия выдача или
-отзыв; это является не принят как свидетельство Minecraft клиент совместимость.
+The primary release gate launches the actual Mojang client. This probe is
+kept only for fast protocol-level bridge checks after session issuance or
+revocation; it is not accepted as evidence of Minecraft client compatibility.
 
-Forge и NeoForge запуск их pre-мир NeverLauncher контроли в Minecraft's
-CONFIGURATION phase. --enter-конфигурация выполняет LOGIN -> CONFIGURATION
-переход. --drive-NeoForge-конфигурация additionally полный NeoForge's
-Vanilla-клиент prelude (Ping/Pong и Select Known Packs) без entering PLAY.
+Forge and NeoForge run their pre-world NeverLauncher gates in Minecraft's
+CONFIGURATION phase. --enter-configuration performs the LOGIN -> CONFIGURATION
+transition. --drive-neoforge-configuration additionally completes NeoForge's
+vanilla-client prelude (Ping/Pong and Select Known Packs) without entering PLAY.
 """
 from __future__ import annotations
 
@@ -153,7 +153,7 @@ def send_protocol_packet(sock: socket.socket, payload: bytes, compression_thresh
 
 
 def offline_uuid(name: str) -> uuid.UUID:
-    # Equivalent форма к Java's nameUUIDFromBytes для OfflinePlayer:<имя>.
+    # Equivalent shape to Java's nameUUIDFromBytes for OfflinePlayer:<name>.
     import hashlib
     digest = bytearray(hashlib.md5(("OfflinePlayer:" + name).encode("utf-8")).digest())
     digest[6] = (digest[6] & 0x0F) | 0x30
@@ -205,15 +205,15 @@ def enter_configuration(
             continue
         if packet_id == LOGIN_CUSTOM_QUERY:
             transaction_id, _ = decode_varint(payload)
-            # null custom-query ответ identifies этот как Vanilla клиент.
-            # FriendlyByteBuf.writeNullable encodes null как единый false byte.
+            # A null custom-query response identifies this as a vanilla client.
+            # FriendlyByteBuf.writeNullable encodes null as a single false byte.
             response = varint(SERVERBOUND_LOGIN_CUSTOM_QUERY_ANSWER) + varint(transaction_id) + b"\x00"
             send_protocol_packet(sock, response, compression_threshold)
             continue
         if packet_id == LOGIN_COOKIE_REQUEST:
-            # Нет E2E среда выполнения сейчас запросы cookies во время вход. Завершаться ошибкой
-            # закрытый здесь предотвращает без уведомления захватывать CONFIGURATION покрытие если
-            # протокол получает prerequisite тот этот probe делает не honor.
+            # No E2E runtime currently requests cookies during login. Failing
+            # closed here prevents silently claiming CONFIGURATION coverage if
+            # the protocol gains a prerequisite that this probe does not honor.
             raise ProtocolError("server requested an unsupported login cookie")
         if packet_id == LOGIN_SUCCESS:
             acknowledgement = varint(SERVERBOUND_LOGIN_ACKNOWLEDGED)
@@ -245,12 +245,12 @@ def drive_neoforge_configuration(
     compression_threshold: int | None,
     seconds: float,
 ) -> tuple[str, int, int, int, int]:
-    """Drive NeoForge 1.21.1 Vanilla-клиент CONFIGURATION prelude.
+    """Drive the NeoForge 1.21.1 vanilla-client CONFIGURATION prelude.
 
- NeoForge waits для Pong(0) до runConfiguration(), затем vanilla's
- SynchronizeRegistriesTask waits для ServerboundSelectKnownPacks. Replying
- к те протокол-нативный packets является sufficient к let сервер-только
- конфигурация tasks (включая NeverLauncher) execute без клиент mod.
+    NeoForge waits for Pong(0) before runConfiguration(), then vanilla's
+    SynchronizeRegistriesTask waits for ServerboundSelectKnownPacks. Replying
+    to those protocol-native packets is sufficient to let server-only
+    configuration tasks (including NeverLauncher) execute without a client mod.
     """
     deadline = time.monotonic() + max(0.0, seconds)
     wire_bytes = 0
@@ -292,9 +292,9 @@ def drive_neoforge_configuration(
             continue
 
         if packet_id == CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS:
-            # ServerboundSelectKnownPacks encodes коллекция. пустой список является
-            # действительный Vanilla-клиент answer и создаёт сервер отправлять полный
-            # реестр данные до advancing к позже конфигурация tasks.
+            # ServerboundSelectKnownPacks encodes a collection. An empty list is
+            # a valid vanilla-client answer and makes the server send the full
+            # registry data before advancing to later configuration tasks.
             response = varint(CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS) + varint(0)
             send_protocol_packet(sock, response, compression_threshold)
             known_packs_responses += 1
@@ -312,18 +312,18 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--username", required=True)
-    parser.add_argument("--protocol", type=int, default=767, help="Minecraft 1.21.1 протокол")
+    parser.add_argument("--protocol", type=int, default=767, help="Minecraft 1.21.1 protocol")
     parser.add_argument(
         "--enter-configuration",
         action="store_true",
-        help="полный LOGIN через Вход Подтверждённый и hold CONFIGURATION открытый",
+        help="complete LOGIN through Login Acknowledged and hold CONFIGURATION open",
     )
     parser.add_argument("--login-timeout-seconds", type=float, default=8.0)
     parser.add_argument("--configuration-hold-seconds", type=float, default=8.0)
     parser.add_argument(
         "--drive-neoforge-configuration",
         action="store_true",
-        help="reply к NeoForge 1.21.1 CONFIGURATION Ping и Select Known Packs packets",
+        help="reply to NeoForge 1.21.1 CONFIGURATION Ping and Select Known Packs packets",
     )
     parser.add_argument(
         "--allow-pre-configuration-disconnect",
@@ -335,13 +335,13 @@ def main() -> int:
     )
     args = parser.parse_args()
     if not (3 <= len(args.username) <= 16) or not all(c.isalnum() or c == "_" for c in args.username):
-        raise SystemExit("username должен соответствовать Minecraft Java правила: 3-16 [A-Za-z0-9_]")
+        raise SystemExit("username must match Minecraft Java rules: 3-16 [A-Za-z0-9_]")
     if args.login_timeout_seconds <= 0:
-        raise SystemExit("--вход-тайм-аут-второй должен быть positive")
+        raise SystemExit("--login-timeout-seconds must be positive")
     if args.configuration_hold_seconds < 0:
-        raise SystemExit("--конфигурация-hold-второй не может быть negative")
+        raise SystemExit("--configuration-hold-seconds cannot be negative")
     if args.drive_neoforge_configuration and not args.enter_configuration:
-        raise SystemExit("--drive-NeoForge-конфигурация требует --enter-конфигурация")
+        raise SystemExit("--drive-neoforge-configuration requires --enter-configuration")
 
     handshake = (
         varint(0x00)
@@ -390,9 +390,9 @@ def main() -> int:
                     configuration_bytes = 0
                     login_acknowledged = False
             except (EOFError, socket.timeout, ConnectionResetError, ProtocolError) as exc:
-                raise SystemExit(f"конфигурация вход probe ошибка: {exc}") from exc
+                raise SystemExit(f"configuration login probe failed: {exc}") from exc
             print(
-                f"probe хост={args.host} port={args.port} username={args.username} "
+                f"probe host={args.host} port={args.port} username={args.username} "
                 f"mode=configuration loginAcknowledged={str(login_acknowledged).lower()} packetsSeen={packets_seen} "
                 f"compressionThreshold={compression_threshold if compression_threshold is not None else 'disabled'} "
                 f"loginWireBytes={login_wire_bytes} configurationBytes={configuration_bytes} "
@@ -407,18 +407,18 @@ def main() -> int:
             if not response:
                 terminal = "eof"
         except socket.timeout:
-            # по умолчанию probe является только вход stimulus. мост решение является
-            # asserted через обязательный NeverLauncher allow/deny журнал проверяет.
+            # The default probe is only a login stimulus. The bridge decision is
+            # asserted by mandatory NeverLauncher allow/deny log checks.
             response = b""
             terminal = "timeout"
         except ConnectionResetError:
-            # Proxy/Bukkit-family среда выполнения может abort намеренно
-            # неполный вход обмен с TCP RST после использовать вход
-            # stimulus. Connect/send ошибка оставаться fatal.
+            # Proxy/Bukkit-family runtimes may abort the intentionally
+            # incomplete login exchange with TCP RST after consuming the login
+            # stimulus. Connect/send failures remain fatal.
             response = b""
             terminal = "reset"
     print(
-        f"probe хост={args.host} port={args.port} username={args.username} "
+        f"probe host={args.host} port={args.port} username={args.username} "
         f"responseBytes={len(response)} terminal={terminal}"
     )
     return 0

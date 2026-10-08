@@ -1,4 +1,4 @@
-name: NeverLauncher Рабочий Кандидат в релиз
+name: NeverLauncher Production Release Candidate
 
 on:
   workflow_dispatch:
@@ -13,34 +13,34 @@ concurrency:
 
 jobs:
   validate-release-ref:
-    name: Требовать главный ветка точный исходник
+    name: Require main branch exact source
     runs-on: ubuntu-24.04
     steps:
-      - name: Отклонять non-главный рабочий релиз dispatch
+      - name: Reject non-main production release dispatch
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/main" || { echo "production release candidate must be dispatched from refs/heads/main" >&2; exit 2; }
 
   base-ci:
-    name: Точный-фиксация главный сертификация и полный E2E
+    name: Exact-commit main certification and full E2E
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
   windows-production-signed:
-    name: Authenticode Windows x64 + ARM64 рабочий доставка
+    name: Authenticode Windows x64 + ARM64 production delivery
     needs: [base-ci]
     uses: ./.github/workflows/windows-production-delivery.yml
     secrets: inherit
 
   macos-production-notarized:
-    name: Разработчик ID + нотариально заверенный macOS x64/ARM64 рабочий доставка
+    name: Developer ID + notarized macOS x64/ARM64 production delivery
     needs: [base-ci]
     uses: ./.github/workflows/macos-production-delivery.yml
     secrets: inherit
 
   release-bundle:
-    name: Кандидат в релиз комплект
+    name: Release candidate bundle
     needs: [base-ci, windows-production-signed, macos-production-notarized]
     permissions:
       contents: read
@@ -49,53 +49,53 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Загрузка сертифицированный Linux Защита артефакты
+      - name: Download certified Linux Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-Linux-neverguard-${{ github.sha }}
+          name: neverlauncher-linux-neverguard-${{ github.sha }}
           path: guard-platform-artifacts/linux
-      - name: Загрузка нативный Linux x64 + ARM64 рабочий артефакты
+      - name: Download native Linux x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: neverlauncher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
-      - name: Загрузка нотариально заверенный macOS x64 + ARM64 рабочий артефакты
+      - name: Download notarized macOS x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macOS-нотариально заверенный-${{ github.sha }}
+          name: neverlauncher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
-      - name: Загрузка Управляемый JRE six-цель рабочий ресурсы
+      - name: Download Managed JRE six-target production assets
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-управляемый-JRE-${{ github.sha }}
+          name: neverlauncher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts
-      - name: Загрузка Authenticode Windows x64 + ARM64 рабочий артефакты
+      - name: Download Authenticode Windows x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-Windows-рабочий-${{ github.sha }}
+          name: neverlauncher-windows-production-${{ github.sha }}
           path: windows-production-artifacts
-      - name: Загрузка сертифицированный Windows Защита артефакты
+      - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-Windows-neverguard-${{ github.sha }}
+          name: neverlauncher-windows-neverguard-${{ github.sha }}
           path: guard-platform-artifacts/windows
-      - name: Загрузка сертифицированный macOS Защита артефакты
+      - name: Download certified macOS Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macOS-neverguard-${{ github.sha }}
+          name: neverlauncher-macos-neverguard-${{ github.sha }}
           path: guard-platform-artifacts/macos
-      - name: Загрузка Защита CI матрица
+      - name: Download Guard CI matrix
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-защита-ci-матрица-${{ github.run_id }}
+          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
-      - name: Загрузка точный-фиксация Windows атакующий сертификат
+      - name: Download exact-commit Windows adversarial certificate
         uses: actions/download-artifact@v4
         with:
-          name: neverguard-Windows-атакующий-сертификат-${{ github.sha }}
+          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
           path: windows-adversarial-certificate
-      - name: Wait для точный-фиксация Совместимость + Доверие к устройству сертификация
+      - name: Wait for exact-commit Compatibility + Device Trust certifications
         env:
           GITHUB_TOKEN: ${{ github.token }}
         shell: bash
@@ -129,13 +129,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Установка релиз зависимости
+      - name: Install release dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
-      - name: Генерировать временный CI релиз доверие hierarchy
+      - name: Generate ephemeral CI release trust hierarchy
         run: |
           umask 077
           openssl genpkey -algorithm ED25519 -out /tmp/neverlauncher-release-root-private.pem
@@ -149,7 +149,7 @@ jobs:
             --registry-dir /tmp/neverlauncher-release-trust \
             --root-private-key /tmp/neverlauncher-release-root-private.pem \
             --policy-out /tmp/neverlauncher-release-trust-policy.json)
-      - name: Сборка и cryptographically проверять полный комплект релиза
+      - name: Build and cryptographically verify complete release bundle
         env:
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
           NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
@@ -169,7 +169,7 @@ jobs:
           NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
         run: bash scripts/release/build-release.sh
-      - name: Assert обязательный рабочий артефакты
+      - name: Assert required production artifacts
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"

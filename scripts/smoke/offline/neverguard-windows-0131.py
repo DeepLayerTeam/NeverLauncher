@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 1):
-    raise SystemExit(f"NeverGuard Windows контроль требует >=0.13.1, получил {version}")
+    raise SystemExit(f"NeverGuard Windows gate requires >=0.13.1, got {version}")
 
 cargo = read("runtime/neverruntime/Cargo.toml")
 require(cargo, ['name = "neverguard"', 'path = "src/bin/neverguard.rs"', '"net"', 'rand = "0.8"', 'hmac = "0.12"', 'subtle = "2"', 'zeroize = "1"'], "NeverRuntime Cargo")
@@ -91,6 +91,6 @@ require(ci, [
 ], "NeverGuard Windows CI")
 
 security = read("SECURITY.md")
-require(security, ["NeverGuard Windows 0.13.1", "bootstrap secret", "Named Pipe", "sequence"], "NeverGuard security documentation")
+require(security, ["NeverGuard Windows 0.13.1", "инициализировать секрет", "Именованный Pipe", "sequence"], "NeverGuard security documentation")
 
-print(f"[NeverLauncher] NeverGuard Windows аутентифицировать IPC контроль OK: {version}")
+print(f"[NeverLauncher] NeverGuard Windows authenticated IPC gate OK: {version}")

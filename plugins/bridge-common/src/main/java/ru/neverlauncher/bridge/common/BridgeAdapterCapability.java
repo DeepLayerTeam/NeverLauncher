@@ -1,11 +1,11 @@
 package ru.neverlauncher.bridge.common;
 
 /**
- * Стабильный возможность vocabulary для Универсальный Сервер Адаптер поверхность.
+ * Stable capability vocabulary for the Universal Server Adapter surface.
  *
- * Возможности описывать что работающий адаптер может фактически делать. Платформа
- * имена являются обнаружение метаданные только; безопасность и выполнение пути следует контроль
- * на эти возможности вместо этого inferring behaviour из бренд string.
+ * Capabilities describe what the running adapter can actually do. Platform
+ * names are discovery metadata only; security and execution paths should gate
+ * on these capabilities instead of inferring behaviour from a brand string.
  */
 public enum BridgeAdapterCapability {
     LOGIN_GATE("auth.login-gate"),

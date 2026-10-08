@@ -19,7 +19,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 		p.Mode = model.ExtensionTrustModeStrict
 	}
 	if p.Mode != model.ExtensionTrustModeStrict && p.Mode != model.ExtensionTrustModeAudit {
-		return model.ExtensionTrustPolicy{}, errors.New("расширение доверие политика режим должен быть строгий или аудит")
+		return model.ExtensionTrustPolicy{}, errors.New("extension trust policy mode must be strict or audit")
 	}
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(p.AllowedPublishers))
@@ -29,7 +29,7 @@ func normalizeTrustPolicy02012(p model.ExtensionTrustPolicy) (model.ExtensionTru
 			continue
 		}
 		if !registryPublisherID0203.MatchString(id) {
-			return model.ExtensionTrustPolicy{}, fmt.Errorf("недопустимый разрешён издатель ID %q", id)
+			return model.ExtensionTrustPolicy{}, fmt.Errorf("invalid allowed publisher id %q", id)
 		}
 		if _, ok := seen[id]; ok {
 			continue
@@ -54,7 +54,7 @@ func normalizeEmergencyScope02012(scope, scopeID string) (string, string, error)
 	if scope == "project" && scopeID != "" {
 		return scope, scopeID, nil
 	}
-	return "", "", errors.New("область должен быть глобальный или проект с scopeId")
+	return "", "", errors.New("scope must be global or project with scopeId")
 }
 
 func (r *MemoryRepository) GetExtensionTrustPolicy(ctx context.Context) (model.ExtensionTrustPolicy, error) {
@@ -108,13 +108,13 @@ func normalizeQuarantine02012(e model.ExtensionQuarantineEntry) (model.Extension
 	e.ArtifactSHA256 = strings.ToLower(strings.TrimSpace(e.ArtifactSHA256))
 	e.Reason = strings.TrimSpace(e.Reason)
 	if e.ID == "" || len(e.ID) > 200 {
-		return e, errors.New("карантин ID является обязательный")
+		return e, errors.New("quarantine id is required")
 	}
 	if !registryIdentity0203.MatchString(e.PackageIdentity) || !registrySHA0203.MatchString(e.ArtifactSHA256) {
-		return e, errors.New("карантин пакет идентичность/SHA-256 является недопустимый")
+		return e, errors.New("quarantine package identity/SHA-256 is invalid")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
-		return e, errors.New("карантин reason является обязательный и ограничение к 1000 chars")
+		return e, errors.New("quarantine reason is required and limited to 1000 chars")
 	}
 	e.ExtensionID = strings.ToLower(strings.TrimSpace(e.ExtensionID))
 	e.PublisherID = strings.ToLower(strings.TrimSpace(e.PublisherID))
@@ -139,7 +139,7 @@ func (r *MemoryRepository) SaveExtensionQuarantine(ctx context.Context, e model.
 	defer r.extensionMu.Unlock()
 	for _, cur := range r.extensionQuarantine {
 		if cur.ID == e.ID {
-			return model.ExtensionQuarantineEntry{}, fmt.Errorf("%w: карантин ID уже существует", ErrConflict)
+			return model.ExtensionQuarantineEntry{}, fmt.Errorf("%w: quarantine id already exists", ErrConflict)
 		}
 	}
 	r.extensionQuarantine = append(r.extensionQuarantine, e)
@@ -221,10 +221,10 @@ func normalizeEmergency02012(e model.ExtensionEmergencyDisable) (model.Extension
 	e.Reason = strings.TrimSpace(e.Reason)
 	e.Source = strings.TrimSpace(e.Source)
 	if !extensionID0201.MatchString(e.ExtensionID) {
-		return e, errors.New("недопустимый расширение ID")
+		return e, errors.New("invalid extension id")
 	}
 	if e.Reason == "" || len(e.Reason) > 1000 {
-		return e, errors.New("аварийный отключить reason является обязательный")
+		return e, errors.New("emergency disable reason is required")
 	}
 	if e.Source == "" {
 		e.Source = "admin"

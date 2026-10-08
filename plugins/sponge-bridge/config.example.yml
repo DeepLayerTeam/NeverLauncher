@@ -1,6 +1,6 @@
 backend:
   url: http://127.0.0.1:8080
-  # Упорядоченный HA эндпоинты. единый URL выше является используется только когда URL является пустой.
+  # Ordered HA endpoints. The single url above is used only when urls is empty.
   urls: "https://launcher-a.example.com,https://launcher-b.example.com"
   failoverCooldownMs: 5000
 server:

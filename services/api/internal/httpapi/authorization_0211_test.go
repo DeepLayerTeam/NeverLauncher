@@ -65,19 +65,19 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 
 	operator := loginUser0211(t, handler, "operator0211@example.test", "operator-password-0211")
 
-	// Конкретный участие в проекте авторизует принадлежащий проект.
+	// Concrete project membership authorizes the owned project.
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/demo-project", operator, `{"description":"authorized-0211"}`)
 	if res.Code != http.StatusOK {
 		t.Fatalf("own project patch returned %d: %s", res.Code, res.Body.String())
 	}
 
-	// одинаковый роль никогда expands к другой проект.
+	// The same role never expands to another project.
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/project-b", operator, `{"description":"must-not-change"}`)
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("cross-project patch returned %d, want 403: %s", res.Code, res.Body.String())
 	}
 
-	// Полезная нагрузка-область эндпоинты являются проверен после разрешать projectId из тело.
+	// Payload-scoped endpoints are checked after resolving projectId from the body.
 	res = request0211(t, handler, http.MethodPost, "/api/v1/packages", operator,
 		`{"projectId":"project-b","profileId":"vanilla","channel":"stable","version":"0.21.1-cross-project"}`)
 	if res.Code != http.StatusForbidden {
@@ -89,14 +89,14 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 		t.Fatalf("cross-project telemetry returned %d, want 403: %s", res.Code, res.Body.String())
 	}
 
-	// Экземпляр резервное копирование являются не проект-область привилегия.
+	// Instance backups are not a project-scoped privilege.
 	res = request0211(t, handler, http.MethodPost, "/api/v1/operations/backups", operator, `{}`)
 	if res.Code != http.StatusForbidden {
 		t.Fatalf("project operator reached instance backup: status=%d body=%s", res.Code, res.Body.String())
 	}
 
-	// Участие отзыв takes эффект для уже выданный токен. Пользователь
-	// administration сам требует устойчивый к фишингу актуальный сессия.
+	// Membership revocation takes effect for the already-issued token. User
+	// administration itself requires a phishing-resistant fresh session.
 	admin, _ = registerTestPasskey117(t, handler, admin)
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/users/"+created.ID, admin,
 		`{"projectRoles":{}}`)

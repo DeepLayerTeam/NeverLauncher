@@ -1,9 +1,9 @@
--- NeverLauncher 0.20.1: канонический NeverExtensions ядро хранение.
--- Этот миграция добавляет нормализован рабочий модель используется через 
--- канонический neverlauncher-расширение.JSON манифест. Нет registry/runtime
--- поведение является implied здесь; таблица являются авторитетный хранение для
--- расширение идентичность, неизменяемый версии, dependency/permission метаданные и
--- установка состояние.
+-- NeverLauncher 0.20.1: canonical NeverExtensions core persistence.
+-- This migration introduces the normalized production model used by the
+-- canonical neverlauncher-extension.json manifest. No registry/runtime
+-- behavior is implied here; the tables are authoritative persistence for
+-- extension identity, immutable versions, dependency/permission metadata and
+-- installation state.
 
 CREATE TABLE IF NOT EXISTS extensions (
     id TEXT PRIMARY KEY,

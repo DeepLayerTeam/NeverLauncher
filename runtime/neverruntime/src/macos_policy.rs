@@ -95,10 +95,10 @@ mod imp {
             .args(["--verify", "--strict", "--verbose=2"])
             .arg(path)
             .output()
-            .map_err(|err| format!("ошибка к execute codesign проверять для {}: {err}", path.display()))?;
+            .map_err(|err| format!("failed to execute codesign verify for {}: {err}", path.display()))?;
         if !verify.status.success() {
             return Err(format!(
-                "macOS код подпись проверка ошибка для {}: {}",
+                "macOS code signature verification failed for {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&verify.stderr).trim()
             ));
@@ -108,10 +108,10 @@ mod imp {
             .args(["-d", "--verbose=4", "--entitlements", ":-"])
             .arg(path)
             .output()
-            .map_err(|err| format!("ошибка к inspect код подпись для {}: {err}", path.display()))?;
+            .map_err(|err| format!("failed to inspect code signature for {}: {err}", path.display()))?;
         if !display.status.success() {
             return Err(format!(
-                "macOS код подпись inspection ошибка для {}: {}",
+                "macOS code signature inspection failed for {}: {}",
                 path.display(),
                 String::from_utf8_lossy(&display.stderr).trim()
             ));
@@ -177,7 +177,7 @@ mod imp {
                 deny_debugger_attach()?;
                 libc::umask(0o077);
             }
-            let executable = std::env::current_exe().map_err(|err| format!("разрешать текущий исполняемый ошибка: {err}"))?;
+            let executable = std::env::current_exe().map_err(|err| format!("resolve current executable failed: {err}"))?;
             let signature = verify_macos_code_signature(&executable)?;
             if !signature.valid || !signature.hardened_runtime || !signature.library_validation {
                 return Err("macOS production hardening requires a valid Hardened Runtime signature with library validation".to_string());
@@ -217,7 +217,7 @@ mod imp {
         }
         let current_parent = unsafe { libc::getppid() };
         if current_parent != parent_pid as libc::pid_t {
-            return Err(format!("macOS родительский PID несоответствие: ожидаемый {parent_pid}, наблюдаемый {current_parent}"));
+            return Err(format!("macOS parent PID mismatch: expected {parent_pid}, observed {current_parent}"));
         }
         let kq = unsafe { libc::kqueue() };
         if kq < 0 { return Err(os_err("macOS kqueue failed")); }
@@ -245,7 +245,7 @@ mod imp {
             }
         }).map_err(|err| {
             unsafe { libc::close(kq); }
-            format!("macOS родительский watcher поток ошибка: {err}")
+            format!("macOS parent watcher thread failed: {err}")
         })?;
         Ok(())
     }
@@ -292,7 +292,7 @@ mod imp {
         if rc == 0 { return Ok(()); }
         let err = io::Error::last_os_error();
         if err.raw_os_error() == Some(libc::ESRCH) { return Ok(()); }
-        Err(format!("macOS kill группа процессов {pid} ошибка: {err}"))
+        Err(format!("macOS kill process group {pid} failed: {err}"))
     }
 }
 

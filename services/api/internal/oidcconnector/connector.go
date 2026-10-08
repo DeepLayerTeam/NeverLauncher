@@ -62,14 +62,14 @@ func NewWithIssuerPolicy(ctx context.Context, input Config, policy IssuerPolicy)
 	}
 	client, transport, err := newHTTPClient(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("OIDC коннектор %q транспорт: %w", cfg.ID, err)
+		return nil, fmt.Errorf("OIDC connector %q transport: %w", cfg.ID, err)
 	}
 	c := &Connector{cfg: cfg, client: client, transport: transport, issuerPolicy: policy}
 	refreshCtx, cancel := context.WithTimeout(ctx, cfg.RequestTimeoutValue)
 	defer cancel()
 	if err := c.refreshMetadata(refreshCtx); err != nil {
 		c.Close()
-		return nil, fmt.Errorf("OIDC коннектор %q обнаружение: %w", cfg.ID, err)
+		return nil, fmt.Errorf("OIDC connector %q discovery: %w", cfg.ID, err)
 	}
 	return c, nil
 }
@@ -201,8 +201,8 @@ func (c *Connector) DefaultRedirectURI() string {
 	return c.cfg.RedirectURIs[0]
 }
 
-// EndSessionURL собирает провайдер front-канал выход URL когда обнаружение предоставляет
-// end_сессия_эндпоинт. Этот является намеренно отдельный из Никогда сессия выход.
+// EndSessionURL builds a provider front-channel logout URL when discovery exposes
+// end_session_endpoint. This is deliberately separate from Never session logout.
 func (c *Connector) EndSessionURL(postLogoutRedirectURI string) (string, error) {
 	c.mu.RLock()
 	endpoint := c.discovery.EndSessionEndpoint
@@ -311,7 +311,7 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 		}
 	}
 	if len(doc.TokenEndpointAuthMethodsSupported) > 0 && !contains(doc.TokenEndpointAuthMethodsSupported, c.cfg.TokenEndpointAuthMethod) {
-		return fmt.Errorf("провайдер делает не advertise токен эндпоинт аутентификация метод %q", c.cfg.TokenEndpointAuthMethod)
+		return fmt.Errorf("provider does not advertise token endpoint auth method %q", c.cfg.TokenEndpointAuthMethod)
 	}
 	if len(doc.IDTokenSigningAlgs) > 0 {
 		ok := false
@@ -322,7 +322,7 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 			}
 		}
 		if !ok {
-			return fmt.Errorf("провайдер и коннектор имеют нет common ID токен подписание algorithm")
+			return fmt.Errorf("provider and connector have no common ID token signing algorithm")
 		}
 	}
 	jwksReq, err := http.NewRequestWithContext(ctx, http.MethodGet, doc.JWKSURI, nil)
@@ -335,10 +335,10 @@ func (c *Connector) refreshMetadata(ctx context.Context) error {
 		return fmt.Errorf("fetch JWKS: %w", err)
 	}
 	if len(set.Keys) == 0 {
-		return errors.New("JWKS содержит нет ключи")
+		return errors.New("JWKS contains no keys")
 	}
 	if len(set.Keys) > 128 {
-		return errors.New("JWKS содержит слишком многие ключи")
+		return errors.New("JWKS contains too many keys")
 	}
 	if err := validateJWKS(set.Keys, c.cfg); err != nil {
 		return err
@@ -362,7 +362,7 @@ func (c *Connector) verifyTokenWithRefresh(ctx context.Context, raw, nonce strin
 		return verified, nil
 	}
 	if refreshErr := c.refreshMetadata(ctx); refreshErr != nil {
-		return verifiedToken{}, fmt.Errorf("%v; JWKS обновление ошибка: %w", err, refreshErr)
+		return verifiedToken{}, fmt.Errorf("%v; JWKS refresh failed: %w", err, refreshErr)
 	}
 	c.mu.RLock()
 	keys = append([]jwk(nil), c.keys...)
@@ -422,10 +422,10 @@ func (c *Connector) doJSON(req *http.Request, out any) error {
 func (c *Connector) validateDiscoveredURL(name, raw string) error {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
-		return fmt.Errorf("обнаружение %s должен быть absolute HTTPS URL", name)
+		return fmt.Errorf("discovery %s must be an absolute HTTPS URL", name)
 	}
 	if !hostAllowed(strings.ToLower(u.Hostname()), c.cfg.HostAllowlist) {
-		return fmt.Errorf("обнаружение %s хост %q является не в hostAllowlist", name, u.Hostname())
+		return fmt.Errorf("discovery %s host %q is not in hostAllowlist", name, u.Hostname())
 	}
 	return nil
 }
@@ -485,19 +485,19 @@ func claimStrings(claims map[string]any, path string) ([]string, error) {
 		out := []string{}
 		seen := map[string]struct{}{}
 		if len(x) > 256 {
-			return nil, errors.New("слишком многие значения")
+			return nil, errors.New("too many values")
 		}
 		for _, raw := range x {
 			s, ok := raw.(string)
 			if !ok {
-				return nil, errors.New("array содержит non-string value")
+				return nil, errors.New("array contains non-string value")
 			}
 			s = strings.TrimSpace(s)
 			if s == "" {
 				continue
 			}
 			if len(s) > 256 {
-				return nil, errors.New("value слишком long")
+				return nil, errors.New("value too long")
 			}
 			if _, ok := seen[s]; !ok {
 				seen[s] = struct{}{}
@@ -506,7 +506,7 @@ func claimStrings(claims map[string]any, path string) ([]string, error) {
 		}
 		return out, nil
 	default:
-		return nil, errors.New("захватывать является не string или string array")
+		return nil, errors.New("claim is not string or string array")
 	}
 }
 func cloneMap(input map[string]any) map[string]any {

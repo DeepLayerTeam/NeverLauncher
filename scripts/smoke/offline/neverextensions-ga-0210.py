@@ -7,7 +7,9 @@ def read(p): return (ROOT/p).read_text(encoding='utf-8')
 def require(cond,msg):
     if not cond: raise SystemExit(msg)
 
-require((ROOT/'VERSION').read_text().strip()=='0.21.0','VERSION must be 0.21.0')
+product_version=(ROOT/'VERSION').read_text().strip()
+version=tuple(int(x) for x in product_version.split('.')[:3])
+require(version >= (0,21,0),'VERSION must be >= 0.21.0')
 contract=read('services/api/internal/extensioncontract/contract_0210.go')
 for token in ['PackageFormatVersion','ManifestSchemaVersion','HostProtocolVersion','ExtensionAPIVersion','LegacyExtensionAPIVersion','RequireGAAPIVersion','SupportsHostHello']:
     require(token in contract,f'GA contract missing {token}')
@@ -39,8 +41,8 @@ spec=json.loads(read('sdk/api/extension-host-protocol.json'))
 require(spec.get('hostProtocolVersion')=='1.0' and spec.get('extensionApiVersion')=='1.0','SDK protocol freeze mismatch')
 require(spec['types']['HelloRequest'].get('extensionApiVersion')=='string','SDK hello API version field missing')
 for f in ['sdk/admin/typescript/package.json','sdk/desktop/typescript/package.json']:
-    require(json.loads(read(f)).get('version')=='0.21.0',f'{f} must be 0.21.0')
-require('version = "0.21.0"' in read('sdk/desktop/rust/Cargo.toml'),'Rust SDK must be 0.21.0')
+    require(json.loads(read(f)).get('version')=='0.21.0',f'{f} must remain at frozen GA SDK version 0.21.0')
+require('version = "0.21.0"' in read('sdk/desktop/rust/Cargo.toml'),'Rust SDK must remain at frozen GA SDK version 0.21.0')
 targets=json.loads(read('neverextensions/ga-targets-0210.json'))
 require({x['os'] for x in targets['targets'] if x.get('required')}=={'linux','windows','macos'},'GA cross-platform target set incomplete')
 workflow=read('.github/workflows/neverextensions-ga-0210.yml')

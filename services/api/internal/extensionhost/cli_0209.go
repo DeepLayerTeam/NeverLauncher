@@ -69,29 +69,29 @@ func cliTarget0209(manifest model.ExtensionManifest) (model.ExtensionTarget, err
 			return t, nil
 		}
 	}
-	return model.ExtensionTarget{}, errors.New("расширение делает не объявлять CLI цель")
+	return model.ExtensionTarget{}, errors.New("extension does not declare a cli target")
 }
 
-// RunCLI0209 запускает неизменяемый CLI цель как краткоживущий изолированный процесс.
-// процесс аутентифицировать к одинаковый локальная петля Хост расширений Протокол как 
-// серверное расширение и поэтому получает возможности только через 
-// запрет по умолчанию broker. Это никогда получает Серверная часть DB/auth/storage секреты.
+// RunCLI0209 starts the immutable cli target as a short-lived isolated process.
+// The process authenticates to the same loopback Extension Host Protocol as a
+// backend extension and therefore receives capabilities only through the
+// deny-by-default broker. It never receives the Backend DB/auth/storage secrets.
 func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInstall, argv []string) (CLIResult0209, error) {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return CLIResult0209{}, errors.New("расширение должен быть включённый до CLI invocation")
+		return CLIResult0209{}, errors.New("extension must be enabled before cli invocation")
 	}
 	if len(argv) == 0 || len(argv) > 128 {
-		return CLIResult0209{}, errors.New("CLI invocation требует 1..128 arguments")
+		return CLIResult0209{}, errors.New("cli invocation requires 1..128 arguments")
 	}
 	total := 0
 	for _, arg := range argv {
 		total += len(arg)
 		if len(arg) > 16<<10 || strings.ContainsRune(arg, '\x00') {
-			return CLIResult0209{}, errors.New("недопустимый CLI argument")
+			return CLIResult0209{}, errors.New("invalid cli argument")
 		}
 	}
 	if total > 128<<10 {
-		return CLIResult0209{}, errors.New("CLI arguments exceed 128 KiB")
+		return CLIResult0209{}, errors.New("cli arguments exceed 128 KiB")
 	}
 	ver, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	}
 	security := s.securityValue0207()
 	if security == nil {
-		return CLIResult0209{}, errors.New("расширение возможность безопасность недоступный")
+		return CLIResult0209{}, errors.New("extension capability security unavailable")
 	}
 	projectID := ""
 	if install.Scope == "project" {
@@ -111,10 +111,10 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	}
 	allowed, err := security.Allowed(ctx, install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, "cli:contribute", projectID)
 	if err != nil {
-		return CLIResult0209{}, fmt.Errorf("загрузка CLI возможность политика: %w", err)
+		return CLIResult0209{}, fmt.Errorf("load cli capability policy: %w", err)
 	}
 	if !allowed {
-		return CLIResult0209{}, errors.New("CLI:contribute является не granted")
+		return CLIResult0209{}, errors.New("cli:contribute is not granted")
 	}
 	payloadRoot, err := extensionlifecycle.CurrentPayloadDir(s.cfg.ExtensionRoot, install.Scope, install.ScopeID, install.ExtensionID)
 	if err != nil {
@@ -149,7 +149,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	baseURL := s.baseURL
 	s.mu.RUnlock()
 	if baseURL == "" {
-		return CLIResult0209{}, errors.New("хост расширений протокол сервер является не запущен")
+		return CLIResult0209{}, errors.New("extension host protocol server is not started")
 	}
 	if err := s.registerTransient0209(st); err != nil {
 		return CLIResult0209{}, err
@@ -168,7 +168,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	cmd.Stderr = stderr
 	started := time.Now().UTC()
 	if err := cmd.Start(); err != nil {
-		return CLIResult0209{}, fmt.Errorf("запуск расширение CLI: %w", err)
+		return CLIResult0209{}, fmt.Errorf("start cli extension: %w", err)
 	}
 	st.mu.Lock()
 	st.cmd = cmd
@@ -196,18 +196,18 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		}
 		result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: stdout.String(), Stderr: stderr.String(), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 		if waitErr != nil {
-			return result, fmt.Errorf("расширение CLI выход до аутентифицировать hello: %w", waitErr)
+			return result, fmt.Errorf("cli extension exited before authenticated hello: %w", waitErr)
 		}
-		return result, errors.New("расширение CLI выход до аутентифицировать hello")
+		return result, errors.New("cli extension exited before authenticated hello")
 	case <-startup.C:
 		_ = killProcessTree(cmd.Process)
-		return CLIResult0209{}, fmt.Errorf("расширение CLI hello тайм-аут после %s", s.cfg.StartupTimeout)
+		return CLIResult0209{}, fmt.Errorf("cli extension hello timeout after %s", s.cfg.StartupTimeout)
 	case <-ctx.Done():
 		_ = killProcessTree(cmd.Process)
 		return CLIResult0209{}, ctx.Err()
 	case <-s.ctx.Done():
 		_ = killProcessTree(cmd.Process)
-		return CLIResult0209{}, errors.New("хост расширений является shutting down")
+		return CLIResult0209{}, errors.New("extension host is shutting down")
 	}
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
@@ -220,7 +220,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			}
 			result := CLIResult0209{ExtensionID: install.ExtensionID, Version: install.CurrentVersion, Scope: install.Scope, ScopeID: install.ScopeID, ExitCode: code, Stdout: stdout.String(), Stderr: stderr.String(), DurationMs: time.Since(started).Milliseconds(), Protocol: ProtocolVersion}
 			if waitErr != nil || code != 0 {
-				return result, fmt.Errorf("расширение CLI выход с код %d", code)
+				return result, fmt.Errorf("cli extension exited with code %d", code)
 			}
 			return result, nil
 		case <-ticker.C:
@@ -228,11 +228,11 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 				if rss, count, e := processTreeUsage(cmd.Process.Pid); e == nil {
 					if s.cfg.MaxMemoryBytes > 0 && rss > s.cfg.MaxMemoryBytes {
 						_ = killProcessTree(cmd.Process)
-						return CLIResult0209{}, fmt.Errorf("расширение CLI память ограничение exceeded: %d > %d", rss, s.cfg.MaxMemoryBytes)
+						return CLIResult0209{}, fmt.Errorf("cli extension memory limit exceeded: %d > %d", rss, s.cfg.MaxMemoryBytes)
 					}
 					if s.cfg.MaxProcesses > 0 && count > s.cfg.MaxProcesses {
 						_ = killProcessTree(cmd.Process)
-						return CLIResult0209{}, fmt.Errorf("расширение CLI процесс ограничение exceeded: %d > %d", count, s.cfg.MaxProcesses)
+						return CLIResult0209{}, fmt.Errorf("cli extension process limit exceeded: %d > %d", count, s.cfg.MaxProcesses)
 					}
 				}
 			}
@@ -251,7 +251,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			case <-time.After(s.cfg.StopTimeout):
 				_ = killProcessTree(cmd.Process)
 			}
-			return CLIResult0209{}, errors.New("хост расширений является shutting down")
+			return CLIResult0209{}, errors.New("extension host is shutting down")
 		}
 	}
 }

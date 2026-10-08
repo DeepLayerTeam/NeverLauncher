@@ -1,10 +1,10 @@
-# NeverLauncher HTTP Аутентификация Коннектор протокол v1
+# NeverLauncher HTTP Auth Connector protocol v1
 
-`0.11.4` использует этот протокол как реальный удалённый аутентификация транспорт. Коннектор не принимает произвольный URL из вход запрос: все эндпоинты строятся только относительно заранее проверенного `baseUrl` provider-конфигурации.
+`0.11.4` использует этот протокол как реальный remote authentication transport. Connector не принимает произвольный URL из login request: все endpoints строятся только относительно заранее проверенного `baseUrl` provider-конфигурации.
 
-## Эндпоинты
+## Endpoints
 
-По умолчанию удалённый аутентификация служба реализует:
+По умолчанию remote auth service реализует:
 
 ```text
 POST /authenticate
@@ -14,9 +14,9 @@ POST /logout
 GET  /health
 ```
 
-Все ответы, включая ошибки, имеют `Content-Type: application/json` и подписываются тем же HMAC ключ, который настроен в NeverLauncher. Перенаправления запрещены.
+Все ответы, включая ошибки, имеют `Content-Type: application/json` и подписываются тем же HMAC key, который настроен в NeverLauncher. Redirects запрещены.
 
-Успешная идентичность ответ:
+Успешная identity response:
 
 ```json
 {
@@ -35,7 +35,7 @@ GET  /health
 }
 ```
 
-`subject` обязан быть стабильным и неизменяемым идентификатором. `/resolve` обязан вернуть ровно тот же субъект, который был запрошен. Электронная почта не является субъект и не используется для implicit учётная запись связывание.
+`subject` обязан быть стабильным и неизменяемым идентификатором. `/resolve` обязан вернуть ровно тот же subject, который был запрошен. Email не является subject и не используется для implicit account linking.
 
 Ошибка:
 
@@ -47,11 +47,11 @@ GET  /health
 }
 ```
 
-NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, тайм-аут и `5xx` считаются временной недоступностью провайдер.
+NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, timeout и `5xx` считаются временной недоступностью provider.
 
-## Запрос конверт
+## Request envelope
 
-`POST` запрос содержит:
+`POST` request содержит:
 
 ```json
 {
@@ -63,11 +63,11 @@ NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `
 }
 ```
 
-Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Провайдер токен никогда не является Никогда access/refresh токен.
+Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Provider token никогда не является Never access/refresh token.
 
-## HMAC подписание
+## HMAC signing
 
-Каждый запрос содержит:
+Каждый request содержит:
 
 ```text
 X-NeverLauncher-Key-Id
@@ -77,7 +77,7 @@ X-NeverLauncher-Signature
 X-NeverLauncher-Connector-Id
 ```
 
-Запрос канонический string:
+Request canonical string:
 
 ```text
 METHOD\n
@@ -89,7 +89,7 @@ HEX_SHA256(BODY)
 
 `X-NeverLauncher-Signature` равен `v1=` + lowercase hex `HMAC-SHA256(secret, canonical)`.
 
-Удалённый служба должен вернуть тот же `X-NeverLauncher-Nonce`, свой текущий `X-NeverLauncher-Timestamp`, тот же `X-NeverLauncher-Key-Id` и подпись над:
+Remote service должен вернуть тот же `X-NeverLauncher-Nonce`, свой текущий `X-NeverLauncher-Timestamp`, тот же `X-NeverLauncher-Key-Id` и signature над:
 
 ```text
 RESPONSE\n
@@ -99,21 +99,21 @@ NONCE\n
 HEX_SHA256(BODY)
 ```
 
-NeverLauncher использует constant-время HMAC comparison, проверяет метка времени окно и отклоняет уже использованный ответ одноразовое значение.
+NeverLauncher использует constant-time HMAC comparison, проверяет timestamp window и отклоняет уже использованный response nonce.
 
-## Сеть безопасность
+## Network security
 
-- Только HTTPS; открытый текст HTTP не поддерживается.
-- Перенаправления отключены.
+- Только HTTPS; plaintext HTTP не поддерживается.
+- Redirects отключены.
 - `hostAllowlist` проверяется перед каждым dial.
-- DNS разрешается самим Коннектор’ом, все полученные IP проверяются до соединения, а dial выполняется непосредственно на уже проверенный IP — это закрывает обычный DNS-rebinding SSRF путь.
-- Loopback/private/link-local/multicast/shared/reserved/test сеть заблокированы по умолчанию. Для контролируемого внутреннего аутентификация служба конкретная сеть должна быть явно указана в `allowedCidrs`.
-- HTTP прокси переменные окружения намеренно не используются Коннектор’ом.
-- TLS сертификат проверка включена; дополнительный CA задаётся `mtls.caFile`.
-- Клиент certificate/key (`mtls.certFile` + `mtls.keyFile`) включают mutual TLS.
-- Тело ответа имеет жёсткий размер ограничение и строгий JSON схема decoding.
+- DNS разрешается самим Connector’ом, все полученные IP проверяются до соединения, а dial выполняется непосредственно на уже проверенный IP — это закрывает обычный DNS-rebinding SSRF path.
+- Loopback/private/link-local/multicast/shared/reserved/test networks заблокированы по умолчанию. Для контролируемого внутреннего auth service конкретная сеть должна быть явно указана в `allowedCidrs`.
+- HTTP proxy environment variables намеренно не используются Connector’ом.
+- TLS certificate verification включена; дополнительный CA задаётся `mtls.caFile`.
+- Client certificate/key (`mtls.certFile` + `mtls.keyFile`) включают mutual TLS.
+- Response body имеет жёсткий size limit и strict JSON schema decoding.
 
-## Провайдер конфигурация
+## Provider configuration
 
 ```json
 [
@@ -136,4 +136,4 @@ NeverLauncher использует constant-время HMAC comparison, пров
 ]
 ```
 
-HMAC секрет задаётся только через переменная окружения или секрет файл (`hmac.secretFile`), а не inline в провайдер JSON.
+HMAC secret задаётся только через environment variable или secret file (`hmac.secretFile`), а не inline в provider JSON.

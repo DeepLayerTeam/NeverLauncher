@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Поток-безопасный value объект созданный через платформа адаптер на поток где его
- * Minecraft/proxy API может безопасно быть queried. HTTP сигнал состояния никогда вызов
- * платформа APIs напрямую; это только использовать последний неизменяемый снимок.
+ * Thread-safe value object produced by a platform adapter on a thread where its
+ * Minecraft/proxy API may safely be queried. The HTTP heartbeat never calls
+ * platform APIs directly; it only consumes the latest immutable snapshot.
  */
 public record BridgePlatformTelemetry(
     long sampledAtUnixMillis,

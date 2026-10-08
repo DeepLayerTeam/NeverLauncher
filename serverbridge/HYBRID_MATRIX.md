@@ -1,14 +1,14 @@
-# ServerBridge гибридный ядро сертификация матрица — 0.19.10
+# ServerBridge hybrid core certification matrix — 0.19.10
 
-Гибридный ядра являются **не** covered через Универсальный Сервер Адаптер релиз группа. Bukkit/Forge/Fabric-compatible API поверхность является не sufficient свидетельство тот вход interception, планировщик владение, жизненный цикл, телеметрия, или управление семантика являются equivalent.
+Hybrid cores are **not** covered by the Universal Server Adapter release cohort. A Bukkit/Forge/Fabric-compatible API surface is not sufficient evidence that login interception, scheduler ownership, lifecycle, telemetry, or control semantics are equivalent.
 
-| Ядро | 0.19.10 состояние | Универсальный адаптер резервный вариант |
+| Core | 0.19.10 status | Universal adapter fallback |
 |---|---|---|
-| Mohist | не сертифицированный | запрещён |
-| Arclight | не сертифицированный | запрещён |
-| Magma | не сертифицированный | запрещён |
-| CatServer | не сертифицированный | запрещён |
-| Banner | не сертифицированный | запрещён |
-| Cardboard | не сертифицированный | запрещён |
+| Mohist | not certified | denied |
+| Arclight | not certified | denied |
+| Magma | not certified | denied |
+| CatServer | not certified | denied |
+| Banner | not certified | denied |
+| Cardboard | not certified | denied |
 
- гибридный может переносить к `certified` только через отдельно версия цель, его собственный артефакт хеш пространство имён, среда выполнения login/control/event тесты, и явный свидетельство в этот матрица. Это должен никогда inherit сертификация из `bukkit`, `paper`, `fabric`, `forge`, или `neoforge`.
+A hybrid may move to `certified` only through a separately versioned target, its own artifact hash namespace, runtime login/control/event tests, and explicit evidence in this matrix. It must never inherit certification from `bukkit`, `paper`, `fabric`, `forge`, or `neoforge`.

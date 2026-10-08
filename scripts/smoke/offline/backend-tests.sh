@@ -5,6 +5,6 @@ cd "${ROOT_DIR}/services/api"
 if [[ "${NEVERLAUNCHER_PREFLIGHT_PGX:-0}" == "1" || "${NEVERLAUNCHER_PREFLIGHT_PGX:-0}" == "true" ]]; then
   go test ./...
 else
-  echo "[NeverLauncher] серверная часть тесты: автономный neverlauncher_nopgx режим. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1" >&2
+  echo "[NeverLauncher] backend tests: offline neverlauncher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1" >&2
   go test -tags neverlauncher_nopgx ./...
 fi

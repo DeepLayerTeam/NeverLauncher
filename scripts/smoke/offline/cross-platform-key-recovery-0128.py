@@ -7,21 +7,21 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(path):
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"отсутствующий обязательный файл: {path}")
+        raise SystemExit(f"missing required file: {path}")
     return p.read_text(encoding="utf-8")
 
 def require(text, needles, label):
     missing = [n for n in needles if n not in text]
     if missing:
-        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
 version = (ROOT / "VERSION").read_text().strip()
 try:
     version_tuple = tuple(int(part) for part in version.split("."))
 except ValueError as exc:
-    raise SystemExit(f"недопустимый VERSION: {version}") from exc
+    raise SystemExit(f"invalid VERSION: {version}") from exc
 if version_tuple < (0, 12, 8):
-    raise SystemExit(f"VERSION должен быть >= 0.12.8, получил {version}")
+    raise SystemExit(f"VERSION must be >= 0.12.8, got {version}")
 
 handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
 repo = read("services/api/internal/repository/devices_0121.go")
@@ -50,7 +50,7 @@ require(repo, [
 ], "atomic SQL key replacement")
 require(model, ["ReplacedAt", "ReplacedByDeviceID", "ReplacementReason", "DeviceKeyReplacementResult"], "device replacement model")
 if migration_api != migration_cli:
-    raise SystemExit("API и CLI миграция 0017 differ")
+    raise SystemExit("API and CLI migration 0017 differ")
 require(migration_api, ["replaced_at", "replaced_by_device_id", "replacement_reason", "idx_trusted_devices_replacement"], "migration 0017")
 require(native, [
     "hardware_key_label_generation", "stage_device_key_replacement", "sign_staged_device_replacement",
@@ -78,4 +78,4 @@ subprocess.run([
 ], cwd=ROOT / "services/api", check=True)
 subprocess.run(["go", "test", "-tags", "neverlauncher_nopgx", "./internal/dbmigrate"], cwd=ROOT / "services/api", check=True)
 subprocess.run(["go", "test", "./internal/dbmigrate"], cwd=ROOT / "cli", check=True)
-print("[NeverLauncher] Кроссплатформенный усиление защиты + ключ recovery/rotation 0.12.8 контроль OK")
+print("[NeverLauncher] Cross-platform hardening + key recovery/rotation 0.12.8 gate OK")

@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
+        raise SystemExit(f"{label} missing: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"недопустимый VERSION: {value}")
+        raise SystemExit(f"invalid VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 4):
-    raise SystemExit(f"NeverGuard Защита Аттестация контроль требует >=0.13.4, получил {version}")
+    raise SystemExit(f"NeverGuard Guard Attestation gate requires >=0.13.4, got {version}")
 
 attestation = read("runtime/neverruntime/src/attestation.rs")
 require(attestation, [
@@ -77,7 +77,7 @@ require(frontend, [
 guard_purpose_migration_api = read("services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 guard_purpose_migration_cli = read("cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 if guard_purpose_migration_api != guard_purpose_migration_cli:
-    raise SystemExit("0.16.1 API/CLI Защита запрос-назначение миграция differs")
+    raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
 require(guard_purpose_migration_api, [
     'device_challenges_purpose_check',
     'guard-attest-v1',
@@ -154,9 +154,9 @@ require(release, [
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "neverguard-guard-attestation-0134.py" not in ci:
-    raise SystemExit("NeverGuard 0.13.4 Защита Аттестация контроль является не wired в CI")
+    raise SystemExit("NeverGuard 0.13.4 Guard Attestation gate is not wired into CI")
 if "neverguard-guard-attestation-0134.py" not in preflight:
-    raise SystemExit("NeverGuard 0.13.4 Защита Аттестация контроль является не wired в релиз предварительная проверка")
+    raise SystemExit("NeverGuard 0.13.4 Guard Attestation gate is not wired into release preflight")
 require(ci, [
     'cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests',
     'cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows',
@@ -164,10 +164,10 @@ require(ci, [
 
 security = read("SECURITY.md")
 require(security, [
-    'NeverGuard: Guard Attestation и Backend verification — 0.13.4',
-    'single-use',
-    'release allowlist',
+    'NeverGuard: Защита Аттестация и Серверная часть проверка — 0.13.4',
+    'одноразовый',
+    'релиз список разрешений',
     'TPM',
 ], "0.13.4 security boundary")
 
-print(f"[NeverLauncher] NeverGuard Защита Аттестация + Серверная часть проверка 0.13.4 контроль OK: {version}")
+print(f"[NeverLauncher] NeverGuard Guard Attestation + Backend verification 0.13.4 gate OK: {version}")

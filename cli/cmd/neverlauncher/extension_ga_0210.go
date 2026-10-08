@@ -29,9 +29,9 @@ func supportedExtensionAPI0210(raw string) bool {
 	}
 }
 
-// supportsHostHello0210 mirrors Серверная часть совместимость правило: 0.20 signed/source
-// манифесты может использовать устаревший 3.7 маркер и старый SDK тот сделал не отправлять 
-// Расширение API field. Новый API v1 манифесты должен явно согласовывать API v1.
+// supportsHostHello0210 mirrors the Backend compatibility rule: 0.20 signed/source
+// manifests may use the legacy 3.7 marker and an old SDK that did not send an
+// Extension API field. New API v1 manifests must explicitly negotiate API v1.
 func supportsHostHello0210(manifestAPI, helloAPI string) bool {
 	manifestAPI = strings.TrimSpace(manifestAPI)
 	helloAPI = strings.TrimSpace(helloAPI)
@@ -68,7 +68,7 @@ func handleExtensionGA0210(args []string) error {
 	case "upgrade-source":
 		return extensionUpgradeSource0210(args[1:])
 	default:
-		return fmt.Errorf("неизвестный расширение ga команда %q; использовать состояние|контракт|обновление-исходник", args[0])
+		return fmt.Errorf("unknown extension ga command %q; use status|contract|upgrade-source", args[0])
 	}
 }
 
@@ -79,7 +79,7 @@ func extensionUpgradeSource0210(args []string) error {
 	}
 	root = filepath.Clean(root)
 	if strings.EqualFold(filepath.Ext(root), ".nlext") {
-		return errors.New("подписанный.nlext пакеты являются неизменяемый; unpack исходник, изменять API к 1.0, пересборка и re-подпись")
+		return errors.New("signed .nlext packages are immutable; unpack source, change api to 1.0, rebuild and re-sign")
 	}
 	manifestPath := canonicalExtensionManifestPath0201(root)
 	data, err := os.ReadFile(manifestPath)
@@ -94,7 +94,7 @@ func extensionUpgradeSource0210(args []string) error {
 	}
 	previousAPI := strings.TrimSpace(manifest.API)
 	if !supportedExtensionAPI0210(previousAPI) {
-		return fmt.Errorf("исходник использует неподдерживаемый API расширений %q", previousAPI)
+		return fmt.Errorf("source uses unsupported extension api %q", previousAPI)
 	}
 	manifest.API = neverExtensionsAPIVersion0210
 	normalized, _, err := normalizeCanonicalExtension0201(manifest)

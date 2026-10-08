@@ -1,4 +1,4 @@
-name: Управляемый JRE Рабочий Доставка
+name: Managed JRE Production Delivery
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   managed-java-II-and-temurin21:
-    name: Управляемый Java II 8/16/17/21/25 + Temurin 21 Windows/Linux/macOS x64+ARM64
+    name: Managed Java II 8/16/17/21/25 + Temurin 21 Windows/Linux/macOS x64+ARM64
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -22,16 +22,16 @@ jobs:
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Сборка NeverRuntime для Управляемый Java II
+      - name: Build NeverRuntime for Managed Java II
         run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
 
-      - name: Управляемый Java II Java 8/16/17/21/25 рабочий E2E
+      - name: Managed Java II Java 8/16/17/21/25 production E2E
         shell: bash
         run: |
           set -euo pipefail
           bash e2e/scripts/run-managed-java-II-e2e.sh
 
-      - name: Сборка точный-поставщик Управляемый JRE Дистрибутив
+      - name: Build exact-vendor Managed JRE Distribution
         shell: bash
         run: |
           set -euo pipefail
@@ -43,7 +43,7 @@ jobs:
             --major 21
           cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json "${OUT}/MANAGED_JAVA_II_EVIDENCE.json"
 
-      - name: Проверять six цели и доставка привязка
+      - name: Verify six targets and delivery binding
         shell: bash
         run: |
           set -euo pipefail
@@ -54,10 +54,10 @@ jobs:
           /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
 
-      - name: Загрузка Управляемый JRE рабочий ресурсы
+      - name: Upload Managed JRE production assets
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-управляемый-JRE-${{ github.sha }}
+          name: neverlauncher-managed-jre-${{ github.sha }}
           path: |
             dist/managed-jre-*/MANAGED_JRE_MANIFEST.json
             dist/managed-jre-*/MANAGED_JRE_EVIDENCE.json

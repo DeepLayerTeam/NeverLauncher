@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 1):
-    raise SystemExit("VERSION является старый чем 0.14.1")
+    raise SystemExit("VERSION is older than 0.14.1")
 
 
 def read(path: str) -> str:
@@ -14,12 +14,12 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 api_migration = read("services/api/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.1 API/CLI ServerBridge миграция differ")
+    raise SystemExit("0.14.1 API/CLI ServerBridge migrations differ")
 require(api_migration, [
     "server_bridge_nodes_v2",
     "server_bridge_join_tickets_v2",
@@ -87,4 +87,4 @@ require(e2e, [
     'sourceOfTruth == "postgresql"',
 ], "Minecraft PostgreSQL ServerBridge E2E")
 
-print(f"NeverLauncher ServerBridge Протокол v2 поэтапный-совместимость + PostgreSQL исходник--truth контроль: OK ({version})")
+print(f"NeverLauncher ServerBridge Protocol v2 rolling-compatibility + PostgreSQL source-of-truth gate: OK ({version})")

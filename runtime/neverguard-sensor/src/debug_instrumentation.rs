@@ -99,8 +99,8 @@ pub fn shutdown() {
 }
 
 fn query_debug_indicators() -> Result<DebugIndicators, String> {
-    // SAFETY: все APIs operate на текущий процесс pseudo дескриптор и фиксированный-размер
-    // вызывающая сторона-принадлежащий вывод buffers. Нет внешний процесс память является чтение или modified.
+    // SAFETY: all APIs operate on the current process pseudo handle and fixed-size
+    // caller-owned output buffers. No foreign process memory is read or modified.
     let process = unsafe { GetCurrentProcess() };
     if process.is_null() {
         return Err("NeverGuard Debug & Instrumentation Guard cannot obtain current process handle".to_string());
@@ -112,7 +112,7 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
     let remote_ok = unsafe { CheckRemoteDebuggerPresent(process, &mut remote_present) } != 0;
     if !remote_ok {
         return Err(format!(
-            "NeverGuard Отладка и Инструментирование Защита CheckRemoteDebuggerPresent ошибка: {}",
+            "NeverGuard Debug & Instrumentation Guard CheckRemoteDebuggerPresent failed: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -149,8 +149,8 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
         remote_debugger_present: remote_present != 0,
         debug_port_present: debug_port != 0,
         debug_object_present: !debug_object.is_null(),
-        // ProcessDebugFlags возвращает inverse NoDebugInherit состояние.
-        // работоспособный non-debugged процесс сообщает nonzero value.
+        // ProcessDebugFlags returns the inverse of the NoDebugInherit state.
+        // A healthy non-debugged process reports a nonzero value.
         debug_flags_no_debug_inherit: debug_flags != 0,
     })
 }
@@ -163,8 +163,8 @@ fn query_process_information(
     label: &str,
 ) -> Result<(), String> {
     let mut returned = 0u32;
-    // SAFETY: NtQueryInformationProcess только записывает к supplied фиксированный-размер
-    // buffer для запрошенный отладка information класс.
+    // SAFETY: NtQueryInformationProcess only writes to the supplied fixed-size
+    // buffer for the requested debug information class.
     let status = unsafe {
         NtQueryInformationProcess(process, class, output, output_len, &mut returned)
     };
@@ -173,13 +173,13 @@ fn query_process_information(
             return Ok(());
         }
         return Err(format!(
-            "NeverGuard Отладка и Инструментирование Защита {label} query ошибка: NTSTATUS=0x{:08X}",
+            "NeverGuard Debug & Instrumentation Guard {label} query failed: NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
     if returned != 0 && returned > output_len {
         return Err(format!(
-            "NeverGuard Отладка и Инструментирование Защита {label} возвращён oversized состояние"
+            "NeverGuard Debug & Instrumentation Guard {label} returned oversized state"
         ));
     }
     Ok(())
@@ -193,7 +193,7 @@ fn reject_debug_state(indicators: DebugIndicators) -> Result<(), String> {
         || !indicators.debug_flags_no_debug_inherit
     {
         return Err(format!(
-            "NeverGuard Отладка и Инструментирование Защита обнаруживать отладчик граница: локальный={}, удалённый={}, port={}, объект={}, noDebugInherit={}",
+            "NeverGuard Debug & Instrumentation Guard detected debugger boundary: local={}, remote={}, port={}, object={}, noDebugInherit={}",
             indicators.debugger_present,
             indicators.remote_debugger_present,
             indicators.debug_port_present,

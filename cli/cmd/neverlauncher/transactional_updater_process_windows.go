@@ -1,4 +1,4 @@
-//Go:сборка Windows
+//go:build windows
 
 package main
 

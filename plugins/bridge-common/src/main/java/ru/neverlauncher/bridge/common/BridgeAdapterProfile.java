@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** Неизменяемый, исполняемый возможность профиль для конкретный ServerBridge адаптер. */
+/** Immutable, executable capability profile for a concrete ServerBridge adapter. */
 public record BridgeAdapterProfile(
     String platformId,
     String family,
@@ -31,8 +31,8 @@ public record BridgeAdapterProfile(
     }
 
     /**
-     * Merge платформа-neutral протокол возможности с стабильный адаптер
-     * возможность vocabulary предоставлять в среда выполнения обнаружение.
+     * Merge platform-neutral protocol capabilities with the stable adapter
+     * capability vocabulary exposed in runtime discovery.
      */
     public List<String> runtimeCapabilities(Collection<String> protocolCapabilities) {
         LinkedHashSet<String> out = new LinkedHashSet<>();

@@ -12,7 +12,7 @@ async fn main() -> ExitCode {
             match serde_json::to_string_pretty(&value) {
                 Ok(text) => println!("{text}"),
                 Err(err) => {
-                    eprintln!("neverruntime: JSON вывод ошибка: {err}");
+                    eprintln!("neverruntime: JSON output error: {err}");
                     return ExitCode::FAILURE;
                 }
             }
@@ -70,7 +70,7 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
     let ready = download.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
         return Err(format!(
-            "синхронизация не завершён: ошибка={}, broken={}",
+            "sync не завершён: failed={}, broken={}",
             download.failed,
             files.iter().filter(|file| file.status != "ok").count()
         ));
@@ -192,8 +192,8 @@ async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
 
 fn read_manifest_required(args: &[String]) -> Result<Manifest, String> {
     let path = PathBuf::from(required_flag(args, "--manifest")?);
-    let bytes = std::fs::read(&path).map_err(|err| format!("не удалось прочитать манифест {}: {err}", path.display()))?;
-    serde_json::from_slice::<Manifest>(&bytes).map_err(|err| format!("манифест {} повреждён: {err}", path.display()))
+    let bytes = std::fs::read(&path).map_err(|err| format!("не удалось прочитать manifest {}: {err}", path.display()))?;
+    serde_json::from_slice::<Manifest>(&bytes).map_err(|err| format!("manifest {} повреждён: {err}", path.display()))
 }
 
 fn required_flag(args: &[String], name: &str) -> Result<String, String> {

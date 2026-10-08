@@ -413,8 +413,8 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Synchronous расширение vetoes запуск до долговременная задача является принят. После
-	// enqueue, задача является recoverable и необратимый DB фиксация является ограждённый.
+	// Synchronous extension vetoes run before a durable job is accepted. After
+	// enqueue, the job is recoverable and the irreversible DB commit is fenced.
 	if err := s.beforePackagePublish0206(r, lookup.Release); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -491,9 +491,9 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Откат является новый неизменяемый релиз, поэтому это получает новый манифест
-	// хеш и MUST obtain его собственный валидация свидетельство. Файл записывает точка к
-	// уже неизменяемый хранилище объекты цель релиз.
+	// Rollback is a new immutable release, therefore it receives a new manifest
+	// digest and MUST obtain its own validation evidence. File records point to
+	// the already immutable storage objects of the target release.
 	rollbackVersion := toVersion + "-rollback-" + time.Now().UTC().Format("20060102T150405.000000000Z")
 	created, err := s.Repo.CreateVersion(projectID, profileID, channel, rollbackVersion)
 	if err != nil {
@@ -521,7 +521,7 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		_ = reader.Close()
 		if saveErr != nil || copiedSize != sourceSize || copiedSize != source.Size {
 			if saveErr == nil {
-				saveErr = fmt.Errorf("copied размер=%d исходник размер=%d метаданные размер=%d", copiedSize, sourceSize, source.Size)
+				saveErr = fmt.Errorf("copied size=%d source size=%d metadata size=%d", copiedSize, sourceSize, source.Size)
 			}
 			writeError(w, http.StatusInternalServerError, "не удалось материализовать rollback storage object: "+saveErr.Error())
 			return
@@ -571,7 +571,7 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 	integrity, err := s.runPackageIntegrityCheck0212(r, lookup)
 	if err != nil || integrity.Result != "passed" {
 		if err == nil {
-			err = errors.New("откат проверка целостности ошибка")
+			err = errors.New("rollback integrity check failed")
 		}
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -592,8 +592,8 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	// Релиз preparation аренда до долговременный обработчик acquires одинаковый
-	// ограждённый пакет область для необратимый публикация фиксация.
+	// Release the preparation lease before the durable worker acquires the same
+	// fenced package scope for the irreversible publish commit.
 	unlockRollback()
 	rollbackLeaseReleased = true
 	release, job, pending, err := s.publishDurably0213(r, lookup)

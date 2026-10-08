@@ -1,6 +1,6 @@
--- NeverLauncher 0.14.8: без патчей топология + одноразовый прокси -> серверная часть передача.
--- Нет Minecraft/proxy конфигурация таблица является patched. Топология является learned из
--- аутентифицировать среда выполнения передачи и PostgreSQL остаётся источник истины.
+-- NeverLauncher 0.14.8: zero-patch topology + one-time proxy -> backend handoff.
+-- No Minecraft/proxy configuration table is patched. Topology is learned from
+-- authenticated runtime handoffs and PostgreSQL remains the source of truth.
 
 CREATE TABLE IF NOT EXISTS server_bridge_topology_edges_v2 (
     source_node_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id) ON DELETE CASCADE,

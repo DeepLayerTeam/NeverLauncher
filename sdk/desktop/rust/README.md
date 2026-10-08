@@ -1,3 +1,3 @@
-# NeverExtensions Настольное приложение Rust SDK
+# NeverExtensions Desktop Rust SDK
 
-Rust протокол types для Настольное расширение companion код. Это намеренно делает не grant прямой доступ к NeverLauncher/Tauri привилегированный команды.
+Rust protocol types for Desktop extension companion code. It intentionally does not grant direct access to NeverLauncher/Tauri privileged commands.

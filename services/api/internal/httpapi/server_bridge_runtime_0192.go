@@ -74,14 +74,14 @@ func validateAndVerifyBridgeRuntime0192(server bridgeServerRecord, req bridgePlu
 	r.IdentitySignature = strings.TrimSpace(r.IdentitySignature)
 
 	if !isSHA256Hex0134(r.RuntimeID) {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_ID_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_id_invalid")
 	}
 	expectedRuntimeID := bridgeRuntimeID0192(server.ID, r.NodeKeyFingerprint, r.StartedAtUnixMillis, r.ProcessID, r.Hostname)
 	if subtle.ConstantTimeCompare([]byte(r.RuntimeID), []byte(expectedRuntimeID)) != 1 {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_ID_привязка_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_id_binding_invalid")
 	}
 	if r.StartedAtUnixMillis <= 0 || r.ProcessID <= 0 || r.UptimeSeconds < 0 {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_процесс_метаданные_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_process_metadata_invalid")
 	}
 	startedAt := time.UnixMilli(r.StartedAtUnixMillis).UTC()
 	if startedAt.After(now.Add(2 * time.Minute)) {
@@ -95,7 +95,7 @@ func validateAndVerifyBridgeRuntime0192(server bridgeServerRecord, req bridgePlu
 		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_started_at_mismatch")
 	}
 	if r.UptimeSeconds > int64((10*365*24*time.Hour)/time.Second) {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_uptime_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_uptime_invalid")
 	}
 	if r.Hostname == "" || r.NodeName == "" || r.MinecraftVersion == "" || r.JavaVersion == "" || r.Platform == "" || r.LoaderName == "" || r.ServerBrand == "" {
 		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_discovery_incomplete")
@@ -104,14 +104,14 @@ func validateAndVerifyBridgeRuntime0192(server bridgeServerRecord, req bridgePlu
 		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_platform_mismatch")
 	}
 	if len(r.Capabilities) == 0 || len(r.Capabilities) > 64 {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_возможности_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_capabilities_invalid")
 	}
 	capabilities := make([]string, 0, len(r.Capabilities))
 	seen := map[string]struct{}{}
 	for _, capability := range r.Capabilities {
 		capability = strings.ToLower(strings.TrimSpace(capability))
 		if capability == "" || len(capability) > 128 || strings.ContainsAny(capability, "\r\n\x00") {
-			return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_возможность_недопустимый")
+			return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_capability_invalid")
 		}
 		if _, ok := seen[capability]; ok {
 			return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_capability_duplicate")
@@ -125,15 +125,15 @@ func validateAndVerifyBridgeRuntime0192(server bridgeServerRecord, req bridgePlu
 	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(server.PublicKey)
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_узел_публичный_ключ_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_node_public_key_invalid")
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(r.IdentitySignature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_подпись_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_signature_invalid")
 	}
 	canonical := bridgeRuntimeCanonical0192(server.ID, r, capabilities)
 	if !ed25519.Verify(ed25519.PublicKey(publicKey), []byte(canonical), signature) {
-		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_среда выполнения_подпись_недопустимый")
+		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_signature_invalid")
 	}
 	digest := sha256.Sum256([]byte(canonical))
 	return model.ServerBridgeRuntimeIdentity{
@@ -213,14 +213,14 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("сервер мост узел не found")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("server bridge node not found")
 	}
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) || !strings.EqualFold(server.KeyFingerprint, runtime.NodeKeyFingerprint) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("сервер мост узел identity/type является не активный")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("server bridge node identity/type is not active")
 	}
 	if server.RuntimeID == runtime.RuntimeID {
 		if server.RuntimeIdentityDigest == "" || !strings.EqualFold(server.RuntimeIdentityDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: среда выполнения идентичность mutated для существующий среда выполнения ID", repository.ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime identity mutated for existing runtime id", repository.ErrConflict)
 		}
 		server.ProtocolVersion = protocolVersion
 		server.LastHeartbeatAt = now
@@ -232,7 +232,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	}
 	previous := server.RuntimeID
 	if previous != "" && !server.RuntimeStartedAt.IsZero() && !runtime.StartedAt.After(server.RuntimeStartedAt) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: среда выполнения экземпляр является старый чем активный среда выполнения", repository.ErrConflict)
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime instance is older than active runtime", repository.ErrConflict)
 	}
 	replacement := previous != "" && !server.RuntimeLastSeenAt.IsZero() && server.RuntimeLastSeenAt.After(now.Add(-2*time.Minute))
 	transition := "started"

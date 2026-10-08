@@ -47,20 +47,20 @@ for required in \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \
   "${BUNDLE_DIR}/neverlauncher-desktop-package-${VERSION}.zip"; do
   if [[ ! -s "${required}" ]]; then
-    echo "[NeverLauncher] релиз-комплект контроль: отсутствует обязательный артефакт ${required}" >&2
+    echo "[NeverLauncher] release-bundle gate: отсутствует обязательный artifact ${required}" >&2
     exit 1
   fi
 done
 if [[ -z "${PUBLIC_KEY}" || ! -f "${PUBLIC_KEY}" ]]; then
-  echo "[NeverLauncher] релиз-комплект контроль требует внешний корень Ed25519 открытый ключ" >&2
+  echo "[NeverLauncher] release-bundle gate требует внешний root Ed25519 public key" >&2
   exit 1
 fi
 if [[ -z "${TRUST_STATE}" ]]; then
-  echo "[NeverLauncher] релиз-комплект контроль требует постоянный доверие состояние через NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
+  echo "[NeverLauncher] release-bundle gate требует persistent trust state через NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
   exit 1
 fi
 if [[ -z "${TRUST_POLICY}" || ! -f "${TRUST_POLICY}" ]]; then
-  echo "[NeverLauncher] релиз-комплект контроль требует внешний текущий доверие политика через NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
+  echo "[NeverLauncher] release-bundle gate требует внешний current trust policy через NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
   exit 1
 fi
 if [ -x "${ROOT_DIR}/dist/preflight/nl" ]; then

@@ -34,4 +34,4 @@ for token in ('"admin"','"dashboardWidgets"','"navigation"','"actions"'):
 openapi=read("schemas/openapi.yaml")
 for path in ('"/api/v1/admin/extensions/catalog"','"/api/v1/admin/extensions/manager"','"/api/v1/admin/extensions/{extensionId}/ui"','"/api/v1/admin/extensions/{extensionId}/rpc"'):
     require(path in openapi, f"OpenAPI missing {path}")
-print("NeverExtensions Администратор Расширения 0.20.8 рабочий контроль: OK")
+print("NeverExtensions Admin Extensions 0.20.8 production gate: OK")

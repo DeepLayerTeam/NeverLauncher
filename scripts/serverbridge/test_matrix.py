@@ -10,4 +10,4 @@ assert len(data["targets"]) == 11
 assert sum(1 for x in data["targets"] if x["role"] == "proxy") == 3
 assert sum(1 for x in data["targets"] if x["role"] == "backend") == 8
 assert next(x for x in data["targets"] if x["id"] == "bukkit")["coverage"] == "build-compatibility"
-print("ServerBridge матрица тесты OK")
+print("ServerBridge matrix tests OK")

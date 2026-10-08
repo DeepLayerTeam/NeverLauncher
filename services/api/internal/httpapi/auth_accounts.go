@@ -177,8 +177,8 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	preview, err := s.State.AuthSessions.previewRefresh0126(req.RefreshToken)
 	if err != nil {
 		if errors.Is(err, errRefreshTokenReuseDetected) {
-			// Preserve существующий семейство-компрометация семантика: preview является только для чтения,
-			// ротировать выполняет транзакционный компрометация когда использованный токен является повторное воспроизведение.
+			// Preserve the existing family-compromise semantics: preview is read-only,
+			// rotate performs the transactional compromise when a consumed token is replayed.
 			_, _, _ = s.State.AuthSessions.rotate(req.RefreshToken, r)
 			_ = s.flushPersistenceState950("auth-refresh-reuse")
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})

@@ -1,6 +1,6 @@
--- NeverLauncher 0.12.8 — кроссплатформенный ключ устройства восстановление и ротация.
--- Preserve старый доверенное устройство строка как постоянный метка удаления и связь это к
--- замена идентичность для audit/incident-response continuity.
+-- NeverLauncher 0.12.8 — cross-platform device-key recovery and rotation.
+-- Preserve the old trusted-device row as a permanent tombstone and link it to
+-- the replacement identity for audit/incident-response continuity.
 ALTER TABLE trusted_devices
     ADD COLUMN IF NOT EXISTS replaced_at TIMESTAMPTZ NULL;
 ALTER TABLE trusted_devices

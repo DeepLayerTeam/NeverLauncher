@@ -62,7 +62,7 @@ func InitializeInstallationSecurityP0(cfg config.Config) error {
 	if state.TokenHash == "" {
 		if token == "" {
 			if isProdP0(cfg.Environment) {
-				return errors.New("актуальный рабочий установка требует NEVERLAUNCHER_BOOTSTRAP_TOKEN")
+				return errors.New("fresh production installation requires NEVERLAUNCHER_BOOTSTRAP_TOKEN")
 			}
 			return nil
 		}
@@ -70,7 +70,7 @@ func InitializeInstallationSecurityP0(cfg config.Config) error {
 		return err
 	}
 	if token != "" && subtle.ConstantTimeCompare([]byte(state.TokenHash), []byte(bootstrapTokenHashP0(token))) != 1 {
-		return errors.New("NEVERLAUNCHER_BOOTSTRAP_TOKEN делает не соответствовать initialized установка токен")
+		return errors.New("NEVERLAUNCHER_BOOTSTRAP_TOKEN does not match initialized installation token")
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (s Server) installationStateP0(ctx context.Context) (installationStateP0, e
 func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error {
 	token = strings.TrimSpace(token)
 	if token == "" {
-		return errors.New("инициализировать токен обязательный")
+		return errors.New("bootstrap token required")
 	}
 	hash := bootstrapTokenHashP0(token)
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
@@ -114,10 +114,10 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 			st.TokenHash = bootstrapTokenHashP0(s.Config.BootstrapToken)
 		}
 		if st.Completed || st.TokenUsedAt.Valid {
-			return errors.New("инициализировать токен уже использованный")
+			return errors.New("bootstrap token already consumed")
 		}
 		if subtle.ConstantTimeCompare([]byte(st.TokenHash), []byte(hash)) != 1 {
-			return errors.New("недопустимый инициализировать токен")
+			return errors.New("invalid bootstrap token")
 		}
 		st.TokenUsedAt = sql.NullTime{Time: time.Now().UTC(), Valid: true}
 		devInstallationP0.state = st
@@ -134,7 +134,7 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 	}
 	n, _ := res.RowsAffected()
 	if n != 1 {
-		return errors.New("недопустимый, использованный, или отключённый инициализировать токен")
+		return errors.New("invalid, consumed, or disabled bootstrap token")
 	}
 	return nil
 }
@@ -160,7 +160,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 	}
 	n, _ := res.RowsAffected()
 	if n != 1 {
-		return fmt.Errorf("установка состояние не может быть завершённый до инициализировать токен является использованный")
+		return fmt.Errorf("installation state cannot be completed before bootstrap token is consumed")
 	}
 	return nil
 }
@@ -181,17 +181,17 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	displayName = strings.TrimSpace(displayName)
 	password = strings.TrimSpace(password)
 	if email == "" || password == "" {
-		return model.User{}, errors.New("электронная почта и пароль являются обязательный")
+		return model.User{}, errors.New("email and password are required")
 	}
 	if len(password) < 12 {
-		return model.User{}, errors.New("инициализировать администратор пароль должен быть в least 12 characters")
+		return model.User{}, errors.New("bootstrap admin password must be at least 12 characters")
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()
 	user := model.User{ID: userID, Email: email, DisplayName: firstNonEmpty(displayName, "Administrator"), RoleID: "owner", Status: "active", ProjectRoles: map[string]string{}, PasswordHash: hashPassword(password), PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		if len(s.Repo.ListUsers()) > 0 {
-			return model.User{}, errors.New("инициализировать администратор является отключённый после первый пользователь существует")
+			return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
 		}
 		if err := s.consumeBootstrapTokenP0(ctx, token); err != nil {
 			return model.User{}, err
@@ -219,18 +219,18 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, err
 	}
 	if completed || used.Valid {
-		return model.User{}, errors.New("инициализировать токен уже использованный или установка завершённый")
+		return model.User{}, errors.New("bootstrap token already consumed or installation completed")
 	}
 	supplied := bootstrapTokenHashP0(token)
 	if token == "" || subtle.ConstantTimeCompare([]byte(tokenHash), []byte(supplied)) != 1 {
-		return model.User{}, errors.New("недопустимый инициализировать токен")
+		return model.User{}, errors.New("invalid bootstrap token")
 	}
 	var exists bool
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users LIMIT 1)`).Scan(&exists); err != nil {
 		return model.User{}, err
 	}
 	if exists {
-		return model.User{}, errors.New("инициализировать администратор является отключённый после первый пользователь существует")
+		return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")
 	}
 	rolesRaw := `{}`
 	_, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at) VALUES($1,$2,$3,'owner','active',$4::jsonb,$5,$6,$6,$6)`, user.ID, user.Email, user.DisplayName, rolesRaw, user.PasswordHash, now)

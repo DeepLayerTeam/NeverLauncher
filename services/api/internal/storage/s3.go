@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// S3Конфигурация описывает параметры S3-совместимого хранилища.
+// S3Config описывает параметры S3-совместимого хранилища.
 type S3Config struct {
 	Endpoint  string
 	PublicURL string
@@ -28,13 +28,13 @@ type S3Config struct {
 	PathStyle bool
 }
 
-// S3Хранилище реализует минимальный S3-compatible хранилище через AWS Подпись Версия 4.
+// S3Storage реализует минимальный S3-compatible storage через AWS Signature Version 4.
 type S3Storage struct {
 	cfg    S3Config
 	client *http.Client
 }
 
-// NewS3Хранилище создаёт S3-совместимое хранилище.
+// NewS3Storage создаёт S3-совместимое хранилище.
 func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 	cfg.Endpoint = strings.TrimRight(strings.TrimSpace(cfg.Endpoint), "/")
 	cfg.PublicURL = strings.TrimRight(strings.TrimSpace(cfg.PublicURL), "/")
@@ -43,7 +43,7 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 		cfg.Region = "ru-central1"
 	}
 	if cfg.Endpoint == "" || cfg.Bucket == "" || cfg.AccessKey == "" || cfg.SecretKey == "" {
-		return nil, errors.New("для S3-хранилища обязательны эндпоинт, bucket, доступ ключ и секрет ключ")
+		return nil, errors.New("для S3-хранилища обязательны endpoint, bucket, access key и secret key")
 	}
 	return &S3Storage{cfg: cfg, client: &http.Client{}}, nil
 }
@@ -56,12 +56,12 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 		return "", 0, err
 	}
 
-	// SigV4 требует полезная нагрузка хеш до заголовки являются подписанный. Spool 
-	// incoming поток к диск пока хеш это, вместо чем buffering whole
-	// объект в память. временный файл является затем поток напрямую к S3.
+	// SigV4 requires the payload digest before headers are signed. Spool the
+	// incoming stream to disk while hashing it, rather than buffering the whole
+	// object in memory. The temporary file is then streamed directly to S3.
 	tmp, err := os.CreateTemp("", "neverlauncher-s3-upload-*")
 	if err != nil {
-		return "", 0, fmt.Errorf("не удалось создать временный файл S3 загрузка: %w", err)
+		return "", 0, fmt.Errorf("не удалось создать временный файл S3 upload: %w", err)
 	}
 	tmpPath := tmp.Name()
 	defer func() {
@@ -75,10 +75,10 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 		return "", 0, fmt.Errorf("не удалось потоково подготовить файл для S3: %w", err)
 	}
 	if err := tmp.Sync(); err != nil {
-		return "", 0, fmt.Errorf("не удалось синхронизировать временный S3 загрузка: %w", err)
+		return "", 0, fmt.Errorf("не удалось синхронизировать временный S3 upload: %w", err)
 	}
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
-		return "", 0, fmt.Errorf("не удалось перемотать временный S3 загрузка: %w", err)
+		return "", 0, fmt.Errorf("не удалось перемотать временный S3 upload: %w", err)
 	}
 	payloadHash := hex.EncodeToString(hasher.Sum(nil))
 
@@ -155,12 +155,12 @@ func (s *S3Storage) Health(ctx context.Context) error {
 	if res.StatusCode >= 200 && res.StatusCode < 400 {
 		return nil
 	}
-	return fmt.Errorf("S3 проверка работоспособности вернул статус %d", res.StatusCode)
+	return fmt.Errorf("S3 health check вернул статус %d", res.StatusCode)
 }
 
 func (s *S3Storage) newSignedRequest(ctx context.Context, method, key string, body io.Reader, size int64) (*http.Request, error) {
 	if body != nil {
-		return nil, errors.New("S3 запрос с тело требует явный поток полезная нагрузка хеш")
+		return nil, errors.New("S3 request with body requires an explicit streaming payload hash")
 	}
 	return s.newSignedRequestWithHash(ctx, method, key, nil, size, sha256Hex(nil))
 }
@@ -171,7 +171,7 @@ func (s *S3Storage) newSignedRequestWithHash(ctx context.Context, method, key st
 		return nil, err
 	}
 	if strings.TrimSpace(payloadHash) == "" {
-		return nil, errors.New("S3 полезная нагрузка хеш обязателен")
+		return nil, errors.New("S3 payload hash обязателен")
 	}
 	req, err := http.NewRequestWithContext(ctx, method, objectURL.String(), body)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *S3Storage) newSignedRequestWithHash(ctx context.Context, method, key st
 func (s *S3Storage) objectURL(key string) (*url.URL, error) {
 	base, err := url.Parse(s.cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("некорректный S3 эндпоинт: %w", err)
+		return nil, fmt.Errorf("некорректный S3 endpoint: %w", err)
 	}
 	if s.cfg.PathStyle {
 		base.Path = joinURLPath(base.Path, s.cfg.Bucket, key)

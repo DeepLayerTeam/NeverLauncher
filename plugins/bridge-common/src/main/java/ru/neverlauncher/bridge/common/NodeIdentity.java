@@ -171,7 +171,7 @@ public final class NodeIdentity {
                 }
             }
         } catch (UnsupportedOperationException ignored) {
-            // Windows/non-POSIX файловая система являются governed через их нативный ACLs.
+            // Windows/non-POSIX filesystems are governed by their native ACLs.
         }
     }
 
@@ -179,7 +179,7 @@ public final class NodeIdentity {
         try {
             Files.setPosixFilePermissions(path, PRIVATE_FILE_PERMISSIONS);
         } catch (UnsupportedOperationException ignored) {
-            // Windows/non-POSIX файловая система являются governed через их нативный ACLs.
+            // Windows/non-POSIX filesystems are governed by their native ACLs.
         }
     }
 }

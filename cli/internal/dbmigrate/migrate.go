@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-//Go:embed SQL/*.SQL
+//go:embed sql/*.sql
 var migrationFS embed.FS
 
 type Migration struct{ Version, Checksum, SQL string }
@@ -61,7 +61,7 @@ func BuildApplyScript() (string, error) {
 		return "", err
 	}
 	if len(ms) == 0 {
-		return "", fmt.Errorf("миграция каталог является пустой")
+		return "", fmt.Errorf("migration catalog is empty")
 	}
 	var b strings.Builder
 	b.WriteString("\\set ON_ERROR_STOP on\nSELECT pg_advisory_lock(718033100100);\n")
@@ -94,7 +94,7 @@ func BuildVerifyScript() (string, error) {
 		return "", err
 	}
 	if len(ms) == 0 {
-		return "", fmt.Errorf("миграция каталог является пустой")
+		return "", fmt.Errorf("migration catalog is empty")
 	}
 	var b strings.Builder
 	b.WriteString("\\set ON_ERROR_STOP on\n")
@@ -127,7 +127,7 @@ func runPSQL(ctx context.Context, psqlPath, dsn, script, action string) (string,
 	cmd.Stdin = strings.NewReader(script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("psql миграция %s ошибка: %w: %s", action, err, strings.TrimSpace(string(out)))
+		return string(out), fmt.Errorf("psql migration %s failed: %w: %s", action, err, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }

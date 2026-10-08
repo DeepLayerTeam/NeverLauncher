@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	errSessionNotFound118 = errors.New("сессия не found")
-	errSessionName118     = errors.New("недопустимый сессия устройство имя")
+	errSessionNotFound118 = errors.New("session not found")
+	errSessionName118     = errors.New("invalid session device name")
 )
 
 func normalizeRiskState118(v string) string {

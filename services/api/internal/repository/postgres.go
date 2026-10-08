@@ -15,14 +15,14 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// SQLRepository — минимальная SQL-реализация Репозиторий для PostgreSQL-схемы NeverLauncher.
+// SQLRepository — минимальная SQL-реализация Repository для PostgreSQL-схемы NeverLauncher.
 //
-// Реализация намеренно narrow: она закрывает основные production-сущности API
-// (проекты, профили, релиз_каналы, релиз_версии, файлы, пользователи, роли,
-// аудит_события, телеметрия_события, сбой_сообщает) и больше не делегирует PostgreSQL-режим в MemoryRepository.
-// Для работы требуется зарегистрированный database/sql драйвер.
+// Реализация intentionally narrow: она закрывает основные production-сущности API
+// (projects, profiles, release_channels, release_versions, files, users, roles,
+// audit_events, telemetry_events, crash_reports) и больше не делегирует PostgreSQL-режим в MemoryRepository.
+// Для работы требуется зарегистрированный database/sql driver.
 // По умолчанию используется имя драйвера "pgx" через github.com/jackc/pgx/v5/stdlib.
-// Для нестандартного драйвер-имя используйте NewSQLRepository.
+// Для нестандартного driver-name используйте NewSQLRepository.
 type SQLRepository struct {
 	db          *sql.DB
 	initErr     error
@@ -32,14 +32,14 @@ type SQLRepository struct {
 	auditSink   func(model.AuditEvent)
 }
 
-// NewPostgresRepository создаёт SQL репозиторий для PostgreSQL-режима.
+// NewPostgresRepository создаёт SQL repository для PostgreSQL-режима.
 func NewPostgresRepository(dsn string, publicURL string) Repository {
 	return NewSQLRepository("pgx", dsn, publicURL)
 }
 
-// NewSQLRepository создаёт репозиторий поверх database/sql.
+// NewSQLRepository создаёт repository поверх database/sql.
 // driverName намеренно вынесен наружу: production-сборка может регистрировать
-// github.com/lib/pq как "PostgreSQL" или pgx stdlib как "pgx".
+// github.com/lib/pq как "postgres" или pgx stdlib как "pgx".
 func NewSQLRepository(driverName, dsn string, publicURL string) Repository {
 	driverName = strings.TrimSpace(driverName)
 	if driverName == "" {
@@ -51,26 +51,26 @@ func NewSQLRepository(driverName, dsn string, publicURL string) Repository {
 
 func (r *SQLRepository) check() error {
 	if r == nil {
-		return errors.New("SQL репозиторий не инициализирован")
+		return errors.New("sql repository не инициализирован")
 	}
 	if r.initErr != nil {
-		return fmt.Errorf("PostgreSQL драйвер недоступен: %w", r.initErr)
+		return fmt.Errorf("postgres driver недоступен: %w", r.initErr)
 	}
 	if r.db == nil {
-		return errors.New("PostgreSQL db дескриптор отсутствует")
+		return errors.New("postgres db handle отсутствует")
 	}
 	return nil
 }
 
-// Работоспособность проверяет доступность SQL серверная часть.
-// Метод используется /готовый: хранилище может быть доступен, но серверная часть нельзя считать готовым,
-// если SQL репозиторий не подключается к базе.
+// Health проверяет доступность SQL backend.
+// Метод используется /ready: storage может быть доступен, но backend нельзя считать готовым,
+// если SQL repository не подключается к базе.
 func (r *SQLRepository) Health(ctx context.Context) error {
 	if err := r.check(); err != nil {
 		return err
 	}
 	if err := r.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("PostgreSQL репозиторий недоступен через драйвер %q: %w", r.driverName, err)
+		return fmt.Errorf("postgres repository недоступен через driver %q: %w", r.driverName, err)
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func (r *SQLRepository) SaveProject(project model.Project) (model.Project, error
 		project.ID = strings.ToLower(strings.ReplaceAll(project.Name, " ", "-"))
 	}
 	if project.ID == "" || project.Name == "" {
-		return model.Project{}, fmt.Errorf("ID и имя проекта обязательны")
+		return model.Project{}, fmt.Errorf("id и name проекта обязательны")
 	}
 	if project.DefaultChannel == "" {
 		project.DefaultChannel = "stable"
@@ -187,7 +187,7 @@ func (r *SQLRepository) SaveProfile(profile model.Profile) (model.Profile, error
 		profile.ID = strings.ToLower(strings.ReplaceAll(profile.Name, " ", "-"))
 	}
 	if profile.ID == "" || profile.ProjectID == "" || profile.Name == "" {
-		return model.Profile{}, fmt.Errorf("projectId, ID и имя профиля обязательны")
+		return model.Profile{}, fmt.Errorf("projectId, id и name профиля обязательны")
 	}
 	if profile.Loader == "" {
 		profile.Loader = "vanilla"
@@ -250,7 +250,7 @@ func (r *SQLRepository) SaveChannel(channel model.ReleaseChannel) (model.Release
 		channel.Name = channel.ID
 	}
 	if channel.ID == "" || channel.ProjectID == "" {
-		return model.ReleaseChannel{}, fmt.Errorf("projectId и ID канала обязательны")
+		return model.ReleaseChannel{}, fmt.Errorf("projectId и id канала обязательны")
 	}
 	_, err := r.db.Exec(`INSERT INTO release_channels (id, project_id, name, description, protected)
 VALUES ($1,$2,$3,$4,$5)
@@ -314,7 +314,7 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(targetOSRaw), &item.TargetOS); err != nil {
-			return nil, fmt.Errorf("файлы.цель_os повреждён для %s: %w", item.Path, err)
+			return nil, fmt.Errorf("files.target_os повреждён для %s: %w", item.Path, err)
 		}
 		result = append(result, item)
 	}
@@ -414,7 +414,7 @@ func (r *SQLRepository) SaveUser(user model.User) (model.User, error) {
 		projectID = strings.TrimSpace(projectID)
 		roleID = strings.TrimSpace(roleID)
 		if projectID == "*" {
-			return model.User{}, fmt.Errorf("маска проектная роль является не поддерживаемый; использовать глобальная роль")
+			return model.User{}, fmt.Errorf("wildcard project role is not supported; use a global role")
 		}
 		if projectID == "" || roleID == "" {
 			continue
@@ -445,7 +445,7 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 	}
 	for projectID, roleID := range user.ProjectRoles {
 		if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())`, projectID, user.ID, roleID); err != nil {
-			return model.User{}, fmt.Errorf("проектная роль %s/%s: %w", projectID, roleID, err)
+			return model.User{}, fmt.Errorf("project role %s/%s: %w", projectID, roleID, err)
 		}
 	}
 	if strings.TrimSpace(user.PasswordHash) != "" {
@@ -584,14 +584,14 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
-		return model.AuthIdentity{}, fmt.Errorf("userId, провайдер и субъект идентичность обязательны")
+		return model.AuthIdentity{}, fmt.Errorf("userId, provider и subject identity обязательны")
 	}
 	if _, err := r.GetUser(identity.UserID); err != nil {
 		return model.AuthIdentity{}, err
 	}
 	existing, lookupErr := r.GetAuthIdentity(identity.Provider, identity.Subject)
 	if lookupErr == nil && existing.UserID != identity.UserID {
-		return model.AuthIdentity{}, fmt.Errorf("идентичность %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
+		return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
 	}
 	if lookupErr != nil && !errors.Is(lookupErr, ErrNotFound) {
 		return model.AuthIdentity{}, lookupErr
@@ -599,7 +599,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	var currentSubject string
 	err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2`, identity.UserID, identity.Provider).Scan(&currentSubject)
 	if err == nil && currentSubject != identity.Subject {
-		return model.AuthIdentity{}, fmt.Errorf("провайдер %s уже связан с другим субъект для пользователя", identity.Provider)
+		return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.AuthIdentity{}, err
@@ -636,7 +636,7 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated пользователь id/email и provider/subject являются обязательный")
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
 	}
 	if user.Status == "" {
 		user.Status = "active"
@@ -677,29 +677,29 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	}
 	defer tx.Rollback()
 
-	// Serialize JIT предоставление учётной записи на нормализован электронная почта даже когда нет строка существует yet.
-	// пользователи.электронная почта ограничение может быть случай-чувствительный, пока идентичность связывание политика
-	// намеренно treats электронная почта случай-insensitively. транзакция-область рекомендательный
-	// блокировка закрывает иначе unavoidable "проверка-затем-insert" гонка.
+	// Serialize JIT provisioning on the normalized email even when no row exists yet.
+	// The users.email constraint may be case-sensitive, while identity linking policy
+	// deliberately treats email case-insensitively. The transaction-scoped advisory
+	// lock closes the otherwise unavoidable "check-then-insert" race.
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(lower($1), 0))`, user.Email); err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("блокировка federated канонический электронная почта: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("lock federated canonical email: %w", err)
 	}
 	var emailOwner string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) LIMIT 1`, user.Email).Scan(&emailOwner)
 	if err == nil && emailOwner != user.ID {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: канонический электронная почта является уже используется через другой Никогда пользователь", ErrConflict)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.User{}, model.AuthIdentity{}, err
 	}
 
-	// JIT предоставление учётной записи является создавать-один раз. на CONFLICT делать NOTHING также создаёт конкурентный
-	// первый вход для одинаковый детерминированный канонический ID идемпотентный.
+	// JIT provisioning is create-once. ON CONFLICT DO NOTHING also makes concurrent
+	// first logins for the same deterministic canonical id idempotent.
 	result, err := tx.ExecContext(ctx, `INSERT INTO users (id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,last_login_at,disabled_at,created_at,updated_at)
 VALUES($1,$2,$3,$4,$5,$6,'',NULL,NULL,NULL,$7,$8)
 ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, user.Status, string(projectRoles), user.CreatedAt, user.UpdatedAt)
 	if err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("сохранение federated канонический пользователь: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated canonical user: %w", err)
 	}
 	inserted, err := result.RowsAffected()
 	if err != nil {
@@ -709,12 +709,12 @@ ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, use
 		var existingEmail string
 		if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id=$1`, user.ID).Scan(&existingEmail); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: канонический электронная почта является уже используется через другой Никогда пользователь", ErrConflict)
+				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: canonical email is already used by another Never user", ErrConflict)
 			}
 			return model.User{}, model.AuthIdentity{}, err
 		}
 		if !strings.EqualFold(strings.TrimSpace(existingEmail), user.Email) {
-			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: детерминированный канонический пользователь ID уже существует с другой электронная почта", ErrConflict)
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: deterministic canonical user id already exists with another email", ErrConflict)
 		}
 	}
 
@@ -722,14 +722,14 @@ ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, use
 VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11)
 ON CONFLICT(provider,subject) DO NOTHING`, identity.ID, identity.UserID, identity.Provider, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, identity.UpdatedAt, identity.LastAuthenticatedAt)
 	if err != nil {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("сохранение federated идентичность: %w", err)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated identity: %w", err)
 	}
 	var linkedUserID string
 	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND subject=$2`, identity.Provider, identity.Subject).Scan(&linkedUserID); err != nil {
 		return model.User{}, model.AuthIdentity{}, err
 	}
 	if linkedUserID != user.ID {
-		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: внешний идентичность является уже связь к другой Никогда пользователь", ErrConflict)
+		return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked to another Never user", ErrConflict)
 	}
 	if err := tx.Commit(); err != nil {
 		return model.User{}, model.AuthIdentity{}, err
@@ -899,8 +899,8 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 			_ = json.Unmarshal(existingRaw, &manifest)
 		}
 	case errors.Is(err, sql.ErrNoRows):
-		// Новый релиз: нет строка существует к блокировка yet. conditional UPSERT ниже является
-		// второй защита против конкурентный издатель создавать одинаковый версия.
+		// New release: no row exists to lock yet. The conditional UPSERT below is
+		// the second guard against a concurrent publisher creating the same version.
 	default:
 		return model.ReleaseVersion{}, err
 	}
@@ -926,7 +926,7 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 		}
 		if err := json.Unmarshal([]byte(targetOSRaw), &file.TargetOS); err != nil {
 			rows.Close()
-			return model.ReleaseVersion{}, fmt.Errorf("файлы.цель_os повреждён для %s: %w", file.Path, err)
+			return model.ReleaseVersion{}, fmt.Errorf("files.target_os повреждён для %s: %w", file.Path, err)
 		}
 		files = append(files, file)
 	}
@@ -1028,7 +1028,7 @@ func (r *SQLRepository) UpdateVersionStatus(projectID, versionID, status string)
 	}
 	status = strings.TrimSpace(status)
 	if status == "" {
-		return model.ReleaseVersion{}, errors.New("состояние обязателен")
+		return model.ReleaseVersion{}, errors.New("status обязателен")
 	}
 	res, err := r.db.Exec(`UPDATE release_versions SET status=$1, updated_at=now() WHERE project_id=$2 AND id=$3 AND status <> 'published'`, status, projectID, versionID)
 	if err != nil {
@@ -1186,12 +1186,12 @@ func (r *SQLRepository) ImportProject(payload map[string]any) error {
 	}
 	project, ok := payload["project"].(map[string]any)
 	if !ok {
-		return errors.New("поле проект обязательно для импорта")
+		return errors.New("поле project обязательно для импорта")
 	}
 	id, _ := project["id"].(string)
 	name, _ := project["name"].(string)
 	if id == "" || name == "" {
-		return errors.New("импортируемый проект должен содержать ID и имя")
+		return errors.New("импортируемый проект должен содержать id и name")
 	}
 	now := time.Now().UTC()
 	_, err := r.db.Exec(`INSERT INTO projects (id, name, description, homepage, repository, default_channel, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = EXCLUDED.updated_at`, id, name, fmt.Sprint(project["description"]), fmt.Sprint(project["homepage"]), fmt.Sprint(project["repository"]), "stable", now, now)
@@ -1368,17 +1368,17 @@ func (r *SQLRepository) SaveProviderCredential(item model.ProviderCredential) (m
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.EncryptedRefreshToken = strings.TrimSpace(item.EncryptedRefreshToken)
 	if item.UserID == "" || item.IdentityID == "" || item.Provider == "" || item.Subject == "" || item.EncryptedRefreshToken == "" {
-		return model.ProviderCredential{}, fmt.Errorf("провайдер учётные данные fields являются обязательный")
+		return model.ProviderCredential{}, fmt.Errorf("provider credential fields are required")
 	}
 	var linkedUserID string
 	if err := r.db.QueryRow(`SELECT user_id FROM auth_identities WHERE id=$1 AND provider=$2 AND subject=$3`, item.IdentityID, item.Provider, item.Subject).Scan(&linkedUserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return model.ProviderCredential{}, fmt.Errorf("провайдер учётные данные идентичность несоответствие")
+			return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
 		}
 		return model.ProviderCredential{}, err
 	}
 	if linkedUserID != item.UserID {
-		return model.ProviderCredential{}, fmt.Errorf("провайдер учётные данные идентичность belongs к другой пользователь")
+		return model.ProviderCredential{}, fmt.Errorf("provider credential identity belongs to another user")
 	}
 	if item.ID == "" {
 		item.ID = "provider-credential-" + item.Provider + "-" + item.UserID
@@ -1391,7 +1391,7 @@ VALUES($1,$2,$3,$4,$5,$6,$7,now(),$8)
 ON CONFLICT(user_id,provider) DO UPDATE SET identity_id=EXCLUDED.identity_id,subject=EXCLUDED.subject,encrypted_refresh_token=EXCLUDED.encrypted_refresh_token,updated_at=now(),last_refreshed_at=EXCLUDED.last_refreshed_at`, item.ID, item.UserID, item.IdentityID, item.Provider, item.Subject, item.EncryptedRefreshToken, item.CreatedAt, nullTime(item.LastRefreshedAt))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
-			return model.ProviderCredential{}, fmt.Errorf("%w: провайдер учётные данные идентичность уже belongs к другой пользователь", ErrConflict)
+			return model.ProviderCredential{}, fmt.Errorf("%w: provider credential identity already belongs to another user", ErrConflict)
 		}
 		return model.ProviderCredential{}, err
 	}
@@ -1469,7 +1469,7 @@ func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model
 		item.IdentityVersion = "independent-v1"
 	}
 	if item.UserID == "" || item.UUID == "" || item.Name == "" {
-		return model.MinecraftProfile{}, fmt.Errorf("профиль Minecraft fields являются обязательный")
+		return model.MinecraftProfile{}, fmt.Errorf("minecraft profile fields are required")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {
@@ -1488,7 +1488,7 @@ func (r *SQLRepository) SaveMinecraftSession(item model.MinecraftSession) (model
 		return model.MinecraftSession{}, err
 	}
 	if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.UserID) == "" || strings.TrimSpace(item.NeverSessionID) == "" || strings.TrimSpace(item.ProfileUUID) == "" || strings.TrimSpace(item.AccessTokenHash) == "" {
-		return model.MinecraftSession{}, fmt.Errorf("Minecraft сессия fields являются обязательный")
+		return model.MinecraftSession{}, fmt.Errorf("minecraft session fields are required")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {
@@ -1622,7 +1622,7 @@ func (r *SQLRepository) SaveMinecraftJoin(item model.MinecraftJoin) error {
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
 	item.ServerID = strings.TrimSpace(item.ServerID)
 	if item.Username == "" || item.UserID == "" || item.ProfileUUID == "" || item.MinecraftSessionID == "" || item.ServerID == "" {
-		return fmt.Errorf("Minecraft подключение fields являются обязательный")
+		return fmt.Errorf("minecraft join fields are required")
 	}
 	now := time.Now().UTC()
 	if item.CreatedAt.IsZero() {

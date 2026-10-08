@@ -41,7 +41,7 @@ func fetchExtensionCLICatalog0209(backend, token string) ([]extensionCLICatalogI
 	}
 	data, ok := payload["data"]
 	if !ok {
-		return nil, errors.New("расширение CLI каталог ответ имеет нет данные")
+		return nil, errors.New("extension CLI catalog response has no data")
 	}
 	raw, err := json.Marshal(data)
 	if err != nil {
@@ -55,24 +55,24 @@ func fetchExtensionCLICatalog0209(backend, token string) ([]extensionCLICatalogI
 		return nil, err
 	}
 	if envelope.Protocol != extensionCLIProtocol0209 {
-		return nil, fmt.Errorf("неподдерживаемый расширение CLI протокол %q", envelope.Protocol)
+		return nil, fmt.Errorf("unsupported extension CLI protocol %q", envelope.Protocol)
 	}
 	return envelope.Items, nil
 }
 
 func handleExtensionCLI0209(args []string) error {
 	if len(args) == 0 {
-		return errors.New("расширение CLI требует подкоманду: список, запуск, завершение")
+		return errors.New("extension cli требует подкоманду: list, run, completion")
 	}
 	command := strings.ToLower(strings.TrimSpace(args[0]))
 	rest := args[1:]
 	backend := adminBackendURL(rest)
 	if backend == "" {
-		return errors.New("расширение CLI требует --серверная часть <URL>")
+		return errors.New("extension cli требует --backend <url>")
 	}
 	token := backendToken(rest)
 	if token == "" {
-		return errors.New("расширение CLI требует --токен или NEVERLAUNCHER_TOKEN")
+		return errors.New("extension cli требует --token или NEVERLAUNCHER_TOKEN")
 	}
 	items, err := fetchExtensionCLICatalog0209(backend, token)
 	if err != nil {
@@ -85,7 +85,7 @@ func handleExtensionCLI0209(args []string) error {
 	case "run":
 		pos := extensionCLIPositionals0209(rest)
 		if len(pos) < 2 {
-			return errors.New("расширение CLI запуск требует <пространство имён> <команда> [-- args...]")
+			return errors.New("extension cli run требует <namespace> <command> [-- args...]")
 		}
 		argv := afterDoubleDash0209(rest)
 		return invokeExtensionNamespace0209(backend, token, items, pos[0], pos[1], flagValue(rest, "--scope", "global"), flagValue(rest, "--scope-id", ""), argv)
@@ -102,22 +102,22 @@ func handleExtensionCLI0209(args []string) error {
 		fmt.Print(script)
 		return nil
 	default:
-		return fmt.Errorf("неизвестная расширение CLI подкоманда: %s", command)
+		return fmt.Errorf("неизвестная extension cli подкоманда: %s", command)
 	}
 }
 
 func handleExtensionNamespace0209(args []string) error {
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("nl x требует --серверная часть <URL>")
+		return errors.New("nl x требует --backend <url>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("nl x требует --токен или NEVERLAUNCHER_TOKEN")
+		return errors.New("nl x требует --token или NEVERLAUNCHER_TOKEN")
 	}
 	pos := extensionCLIPositionals0209(args)
 	if len(pos) < 2 {
-		return errors.New("использование: nl x <пространство имён> <команда> [--область глобальный|проект] [--область-ID ID] [-- args...]")
+		return errors.New("использование: nl x <namespace> <command> [--scope global|project] [--scope-id id] [-- args...]")
 	}
 	items, err := fetchExtensionCLICatalog0209(backend, token)
 	if err != nil {
@@ -163,12 +163,12 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return errors.New("--область должен быть глобальный или проект")
+		return errors.New("--scope должен быть global или project")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if strings.TrimSpace(scopeID) == "" {
-		return errors.New("--область проект требует --область-ID")
+		return errors.New("--scope project требует --scope-id")
 	}
 	matches := []extensionCLICatalogItem0209{}
 	for _, item := range items {
@@ -177,10 +177,10 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		}
 	}
 	if len(matches) == 0 {
-		return fmt.Errorf("CLI пространство имён %q не найден для область %s/%s", namespace, scope, scopeID)
+		return fmt.Errorf("CLI namespace %q не найден для scope %s/%s", namespace, scope, scopeID)
 	}
 	if len(matches) > 1 {
-		return fmt.Errorf("CLI пространство имён %q неоднозначен; укажите --scope/--scope-id", namespace)
+		return fmt.Errorf("CLI namespace %q неоднозначен; укажите --scope/--scope-id", namespace)
 	}
 	item := matches[0]
 	declared := false
@@ -191,7 +191,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		}
 	}
 	if !declared {
-		return fmt.Errorf("пространство имён %s не объявляет команду %s", namespace, command)
+		return fmt.Errorf("namespace %s не объявляет команду %s", namespace, command)
 	}
 	body := map[string]any{"scope": scope, "scopeId": scopeID, "command": command, "args": argv}
 	data, _ := json.Marshal(body)
@@ -223,7 +223,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("недопустимый CLI расширение ответ: %w", err)
+		return fmt.Errorf("invalid CLI extension response: %w", err)
 	}
 	if envelope.Data.Stdout != "" {
 		fmt.Print(envelope.Data.Stdout)
@@ -242,10 +242,10 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		if msg == "" {
 			msg = resp.Status
 		}
-		return fmt.Errorf("расширение команда ошибка: %s", msg)
+		return fmt.Errorf("extension command failed: %s", msg)
 	}
 	if envelope.Data.ExitCode != 0 {
-		return fmt.Errorf("расширение команда выход с код %d", envelope.Data.ExitCode)
+		return fmt.Errorf("extension command exited with code %d", envelope.Data.ExitCode)
 	}
 	return nil
 }
@@ -293,6 +293,6 @@ func extensionCLICompletion0209(shell string, items []extensionCLICatalogItem020
 		}
 		return b.String(), nil
 	default:
-		return "", fmt.Errorf("завершение оболочка должен быть bash, zsh или fish (серверная часть %s)", backend)
+		return "", fmt.Errorf("completion shell должен быть bash, zsh или fish (backend %s)", backend)
 	}
 }

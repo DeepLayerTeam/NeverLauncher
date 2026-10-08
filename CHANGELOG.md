@@ -1,3 +1,13 @@
+## [0.21.5] - 2026-10-08
+
+- Восстановлены машинно-чувствительные контракты, повреждённые массовой русификацией 0.21.4: Go build tags/embed, cgo/C preprocessor, protocol/status identifiers, Desktop↔Tauri поля и CI certification markers снова остаются неизменяемыми техническими значениями.
+- Исправлены реальные build/regression дефекты, существовавшие до 0.21.4: Bukkit-family heartbeat больше не ссылается на отсутствующий `heartbeatOnce`; Windows Rust Sensor получает явный `bool`; код приведён к новым lint Rust 1.99; Windows lifecycle не пытается выполнять неподдерживаемый directory `fsync`.
+- Исправлена Windows NeverGuard сборка: `LdrRegisterDllNotification`/`LdrUnregisterDllNotification` разрешаются динамически из `ntdll.dll`, а debug probe включает требуемую возможность `Win32_System_Threading`.
+- Исправлен Device Trust PostgreSQL E2E: тестовый ServerBridge allowlist теперь содержит полный набор 0.19.8+ `quiltSha256`/`spongeSha256`/`vanillaSha256`; attestation возвращает канонический `not-remotely-verified`.
+- Исторические NeverExtensions/authorization/durable certification gates теперь проверяют совместимость текущей версии с замороженным baseline вместо ошибочного требования точного номера старого релиза. Замороженные SDK NeverExtensions при этом остаются версии `0.21.0`.
+- Compatibility CI с 292 обязательными целями разделён на две матрицы по 146 целей; итоговый агрегатор по-прежнему требует evidence от всех 292 целей, поэтому покрытие не уменьшено и лимит GitHub Actions в 256 комбинаций больше не блокирует запуск.
+- Синхронизированы русифицированные production/security smoke-проверки с русскими runbook/SECURITY без ослабления технических инвариантов.
+
 ## [0.21.4] - 2026-10-08
 
 - Полностью русифицирована человекочитаемая документация проекта, включая README, руководства по эксплуатации, развёртыванию, безопасности, совместимости, ServerBridge, Доверие к устройству, NeverExtensions, SDK и примеры.

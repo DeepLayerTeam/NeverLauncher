@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Публикация материализовать Никогда клиент пакет через канонический администратор API.
+"""Publish a materialized Never client package through the canonical admin API.
 
- скрипт является намеренно E2E-oriented: каждый локальный файл является re-хешированный до
-загрузка, каждый серверная часть ответ hash/size является сравнивать с пакет манифест,
-и релиз является опубликованный только после все артефакты и среда выполнения settings имеют
-был принят через Серверная часть API.
+The script is intentionally E2E-oriented: every local file is re-hashed before
+upload, every backend response hash/size is compared with the package manifest,
+and the release is published only after all artifacts and runtime settings have
+been accepted by the Backend API.
 """
 from __future__ import annotations
 
@@ -54,9 +54,9 @@ class APIClient:
                 continue
             if parsed > 0:
                 delays.append(parsed)
-        # API предоставляет фиксированный-окно reset в второй. Добавлять один второй так 
-        # повторить никогда гонка Redis TTL граница. Сохранять upper привязанный так 
-        # broken прокси не может stall релиз задача indefinitely.
+        # The API exposes a fixed-window reset in seconds. Add one second so a
+        # retry never races the Redis TTL boundary. Keep an upper bound so a
+        # broken proxy cannot stall the release job indefinitely.
         return min(65, max(delays, default=1) + 1)
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
@@ -77,7 +77,7 @@ class APIClient:
                     delay = self._retry_after_seconds(response)
                     rate_limit_retries += 1
                     print(
-                        f"[e2e-upload] rate ограничение на {method} {path}; повторить {rate_limit_retries}/8 после {delay}s",
+                        f"[e2e-upload] rate limited on {method} {path}; retry {rate_limit_retries}/8 after {delay}s",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -269,12 +269,12 @@ def main() -> int:
         client.upload(relative, local_file, expected_sha, expected_size, bool(item.get("executable", False)), list(item.get("targetOs") or []))
         total_bytes += expected_size
         if index == 1 or index % 250 == 0 or index == total:
-            print(f"[e2e-upload] {index}/{total} файлы, {total_bytes} байты", file=sys.stderr, flush=True)
+            print(f"[e2e-upload] {index}/{total} files, {total_bytes} bytes", file=sys.stderr, flush=True)
 
     if bool(args.webauthn_helper) != bool(args.webauthn_state):
         raise RuntimeError("--webauthn-helper and --webauthn-state must be provided together")
     if args.webauthn_helper and args.webauthn_state:
-        print("[e2e-upload] обновление устойчивый к фишингу step-up немедленно до публикация", file=sys.stderr, flush=True)
+        print("[e2e-upload] refresh phishing-resistant step-up immediately before publish", file=sys.stderr, flush=True)
         client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
 
     published = client.json("POST", f"/api/v1/admin/projects/{quote(project, safe='')}/versions/{quote(version_id, safe='')}/publish")

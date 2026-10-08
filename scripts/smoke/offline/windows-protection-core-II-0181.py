@@ -12,13 +12,13 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Windows Защита Ядро II 0.18.1 контроль: {label} отсутствующий {missing}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: {label} missing {missing}")
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 1):
-        raise SystemExit(f"[NeverLauncher] Windows Защита Ядро II 0.18.1 контроль: VERSION является {version}")
+        raise SystemExit(f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: VERSION is {version}")
 
     protection = read("runtime/neverruntime/src/windows_protection.rs")
     policy = read("runtime/neverruntime/src/windows_policy.rs")
@@ -118,7 +118,7 @@ def main() -> int:
         "Windows CI",
     )
     if "windows-protection-core-II-0181.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Windows Защита Ядро II 0.18.1 контроль: предварительная проверка wiring отсутствующий")
+        raise SystemExit("[NeverLauncher] Windows Protection Core II 0.18.1 gate: preflight wiring missing")
 
     for path, body in [
         ("runtime/neverruntime/src/windows_protection.rs", protection),
@@ -129,10 +129,10 @@ def main() -> int:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Windows Защита Ядро II 0.18.1 контроль: placeholder {forbidden!r} в {path}"
+                    f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Windows Защита Ядро II 0.18.1 контроль: OK")
+    print("[NeverLauncher] Windows Protection Core II 0.18.1 gate: OK")
     return 0
 
 

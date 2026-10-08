@@ -254,11 +254,11 @@ mod imp {
 
         fn validate_loaded_module(&self, path: &Path) -> Result<(String, String), String> {
             let metadata = std::fs::symlink_metadata(path).map_err(|err| {
-                format!("Модуль Защита не может stat загружен модуль {}: {err}", path.display())
+                format!("Module Guard cannot stat loaded module {}: {err}", path.display())
             })?;
             if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
                 return Err(format!(
-                    "Модуль Защита отклонён non-regular/symlink модуль {}",
+                    "Module Guard rejected non-regular/symlink module {}",
                     path.display()
                 ));
             }
@@ -267,7 +267,7 @@ mod imp {
             if !self.is_trusted_root_path(&normalized) {
                 verify_windows_authenticode_trust(&canonical).map_err(|err| {
                     format!(
-                        "Модуль Защита отклонён модуль вне доверенный корни {}: {err}",
+                        "Module Guard rejected module outside trusted roots {}: {err}",
                         canonical.display()
                     )
                 })?;
@@ -294,7 +294,7 @@ mod imp {
             let (normalized, sha256) = policy.validate_loaded_module(&module.path)?;
             if !normalized.eq_ignore_ascii_case(&module.normalized_path) {
                 return Err(format!(
-                    "Модуль Защита базовая линия канонический путь расхождение для {}",
+                    "Module Guard baseline canonical path drift for {}",
                     module.path.display()
                 ));
             }
@@ -337,25 +337,25 @@ mod imp {
         server
             .write_all(&ack)
             .await
-            .map_err(|err| format!("Модуль Защита arm acknowledgement запись ошибка: {err}"))?;
+            .map_err(|err| format!("Module Guard arm acknowledgement write failed: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Модуль Защита arm acknowledgement flush ошибка: {err}"))?;
+            .map_err(|err| format!("Module Guard arm acknowledgement flush failed: {err}"))?;
         ack.zeroize();
 
-        // Agent_OnLoad является не разрешён к возвращать до внутри процесса агрессивный
-        // хук движок доказывает тот это является armed. первый аутентифицировать поток
-        // packet является поэтому обязательный HOOK_READY запись.
+        // Agent_OnLoad is not allowed to return until the in-process aggressive
+        // hook engine proves that it is armed. The first authenticated stream
+        // packet is therefore a mandatory HOOK_READY record.
         let mut ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
             .await
             .map_err(|_| "NeverGuard Hook Engine ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Хук Движок готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard Hook Engine ready proof read failed: {err}"))?;
         let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
         if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
             return Err(format!(
-                "NeverGuard Хук Движок ожидаемый HOOK_READY как первый событие, получил {}",
+                "NeverGuard Hook Engine expected HOOK_READY as first event, got {}",
                 ready_event.reason
             ));
         }
@@ -386,17 +386,17 @@ mod imp {
         });
         ready_packet.zeroize();
 
-        // Память Целостность должен также быть armed до Agent_OnLoad возвращает. 
-        // второй аутентифицировать поток packet является обязательный MEMORY_READY доказательство.
+        // Memory Integrity must also be armed before Agent_OnLoad returns. The
+        // second authenticated stream packet is a mandatory MEMORY_READY proof.
         let mut memory_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
             .await
             .map_err(|_| "NeverGuard Memory Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Память Целостность готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard Memory Integrity ready proof read failed: {err}"))?;
         let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
         if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
             return Err(format!(
-                "NeverGuard Память Целостность ожидаемый MEMORY_READY как второй событие, получил {}",
+                "NeverGuard Memory Integrity expected MEMORY_READY as second event, got {}",
                 memory_ready_event.reason
             ));
         }
@@ -418,18 +418,18 @@ mod imp {
         });
         memory_ready_packet.zeroize();
 
-        // Поток и Процесс Целостность является third обязательный запуск доказательство. 
-        // Sensor валидирует поток источник внутри процесса пока родительский валидирует
-        // полный descendant дерево против без отделения Задача Объект.
+        // Thread & Process Integrity is the third mandatory startup proof. The
+        // Sensor validates thread origins in-process while the parent validates
+        // the complete descendant tree against the non-breakaway Job Object.
         let mut thread_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
             .await
             .map_err(|_| "NeverGuard Thread & Process Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Поток и Процесс Целостность готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard Thread & Process Integrity ready proof read failed: {err}"))?;
         let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
         if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
             return Err(format!(
-                "NeverGuard Поток и Процесс Целостность ожидаемый THREAD_PROCESS_READY как third событие, получил {}",
+                "NeverGuard Thread & Process Integrity expected THREAD_PROCESS_READY as third event, got {}",
                 thread_ready_event.reason
             ));
         }
@@ -461,18 +461,18 @@ mod imp {
         });
         thread_ready_packet.zeroize();
 
-        // Отладка и Инструментирование Защита является fourth обязательный запуск доказательство.
-        // Agent_OnLoad не может возвращать до Sensor доказывает тот нет отладчик является
-        // подключение и JVM подключение mechanism является отключённый через лаунчер.
+        // Debug & Instrumentation Guard is the fourth mandatory startup proof.
+        // Agent_OnLoad cannot return until the Sensor proves that no debugger is
+        // attached and the JVM attach mechanism is disabled by the launcher.
         let mut debug_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
             .await
             .map_err(|_| "NeverGuard Debug & Instrumentation Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Отладка и Инструментирование Защита готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard Debug & Instrumentation Guard ready proof read failed: {err}"))?;
         let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
         if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
             return Err(format!(
-                "NeverGuard Отладка и Инструментирование Защита ожидаемый DEBUG_INSTRUMENTATION_READY как fourth событие, получил {}",
+                "NeverGuard Debug & Instrumentation Guard expected DEBUG_INSTRUMENTATION_READY as fourth event, got {}",
                 debug_ready_event.reason
             ));
         }
@@ -499,27 +499,27 @@ mod imp {
         });
         debug_ready_packet.zeroize();
 
-        // JVM-Учитывающий Защита является fifth обязательный запуск доказательство. Sensor
-        // имеет уже разрешённый загружен JVM.DLL идентичность и сертифицированный Java
-        // крупный до хук движок является armed, так post-запуск исполняемый
-        // MEM_PRIVATE переходы может быть attributed к HotSpot вместо чем всего лишь
-        // принят потому что VirtualAlloc/VirtualProtect был наблюдаемый.
+        // JVM-Aware Protection is the fifth mandatory startup proof. The Sensor
+        // has already resolved the loaded jvm.dll identity and certified Java
+        // major before the hook engine is armed, so post-start executable
+        // MEM_PRIVATE transitions can be attributed to HotSpot rather than merely
+        // accepted because VirtualAlloc/VirtualProtect was observed.
         let mut jvm_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
             .await
             .map_err(|_| "NeverGuard JVM-Aware Protection ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard JVM-Учитывающий Защита готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard JVM-Aware Protection ready proof read failed: {err}"))?;
         let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
         if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
             return Err(format!(
-                "NeverGuard JVM-Учитывающий Защита ожидаемый JVM_AWARE_READY как fifth событие, получил {}",
+                "NeverGuard JVM-Aware Protection expected JVM_AWARE_READY as fifth event, got {}",
                 jvm_ready_event.reason
             ));
         }
         let jvm_ready = jvm_aware_report_from_event(&jvm_ready_event)?;
         if !jvm_ready.certified_major || !crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&jvm_ready.java_major) {
             return Err(format!(
-                "NeverGuard JVM-Учитывающий Защита отклонён uncertified Java крупный {}",
+                "NeverGuard JVM-Aware Protection rejected uncertified Java major {}",
                 jvm_ready.java_major
             ));
         }
@@ -537,19 +537,19 @@ mod imp {
         });
         jvm_ready_packet.zeroize();
 
-        // Непрерывный Защита является sixth обязательный запуск доказательство. Это содержит 
-        // Sensor's независимо maintained хеш каждый аутентифицировать packet
-        // emitted так far. родительский должен see точный одинаковый цепочка и возвращать 
-        // подписанный ACK до Agent_OnLoad является разрешён к полный.
+        // Continuous Guard is the sixth mandatory startup proof. It carries the
+        // Sensor's independently maintained digest of every authenticated packet
+        // emitted so far. The parent must see the exact same chain and return a
+        // signed ACK before Agent_OnLoad is allowed to complete.
         let mut continuous_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
             .await
             .map_err(|_| "NeverGuard Continuous Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Непрерывный Защита готовый доказательство чтение ошибка: {err}"))?;
+            .map_err(|err| format!("NeverGuard Continuous Guard ready proof read failed: {err}"))?;
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
-                "NeverGuard Непрерывный Защита ожидаемый CONTINUOUS_READY как sixth событие, получил {}",
+                "NeverGuard Continuous Guard expected CONTINUOUS_READY as sixth event, got {}",
                 continuous_ready_event.reason
             ));
         }
@@ -669,7 +669,7 @@ mod imp {
                         fail_closed(
                             &state,
                             pid,
-                            &format!("Модуль Защита событие поток отдельный: {err}"),
+                            &format!("Module Guard event stream disconnected: {err}"),
                             0,
                         );
                     } else {
@@ -719,7 +719,7 @@ mod imp {
                         Err("Module Guard received malformed DLL unload event".to_string())
                     } else if expected.remove(&event.base_address).is_none() {
                         Err(format!(
-                            "Модуль Защита наблюдаемый выгрузка для неизвестный модуль основа 0x{:X}",
+                            "Module Guard observed unload for unknown module base 0x{:X}",
                             event.base_address
                         ))
                     } else {
@@ -771,7 +771,7 @@ mod imp {
                     Err(if detail.is_empty() {
                         "NeverGuard Hook Engine integrity violation".to_string()
                     } else {
-                        format!("NeverGuard Хук Движок целостность нарушение: {detail}")
+                        format!("NeverGuard Hook Engine integrity violation: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_MEMORY_READY => {
@@ -804,7 +804,7 @@ mod imp {
                     Err(if detail.is_empty() {
                         "NeverGuard Memory Integrity runtime tampering detected".to_string()
                     } else {
-                        format!("NeverGuard Память Целостность среда выполнения подмена обнаруживать: {detail}")
+                        format!("NeverGuard Memory Integrity runtime tampering detected: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_THREAD_PROCESS_READY => {
@@ -819,7 +819,7 @@ mod imp {
                         Ok(mut thread_report) => {
                             match runtime_policy.verify_process_tree(pid) {
                                 Err(err) => Err(format!(
-                                    "NeverGuard Поток и Процесс Целостность дерево процессов проверка ошибка: {err}"
+                                    "NeverGuard Thread & Process Integrity process-tree verification failed: {err}"
                                 )),
                                 Ok(tree) => {
                                     module_hash = thread_report.thread_set_sha256.clone();
@@ -856,7 +856,7 @@ mod imp {
                         "NeverGuard Thread & Process Integrity suspicious runtime transition detected".to_string()
                     } else {
                         format!(
-                            "NeverGuard Поток и Процесс Целостность suspicious среда выполнения переход обнаруживать: {detail}"
+                            "NeverGuard Thread & Process Integrity suspicious runtime transition detected: {detail}"
                         )
                     })
                 }
@@ -888,7 +888,7 @@ mod imp {
                         "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected".to_string()
                     } else {
                         format!(
-                            "NeverGuard Отладка и Инструментирование Защита unwanted debug/instrumentation граница обнаруживать: {detail}"
+                            "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected: {detail}"
                         )
                     })
                 }
@@ -916,7 +916,7 @@ mod imp {
                         "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition".to_string()
                     } else {
                         format!(
-                            "NeverGuard JVM-Учитывающий Защита отклонён non-JVM исполняемый-память переход: {detail}"
+                            "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition: {detail}"
                         )
                     })
                 }
@@ -928,7 +928,7 @@ mod imp {
                         Err("NeverGuard Continuous Guard heartbeat metadata mismatch".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
-                            "NeverGuard Непрерывный Защита защита-последовательность несоответствие: ожидаемый {guard_sequence}, получил {}",
+                            "NeverGuard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
                             event.base_address
                         ))
                     } else {
@@ -949,15 +949,15 @@ mod imp {
                     Err(if detail.is_empty() {
                         "NeverGuard Continuous Guard Sensor/Guard cross-check failed".to_string()
                     } else {
-                        format!("NeverGuard Непрерывный Защита Sensor/Guard cross-проверка ошибка: {detail}")
+                        format!("NeverGuard Continuous Guard Sensor/Guard cross-check failed: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_OVERFLOW => {
                     let dropped = event.base_address.max(event.flags as u64);
-                    Err(format!("Модуль Защита Sensor кольцо overflow: dropped {dropped} события"))
+                    Err(format!("Module Guard Sensor ring overflow: dropped {dropped} events"))
                 }
                 MODULE_EVENT_REASON_SHUTDOWN => Ok(()),
-                other => Err(format!("Модуль Защита получать неподдерживаемый событие reason {other}")),
+                other => Err(format!("Module Guard received unsupported event reason {other}")),
             };
 
             if let Err(err) = event_result {
@@ -1123,7 +1123,7 @@ mod imp {
         }
         if suspicious_thread_count != 0 {
             return Err(format!(
-                "NeverGuard Поток и Процесс Целостность отображается {suspicious_thread_count} suspicious потоки"
+                "NeverGuard Thread & Process Integrity reported {suspicious_thread_count} suspicious threads"
             ));
         }
         Ok(crate::WindowsThreadProcessIntegrityReport {
@@ -1170,7 +1170,7 @@ mod imp {
             || !debug_flags_no_debug_inherit
         {
             return Err(format!(
-                "NeverGuard Отладка и Инструментирование Защита обнаруживать отладчик состояние: флаги=0x{:X}",
+                "NeverGuard Debug & Instrumentation Guard detected debugger state: flags=0x{:X}",
                 event.flags
             ));
         }
@@ -1236,7 +1236,7 @@ mod imp {
         let certified_major = crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&java_major);
         if !certified_major {
             return Err(format!(
-                "NeverGuard JVM-Учитывающий Защита отображается неподдерживаемый Java крупный {java_major}"
+                "NeverGuard JVM-Aware Protection reported unsupported Java major {java_major}"
             ));
         }
         if event.size_of_image == 0 {
@@ -1244,7 +1244,7 @@ mod imp {
         }
         if foreign_executable_transition_count != 0 || unknown_executable_transition_count != 0 {
             return Err(format!(
-                "NeverGuard JVM-Учитывающий Защита отображается недоверенный исполняемый переходы: внешний={foreign_executable_transition_count}, неизвестный={unknown_executable_transition_count}"
+                "NeverGuard JVM-Aware Protection reported untrusted executable transitions: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
             ));
         }
         Ok(crate::WindowsJvmAwareProtectionReport {
@@ -1269,7 +1269,7 @@ mod imp {
     fn validate_jvm_aware_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "NeverGuard JVM-Учитывающий Защита недопустимый {label} хеш"
+                "NeverGuard JVM-Aware Protection invalid {label} digest"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1278,7 +1278,7 @@ mod imp {
     fn validate_thread_process_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "NeverGuard Поток и Процесс Целостность недопустимый {label} хеш"
+                "NeverGuard Thread & Process Integrity invalid {label} digest"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1286,7 +1286,7 @@ mod imp {
 
     fn validate_memory_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("NeverGuard Память Целостность недопустимый {label} хеш"));
+            return Err(format!("NeverGuard Memory Integrity invalid {label} digest"));
         }
         Ok(value.to_ascii_lowercase())
     }
@@ -1308,7 +1308,7 @@ mod imp {
         }
         if sequence != expected_sequence {
             return Err(format!(
-                "Модуль Защита событие последовательность несоответствие: ожидаемый {expected_sequence}, получил {sequence}"
+                "Module Guard event sequence mismatch: expected {expected_sequence}, got {sequence}"
             ));
         }
         let mut mac = HmacSha256::new_from_slice(secret)
@@ -1365,7 +1365,7 @@ mod imp {
             .collect::<HashMap<_, _>>();
         if observed_map.len() != expected.len() {
             return Err(format!(
-                "Модуль Защита внешний снимок расхождение: ожидаемый {} модули, наблюдаемый {}",
+                "Module Guard external snapshot drift: expected {} modules, observed {}",
                 expected.len(),
                 observed_map.len()
             ));
@@ -1373,12 +1373,12 @@ mod imp {
         for (base, expected_path) in expected {
             let Some(observed_path) = observed_map.get(base) else {
                 return Err(format!(
-                    "Модуль Защита внешний снимок отсутствующий модуль основа 0x{base:X}"
+                    "Module Guard external snapshot missing module base 0x{base:X}"
                 ));
             };
             if !observed_path.eq_ignore_ascii_case(expected_path) {
                 return Err(format!(
-                    "Модуль Защита модуль путь расхождение в основа 0x{base:X}: ожидаемый {expected_path}, наблюдаемый {observed_path}"
+                    "Module Guard module path drift at base 0x{base:X}: expected {expected_path}, observed {observed_path}"
                 ));
             }
         }
@@ -1394,7 +1394,7 @@ mod imp {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Модуль Защита снимок ошибка для PID {pid}: {}",
+                "Module Guard snapshot failed for PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -1405,14 +1405,14 @@ mod imp {
         };
         if unsafe { Module32FirstW(snapshot.raw(), &mut entry) } == 0 {
             return Err(format!(
-                "Модуль Защита модуль enumeration ошибка для PID {pid}: {}",
+                "Module Guard module enumeration failed for PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
         let mut modules = Vec::new();
         loop {
             let path = wide_z_to_path(&entry.szExePath).ok_or_else(|| {
-                format!("Модуль Защита encountered модуль без путь в PID {pid}")
+                format!("Module Guard encountered module without a path in PID {pid}")
             })?;
             let normalized_path = normalize_path(&canonical_or_absolute(&path)?);
             modules.push(LoadedModule {
@@ -1495,11 +1495,11 @@ mod imp {
         server
             .write_all(&packet)
             .await
-            .map_err(|err| format!("Непрерывный Защита ACK запись ошибка: {err}"))?;
+            .map_err(|err| format!("Continuous Guard ACK write failed: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Непрерывный Защита ACK flush ошибка: {err}"))?;
+            .map_err(|err| format!("Continuous Guard ACK flush failed: {err}"))?;
         packet.zeroize();
         Ok(())
     }
@@ -1628,14 +1628,14 @@ mod imp {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("Модуль Защита не может открытый {} для хеш: {err}", path.display()))?;
+            .map_err(|err| format!("Module Guard cannot open {} for hashing: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("Модуль Защита не может хеш {}: {err}", path.display()))?;
+                .map_err(|err| format!("Module Guard cannot hash {}: {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -1673,7 +1673,7 @@ mod imp {
         }
         std::env::current_dir()
             .map(|current| current.join(&loader_path))
-            .map_err(|err| format!("Модуль Защита не может разрешать {}: {err}", path.display()))
+            .map_err(|err| format!("Module Guard cannot resolve {}: {err}", path.display()))
     }
 
     fn resolve_loader_path(path: &Path) -> PathBuf {

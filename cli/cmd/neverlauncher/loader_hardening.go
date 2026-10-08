@@ -30,7 +30,7 @@ type loaderPayloadCacheRecord struct {
 func loaderPayloadCachePaths(root, sha string) (recordRel, payloadRel, recordPath, payloadPath string, err error) {
 	sha = strings.ToLower(strings.TrimSpace(sha))
 	if !compatibilitySHA256RE.MatchString(sha) {
-		return "", "", "", "", errors.New("загрузчик полезная нагрузка кэш требует валидный SHA-256")
+		return "", "", "", "", errors.New("loader payload cache требует валидный SHA-256")
 	}
 	baseRel := filepath.ToSlash(filepath.Join(".neverlauncher", "loader-cache", "sha256", sha[:2], sha))
 	recordRel = baseRel + ".json"
@@ -71,7 +71,7 @@ func storeLoaderPayloadCacheFile(root, loader, minecraft, source, filePath, expe
 	}
 	sha = strings.ToLower(sha)
 	if expectedSHA256 != "" && !strings.EqualFold(sha, strings.TrimSpace(expectedSHA256)) {
-		return "", fmt.Errorf("загрузчик полезная нагрузка кэш исходник SHA-256 несоответствие: ожидаемый %s получил %s", expectedSHA256, sha)
+		return "", fmt.Errorf("loader payload cache source SHA-256 mismatch: expected %s got %s", expectedSHA256, sha)
 	}
 	_, _, recordPath, payloadPath, err := loaderPayloadCachePaths(root, sha)
 	if err != nil {
@@ -93,7 +93,7 @@ func storeLoaderPayloadCacheFile(root, loader, minecraft, source, filePath, expe
 
 func writeLoaderPayloadCacheRecord(recordPath, loader, minecraft, source, sha string, size int64) error {
 	if size <= 0 || size > maxCompatibilityArtifact {
-		return fmt.Errorf("загрузчик полезная нагрузка кэш размер %d вне допустимого диапазона", size)
+		return fmt.Errorf("loader payload cache size %d вне допустимого диапазона", size)
 	}
 	record := loaderPayloadCacheRecord{
 		SchemaVersion:    loaderPayloadCacheSchema,
@@ -121,7 +121,7 @@ func loadLoaderPayloadCacheBytes(root, loader, minecraft, source, expectedSHA256
 		return nil, err
 	}
 	if int64(len(data)) != size {
-		return nil, errors.New("загрузчик полезная нагрузка кэш размер изменён после проверка")
+		return nil, errors.New("loader payload cache size changed after verification")
 	}
 	return data, nil
 }
@@ -137,7 +137,7 @@ func restoreLoaderPayloadCacheFile(root, loader, minecraft, source, expectedSHA2
 	ok, _, gotSize := existingFileMatchesSHA256(destination, expectedSHA256)
 	if !ok || gotSize != size {
 		_ = os.Remove(destination)
-		return 0, errors.New("восстановление загрузчик полезная нагрузка ошибка SHA-256 проверка")
+		return 0, errors.New("restored loader payload failed SHA-256 verification")
 	}
 	return size, nil
 }
@@ -159,12 +159,12 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 	var record loaderPayloadCacheRecord
 	if jsonErr := json.Unmarshal(raw, &record); jsonErr != nil {
 		_, _ = quarantineCompatibilityArtifact(root, recordRel, "loader payload cache record JSON is corrupt")
-		err = fmt.Errorf("загрузчик полезная нагрузка кэш запись JSON: %w", jsonErr)
+		err = fmt.Errorf("loader payload cache record JSON: %w", jsonErr)
 		return
 	}
 	if record.SchemaVersion != loaderPayloadCacheSchema || record.Loader != strings.ToLower(strings.TrimSpace(loader)) || record.MinecraftVersion != strings.TrimSpace(minecraft) || record.SourceURL != strings.TrimSpace(source) || !strings.EqualFold(record.PayloadSHA256, expectedSHA256) || record.Size <= 0 || record.Size > max {
 		_, _ = quarantineCompatibilityArtifact(root, recordRel, "loader payload cache identity/integrity metadata mismatch")
-		err = errors.New("загрузчик полезная нагрузка кэш идентичность несоответствие")
+		err = errors.New("loader payload cache identity mismatch")
 		return
 	}
 	info, statErr := os.Lstat(payloadPath)
@@ -174,16 +174,16 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Size() != record.Size {
 		_, _ = quarantineCompatibilityArtifact(root, payloadRel, "loader payload cache file type/size mismatch")
-		err = errors.New("загрузчик полезная нагрузка кэш полезная нагрузка метаданные несоответствие")
+		err = errors.New("loader payload cache payload metadata mismatch")
 		return
 	}
 	ok, _, gotSize := existingFileMatchesSHA256(payloadPath, expectedSHA256)
 	if !ok || gotSize != record.Size {
 		_, _ = quarantineCompatibilityArtifact(root, payloadRel, "loader payload cache SHA-256 mismatch")
-		err = errors.New("загрузчик полезная нагрузка кэш SHA-256 несоответствие")
+		err = errors.New("loader payload cache SHA-256 mismatch")
 		return
 	}
-	// Touch проверен полезная нагрузка так future GC реализация может использовать доступ время через mtime.
+	// Touch verified payload so future GC implementations can use access time by mtime.
 	_ = os.Chtimes(payloadPath, time.Now(), time.Now())
 	size = record.Size
 	return
@@ -214,16 +214,16 @@ func existingFileMatchesSHA256(path, expected string) (bool, string, int64) {
 func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root, loader, minecraft, source string, pinned *loaderResolutionLock, cacheOnly bool, max int64) ([]byte, bool, bool, error) {
 	if pinned != nil {
 		if pinned.PayloadURL != source {
-			return nil, false, false, fmt.Errorf("загрузчик разрешение блокировка полезная нагрузка URL несоответствие: закреплённый %s получил %s", pinned.PayloadURL, source)
+			return nil, false, false, fmt.Errorf("loader resolution lock payload URL mismatch: pinned %s got %s", pinned.PayloadURL, source)
 		}
 		if data, err := loadLoaderPayloadCacheBytes(root, loader, minecraft, source, pinned.PayloadSHA256, max); err == nil {
 			return data, true, cacheOnly, nil
 		} else if cacheOnly {
-			return nil, false, false, fmt.Errorf("загрузчик только кэш восстановление ошибка: %w", err)
+			return nil, false, false, fmt.Errorf("loader cache-only recovery failed: %w", err)
 		}
 	}
 	if cacheOnly {
-		return nil, false, false, errors.New("загрузчик только кэш режим требует существующий неизменяемый разрешение блокировка")
+		return nil, false, false, errors.New("loader cache-only mode требует существующий immutable resolution lock")
 	}
 	data, err := fetchJSONBytes(ctx, client, source, max)
 	if err != nil {
@@ -240,7 +240,7 @@ func fetchLoaderProfileWithCache(ctx context.Context, client *http.Client, root,
 		}
 	}
 	if _, err := storeLoaderPayloadCacheBytes(root, loader, minecraft, source, data); err != nil {
-		return nil, false, false, fmt.Errorf("загрузчик полезная нагрузка кэш фиксация: %w", err)
+		return nil, false, false, fmt.Errorf("loader payload cache commit: %w", err)
 	}
 	return data, false, false, nil
 }
@@ -255,7 +255,7 @@ func restorePinnedInstallerFromCache(root, loader, minecraft, source, expectedSH
 		return vanillaDownloadedFile{}, err
 	}
 	if actualSize != size || !strings.EqualFold(sha256sum, expectedSHA256) {
-		return vanillaDownloadedFile{}, errors.New("восстановление установщик кэш проверка несоответствие")
+		return vanillaDownloadedFile{}, errors.New("restored installer cache verification mismatch")
 	}
 	rel, err := filepath.Rel(root, destination)
 	if err != nil {
@@ -269,7 +269,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 		return vanillaDownloadedFile{}, err
 	}
 	if !compatibilitySHA256RE.MatchString(strings.ToLower(strings.TrimSpace(expectedSHA256))) {
-		return vanillaDownloadedFile{}, errors.New("закреплённый артефакт требует SHA-256")
+		return vanillaDownloadedFile{}, errors.New("pinned artifact requires SHA-256")
 	}
 	if max <= 0 || max > maxCompatibilityArtifact {
 		max = maxCompatibilityArtifact
@@ -300,16 +300,16 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 	closeErr := out.Close()
 	if copyErr != nil || syncErr != nil || closeErr != nil {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("закреплённый артефакт запись ошибка: %v %v %v", copyErr, syncErr, closeErr)
+		return vanillaDownloadedFile{}, fmt.Errorf("pinned artifact write failed: %v %v %v", copyErr, syncErr, closeErr)
 	}
 	if written <= 0 || written > max {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("закреплённый артефакт размер %d вне разрешён диапазон", written)
+		return vanillaDownloadedFile{}, fmt.Errorf("pinned artifact size %d outside allowed range", written)
 	}
 	actualSHA256 := hex.EncodeToString(h256.Sum(nil))
 	if !strings.EqualFold(actualSHA256, expectedSHA256) {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("закреплённый артефакт SHA-256 несоответствие: ожидаемый %s получил %s", expectedSHA256, actualSHA256)
+		return vanillaDownloadedFile{}, fmt.Errorf("pinned artifact SHA-256 mismatch: expected %s got %s", expectedSHA256, actualSHA256)
 	}
 	if err := replaceFileAtomicPortable(tmp, destination); err != nil {
 		_ = os.Remove(tmp)

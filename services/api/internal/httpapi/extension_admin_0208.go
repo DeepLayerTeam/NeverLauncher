@@ -93,27 +93,27 @@ func (s Server) adminInstallManifest0208(r *http.Request, id, scope, scopeID str
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("расширение является не включённый")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension is not enabled")
 	}
 	ver, err := s.Repo.GetExtensionVersion(r.Context(), id, install.CurrentVersion)
 	if err != nil {
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if ver.Manifest.Admin == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("расширение делает не объявлять администратор contributions")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension does not declare admin contributions")
 	}
 	if _, ok := adminTarget0208(ver.Manifest); !ok {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("расширение делает не объявлять администратор цель")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension does not declare admin target")
 	}
 	if s.ExtensionSecurity == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("расширение безопасность недоступный")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("extension security unavailable")
 	}
 	allowed, err := s.ExtensionSecurity.Allowed(r.Context(), id, install.CurrentVersion, install.Scope, install.ScopeID, "ui:contribute", install.ScopeID)
 	if err != nil {
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if !allowed {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("интерфейс:contribute является не granted")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, fmt.Errorf("ui:contribute is not granted")
 	}
 	return install, ver.Manifest, nil
 }
@@ -178,7 +178,7 @@ func (s Server) adminExtensionCatalog0208(w http.ResponseWriter, r *http.Request
 func safeAdminEntrypoint0208(root, entry string) (string, error) {
 	entry = filepath.Clean(filepath.FromSlash(strings.TrimSpace(entry)))
 	if entry == "." || filepath.IsAbs(entry) || entry == ".." || strings.HasPrefix(entry, ".."+string(filepath.Separator)) {
-		return "", errors.New("недопустимый администратор entrypoint")
+		return "", errors.New("invalid admin entrypoint")
 	}
 	rootAbs, err := filepath.Abs(root)
 	if err != nil {
@@ -189,17 +189,17 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 		return "", err
 	}
 	if pathAbs != rootAbs && !strings.HasPrefix(pathAbs, rootAbs+string(filepath.Separator)) {
-		return "", errors.New("администратор entrypoint escapes полезная нагрузка")
+		return "", errors.New("admin entrypoint escapes payload")
 	}
 	info, err := os.Lstat(pathAbs)
 	if err != nil {
 		return "", err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return "", errors.New("администратор entrypoint должен быть regular non-символическая ссылка файл")
+		return "", errors.New("admin entrypoint must be a regular non-symlink file")
 	}
 	if info.Size() > maxAdminEntrypointBytes0208 {
-		return "", errors.New("администратор entrypoint exceeds 2 MiB")
+		return "", errors.New("admin entrypoint exceeds 2 MiB")
 	}
 	return pathAbs, nil
 }
@@ -296,14 +296,14 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	}
 	allow := func(permission, projectID string) error {
 		if s.ExtensionSecurity == nil {
-			return errors.New("расширение безопасность недоступный")
+			return errors.New("extension security unavailable")
 		}
 		ok, e := s.ExtensionSecurity.Allowed(r.Context(), install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, permission, projectID)
 		if e != nil {
-			return fmt.Errorf("политика недоступный: %w", e)
+			return fmt.Errorf("policy unavailable: %w", e)
 		}
 		if !ok {
-			return fmt.Errorf("расширение возможность %s запрещён", permission)
+			return fmt.Errorf("extension capability %s denied", permission)
 		}
 		return nil
 	}
@@ -335,15 +335,15 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || strings.TrimSpace(p.ProjectID) == "" {
-			respond(nil, errors.New("projectId обязательный"))
+			respond(nil, errors.New("projectId required"))
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {
-			respond(nil, errors.New("расширение область проекта запрещён"))
+			respond(nil, errors.New("extension project scope denied"))
 			return
 		}
 		if !s.adminUserCanProject0208(claims, p.ProjectID) {
-			respond(nil, errors.New("пользователь проект доступ запрещён"))
+			respond(nil, errors.New("user project access denied"))
 			return
 		}
 		if err := allow("release:read", p.ProjectID); err != nil {
@@ -357,11 +357,11 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		respond(items, e)
 	case "audit.list":
 		if install.Scope == "project" {
-			respond(nil, errors.New("глобальный аудит данные является недоступный к проект-область расширения"))
+			respond(nil, errors.New("global audit data is unavailable to project-scoped extensions"))
 			return
 		}
 		if !s.authorizeClaims(r, claims, "audit:read", "", "audit", "").Allowed {
-			respond(nil, errors.New("пользователь аудит:чтение запрещён"))
+			respond(nil, errors.New("user audit:read denied"))
 			return
 		}
 		if err := allow("audit:read", ""); err != nil {
@@ -376,7 +376,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		respond(items, nil)
 	case "storage.info":
 		if !s.hasAnyProjectPermission(r, claims, "project:read") {
-			respond(nil, errors.New("пользователь проект:чтение запрещён"))
+			respond(nil, errors.New("user project:read denied"))
 			return
 		}
 		if err := allow("storage:read", ""); err != nil {
@@ -392,15 +392,15 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 			Status    string `json:"status"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || strings.TrimSpace(p.ProjectID) == "" || strings.TrimSpace(p.Event) == "" {
-			respond(nil, errors.New("projectId и событие обязательный"))
+			respond(nil, errors.New("projectId and event required"))
 			return
 		}
 		if !adminExtensionProjectAllowed0208(install, p.ProjectID) {
-			respond(nil, errors.New("расширение область проекта запрещён"))
+			respond(nil, errors.New("extension project scope denied"))
 			return
 		}
 		if !s.adminUserCanProject0208(claims, p.ProjectID) {
-			respond(nil, errors.New("пользователь проект доступ запрещён"))
+			respond(nil, errors.New("user project access denied"))
 			return
 		}
 		if err := allow("telemetry:write", p.ProjectID); err != nil {
@@ -411,7 +411,7 @@ func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 		audit()
 		respond(map[string]any{"accepted": true}, nil)
 	default:
-		respond(nil, fmt.Errorf("неподдерживаемый Администратор RPC метод %q", method))
+		respond(nil, fmt.Errorf("unsupported Admin RPC method %q", method))
 	}
 }
 

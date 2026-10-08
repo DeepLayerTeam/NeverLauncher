@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 3):
-    raise SystemExit("VERSION является старый чем 0.14.3")
+    raise SystemExit("VERSION is older than 0.14.3")
 
 
 def read(path: str) -> str:
@@ -14,13 +14,13 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 api_migration = read("services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.3 API/CLI одноразовый подключение билет миграция differ")
+    raise SystemExit("0.14.3 API/CLI one-time join ticket migrations differ")
 require(api_migration, [
     "ticket_version INTEGER NOT NULL DEFAULT 1",
     "issued_identity_epoch",
@@ -45,7 +45,7 @@ require(helper, [
     "ServerBridgeJoinRedemption",
 ], "secure join ticket helper")
 if "UnixNano" in helper or "time.Now" in helper:
-    raise SystemExit("0.14.3 билет identifier вспомогательный модуль содержит predictable entropy резервный вариант")
+    raise SystemExit("0.14.3 ticket identifier helper contains predictable entropy fallback")
 
 repo = read("services/api/internal/repository/server_bridge_v2.go")
 require(repo, [
@@ -121,4 +121,4 @@ require(openapi, [
     "one-time join ticket",
 ], "OpenAPI one-time join documentation")
 
-print(f"NeverLauncher 0.14.3 Одноразовый Подключение Билеты контроль: OK ({version})")
+print(f"NeverLauncher 0.14.3 One-Time Join Tickets gate: OK ({version})")

@@ -2,9 +2,9 @@ package model
 
 import "time"
 
-// ExtensionPermissionGrant является явный администратор approval для один
-// разрешение запрошенный через расширение манифест. Запрошенный разрешения alone
-// никогда авторизовать возможность.
+// ExtensionPermissionGrant is an explicit administrator approval for one
+// permission requested by an extension manifest. Requested permissions alone
+// never authorize a capability.
 type ExtensionPermissionGrant struct {
 	ExtensionID string    `json:"extensionId"`
 	Scope       string    `json:"scope"`
@@ -16,7 +16,7 @@ type ExtensionPermissionGrant struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// ExtensionPermissionDiff является безопасность решение материал для install/update.
+// ExtensionPermissionDiff is the security decision material for install/update.
 type ExtensionPermissionDiff struct {
 	ExtensionID     string   `json:"extensionId"`
 	FromVersion     string   `json:"fromVersion,omitempty"`
@@ -32,8 +32,8 @@ type ExtensionPermissionDiff struct {
 	AddedNotGranted []string `json:"addedNotGranted"`
 }
 
-// ExtensionSecret хранит ciphertext только. Открытый текст является предоставлять exclusively через
-// аутентифицировать возможность broker и является никогда сериализованный через администратор APIs.
+// ExtensionSecret stores ciphertext only. Plaintext is exposed exclusively by
+// the authenticated capability broker and is never serialized by admin APIs.
 type ExtensionSecret struct {
 	ExtensionID string    `json:"extensionId"`
 	Scope       string    `json:"scope"`
@@ -47,7 +47,7 @@ type ExtensionSecret struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// ExtensionSecretMetadata является безопасный для REST/CLI список.
+// ExtensionSecretMetadata is safe for REST/CLI listing.
 type ExtensionSecretMetadata struct {
 	ExtensionID string    `json:"extensionId"`
 	Scope       string    `json:"scope"`

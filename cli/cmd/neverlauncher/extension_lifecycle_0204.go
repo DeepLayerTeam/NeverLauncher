@@ -11,11 +11,11 @@ import (
 func handleExtensionLifecycle0204(command string, args []string) error {
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("жизненный цикл расширения требует --серверная часть <URL>")
+		return errors.New("extension lifecycle требует --backend <url>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("жизненный цикл расширения требует --токен или NEVERLAUNCHER_TOKEN")
+		return errors.New("extension lifecycle требует --token или NEVERLAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	scope := strings.TrimSpace(flagValue(args, "--scope", "global"))
@@ -41,7 +41,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return errors.New("расширение состояние требует расширение ID")
+			return errors.New("extension status требует extension id")
 		}
 		values := url.Values{}
 		values.Set("scope", scope)
@@ -56,11 +56,11 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "install":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return errors.New("расширение установка требует ID@версия")
+			return errors.New("extension install требует id@version")
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[0])
 		if !ok {
-			return errors.New("расширение установка требует координату ID@версия")
+			return errors.New("extension install требует координату id@version")
 		}
 		scopePayload["version"] = versionValue
 		payload, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-installs/"+url.PathEscape(id)+"/install", scopePayload, token)
@@ -70,7 +70,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "enable", "disable", "uninstall", "rollback":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return fmt.Errorf("расширение %s требует расширение ID", command)
+			return fmt.Errorf("extension %s требует extension id", command)
 		}
 		id := args[0]
 		if parsed, _, ok := parseRegistryCoordinate0203(id); ok {
@@ -83,7 +83,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "update":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return errors.New("расширение обновление требует расширение ID или ID@версия")
+			return errors.New("extension update требует extension id или id@version")
 		}
 		id, versionValue, hasVersion := parseRegistryCoordinate0203(args[0])
 		if !hasVersion {
@@ -106,6 +106,6 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная жизненный цикл расширения-подкоманда: %s", command)
+		return fmt.Errorf("неизвестная extension lifecycle-подкоманда: %s", command)
 	}
 }

@@ -74,14 +74,14 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 		payload = map[string]string{}
 	}
 	if len(payload) > 16 {
-		return nil, fmt.Errorf("serverbridge_управление_полезная нагрузка_недопустимый")
+		return nil, fmt.Errorf("serverbridge_control_payload_invalid")
 	}
 	clean := make(map[string]string, len(payload))
 	for k, v := range payload {
 		k = strings.TrimSpace(k)
 		v = strings.TrimSpace(v)
 		if k == "" || len(k) > 64 || len(v) > 1024 || strings.ContainsAny(k, "\r\n\x00") || strings.ContainsRune(v, '\x00') {
-			return nil, fmt.Errorf("serverbridge_управление_полезная нагрузка_недопустимый")
+			return nil, fmt.Errorf("serverbridge_control_payload_invalid")
 		}
 		clean[k] = v
 	}
@@ -98,7 +98,7 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 		}
 		for k := range clean {
 			if !allowed[k] {
-				return fmt.Errorf("serverbridge_управление_полезная нагрузка_недопустимый")
+				return fmt.Errorf("serverbridge_control_payload_invalid")
 			}
 		}
 		return nil
@@ -127,7 +127,7 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 		}
 	case "whitelist.enable", "whitelist.disable", "server.save":
 		if len(clean) != 0 {
-			return nil, fmt.Errorf("serverbridge_управление_полезная нагрузка_недопустимый")
+			return nil, fmt.Errorf("serverbridge_control_payload_invalid")
 		}
 	case "server.maintenance", "server.drain":
 		v := strings.ToLower(clean["enabled"])
@@ -150,11 +150,11 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 		}
 		command := strings.TrimSpace(clean["command"])
 		if len(command) > 512 || strings.ContainsAny(command, "\r\n\x00") {
-			return nil, fmt.Errorf("serverbridge_управление_консоль_недопустимый")
+			return nil, fmt.Errorf("serverbridge_control_console_invalid")
 		}
 		fields := strings.Fields(strings.TrimPrefix(command, "/"))
 		if len(fields) == 0 {
-			return nil, fmt.Errorf("serverbridge_управление_консоль_недопустимый")
+			return nil, fmt.Errorf("serverbridge_control_console_invalid")
 		}
 		root := strings.ToLower(fields[0])
 		if _, ok := serverBridgeConsoleAllowlist0195[root]; !ok {
@@ -163,7 +163,7 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 	}
 	encoded, err := canonicalControlPayload0195(clean)
 	if err != nil || len(encoded) > serverBridgeControlPayloadMax0195 {
-		return nil, fmt.Errorf("serverbridge_управление_полезная нагрузка_недопустимый")
+		return nil, fmt.Errorf("serverbridge_control_payload_invalid")
 	}
 	return clean, nil
 }
@@ -175,7 +175,7 @@ func (s Server) serverBridgeControlSigningPrivateKey0195() (ed25519.PrivateKey, 
 	}
 	seed, err := hex.DecodeString(seedHex)
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return nil, fmt.Errorf("serverbridge управление ключ подписи должен быть 32-byte Ed25519 начальное значение в hex")
+		return nil, fmt.Errorf("serverbridge control signing key must be a 32-byte Ed25519 seed in hex")
 	}
 	return ed25519.NewKeyFromSeed(seed), nil
 }
@@ -380,8 +380,8 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		previousFingerprint = previousKey.Fingerprint
 		previousCanonical := serverBridgeControlCanonical01912(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, capabilityDigest, previousKey.Fingerprint, node.IdentityEpoch, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
 		previousSignature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(previousKey.PrivateKey, []byte(previousCanonical)))
-		// Во время перекрытие, pre-0.19.12 мост по-прежнему доверие предыдущий ключ. Сохранять 
-		// устаревший подпись на тот ключ пока v3 клиенты аутентифицировать активный задать.
+		// During overlap, pre-0.19.12 bridges still trust the previous key. Keep the
+		// legacy signature on that key while v3 clients authenticate the active set.
 		legacyKey = *previousKey
 	}
 	legacyCanonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)

@@ -23,9 +23,9 @@ var (
 	extensionPermission0201 = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{1,127}$`)
 )
 
-// NormalizeExtensionManifest валидирует и canonicalizes NeverExtensions манифест.
-// Registry/package проверка использует одинаковый normalization как хранение так
-// пакет идентичность и база данных идентичность не может diverge.
+// NormalizeExtensionManifest validates and canonicalizes a NeverExtensions manifest.
+// Registry/package verification uses the same normalization as persistence so
+// package identity and database identity cannot diverge.
 func NormalizeExtensionManifest(in model.ExtensionManifest) (model.ExtensionManifest, string, error) {
 	return normalizeExtensionManifest0201(in)
 }
@@ -45,28 +45,28 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		m.SchemaVersion = extensioncontract.ManifestSchemaVersion
 	}
 	if m.SchemaVersion != extensioncontract.ManifestSchemaVersion {
-		return model.ExtensionManifest{}, "", fmt.Errorf("неподдерживаемый расширение schemaVersion %q; ожидаемый %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
+		return model.ExtensionManifest{}, "", fmt.Errorf("unsupported extension schemaVersion %q; expected %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
 	}
 	if !extensionID0201.MatchString(m.ID) {
-		return model.ExtensionManifest{}, "", fmt.Errorf("недопустимый расширение ID %q", m.ID)
+		return model.ExtensionManifest{}, "", fmt.Errorf("invalid extension id %q", m.ID)
 	}
 	if m.Name == "" || len(m.Name) > 160 {
-		return model.ExtensionManifest{}, "", fmt.Errorf("расширение имя должен contain 1..160 characters")
+		return model.ExtensionManifest{}, "", fmt.Errorf("extension name must contain 1..160 characters")
 	}
 	if m.Publisher == "" || len(m.Publisher) > 160 {
-		return model.ExtensionManifest{}, "", fmt.Errorf("расширение издатель должен contain 1..160 characters")
+		return model.ExtensionManifest{}, "", fmt.Errorf("extension publisher must contain 1..160 characters")
 	}
 	if !extensionSemver0201.MatchString(m.Version) {
-		return model.ExtensionManifest{}, "", fmt.Errorf("расширение версия %q является не поддерживаемый SemVer", m.Version)
+		return model.ExtensionManifest{}, "", fmt.Errorf("extension version %q is not supported semver", m.Version)
 	}
 	if m.API == "" || len(m.API) > 64 {
-		return model.ExtensionManifest{}, "", fmt.Errorf("API расширений является обязательный")
+		return model.ExtensionManifest{}, "", fmt.Errorf("extension api is required")
 	}
 	if _, err := extensioncontract.CanonicalAPIVersion(m.API); err != nil {
 		return model.ExtensionManifest{}, "", err
 	}
 	if len(m.Targets) == 0 {
-		return model.ExtensionManifest{}, "", fmt.Errorf("расширение должен объявлять в least один цель")
+		return model.ExtensionManifest{}, "", fmt.Errorf("extension must declare at least one target")
 	}
 	targets := make([]model.ExtensionTarget, 0, len(m.Targets))
 	seenTargets := map[string]struct{}{}
@@ -74,18 +74,18 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		target.Kind = strings.ToLower(strings.TrimSpace(target.Kind))
 		target.Entrypoint = strings.TrimSpace(target.Entrypoint)
 		if target.Kind != "backend" && target.Kind != "admin" && target.Kind != "desktop" && target.Kind != "cli" {
-			return model.ExtensionManifest{}, "", fmt.Errorf("неподдерживаемый расширение цель %q", target.Kind)
+			return model.ExtensionManifest{}, "", fmt.Errorf("unsupported extension target %q", target.Kind)
 		}
 		if target.Entrypoint == "" || strings.HasPrefix(target.Entrypoint, "/") || strings.Contains(target.Entrypoint, "\\") {
-			return model.ExtensionManifest{}, "", fmt.Errorf("цель %s имеет недопустимый entrypoint", target.Kind)
+			return model.ExtensionManifest{}, "", fmt.Errorf("target %s has invalid entrypoint", target.Kind)
 		}
 		for _, part := range strings.Split(target.Entrypoint, "/") {
 			if part == "" || part == "." || part == ".." {
-				return model.ExtensionManifest{}, "", fmt.Errorf("цель %s entrypoint должен быть чистый relative путь", target.Kind)
+				return model.ExtensionManifest{}, "", fmt.Errorf("target %s entrypoint must be a clean relative path", target.Kind)
 			}
 		}
 		if _, duplicate := seenTargets[target.Kind]; duplicate {
-			return model.ExtensionManifest{}, "", fmt.Errorf("дубликат расширение цель %q", target.Kind)
+			return model.ExtensionManifest{}, "", fmt.Errorf("duplicate extension target %q", target.Kind)
 		}
 		seenTargets[target.Kind] = struct{}{}
 		targets = append(targets, target)
@@ -102,7 +102,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 				continue
 			}
 			if validator != nil && !validator.MatchString(value) {
-				return nil, fmt.Errorf("недопустимый %s %q", field, value)
+				return nil, fmt.Errorf("invalid %s %q", field, value)
 			}
 			if _, ok := seen[value]; ok {
 				continue
@@ -129,16 +129,16 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		dep.ID = strings.ToLower(strings.TrimSpace(dep.ID))
 		dep.Version = strings.TrimSpace(dep.Version)
 		if !extensionID0201.MatchString(dep.ID) {
-			return model.ExtensionManifest{}, "", fmt.Errorf("недопустимый зависимость ID %q", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("invalid dependency id %q", dep.ID)
 		}
 		if dep.ID == m.ID {
-			return model.ExtensionManifest{}, "", fmt.Errorf("расширение не может depend на сам")
+			return model.ExtensionManifest{}, "", fmt.Errorf("extension cannot depend on itself")
 		}
 		if dep.Version == "" || len(dep.Version) > 128 {
-			return model.ExtensionManifest{}, "", fmt.Errorf("зависимость %s требует версия ограничение", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("dependency %s requires a version constraint", dep.ID)
 		}
 		if _, ok := seenDeps[dep.ID]; ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("дубликат зависимость %q", dep.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("duplicate dependency %q", dep.ID)
 		}
 		seenDeps[dep.ID] = struct{}{}
 		deps = append(deps, dep)
@@ -151,13 +151,13 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		conflict.ID = strings.ToLower(strings.TrimSpace(conflict.ID))
 		conflict.Version = strings.TrimSpace(conflict.Version)
 		if !extensionID0201.MatchString(conflict.ID) || conflict.ID == m.ID {
-			return model.ExtensionManifest{}, "", fmt.Errorf("недопустимый конфликт ID %q", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("invalid conflict id %q", conflict.ID)
 		}
 		if conflict.Version == "" || len(conflict.Version) > 128 {
-			return model.ExtensionManifest{}, "", fmt.Errorf("конфликт %s требует версия ограничение", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("conflict %s requires a version constraint", conflict.ID)
 		}
 		if _, ok := seenConflicts[conflict.ID]; ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("дубликат конфликт %q", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("duplicate conflict %q", conflict.ID)
 		}
 		seenConflicts[conflict.ID] = struct{}{}
 		conflicts = append(conflicts, conflict)
@@ -166,11 +166,11 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	m.Conflicts = conflicts
 	if m.Admin != nil {
 		if _, ok := seenTargets["admin"]; !ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("администратор contributions требовать администратор цель")
+			return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require an admin target")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "admin" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return model.ExtensionManifest{}, "", fmt.Errorf("администратор contributions требовать автономный.HTML entrypoint")
+				return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require a standalone .html entrypoint")
 			}
 		}
 		hasUI := false
@@ -181,7 +181,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			}
 		}
 		if !hasUI {
-			return model.ExtensionManifest{}, "", fmt.Errorf("администратор contributions требовать интерфейс:contribute разрешение")
+			return model.ExtensionManifest{}, "", fmt.Errorf("admin contributions require ui:contribute permission")
 		}
 		if err := normalizeAdminContributions0208(m.Admin); err != nil {
 			return model.ExtensionManifest{}, "", err
@@ -189,15 +189,15 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	if m.Desktop != nil {
 		if _, ok := seenTargets["desktop"]; !ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("настольное приложение contributions требовать настольное приложение цель")
+			return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require a desktop target")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "desktop" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return model.ExtensionManifest{}, "", fmt.Errorf("настольное приложение contributions требовать автономный.HTML entrypoint")
+				return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require a standalone .html entrypoint")
 			}
 		}
 		if !containsNormalized0209(m.Permissions, "desktop:contribute") {
-			return model.ExtensionManifest{}, "", fmt.Errorf("настольное приложение contributions требовать настольное приложение:contribute разрешение")
+			return model.ExtensionManifest{}, "", fmt.Errorf("desktop contributions require desktop:contribute permission")
 		}
 		if err := normalizeDesktopContributions0209(m.Desktop); err != nil {
 			return model.ExtensionManifest{}, "", err
@@ -205,10 +205,10 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	if m.CLI != nil {
 		if _, ok := seenTargets["cli"]; !ok {
-			return model.ExtensionManifest{}, "", fmt.Errorf("CLI contributions требовать CLI цель")
+			return model.ExtensionManifest{}, "", fmt.Errorf("cli contributions require a cli target")
 		}
 		if !containsNormalized0209(m.Permissions, "cli:contribute") {
-			return model.ExtensionManifest{}, "", fmt.Errorf("CLI contributions требовать CLI:contribute разрешение")
+			return model.ExtensionManifest{}, "", fmt.Errorf("cli contributions require cli:contribute permission")
 		}
 		if err := normalizeCLIContributions0209(m.CLI); err != nil {
 			return model.ExtensionManifest{}, "", err
@@ -220,7 +220,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 
 	canonical, err := json.Marshal(m)
 	if err != nil {
-		return model.ExtensionManifest{}, "", fmt.Errorf("marshal канонический расширение манифест: %w", err)
+		return model.ExtensionManifest{}, "", fmt.Errorf("marshal canonical extension manifest: %w", err)
 	}
 	digest := sha256.Sum256(canonical)
 	return m, hex.EncodeToString(digest[:]), nil
@@ -246,21 +246,21 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 	item.Version = strings.TrimSpace(item.Version)
 	item.Source = strings.TrimSpace(item.Source)
 	if !extensionID0201.MatchString(item.ExtensionID) {
-		return model.ExtensionInstall{}, fmt.Errorf("недопустимый расширение ID %q", item.ExtensionID)
+		return model.ExtensionInstall{}, fmt.Errorf("invalid extension id %q", item.ExtensionID)
 	}
 	if !extensionSemver0201.MatchString(item.Version) {
-		return model.ExtensionInstall{}, fmt.Errorf("недопустимый расширение версия %q", item.Version)
+		return model.ExtensionInstall{}, fmt.Errorf("invalid extension version %q", item.Version)
 	}
 	if item.Scope == "" {
 		item.Scope = "global"
 	}
 	if item.Scope != "global" && item.Scope != "project" {
-		return model.ExtensionInstall{}, fmt.Errorf("расширение установка область должен быть глобальный или проект")
+		return model.ExtensionInstall{}, fmt.Errorf("extension install scope must be global or project")
 	}
 	if item.Scope == "global" {
 		item.ScopeID = ""
 	} else if item.ScopeID == "" {
-		return model.ExtensionInstall{}, fmt.Errorf("проект расширение установка требует scopeId")
+		return model.ExtensionInstall{}, fmt.Errorf("project extension install requires scopeId")
 	}
 	if item.Source == "" {
 		item.Source = "local"
@@ -371,7 +371,7 @@ func (r *MemoryRepository) SaveExtensionVersion(ctx context.Context, manifest mo
 	for _, item := range r.extensionVersions {
 		if item.ExtensionID == manifest.ID && item.Version == manifest.Version {
 			if item.ManifestSHA256 != digest {
-				return model.ExtensionVersion{}, fmt.Errorf("%w: расширение %s версия %s уже существует с другой манифест", ErrImmutable, manifest.ID, manifest.Version)
+				return model.ExtensionVersion{}, fmt.Errorf("%w: extension %s version %s already exists with another manifest", ErrImmutable, manifest.ID, manifest.Version)
 			}
 			return item, nil
 		}
@@ -384,7 +384,7 @@ func (r *MemoryRepository) SaveExtensionVersion(ctx context.Context, manifest mo
 		}
 		identityFound = true
 		if r.extensions[i].Publisher != manifest.Publisher {
-			return model.ExtensionVersion{}, fmt.Errorf("%w: расширение издатель является неизменяемый", ErrConflict)
+			return model.ExtensionVersion{}, fmt.Errorf("%w: extension publisher is immutable", ErrConflict)
 		}
 		r.extensions[i].Name = manifest.Name
 		r.extensions[i].Description = manifest.Description
@@ -542,14 +542,14 @@ func scanExtensionVersion0201(scanner interface{ Scan(...any) error }) (model.Ex
 		return model.ExtensionVersion{}, err
 	}
 	if err := json.Unmarshal(raw, &item.Manifest); err != nil {
-		return model.ExtensionVersion{}, fmt.Errorf("decode сохранённый расширение манифест %s@%s: %w", item.ExtensionID, item.Version, err)
+		return model.ExtensionVersion{}, fmt.Errorf("decode persisted extension manifest %s@%s: %w", item.ExtensionID, item.Version, err)
 	}
 	normalized, digest, err := normalizeExtensionManifest0201(item.Manifest)
 	if err != nil {
-		return model.ExtensionVersion{}, fmt.Errorf("сохранённый расширение манифест %s@%s является недопустимый: %w", item.ExtensionID, item.Version, err)
+		return model.ExtensionVersion{}, fmt.Errorf("persisted extension manifest %s@%s is invalid: %w", item.ExtensionID, item.Version, err)
 	}
 	if normalized.ID != item.ExtensionID || normalized.Version != item.Version || normalized.SchemaVersion != item.SchemaVersion || normalized.API != item.API || digest != item.ManifestSHA256 {
-		return model.ExtensionVersion{}, fmt.Errorf("сохранённый расширение манифест целостность несоответствие для %s@%s", item.ExtensionID, item.Version)
+		return model.ExtensionVersion{}, fmt.Errorf("persisted extension manifest integrity mismatch for %s@%s", item.ExtensionID, item.Version)
 	}
 	item.Manifest = normalized
 	return item, nil
@@ -652,7 +652,7 @@ func (r *SQLRepository) SaveExtensionVersion(ctx context.Context, manifest model
 		return model.ExtensionVersion{}, err
 	}
 	if publisher != manifest.Publisher {
-		return model.ExtensionVersion{}, fmt.Errorf("%w: расширение издатель является неизменяемый", ErrConflict)
+		return model.ExtensionVersion{}, fmt.Errorf("%w: extension publisher is immutable", ErrConflict)
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE extensions SET name=$2,description=$3,homepage=$4,repository=$5,updated_at=now() WHERE id=$1`, manifest.ID, manifest.Name, manifest.Description, manifest.Homepage, manifest.Repository); err != nil {
 		return model.ExtensionVersion{}, err
@@ -663,7 +663,7 @@ func (r *SQLRepository) SaveExtensionVersion(ctx context.Context, manifest model
 	err = tx.QueryRowContext(ctx, `SELECT manifest_sha256,created_at FROM extension_versions WHERE extension_id=$1 AND version=$2`, manifest.ID, manifest.Version).Scan(&existingDigest, &existingCreated)
 	if err == nil {
 		if existingDigest != digest {
-			return model.ExtensionVersion{}, fmt.Errorf("%w: расширение %s версия %s уже существует с другой манифест", ErrImmutable, manifest.ID, manifest.Version)
+			return model.ExtensionVersion{}, fmt.Errorf("%w: extension %s version %s already exists with another manifest", ErrImmutable, manifest.ID, manifest.Version)
 		}
 		if err := tx.Commit(); err != nil {
 			return model.ExtensionVersion{}, err
@@ -820,7 +820,7 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		return nil
 	}
 	if len(a.Pages) > 64 || len(a.Navigation) > 64 || len(a.DashboardWidgets) > 32 || len(a.Actions) > 64 {
-		return fmt.Errorf("администратор contributions exceed ограничения")
+		return fmt.Errorf("admin contributions exceed limits")
 	}
 	pages := map[string]struct{}{}
 	for i := range a.Pages {
@@ -829,10 +829,10 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("недопустимый администратор страница %q", p.ID)
+			return fmt.Errorf("invalid admin page %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("дубликат администратор страница %q", p.ID)
+			return fmt.Errorf("duplicate admin page %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -843,13 +843,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("недопустимый администратор navigation %q", n.ID)
+			return fmt.Errorf("invalid admin navigation %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("администратор navigation %s ссылки неизвестный страница %s", n.ID, n.PageID)
+			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("дубликат администратор navigation %q", n.ID)
+			return fmt.Errorf("duplicate admin navigation %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -863,13 +863,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 			w.Height = 280
 		}
 		if !validAdminContributionID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
-			return fmt.Errorf("недопустимый администратор widget %q", w.ID)
+			return fmt.Errorf("invalid admin widget %q", w.ID)
 		}
 		if _, ok := pages[w.PageID]; !ok {
-			return fmt.Errorf("администратор widget %s ссылки неизвестный страница %s", w.ID, w.PageID)
+			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
 		}
 		if _, ok := seen[w.ID]; ok {
-			return fmt.Errorf("дубликат администратор widget %q", w.ID)
+			return fmt.Errorf("duplicate admin widget %q", w.ID)
 		}
 		seen[w.ID] = struct{}{}
 	}
@@ -884,13 +884,13 @@ func normalizeAdminContributions0208(a *model.ExtensionAdminContributions) error
 			x.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
-			return fmt.Errorf("недопустимый администратор действие %q", x.ID)
+			return fmt.Errorf("invalid admin action %q", x.ID)
 		}
 		if _, ok := pages[x.PageID]; !ok {
-			return fmt.Errorf("администратор действие %s ссылки неизвестный страница %s", x.ID, x.PageID)
+			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
 		}
 		if _, ok := seen[x.ID]; ok {
-			return fmt.Errorf("дубликат администратор действие %q", x.ID)
+			return fmt.Errorf("duplicate admin action %q", x.ID)
 		}
 		seen[x.ID] = struct{}{}
 	}
@@ -910,7 +910,7 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 		return nil
 	}
 	if len(d.Pages) == 0 || len(d.Pages) > 64 || len(d.Navigation) > 64 || len(d.Actions) > 64 {
-		return fmt.Errorf("настольное приложение contributions exceed ограничения или имеют нет страница")
+		return fmt.Errorf("desktop contributions exceed limits or have no pages")
 	}
 	pages := map[string]struct{}{}
 	for i := range d.Pages {
@@ -919,10 +919,10 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("недопустимый настольное приложение страница %q", p.ID)
+			return fmt.Errorf("invalid desktop page %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("дубликат настольное приложение страница %q", p.ID)
+			return fmt.Errorf("duplicate desktop page %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -933,13 +933,13 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("недопустимый настольное приложение navigation %q", n.ID)
+			return fmt.Errorf("invalid desktop navigation %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("настольное приложение navigation %s ссылки неизвестный страница %s", n.ID, n.PageID)
+			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("дубликат настольное приложение navigation %q", n.ID)
+			return fmt.Errorf("duplicate desktop navigation %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -954,13 +954,13 @@ func normalizeDesktopContributions0209(d *model.ExtensionDesktopContributions) e
 			a.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
-			return fmt.Errorf("недопустимый настольное приложение действие %q", a.ID)
+			return fmt.Errorf("invalid desktop action %q", a.ID)
 		}
 		if _, ok := pages[a.PageID]; !ok {
-			return fmt.Errorf("настольное приложение действие %s ссылки неизвестный страница %s", a.ID, a.PageID)
+			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
 		}
 		if _, ok := seen[a.ID]; ok {
-			return fmt.Errorf("дубликат настольное приложение действие %q", a.ID)
+			return fmt.Errorf("duplicate desktop action %q", a.ID)
 		}
 		seen[a.ID] = struct{}{}
 	}
@@ -980,10 +980,10 @@ func normalizeCLIContributions0209(c *model.ExtensionCLIContributions) error {
 	}
 	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
 	if !validAdminContributionID0208(c.Namespace) {
-		return fmt.Errorf("недопустимый CLI пространство имён %q", c.Namespace)
+		return fmt.Errorf("invalid cli namespace %q", c.Namespace)
 	}
 	if len(c.Commands) == 0 || len(c.Commands) > 64 {
-		return fmt.Errorf("CLI contributions требовать 1..64 команды")
+		return fmt.Errorf("cli contributions require 1..64 commands")
 	}
 	seen := map[string]struct{}{}
 	for i := range c.Commands {
@@ -992,10 +992,10 @@ func normalizeCLIContributions0209(c *model.ExtensionCLIContributions) error {
 		cmd.Description = strings.TrimSpace(cmd.Description)
 		cmd.Usage = strings.TrimSpace(cmd.Usage)
 		if !validAdminContributionID0208(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
-			return fmt.Errorf("недопустимый CLI команда %q", cmd.Name)
+			return fmt.Errorf("invalid cli command %q", cmd.Name)
 		}
 		if _, ok := seen[cmd.Name]; ok {
-			return fmt.Errorf("дубликат CLI команда %q", cmd.Name)
+			return fmt.Errorf("duplicate cli command %q", cmd.Name)
 		}
 		seen[cmd.Name] = struct{}{}
 	}

@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 4):
-    raise SystemExit(f"Нотариально заверенный macOS x64+ARM64 контроль требует VERSION>=0.15.4, получил {VERSION}")
+    raise SystemExit(f"Notarized macOS x64+ARM64 gate requires VERSION>=0.15.4, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 
 builder = read("scripts/release/build-macos-production.sh")
@@ -52,16 +52,16 @@ require(builder, [
     'codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"',
 ], "inside-out macOS signing")
 if 'APP_SIGN_ARGS+=(--deep)' in builder or 'codesign --deep --force' in builder:
-    raise SystemExit("macOS builder должен никогда использовать --deep для подписание; вложенный код является подписанный явно внутри-из")
+    raise SystemExit("macOS builder must never use --deep for signing; nested code is signed explicitly inside-out")
 if 'codesign --verify --strict --verbose=2 "${file}"' not in builder or 'codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"' not in builder:
-    raise SystemExit("macOS builder должен проверять вспомогательный модуль бинарные файлы оба до и после outer комплект подписание")
+    raise SystemExit("macOS builder must verify helper binaries both before and after outer bundle signing")
 if 'file="${MACOS_DIR}/${binary}"' in builder or 'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"' in builder:
-    raise SystemExit("macOS builder должен не подпись комплект главный исполняемый как автономный вложенный step")
+    raise SystemExit("macOS builder must not sign the bundle main executable as a standalone nested step")
 helper_sign = builder.find('for binary in neverguard neverruntime neverlauncher-cli; do')
 manifest_build = builder.find('macos-package.py" manifest')
 app_sign = builder.find('codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"')
 if min(helper_sign, manifest_build, app_sign) < 0 or not (helper_sign < manifest_build < app_sign):
-    raise SystemExit("macOS подписание order должен быть вспомогательный модуль -> Ресурсы манифест -> APP_ROOT")
+    raise SystemExit("macOS signing order must be helpers -> Resources manifest -> APP_ROOT")
 
 packager = read("scripts/release/macos-package.py")
 require(
@@ -171,7 +171,7 @@ require(
     "production release macOS notarization wiring",
 )
 if 'macos-production-notarized:' in ci or 'neverlauncher-macos-notarized-${{ github.sha }}' in ci:
-    raise SystemExit("ordinary главный CI должен не требовать Apple рабочий notarization учётные данные")
+    raise SystemExit("ordinary main CI must not require Apple production notarization credentials")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestMacOS", "-count=1"],
@@ -179,4 +179,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} нотариально заверенный macOS x64 + ARM64 контроль: OK")
+print(f"NeverLauncher {VERSION} notarized macOS x64 + ARM64 gate: OK")

@@ -58,14 +58,14 @@ func ParseKey(raw string) ([]byte, error) {
 	if b, err := base64.StdEncoding.DecodeString(raw); err == nil && len(b) == 32 {
 		return b, nil
 	}
-	return nil, errors.New("расширение секреты ключ должен быть 32-byte hex или основа64")
+	return nil, errors.New("extension secrets key must be 32-byte hex or base64")
 }
 func New(repo repository.Repository, key []byte) (*Manager, error) {
 	if repo == nil {
-		return nil, errors.New("расширение безопасность репозиторий является обязательный")
+		return nil, errors.New("extension security repository is required")
 	}
 	if len(key) != 0 && len(key) != 32 {
-		return nil, errors.New("расширение секреты ключ должен быть 32 байты")
+		return nil, errors.New("extension secrets key must be 32 bytes")
 	}
 	return &Manager{repo: repo, key: append([]byte(nil), key...)}, nil
 }
@@ -208,14 +208,14 @@ func (m *Manager) Grant(ctx context.Context, extensionID, version, scope, scopeI
 	}
 	permission = strings.ToLower(strings.TrimSpace(permission))
 	if !IsKnownPermission(permission) {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("неизвестный разрешение %q", permission)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("unknown permission %q", permission)
 	}
 	requested, err := m.Requested(ctx, extensionID, version)
 	if err != nil {
 		return model.ExtensionPermissionGrant{}, err
 	}
 	if _, ok := setOf(requested)[permission]; !ok {
-		return model.ExtensionPermissionGrant{}, fmt.Errorf("разрешение %s является не запрошенный через %s@%s", permission, extensionID, version)
+		return model.ExtensionPermissionGrant{}, fmt.Errorf("permission %s is not requested by %s@%s", permission, extensionID, version)
 	}
 	return m.repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: extensionID, Scope: scope, ScopeID: scopeID, Permission: permission, GrantedBy: actor, Reason: reason})
 }
@@ -230,12 +230,12 @@ func normalizeScope0207(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("область должен быть глобальный или проект")
+		return "", "", errors.New("scope must be global or project")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("область проекта требует scopeId")
+		return "", "", errors.New("project scope requires scopeId")
 	}
 	return scope, scopeID, nil
 }
@@ -257,10 +257,10 @@ func (m *Manager) SetSecret(ctx context.Context, extensionID, scope, scopeID, na
 		}
 	}
 	if len(m.key) != 32 {
-		return model.ExtensionSecretMetadata{}, errors.New("расширение секреты broker является не настраивать")
+		return model.ExtensionSecretMetadata{}, errors.New("extension secrets broker is not configured")
 	}
 	if len(plaintext) == 0 || len(plaintext) > 1<<20 {
-		return model.ExtensionSecretMetadata{}, errors.New("секрет value должен contain 1..1048576 байты")
+		return model.ExtensionSecretMetadata{}, errors.New("secret value must contain 1..1048576 bytes")
 	}
 	block, err := aes.NewCipher(m.key)
 	if err != nil {
@@ -290,14 +290,14 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 	extensionID = strings.ToLower(strings.TrimSpace(extensionID))
 	name = strings.TrimSpace(name)
 	if len(m.key) != 32 {
-		return nil, errors.New("расширение секреты broker является не настраивать")
+		return nil, errors.New("extension secrets broker is not configured")
 	}
 	s, err := m.repo.GetExtensionSecret(ctx, extensionID, scope, scopeID, name)
 	if err != nil {
 		return nil, err
 	}
 	if s.KeyVersion != KeyVersion {
-		return nil, fmt.Errorf("неподдерживаемый расширение секрет ключ версия %q", s.KeyVersion)
+		return nil, fmt.Errorf("unsupported extension secret key version %q", s.KeyVersion)
 	}
 	block, err := aes.NewCipher(m.key)
 	if err != nil {
@@ -309,7 +309,7 @@ func (m *Manager) GetSecret(ctx context.Context, extensionID, scope, scopeID, na
 	}
 	plain, err := gcm.Open(nil, s.Nonce, s.Ciphertext, secretAAD(s.ExtensionID, s.Scope, s.ScopeID, s.Name))
 	if err != nil {
-		return nil, errors.New("расширение секрет аутентификация ошибка")
+		return nil, errors.New("extension secret authentication failed")
 	}
 	return plain, nil
 }

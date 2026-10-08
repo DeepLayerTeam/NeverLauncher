@@ -56,10 +56,10 @@ func productionDeliveryReleaseRequired0160(ver string) bool {
 func stableProductionVersion0160(ver string) error {
 	ver = strings.TrimSpace(ver)
 	if !productionDeliveryReleaseRequired0160(ver) {
-		return fmt.Errorf("рабочий доставка релиз требует версия >=0.16.0, получил %q", ver)
+		return fmt.Errorf("production delivery release requires version >=0.16.0, got %q", ver)
 	}
 	if strings.ContainsAny(ver, "-+") {
-		return fmt.Errorf("рабочий доставка релиз должен использовать неизменяемый GA SemVer без prerelease/build suffix: %q", ver)
+		return fmt.Errorf("production delivery release must use immutable GA SemVer without prerelease/build suffix: %q", ver)
 	}
 	return nil
 }
@@ -128,11 +128,11 @@ func productionDeliveryReleaseAnchors0160(dir, ver string) ([]productionDelivery
 	for _, name := range names {
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("рабочий доставка релиз якорь путь недопустимый: %q", name)
+			return nil, fmt.Errorf("production delivery release anchor path invalid: %q", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("рабочий доставка релиз якорь %s: %w", name, err)
+			return nil, fmt.Errorf("production delivery release anchor %s: %w", name, err)
 		}
 		anchors = append(anchors, productionDeliveryReleaseAnchor0160{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -172,7 +172,7 @@ func versionedPublicBaseURL0160(raw, ver string) (string, error) {
 		}
 	}
 	if !found {
-		return "", fmt.Errorf("рабочий публичный основа URL должен contain неизменяемый версия segment %q или %q: %s", ver, "v"+ver, base)
+		return "", fmt.Errorf("production public base URL must contain immutable version segment %q or %q: %s", ver, "v"+ver, base)
 	}
 	return base, nil
 }
@@ -203,7 +203,7 @@ func expectedProductionTargets0160() []DeliveryTarget {
 
 func validateProductionTargets0160(targets []DeliveryTarget) error {
 	if len(targets) != 6 {
-		return fmt.Errorf("рабочий доставка релиз требует точно six опубликованный цели, получил %d", len(targets))
+		return fmt.Errorf("production delivery release requires exactly six published targets, got %d", len(targets))
 	}
 	actual := append([]DeliveryTarget(nil), targets...)
 	sort.Slice(actual, func(i, j int) bool {
@@ -215,7 +215,7 @@ func validateProductionTargets0160(targets []DeliveryTarget) error {
 	expected := expectedProductionTargets0160()
 	for i := range expected {
 		if actual[i] != expected[i] {
-			return fmt.Errorf("рабочий доставка цель несоответствие в #%d: ожидаемый=%s/%s фактический=%s/%s", i+1, expected[i].Platform, expected[i].Architecture, actual[i].Platform, actual[i].Architecture)
+			return fmt.Errorf("production delivery target mismatch at #%d: expected=%s/%s actual=%s/%s", i+1, expected[i].Platform, expected[i].Architecture, actual[i].Platform, actual[i].Architecture)
 		}
 	}
 	return nil
@@ -227,14 +227,14 @@ func buildProductionDeliveryReleaseDocument0160(dir, ver string) (productionDeli
 	}
 	candidate, commit, err := readProductionCandidateForRelease0160(dir, ver)
 	if err != nil {
-		return productionDeliveryRelease0160{}, fmt.Errorf("рабочий кандидат: %w", err)
+		return productionDeliveryRelease0160{}, fmt.Errorf("production candidate: %w", err)
 	}
 	matrix, err := readPublicProductionDeliveryMatrix0159(filepath.Join(dir, publicProductionDeliveryMatrixFile0159))
 	if err != nil {
 		return productionDeliveryRelease0160{}, err
 	}
 	if matrix.Version != ver || matrix.Channel != productionDeliveryReleaseChannel0160 {
-		return productionDeliveryRelease0160{}, errors.New("публичный доставка матрица является не стабильный цель версия")
+		return productionDeliveryRelease0160{}, errors.New("public delivery matrix is not the stable target version")
 	}
 	baseURL, err := versionedPublicBaseURL0160(matrix.BaseURL, ver)
 	if err != nil {
@@ -294,44 +294,44 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, productionDeliveryReleaseFile0160))
 	if err != nil {
-		return "", fmt.Errorf("чтение %s: %w", productionDeliveryReleaseFile0160, err)
+		return "", fmt.Errorf("read %s: %w", productionDeliveryReleaseFile0160, err)
 	}
 	var doc productionDeliveryRelease0160
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		return "", fmt.Errorf("недопустимый %s: %w", productionDeliveryReleaseFile0160, err)
+		return "", fmt.Errorf("invalid %s: %w", productionDeliveryReleaseFile0160, err)
 	}
 	commit, err := normalizeSourceCommit01511(doc.SourceCommit)
 	if err != nil {
 		return "", err
 	}
 	if doc.SchemaVersion != productionDeliveryReleaseSchema0160 || doc.Product != "NeverLauncher" || doc.Version != ver || doc.Status != productionDeliveryReleaseStatus0160 || doc.Channel != productionDeliveryReleaseChannel0160 || !doc.PostPublishE2E {
-		return "", errors.New("рабочий доставка релиз метаданные несоответствие")
+		return "", errors.New("production delivery release metadata mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, doc.CreatedAt); err != nil {
-		return "", fmt.Errorf("рабочий доставка релиз createdAt недопустимый: %w", err)
+		return "", fmt.Errorf("production delivery release createdAt invalid: %w", err)
 	}
 	baseURL, err := versionedPublicBaseURL0160(doc.PublicBaseURL, ver)
 	if err != nil || baseURL != doc.PublicBaseURL {
-		return "", errors.New("рабочий доставка релиз publicBaseUrl является недопустимый")
+		return "", errors.New("production delivery release publicBaseUrl is invalid")
 	}
 	candidate, candidateCommit, err := readProductionCandidateForRelease0160(dir, ver)
 	if err != nil {
 		return "", err
 	}
 	if !strings.EqualFold(commit, candidateCommit) {
-		return "", errors.New("рабочий доставка релиз исходник фиксация делает не соответствовать кандидат")
+		return "", errors.New("production delivery release source commit does not match candidate")
 	}
 	candidateSHA, _, err := hashFile(filepath.Join(dir, productionReleaseCandidateFile01511))
 	if err != nil || !strings.EqualFold(candidateSHA, doc.CandidateSHA256) || !strings.EqualFold(candidate.CohortSHA256, doc.CandidateCohortSHA256) {
-		return "", errors.New("рабочий доставка кандидат в релиз привязка несоответствие")
+		return "", errors.New("production delivery release candidate binding mismatch")
 	}
 	expectedGates := productionDeliveryReleaseRequiredGates0160(ver)
 	if len(doc.RequiredGates) != len(expectedGates) {
-		return "", errors.New("рабочий доставка релиз обязательный контроль задать несоответствие")
+		return "", errors.New("production delivery release required gate set mismatch")
 	}
 	for i := range expectedGates {
 		if doc.RequiredGates[i] != expectedGates[i] {
-			return "", fmt.Errorf("рабочий доставка контроль выпуска #%d несоответствие", i+1)
+			return "", fmt.Errorf("production delivery release gate #%d mismatch", i+1)
 		}
 	}
 	if err := validateProductionTargets0160(doc.PublishedTargets); err != nil {
@@ -342,11 +342,11 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 		return "", err
 	}
 	if len(anchors) != len(doc.Anchors) {
-		return "", errors.New("рабочий доставка релиз якорь счётчик несоответствие")
+		return "", errors.New("production delivery release anchor count mismatch")
 	}
 	for i := range anchors {
 		if anchors[i] != doc.Anchors[i] {
-			return "", fmt.Errorf("рабочий доставка релиз якорь несоответствие в %s", anchors[i].Name)
+			return "", fmt.Errorf("production delivery release anchor mismatch at %s", anchors[i].Name)
 		}
 	}
 	targets := append([]DeliveryTarget(nil), doc.PublishedTargets...)
@@ -358,14 +358,14 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	})
 	expectedBoundary := productionDeliveryReleaseBoundaryDigest0160(anchors, targets, ver, commit, doc.PublicBaseURL)
 	if !strings.EqualFold(expectedBoundary, doc.BoundarySHA256) {
-		return "", errors.New("рабочий доставка релиз boundarySha256 несоответствие")
+		return "", errors.New("production delivery release boundarySha256 mismatch")
 	}
 	matrix, err := readPublicProductionDeliveryMatrix0159(filepath.Join(dir, publicProductionDeliveryMatrixFile0159))
 	if err != nil {
 		return "", err
 	}
 	if matrix.Version != ver || matrix.Channel != doc.Channel || matrix.BaseURL != doc.PublicBaseURL {
-		return "", errors.New("рабочий доставка release/public матрица привязка несоответствие")
+		return "", errors.New("production delivery release/public matrix binding mismatch")
 	}
 	return commit, nil
 }
@@ -375,28 +375,28 @@ func verifyProductionDeliveryRelease0160(dir, ver string, strict bool) error {
 		return nil
 	}
 	if err := verifyProductionReleaseCandidate01511(dir, ver, true); err != nil {
-		return fmt.Errorf("рабочий кандидат prerequisite: %w", err)
+		return fmt.Errorf("production candidate prerequisite: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
-		return fmt.Errorf("доставка манифест: %w", err)
+		return fmt.Errorf("delivery manifest: %w", err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, strict); err != nil {
-		return fmt.Errorf("Windows подписание: %w", err)
+		return fmt.Errorf("Windows signing: %w", err)
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
-		return fmt.Errorf("Linux доставка: %w", err)
+		return fmt.Errorf("Linux delivery: %w", err)
 	}
 	if err := verifyMacOSNotarizationEvidence0154(dir, ver, strict); err != nil {
-		return fmt.Errorf("macOS доставка: %w", err)
+		return fmt.Errorf("macOS delivery: %w", err)
 	}
 	if err := verifyManagedJREDistribution0155(dir, ver, true); err != nil {
-		return fmt.Errorf("Управляемый JRE: %w", err)
+		return fmt.Errorf("Managed JRE: %w", err)
 	}
 	if err := verifyPublicProductionDeliveryMatrix0159(dir, ver); err != nil {
-		return fmt.Errorf("публичный рабочий доставка матрица: %w", err)
+		return fmt.Errorf("public production delivery matrix: %w", err)
 	}
 	if _, err := loadReleaseTrustPolicy0158(filepath.Join(dir, releaseTrustPolicyFile0158)); err != nil {
-		return fmt.Errorf("релиз доверие политика: %w", err)
+		return fmt.Errorf("release trust policy: %w", err)
 	}
 	_, err := verifyProductionDeliveryReleaseDocument0160(dir, ver)
 	return err

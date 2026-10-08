@@ -1,4 +1,4 @@
-//Go:сборка!Windows
+//go:build !windows
 
 package main
 
@@ -21,7 +21,7 @@ func hostPrepareChildProcess01910(cmd *exec.Cmd) error {
 
 func hostTerminateProcess01910(pid int) error {
 	if pid <= 0 {
-		return errors.New("недопустимый процесс PID")
+		return errors.New("invalid process pid")
 	}
 	if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
 		return err
@@ -31,7 +31,7 @@ func hostTerminateProcess01910(pid int) error {
 
 func hostKillProcess01910(pid int) error {
 	if pid <= 0 {
-		return errors.New("недопустимый процесс PID")
+		return errors.New("invalid process pid")
 	}
 	if err := syscall.Kill(-pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
 		if process, findErr := os.FindProcess(pid); findErr == nil {

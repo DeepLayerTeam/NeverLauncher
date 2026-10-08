@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 9):
-    raise SystemExit(f"Публичный Рабочий Доставка Матрица + E2E контроль требует VERSION>=0.15.9, получил {VERSION}")
+    raise SystemExit(f"Public Production Delivery Matrix + E2E gate requires VERSION>=0.15.9, got {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: отсутствующий {missing}")
+        raise SystemExit(f"{label}: missing {missing}")
 
 core_go = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
 require(core_go, [
@@ -71,4 +71,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Публичный Рабочий Доставка Матрица + E2E контроль: OK")
+print(f"NeverLauncher {VERSION} Public Production Delivery Matrix + E2E gate: OK")

@@ -104,8 +104,8 @@ func TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp(t *
 	signBridgeNodeRequestWith0142(t, first, "crypto-0142", identity, ts, nonce)
 	firstOut := httptest.NewRecorder()
 	h.ServeHTTP(firstOut, first)
-	// testServer имеет нет мост список разрешений, так действительный криптографический запрос reaches
-	// ordinary сигнал состояния политика regardless его eventual политика состояние.
+	// testServer has no bridge allowlist, so a valid cryptographic request reaches
+	// the ordinary heartbeat policy regardless of its eventual policy status.
 	if firstOut.Code == http.StatusUnauthorized || firstOut.Code == http.StatusConflict {
 		t.Fatalf("valid signed heartbeat rejected at identity boundary: %d %s", firstOut.Code, firstOut.Body.String())
 	}
@@ -146,8 +146,8 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	tampered := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/crypto-rotate-0142/heartbeat", strings.NewReader(originalBody))
 	tampered.Header.Set("Content-Type", "application/json")
 	signBridgeNodeRequest0142(t, tampered, "crypto-rotate-0142", firstIdentity)
-	// Изменять точный байты после подписание. аутентифицировать тело хеш должен привязывать
-	// запрос до JSON parsing или политика evaluation.
+	// Change the exact bytes after signing. The authenticated body hash must bind
+	// the request before JSON parsing or policy evaluation.
 	tampered.Body = io.NopCloser(strings.NewReader(strings.Replace(originalBody, "0.14.2", "0.14.2-tampered", 1)))
 	tamperedOut := httptest.NewRecorder()
 	h.ServeHTTP(tamperedOut, tampered)

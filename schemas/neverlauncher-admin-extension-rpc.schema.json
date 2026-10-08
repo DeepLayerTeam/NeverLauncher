@@ -1,115 +1,51 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://neverlauncher.local/schemas/neverlauncher-admin-extension-rpc.schema.json",
-  "title": "NeverLauncher Расширение панели администратора RPC v1",
+  "title": "NeverLauncher Admin Extension RPC v1",
   "oneOf": [
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "protocol",
-        "type",
-        "id",
-        "method",
-        "params"
-      ],
+      "required": ["protocol", "type", "id", "method", "params"],
       "properties": {
-        "protocol": {
-          "const": "neverextensions.admin-rpc.v1"
-        },
-        "type": {
-          "const": "rpc.request"
-        },
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "method": {
-          "enum": [
-            "context.get",
-            "projects.list",
-            "releases.list",
-            "audit.list",
-            "storage.info",
-            "telemetry.emit"
-          ]
-        },
-        "params": {
-          "type": "object"
-        }
+        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "type": { "const": "rpc.request" },
+        "id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "method": { "enum": ["context.get", "projects.list", "releases.list", "audit.list", "storage.info", "telemetry.emit"] },
+        "params": { "type": "object" }
       }
     },
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "protocol",
-        "type",
-        "id"
-      ],
+      "required": ["protocol", "type", "id"],
       "properties": {
-        "protocol": {
-          "const": "neverextensions.admin-rpc.v1"
-        },
-        "type": {
-          "const": "rpc.response"
-        },
-        "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
+        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "type": { "const": "rpc.response" },
+        "id": { "type": "string", "minLength": 1, "maxLength": 160 },
         "result": {},
-        "error": {
-          "type": "string",
-          "maxLength": 2000
-        }
+        "error": { "type": "string", "maxLength": 2000 }
       }
     },
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "protocol",
-        "type",
-        "context"
-      ],
+      "required": ["protocol", "type", "context"],
       "properties": {
-        "protocol": {
-          "const": "neverextensions.admin-rpc.v1"
-        },
-        "type": {
-          "const": "host.context"
-        },
-        "context": {
-          "type": "object",
-          "additionalProperties": true
-        }
+        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "type": { "const": "host.context" },
+        "context": { "type": "object", "additionalProperties": true }
       }
     },
     {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "protocol",
-        "type",
-        "actionId",
-        "pageId"
-      ],
+      "required": ["protocol", "type", "actionId", "pageId"],
       "properties": {
-        "protocol": {
-          "const": "neverextensions.admin-rpc.v1"
-        },
-        "type": {
-          "const": "host.action"
-        },
-        "actionId": {
-          "type": "string"
-        },
-        "pageId": {
-          "type": "string"
-        }
+        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "type": { "const": "host.action" },
+        "actionId": { "type": "string" },
+        "pageId": { "type": "string" }
       }
     }
   ]

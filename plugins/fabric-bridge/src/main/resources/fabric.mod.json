@@ -3,10 +3,8 @@
   "id": "neverlauncher_fabric_bridge",
   "version": "${version}",
   "name": "NeverLauncher Fabric Server Bridge",
-  "description": "Сервер-только NeverLauncher ServerBridge интеграционный для Fabric 1.21.1.",
-  "authors": [
-    "NeverLauncher Team"
-  ],
+  "description": "Server-only NeverLauncher ServerBridge integration for Fabric 1.21.1.",
+  "authors": ["NeverLauncher Team"],
   "license": "Apache-2.0",
   "environment": "server",
   "entrypoints": {

@@ -68,7 +68,7 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	jsonValue = strings.TrimSpace(jsonValue)
 	filePath = strings.TrimSpace(filePath)
 	if jsonValue != "" && filePath != "" {
-		return nil, errors.New("настраивать только один NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON или NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE")
+		return nil, errors.New("configure only one of NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON or NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE")
 	}
 	if jsonValue == "" && filePath == "" {
 		return nil, nil
@@ -77,16 +77,16 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	if filePath != "" {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("чтение SQL аутентификация провайдеры файл: %w", err)
+			return nil, fmt.Errorf("read SQL auth providers file: %w", err)
 		}
 		raw = data
 	}
 	var configs []Config
 	if err := json.Unmarshal(raw, &configs); err != nil {
-		return nil, fmt.Errorf("decode SQL аутентификация провайдеры конфигурация: %w", err)
+		return nil, fmt.Errorf("decode SQL auth providers configuration: %w", err)
 	}
 	if len(configs) == 0 {
-		return nil, errors.New("SQL аутентификация провайдеры конфигурация является пустой")
+		return nil, errors.New("SQL auth providers configuration is empty")
 	}
 	return configs, nil
 }
@@ -104,14 +104,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	cfg.Provisioning.DefaultRole = strings.TrimSpace(cfg.Provisioning.DefaultRole)
 
 	if cfg.ID == "" || cfg.ID == "local" {
-		return RuntimeConfig{}, errors.New("SQL коннектор ID является обязательный и не может быть 'local'")
+		return RuntimeConfig{}, errors.New("SQL connector id is required and cannot be 'local'")
 	}
 	if len(cfg.ID) > 64 {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор ID %q exceeds 64 characters", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector id %q exceeds 64 characters", cfg.ID)
 	}
 	for _, r := range cfg.ID {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return RuntimeConfig{}, fmt.Errorf("SQL коннектор ID %q содержит неподдерживаемый character %q", cfg.ID, r)
+			return RuntimeConfig{}, fmt.Errorf("SQL connector id %q contains unsupported character %q", cfg.ID, r)
 		}
 	}
 	if cfg.DisplayName == "" {
@@ -123,45 +123,45 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	case "mysql":
 	case "mariadb":
 	default:
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: неподдерживаемый драйвер %q", cfg.ID, cfg.Driver)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: unsupported driver %q", cfg.ID, cfg.Driver)
 	}
 	if cfg.DSN != "" && cfg.DSNEnv != "" {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: настраивать только один dsn или dsnEnv", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: configure only one of dsn or dsnEnv", cfg.ID)
 	}
 	if cfg.DSN == "" && cfg.DSNEnv != "" {
 		cfg.DSN = strings.TrimSpace(os.Getenv(cfg.DSNEnv))
 		if cfg.DSN == "" {
-			return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: переменная окружения %s является пустой", cfg.ID, cfg.DSNEnv)
+			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: environment variable %s is empty", cfg.ID, cfg.DSNEnv)
 		}
 	}
 	if cfg.DSN == "" {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: dsn или dsnEnv является обязательный", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: dsn or dsnEnv is required", cfg.ID)
 	}
 	if err := validateTableIdentifier(cfg.Table); err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: %w", cfg.ID, err)
 	}
 	if err := validateColumns(cfg.Columns); err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: %w", cfg.ID, err)
 	}
 	switch cfg.Password.Algorithm {
 	case "argon2id":
 		if !argon2idAvailable() {
-			return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: argon2ID проверка является недоступный в этот сборка", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: argon2id verification is unavailable in this build", cfg.ID)
 		}
 	case "bcrypt", "pbkdf2-sha256":
 	case "sha256", "legacy-sha256":
 		if !cfg.Password.AllowLegacySHA256 {
-			return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: устаревший SHA-256 требует пароль.allowLegacySha256=true", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: legacy SHA-256 requires password.allowLegacySha256=true", cfg.ID)
 		}
 		cfg.Password.Algorithm = "legacy-sha256"
 	default:
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: неподдерживаемый пароль algorithm %q", cfg.ID, cfg.Password.Algorithm)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: unsupported password algorithm %q", cfg.ID, cfg.Password.Algorithm)
 	}
 	if cfg.Password.PBKDF2MinIterations <= 0 {
 		cfg.Password.PBKDF2MinIterations = 10000
 	}
 	if cfg.Password.PBKDF2MinIterations > 10_000_000 {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: pbkdf2MinIterations exceeds безопасность ограничение", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: pbkdf2MinIterations exceeds safety limit", cfg.ID)
 	}
 	if cfg.Provisioning.Mode == "" {
 		cfg.Provisioning.Mode = "jit"
@@ -169,7 +169,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	switch cfg.Provisioning.Mode {
 	case "jit", "explicit-only":
 	default:
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q: неподдерживаемый предоставление учётной записи режим %q", cfg.ID, cfg.Provisioning.Mode)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: unsupported provisioning mode %q", cfg.ID, cfg.Provisioning.Mode)
 	}
 	if cfg.Provisioning.DefaultRole == "" {
 		cfg.Provisioning.DefaultRole = "player"
@@ -186,24 +186,24 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	}
 	connectTimeout, err := parseDurationDefault(cfg.ConnectTimeout, 5*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q connectTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q connectTimeout: %w", cfg.ID, err)
 	}
 	queryTimeout, err := parseDurationDefault(cfg.QueryTimeout, 3*time.Second)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q queryTimeout: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q queryTimeout: %w", cfg.ID, err)
 	}
 	lifetime, err := parseDurationDefault(cfg.ConnMaxLifetime, 4*time.Minute)
 	if err != nil {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q connMaxLifetime: %w", cfg.ID, err)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q connMaxLifetime: %w", cfg.ID, err)
 	}
 	if cfg.MaxOpenConns <= 0 {
 		cfg.MaxOpenConns = 10
 	}
 	if cfg.MaxOpenConns > 512 {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q maxOpenConns exceeds 512", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q maxOpenConns exceeds 512", cfg.ID)
 	}
 	if cfg.MaxIdleConns < 0 {
-		return RuntimeConfig{}, fmt.Errorf("SQL коннектор %q maxIdleConns не может быть negative", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q maxIdleConns cannot be negative", cfg.ID)
 	}
 	if cfg.MaxIdleConns == 0 {
 		cfg.MaxIdleConns = 2
@@ -217,11 +217,11 @@ func Normalize(input Config) (RuntimeConfig, error) {
 func validateTableIdentifier(value string) error {
 	parts := strings.Split(value, ".")
 	if len(parts) == 0 || len(parts) > 2 {
-		return fmt.Errorf("таблица %q должен быть таблица или схема.таблица", value)
+		return fmt.Errorf("table %q must be table or schema.table", value)
 	}
 	for _, part := range parts {
 		if !identifierPattern.MatchString(part) {
-			return fmt.Errorf("таблица identifier %q является недопустимый", value)
+			return fmt.Errorf("table identifier %q is invalid", value)
 		}
 	}
 	return nil
@@ -229,10 +229,10 @@ func validateTableIdentifier(value string) error {
 
 func validateColumns(columns Columns) error {
 	if columns.ID == "" || columns.Password == "" {
-		return errors.New("столбцы.ID и столбцы.пароль являются обязательный")
+		return errors.New("columns.id and columns.password are required")
 	}
 	if columns.Username == "" && columns.Email == "" {
-		return errors.New("в least один столбцы.username или столбцы.электронная почта является обязательный")
+		return errors.New("at least one of columns.username or columns.email is required")
 	}
 	values := []struct {
 		name  string
@@ -247,11 +247,11 @@ func validateColumns(columns Columns) error {
 			continue
 		}
 		if !identifierPattern.MatchString(item.value) {
-			return fmt.Errorf("column %s=%q является недопустимый", item.name, item.value)
+			return fmt.Errorf("column %s=%q is invalid", item.name, item.value)
 		}
 		lower := strings.ToLower(item.value)
 		if previous, ok := seen[lower]; ok && previous != item.name {
-			return fmt.Errorf("столбцы %s и %s сопоставление к одинаковый база данных column %q", previous, item.name, item.value)
+			return fmt.Errorf("columns %s and %s map to the same database column %q", previous, item.name, item.value)
 		}
 		seen[lower] = item.name
 	}
@@ -266,7 +266,7 @@ func parseDurationDefault(value string, fallback time.Duration) (time.Duration, 
 	parsed, err := time.ParseDuration(value)
 	if err != nil || parsed <= 0 {
 		if err == nil {
-			err = errors.New("duration должен быть positive")
+			err = errors.New("duration must be positive")
 		}
 		return 0, err
 	}

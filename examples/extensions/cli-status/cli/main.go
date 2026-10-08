@@ -1,7 +1,7 @@
 package main
 
-// SDK аутентифицировать с NEVERLAUNCHER_EXTENSION_HOST_URL и NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
-// Это выполняет POST /v1/hello до dispatching объявлять состояние команда.
+// The SDK authenticates with NEVERLAUNCHER_EXTENSION_HOST_URL and NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
+// It performs POST /v1/hello before dispatching the declared status command.
 
 import (
   "context"

@@ -6,11 +6,11 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(rel): return (ROOT / rel).read_text(encoding="utf-8")
 def require(text, needles, label):
     for needle in needles:
-        if needle not in text: raise SystemExit(f"{label}: отсутствующий {needle!r}")
+        if needle not in text: raise SystemExit(f"{label}: missing {needle!r}")
 
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-",1)[0].split(".")[:3])
-if parts < (0,19,11): raise SystemExit(f"HA Плоскость управления контроль требует VERSION>=0.19.11, получил {version}")
+if parts < (0,19,11): raise SystemExit(f"HA Control Plane gate requires VERSION>=0.19.11, got {version}")
 
 control = read("services/api/internal/httpapi/server_bridge_control_0195.go")
 repo = read("services/api/internal/repository/server_bridge_v2.go")
@@ -44,7 +44,7 @@ require(control,["authenticateBridgeNodeRequest0142(r)","serverbridge_ha_coordin
 require(redis_tests,["TestRedisCoordinatorFencesCommandOwnership01911","competing acquire must be fenced"],"Redis runtime tests")
 require(pg_tests,["TestServerBridgeHAControlPlane01911MultiReplica","expected one distributed owner","cross-replica idempotent ACK"],"PostgreSQL multi-replica tests")
 for forbidden in ["status == 401 ||", "status == 403 ||"]:
-    if forbidden in client: raise SystemExit("аутентификация отклонение должен не trigger эндпоинт failover")
+    if forbidden in client: raise SystemExit("authentication rejection must not trigger endpoint failover")
 for text, needle, label in [(preflight,"serverbridge-ha-control-plane-01911.py","preflight"),(ci,"serverbridge-ha-control-plane-01911.py","CI")]:
-    if needle not in text: raise SystemExit(f"{label}: отсутствующий {needle!r}")
-print("ServerBridge HA Плоскость управления 0.19.11+ рабочий контроль: OK")
+    if needle not in text: raise SystemExit(f"{label}: missing {needle!r}")
+print("ServerBridge HA Control Plane 0.19.11+ production gate: OK")

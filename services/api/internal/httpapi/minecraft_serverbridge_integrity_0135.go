@@ -73,7 +73,7 @@ func minecraftIntegrityAllow0135(required bool, reason string, session model.Min
 
 func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftIntegritySnapshot0135, error) {
 	if strings.TrimSpace(ticket.ID) == "" {
-		return minecraftIntegritySnapshot0135{}, errors.New("Защита запускать билет является отсутствующий")
+		return minecraftIntegritySnapshot0135{}, errors.New("Guard launch ticket is missing")
 	}
 	snapshot := minecraftIntegritySnapshot0135{
 		GuardAttestationSHA256: strings.ToLower(strings.TrimSpace(metadataString0121(ticket.Metadata, "attestationSha256"))),
@@ -90,11 +90,11 @@ func snapshotFromGuardLaunchTicket0135(ticket model.DeviceChallenge) (minecraftI
 		"launcherSha256":    snapshot.LauncherSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
-			return minecraftIntegritySnapshot0135{}, fmt.Errorf("Защита запускать билет %s повреждённый", label)
+			return minecraftIntegritySnapshot0135{}, fmt.Errorf("Guard launch ticket %s malformed", label)
 		}
 	}
 	if snapshot.LauncherVersion == "" || len(snapshot.LauncherVersion) > 64 || snapshot.VerifiedAt.IsZero() {
-		return minecraftIntegritySnapshot0135{}, errors.New("Защита запускать билет целостность метаданные неполный")
+		return minecraftIntegritySnapshot0135{}, errors.New("Guard launch ticket integrity metadata incomplete")
 	}
 	return snapshot, nil
 }
@@ -188,25 +188,25 @@ func (s Server) evaluateServerBridgeJoinIntegrity0135(join bridgeJoinRecord) (mo
 func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessionID, trustedDeviceID string, bindingEpoch int64, minecraftAccessToken string) (model.MinecraftSession, error) {
 	required, err := guardAttestationRequiredForDevice0135(s, userID, trustedDeviceID)
 	if err != nil {
-		return model.MinecraftSession{}, errors.New("не удалось определить Minecraft целостность политика")
+		return model.MinecraftSession{}, errors.New("не удалось определить Minecraft integrity policy")
 	}
 	minecraftAccessToken = strings.TrimSpace(minecraftAccessToken)
 	if minecraftAccessToken == "" {
 		if required {
-			return model.MinecraftSession{}, errors.New("minecraftAccessToken обязателен для целостность-применять ServerBridge подключение")
+			return model.MinecraftSession{}, errors.New("minecraftAccessToken обязателен для integrity-enforced ServerBridge join")
 		}
 		return model.MinecraftSession{}, nil
 	}
 	session, _, _, err := s.validateMinecraftToken119(minecraftAccessToken)
 	if err != nil {
-		return model.MinecraftSession{}, errors.New("Minecraft сессия недействительна")
+		return model.MinecraftSession{}, errors.New("Minecraft session недействительна")
 	}
 	if session.UserID != strings.TrimSpace(userID) || session.NeverSessionID != strings.TrimSpace(neverSessionID) || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(trustedDeviceID) || session.BindingEpoch != bindingEpoch {
-		return model.MinecraftSession{}, errors.New("Minecraft сессия не совпадает с Никогда session/device привязка")
+		return model.MinecraftSession{}, errors.New("Minecraft session не совпадает с Never session/device binding")
 	}
 	decision := s.evaluateMinecraftIntegrity0135(session)
 	if !decision.Allowed {
-		return model.MinecraftSession{}, fmt.Errorf("Minecraft целостность политика запрещён: %s", decision.Reason)
+		return model.MinecraftSession{}, fmt.Errorf("Minecraft integrity policy denied: %s", decision.Reason)
 	}
 	return session, nil
 }

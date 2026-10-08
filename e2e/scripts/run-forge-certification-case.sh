@@ -26,7 +26,7 @@ EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
 NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime$EXE_SUFFIX"
 
-printf '[Forge-cert] сборка CLI и NeverRuntime\n'
+printf '[forge-cert] build CLI and NeverRuntime\n'
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/neverlauncher
@@ -34,7 +34,7 @@ printf '[Forge-cert] сборка CLI и NeverRuntime\n'
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[forge-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
-printf '[Forge-cert] материализовать Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
+printf '[forge-cert] materialize Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {
   "$NL_BIN" runtime forge-package \
     --minecraft "$MINECRAFT_VERSION" \
@@ -53,7 +53,7 @@ materialize_loader_package() {
 materialize_loader_package
 FIRST_REPRODUCIBILITY_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("forge") or {}).get("reproducibilitySha256") or "")' "$RUNTIME_DIR/client-package.json")"
 FIRST_LOCK_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("forge") or {}).get("resolutionLockSha256") or "")' "$RUNTIME_DIR/client-package.json")"
-# Повторное воспроизведение одинаковый изменяемый селектор через сгенерированный блокировка. Этот должен не re-разрешать последний-стабильный.
+# Replay the same mutable selector through the generated lock. This must not re-resolve latest-stable.
 materialize_loader_package
 cp "$RUNTIME_DIR/materialized-client/.neverlauncher/forge-resolution-lock.json" "$RUNTIME_DIR/forge-resolution-lock.json"
 
@@ -151,7 +151,7 @@ MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 [[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[forge-cert] incomplete Forge profile evidence" >&2; exit 1; }
 case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[forge-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
 
-printf '[Forge-cert] запускать фактический Forge клиент профиль %s с Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
+printf '[forge-cert] launch actual Forge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
 certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/forge-certification.json" \
@@ -201,4 +201,4 @@ payload = {
 open(out, 'w', encoding='utf-8').write(json.dumps(payload, indent=2, ensure_ascii=False) + '\n')
 PY
 
-printf '[Forge-cert] PASS Forge %s / загрузчик %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"
+printf '[forge-cert] PASS Forge %s / loader %s / Java %s\n' "$MINECRAFT_VERSION" "$RESOLVED_LOADER" "$JAVA_MAJOR"

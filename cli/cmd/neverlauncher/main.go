@@ -365,12 +365,12 @@ func run(args []string) error {
 
 func handleManifest(args []string) error {
 	if len(args) < 1 {
-		return errors.New("нужно указать подкоманду манифест")
+		return errors.New("нужно указать подкоманду manifest")
 	}
 	switch args[0] {
 	case "build":
 		if len(args) < 2 {
-			return errors.New("манифест сборка требует путь к каталогу клиента")
+			return errors.New("manifest build требует путь к каталогу клиента")
 		}
 		clientDir := args[1]
 		project := flagValue(args, "--project", "demo-project")
@@ -384,7 +384,7 @@ func handleManifest(args []string) error {
 		return writeJSONFile(out, manifest)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("манифест проверять требует путь к манифест.JSON")
+			return errors.New("manifest validate требует путь к manifest.json")
 		}
 		manifest, err := readManifest(args[1])
 		if err != nil {
@@ -404,7 +404,7 @@ func handleManifest(args []string) error {
 		newPath := flagValue(args, "--new", "")
 		out := flagValue(args, "--output", "")
 		if oldPath == "" || newPath == "" {
-			return errors.New("использование: neverlauncher манифест diff --старый старый.JSON --новый новый.JSON [--вывод diff.JSON]")
+			return errors.New("использование: neverlauncher manifest diff --old old.json --new new.json [--output diff.json]")
 		}
 		oldManifest, err := readManifest(oldPath)
 		if err != nil {
@@ -427,7 +427,7 @@ func handleManifest(args []string) error {
 
 func handleUpdate(args []string) error {
 	if len(args) < 1 {
-		return errors.New("использование: neverlauncher обновление plan|применить|компонент|состояние|восстанавливать|мигрировать-состояние|self-тест|стабилизация-self-тест...")
+		return errors.New("использование: neverlauncher update plan|apply|components|status|recover|migrate-state|self-test|stabilization-self-test ...")
 	}
 	switch args[0] {
 	case "plan":
@@ -435,7 +435,7 @@ func handleUpdate(args []string) error {
 		toPath := flagValue(args, "--to", "")
 		out := flagValue(args, "--output", "")
 		if fromPath == "" || toPath == "" {
-			return errors.New("обновление plan требует --из старый.JSON и --к новый.JSON")
+			return errors.New("update plan требует --from old.json и --to new.json")
 		}
 		oldManifest, err := readManifest(fromPath)
 		if err != nil {
@@ -455,7 +455,7 @@ func handleUpdate(args []string) error {
 		fromPath := flagValue(args, "--from", "")
 		toPath := flagValue(args, "--to", "")
 		if fromPath == "" || toPath == "" {
-			return errors.New("обновление применить требует --из старый.JSON --к новый.JSON --исходник-корень <dir> --корень <dir>")
+			return errors.New("update apply требует --from old.json --to new.json --source-root <dir> --root <dir>")
 		}
 		report, err := applyManifestUpdate0156(fromPath, toPath, flagValue(args, "--source-root", ""), flagValue(args, "--root", ""))
 		if err != nil {
@@ -546,7 +546,7 @@ func handleUpdate(args []string) error {
 
 func handleHashes(args []string) error {
 	if len(args) < 2 || args[0] != "check" {
-		return errors.New("использование: neverlauncher хеширует проверка манифест.JSON --корень <каталог>")
+		return errors.New("использование: neverlauncher hashes check manifest.json --root <каталог>")
 	}
 	manifest, err := readManifest(args[1])
 	if err != nil {
@@ -569,7 +569,7 @@ func handleHashes(args []string) error {
 
 func handleDiagnostics(args []string) error {
 	if len(args) < 1 {
-		return errors.New("нужно указать подкоманду диагностика")
+		return errors.New("нужно указать подкоманду diagnostics")
 	}
 	switch args[0] {
 	case "collect":
@@ -601,7 +601,7 @@ func handleDiagnostics(args []string) error {
 		return nil
 	case "redact":
 		if len(args) < 2 {
-			return errors.New("диагностика redact требует путь к JSON-отчёту")
+			return errors.New("diagnostics redact требует путь к JSON-отчёту")
 		}
 		out := flagValue(args, "--output", args[1])
 		data, err := os.ReadFile(args[1])
@@ -616,7 +616,7 @@ func handleDiagnostics(args []string) error {
 		return nil
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("диагностика проверять требует путь к JSON-отчёту")
+			return errors.New("diagnostics validate требует путь к JSON-отчёту")
 		}
 		data, err := os.ReadFile(args[1])
 		if err != nil {

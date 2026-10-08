@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 1):
-    raise SystemExit(f"Fabric Совместимость II требует VERSION>=0.17.1, получил {version}")
+    raise SystemExit(f"Fabric Compatibility II requires VERSION>=0.17.1, got {version}")
 
 
 def read(rel: str) -> str:
@@ -18,7 +18,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: отсутствующий {missing}")
+        raise SystemExit(f"{name}: missing {missing}")
 
 
 expected: dict[str, int] = {
@@ -39,24 +39,24 @@ expected: dict[str, int] = {
 target_doc = json.loads(read("compatibility/targets.json"))
 fabric_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "fabric" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(fabric_rows) != len(expected):
-    raise SystemExit(f"Fabric 0.17.1 требует точно {len(expected)} обязательный цели, получил {len(fabric_rows)}")
+    raise SystemExit(f"Fabric 0.17.1 requires exactly {len(expected)} required targets, got {len(fabric_rows)}")
 by_version: dict[str, dict] = {}
 for row in fabric_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Fabric 0.17.1 дубликат Minecraft цель: {minecraft}")
+        raise SystemExit(f"Fabric 0.17.1 duplicate Minecraft target: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
-    raise SystemExit(f"Fabric 0.17.1 релиз сетка несоответствие: отсутствующий={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
+    raise SystemExit(f"Fabric 0.17.1 release grid mismatch: missing={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
-        raise SystemExit(f"Fabric {minecraft} должен быть Java {java_major} область={expected_scope}")
+        raise SystemExit(f"Fabric {minecraft} must be Java {java_major} scope={expected_scope}")
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
-        raise SystemExit(f"Fabric {minecraft} должен быть сертифицированный на linux/x86_64")
+        raise SystemExit(f"Fabric {minecraft} must be certified on linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
-        raise SystemExit(f"Fabric {minecraft} должен разрешать последний-стабильный в выполнение время")
+        raise SystemExit(f"Fabric {minecraft} must resolve latest-stable at execution time")
 
 fabric_case = read("e2e/scripts/run-fabric-certification-case.sh")
 require(fabric_case, [
@@ -103,4 +103,4 @@ require(tests, [
     "TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader",
 ], "Fabric 0.17.1 regression coverage")
 
-print(f"Fabric Совместимость II 0.17.1 контроль: OK ({len(fabric_rows)} стабильный Fabric релизы, 1.14..26.3, Java 8/16/17/21/25)")
+print(f"Fabric Compatibility II 0.17.1 gate: OK ({len(fabric_rows)} stable Fabric releases, 1.14..26.3, Java 8/16/17/21/25)")

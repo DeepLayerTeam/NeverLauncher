@@ -19,7 +19,7 @@ env:
 
 jobs:
   go-contracts:
-    name: Go, миграция и контракты
+    name: Go, migrations and contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
-      - name: Репозиторий политика и версия alignment
+      - name: Repository policy and version alignment
         run: |
           python3 scripts/smoke/offline/repository-policy.py
           python3 scripts/release/test_fetch_exact_certifications.py
@@ -79,9 +79,9 @@ jobs:
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
-      - name: Проверять канонический OpenAPI
+      - name: Validate canonical OpenAPI
         run: python3 scripts/contracts/validate-openapi.py
-      - name: Проверять публичный совместимость цель определение
+      - name: Validate public compatibility target definition
         run: |
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 scripts/compatibility/test_matrix.py
@@ -106,7 +106,7 @@ jobs:
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
           python3 scripts/serverbridge/test_matrix.py
           python3 e2e/scripts/test_publish_client_package.py
-      - name: CLI тест, гонка, vet и сборка
+      - name: CLI test, race, vet and build
         working-directory: cli
         run: |
           go test -race ./...
@@ -115,19 +115,19 @@ jobs:
           /tmp/nl update self-test
           /tmp/nl update component-self-test
           /tmp/nl update stabilization-self-test
-      - name: Релиз doctor
+      - name: Release doctor
         run: /tmp/nl release doctor
-      - name: Серверная часть тест, гонка, vet и pgx сборка
+      - name: Backend test, race, vet and pgx build
         working-directory: services/api
         run: |
           go test -race ./...
           go vet ./...
           go build -trimpath ./cmd/neverlauncher-api
-      - name: Федерация E2E релиз матрица
+      - name: Federation E2E release matrix
         run: python3 scripts/test/federation-e2e.py
 
   web:
-    name: Администратор и Настольное приложение клиентская часть
+    name: Admin and Desktop frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -139,18 +139,18 @@ jobs:
           cache-dependency-path: |
             apps/admin/package-lock.json
             apps/desktop/package-lock.json
-      - name: Сборка Администратор
+      - name: Build Admin
         working-directory: apps/admin
         run: npm ci && npm run build
-      - name: Сборка Настольное приложение клиентская часть
+      - name: Build Desktop frontend
         working-directory: apps/desktop
         run: npm ci && npm run build
-      - name: Type-проверка NeverExtensions TypeScript SDK
+      - name: Type-check NeverExtensions TypeScript SDKs
         run: |
           apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts
 
   rust-desktop:
-    name: NeverRuntime и Tauri
+    name: NeverRuntime and Tauri
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -166,17 +166,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt,clippy
-      - name: Установка Linux настольное приложение зависимости
+      - name: Install Linux desktop dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: Нормализовать Rust исходник formatting
+      - name: Normalize Rust source formatting
         run: |
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: NeverRuntime + NeverGuard Linux тест и clippy
+      - name: NeverRuntime + NeverGuard Linux test and clippy
         run: |
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
@@ -184,7 +184,7 @@ jobs:
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_linux -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path runtime/neverruntime/Cargo.toml
-      - name: Сборка Настольное приложение Tauri
+      - name: Build Desktop Tauri
         working-directory: apps/desktop
         run: |
           npm ci
@@ -192,9 +192,9 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
-      - name: Сборка Linux Настольное приложение + NeverGuard рабочий пакет
+      - name: Build Linux Desktop + NeverGuard production package
         run: bash scripts/release/build-linux-desktop.sh
-      - name: Emit Linux Защита CI свидетельство
+      - name: Emit Linux Guard CI evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -211,10 +211,10 @@ jobs:
             --signing-mode none-linux-integrity \
             --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
             --output guard-ci-result/linux/guard-ci-result.json
-      - name: Загрузка Linux NeverGuard пакет
+      - name: Upload Linux NeverGuard package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-Linux-neverguard-${{ github.sha }}
+          name: neverlauncher-linux-neverguard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
             dist/release-*/neverlauncher-desktop-linux-amd64
@@ -222,15 +222,15 @@ jobs:
             dist/release-*/LINUX_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_LINUX.json
           if-no-files-found: error
-      - name: Загрузка Linux Защита CI результат
+      - name: Upload Linux Guard CI result
         uses: actions/upload-artifact@v4
         with:
-          name: защита-ci-Linux-amd64-${{ github.sha }}
+          name: guard-ci-linux-amd64-${{ github.sha }}
           path: guard-ci-result/linux/guard-ci-result.json
           if-no-files-found: error
 
   linux-production:
-    name: Linux рабочий ${{ matrix.arch }}
+    name: Linux production ${{ matrix.arch }}
     needs: [go-contracts, web]
     strategy:
       fail-fast: false
@@ -257,15 +257,15 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-      - name: Установка Linux настольное приложение зависимости
+      - name: Install Linux desktop dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: Сборка нативный Linux рабочий пакет
+      - name: Build native Linux production package
         run: bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --expected-arch "${{ matrix.arch }}"
-      - name: Проверять пакет локально
+      - name: Verify package locally
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
@@ -279,10 +279,10 @@ jobs:
           "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update self-test
           "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update component-self-test
           "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update stabilization-self-test
-      - name: Загрузка нативный Linux рабочий артефакты
+      - name: Upload native Linux production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-Linux-рабочий-${{ matrix.arch }}-${{ github.sha }}
+          name: neverlauncher-linux-production-${{ matrix.arch }}-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-cli-linux-${{ matrix.arch }}
             dist/release-*/neverlauncher-api-linux-${{ matrix.arch }}
@@ -295,7 +295,7 @@ jobs:
           retention-days: 14
 
   neverguard-windows:
-    name: NeverGuard Windows x64 + ARM64 доставка граница
+    name: NeverGuard Windows x64 + ARM64 delivery boundary
     runs-on: windows-2022
     timeout-minutes: 50
     steps:
@@ -320,7 +320,7 @@ jobs:
         with:
           components: rustfmt,clippy
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
-      - name: NeverGuard Windows интеграционный тест
+      - name: NeverGuard Windows integration test
         run: |
           python scripts/smoke/offline/windows-production-hardening-0136.py
           python scripts/smoke/offline/windows-protection-core-II-0181.py
@@ -369,7 +369,7 @@ jobs:
           cargo clippy --manifest-path runtime/neverguard-thread-probe/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/neverguard-debug-probe/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/neverguard-jvm-probe/Cargo.toml --all-targets -- -D warnings
-      - name: Единый транзакционный обновлятор self-тест
+      - name: Unified transactional updater self-test
         shell: pwsh
         run: |
           Push-Location cli
@@ -378,19 +378,19 @@ jobs:
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update self-test
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update component-self-test
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update stabilization-self-test
-      - name: Сборка неподписанный CI x64 + ARM64 доставка кандидат
+      - name: Build unsigned CI x64 + ARM64 delivery candidates
         shell: pwsh
         run: ./scripts/release/build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage
-      - name: Emit Windows Защита CI свидетельство
+      - name: Emit Windows Guard CI evidence
         shell: pwsh
         run: |
           $Version = (Get-Content VERSION -Raw).Trim()
           $Dir = "dist/release-$Version"
           python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/neverlauncher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/neverlauncher-desktop-windows-amd64.exe" --guard "$Dir/neverguard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
-      - name: Загрузка Windows пакет
+      - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-Windows-neverguard-${{ github.sha }}
+          name: neverlauncher-windows-neverguard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
             dist/release-*/neverlauncher-desktop-windows-amd64.exe
@@ -414,15 +414,15 @@ jobs:
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_ARM64.json
             dist/release-*/WINDOWS_SIGNING_EVIDENCE.json
           if-no-files-found: error
-      - name: Загрузка Windows Защита CI результат
+      - name: Upload Windows Guard CI result
         uses: actions/upload-artifact@v4
         with:
-          name: защита-ci-Windows-amd64-${{ github.sha }}
+          name: guard-ci-windows-amd64-${{ github.sha }}
           path: guard-ci-result/windows/guard-ci-result.json
           if-no-files-found: error
 
   neverguard-macos:
-    name: NeverGuard macOS рабочий реализация
+    name: NeverGuard macOS production implementation
     runs-on: macos-14
     timeout-minutes: 45
     steps:
@@ -439,7 +439,7 @@ jobs:
         with:
           components: rustfmt,clippy
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - name: macOS рабочий контроль и нативный Rust проверяет
+      - name: macOS production gate and native Rust checks
         shell: bash
         run: |
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
@@ -450,7 +450,7 @@ jobs:
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
           cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverguard
-      - name: Подписанный macOS NeverGuard интеграционный тест
+      - name: Signed macOS NeverGuard integration test
         shell: bash
         run: |
           TEST_BIN="$(cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="neverguard_macos" and x.get("executable")]; print(xs[-1])')"
@@ -458,13 +458,13 @@ jobs:
           codesign --force --sign - --options runtime --timestamp=none runtime/neverruntime/target/debug/neverguard
           codesign --force --sign - --options runtime --timestamp=none "${TEST_BIN}"
           "${TEST_BIN}" --nocapture
-      - name: Сборка Настольное приложение клиентская часть
+      - name: Build Desktop frontend
         working-directory: apps/desktop
         run: npm ci && npm run build
-      - name: Сборка специальный универсальный macOS пакет
+      - name: Build ad-hoc universal macOS package
         shell: bash
         run: bash scripts/release/build-macos-desktop.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --allow-ad-hoc
-      - name: Emit macOS Защита CI свидетельство
+      - name: Emit macOS Guard CI evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -481,10 +481,10 @@ jobs:
             --signing-mode adhoc-ci \
             --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
             --output guard-ci-result/macos/guard-ci-result.json
-      - name: Загрузка macOS пакет
+      - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macOS-neverguard-${{ github.sha }}
+          name: neverlauncher-macos-neverguard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-macos-universal.zip
             dist/release-*/neverlauncher-desktop-macos-universal
@@ -492,15 +492,15 @@ jobs:
             dist/release-*/MACOS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS.json
           if-no-files-found: error
-      - name: Загрузка macOS Защита CI результат
+      - name: Upload macOS Guard CI result
         uses: actions/upload-artifact@v4
         with:
-          name: защита-ci-macOS-универсальный-${{ github.sha }}
+          name: guard-ci-macos-universal-${{ github.sha }}
           path: guard-ci-result/macos/guard-ci-result.json
           if-no-files-found: error
 
   macos-production:
-    name: macOS x64 + ARM64 доставка граница
+    name: macOS x64 + ARM64 delivery boundary
     needs: [go-contracts, web]
     runs-on: macos-14
     timeout-minutes: 60
@@ -521,7 +521,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - name: Проверять обновлятор ядро до пакет
+      - name: Verify updater core before packaging
         shell: bash
         run: |
           set -euo pipefail
@@ -529,7 +529,7 @@ jobs:
           /tmp/nl update self-test
           /tmp/nl update component-self-test
           /tmp/nl update stabilization-self-test
-      - name: Сборка и проверять специальный облегчённый x64 + ARM64 доставка кандидат
+      - name: Build and verify ad-hoc thin x64 + ARM64 delivery candidates
         shell: bash
         run: |
           set -euo pipefail
@@ -541,10 +541,10 @@ jobs:
           test -x /tmp/nl
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
           /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}"
-      - name: Загрузка macOS x64 + ARM64 доставка кандидат
+      - name: Upload macOS x64 + ARM64 delivery candidates
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macOS-рабочий-${{ github.sha }}
+          name: neverlauncher-macos-production-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-cli-macos-x64
             dist/release-*/neverlauncher-cli-macos-arm64
@@ -564,7 +564,7 @@ jobs:
           retention-days: 14
 
   guard-certification:
-    name: Кроссплатформенный Защита CI матрица сертификация
+    name: Cross-platform Guard CI matrix certification
     needs: [rust-desktop, neverguard-windows, neverguard-macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -573,12 +573,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Загрузка Защита цель свидетельство
+      - name: Download Guard target evidence
         uses: actions/download-artifact@v4
         with:
           pattern: guard-ci-*-${{ github.sha }}
           path: guard-ci-results
-      - name: Агрегат точный-фиксация Защита матрица
+      - name: Aggregate exact-commit Guard matrix
         shell: bash
         run: |
           set -euo pipefail
@@ -592,10 +592,10 @@ jobs:
             --repository "${GITHUB_REPOSITORY}"
           cp guard-ci/targets.json guard-ci-public/targets.json
           cat guard-ci-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Загрузка Защита сертификация свидетельство
+      - name: Upload Guard certification evidence
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-защита-ci-матрица-${{ github.run_id }}
+          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
           path: |
             guard-ci-public/matrix.json
             guard-ci-public/matrix.md
@@ -604,7 +604,7 @@ jobs:
           retention-days: 30
 
   bridge:
-    name: ServerBridge плагины
+    name: ServerBridge plugins
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -616,16 +616,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Сборка реальный Velocity + Bukkit семейство мост
+      - name: Build real Velocity + Bukkit family bridges
         run: bash scripts/build/bridge-plugins.sh
 
   containers:
-    name: Рабочий containers
+    name: Production containers
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Проверять рабочий Compose
+      - name: Validate production Compose
         env:
           POSTGRES_PASSWORD: ci-postgres-password
           REDIS_PASSWORD: 0123456789abcdef0123456789abcdef
@@ -639,14 +639,14 @@ jobs:
           NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
           NEVERLAUNCHER_IMAGE_TAG: 0.0.0-ci
         run: docker compose -f deploy/production/docker-compose.yml config >/dev/null
-      - name: Сборка API и Администратор рабочий образ
+      - name: Build API and Admin production images
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f services/api/Dockerfile -t neverlauncher-api:ci .
           docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
 
   managed-jre-production:
-    name: Управляемый Java II Java 8/16/17/21/25 рабочий E2E + Temurin 21 доставка
+    name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery
     needs: [go-contracts]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -660,16 +660,16 @@ jobs:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Сборка NeverRuntime для Управляемый Java II
+      - name: Build NeverRuntime for Managed Java II
         run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
-      - name: Управляемый Java II Java 8/16/17/21/25 рабочий E2E
+      - name: Managed Java II Java 8/16/17/21/25 production E2E
         shell: bash
         run: |
           set -euo pipefail
           bash e2e/scripts/run-managed-java-II-e2e.sh
           mkdir -p managed-jre-artifacts
           cp e2e/runtime/managed-java-II/MANAGED_JAVA_II_EVIDENCE.json managed-jre-artifacts/MANAGED_JAVA_II_EVIDENCE.json
-      - name: Сборка точный-поставщик Управляемый JRE Дистрибутив
+      - name: Build exact-vendor Managed JRE Distribution
         shell: bash
         run: |
           set -euo pipefail
@@ -679,7 +679,7 @@ jobs:
             --out "${OUT}" \
             --version "${VERSION}" \
             --major 21
-      - name: Проверять Управляемый JRE six-цель доставка привязка
+      - name: Verify Managed JRE six-target delivery binding
         shell: bash
         run: |
           set -euo pipefail
@@ -689,16 +689,16 @@ jobs:
           /tmp/nl-managed-jre delivery manifest --bundle "${OUT}" --version "${VERSION}"
           /tmp/nl-managed-jre delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
-      - name: Загрузка точный-фиксация Управляемый JRE рабочий ресурсы
+      - name: Upload exact-commit Managed JRE production assets
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-управляемый-JRE-${{ github.sha }}
+          name: neverlauncher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts/
           if-no-files-found: error
           retention-days: 30
 
   production-e2e:
-    name: PostgreSQL + Redis + фактический Minecraft Клиент E2E
+    name: PostgreSQL + Redis + actual Minecraft Client E2E
     needs: [go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, managed-jre-production]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -718,108 +718,108 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.7.1'
-      - name: Установка E2E зависимости
+      - name: Install E2E dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             jq maven postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Федерация PostgreSQL миграция + перезапуск + multi-экземпляр E2E
+      - name: Federation PostgreSQL migration + restart + multi-instance E2E
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
-      - name: Долговременный 0.21.3 PostgreSQL многорепликовый перезапуск + ограждение E2E
+      - name: Durable 0.21.3 PostgreSQL multi-replica restart + fencing E2E
         run: bash e2e/scripts/run-durable-boundaries-0213-e2e.sh
-      - name: Доверие к устройству 0.12.9 к 0.12.10 миграция E2E
+      - name: Device Trust 0.12.9 to 0.12.10 migration E2E
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
-      - name: NeverGuard 0.13.9 к 0.13.10 миграция E2E
+      - name: NeverGuard 0.13.9 to 0.13.10 migration E2E
         run: bash e2e/scripts/run-guard-migration-e2e.sh
-      - name: ServerBridge 0.14.0 к 0.14.2 миграция E2E
+      - name: ServerBridge 0.14.0 to 0.14.2 migration E2E
         run: bash e2e/scripts/run-serverbridge-v2-migration-e2e.sh
-      - name: ServerBridge 0.14.1 к 0.14.2 криптографический идентичность миграция E2E
+      - name: ServerBridge 0.14.1 to 0.14.2 cryptographic identity migration E2E
         run: bash e2e/scripts/run-serverbridge-crypto-identity-migration-e2e.sh
-      - name: ServerBridge 0.14.2 к 0.14.3 одноразовый подключение билет миграция E2E
+      - name: ServerBridge 0.14.2 to 0.14.3 one-time join ticket migration E2E
         run: bash e2e/scripts/run-one-time-join-ticket-migration-e2e.sh
-      - name: ServerBridge 0.14.3 к 0.14.4 Bukkit семейство миграция E2E
+      - name: ServerBridge 0.14.3 to 0.14.4 Bukkit family migration E2E
         run: bash e2e/scripts/run-bukkit-family-migration-e2e.sh
-      - name: ServerBridge 0.14.4 к 0.14.5 Прокси семейство миграция E2E
+      - name: ServerBridge 0.14.4 to 0.14.5 Proxy family migration E2E
         run: bash e2e/scripts/run-proxy-family-migration-e2e.sh
-      - name: ServerBridge 0.14.5 к 0.14.6 Fabric миграция E2E
+      - name: ServerBridge 0.14.5 to 0.14.6 Fabric migration E2E
         run: bash e2e/scripts/run-fabric-server-bridge-migration-e2e.sh
-      - name: ServerBridge 0.14.6 к 0.14.7 Forge + NeoForge миграция E2E
+      - name: ServerBridge 0.14.6 to 0.14.7 Forge + NeoForge migration E2E
         run: bash e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh
-      - name: ServerBridge 0.14.7 к 0.14.8 без патчей топология + передача миграция E2E
+      - name: ServerBridge 0.14.7 to 0.14.8 zero-patch topology + handoff migration E2E
         run: bash e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh
-      - name: ServerBridge 0.14.8 к 0.14.9 Публичная матрица + HA усиление защиты migration/multi-instance E2E
+      - name: ServerBridge 0.14.8 to 0.14.9 Public Matrix + HA hardening migration/multi-instance E2E
         run: bash e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh
-      - name: ServerBridge 3 контроль выпуска
+      - name: ServerBridge 3 release gate
         run: python3 scripts/smoke/offline/serverbridge-release-0150.py
-      - name: ServerBridge 3 Узел Обнаружение + Среда выполнения Идентичность 0.19.2 контроль
+      - name: ServerBridge 3 Node Discovery + Runtime Identity 0.19.2 gate
         run: python3 scripts/smoke/offline/serverbridge-runtime-identity-0192.py
-      - name: ServerBridge 3 Сервер Телеметрия 0.19.3 контроль
+      - name: ServerBridge 3 Server Telemetry 0.19.3 gate
         run: python3 scripts/smoke/offline/serverbridge-telemetry-0193.py
-      - name: ServerBridge 3 Сервер Событие Поток 0.19.4 контроль
+      - name: ServerBridge 3 Server Event Stream 0.19.4 gate
         run: python3 scripts/smoke/offline/serverbridge-event-stream-0194.py
-      - name: ServerBridge 3 Управление API 0.19.5 контроль
+      - name: ServerBridge 3 Control API 0.19.5 gate
         run: python3 scripts/smoke/offline/serverbridge-control-api-0195.py
-      - name: ServerBridge 3 Топология и Маршрутизация 2 0.19.6 контроль
+      - name: ServerBridge 3 Topology & Routing 2 0.19.6 gate
         run: python3 scripts/smoke/offline/serverbridge-topology-routing2-0196.py
-      - name: ServerBridge 3 Игрок Сессия Интеграционный 3 0.19.7 контроль
+      - name: ServerBridge 3 Player Session Integration 3 0.19.7 gate
         run: python3 scripts/smoke/offline/serverbridge-player-session-integration3-0197.py
-      - name: ServerBridge 3 Универсальный Сервер Адаптеры 0.19.8 контроль
+      - name: ServerBridge 3 Universal Server Adapters 0.19.8 gate
         run: python3 scripts/smoke/offline/serverbridge-universal-adapters-0198.py
-      - name: ServerBridge 3 Без патчей Предоставление учётной записи 0.19.9 контроль
+      - name: ServerBridge 3 Zero-Patch Provisioning 0.19.9 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-zero-patch-provisioning-0199.py
           (cd cli && go test -run 'TestServerBridge(Detect|Install|DryRun|ReleaseTargetCohort)' ./cmd/neverlauncher)
-      - name: ServerBridge Хост 0.19.10 контроль
+      - name: ServerBridge Host 0.19.10 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-host-01910.py
           (cd cli && go test -run 'TestServerBridgeHost' ./cmd/neverlauncher)
           (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/neverlauncher -o /tmp/neverlauncher-host-windows.test.exe)
-      - name: ServerBridge HA Плоскость управления 0.19.11 контроль
+      - name: ServerBridge HA Control Plane 0.19.11 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-ha-control-plane-01911.py
           (cd services/api && go test ./internal/serverbridgeha)
           (cd services/api && go test -run 'TestServerBridge(Control|HAControlPlane)' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
-      - name: ServerBridge Безопасность и Сертификация 0.19.12 контроль
+      - name: ServerBridge Security & Certification 0.19.12 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-security-certification-01912.py
           bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
           (cd services/api && go test -run 'TestServerBridge(Security|ProtocolV3|Event|NodeIdentity|Control)' ./internal/httpapi)
-      - name: ServerBridge 3 GA 0.20.0 контроль
+      - name: ServerBridge 3 GA 0.20.0 gate
         run: |
           python3 scripts/smoke/offline/serverbridge3-ga-0200.py
           (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
           (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/neverlauncher ./internal/dbmigrate)
-      - name: NeverExtensions Ядро 0.20.1 контроль
+      - name: NeverExtensions Core 0.20.1 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-core-0201.py
           (cd services/api && go test -run 'TestNeverExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher ./internal/dbmigrate)
-      - name: NeverExtensions Пакет расширения 0.20.2 контроль
+      - name: NeverExtensions Extension Package 0.20.2 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-package-0202.py
           (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Реестр 0.20.3 контроль
+      - name: NeverExtensions Registry 0.20.3 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-registry-0203.py
           (cd services/api && go test -run 'TestNeverExtensionsRegistry.*0203|TestVerifyRegistryPackageAcceptsOlderCLISBOM0203|TestExtensionRegistryMemoryProductionLifecycle0203|TestNeverExtensionsRegistryMigration0203' ./internal/httpapi ./internal/extensionpackage ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestExtensionRegistry.*0203|TestExtensionPackage.*0202' ./cmd/neverlauncher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Установка Жизненный цикл 0.20.4 контроль
+      - name: NeverExtensions Install Lifecycle 0.20.4 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-install-lifecycle-0204.py
           (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestNeverExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
           (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/neverlauncher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Хост расширений 1 0.20.5 контроль
+      - name: NeverExtensions Extension Host 1 0.20.5 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-host-0205.py
           (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentNeverForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
           (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/neverlauncher)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions События и Хуки 0.20.6 контроль
+      - name: NeverExtensions Events & Hooks 0.20.6 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-events-0206.py
           (cd services/api && go test -run 'TestEventBus.*0206|TestSyncHook.*0206|TestAsyncDelivery.*0206|TestSubscription.*0206|TestTypedProjectPayload.*0206|TestDeliveryLeaseFencing.*0206|TestDisabledInstall.*0206' ./internal/eventbus)
@@ -828,7 +828,7 @@ jobs:
           (cd services/api && go vet ./internal/eventbus ./internal/extensionhost)
           (cd cli && go test ./internal/dbmigrate)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Разрешения и Возможность Безопасность 0.20.7 контроль
+      - name: NeverExtensions Permissions & Capability Security 0.20.7 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-capability-security-0207.py
           (cd services/api && go test -run 'TestDenyByDefaultGrantRevokeAndDiff0207|TestProjectScopedGrant0207|TestSecretsEncryptedAuthenticated0207' ./internal/extensionsecurity)
@@ -838,7 +838,7 @@ jobs:
           (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/neverlauncher && go test ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Администратор Расширения 0.20.8 контроль
+      - name: NeverExtensions Admin Extensions 0.20.8 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-admin-0208.py
           (cd services/api && go test -run 'TestAdminContributions0208' ./internal/repository)
@@ -849,7 +849,7 @@ jobs:
           npm ci --prefix apps/admin
           npm run build --prefix apps/admin
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Настольное приложение и CLI Расширения 0.20.9 контроль
+      - name: NeverExtensions Desktop & CLI Extensions 0.20.9 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-desktop-cli-0209.py
           (cd services/api && go test -run 'TestDesktop.*0209|TestCLIExtension.*0209|TestLifecycleStopTerminatesTransientCLI0209' ./internal/httpapi ./internal/extensionhost)
@@ -861,7 +861,7 @@ jobs:
           npm run build --prefix apps/desktop
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions SDK 0.20.10 контроль
+      - name: NeverExtensions SDK 0.20.10 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-sdk-02010.py
           python3 scripts/sdk/generate-types.py
@@ -877,7 +877,7 @@ jobs:
           /tmp/nl-sdk extension dev examples/extensions/backend-health --target backend --sdk-root sdk --duration 2s
           /tmp/nl-sdk extension dev examples/extensions/cli-status --target cli --sdk-root sdk --duration 5s -- status
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Зависимости и Обновляет 0.20.11 контроль
+      - name: NeverExtensions Dependencies & Updates 0.20.11 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-dependencies-updates-02011.py
           (cd services/api && go test -run '02011' ./internal/extensionresolver ./internal/extensionupdates ./internal/repository ./internal/dbmigrate)
@@ -886,7 +886,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
-      - name: NeverExtensions Доверие, Восстановление и Сертификация 0.20.12 контроль
+      - name: NeverExtensions Trust, Recovery & Certification 0.20.12 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-trust-recovery-certification-02012.py
           python3 scripts/compatibility/neverextensions_trust_02012.py validate
@@ -894,7 +894,7 @@ jobs:
           (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/neverlauncher-api)
           (cd cli && go test -run '02012' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions GA 0.21.0 контроль
+      - name: NeverExtensions GA 0.21.0 gate
         run: |
           python3 scripts/smoke/offline/neverextensions-ga-0210.py
           python3 scripts/compatibility/neverextensions_ga_0210.py validate
@@ -905,7 +905,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
-      - name: Честная проверка и Границы доверия 0.21.2 контроль
+      - name: Honest Validation & Trust Boundaries 0.21.2 gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -913,7 +913,7 @@ jobs:
           (cd services/api && go test -run '0211|0212|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository ./internal/extensionhost)
           (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./internal/extensionhost)
           (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher -run '0212|Runtime|Pipeline' && go vet ./internal/dbmigrate ./cmd/neverlauncher)
-      - name: Надёжные долговременные границы и Сертификация 0.21.3 контроль
+      - name: Durable Boundaries & Certification 0.21.3 gate
         run: |
           python3 scripts/compatibility/durable_boundaries_0213.py validate
           (cd services/api && go test -run '0213|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository)
@@ -922,21 +922,21 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
-      - name: Доставка Манифест + платформа архитектура 0.15.1 контроль
+      - name: Delivery Manifest + platform architecture 0.15.1 gate
         run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
-      - name: Подписанный Windows x64 + ARM64 0.15.2 контроль
+      - name: Signed Windows x64 + ARM64 0.15.2 gate
         run: python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
-      - name: ServerBridge 0.14.9 к 0.14.10 миграция + стабилизация E2E
+      - name: ServerBridge 0.14.9 to 0.14.10 migration + stabilization E2E
         run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
-      - name: Доверие к устройству PostgreSQL жизненный цикл E2E
+      - name: Device Trust PostgreSQL lifecycle E2E
         env:
           NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
           NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
           NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
-      - name: Материализовать -> публикация -> синхронизация -> запускать фактический Minecraft -> подключение -> отзыв -> запрещать
+      - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
-      - name: Проверять Minecraft работоспособность свидетельство
+      - name: Verify Minecraft health evidence
         run: |
           jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .checks.foliaPinnedRuntime == true and .checks.foliaPinnedBuildDependency == true and .checks.bytesocksPinnedBuildDependency == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy" and .health.fabric == "healthy" and .health.forge == "healthy" and .health.neoforge == "healthy"' e2e/runtime/result.json >/dev/null
           jq -e '.verified == true and .sourceCommit == "b6147dcc8a9f1265ccf1491147d427fcfa7d2e27" and .requestedMavenCoordinate == "me.lucko:bytesocks-java-client:1.0-20230828.145440-5" and .sourcePomVersion == "1.0-SNAPSHOT" and .reconstructionMode == "pinned-compatible-source" and .historicalArtifactOriginalVerified == false and .apiContract.factory == "BytesocksClient.create" and .apiContract.channelId == "Socket.channelId" and .apiContract.webSocketLibrary == "org.java-websocket:Java-WebSocket:1.5.4" and (.sha256 | test("^[0-9a-f]{64}$"))' e2e/runtime/bytesocks-build.json >/dev/null
@@ -945,11 +945,11 @@ jobs:
           for service in velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
-      - name: Загрузка E2E свидетельство
+      - name: Upload E2E evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-Minecraft-клиент-e2e-evidence
+          name: neverlauncher-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
             e2e/runtime/client-package.json
@@ -970,48 +970,48 @@ jobs:
             e2e/runtime/probe-*.txt
           if-no-files-found: ignore
           retention-days: 7
-      - name: Загрузка Forge + NeoForge миграция свидетельство
+      - name: Upload Forge + NeoForge migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-Forge-NeoForge-миграция-e2e-evidence
+          name: neverlauncher-forge-neoforge-migration-e2e-evidence
           path: e2e/forge-neoforge-migration-result/
           if-no-files-found: ignore
-      - name: Загрузка ServerBridge HA усиление защиты миграция свидетельство
+      - name: Upload ServerBridge HA hardening migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-serverbridge-ha-усиление защиты-e2e-evidence
+          name: neverlauncher-serverbridge-ha-hardening-e2e-evidence
           path: e2e/serverbridge-ha-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка топология + передача миграция свидетельство
+      - name: Upload topology + handoff migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-топология-передача-миграция-e2e-evidence
+          name: neverlauncher-topology-handoff-migration-e2e-evidence
           path: e2e/topology-handoff-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка Доверие к устройству протокол свидетельство
+      - name: Upload Device Trust protocol evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-устройство-доверие-протокол-e2e-evidence
+          name: neverlauncher-device-trust-protocol-e2e-evidence
           path: |
             e2e/device-trust-result/
             e2e/device-trust-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка NeverGuard миграция свидетельство
+      - name: Upload NeverGuard migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-защита-миграция-e2e-evidence
+          name: neverlauncher-guard-migration-e2e-evidence
           path: e2e/guard-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка ServerBridge v2 миграция свидетельство
+      - name: Upload ServerBridge v2 migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -1019,33 +1019,33 @@ jobs:
           path: e2e/serverbridge-v2-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка ServerBridge криптографический идентичность миграция свидетельство
+      - name: Upload ServerBridge cryptographic identity migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-serverbridge-crypto-идентичность-миграция-e2e-evidence
+          name: neverlauncher-serverbridge-crypto-identity-migration-e2e-evidence
           path: e2e/serverbridge-crypto-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка одноразовый подключение билет миграция свидетельство
+      - name: Upload one-time join ticket migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-одноразовый-подключение-билет-миграция-e2e-evidence
+          name: neverlauncher-one-time-join-ticket-migration-e2e-evidence
           path: e2e/one-time-join-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Загрузка Прокси семейство миграция свидетельство
+      - name: Upload Proxy family migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-прокси-семейство-миграция-e2e-evidence
+          name: neverlauncher-proxy-family-migration-e2e-evidence
           path: e2e/proxy-family-migration-result/
           if-no-files-found: ignore
           retention-days: 14
 
   neverguard-windows-adversarial:
-    name: NeverGuard Windows атакующий Java ${{ matrix.java }}
+    name: NeverGuard Windows adversarial Java ${{ matrix.java }}
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -1066,7 +1066,7 @@ jobs:
         with:
           components: rustfmt,clippy
           targets: x86_64-pc-windows-msvc
-      - name: Сборка NeverGuard Sensor и атакующий фикстура
+      - name: Build NeverGuard Sensor and adversarial fixtures
         shell: pwsh
         run: |
           cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
@@ -1075,7 +1075,7 @@ jobs:
           cargo build --manifest-path runtime/neverguard-debug-probe/Cargo.toml
           cargo build --manifest-path runtime/neverguard-jvm-probe/Cargo.toml
           cargo build --manifest-path runtime/neverruntime/Cargo.toml --tests
-      - name: Execute актуальный Windows attack simulation и совместимость сертификация
+      - name: Execute live Windows attack simulation and compatibility certification
         shell: pwsh
         run: |
           $out = "guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json"
@@ -1090,22 +1090,22 @@ jobs:
             --commit "$env:GITHUB_SHA" `
             --run-id "$env:GITHUB_RUN_ID" `
             --output $out
-      - name: Проверять 0.18.11 атакующий CI рабочий контроль
+      - name: Validate 0.18.11 adversarial CI production gate
         shell: pwsh
         run: |
           python scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py
           python scripts/guard_ci/test_windows_adversarial.py
-      - name: Загрузка на-Java атакующий свидетельство
+      - name: Upload per-Java adversarial evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverguard-Windows-атакующий-Java-${{ matrix.java }}-${{ github.sha }}
+          name: neverguard-windows-adversarial-java-${{ matrix.java }}-${{ github.sha }}
           path: guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json
           if-no-files-found: error
           retention-days: 30
 
   neverguard-windows-adversarial-certificate:
-    name: NeverGuard Windows атакующий сертификация
+    name: NeverGuard Windows adversarial certification
     if: always()
     needs: [neverguard-windows-adversarial]
     runs-on: ubuntu-24.04
@@ -1114,13 +1114,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Загрузка на-Java атакующий свидетельство
+      - name: Download per-Java adversarial evidence
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: neverguard-windows-adversarial-java-*
           path: guard-ci-result/windows-adversarial/results
-      - name: Агрегат и certify Windows атакующий матрица
+      - name: Aggregate and certify Windows adversarial matrix
         shell: bash
         run: |
           set -euo pipefail
@@ -1135,23 +1135,23 @@ jobs:
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
-      - name: Проверять 0.18.12 Windows Защита RC рабочий контроль
+      - name: Validate 0.18.12 Windows Protection RC production gate
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/smoke/offline/neverguard-windows-protection-rc-01812.py
           (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtection' -count=1)
-      - name: Проверять 0.19.0 Windows Защита GA рабочий контроль
+      - name: Validate 0.19.0 Windows Protection GA production gate
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/smoke/offline/neverguard-windows-protection-ga-0190.py
           (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtectionGA' -count=1)
-      - name: Загрузка Windows атакующий сертификат
+      - name: Upload Windows adversarial certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverguard-Windows-атакующий-сертификат-${{ github.sha }}
+          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
           path: |
             guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
             guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md

@@ -43,13 +43,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
- * Рабочий Bukkit-семейство ServerBridge среда выполнения общий через CraftBukkit, Spigot,
- * Paper, Purpur и Folia артефакты.
+ * Production Bukkit-family ServerBridge runtime shared by CraftBukkit, Spigot,
+ * Paper, Purpur and Folia artifacts.
  *
- * Нет Bukkit планировщик является используется для сеть I/O. Сигнал состояния запуск на выделенный
- * daemon исполнитель, который avoids главный-поток stalls на classic серверы и avoids
- * illegal global/region планировщик assumptions на Folia. Вход валидация запускает в
- * AsyncPlayerPreLoginEvent и должен полный до сервер принимает вход.
+ * No Bukkit scheduler is used for network I/O. Heartbeats run on a dedicated
+ * daemon executor, which avoids main-thread stalls on classic servers and avoids
+ * illegal global/region scheduler assumptions on Folia. Login validation runs in
+ * AsyncPlayerPreLoginEvent and must complete before the server accepts the login.
  */
 public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Listener, CommandExecutor {
     private final BukkitFamilyPlatform expectedPlatform;
@@ -318,9 +318,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             }
             return;
         }
-        // Folia делает не permit classic Bukkit планировщик task. Использовать глобальный
-        // region планировщик reflectively так мост-common сохраняет Spigot API
-        // compile поверхность пока выделенный Folia артефакт остаётся region-безопасный.
+        // Folia does not permit a classic Bukkit scheduler task. Use the global
+        // region scheduler reflectively so bridge-common keeps a Spigot API
+        // compile surface while the dedicated Folia artifact remains region-safe.
         try {
             Method getter = Bukkit.class.getMethod("getGlobalRegionScheduler");
             Object scheduler = getter.invoke(null);
@@ -380,11 +380,11 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             metrics.add("worlds");
             metrics.add("dimensions");
 
-            // Paper/Purpur предоставлять constant-время мир счётчики. Bukkit/Spigot
-            // только предоставлять APIs тот материализовать loaded-chunk/entity коллекция,
-            // который может violate телеметрия sampling budget на large мир.
-            // Folia также требует region владение для произвольный мир состояние, так
-            // те платформы намеренно отчёт эти счётчики как неподдерживаемый.
+            // Paper/Purpur expose constant-time world counters. Bukkit/Spigot
+            // only expose APIs that materialize loaded-chunk/entity collections,
+            // which can violate the telemetry sampling budget on large worlds.
+            // Folia also requires region ownership for arbitrary world state, so
+            // those platforms intentionally report these counters as unsupported.
             if (adapterProfile.supports(BridgeAdapterCapability.TELEMETRY_BOUNDED_WORLD_COUNTERS) && loaded.size() <= 64) {
                 long chunkTotal = 0L;
                 long entityTotal = 0L;
@@ -414,7 +414,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 budgetExceeded = true;
             }
         } catch (RuntimeException e) {
-            // Метрики являются best-effort и никогда разрешён к affect login/auth.
+            // Metrics are best-effort and never allowed to affect login/auth.
             budgetExceeded = true;
         }
 
@@ -521,7 +521,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         if (current != null) {
             current.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
             ScheduledExecutorService executor = networkExecutor;
-            if (executor != null && !executor.isShutdown()) executor.execute(this::heartbeatOnce);
+            if (executor != null && !executor.isShutdown()) triggerHeartbeat();
         }
     }
 

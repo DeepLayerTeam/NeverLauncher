@@ -130,14 +130,14 @@ func loaderCompatibilityEvidenceRoot01711(results []releaseCompatibilityResult, 
 func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, compatibilityCertificationRaw []byte, certification releaseCompatibilityCertification) (loaderCompatibilityReleaseCertificate01711, error) {
 	var targets releaseCompatibilityTargets
 	if err := json.Unmarshal(targetsRaw, &targets); err != nil {
-		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("релиз сертификат цели: %w", err)
+		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("release certificate targets: %w", err)
 	}
 	var matrix releaseCompatibilityMatrix
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
-		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("релиз сертификат матрица: %w", err)
+		return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("release certificate matrix: %w", err)
 	}
 	if matrix.ProductVersion != certification.ProductVersion || matrix.Repository != certification.Repository || matrix.Commit != certification.Commit || matrix.RunID != certification.RunID {
-		return loaderCompatibilityReleaseCertificate01711{}, errors.New("загрузчик совместимость релиз сертификат группа несоответствие")
+		return loaderCompatibilityReleaseCertificate01711{}, errors.New("loader compatibility release certificate cohort mismatch")
 	}
 
 	requiredByID := make(map[string]releaseCompatibilityTarget, len(targets.Targets))
@@ -276,7 +276,7 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 	}
 	for name, ok := range invariants {
 		if !ok {
-			return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("загрузчик совместимость RC инвариант %s=false", name)
+			return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("loader compatibility RC invariant %s=false", name)
 		}
 	}
 
@@ -298,7 +298,7 @@ func buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, comp
 			want := loaderGAVersions0180(loader)
 			got := familyVersions[loader]
 			if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
-				return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Загрузчик Совместимость GA 0.18.0 %s среда выполнения support/certified свидетельство несоответствие: получил=%v want=%v", loader, got, want)
+				return loaderCompatibilityReleaseCertificate01711{}, fmt.Errorf("Loader Compatibility GA 0.18.0 %s runtime support/certified evidence mismatch: got=%v want=%v", loader, got, want)
 			}
 		}
 		status = "ga-certified"
@@ -386,15 +386,15 @@ func verifyLoaderCompatibilityReleaseCertificate01711(dir, ver string) error {
 	}
 	var compatibilityCertification releaseCompatibilityCertification
 	if err := json.Unmarshal(compatRaw, &compatibilityCertification); err != nil {
-		return fmt.Errorf("%s недопустимый: %w", compatibilityCertificationReleaseFile, err)
+		return fmt.Errorf("%s invalid: %w", compatibilityCertificationReleaseFile, err)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, loaderCompatibilityReleaseCertificateFile01711))
 	if err != nil {
-		return fmt.Errorf("%s отсутствующий: %w", loaderCompatibilityReleaseCertificateFile01711, err)
+		return fmt.Errorf("%s missing: %w", loaderCompatibilityReleaseCertificateFile01711, err)
 	}
 	var stored loaderCompatibilityReleaseCertificate01711
 	if err := json.Unmarshal(raw, &stored); err != nil {
-		return fmt.Errorf("%s недопустимый: %w", loaderCompatibilityReleaseCertificateFile01711, err)
+		return fmt.Errorf("%s invalid: %w", loaderCompatibilityReleaseCertificateFile01711, err)
 	}
 	expected, err := buildLoaderCompatibilityReleaseCertificate01711(matrixRaw, targetsRaw, compatRaw, compatibilityCertification)
 	if err != nil {
@@ -409,7 +409,7 @@ func verifyLoaderCompatibilityReleaseCertificate01711(dir, ver string) error {
 		return err
 	}
 	if string(storedRaw) != string(expectedRaw) {
-		return errors.New("LOADER_COMPATIBILITY_RELEASE_CERTIFICATE не соответствует встроенный совместимость группа")
+		return errors.New("LOADER_COMPATIBILITY_RELEASE_CERTIFICATE не соответствует embedded compatibility cohort")
 	}
 	return nil
 }

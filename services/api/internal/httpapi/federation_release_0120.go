@@ -13,9 +13,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
 
-// authProviderLinkBegin0120 запускает явный browser-провайдер доказательство привязанный к 
-// уже аутентифицировать канонический Никогда пользователь. Это намеренно делает не inspect или
-// сравнивать e-mail адрес: владение провайдер идентичность является доказательство.
+// authProviderLinkBegin0120 starts an explicit browser-provider proof bound to the
+// already authenticated canonical Never user. It intentionally does not inspect or
+// compare e-mail addresses: possession of the provider identity is the proof.
 func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
