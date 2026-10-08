@@ -15,8 +15,12 @@ import (
 
 func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	state := NewRuntimeState()
-	s := Server{Repo: repository.NewMemoryRepository("https://api.example.test"), Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "fallback-secret", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "neverlauncher-api", AuthTokenActiveKID: "old", AuthTokenKeysJSON: `{"old":"0123456789abcdef0123456789abcdef-old","new":"0123456789abcdef0123456789abcdef-new"}`}, State: state}
-	user := model.User{ID: "user-1", Email: "u@example.test", RoleID: "owner"}
+	repo := repository.NewMemoryRepository("https://api.example.test")
+	s := Server{Repo: repo, Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "fallback-secret", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "neverlauncher-api", AuthTokenActiveKID: "old", AuthTokenKeysJSON: `{"old":"0123456789abcdef0123456789abcdef-old","new":"0123456789abcdef0123456789abcdef-new"}`}, State: state}
+	user := model.User{ID: "user-1", Email: "u@example.test", RoleID: "owner", Status: "active"}
+	if _, err := repo.SaveUser(user); err != nil {
+		t.Fatal(err)
+	}
 	req := httptest.NewRequest("POST", "https://api.example.test/login", nil)
 	req.RemoteAddr = "203.0.113.10:1234"
 	req.Header.Set("User-Agent", "NeverLauncher-Test/1")

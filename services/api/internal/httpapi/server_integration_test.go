@@ -130,8 +130,10 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusOK {
-		t.Fatalf("публикация версии вернула статус %d: %s", res.Code, res.Body.String())
+	// Publishing an unvalidated release must fail closed. The separate validation
+	// tests exercise a successful integrity- and runtime-certified publication.
+	if res.Code != http.StatusConflict {
+		t.Fatalf("непроверенная версия должна быть заблокирована (409), получено %d: %s", res.Code, res.Body.String())
 	}
 }
 

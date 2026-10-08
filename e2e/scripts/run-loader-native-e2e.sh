@@ -14,7 +14,7 @@ JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
 JAVA_MAJOR="${NEVERLAUNCHER_E2E_JAVA_MAJOR:-}"
 SERVER_PORT="25580"
 MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_LOADER_NATIVE_CLIENT_SECONDS:-45}"
-PLAYER_USERNAME="NeverLauncherCertification"
+PLAYER_USERNAME="NL_Cert_Client"
 
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-native] unsupported loader: $LOADER" >&2; exit 2 ;; esac
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[loader-native] invalid Minecraft version" >&2; exit 2; }
@@ -135,7 +135,7 @@ if int(client.get('classpathEntries') or 0)<=0:
     raise SystemExit('loader-native client classpath is empty')
 if health.get('Status')!='healthy' or int(health.get('FailingStreak') or 0)!=0:
     raise SystemExit('loader-native server is not healthy')
-if 'NeverLauncherCertification joined the game' not in log:
+if 'NL_Cert_Client joined the game' not in log:
     raise SystemExit('loader-native server log does not prove actual client join')
 needle='/' + loader_ver + '/'
 if not any(needle in p.replace('\\','/') or loader_ver in p.rsplit('/',1)[-1] for p in paths):

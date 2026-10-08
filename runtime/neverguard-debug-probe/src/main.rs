@@ -3,7 +3,7 @@
 use std::{env, process, time::{Duration, Instant}};
 use windows_sys::Win32::System::Diagnostics::Debug::{
     ContinueDebugEvent, DebugActiveProcess, DebugActiveProcessStop, DebugSetProcessKillOnExit,
-    WaitForDebugEvent, DEBUG_EVENT, DBG_CONTINUE, EXIT_PROCESS_DEBUG_EVENT,
+    WaitForDebugEvent, DEBUG_EVENT, EXIT_PROCESS_DEBUG_EVENT,
 };
 
 fn main() {
@@ -30,7 +30,7 @@ fn main() {
         let event_pid = event.dwProcessId;
         let thread_id = event.dwThreadId;
         unsafe {
-            let _ = ContinueDebugEvent(event_pid, thread_id, DBG_CONTINUE);
+            let _ = ContinueDebugEvent(event_pid, thread_id, 0x0001_0002);
         }
         if code == EXIT_PROCESS_DEBUG_EVENT {
             saw_exit = true;

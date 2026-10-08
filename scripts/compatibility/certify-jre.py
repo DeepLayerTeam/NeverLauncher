@@ -54,7 +54,13 @@ def executable_path(value: str) -> Path:
         match = re.fullmatch(r"/([A-Za-z])/(.+)", raw)
         if match:
             raw = f"{match.group(1)}:/{match.group(2)}"
-    return Path(raw).expanduser().resolve(strict=True)
+    path = Path(raw).expanduser()
+    if os.name == "nt" and path.suffix.lower() != ".exe":
+        # Git Bash `command -v java` omits .exe on Windows runners.
+        executable = path.with_name(path.name + ".exe")
+        if executable.is_file():
+            path = executable
+    return path.resolve(strict=True)
 
 
 def sha256_file(path: Path) -> tuple[str, int]:

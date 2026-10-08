@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 SPEC=ROOT/'schemas/openapi.yaml'
 HTTP=ROOT/'services/api/internal/httpapi'
-try: spec=json.loads(SPEC.read_text())
+try: spec=json.loads(SPEC.read_text(encoding="utf-8"))
 except Exception as exc: raise SystemExit(f"OpenAPI parse failed: {exc}")
 errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
@@ -15,7 +15,7 @@ route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles
 files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)
 code=set()
 for f in files:
-    for method,path in route_re.findall(f.read_text()): code.add((method.lower(),path.replace('{path...}','{path}')))
+    for method,path in route_re.findall(f.read_text(encoding="utf-8")): code.add((method.lower(),path.replace('{path...}','{path}')))
 doc=set()
 ids=[]
 for path,item in spec.get('paths',{}).items():
@@ -35,7 +35,7 @@ for missing in sorted(code-doc): errors.append(f'route missing from OpenAPI: {mi
 for extra in sorted(doc-code): errors.append(f'OpenAPI operation missing from canonical router: {extra[0].upper()} {extra[1]}')
 if len(ids)!=len(set(ids)): errors.append('operationId values must be unique')
 # P3 invariant: historical routers are physically removed from the canonical server.
-config=(HTTP/'handler.go').read_text()
+config=(HTTP/'handler.go').read_text(encoding="utf-8")
 if 'registerLegacy' in config or 'EnableLegacyAPI' in config: errors.append('legacy API registration must be removed in P3')
 if errors:
     print('OpenAPI contract validation FAILED:',file=sys.stderr)

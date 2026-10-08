@@ -79,6 +79,7 @@ struct GuardAttestationV2Submission {
     hardware_bound: bool,
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GuardAttestationV2Request {
@@ -527,7 +528,7 @@ async fn neverguard_guard_attestation_v2(
     #[cfg(not(windows))]
     {
         let _ = (request, neverguard, supervisor);
-        return Err("Guard Attestation v2 continuous evidence доступна только для Windows".to_string());
+        Err("Guard Attestation v2 continuous evidence доступна только для Windows".to_string())
     }
     #[cfg(windows)]
     {

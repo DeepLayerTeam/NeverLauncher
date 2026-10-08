@@ -51,6 +51,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	libraryJar := []byte("fake-library-jar")
 	nativeJar := testNativeZip(t)
 	legacyNativeJar := testNamedNativeZip(t, "liblegacy-native.bin", []byte("legacy-native-binary"))
+	modernNativeJar := testNamedNativeZip(t, "libmodern-native.bin", []byte("modern-native-binary"))
 	logging := []byte("<Configuration/>")
 	asset := []byte("asset-object")
 	assetHash := sha1hex(asset)
@@ -100,6 +101,12 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 				"natives": map[string]any{target.OS: classifier},
 				"extract": map[string]any{"exclude": []any{"META-INF/"}},
 			},
+			map[string]any{
+				"name": "org.lwjgl:lwjgl-glfw:3.4.1:" + classifier,
+				"downloads": map[string]any{
+					"artifact": map[string]any{"path": "org/lwjgl/lwjgl-glfw/3.4.1/lwjgl-glfw-3.4.1-" + classifier + ".jar", "url": base + "/modern-native.jar", "sha1": sha1hex(modernNativeJar), "size": len(modernNativeJar)},
+				},
+			},
 		},
 		"logging": map[string]any{"client": map[string]any{"argument": "-Dlog4j.configurationFile=${path}", "file": map[string]any{"id": "client-test.xml", "url": base + "/logging.xml", "sha1": sha1hex(logging), "size": len(logging)}}},
 	}
@@ -116,6 +123,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	mux.HandleFunc("/library.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(libraryJar) })
 	mux.HandleFunc("/native.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(nativeJar) })
 	mux.HandleFunc("/legacy-native.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(legacyNativeJar) })
+	mux.HandleFunc("/modern-native.jar", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(modernNativeJar) })
 	mux.HandleFunc("/asset-index.json", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(assetIndexBytes) })
 	mux.HandleFunc("/logging.xml", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(logging) })
 	mux.HandleFunc(fmt.Sprintf("/assets/%s/%s", assetHash[:2], assetHash), func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(asset) })
@@ -148,6 +156,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		"assets/log_configs/client-test.xml",
 		"natives/" + target.OS + "/" + target.Arch + "/libtest-native.bin",
 		"natives/" + target.OS + "/" + target.Arch + "/liblegacy-native.bin",
+		"natives/" + target.OS + "/" + target.Arch + "/libmodern-native.bin",
 		".neverlauncher/vanilla-install.json",
 	}
 	for _, rel := range required {
@@ -159,6 +168,9 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	for _, file := range result.Files {
 		if file.Path == "libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1.jar" {
 			t.Fatalf("classifier-only legacy library leaked into classpath materialization: %+v", file)
+		}
+		if file.Path == "libraries/org/lwjgl/lwjgl-glfw/3.4.1/lwjgl-glfw-3.4.1-"+classifier+".jar" && file.Kind != "native-archive" {
+			t.Fatalf("modern Mojang native artifact was not marked as native archive: %+v", file)
 		}
 	}
 
@@ -886,6 +898,15 @@ func TestVanillaRuleAndNativeClassifierMatchTargetArchitecture(t *testing.T) {
 	}
 	if !libraryArtifactAppliesToTarget("com.example:plain-library:1.0.0", arm) {
 		t.Fatal("non-native library must be architecture-neutral")
+	}
+	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-linux", arm) {
+		t.Fatal("Linux native classifier must never materialize on Windows")
+	}
+	if !isClassifiedNativeLibrary("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64") {
+		t.Fatal("modern artifact-based native classifier was not recognized")
+	}
+	if isClassifiedNativeLibrary("org.lwjgl:lwjgl-glfw:3.4.1") {
+		t.Fatal("ordinary library must not be extracted as native archive")
 	}
 }
 

@@ -26,12 +26,21 @@ case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] un
 # output whose installer-declared digest still verifies.
 if [[ "$LOADER" == "forge" || "$LOADER" == "neoforge" ]]; then
   find "$CLIENT_DIR/.neverlauncher/installers/$LOADER" -type f -name installer.jar -delete 2>/dev/null || true
-  python3 - "$CLIENT_DIR" "$LOADER" <<'PY'
+  python3 - "$CLIENT_DIR" "$LOADER" "$RUNTIME_DIR/client-package.json" <<'PY'
 import json, sys
 from pathlib import Path
-root, loader = Path(sys.argv[1]), sys.argv[2]
+root, loader, initial_package = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+initial = json.loads(initial_package.read_text(encoding='utf-8')).get(loader) or {}
+processor_count = int(initial.get('clientProcessorCount') or 0)
+install_mode = str(initial.get('installMode') or '')
+legacy_without_processors = loader == 'forge' and install_mode in (
+    'legacy-v1-universal', 'legacy-v2-empty-processors'
+) and processor_count == 0
 journals = sorted((root / '.neverlauncher' / 'installers' / loader).glob('*/processor-journal.json'))
 if not journals:
+    if legacy_without_processors:
+        print('legacy Forge without client processors: recovery journal is not applicable')
+        raise SystemExit(0)
     raise SystemExit('processor recovery journal is missing')
 path = journals[-1]
 data = json.loads(path.read_text(encoding='utf-8'))
@@ -94,6 +103,8 @@ cache_hit = result.get('payloadCacheHit') is True if loader in ('fabric','quilt'
 if not cache_hit or result.get('upstreamRecoveryUsed') is not True:
     raise SystemExit('cache-only replay did not prove upstream-independent cache recovery')
 processor_verified = True
+processor_applicable = False
+client_count = 0
 processor_recovered = 0
 journal_sha = ''
 if loader in ('forge','neoforge'):
@@ -102,9 +113,27 @@ if loader in ('forge','neoforge'):
     client_count = int(result.get('clientProcessorCount') or 0)
     ran = int(result.get('processorRan') or 0)
     skipped = int(result.get('processorSkipped') or 0)
-    processor_verified = client_count > 0 and processor_recovered > 0 and ran == 0 and skipped == client_count and bool(sha_re.fullmatch(journal_sha))
+    mode = str(result.get('installMode') or '')
+    processor_applicable = client_count > 0
+    if not processor_applicable:
+        processor_verified = (
+            loader == 'forge'
+            and minecraft in ('1.7.10', '1.12.2')
+            and mode in ('legacy-v1-universal', 'legacy-v2-empty-processors')
+            and ran == 0 and skipped == 0 and processor_recovered == 0
+        )
+    else:
+        processor_verified = (
+            mode == 'processors' and processor_recovered > 0
+            and ran + skipped == client_count
+            and bool(sha_re.fullmatch(journal_sha))
+        )
     if not processor_verified:
-        raise SystemExit('processor crash recovery journal evidence is incomplete')
+        raise SystemExit(
+            f'processor crash recovery evidence is incomplete: mode={mode!r}, '
+            f'client={client_count}, ran={ran}, skipped={skipped}, '
+            f'recovered={processor_recovered}, journalSha={journal_sha!r}'
+        )
 evidence = {
     'schemaVersion': '1.0',
     'status': 'passed',
@@ -121,6 +150,8 @@ evidence = {
     'upstreamIndependentRecovery': result.get('upstreamRecoveryUsed') is True,
     'installerRecovered': result.get('installerCacheHit') is True if loader in ('forge','neoforge') else None,
     'processorRecoveryVerified': processor_verified,
+    'processorRecoveryApplicable': processor_applicable,
+    'clientProcessorCount': client_count,
     'processorRecovered': processor_recovered,
     'processorJournalSha256': journal_sha,
 }

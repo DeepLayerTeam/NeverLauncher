@@ -289,12 +289,12 @@ HW_COMPLETE="$(json_post "$API/api/v1/auth/devices/register/complete" "$HW_ACCES
 HW_ACCESS="$(jq -er '.data.accessToken' <<<"$HW_COMPLETE")"; HW_DEVICE="$(jq -er '.data.device.id' <<<"$HW_COMPLETE")"
 jq -e '.data.device.keyAlgorithm=="p256" and .data.device.keyBinding=="hardware" and .data.device.assurance=="proof-of-possession" and .data.device.attestationState=="unattested"' <<<"$HW_COMPLETE" >/dev/null
 ATT_BEGIN="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/attest/begin" "$HW_ACCESS" '{}')"
-jq -e '.data.hardwareProvenance=="not-remotely-verified" and .data.privateKeyServerExposed==false and .data.attestationMethod=="challenge-response-v1"' <<<"$ATT_BEGIN" >/dev/null
+jq -e '.data.hardwareProvenance=="not-verified" and .data.privateKeyServerExposed==false and .data.attestationMethod=="challenge-response-v1"' <<<"$ATT_BEGIN" >/dev/null
 ATT_SIG="$(sign_payload p256 "$HW_KEY" "$(jq -er '.data.signingPayload' <<<"$ATT_BEGIN")")"
 ATT_BODY="$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$ATT_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$ATT_BEGIN")" --arg sig "$ATT_SIG" '{challengeId:$id,challenge:$ch,signature:$sig}')"
 ATT_OK="$(json_post "$API/api/v1/auth/devices/$HW_DEVICE/attest/complete" "$HW_ACCESS" "$ATT_BODY")"
 HW_ACCESS_ATTESTED="$(jq -er '.data.accessToken' <<<"$ATT_OK")"
-jq -e '.data.attestationState=="verified" and .data.device.assurance=="challenge-response-attested" and .data.hardwareProvenance=="not-remotely-verified" and .data.authorizationElevation==false' <<<"$ATT_OK" >/dev/null
+jq -e '.data.attestationState=="verified" and .data.device.assurance=="challenge-response-attested" and .data.hardwareProvenance=="not-verified" and .data.authorizationElevation==false' <<<"$ATT_OK" >/dev/null
 jq '{data:{device:.data.device,attestationState:.data.attestationState,attestationMethod:.data.attestationMethod,hardwareProvenance:.data.hardwareProvenance,authorizationElevation:.data.authorizationElevation,phishingResistantElevation:.data.phishingResistantElevation}}' <<<"$ATT_OK" > "$RESULT_DIR/p256-attestation.json"
 
 printf '[device-trust-e2e] hardware-attested Linux session obtains one-time Guard ticket and integrity-bound Minecraft token\n'

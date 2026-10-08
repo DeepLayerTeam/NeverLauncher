@@ -244,8 +244,20 @@ if scope == "client":
                     "loaderInstallerRecovery": loader_hardening.get("installerRecovered") is True,
                     "loaderProcessorRecovery": (
                         loader_hardening.get("processorRecoveryVerified") is True
-                        and int(loader_hardening.get("processorRecovered") or 0) > 0
-                        and valid_sha256(str(loader_hardening.get("processorJournalSha256") or ""))
+                        and (
+                            (
+                                loader_hardening.get("processorRecoveryApplicable") is True
+                                and int(loader_hardening.get("processorRecovered") or 0) > 0
+                                and valid_sha256(str(loader_hardening.get("processorJournalSha256") or ""))
+                            )
+                            or (
+                                loader == "forge"
+                                and minecraft in ("1.7.10", "1.12.2")
+                                and loader_hardening.get("processorRecoveryApplicable") is False
+                                and int(loader_hardening.get("clientProcessorCount", -1)) == 0
+                                and int(loader_hardening.get("processorRecovered", -1)) == 0
+                            )
+                        )
                     ),
                 })
         if cross_platform_loader_target:

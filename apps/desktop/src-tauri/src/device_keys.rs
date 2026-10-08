@@ -554,6 +554,7 @@ pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<De
 }
 
 
+#[cfg_attr(not(windows), allow(dead_code))]
 #[derive(Debug, Clone)]
 pub struct GuardAttestationV2SignRequest {
     pub backend_url: String,
@@ -571,6 +572,7 @@ pub struct GuardAttestationV2SignRequest {
     pub runtime_pid: u32,
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 fn guard_attestation_v2_device_payload(
     user_id: &str,
     record: &SecureDeviceKeyRecord,
@@ -624,6 +626,7 @@ fn guard_attestation_v2_device_payload(
     ))
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Result<DeviceSignatureResult, String> {
     let user = normalize_user_id(&request.user_id)?;
     let mut record = load_record(&request.backend_url, &user)?

@@ -2559,7 +2559,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["loader-native:", "FABRIC_LOADER_VERSION", "QUILT_LOADER_VERSION", "FORGE_VERSION", "NEOFORGE_VERSION", '"25580:25565"']:
         if required not in native_compose_0178:
             fail(f"0.17.8 loader-native dedicated server incomplete: {required}")
-    for required in ["RESOLVED_LOADER_VERSION", "certify-vanilla", "NeverLauncherCertification joined the game", "loader-native-server-artifacts.txt", "actual-client-joined-dedicated-loader-server"]:
+    for required in ["RESOLVED_LOADER_VERSION", "certify-vanilla", "NL_Cert_Client joined the game", "loader-native-server-artifacts.txt", "actual-client-joined-dedicated-loader-server"]:
         if required not in native_runner_0178:
             fail(f"0.17.8 loader-native runtime incomplete: {required}")
     for required in ["run-loader-native-e2e.sh", "NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION", "loaderNativeClientJoin"]:

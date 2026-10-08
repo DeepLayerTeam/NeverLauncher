@@ -13,7 +13,7 @@ TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 CLIENT_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-55}"
-PLAYER_USERNAME="NeverLauncherCertification"
+PLAYER_USERNAME="NL_Cert_Client"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[matching-e2e] invalid Minecraft version" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[matching-e2e] invalid Java major" >&2; exit 2; }

@@ -659,7 +659,7 @@ pub async fn certify_vanilla_compatibility(
     let natives_base = root.join("natives");
     let natives_dir = platform_natives_directory(&natives_base).await;
     let context = CompatibilityContext {
-        username: "NeverLauncherCertification".to_string(),
+        username: "NL_Cert_Client".to_string(),
         uuid: "00000000-0000-0000-0000-000000000000".to_string(),
         access_token: "offline".to_string(),
         user_type: "legacy".to_string(),

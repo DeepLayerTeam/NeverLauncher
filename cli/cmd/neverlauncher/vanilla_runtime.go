@@ -498,7 +498,21 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(artifactPath, "/")
 			}
-			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "library", TargetOS: uniqueStrings(applicableTargets)}); err != nil {
+			// Modern Mojang metadata uses native-classified Maven coordinates with
+			// downloads.artifact, rather than downloads.classifiers + natives.
+			// These archives must be extracted into the selected native directory;
+			// treating them as ordinary classpath libraries loses every native.
+			if isClassifiedNativeLibrary(lib.Name) {
+				for _, target := range opts.Targets {
+					if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) {
+						continue
+					}
+					t := target
+					if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTarget: &t}); err != nil {
+						return vanillaInstallResult{}, fmt.Errorf("native library %s: %w", lib.Name, err)
+					}
+				}
+			} else if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "library", TargetOS: uniqueStrings(applicableTargets)}); err != nil {
 				return vanillaInstallResult{}, fmt.Errorf("library %s: %w", lib.Name, err)
 			}
 		}
@@ -1422,6 +1436,11 @@ func nativeClassifierForTarget(natives map[string]string, osName string) string 
 	return ""
 }
 
+func isClassifiedNativeLibrary(name string) bool {
+	parts := strings.Split(strings.TrimSpace(name), ":")
+	return len(parts) >= 4 && strings.HasPrefix(strings.ToLower(parts[3]), "natives-")
+}
+
 func rulesAllowTarget(rules []map[string]any, target vanillaTarget) bool {
 	if len(rules) == 0 {
 		return true
@@ -1507,7 +1526,7 @@ func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
 	}
 	prefix := "natives-" + osToken
 	if !strings.HasPrefix(classifier, prefix) {
-		return true // OS rules remain authoritative for artifacts belonging to another OS.
+		return false // A native archive for another OS is never executable here.
 	}
 	suffix := strings.TrimPrefix(classifier, prefix)
 	switch suffix {
