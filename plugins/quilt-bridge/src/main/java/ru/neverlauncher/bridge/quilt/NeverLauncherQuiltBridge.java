@@ -388,7 +388,8 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
     }
 
     private static int executeMinecraftCommand(MinecraftServer server, String command) {
-        return server.getCommandManager().executeWithPrefix(server.getCommandSource(), command);
+        server.getCommandManager().executeWithPrefix(server.getCommandSource(), command);
+        return 1; // successful submission; failures surface as exceptions
     }
 
     private static String safeUsername(String value) {
@@ -400,6 +401,12 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
     private static String safeLine(String value, int max) {
         String out = value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').replace('\0', ' ').trim();
         return out.length() > max ? out.substring(0, max) : out;
+    }
+
+    private void triggerHeartbeat() {
+        if (!stopping.get() && !heartbeatExecutor.isShutdown()) {
+            heartbeatExecutor.execute(this::heartbeatOnce);
+        }
     }
 
     private void scheduleHeartbeat(long delaySeconds) {

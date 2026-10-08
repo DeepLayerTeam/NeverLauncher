@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -125,9 +124,18 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 	if err != nil {
 		return authSessionRecord{}, "", err
 	}
-	familyID := fmt.Sprintf("rtf-%d", now.UnixNano())
+	// Use the same unpredictable, collision-resistant identifiers as PostgreSQL.
+	// Timestamp-only IDs can alias within the clock's effective resolution.
+	sessionID, err := randomToken("sess")
+	if err != nil {
+		return authSessionRecord{}, "", err
+	}
+	familyID, err := randomToken("rtf")
+	if err != nil {
+		return authSessionRecord{}, "", err
+	}
 	record := authSessionRecord{
-		ID:               fmt.Sprintf("sess-%d", now.UnixNano()),
+		ID:               sessionID,
 		UserID:           user.ID,
 		Email:            user.Email,
 		RoleID:           user.RoleID,

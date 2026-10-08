@@ -32,7 +32,7 @@ require(native, [
     "RESOLVED_LOADER_VERSION", "mutable loader selector is forbidden",
     "fabric-loader", "quilt-loader", "minecraftforge/forge", "neoforged/neoforge",
     "certify-vanilla", "--server 127.0.0.1", "--server-port",
-    "NeverLauncherCertification joined the game", "loader-native-server-artifacts.txt",
+    "NL_Cert_Client joined the game", "loader-native-server-artifacts.txt",
     "exact loader version", "nativeHandshake", "actual-client-joined-dedicated-loader-server",
 ], "loader-native execution")
 

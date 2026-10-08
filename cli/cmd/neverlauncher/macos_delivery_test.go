@@ -4,8 +4,10 @@ import (
 	"archive/zip"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -226,8 +228,25 @@ func TestMacOSProductionEvidenceAdhocAndNotarized0154(t *testing.T) {
 			if err := verifyDeliveryManifest0151(dir, ver); err != nil {
 				t.Fatal(err)
 			}
-			if err := verifyMacOSNotarizationEvidence0154(dir, ver, tc.production); err != nil {
+			// Synthetic Mach-O fixtures exercise manifest, hashing, notarization
+			// and dual-architecture policy without claiming genuine Apple signing.
+			// The real release path still requires native codesign/stapler/spctl.
+			nativeCalls := 0
+			fixtureNativeVerifier := func(packagePath, teamID string) error {
+				if teamID != tc.team || !strings.HasSuffix(packagePath, ".zip") {
+					return fmt.Errorf("unexpected native package verification: %q %q", packagePath, teamID)
+				}
+				nativeCalls++
+				return nil
+			}
+			if err := verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver, tc.production, fixtureNativeVerifier); err != nil {
 				t.Fatal(err)
+			}
+			if tc.production && nativeCalls != 2 {
+				t.Fatalf("production verification must inspect both architectures, got %d", nativeCalls)
+			}
+			if !tc.production && nativeCalls != 0 {
+				t.Fatalf("development verification unexpectedly invoked production native verifier %d times", nativeCalls)
 			}
 			if !tc.production {
 				if err := verifyMacOSNotarizationEvidence0154(dir, ver, true); err == nil {

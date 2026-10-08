@@ -322,8 +322,14 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит выбранный loader artifact %s", loader, selectedEntry.Loader.Maven)
 	}
-	if selectedEntry.Intermediary.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Intermediary.Maven) {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит intermediary artifact %s", loader, selectedEntry.Intermediary.Maven)
+	// Minecraft 26.1+ is distributed unobfuscated. Fabric Meta may use the
+	// sentinel intermediary:0.0.0 rather than a mapping JAR in launcher profiles.
+	// Do not require a fictitious mapping dependency for these releases, but
+	// keep the strict identity check for every actual intermediary artifact.
+	intermediary := selectedEntry.Intermediary.Maven
+	noMappingSentinel := loader == "fabric" && strings.HasPrefix(vanilla.MinecraftVersion, "26.") && intermediary == "net.fabricmc:intermediary:0.0.0"
+	if intermediary != "" && !noMappingSentinel && !profileHasLibrary(profile.Libraries, intermediary) {
+		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит intermediary artifact %s", loader, intermediary)
 	}
 	if profile.Type == "" {
 		profile.Type = "release"

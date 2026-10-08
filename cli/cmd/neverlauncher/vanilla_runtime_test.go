@@ -57,6 +57,9 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	assetHash := sha1hex(asset)
 	target := currentVanillaTarget()
 	classifier := "natives-" + target.OS
+	if target.Arch == "aarch64" {
+		classifier += "-arm64"
+	}
 
 	var base string
 	mux := http.NewServeMux()

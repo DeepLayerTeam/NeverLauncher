@@ -157,6 +157,40 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("invalid installer/processor recovery evidence: %+v", third)
 			}
 
+			// Recovery must also count an interrupted processor that cannot adopt
+			// its output and is successfully re-executed from pinned local inputs.
+			journalRaw, err = os.ReadFile(filepath.FromSlash(third.ProcessorJournalPath))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(journalRaw, &journal); err != nil {
+				t.Fatal(err)
+			}
+			entry = journal.Entries["0"]
+			entry.State = "failed"
+			entry.Recovered = false
+			journal.Entries["0"] = entry
+			journalRaw, _ = json.MarshalIndent(journal, "", "  ")
+			if err := writeAtomicBytes(filepath.FromSlash(third.ProcessorJournalPath), append(journalRaw, '\n'), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Remove(filepath.Join(dir, "libraries", filepath.FromSlash(generatedRel))); err != nil {
+				t.Fatal(err)
+			}
+			fourth, err := installForgeLike(context.Background(), forgeMaterializeOptions{
+				Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, ClientDir: dir,
+				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar", VersionManifest: base + "/manifest.json",
+				AssetBaseURL: base + "/assets", LibraryBaseURL: base + "/libraries",
+				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true,
+				LoaderCacheOnly: true, HTTPClient: server.Client(),
+			})
+			if err != nil {
+				t.Fatalf("interrupted processor rerun failed: %v", err)
+			}
+			if fourth.ProcessorRecovered != 1 || fourth.ProcessorRan != 1 || fourth.ProcessorSkipped != 0 {
+				t.Fatalf("rerun of interrupted processor must be genuine recovery: %+v", fourth)
+			}
+
 			packagePath := filepath.Join(t.TempDir(), "package.json")
 			args := []string{
 				"--minecraft", minecraftVersion, "--loader-version", loaderVersion, "--client-dir", dir, "--java", javaPath,

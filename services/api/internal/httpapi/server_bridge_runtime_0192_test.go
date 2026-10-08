@@ -105,7 +105,7 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 	replacement := base
 	replacement.RuntimeID = strings.Repeat("2", 64)
 	replacement.IdentityDigest = strings.Repeat("c", 64)
-	replacement.StartedAt = time.Now().UTC()
+	replacement.StartedAt = base.StartedAt.Add(30 * time.Second)
 	replacement.ProcessID = 1002
 	repl, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, replacement)
 	if err != nil || repl.Transition != "replacement" || !repl.ReplacementDetected || repl.PreviousRuntimeID != base.RuntimeID || repl.RuntimeEpoch != 2 {
@@ -127,7 +127,7 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 	restart := base
 	restart.RuntimeID = strings.Repeat("3", 64)
 	restart.IdentityDigest = strings.Repeat("d", 64)
-	restart.StartedAt = time.Now().UTC()
+	restart.StartedAt = replacement.StartedAt.Add(30 * time.Second)
 	restart.ProcessID = 1003
 	next, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, restart)
 	if err != nil || next.Transition != "restart" || next.ReplacementDetected || next.PreviousRuntimeID != replacement.RuntimeID || next.RuntimeEpoch != 3 {

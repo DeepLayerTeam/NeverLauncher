@@ -563,6 +563,13 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 }
 
 func verifyMacOSNotarizationEvidence0154(dir, ver string, requireNotarized bool) error {
+	return verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver, requireNotarized, verifyMacOSNativePackage0154)
+}
+
+// Keep the production verifier hard-wired to the real Apple tooling. Only
+// synthetic fixture tests inject a verifier, since fabricated Mach-O bytes
+// cannot carry a real Developer ID signature or notarization ticket.
+func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requireNotarized bool, verifyNative func(string, string) error) error {
 	evidence, err := readMacOSNotarizationEvidence0154(dir)
 	if err != nil {
 		return err
@@ -654,7 +661,7 @@ func verifyMacOSNotarizationEvidence0154(dir, ver string, requireNotarized bool)
 			if !macOSNotaryIDRE0154.MatchString(target.Package.NotarySubmissionID) || target.Package.NotaryStatus != "Accepted" || !target.Package.Stapled || !target.Package.StaplerValidated || !target.Package.GatekeeperAccepted || !target.Package.BundleCodeSignVerified {
 				return fmt.Errorf("macOS %s package lacks accepted notarization/stapling/Gatekeeper evidence", target.Architecture)
 			}
-			if err := verifyMacOSNativePackage0154(filepath.Join(dir, target.Package.Name), evidence.TeamID); err != nil {
+			if err := verifyNative(filepath.Join(dir, target.Package.Name), evidence.TeamID); err != nil {
 				return fmt.Errorf("macOS %s native verification: %w", target.Architecture, err)
 			}
 		} else {

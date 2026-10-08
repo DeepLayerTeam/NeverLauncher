@@ -1655,6 +1655,10 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		key := processorJournalKey(index)
 		entry, hasEntry := journal.Entries[key]
 		entryMatches := hasEntry && entry.IdentitySHA256 == identity
+		// An interrupted processor may either leave verified outputs for adoption
+		// or require a clean rerun. Both are genuine recovery paths; count the
+		// latter only after its rerun and output verification succeed.
+		interrupted := entryMatches && (entry.State == "running" || entry.State == "failed")
 		allReady, err := processorOutputsMatch(pc, processor)
 		if err != nil {
 			return stats, fmt.Errorf("processor[%d] outputs: %w", index, err)
@@ -1733,12 +1737,15 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, "expected outputs were not produced")
 			return stats, fmt.Errorf("processor[%d] не создал ожидаемые outputs", index)
 		}
-		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, "completed", false, "")
+		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, "completed", interrupted, "")
 		if err != nil {
 			return stats, fmt.Errorf("processor[%d] journal commit: %w", index, err)
 		}
 		stats.JournalSHA256 = journalSHA
 		stats.Ran++
+		if interrupted {
+			stats.Recovered++
+		}
 	}
 	if stats.JournalSHA256 == "" {
 		sha, err := persistForgeProcessorJournal(pc, journal)

@@ -10,7 +10,7 @@
   "depends": {
     "quilt_loader": ">=0.26.0",
     "minecraft": "~1.21.1",
-    "quilted_fabric_api": "*",
+    "fabric-api": "*",
     "java": ">=21"
   },
   "custom": {"neverlauncher": {"platform": "quilt", "serverOnly": true, "clientModRequired": false, "universalAdapter": true}}
