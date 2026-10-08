@@ -21,12 +21,12 @@ type authSessionPostgres111 struct {
 	db *sql.DB
 }
 
-// ConfigureAuthCore111 switches authentication state from process-local development
-// storage to normalized PostgreSQL tables. PostgreSQL is mandatory whenever the
-// repository itself is persistent; memory mode remains available only for dev/tests.
+// ConfigureAuthCore111 переключается аутентификация состояние из локальный для процесса разработка
+// хранилище к нормализован PostgreSQL таблица. PostgreSQL является обязательный whenever 
+// репозиторий сам является постоянный; память режим остаётся доступный только для dev/tests.
 func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil {
-		return errors.New("auth core runtime state не инициализирован")
+		return errors.New("аутентификация ядро среда выполнения состояние не инициализирован")
 	}
 	if isMemoryRepository950(cfg.RepositoryDriver) {
 		return nil
@@ -36,11 +36,11 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		driver = "pgx"
 	}
 	if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-		return errors.New("auth core 0.11.1 требует NEVERLAUNCHER_DATABASE_DSN")
+		return errors.New("аутентификация ядро 0.11.1 требует NEVERLAUNCHER_DATABASE_DSN")
 	}
 	db, err := sql.Open(driver, cfg.DatabaseDSN)
 	if err != nil {
-		return fmt.Errorf("auth core postgres open: %w", err)
+		return fmt.Errorf("аутентификация ядро PostgreSQL открытый: %w", err)
 	}
 	db.SetMaxOpenConns(20)
 	db.SetMaxIdleConns(10)
@@ -49,17 +49,17 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
-		return fmt.Errorf("auth core postgres ping: %w", err)
+		return fmt.Errorf("аутентификация ядро PostgreSQL ping: %w", err)
 	}
-	// Fail closed if migrations were disabled or did not create the normalized schema.
+	// Отказ с блокировкой если миграция были отключённый или сделал не создавать нормализован схема.
 	for _, table := range []string{"auth_sessions", "refresh_token_families", "refresh_tokens", "mfa_methods", "recovery_codes", "auth_events", "webauthn_credentials", "webauthn_challenges", "mfa_policies"} {
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("auth core schema check %s: %w", table, err)
+				return fmt.Errorf("аутентификация ядро схема проверка %s: %w", table, err)
 			}
-			return fmt.Errorf("auth core schema table %s отсутствует; примените database migrations", table)
+			return fmt.Errorf("аутентификация ядро схема таблица %s отсутствует; примените база данных миграция", table)
 		}
 	}
 	for _, column := range []string{"last_ip", "last_user_agent", "risk_state", "risk_reasons", "risk_updated_at", "device_renamed_at"} {
@@ -67,9 +67,9 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_sessions' AND column_name=$1)`, column).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("session management 2.0 schema check %s: %w", column, err)
+				return fmt.Errorf("сессия управление 2.0 схема проверка %s: %w", column, err)
 			}
-			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0008_session_management_2_0118.sql", column)
+			return fmt.Errorf("аутентификация_сессии.%s отсутствует; примените миграция 0008_сессия_управление_2_0118.SQL", column)
 		}
 	}
 	for _, column := range []string{"binding_epoch", "risk_score", "risk_action", "risk_evaluated_at"} {
@@ -77,9 +77,9 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_sessions' AND column_name=$1)`, column).Scan(&exists); err != nil || !exists {
 			db.Close()
 			if err != nil {
-				return fmt.Errorf("session/device risk 0.12.6 schema check %s: %w", column, err)
+				return fmt.Errorf("session/device риск 0.12.6 схема проверка %s: %w", column, err)
 			}
-			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0015_session_device_risk_0126.sql", column)
+			return fmt.Errorf("аутентификация_сессии.%s отсутствует; примените миграция 0015_сессия_устройство_риск_0126.SQL", column)
 		}
 	}
 	state.AuthSessions.persistent = &authSessionPostgres111{db: db}
@@ -462,8 +462,8 @@ func scanSession111(row rowScanner111) (authSessionRecord, error) {
 	return rec, nil
 }
 
-// stableSessionSort111 is used by tests/compatibility callers that aggregate rows
-// from more than one backend.
+// stableSessionSort111 является используется через tests/compatibility вызывающая сторона тот агрегат строки
+// из больше чем один серверная часть.
 func stableSessionSort111(items []authSessionRecord) {
 	sort.Slice(items, func(i, j int) bool { return items[i].LastSeenAt.After(items[j].LastSeenAt) })
 }

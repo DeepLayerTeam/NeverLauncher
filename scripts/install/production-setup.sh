@@ -74,4 +74,4 @@ cat > "${REPORT}" <<JSON
 }
 JSON
 
-echo "[NeverLauncher] production first-run report: ${REPORT}"
+echo "[NeverLauncher] рабочий первый запуск отчёт: ${REPORT}"

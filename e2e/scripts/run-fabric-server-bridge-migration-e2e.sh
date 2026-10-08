@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[fabric-bridge-migration] materialize exact 0.14.5 database through migration 0025\n'
+printf '[Fabric-мост-миграция] материализовать точный 0.14.5 база данных через миграция 0025\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -88,7 +88,7 @@ shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0026_fabric_server_bridge_0146'")"
 [[ "$target_sealed" == "true" ]] || { echo "Fabric ServerBridge migration is not sealed: 0026_fabric_server_bridge_0146" >&2; exit 1; }
 
-printf '[fabric-bridge-migration] verify existing node preserved and Fabric kind accepted\n'
+printf '[Fabric-мост-миграция] проверять существующий узел preserved и Fabric тип принят\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='paper-before-0146'")" == "paper" ]]
 fabric_fingerprint="$(printf 'fabric-0146' | sha256sum | awk '{print $1}')"
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -v fingerprint="$fabric_fingerprint" <<'SQL' >/dev/null
@@ -111,7 +111,7 @@ INSERT INTO server_bridge_nodes_v2(
 );
 SQL
 then
-  echo '[fabric-bridge-migration] invalid Fabric kind bypassed PostgreSQL constraint' >&2
+  echo '[Fabric-мост-миграция] недопустимый Fabric тип обход PostgreSQL ограничение' >&2
   exit 1
 fi
 
@@ -121,4 +121,4 @@ fabric_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$fabric_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingNodePreserved:true,fabricKindAccepted:true,invalidKindRejected:true,fabricNodeCount:$count}' \
   > "$RESULT_DIR/fabric-server-bridge-migration.json"
-printf '[fabric-bridge-migration] PASS 0.14.5 -> 0.14.6 Fabric Server Bridge schema semantics\n'
+printf '[Fabric-мост-миграция] PASS 0.14.5 -> 0.14.6 Fabric Сервер Мост схема семантика\n'

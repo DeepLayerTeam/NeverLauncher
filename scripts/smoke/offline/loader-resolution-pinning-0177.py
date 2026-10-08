@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 7):
-    raise SystemExit(f"Loader Resolution & Pinning requires VERSION>=0.17.7, got {version}")
+    raise SystemExit(f"Загрузчик Разрешение и Закрепление требует VERSION>=0.17.7, получил {version}")
 
 def read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
@@ -15,7 +15,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: missing {missing}")
+        raise SystemExit(f"{name}: отсутствующий {missing}")
 
 resolution = read("cli/cmd/neverlauncher/loader_resolution.go")
 require(resolution, [
@@ -84,6 +84,6 @@ require(tests, [
 workflow = read(".github/workflows/compatibility.yml")
 for loader in ("fabric", "quilt", "forge", "neoforge"):
     if f"e2e/runtime/{loader}-resolution-lock.json" not in workflow:
-        raise SystemExit(f"compatibility workflow does not archive {loader} resolution lock")
+        raise SystemExit(f"совместимость процесс делает не архив {loader} разрешение блокировка")
 
-print("Loader Resolution & Pinning 0.17.7 gate: OK (immutable concrete loader + upstream/payload/profile SHA-256 + lock replay reproducibility)")
+print("Загрузчик Разрешение и Закрепление 0.17.7 контроль: OK (неизменяемый конкретный загрузчик + upstream/payload/profile SHA-256 + блокировка повторное воспроизведение reproducibility)")

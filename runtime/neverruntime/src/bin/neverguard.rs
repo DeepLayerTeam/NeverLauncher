@@ -48,7 +48,7 @@ fn main() -> ExitCode {
     {
         Ok(runtime) => runtime,
         Err(err) => {
-            eprintln!("neverguard: failed to initialize async runtime: {err}");
+            eprintln!("neverguard: ошибка к initialize асинхронный среда выполнения: {err}");
             return ExitCode::FAILURE;
         }
     };
@@ -65,17 +65,17 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         #[cfg(windows)]
         println!(
-            "NeverGuard {}\nUsage: neverguard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "NeverGuard {}\nUsage: neverguard --pipe <локальный именованный pipe> --родительский-PID <PID> [--защита-профиль аудит|compat|агрессивный]\nBootstrap секрет: точно 32 сырой байты на стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "linux")]
         println!(
-            "NeverGuard {}\nUsage: neverguard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "NeverGuard {}\nUsage: neverguard --сокет <закрытый unix сокет> --родительский-PID <PID>\nBootstrap секрет: точно 32 сырой байты на стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "macos")]
         println!(
-            "NeverGuard {}\nUsage: neverguard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "NeverGuard {}\nUsage: neverguard --сокет <закрытый unix сокет> --родительский-PID <PID>\nBootstrap секрет: точно 32 сырой байты на стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         return Ok(());
@@ -122,7 +122,7 @@ fn windows_protection_profile(args: &[String]) -> Result<WindowsProtectionProfil
 }
 
 fn required_flag(args: &[String], name: &str) -> Result<String, String> {
-    optional_flag(args, name)?.ok_or_else(|| format!("required argument {name} is missing"))
+    optional_flag(args, name)?.ok_or_else(|| format!("обязательный argument {name} является отсутствующий"))
 }
 
 fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> {
@@ -132,9 +132,9 @@ fn optional_flag(args: &[String], name: &str) -> Result<Option<String>, String> 
         if args[index] == name {
             let value = args
                 .get(index + 1)
-                .ok_or_else(|| format!("argument {name} requires a value"))?;
+                .ok_or_else(|| format!("argument {name} требует value"))?;
             if found.replace(value.clone()).is_some() {
-                return Err(format!("argument {name} must be specified only once"));
+                return Err(format!("argument {name} должен быть specified только один раз"));
             }
             index += 2;
         } else {

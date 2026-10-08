@@ -1,6 +1,6 @@
-# NeverExtensions Trust, Recovery & Certification — 0.20.12
+# NeverExtensions Доверие, Восстановление и Сертификация — 0.20.12
 
-The required certification target is Linux, Windows and macOS, enforced by `.github/workflows/neverextensions-trust-recovery-02012.yml`.
-The checked-in `trust-recovery-targets-02012.json` defines the required platform set and checks; it intentionally contains no manually editable PASS state.
+ обязательный сертификация цель является Linux, Windows и macOS, применять через `.github/workflows/neverextensions-trust-recovery-02012.yml`.
+ проверен-в `trust-recovery-targets-02012.json` defines обязательный платформа задать и проверяет; это намеренно содержит нет manually editable PASS состояние.
 
-Each platform runner builds the Backend and CLI and executes trust-policy, revoked-key, quarantine, malicious-package, crash-loop kill-switch and migration tests. The aggregate job rejects missing/non-PASS evidence and publishes both JSON and Markdown public compatibility matrices as CI artifacts. This prevents a release from presenting a platform as certified without runner-produced evidence.
+Каждый платформа исполнитель собирает Серверная часть и CLI и executes доверие-политика, отозванный-ключ, карантин, malicious-пакет, сбой-loop kill-переключение и миграция тесты. агрегат задача отклоняет missing/non-PASS свидетельство и публикует оба JSON и Markdown публичный совместимость matrices как CI артефакты. Этот предотвращает релиз из presenting платформа как сертифицированный без исполнитель-созданный свидетельство.

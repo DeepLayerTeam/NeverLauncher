@@ -132,7 +132,7 @@ func buildWindowsEvidenceFixture0152(t *testing.T, dir, ver string, signed bool)
 		for component, name := range expected {
 			payload := append([]byte(nil), pe...)
 			payload = append(payload, []byte(component)...)
-			// Appending data after the certificate table is legal for this parser fixture and keeps component hashes distinct.
+			// Appending данные после сертификат таблица является legal для этот parser фикстура и сохраняет компонент хеширует отдельный.
 			if err := os.WriteFile(filepath.Join(dir, name), payload, 0o755); err != nil {
 				t.Fatal(err)
 			}

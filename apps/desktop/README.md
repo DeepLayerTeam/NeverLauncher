@@ -1,6 +1,6 @@
-# NeverLauncher Desktop
+# NeverLauncher Настольное приложение
 
-Desktop Launcher — рабочий Tauri/React-клиент NeverLauncher поверх NeverRuntime.
+Настольное приложение Лаунчер — рабочий Tauri/React-клиент NeverLauncher поверх NeverRuntime.
 
 ## Основной сценарий
 
@@ -10,9 +10,9 @@ Desktop Launcher — рабочий Tauri/React-клиент NeverLauncher по�
      -> Yggdrasil/authlib-injector и/или сессия ServerBridge
 ```
 
-Учётные данные Never session хранятся в native OS secure storage. Для device identity Desktop сначала пытается создать non-exportable P-256 key в platform HSM (Secure Enclave/TPM); если hardware backend недоступен, используется совместимый Ed25519 key в native OS secure storage. Private key создаётся и используется только внутри Tauri: React получает public fingerprint/binding/provider и подпись конкретного Backend challenge, но не private key material. После login/restore Desktop автоматически регистрирует либо повторно подтверждает trusted device; для P-256/hardware затем выполняется отдельный `challenge-response-v1` attestation с 12-часовой freshness. Эта ceremony подтверждает владение зарегистрированным hardware key, но не заявляет vendor TPM/Secure Enclave provenance.
+Учётные данные Никогда сессия хранятся в нативный OS защищённый хранилище. Для устройство идентичность Настольное приложение сначала пытается создать неэкспортируемый P-256 ключ в платформа HSM (Защищённый Анклав/TPM); если оборудование серверная часть недоступен, используется совместимый Ed25519 ключ в нативный OS защищённый хранилище. Закрытый ключ создаётся и используется только внутри Tauri: React получает публичный fingerprint/binding/provider и подпись конкретного Серверная часть запрос, но не закрытый ключ материал. После login/restore Настольное приложение автоматически регистрирует либо повторно подтверждает доверенный устройство; для P-256/hardware затем выполняется отдельный `challenge-response-v1` аттестация с 12-часовой актуальность. Эта процедура подтверждает владение зарегистрированным аппаратный ключ, но не заявляет поставщик TPM/Защищённый Анклав происхождение.
 
-Перед запуском Desktop получает отдельный Minecraft access token/UUID от Backend и передаёт их NeverRuntime; token не пишется в command preview. Проверка manifest signature, SHA-256 и pinned Ed25519 public key выполняется fail-closed. Authlib-injector подключается только если его JAR присутствует в подписанном manifest.
+Перед запуском Настольное приложение получает отдельный Minecraft токен доступа/UUID от Серверная часть и передаёт их NeverRuntime; токен не пишется в команда preview. Проверка манифест подпись, SHA-256 и закреплённый Ed25519 открытый ключ выполняется отказ с блокировкой. Authlib-injector подключается только если его JAR присутствует в подписанном манифест.
 
 ## Проверка
 
@@ -22,7 +22,7 @@ npm run build
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-В составе общего preflight:
+В составе общего предварительная проверка:
 
 ```bash
 NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh

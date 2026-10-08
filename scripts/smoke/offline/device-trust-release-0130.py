@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[3]
 def read(p): return (ROOT/p).read_text(encoding='utf-8')
 def req(text, needles, label):
     missing=[x for x in needles if x not in text]
-    if missing: raise SystemExit(f"{label} missing: {', '.join(missing)}")
+    if missing: raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
 version=read('VERSION').strip()
 core=version.split('-',1)[0].split('+',1)[0]
 try: version_tuple=tuple(int(x) for x in core.split('.'))
@@ -26,7 +26,7 @@ req(e2e,['release-capabilities.json','release-readiness.json','deviceTrustReleas
 targets=json.loads(read('device-trust/targets.json'))
 if targets.get('productVersion')!=version: raise SystemExit(f'Device Trust targets version mismatch: {targets.get("productVersion")} != {version}')
 for t in targets['targets']:
-    if 'deviceTrustRelease0130' not in t.get('requiredChecks',[]): raise SystemExit(f"target {t.get('id')} missing deviceTrustRelease0130")
+    if 'deviceTrustRelease0130' not in t.get('requiredChecks',[]): raise SystemExit(f"цель {t.get('id')} отсутствующий deviceTrustRelease0130")
 build=read('scripts/release/build-release.sh')
 req(build,['NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE','--device-trust-matrix','Publish-check Minecraft Compatibility + Device Trust Release'], 'release pipeline')
 subprocess.run(['go','test','./cmd/neverlauncher'],cwd=ROOT/'cli',check=True)

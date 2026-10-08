@@ -54,10 +54,10 @@ func (p *securityPostgres111) saveMFA(userID string, rec mfaRecord) error {
 	pending := encryptString950(p.secret, rec.PendingSecret)
 	active := encryptString950(p.secret, rec.ActiveSecret)
 	if rec.PendingSecret != "" && pending == "" {
-		return errors.New("не удалось зашифровать pending TOTP secret")
+		return errors.New("не удалось зашифровать ожидающий TOTP секрет")
 	}
 	if rec.ActiveSecret != "" && active == "" {
-		return errors.New("не удалось зашифровать active TOTP secret")
+		return errors.New("не удалось зашифровать активный TOTP секрет")
 	}
 	methodID := "mfa-totp-" + userID
 	_, err := p.db.ExecContext(ctx, `INSERT INTO mfa_methods(id,user_id,method_type,status,pending_secret_ciphertext,active_secret_ciphertext,created_at,updated_at) VALUES($1,$2,'totp',$3,$4,$5,now(),now()) ON CONFLICT(user_id,method_type) DO UPDATE SET status=EXCLUDED.status,pending_secret_ciphertext=EXCLUDED.pending_secret_ciphertext,active_secret_ciphertext=EXCLUDED.active_secret_ciphertext,updated_at=now()`, methodID, userID, status, pending, active)
@@ -123,7 +123,7 @@ func (p *securityPostgres111) verifySecondFactor(userID, totp, recovery string) 
 
 func (p *securityPostgres111) generateRecoveryCodes(userID string, count int) ([]string, error) {
 	if count <= 0 {
-		return nil, errors.New("recovery code count должен быть > 0")
+		return nil, errors.New("восстановление код счётчик должен быть > 0")
 	}
 	rec, err := p.loadMFA(userID)
 	if err != nil {
@@ -194,7 +194,7 @@ func (p *securityPostgres111) importLegacyMFA(state securityState950) error {
 	for userID, legacy := range state.MFA {
 		rec := mfaRecord{PendingSecret: decryptString950(p.secret, legacy.PendingSecretEncrypted), ActiveSecret: decryptString950(p.secret, legacy.ActiveSecretEncrypted), Enabled: legacy.Enabled, Recovery: legacy.Recovery, UpdatedAt: legacy.UpdatedAt}
 		if err := p.saveMFA(userID, rec); err != nil {
-			return fmt.Errorf("migrate MFA %s: %w", userID, err)
+			return fmt.Errorf("мигрировать MFA %s: %w", userID, err)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 		tx, err := p.db.BeginTx(ctx, nil)
@@ -228,7 +228,7 @@ func normalizeRecoveryCode111(token string) string {
 }
 
 func normalizeProvidedRecoveryCode111(code string) string {
-	// Preserve the exact 0.10.x normalization so existing codes continue to work.
+	// Preserve точный 0.10.x normalization так существующий код continue к работа.
 	return stringsToUpperReplaceUnderscore111(code)
 }
 
@@ -256,13 +256,13 @@ func (p *securityPostgres111) ensurePasskeyMethod117(userID string, enabled bool
 
 func (p *securityPostgres111) generateRecoveryCodesForMethod117(userID string, count int, methodID string) ([]string, error) {
 	if count <= 0 {
-		return nil, errors.New("recovery code count должен быть > 0")
+		return nil, errors.New("восстановление код счётчик должен быть > 0")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var active bool
 	if err := p.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM mfa_methods WHERE id=$1 AND user_id=$2 AND status='enabled')`, methodID, userID).Scan(&active); err != nil || !active {
-		return nil, errors.New("MFA method не активен")
+		return nil, errors.New("MFA метод не активен")
 	}
 	tx, err := p.db.BeginTx(ctx, nil)
 	if err != nil {

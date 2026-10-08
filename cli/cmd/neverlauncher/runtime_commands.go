@@ -16,7 +16,7 @@ import (
 
 func handleRuntime(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, vanilla-server, fabric-install, fabric-package, quilt-install, quilt-package, forge-install, forge-package, neoforge-install, neoforge-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
+		return errors.New("доступные runtime-подкоманды: Vanilla-установка, Vanilla-пакет, Vanilla-сервер, Fabric-установка, Fabric-пакет, Quilt-установка, Quilt-пакет, Forge-установка, Forge-пакет, NeoForge-установка, NeoForge-пакет, разрешать, inspect, ресурсы, библиотеки, Java-проверка, запускать-plan, проверять, разрешатель, матрица, метаданные-политика, fetch-метаданные, разрешать-версия, разрешать-загрузчик, сборка-путь классов, сборка-запускать-plan, проверять-запускать-plan, parity, parity-smoke, сборка-загрузка-plan, проверять-parity-plan")
 	}
 	switch args[0] {
 	case "vanilla-install":
@@ -48,7 +48,7 @@ func handleRuntime(args []string) error {
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		out := flagValue(args, "--output", "minecraft-runtime.json")
 		if versionJSON == "" {
-			return errors.New("runtime resolve требует --version-json; fallback runtime plan в текущей версии запрещён")
+			return errors.New("среда выполнения разрешать требует --версия-JSON; резервный вариант среда выполнения plan в текущей версии запрещён")
 		}
 		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
 		if err != nil {
@@ -61,7 +61,7 @@ func handleRuntime(args []string) error {
 		return writeJSONFile(out, plan)
 	case "inspect":
 		if len(args) < 2 {
-			return errors.New("runtime inspect требует путь к runtime.json")
+			return errors.New("среда выполнения inspect требует путь к среда выполнения.JSON")
 		}
 		data, err := os.ReadFile(args[1])
 		if err != nil {
@@ -115,7 +115,7 @@ func handleRuntime(args []string) error {
 		}
 		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "javaPath": javaPath, "status": status, "recommendedMajorVersion": 21, "supportedMajorVersions": []int{8, 16, 17, 21}, "checks": []string{"path", "major-version", "executable-bit", "launch-compatibility"}})
 		if status != "available" {
-			return errors.New("Java runtime не найден по указанному пути")
+			return errors.New("Java среда выполнения не найден по указанному пути")
 		}
 		return nil
 	case "launch-plan":
@@ -172,7 +172,7 @@ func handleRuntime(args []string) error {
 		return handleRuntimeVerifyLaunchPlan850(args[1:])
 	case "verify":
 		if len(args) < 2 {
-			return errors.New("runtime verify требует путь к launch-plan.json")
+			return errors.New("среда выполнения проверять требует путь к запускать-plan.JSON")
 		}
 		data, err := os.ReadFile(args[1])
 		if err != nil {
@@ -190,7 +190,7 @@ func handleRuntime(args []string) error {
 		}
 		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "subject": args[1], "valid": len(errs) == 0, "errors": errs, "checks": runtimeChecks()})
 		if len(errs) > 0 {
-			return errors.New("launch plan не прошёл проверку")
+			return errors.New("запускать plan не прошёл проверку")
 		}
 		return nil
 	default:
@@ -226,10 +226,10 @@ type MojangLibrary struct {
 	Natives   map[string]string      `json:"natives,omitempty"`
 	Rules     []map[string]any       `json:"rules,omitempty"`
 	Extract   map[string]any         `json:"extract,omitempty"`
-	// Forge <=1.12.2 versionInfo uses the legacy lowercase clientreq/serverreq
-	// switches and a list of acceptable SHA-1 checksums instead of Mojang's
-	// downloads.artifact object. Keep them in the shared model so the legacy
-	// installer can be materialized without rewriting its runtime metadata.
+	// Forge <=1.12.2 versionInfo использует устаревший lowercase clientreq/serverreq
+	// переключается и список acceptable SHA-1 контрольные суммы вместо этого Mojang's
+	// загрузка.артефакт объект. Сохранять их в общий модель так устаревший
+	// установщик может быть материализовать без rewriting его среда выполнения метаданные.
 	ClientReq *bool    `json:"clientreq,omitempty"`
 	ServerReq *bool    `json:"serverreq,omitempty"`
 	Checksums []string `json:"checksums,omitempty"`
@@ -487,7 +487,7 @@ func handleRuntimeFetchMetadata850(args []string) error {
 	cacheDir := flagValue(args, "--cache-dir", filepath.Join(".neverlauncher", "metadata"))
 	out := flagValue(args, "--output", "")
 	if versionJSON == "" && manifestPath == "" {
-		return errors.New("runtime fetch-metadata требует --version-json или --version-manifest")
+		return errors.New("среда выполнения fetch-метаданные требует --версия-JSON или --версия-манифест")
 	}
 	result := map[string]any{"schemaVersion": "0.8.8", "toolVersion": version, "minecraftVersion": minecraftVersion, "cacheDir": cacheDir, "status": "cached", "files": map[string]string{}}
 	if err := os.MkdirAll(filepath.Join(cacheDir, "versions", minecraftVersion), 0o755); err != nil {
@@ -500,7 +500,7 @@ func handleRuntimeFetchMetadata850(args []string) error {
 		}
 		mv, ok := findMojangManifestVersion(manifest, minecraftVersion)
 		if !ok {
-			return fmt.Errorf("версия %s не найдена в version manifest", minecraftVersion)
+			return fmt.Errorf("версия %s не найдена в версия манифест", minecraftVersion)
 		}
 		result["manifestEntry"] = mv
 		if mv.URL != "" {
@@ -545,7 +545,7 @@ func handleRuntimeResolveVersion850(args []string) error {
 	versionJSON := flagValue(args, "--version-json", "")
 	out := flagValue(args, "--output", "")
 	if versionJSON == "" {
-		return errors.New("runtime resolve-version требует --version-json")
+		return errors.New("среда выполнения разрешать-версия требует --версия-JSON")
 	}
 	var vf MojangVersionFile
 	if err := loadJSONSource(versionJSON, &vf); err != nil {
@@ -619,7 +619,7 @@ func handleRuntimeVerifyLaunchPlan850(args []string) error {
 		path = flagValue(args, "--plan", "")
 	}
 	if path == "" {
-		return errors.New("runtime verify-launch-plan требует путь к launch-plan.json или --plan")
+		return errors.New("среда выполнения проверять-запускать-plan требует путь к запускать-plan.JSON или --plan")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -633,7 +633,7 @@ func handleRuntimeVerifyLaunchPlan850(args []string) error {
 	report["subject"] = path
 	printJSON(report)
 	if report["valid"] != true {
-		return errors.New("launch plan не прошёл строгую проверку 0.8.8")
+		return errors.New("запускать plan не прошёл строгую проверку 0.8.8")
 	}
 	return nil
 }
@@ -666,7 +666,7 @@ func resolveVersionSummary850(vf MojangVersionFile) map[string]any {
 
 func productLaunchPlan850(minecraftVersion, loader, loaderVersion, username, gameDir, versionJSON, assetIndexPath, metadataPath, installerProfile string) (map[string]any, error) {
 	if versionJSON == "" {
-		return nil, errors.New("product runtime 0.8.8 требует --version-json; fallback launch plan запрещён")
+		return nil, errors.New("продукт среда выполнения 0.8.8 требует --версия-JSON; резервный вариант запускать plan запрещён")
 	}
 	if loader == "" {
 		loader = "vanilla"
@@ -898,7 +898,7 @@ func resolveAssetIndex(index MojangAssetIndex) map[string]any {
 
 func realRuntimePlan(minecraftVersion, loader, username, gameDir, versionJSON, assetIndexPath string) (map[string]any, error) {
 	if versionJSON == "" {
-		return nil, errors.New("Compatibility Engine требует version.json; fallback launch plan запрещён")
+		return nil, errors.New("Совместимость Движок требует версия.JSON; резервный вариант запускать plan запрещён")
 	}
 	var vf MojangVersionFile
 	if err := loadJSONSource(versionJSON, &vf); err != nil {

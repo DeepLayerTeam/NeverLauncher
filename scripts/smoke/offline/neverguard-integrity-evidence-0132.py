@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"недопустимый VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 2):
-    raise SystemExit(f"NeverGuard integrity evidence gate requires >=0.13.2, got {version}")
+    raise SystemExit(f"NeverGuard целостность свидетельство контроль требует >=0.13.2, получил {version}")
 
 cargo = read("runtime/neverruntime/Cargo.toml")
 require(cargo, [
@@ -97,9 +97,9 @@ require(integration, [
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "neverguard-integrity-evidence-0132.py" not in ci:
-    raise SystemExit("NeverGuard 0.13.2 integrity gate is not wired into CI")
+    raise SystemExit("NeverGuard 0.13.2 целостность контроль является не wired в CI")
 if "neverguard-integrity-evidence-0132.py" not in preflight:
-    raise SystemExit("NeverGuard 0.13.2 integrity gate is not wired into release preflight")
+    raise SystemExit("NeverGuard 0.13.2 целостность контроль является не wired в релиз предварительная проверка")
 
 security = read("SECURITY.md")
 require(security, [
@@ -110,4 +110,4 @@ require(security, [
     "не является server-verifiable attestation",
 ], "NeverGuard integrity security boundary")
 
-print(f"[NeverLauncher] NeverGuard Windows Integrity Evidence v1 gate OK: {version}")
+print(f"[NeverLauncher] NeverGuard Windows Целостность Свидетельство v1 контроль OK: {version}")

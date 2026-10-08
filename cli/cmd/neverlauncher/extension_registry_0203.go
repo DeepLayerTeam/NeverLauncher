@@ -20,15 +20,15 @@ import (
 
 func handleExtensionRegistry0203(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension registry-подкоманды: publishers, publisher-add, key-add, keys, search, list, show, publish, yank, channel-set, pull, install")
+		return errors.New("доступные реестр расширений-подкоманды: издатели, издатель-добавлять, ключ-добавлять, ключи, search, список, показывать, публикация, yank, канал-задать, pull, установка")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("extension registry требует --backend <url>")
+		return errors.New("реестр расширений требует --серверная часть <URL>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension registry требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("реестр расширений требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -41,7 +41,7 @@ func handleExtensionRegistry0203(args []string) error {
 	case "publisher-add":
 		id, name := strings.TrimSpace(flagValue(args, "--id", "")), strings.TrimSpace(flagValue(args, "--name", ""))
 		if id == "" || name == "" {
-			return errors.New("publisher-add требует --id и --name")
+			return errors.New("издатель-добавлять требует --ID и --имя")
 		}
 		payload, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-registry/publishers", map[string]any{"id": id, "name": name, "active": true}, token)
 		if err != nil {
@@ -51,7 +51,7 @@ func handleExtensionRegistry0203(args []string) error {
 	case "key-add":
 		publisher, keyPath := strings.TrimSpace(flagValue(args, "--publisher", "")), strings.TrimSpace(flagValue(args, "--public-key", ""))
 		if publisher == "" || keyPath == "" {
-			return errors.New("key-add требует --publisher и --public-key")
+			return errors.New("ключ-добавлять требует --издатель и --публичный-ключ")
 		}
 		publicKey, err := loadEd25519PublicKey(keyPath)
 		if err != nil {
@@ -65,7 +65,7 @@ func handleExtensionRegistry0203(args []string) error {
 	case "keys":
 		publisher := strings.TrimSpace(flagValue(args, "--publisher", ""))
 		if publisher == "" {
-			return errors.New("keys требует --publisher")
+			return errors.New("ключи требует --издатель")
 		}
 		payload, err := httpJSONWithAuth(http.MethodGet, backend+"/api/v1/admin/extension-registry/publishers/"+url.PathEscape(publisher)+"/keys", nil, token)
 		if err != nil {
@@ -102,7 +102,7 @@ func handleExtensionRegistry0203(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "show":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("show требует extension id или id@version")
+			return errors.New("показывать требует расширение ID или ID@версия")
 		}
 		id, versionValue, hasVersion := parseRegistryCoordinate0203(args[1])
 		endpoint := backend + "/api/v1/admin/extension-registry/extensions/" + url.PathEscape(id)
@@ -116,16 +116,16 @@ func handleExtensionRegistry0203(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "publish":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("publish требует путь к подписанному .nlext")
+			return errors.New("публикация требует путь к подписанному.nlext")
 		}
 		return extensionRegistryPublishCLI0203(backend, token, args[1], args[2:], out)
 	case "yank":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("yank требует id@version")
+			return errors.New("yank требует ID@версия")
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[1])
 		if !ok {
-			return errors.New("yank требует координату id@version")
+			return errors.New("yank требует координату ID@версия")
 		}
 		reason := strings.TrimSpace(flagValue(args, "--reason", ""))
 		if reason == "" {
@@ -142,7 +142,7 @@ func handleExtensionRegistry0203(args []string) error {
 			id = args[1]
 		}
 		if id == "" || channel == "" || versionValue == "" {
-			return errors.New("channel-set требует extension id, --channel и --version")
+			return errors.New("канал-задать требует расширение ID, --канал и --версия")
 		}
 		payload, err := httpJSONWithAuth(http.MethodPut, backend+"/api/v1/admin/extension-registry/extensions/"+url.PathEscape(id)+"/channels/"+url.PathEscape(channel), map[string]any{"version": versionValue}, token)
 		if err != nil {
@@ -151,21 +151,21 @@ func handleExtensionRegistry0203(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "pull":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("pull требует id@version")
+			return errors.New("pull требует ID@версия")
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[1])
 		if !ok {
-			return errors.New("pull требует координату id@version")
+			return errors.New("pull требует координату ID@версия")
 		}
 		dest := strings.TrimSpace(flagValue(args, "--output", id+"-"+versionValue+".nlext"))
 		return extensionRegistryPullCLI0203(backend, token, id, versionValue, dest)
 	case "install":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("install требует id@version")
+			return errors.New("установка требует ID@версия")
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[1])
 		if !ok {
-			return errors.New("install требует координату id@version")
+			return errors.New("установка требует координату ID@версия")
 		}
 		scope := strings.TrimSpace(flagValue(args, "--scope", "global"))
 		scopeID := strings.TrimSpace(flagValue(args, "--scope-id", ""))
@@ -175,7 +175,7 @@ func handleExtensionRegistry0203(args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная extension registry-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная реестр расширений-подкоманда: %s", args[0])
 	}
 }
 
@@ -238,11 +238,11 @@ func extensionRegistryPublishCLI0203(backend, token, packagePath string, args []
 	payload := map[string]any{}
 	if len(strings.TrimSpace(string(data))) > 0 {
 		if err := json.Unmarshal(data, &payload); err != nil {
-			return fmt.Errorf("registry publish returned invalid JSON: %w", err)
+			return fmt.Errorf("реестр публикация возвращён недопустимый JSON: %w", err)
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("registry publish returned %s: %s", resp.Status, strings.TrimSpace(string(data)))
+		return fmt.Errorf("реестр публикация возвращён %s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
 	return writeOrPrintJSON(out, payload)
 }
@@ -262,7 +262,7 @@ func extensionRegistryPullCLI0203(backend, token, id, versionValue, dest string)
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("registry pull returned %s: %s", resp.Status, strings.TrimSpace(string(data)))
+		return fmt.Errorf("реестр pull возвращён %s: %s", resp.Status, strings.TrimSpace(string(data)))
 	}
 	if err := os.MkdirAll(filepath.Dir(filepath.Clean(dest)), 0o755); err != nil && filepath.Dir(filepath.Clean(dest)) != "." {
 		return err
@@ -285,10 +285,10 @@ func extensionRegistryPullCLI0203(backend, token, id, versionValue, dest string)
 		return err
 	}
 	if expected := strings.Trim(resp.Header.Get("ETag"), `"`); expected != "" && !strings.EqualFold(expected, hex.EncodeToString(h.Sum(nil))) {
-		return errors.New("downloaded registry artifact SHA-256 does not match ETag")
+		return errors.New("загрузка реестр артефакт SHA-256 делает не соответствовать ETag")
 	}
 	if resp.ContentLength >= 0 && size != resp.ContentLength {
-		return errors.New("downloaded registry artifact size mismatch")
+		return errors.New("загрузка реестр артефакт размер несоответствие")
 	}
 	if err := tmp.Sync(); err != nil {
 		return err

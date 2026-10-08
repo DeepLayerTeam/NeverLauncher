@@ -8,6 +8,6 @@ cd "${ROOT_DIR}/services/api"
 if [[ "${NEVERLAUNCHER_PREFLIGHT_PGX:-0}" == "1" || "${NEVERLAUNCHER_PREFLIGHT_PGX:-0}" == "true" ]]; then
   go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT}" ./cmd/neverlauncher-api
 else
-  echo "[NeverLauncher] backend build: offline neverlauncher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1" >&2
+  echo "[NeverLauncher] серверная часть сборка: автономный neverlauncher_nopgx режим. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1" >&2
   go build -tags neverlauncher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT}" ./cmd/neverlauncher-api
 fi

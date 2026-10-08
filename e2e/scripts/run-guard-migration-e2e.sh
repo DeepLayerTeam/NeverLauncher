@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[guard-migration-e2e] materialize exact 0.13.9 database (0001..0019)\n'
+printf '[защита-миграция-e2e] материализовать точный 0.13.9 база данных (0001..0019)\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -69,7 +69,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0019_minecraft_serverbridge_integrity_0135" ]] || { echo "unexpected pre-upgrade migration: $latest_before" >&2; exit 1; }
 
-printf '[guard-migration-e2e] seed valid 0.13.9 state plus an ambiguous partial Guard snapshot\n'
+printf '[защита-миграция-e2e] начальное значение действительный 0.13.9 состояние плюс ambiguous частичный Защита снимок\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 BEGIN;
 SET CONSTRAINTS ALL DEFERRED;
@@ -109,17 +109,17 @@ SQL
 
 ( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
 
-printf '[guard-migration-e2e] prove 0020 refuses ambiguous 0.13.9 state\n'
+printf '[защита-миграция-e2e] prove 0020 refuses ambiguous 0.13.9 состояние\n'
 if "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" >"$RUNTIME_DIR/migrate-invalid.log" 2>&1; then
-  echo '[guard-migration-e2e] 0020 unexpectedly accepted a partial Guard snapshot' >&2
+  echo '[защита-миграция-e2e] 0020 unexpectedly принят частичный Защита снимок' >&2
   exit 1
 fi
 if psql "$DB_DSN" -Atqc "SELECT count(*) FROM schema_migrations WHERE version='0020_guard_migration_compatibility_stabilization_01310'" | grep -qx '1'; then
-  echo '[guard-migration-e2e] failed migration was recorded as applied' >&2
+  echo '[защита-миграция-e2e] ошибка миграция был запись как применённый' >&2
   exit 1
 fi
 
-printf '[guard-migration-e2e] repair ambiguous legacy row explicitly, then apply and verify through current migration\n'
+printf '[защита-миграция-e2e] repair ambiguous устаревший строка явно, затем применить и проверять через текущий миграция\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET guard_sha256='' WHERE id='gmig-partial'" >/dev/null
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.log"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
@@ -136,13 +136,13 @@ identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema
 serverbridge_table_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema=current_schema() AND table_name IN ('server_bridge_nodes_v2','server_bridge_join_tickets_v2','server_bridge_textures_v2')")"
 [[ "$serverbridge_table_count" == "3" ]]
 
-printf '[guard-migration-e2e] prove snapshot shape/freshness constraints are live\n'
+printf '[защита-миграция-e2e] prove снимок shape/freshness ограничения являются актуальный\n'
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET integrity_verified=FALSE WHERE id='gmig-valid'" >/dev/null 2>&1; then
-  echo '[guard-migration-e2e] snapshot shape constraint allowed verified flag downgrade with hashes retained' >&2
+  echo '[защита-миграция-e2e] снимок форма ограничение разрешён проверен flag понижение версии с хеширует сохранённый' >&2
   exit 1
 fi
 if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET integrity_verified_at=created_at-interval '10 minutes' WHERE id='gmig-valid'" >/dev/null 2>&1; then
-  echo '[guard-migration-e2e] snapshot freshness constraint allowed stale attestation' >&2
+  echo '[защита-миграция-e2e] снимок актуальность ограничение разрешён устаревший аттестация' >&2
   exit 1
 fi
 constraint_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM pg_constraint WHERE conname IN ('minecraft_sessions_guard_snapshot_shape_01310','minecraft_sessions_guard_snapshot_freshness_01310')")"
@@ -156,4 +156,4 @@ jq -n \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after,sealedChecksum:true},failClosedPartialSnapshot:true,guardSnapshotConstraints:$constraints,serverBridgeV2Tables:3}' \
   > "$RESULT_DIR/migration-compatibility-stabilization.json"
 
-printf '[guard-migration-e2e] PASS 0.13.9 -> current Guard migration + ServerBridge v2 schema\n'
+printf '[защита-миграция-e2e] PASS 0.13.9 -> текущий Защита миграция + ServerBridge v2 схема\n'

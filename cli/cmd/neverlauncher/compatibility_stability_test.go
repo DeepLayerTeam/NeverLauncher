@@ -50,7 +50,7 @@ func TestMaterializationLockIsExclusive(t *testing.T) {
 		t.Fatalf("lock file: %v", err)
 	}
 
-	// Do not wait for the production timeout in a unit test: prove O_EXCL semantics directly.
+	// Делать не wait для рабочий тайм-аут в модульный тест: prove O_EXCL семантика напрямую.
 	if _, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600); err == nil {
 		t.Fatal("second materialization lock unexpectedly succeeded")
 	}

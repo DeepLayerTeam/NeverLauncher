@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// ServerBridgeRepository is implemented by the PostgreSQL repository and is the
-// source of truth for ServerBridge Protocol v2/v3 rolling upgrades. MemoryRepository intentionally
-// does not implement it; dev/test therefore keeps the lightweight in-memory path.
+// ServerBridgeRepository является implemented через PostgreSQL репозиторий и является 
+// источник истины для ServerBridge Протокол v2/v3 поэтапный обновление. MemoryRepository намеренно
+// делает не implement это; dev/test поэтому сохраняет lightweight в памяти процесса путь.
 type ServerBridgeRepository interface {
 	SaveServerBridgeNode(context.Context, model.ServerBridgeNode) (model.ServerBridgeNode, error)
 	GetServerBridgeNode(context.Context, string) (model.ServerBridgeNode, error)
@@ -94,13 +94,13 @@ func scanServerBridgeNode(row interface{ Scan(...any) error }) (model.ServerBrid
 	}
 	if len(runtimeCapabilities) > 0 {
 		if err := json.Unmarshal(runtimeCapabilities, &n.RuntimeCapabilities); err != nil {
-			return model.ServerBridgeNode{}, fmt.Errorf("decode server bridge runtime capabilities: %w", err)
+			return model.ServerBridgeNode{}, fmt.Errorf("decode сервер мост среда выполнения возможности: %w", err)
 		}
 	}
 	if len(telemetryLatest) > 0 && string(telemetryLatest) != "{}" {
 		var telemetry model.ServerBridgeTelemetry
 		if err := json.Unmarshal(telemetryLatest, &telemetry); err != nil {
-			return model.ServerBridgeNode{}, fmt.Errorf("decode server bridge telemetry: %w", err)
+			return model.ServerBridgeNode{}, fmt.Errorf("decode сервер мост телеметрия: %w", err)
 		}
 		if telemetry.RuntimeID != "" {
 			n.Telemetry = &telemetry
@@ -131,14 +131,14 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, n.ID); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	// Registration is intentionally create-only. The node-id advisory lock closes
-	// the GET-before-INSERT race between concurrent admin requests; changing an
-	// existing identity is allowed only through RotateServerBridgeNodeIdentity,
-	// whose HTTP route requires a fresh phishing-resistant admin step-up.
+	// Регистрация является намеренно создавать-только. узел-ID рекомендательный блокировка закрывает
+	// GET-before-INSERT гонка между конкурентный администратор запросы; изменять 
+	// существующий идентичность является разрешён только через RotateServerBridgeNodeIdentity,
+	// чей HTTP маршрут требует актуальный устойчивый к фишингу администратор step-up.
 	var existingID string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 LIMIT 1`, n.ID).Scan(&existingID)
 	if err == nil {
-		return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node %s already exists", ErrConflict, n.ID)
+		return model.ServerBridgeNode{}, fmt.Errorf("%w: сервер мост узел %s уже существует", ErrConflict, n.ID)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeNode{}, err
@@ -150,7 +150,7 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 		var duplicateID string
 		err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE key_fingerprint=$1 LIMIT 1`, n.KeyFingerprint).Scan(&duplicateID)
 		if err == nil {
-			return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node public key is already registered by %s", ErrConflict, duplicateID)
+			return model.ServerBridgeNode{}, fmt.Errorf("%w: сервер мост узел открытый ключ является уже регистрировать через %s", ErrConflict, duplicateID)
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return model.ServerBridgeNode{}, err
@@ -224,7 +224,7 @@ func (r *SQLRepository) RotateServerBridgeNodeIdentity(ctx context.Context, id, 
 	var duplicateID string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE key_fingerprint=$1 AND id<>$2 LIMIT 1`, fingerprint, id).Scan(&duplicateID)
 	if err == nil {
-		return model.ServerBridgeNode{}, fmt.Errorf("%w: server bridge node public key is already registered by %s", ErrConflict, duplicateID)
+		return model.ServerBridgeNode{}, fmt.Errorf("%w: сервер мост узел открытый ключ является уже регистрировать через %s", ErrConflict, duplicateID)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeNode{}, err
@@ -263,9 +263,9 @@ func (r *SQLRepository) ConsumeServerBridgeNodeNonce(ctx context.Context, nodeID
 		return false, err
 	}
 	defer tx.Rollback()
-	// Expired-nonce cleanup is deliberately not performed on this hot path.
-	// 0.14.9 moves cleanup behind a cross-instance PostgreSQL advisory lock so
-	// concurrent API replicas do not serialize every signed request on a table-wide DELETE.
+	// Истёкший-одноразовое значение очистка является намеренно не performed на этот hot путь.
+	// 0.14.9 переносит очистка behind cross-экземпляр PostgreSQL рекомендательный блокировка так
+	// конкурентный API реплики делать не serialize каждый подписанный запрос на таблица-wide DELETE.
 	res, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_node_nonces_v2(node_id,nonce_hash,identity_epoch,consumed_at,expires_at)
 SELECT id,$2,$3,$4,$5 FROM server_bridge_nodes_v2 WHERE id=$1 AND status='active' AND identity_epoch=$3
 ON CONFLICT(node_id,nonce_hash) DO NOTHING`, nodeID, nonceHash, identityEpoch, consumedAt.UTC(), expiresAt.UTC())
@@ -303,7 +303,7 @@ func (r *SQLRepository) TouchServerBridgeNodeHeartbeat(ctx context.Context, id, 
 		return err
 	}
 	if protocolVersion != 2 && protocolVersion != 3 {
-		return fmt.Errorf("unsupported ServerBridge protocol version %d", protocolVersion)
+		return fmt.Errorf("неподдерживаемый ServerBridge протокол версия %d", protocolVersion)
 	}
 	res, err := r.db.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,protocol_version=$4,last_heartbeat_at=$5 WHERE id=$1 AND status='active' AND kind=lower(btrim($2))`, id, kind, pluginVersion, protocolVersion, now.UTC())
 	if err != nil {
@@ -321,7 +321,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		return model.ServerBridgeRuntimeTransition{}, err
 	}
 	if protocolVersion != 3 {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("runtime identity requires ServerBridge protocol v3")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("среда выполнения идентичность требует ServerBridge протокол v3")
 	}
 	id = strings.TrimSpace(id)
 	kind = strings.ToLower(strings.TrimSpace(kind))
@@ -359,7 +359,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 	now = now.UTC()
 	if currentRuntimeID == runtime.RuntimeID {
 		if currentDigest == "" || !strings.EqualFold(currentDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime identity mutated for existing runtime id", ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: среда выполнения идентичность mutated для существующий среда выполнения ID", ErrConflict)
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET
 			fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,
@@ -391,7 +391,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 
 	previousRuntimeID := currentRuntimeID
 	if previousRuntimeID != "" && currentStartedAt.Valid && !runtime.StartedAt.After(currentStartedAt.Time) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: runtime instance is older than active runtime", ErrConflict)
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: среда выполнения экземпляр является старый чем активный среда выполнения", ErrConflict)
 	}
 	replacementDetected := previousRuntimeID != "" && currentLastSeenAt.Valid && currentLastSeenAt.Time.After(now.Add(-serverBridgeFreshness0149))
 	transition := "started"
@@ -483,7 +483,7 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 		return err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, telemetry.RuntimeID) {
-		return fmt.Errorf("%w: telemetry runtime is not active", ErrConflict)
+		return fmt.Errorf("%w: телеметрия среда выполнения является не активный", ErrConflict)
 	}
 	telemetry.RuntimeEpoch = runtimeEpoch
 	payload, err = json.Marshal(telemetry)
@@ -500,7 +500,7 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 	}
 	inserted, _ := res.RowsAffected()
 	if inserted != 1 {
-		return fmt.Errorf("%w: duplicate telemetry sample", ErrConflict)
+		return fmt.Errorf("%w: дубликат телеметрия sample", ErrConflict)
 	}
 	res, err = tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET telemetry_latest=$4::jsonb,telemetry_sampled_at=$5
 		WHERE id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND (telemetry_sampled_at IS NULL OR telemetry_sampled_at < $5)`,
@@ -509,9 +509,9 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 		return err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return fmt.Errorf("%w: active runtime changed or telemetry sample is stale", ErrConflict)
+		return fmt.Errorf("%w: активный среда выполнения изменён или телеметрия sample является устаревший", ErrConflict)
 	}
-	// Keep per-node history bounded even if global maintenance is delayed.
+	// Сохранять на-узел история ограниченный даже если глобальный обслуживание является delayed.
 	if telemetry.Sequence%64 == 0 {
 		if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_telemetry_samples_v3 t
 			USING (
@@ -527,9 +527,9 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 	return tx.Commit()
 }
 
-// AppendServerBridgeEvents atomically advances a contiguous per-runtime cursor and
-// writes the event row plus the global audit row in the same PostgreSQL transaction.
-// Resending an already-ACKed sequence is idempotent only when its digest/event id match.
+// AppendServerBridgeEvents атомарно advances contiguous на-среда выполнения курсор и
+// записывает событие строка плюс глобальный аудит строка в одинаковый PostgreSQL транзакция.
+// Resending уже-ACKed последовательность является идемпотентный только когда его digest/event ID соответствовать.
 func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, events []model.ServerBridgeEvent, now time.Time) (model.ServerBridgeEventAppendResult, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeEventAppendResult{}, err
@@ -537,7 +537,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 	serverID = strings.TrimSpace(serverID)
 	runtimeID = strings.ToLower(strings.TrimSpace(runtimeID))
 	if serverID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 || len(events) == 0 || len(events) > 64 {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: invalid server bridge event batch", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: недопустимый сервер мост событие пакет", ErrConflict)
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -556,7 +556,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		return model.ServerBridgeEventAppendResult{}, err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntimeID), runtimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event runtime is not active", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие среда выполнения является не активный", ErrConflict)
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_event_cursors_v3(server_id,runtime_epoch,runtime_id,ack_sequence,updated_at)
 		VALUES($1,$2,$3,0,$4) ON CONFLICT(server_id,runtime_epoch) DO NOTHING`, serverID, runtimeEpoch, runtimeID, now.UTC()); err != nil {
@@ -568,28 +568,28 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		return model.ServerBridgeEventAppendResult{}, err
 	}
 	if !strings.EqualFold(strings.TrimSpace(cursorRuntime), runtimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event cursor runtime mismatch", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие курсор среда выполнения несоответствие", ErrConflict)
 	}
 	inserted := 0
 	var previousBatchSequence int64
 	for i, event := range events {
 		if event.Sequence < 1 || event.RuntimeID == "" || !strings.EqualFold(event.RuntimeID, runtimeID) || event.EventID == "" || event.PayloadSHA256 == "" {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: invalid event record", ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: недопустимый событие запись", ErrConflict)
 		}
 		if i > 0 && event.Sequence != previousBatchSequence+1 {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event batch sequence gap", ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие пакет последовательность разрыв", ErrConflict)
 		}
 		previousBatchSequence = event.Sequence
 		if event.Sequence <= ack {
 			var storedDigest, storedEventID, storedType, storedSignature string
 			err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature)
 			if err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликтующий событие повторное воспроизведение", ErrConflict)
 			}
 			continue
 		}
 		if event.Sequence != ack+1 {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event sequence gap", ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие последовательность разрыв", ErrConflict)
 		}
 		payload, marshalErr := json.Marshal(event.Payload)
 		if marshalErr != nil {
@@ -606,7 +606,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		if rows != 1 {
 			var storedDigest, storedEventID, storedType, storedSignature string
 			if err = tx.QueryRowContext(ctx, `SELECT payload_sha256,event_id,event_type,signature FROM server_bridge_events_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND sequence=$3`, serverID, runtimeEpoch, event.Sequence).Scan(&storedDigest, &storedEventID, &storedType, &storedSignature); err != nil || !strings.EqualFold(storedDigest, event.PayloadSHA256) || storedEventID != event.EventID || storedType != event.Type || storedSignature != event.Signature {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликтующий событие повторное воспроизведение", ErrConflict)
 			}
 		} else {
 			inserted++
@@ -660,7 +660,7 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 		j.ProtocolVersion = 2
 	}
 	if j.ProtocolVersion != 2 && j.ProtocolVersion != 3 {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("unsupported ServerBridge protocol version %d", j.ProtocolVersion)
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("неподдерживаемый ServerBridge протокол версия %d", j.ProtocolVersion)
 	}
 	if j.Status == "" {
 		j.Status = "active"
@@ -685,16 +685,16 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 		return model.ServerBridgeJoinTicket{}, err
 	}
 	if status != "active" || identityEpoch < 1 || len(keyFingerprint) != 64 {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server bridge node identity is not active")
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("сервер мост узел идентичность является не активный")
 	}
 	if projectID != "" && projectID != j.ProjectID {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server project binding mismatch")
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("сервер проект привязка несоответствие")
 	}
 	if profileID != "" && profileID != j.ProfileID {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server profile binding mismatch")
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("сервер профиль привязка несоответствие")
 	}
 	if nodeProtocolVersion != 2 && nodeProtocolVersion != 3 {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("server bridge node has unsupported protocol version %d", nodeProtocolVersion)
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("сервер мост узел имеет неподдерживаемый протокол версия %d", nodeProtocolVersion)
 	}
 	j.ProtocolVersion = nodeProtocolVersion
 	j.IssuedIdentityEpoch = identityEpoch
@@ -916,10 +916,10 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 
 const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence FROM server_bridge_handoffs_v2`
 
-// CreateServerBridgeHandoff mints a target-specific credential only from a very
-// recent join ticket already redeemed by the authenticated proxy. The target is
-// resolved by canonical node id first, then by unique node name. This is what
-// allows zero-patch installs to use the proxy's existing backend name directly.
+// CreateServerBridgeHandoff mints цель-specific учётные данные только из очень
+// recent подключение билет уже redeemed через аутентифицировать прокси. цель является
+// разрешённый через канонический узел ID первый, затем через уникальный узел имя. Этот является что
+// разрешает без патчей устанавливает к использовать proxy's существующий серверная часть имя напрямую.
 func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.ServerBridgeHandoff, now time.Time) (model.ServerBridgeHandoff, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeHandoff{}, err
@@ -955,14 +955,14 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	if sourceStatus != "active" || !isProxyBridgeKind0148(sourceKind) || sourceEpoch < 1 || len(sourceFingerprint) != 64 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("source node is not an active proxy")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("исходник узел является не активный прокси")
 	}
 	routingV3 := h.RequireRoutingProof && sourceProtocolVersion >= 3
 	if routingV3 {
 		if len(sourceRuntimeID) != 64 || sourceRuntimeEpoch < 1 || sourceRouteRevision < 1 || len(sourceRouteDigest) != 64 || sourceRouteSignature == "" ||
 			!sourceHeartbeat.Valid || sourceHeartbeat.Time.Before(freshAfter) || !sourceRouteObserved.Valid || sourceRouteObserved.Time.Before(freshAfter) ||
 			sourceRouteState != "ready" || !sourceRouteAccepting || sourceRouteHealth == "unhealthy" {
-			return model.ServerBridgeHandoff{}, fmt.Errorf("source node is not a routable proxy")
+			return model.ServerBridgeHandoff{}, fmt.Errorf("исходник узел является не routable прокси")
 		}
 		h.SourceRuntimeID = strings.ToLower(sourceRuntimeID)
 		h.SourceRuntimeEpoch = sourceRuntimeEpoch
@@ -1001,17 +1001,17 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, ErrNotFound
 	}
 	if targetID != targetRef && matches > 1 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: backend name %s is ambiguous", ErrConflict, targetRef)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: серверная часть имя %s является ambiguous", ErrConflict, targetRef)
 	}
 	if targetStatus != "active" || !isBackendBridgeKind0148(targetKind) || targetEpoch < 1 || len(targetFingerprint) != 64 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("target node is not an active backend")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("цель узел является не активный серверная часть")
 	}
 	if routingV3 {
 		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
 			!targetHeartbeat.Valid || targetHeartbeat.Time.Before(freshAfter) || !targetRouteObserved.Valid || targetRouteObserved.Time.Before(freshAfter) ||
 			targetRouteState != "ready" || !targetRouteAccepting || (targetRouteHealth != "healthy" && targetRouteHealth != "degraded") ||
 			(targetCapacity > 0 && targetPlayers >= targetCapacity) {
-			return model.ServerBridgeHandoff{}, fmt.Errorf("target node is unhealthy, draining, in maintenance, stale, or at capacity")
+			return model.ServerBridgeHandoff{}, fmt.Errorf("цель узел является unhealthy, draining, в обслуживание, устаревший, или в ёмкость")
 		}
 		if targetCapacity > 0 {
 			var reservations int
@@ -1019,12 +1019,12 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 				return model.ServerBridgeHandoff{}, err
 			}
 			if targetPlayers+reservations >= targetCapacity {
-				return model.ServerBridgeHandoff{}, fmt.Errorf("target node has no unreserved capacity")
+				return model.ServerBridgeHandoff{}, fmt.Errorf("цель узел имеет нет unreserved ёмкость")
 			}
 		}
 	}
 	if targetProtocolVersion != 2 && targetProtocolVersion != 3 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("target node has unsupported ServerBridge protocol version %d", targetProtocolVersion)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("цель узел имеет неподдерживаемый ServerBridge протокол версия %d", targetProtocolVersion)
 	}
 	if routingV3 {
 		h.TargetRuntimeID = strings.ToLower(targetRuntimeID)
@@ -1034,9 +1034,9 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		h.TargetRoutingSignature = targetRouteSignature
 	}
 
-	// The source proof is the latest successfully consumed launcher ticket for an
-	// auth session that is still active and on the same binding epoch. This keeps
-	// later proxy server switches working without replaying the launcher ticket.
+	// исходник доказательство является последний успешно использованный лаунчер билет для 
+	// аутентификация сессия тот является по-прежнему активный и на одинаковый привязка эпоха. Этот сохраняет
+	// позже прокси сервер переключается работа без повторное воспроизведение лаунчер билет.
 	var sourceJoin model.ServerBridgeJoinTicket
 	var consumedAt sql.NullTime
 	err = tx.QueryRowContext(ctx, bridgeJoinSelectV2+` WHERE server_id=$1 AND username_normalized=$2 AND status='consumed' AND EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=server_bridge_join_tickets_v2.session_id AND a.user_id=server_bridge_join_tickets_v2.user_id AND a.status='active' AND a.expires_at>$3 AND a.binding_epoch=server_bridge_join_tickets_v2.binding_epoch) ORDER BY consumed_at DESC LIMIT 1`, h.SourceNodeID, h.UsernameNormalized, now.UTC()).
@@ -1048,13 +1048,13 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, err
 	}
 	if !consumedAt.Valid || sourceJoin.RedeemedIdentityEpoch != sourceEpoch || !strings.EqualFold(sourceJoin.RedeemedKeyFingerprint, sourceFingerprint) {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("source join was not redeemed by current proxy identity")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("исходник подключение был не redeemed через текущий прокси идентичность")
 	}
 	if targetProject != "" && targetProject != sourceJoin.ProjectID {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("target project binding mismatch")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("цель проект привязка несоответствие")
 	}
 	if targetProfile != "" && targetProfile != sourceJoin.ProfileID {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("target profile binding mismatch")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("цель профиль привязка несоответствие")
 	}
 
 	h.Username = sourceJoin.Username
@@ -1071,15 +1071,15 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	h.BindingEpoch = sourceJoin.BindingEpoch
 	expectedCorrelation := strings.ToLower(strings.TrimSpace(h.SessionCorrelationID))
 	if expectedCorrelation != "" && !strings.EqualFold(expectedCorrelation, sourceJoin.SessionCorrelationID) {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: session correlation proof mismatch", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: сессия корреляция доказательство несоответствие", ErrConflict)
 	}
 	h.MinecraftSessionID = sourceJoin.MinecraftSessionID
-	// A lifecycle transfer is runtime-bound. The explicit 0.19.7 correlation
-	// proof therefore requires v3 + Routing 2 on both ends; older rolling-upgrade
-	// paths continue with the pre-0.19.7 handoff without fabricating a runtime.
+	// жизненный цикл переход является привязанный к среде выполнения. явный 0.19.7 корреляция
+	// доказательство поэтому требует v3 + Маршрутизация 2 на оба ends; старый поэтапный-обновление
+	// пути continue с pre-0.19.7 передача без fabricating среда выполнения.
 	lifecycleTransfer := sourceJoin.ProtocolVersion >= 3 && targetProtocolVersion >= 3 && routingV3 && len(h.SourceRuntimeID) == 64 && h.SourceRuntimeEpoch > 0 && len(h.TargetRuntimeID) == 64 && h.TargetRuntimeEpoch > 0
 	if expectedCorrelation != "" && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer requires v3 runtime-bound source and target", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: игрок сессия переход требует v3 привязанный к среде выполнения исходник и цель", ErrConflict)
 	}
 	if lifecycleTransfer {
 		h.SessionCorrelationID = strings.ToLower(strings.TrimSpace(sourceJoin.SessionCorrelationID))
@@ -1179,10 +1179,10 @@ func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.S
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	// Topology & Routing 2 derives the live graph from authenticated node/runtime
-	// advertisements instead of waiting for the first successful handoff to create
-	// an edge. Historical observed edges are joined only for created/last-seen
-	// metadata; routing eligibility is always recomputed from current node state.
+	// Топология и Маршрутизация 2 derives актуальный graph из аутентифицировать node/runtime
+	// advertisements вместо этого waiting для первый успешный передача к создавать
+	// edge. Исторический наблюдаемый edges являются подключение только для created/last-seen
+	// метаданные; маршрутизация eligibility является всегда recomputed из текущий узел состояние.
 	rows, err := r.db.QueryContext(ctx, `SELECT
 s.id,t.id,t.name,s.project_id,t.profile_id,
 CASE
@@ -1245,9 +1245,9 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, nil
 	}
 	result.LeaseAcquired = true
-	// Every maintenance batch locks only the rows it will mutate. The advisory
-	// lock prevents duplicate NeverLauncher maintenance work across replicas;
-	// SKIP LOCKED additionally avoids waiting behind normal ticket/handoff writes.
+	// Каждый обслуживание пакет блокирует только строки это будет mutate. рекомендательный
+	// блокировка предотвращает дубликат NeverLauncher обслуживание работа через реплики;
+	// SKIP LOCKED additionally avoids waiting behind обычный ticket/handoff записывает.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 n USING (SELECT node_id,nonce_hash FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE n.node_id=q.node_id AND n.nonce_hash=q.nonce_hash`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1263,10 +1263,10 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
-	// A gameplay lifecycle may outlive its short-lived join/handoff rows, but it
-	// must never outlive the Never session or the exact proxy/backend runtime it
-	// was bound to. Invalidate under the same maintenance transaction so the
-	// existing durable Control API can fan out player.kick to every live side.
+	// игровой жизненный цикл может outlive его краткоживущий join/handoff строки, но это
+	// должен никогда outlive Никогда сессия или точный proxy/backend среда выполнения это
+	// был привязанный к. Invalidate под одинаковый обслуживание транзакция так 
+	// существующий долговременный Управление API может fan из игрок.отключение игрока к каждый актуальный побочный.
 	staleRows, queryErr := tx.QueryContext(ctx, `SELECT p.correlation_id FROM server_bridge_player_sessions_v3 p
 		WHERE p.status='active' AND (
 			NOT EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=p.never_session_id AND a.user_id=p.user_id AND a.status='active' AND a.expires_at>$1 AND a.binding_epoch=p.binding_epoch)
@@ -1308,10 +1308,10 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.TopologyEdgesPurged, _ = res.RowsAffected()
 	}
-	// Terminal transient rows are operational evidence, not permanent audit
-	// records. Keep recent rows for diagnostics, but cap unbounded growth. A
-	// consumed join remains available while its auth session is active because it
-	// is the source proof for later proxy -> backend handoffs.
+	// Конечный временный строки являются эксплуатационный свидетельство, не постоянный аудит
+	// записывает. Сохранять recent строки для диагностика, но cap unbounded growth. 
+	// использованный подключение остаётся доступный пока его аутентификация сессия является активный потому что это
+	// является исходник доказательство для позже прокси -> серверная часть передачи.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_join_tickets_v2 j USING (SELECT j2.id FROM server_bridge_join_tickets_v2 j2 LEFT JOIN auth_sessions a ON a.id=j2.session_id WHERE ((j2.status='consumed' AND COALESCE(j2.consumed_at,j2.expires_at) <= $1::timestamptz - interval '1 hour' AND (a.id IS NULL OR a.status<>'active' OR a.expires_at <= $1::timestamptz)) OR (j2.status IN ('invalidated','replaced') AND COALESCE(j2.invalidated_at,j2.expires_at) <= $1::timestamptz - interval '1 hour')) ORDER BY COALESCE(j2.consumed_at,j2.invalidated_at,j2.expires_at) LIMIT 5000 FOR UPDATE OF j2 SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1327,16 +1327,16 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.TelemetrySamplesPurged, _ = res.RowsAffected()
 	}
-	// Raw delivery rows are retained for bounded diagnostics only. Permanent event
-	// evidence lives in audit_events, which is written in the same transaction as
-	// the ACK cursor. Keep cursor rows so a reconnect cannot reuse an old sequence.
+	// Сырой доставка строки являются сохранённый для ограниченный диагностика только. Постоянный событие
+	// свидетельство актуальный в аудит_события, который является записан в одинаковый транзакция как
+	// ACK курсор. Сохранять курсор строки так переподключение не может повторное использование старый последовательность.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_events_v3 e USING (SELECT server_id,runtime_epoch,sequence FROM server_bridge_events_v3 WHERE received_at <= $1::timestamptz - interval '30 days' ORDER BY received_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.server_id=q.server_id AND e.runtime_epoch=q.runtime_epoch AND e.sequence=q.sequence`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.EventStreamRowsPurged, _ = res.RowsAffected()
 	}
-	// Control commands are transient delivery state. Permanent evidence remains in
-	// audit_events; retain terminal/expired rows for 30 days for diagnostics.
+	// Команды управления являются временный доставка состояние. Постоянный свидетельство остаётся в
+	// аудит_события; сохранять terminal/expired строки для 30 дней для диагностика.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 c USING (SELECT id FROM server_bridge_control_commands_v3 WHERE status IN ('succeeded','failed','unsupported','indeterminate','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE c.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1414,15 +1414,15 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 
 const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,delivery_sequence,lease_owner,lease_token,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
 
-// CreateServerBridgeControlCommand is exactly-once at admission per (server, actor, idempotency key).
-// Reuse with the same canonical request returns the original command; reuse with a different
-// digest is rejected on every API replica by the PostgreSQL unique key + advisory lock.
+// CreateServerBridgeControlCommand является точно-один раз в допуск на (сервер, actor, ключ идемпотентности).
+// Повторное использование с одинаковый канонический запрос возвращает исходный команда; повторное использование с другой
+// хеш является отклонён на каждый API реплика через PostgreSQL уникальный ключ + рекомендательный блокировка.
 func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c model.ServerBridgeControlCommand, now time.Time) (model.ServerBridgeControlCommand, bool, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	if c.ID == "" || c.ServerID == "" || c.RuntimeEpoch < 1 || len(c.RuntimeID) != 64 || c.Type == "" || len(c.PayloadSHA256) != 64 || len(c.RequestDigest) != 64 || c.RequestedBy == "" || len(c.IdempotencyKey) < 8 || c.ExpiresAt.Before(now) {
-		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: invalid control command", ErrConflict)
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: недопустимый команда управления", ErrConflict)
 	}
 	payload, err := json.Marshal(c.Payload)
 	if err != nil {
@@ -1445,11 +1445,11 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	if status != "active" || activeEpoch != c.RuntimeEpoch || !strings.EqualFold(strings.TrimSpace(activeRuntime), c.RuntimeID) {
-		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: control runtime is not active", ErrConflict)
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: управление среда выполнения является не активный", ErrConflict)
 	}
 	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND requested_by=$2 AND idempotency_key=$3`, c.ServerID, c.RequestedBy, c.IdempotencyKey)); scanErr == nil {
 		if !strings.EqualFold(existing.RequestDigest, c.RequestDigest) {
-			return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: idempotency key reused with different request", ErrConflict)
+			return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: ключ идемпотентности повторное использование с другой запрос", ErrConflict)
 		}
 		return existing, true, nil
 	} else if !errors.Is(scanErr, sql.ErrNoRows) {
@@ -1469,10 +1469,10 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	return created, false, err
 }
 
-// LeaseServerBridgeControlCommand provides a fenced, resumable command channel. leaseOwner is
-// the bridge channel identity and survives Backend endpoint failover; leaseToken fences stale
-// deliveries. A reconnect from the same owner receives its still-live lease instead of causing
-// a second delivery attempt. resumeAfter is the highest locally acknowledged delivery sequence.
+// LeaseServerBridgeControlCommand предоставляет ограждённый, resumable команда канал. leaseOwner является
+// мост канал идентичность и переживает Серверная часть эндпоинт failover; leaseToken fences устаревший
+// доставка. переподключение из одинаковый владелец получает его по-прежнему-актуальный аренда вместо этого causing
+// второй доставка попытка. resumeAfter является highest локально подтверждённый доставка последовательность.
 func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, leaseOwner, leaseToken string, resumeAfter int64, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1480,7 +1480,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	leaseOwner = strings.TrimSpace(leaseOwner)
 	leaseToken = strings.TrimSpace(leaseToken)
 	if len(leaseOwner) < 16 || len(leaseOwner) > 128 || len(leaseToken) < 16 || len(leaseToken) > 160 || resumeAfter < 0 {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control lease identity", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: недопустимый управление аренда идентичность", ErrConflict)
 	}
 	if lease < 5*time.Second {
 		lease = 5 * time.Second
@@ -1502,12 +1502,12 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: управление среда выполнения является не активный", ErrConflict)
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery',lease_until=NULL WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	// HTTP response loss or Backend endpoint failover: resume the exact live lease for this channel.
+	// HTTP ответ loss или Серверная часть эндпоинт failover: возобновление точный актуальный аренда для этот канал.
 	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND status='leased' AND lease_owner=$4 AND lease_until>$5 AND delivery_sequence>$6 ORDER BY delivery_sequence LIMIT 1 FOR UPDATE`, serverID, runtimeEpoch, runtimeID, leaseOwner, now.UTC(), resumeAfter)); scanErr == nil {
 		if err = tx.Commit(); err != nil {
 			return model.ServerBridgeControlCommand{}, err
@@ -1537,16 +1537,16 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
 }
 
-// CompleteServerBridgeControlCommand is an idempotent fenced commit. Only the channel and lease
-// token that received the command can complete it. The token is retained after completion so a
-// retry routed to a different Backend replica receives the same durable result.
+// CompleteServerBridgeControlCommand является идемпотентный ограждённый фиксация. Только канал и аренда
+// токен тот получать команда может полный это. токен является сохранённый после завершение так 
+// повторить маршрут к другой Серверная часть реплика получает одинаковый долговременный результат.
 func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	allowed := map[string]bool{"succeeded": true, "failed": true, "unsupported": true, "indeterminate": true}
 	if !allowed[status] || len(strings.TrimSpace(leaseOwner)) < 16 || len(strings.TrimSpace(leaseToken)) < 16 || deliverySequence < 1 {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: недопустимый управление результат", ErrConflict)
 	}
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
@@ -1565,16 +1565,16 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement lease mismatch", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: управление acknowledgement аренда несоответствие", ErrConflict)
 	}
 	if current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
 		if current.Status != status || !serverBridgeControlStringMapEqual0195(current.Result, result) || current.Error != failure {
-			return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: conflicting control acknowledgement", ErrConflict)
+			return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: конфликтующий управление acknowledgement", ErrConflict)
 		}
 		return current, nil
 	}
 	if current.Status != "leased" || !current.LeaseUntil.After(now) {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease expired", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: команда управления аренда истёкший", ErrConflict)
 	}
 	if len(failure) > 1024 {
 		failure = failure[:1024]
@@ -1614,8 +1614,8 @@ func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serve
 	return c, err
 }
 
-// ListServerBridgeRecentControlCommands returns bounded control-plane history for the
-// GA operator overview. Lease tokens remain redacted by the model JSON contract.
+// ListServerBridgeRecentControlCommands возвращает ограниченный управление-плоскость история для 
+// GA оператор обзор. Токены аренды оставаться redacted через модель JSON контракт.
 func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Context, limit int) ([]model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return nil, err

@@ -26,8 +26,8 @@ func (s Server) microsoftConnector116(providerID string) (authconnector.Connecto
 	return connector, ok && kind.ProviderKind() == "microsoft"
 }
 
-// authMicrosoftLinkBegin116 starts a Microsoft proof bound to the already
-// authenticated Never user. Email equality is never considered proof of ownership.
+// authMicrosoftLinkBegin116 запускает Microsoft доказательство привязанный к уже
+// аутентифицировать Никогда пользователь. Электронная почта equality является никогда considered доказательство владение.
 func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {

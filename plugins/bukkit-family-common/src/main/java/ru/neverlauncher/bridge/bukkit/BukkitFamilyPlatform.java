@@ -5,11 +5,11 @@ import org.bukkit.Bukkit;
 import java.util.Locale;
 
 /**
- * Runtime discriminator for the Bukkit-compatible server family.
+ * Среда выполнения discriminator для Bukkit-compatible сервер семейство.
  *
- * The bridge deliberately compiles against the Bukkit/Spigot API only. Paper,
- * Purpur and Folia detection uses brand/class probes without linking their APIs,
- * so the same common runtime remains binary-compatible with plain CraftBukkit.
+ *  мост намеренно compiles против Bukkit/Spigot API только. Paper,
+ * Purpur и Folia обнаружение использует brand/class probes без связывание их APIs,
+ * так одинаковый common среда выполнения остаётся бинарный файл-compatible с plain CraftBukkit.
  */
 public enum BukkitFamilyPlatform {
     BUKKIT("bukkit", "Bukkit"),

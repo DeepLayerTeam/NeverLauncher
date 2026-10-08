@@ -16,7 +16,7 @@ TEAM_ID="${NEVERLAUNCHER_MACOS_TEAM_ID:-}"
 NOTARY_PROFILE="${NEVERLAUNCHER_MACOS_NOTARY_PROFILE:-}"
 if [[ "${MODE}" == "production" ]]; then
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS release requires Developer ID Application identity, Team ID and notarytool keychain profile via NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID and NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
+    echo "рабочий macOS релиз требует Разработчик ID Приложение идентичность, Команда ID и notarytool keychain профиль через NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID и NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
   }
   [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "production signing identity must be a Developer ID Application certificate" >&2; exit 2; }
 else
@@ -65,8 +65,8 @@ EOF_PLIST
 if [[ "${MODE}" == "production" ]]; then DEV_REQUIRED=true; NOTARY_REQUIRED=true; else DEV_REQUIRED=false; NOTARY_REQUIRED=false; fi
 if [[ "${MODE}" == "production" ]]; then TIMESTAMP_ARG="--timestamp"; else TIMESTAMP_ARG="--timestamp=none"; fi
 
-# Sign the nested executables first. Their final signed bytes are then pinned in
-# the package manifest, and the outer app signature seals that manifest.
+# Подпись вложенный исполняемый первый. Их итоговый подписанный байты являются затем закреплённый в
+# пакет манифест, и outer app подпись запечатывает тот манифест.
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher.guard "${MACOS_DIR}/neverguard"
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
@@ -119,11 +119,11 @@ fi
 SIGNING_MODE="adhoc-development"
 [[ "${MODE}" == "production" ]] && SIGNING_MODE="developer-id-notarized"
 
-# The outer .app signature seals Contents/Resources and therefore changes the main
-# executable's final code-signature bytes. Full-file SHA-256 values are emitted
-# only after the final bundle signing/notarization step; the embedded manifest is
-# protected by the bundle signature and uses code-signing + external release-policy
-# binding to avoid a circular self-hash.
+# outer.app подпись запечатывает Contents/Resources и поэтому изменяет главный
+# executable's итоговый код-подпись байты. Полный-файл SHA-256 значения являются emitted
+# только после итоговый комплект signing/notarization step; встроенный манифест является
+# защищать через комплект подпись и использует код-подписание + внешний релиз-политика
+# привязка к avoid circular self-хеш.
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
 GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/neverguard" | awk '{print $1}')"
 DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
@@ -157,4 +157,4 @@ rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"
 [[ "${MODE}" == production ]] && rm -f "${TMP_ZIP}"
 shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/neverlauncher-desktop-macos-universal" "${OUT_DIR}/neverguard-macos-universal"
-echo "macOS ${MODE} package created: ${FINAL_ZIP}"
+echo "macOS ${MODE} пакет создан: ${FINAL_ZIP}"

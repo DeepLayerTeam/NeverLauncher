@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	ErrProviderNotFound      = errors.New("auth provider not found")
-	ErrCapabilityUnsupported = errors.New("auth provider capability unsupported")
-	ErrIdentityNotLinked     = errors.New("external identity is not linked to a Never user")
+	ErrProviderNotFound      = errors.New("аутентификация провайдер не found")
+	ErrCapabilityUnsupported = errors.New("аутентификация провайдер возможность неподдерживаемый")
+	ErrIdentityNotLinked     = errors.New("внешний идентичность является не связь к Никогда пользователь")
 )
 
 type Result struct {
@@ -38,9 +38,9 @@ type ProviderHealth struct {
 	Error    string                 `json:"error,omitempty"`
 }
 
-// Core owns provider dispatch and the mandatory ExternalIdentity -> canonical Never
-// User resolution boundary. Connectors authenticate external credentials; they never
-// mint Never access/refresh tokens and never bypass Never session policy.
+// Ядро владеет провайдер dispatch и обязательный ExternalIdentity -> канонический Никогда
+// Пользователь разрешение граница. Коннекторы аутентифицировать внешний учётные данные; они никогда
+// mint Никогда access/refresh токены и никогда обход Никогда сессия политика.
 type ProviderPolicy struct {
 	AutoProvision bool
 	DefaultRole   string
@@ -64,7 +64,7 @@ func (c *Core) Register(connector authconnector.Connector) error {
 
 func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy ProviderPolicy) error {
 	if connector == nil {
-		return errors.New("connector is nil")
+		return errors.New("коннектор является nil")
 	}
 	meta := authconnector.NormalizedMetadata(connector.Metadata())
 	if err := authconnector.ValidateMetadata(meta); err != nil {
@@ -72,32 +72,32 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) {
 		if _, ok := connector.(authconnector.PasswordAuthenticator); !ok {
-			return fmt.Errorf("connector %q advertises password-auth without PasswordAuthenticator", meta.ID)
+			return fmt.Errorf("коннектор %q advertises пароль-аутентификация без PasswordAuthenticator", meta.ID)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
 		if _, ok := connector.(authconnector.BrowserAuthenticator); !ok {
-			return fmt.Errorf("connector %q advertises browser-auth without BrowserAuthenticator", meta.ID)
+			return fmt.Errorf("коннектор %q advertises browser-аутентификация без BrowserAuthenticator", meta.ID)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityProfile) {
 		if _, ok := connector.(authconnector.ProfileResolver); !ok {
-			return fmt.Errorf("connector %q advertises profile without ProfileResolver", meta.ID)
+			return fmt.Errorf("коннектор %q advertises профиль без ProfileResolver", meta.ID)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
 		if _, ok := connector.(authconnector.TokenRefresher); !ok {
-			return fmt.Errorf("connector %q advertises token-refresh without TokenRefresher", meta.ID)
+			return fmt.Errorf("коннектор %q advertises токен-обновление без TokenRefresher", meta.ID)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
 		if _, ok := connector.(authconnector.Revoker); !ok {
-			return fmt.Errorf("connector %q advertises token-revoke without Revoker", meta.ID)
+			return fmt.Errorf("коннектор %q advertises токен-отзыв без Revoker", meta.ID)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
 		if _, ok := connector.(authconnector.IdentityResolver); !ok {
-			return fmt.Errorf("connector %q advertises user-lookup without IdentityResolver", meta.ID)
+			return fmt.Errorf("коннектор %q advertises пользователь-поиск без IdentityResolver", meta.ID)
 		}
 	}
 	policy.DefaultRole = strings.TrimSpace(policy.DefaultRole)
@@ -113,7 +113,7 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 			}
 		}
 		if !roleExists {
-			return fmt.Errorf("connector %q auto-provision default role %q does not exist", meta.ID, policy.DefaultRole)
+			return fmt.Errorf("коннектор %q автоматический-provision по умолчанию роль %q делает не exist", meta.ID, policy.DefaultRole)
 		}
 	}
 	knownRoles := make(map[string]struct{})
@@ -125,10 +125,10 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 		externalValue = strings.TrimSpace(externalValue)
 		roleID = strings.TrimSpace(roleID)
 		if externalValue == "" || roleID == "" {
-			return fmt.Errorf("connector %q contains empty role mapping", meta.ID)
+			return fmt.Errorf("коннектор %q содержит пустой роль сопоставление", meta.ID)
 		}
 		if _, ok := knownRoles[roleID]; !ok {
-			return fmt.Errorf("connector %q role mapping target %q does not exist", meta.ID, roleID)
+			return fmt.Errorf("коннектор %q роль сопоставление цель %q делает не exist", meta.ID, roleID)
 		}
 		normalizedMappings[externalValue] = roleID
 	}
@@ -136,7 +136,7 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.connectors[meta.ID]; exists {
-		return fmt.Errorf("connector %q already registered", meta.ID)
+		return fmt.Errorf("коннектор %q уже регистрировать", meta.ID)
 	}
 	c.connectors[meta.ID] = connector
 	c.policies[meta.ID] = policy
@@ -216,10 +216,10 @@ func (c *Core) CompleteBrowserAuth(ctx context.Context, providerID string, callb
 	return c.resolveAuthentication(ctx, meta, auth)
 }
 
-// CompleteBrowserAuthProof verifies the external browser flow without resolving or
-// auto-provisioning a canonical Never user. This is the security boundary required
-// for explicit account linking: a proof can be linked only to the already-authenticated
-// Never user chosen by the caller.
+// CompleteBrowserAuthProof проверяет внешний browser поток без разрешать или
+// автоматический-предоставление учётной записи канонический Никогда пользователь. Этот является граница безопасности обязательный
+// для явный учётная запись связывание: доказательство может быть связь только к уже-аутентифицировать
+// Никогда пользователь chosen через вызывающая сторона.
 func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (authconnector.Metadata, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -241,8 +241,8 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 	return meta, auth, nil
 }
 
-// RefreshProviderCredential rotates/revalidates an external provider credential.
-// The returned provider token remains internal and is never a Never access token.
+// RefreshProviderCredential rotates/revalidates внешний провайдер учётные данные.
+// возвращён провайдер токен остаётся внутренний и является никогда Никогда токен доступа.
 func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, providerToken, expectedSubject string) (authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -356,9 +356,9 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	})
 }
 
-// LinkAuthenticatedIdentity persists a provider identity only after the caller has
-// obtained an Authentication proof from that provider. It refuses silent reassignment:
-// one provider/subject cannot be moved between Never users.
+// LinkAuthenticatedIdentity сохраняет провайдер идентичность только после вызывающая сторона имеет
+// obtained Аутентификация доказательство из тот провайдер. Это refuses silent reassignment:
+// один provider/subject не может быть moved между Никогда пользователи.
 func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authentication authconnector.Authentication) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	if _, ok := c.Connector(providerID); !ok {
@@ -426,8 +426,8 @@ func cloneClaims(input map[string]any) map[string]any {
 	return out
 }
 
-// RevokeProviderCredential performs provider-side logout/revocation only. It does
-// not revoke the Never session; callers must make that a separate explicit action.
+// RevokeProviderCredential выполняет провайдер-побочный logout/revocation только. Это делает
+// не отзыв Никогда сессия; вызывающая сторона должен создавать тот отдельный явный действие.
 func (c *Core) RevokeProviderCredential(ctx context.Context, providerID, subject, providerToken string) error {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)

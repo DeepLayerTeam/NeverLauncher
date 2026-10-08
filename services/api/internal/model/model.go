@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// Project описывает Minecraft-проект, который использует NeverLauncher.
+// Проект описывает Minecraft-проект, который использует NeverLauncher.
 type Project struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`
@@ -14,7 +14,7 @@ type Project struct {
 	UpdatedAt      time.Time `json:"updatedAt"`
 }
 
-// Profile описывает клиентский профиль проекта.
+// Профиль описывает клиентский профиль проекта.
 type Profile struct {
 	ID          string    `json:"id"`
 	ProjectID   string    `json:"projectId"`
@@ -27,7 +27,7 @@ type Profile struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// ReleaseChannel описывает канал релиза: dev, beta или stable.
+// ReleaseChannel описывает канал релиза: dev, beta или стабильный.
 type ReleaseChannel struct {
 	ID          string `json:"id"`
 	ProjectID   string `json:"projectId"`
@@ -62,7 +62,7 @@ type FileObject struct {
 	TargetOS   []string `json:"targetOs,omitempty"`
 }
 
-// User описывает пользователя backend/admin panel.
+// Пользователь описывает пользователя backend/admin panel.
 type User struct {
 	ID                string            `json:"id"`
 	Email             string            `json:"email"`
@@ -78,9 +78,9 @@ type User struct {
 	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
-// AuthIdentity связывает канонического Never user с subject конкретного auth provider.
-// Внешний provider никогда не заменяет User: federation core всегда разрешает identity
-// в локальный User до выпуска Never session/token.
+// AuthIdentity связывает канонического Никогда пользователь с субъект конкретного аутентификация провайдер.
+// Внешний провайдер никогда не заменяет Пользователь: федерация ядро всегда разрешает идентичность
+// в локальный Пользователь до выпуска Никогда session/token.
 type AuthIdentity struct {
 	ID                  string         `json:"id"`
 	UserID              string         `json:"userId"`
@@ -95,7 +95,7 @@ type AuthIdentity struct {
 	LastAuthenticatedAt time.Time      `json:"lastAuthenticatedAt,omitempty"`
 }
 
-// Role описывает роль пользователя в проекте.
+// Роль описывает роль пользователя в проекте.
 type Role struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -113,7 +113,7 @@ type AdminSession struct {
 	RefreshExpiresAt time.Time `json:"refreshExpiresAt,omitempty"`
 }
 
-// Manifest — минимальная структура манифеста, которую backend отдаёт desktop client.
+// Манифест — минимальная структура манифеста, которую серверная часть отдаёт настольное приложение клиент.
 type Manifest struct {
 	SchemaVersion string         `json:"schemaVersion"`
 	ProjectID     string         `json:"projectId"`
@@ -224,9 +224,9 @@ type CrashReport struct {
 	CreatedAt       time.Time `json:"createdAt"`
 }
 
-// ProviderCredential stores an opaque external-provider credential only after it
-// has been encrypted by the auth service. Plaintext provider tokens must never be
-// persisted by Repository implementations or exposed through API models.
+// ProviderCredential хранит непрозрачный внешний-провайдер учётные данные только после это
+// имеет был зашифрованный через аутентификация служба. Открытый текст провайдер токены должен никогда быть
+// сохранённый через Репозиторий реализация или предоставлять через API модель.
 type ProviderCredential struct {
 	ID                    string    `json:"id"`
 	UserID                string    `json:"userId"`
@@ -239,9 +239,9 @@ type ProviderCredential struct {
 	LastRefreshedAt       time.Time `json:"lastRefreshedAt,omitempty"`
 }
 
-// TrustedDevice is a canonical device identity registered to one Never user.
-// PublicKey contains raw Ed25519 public key bytes encoded as base64url in storage;
-// API responses intentionally expose only KeyFingerprint.
+// TrustedDevice является канонический устройство идентичность регистрировать к один Никогда пользователь.
+// PublicKey содержит сырой Ed25519 открытый ключ байты encoded как основа64URL в хранилище;
+// API ответы намеренно предоставлять только KeyFingerprint.
 type TrustedDevice struct {
 	ID                       string          `json:"id"`
 	UserID                   string          `json:"userId"`
@@ -275,8 +275,8 @@ type TrustedDevice struct {
 	TrustAssessment          TrustAssessment `json:"trustAssessment"`
 }
 
-// DeviceChallenge is a short-lived, single-use proof-of-possession challenge.
-// Only the SHA-256 of the wire challenge is persisted.
+// DeviceChallenge является краткоживущий, одноразовый доказательство владения запрос.
+// Только SHA-256 сетевой запрос является сохранённый.
 type DeviceChallenge struct {
 	ID            string         `json:"id"`
 	UserID        string         `json:"userId"`
@@ -289,9 +289,9 @@ type DeviceChallenge struct {
 	ConsumedAt    time.Time      `json:"consumedAt,omitempty"`
 }
 
-// DeviceRevocationResult is the authoritative result of a trusted-device revoke.
-// RevokedSessionIDs is internal cascade evidence used by the HTTP layer in the
-// in-memory test/runtime path and is never serialized to clients.
+// DeviceRevocationResult является авторитетный результат доверенное устройство отзыв.
+// RevokedSessionIDs является внутренний каскад свидетельство используется через HTTP слой в 
+// в памяти процесса test/runtime путь и является никогда сериализованный к клиенты.
 type DeviceRevocationResult struct {
 	Device                   TrustedDevice `json:"device"`
 	AlreadyRevoked           bool          `json:"alreadyRevoked"`
@@ -303,10 +303,10 @@ type DeviceRevocationResult struct {
 	CascadeHandled           bool          `json:"-"`
 }
 
-// DeviceKeyReplacementResult is produced by the atomic PostgreSQL replacement
-// path used by key rotation/recovery. The current session is rebound before the
-// old device is revoked, so it survives while every other session still bound
-// to the old identity is revoked.
+// DeviceKeyReplacementResult является созданный через атомарный PostgreSQL замена
+// путь используется через ключ rotation/recovery. текущий сессия является rebound до 
+// старый устройство является отозванный, так это переживает пока каждый другой сессия по-прежнему привязанный
+// к старый идентичность является отозванный.
 type DeviceKeyReplacementResult struct {
 	OldDevice                TrustedDevice `json:"oldDevice"`
 	NewDevice                TrustedDevice `json:"newDevice"`
@@ -317,8 +317,8 @@ type DeviceKeyReplacementResult struct {
 	RevokedSessionIDs        []string      `json:"-"`
 }
 
-// DeviceRevocationBatch is returned by "revoke other devices" and keeps the
-// whole server-side cascade observable without exposing refresh/session secrets.
+// DeviceRevocationBatch является возвращён через "отзыв другой устройства" и сохраняет 
+// whole на стороне сервера каскад observable без предоставлять refresh/session секреты.
 type DeviceRevocationBatch struct {
 	Devices                  []TrustedDevice `json:"devices"`
 	RevokedDevices           int             `json:"revokedDevices"`
@@ -331,8 +331,8 @@ type DeviceRevocationBatch struct {
 	CascadeHandled           bool            `json:"-"`
 }
 
-// MinecraftProfile is the stable Minecraft identity owned by a canonical Never user.
-// UUID/name are independent from mutable email and from any external provider subject.
+// MinecraftProfile является стабильный Minecraft идентичность принадлежащий через канонический Никогда пользователь.
+// UUID/имя являются независимый из изменяемый электронная почта и из любой внешний провайдер субъект.
 type MinecraftProfile struct {
 	UserID          string    `json:"userId"`
 	UUID            string    `json:"uuid"`
@@ -345,8 +345,8 @@ type MinecraftProfile struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-// MinecraftSession is an opaque Minecraft/Yggdrasil session derived from a Never
-// session. AccessTokenHash is the only persisted representation of the bearer token.
+// MinecraftSession является непрозрачный Minecraft/Yggdrasil сессия производный из Никогда
+// сессия. AccessTokenHash является только сохранённый representation bearer токен.
 type MinecraftSession struct {
 	ID                     string    `json:"id"`
 	UserID                 string    `json:"userId"`
@@ -371,8 +371,8 @@ type MinecraftSession struct {
 	RevokedReason          string    `json:"revokedReason,omitempty"`
 }
 
-// MinecraftJoin is the short-lived proof created by the client /join call and
-// consumed by a Minecraft server through /hasJoined.
+// MinecraftJoin является краткоживущий доказательство создан через клиент /подключение вызов и
+// использованный через Minecraft сервер через /hasJoined.
 type MinecraftJoin struct {
 	Username           string    `json:"username"`
 	UsernameNormalized string    `json:"-"`
@@ -388,10 +388,10 @@ type MinecraftJoin struct {
 	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
-// ServerBridgeNode is the authoritative ServerBridge identity of a game/proxy node; protocol_version tracks the negotiated v2/v3 wire generation.
-// Since 0.14.2 node requests are authenticated by an Ed25519 public key; private
-// key material never crosses the node/backend boundary. Legacy token fields remain
-// internal only so the 0.14.1 schema can be migrated safely.
+// ServerBridgeNode является авторитетный ServerBridge идентичность game/proxy узел; протокол_версия tracks согласовывать v2/v3 сетевой генерация.
+// Since 0.14.2 узел запросы являются аутентифицировать через Ed25519 открытый ключ; закрытый
+// ключ материал никогда crosses node/backend граница. Устаревший токен fields оставаться
+// внутренний только так 0.14.1 схема может быть мигрировать безопасно.
 type ServerBridgeNode struct {
 	ID                         string                 `json:"id"`
 	Name                       string                 `json:"name"`
@@ -440,8 +440,8 @@ type ServerBridgeNode struct {
 	Telemetry                  *ServerBridgeTelemetry `json:"telemetry,omitempty"`
 }
 
-// ServerBridgeRoutingSnapshot is a signed runtime-bound routing advertisement.
-// It is accepted only from Protocol v3 nodes and is used for fail-closed handoff routing.
+// ServerBridgeRoutingSnapshot является подписанный привязанный к среде выполнения маршрутизация advertisement.
+// Это является принят только из Протокол v3 узлы и является используется для отказ с блокировкой передача маршрутизация.
 type ServerBridgeRoutingSnapshot struct {
 	RuntimeID            string    `json:"runtimeId"`
 	ObservedAtUnixMillis int64     `json:"observedAtUnixMillis"`
@@ -456,7 +456,7 @@ type ServerBridgeRoutingSnapshot struct {
 	ObservedAt           time.Time `json:"observedAt,omitempty"`
 }
 
-// ServerBridgeTelemetry is one bounded telemetry snapshot bound to one verified JVM runtime.
+// ServerBridgeTelemetry является один ограниченный телеметрия снимок привязанный к один проверен JVM среда выполнения.
 type ServerBridgeTelemetry struct {
 	Sequence                    int64    `json:"sequence"`
 	SampledAtUnixMillis         int64    `json:"sampledAtUnixMillis"`
@@ -488,7 +488,7 @@ type ServerBridgeTelemetry struct {
 	Metrics                     []string `json:"metrics"`
 }
 
-// ServerBridgeEvent is one ordered, individually signed event bound to a verified runtime epoch.
+// ServerBridgeEvent является один упорядоченный, individually подписанный событие привязанный к проверен среда выполнения эпоха.
 type ServerBridgeEvent struct {
 	Sequence             int64             `json:"sequence"`
 	EventID              string            `json:"eventId"`
@@ -500,14 +500,14 @@ type ServerBridgeEvent struct {
 	Signature            string            `json:"signature"`
 }
 
-// ServerBridgeEventAppendResult is the durable contiguous ACK returned by PostgreSQL.
+// ServerBridgeEventAppendResult является долговременный contiguous ACK возвращён через PostgreSQL.
 type ServerBridgeEventAppendResult struct {
 	AckSequence int64 `json:"ackSequence"`
 	Inserted    int   `json:"inserted"`
 }
 
-// ServerBridgeControlCommand is a durable Backend->Bridge command bound to the active runtime.
-// Payload contains only validated platform arguments; no shell program/argv is ever stored or executed.
+// ServerBridgeControlCommand является долговременный Backend->Мост команда привязанный к активный среда выполнения.
+// Полезная нагрузка содержит только проверен платформа arguments; нет оболочка program/argv является ever сохранённый или executed.
 type ServerBridgeControlCommand struct {
 	ID               string            `json:"id"`
 	ServerID         string            `json:"serverId"`
@@ -533,7 +533,7 @@ type ServerBridgeControlCommand struct {
 	Error            string            `json:"error,omitempty"`
 }
 
-// ServerBridgeRuntimeIdentity is the immutable process identity attested by the node Ed25519 key.
+// ServerBridgeRuntimeIdentity является неизменяемый процесс идентичность attested через узел Ed25519 ключ.
 type ServerBridgeRuntimeIdentity struct {
 	RuntimeID           string
 	StartedAt           time.Time
@@ -556,7 +556,7 @@ type ServerBridgeRuntimeIdentity struct {
 	IdentityDigest      string
 }
 
-// ServerBridgeRuntimeTransition describes what changed when a signed runtime heartbeat was persisted.
+// ServerBridgeRuntimeTransition описывает что изменён когда подписанный среда выполнения сигнал состояния был сохранённый.
 type ServerBridgeRuntimeTransition struct {
 	RuntimeID           string    `json:"runtimeId"`
 	RuntimeEpoch        int64     `json:"runtimeEpoch"`
@@ -568,8 +568,8 @@ type ServerBridgeRuntimeTransition struct {
 	LastSeenAt          time.Time `json:"lastSeenAt"`
 }
 
-// ServerBridgeJoinTicket is a short-lived one-time ServerBridge authorization bound to the negotiated v2/v3 node protocol.
-// A successful server-side validation atomically consumes it, preventing replay.
+// ServerBridgeJoinTicket является краткоживущий одноразовый ServerBridge авторизация привязанный к согласовывать v2/v3 узел протокол.
+// успешный на стороне сервера валидация атомарно использовать это, предотвращать повторное воспроизведение.
 type ServerBridgeJoinTicket struct {
 	ID                     string    `json:"id"`
 	TicketVersion          int       `json:"ticketVersion"`
@@ -600,9 +600,9 @@ type ServerBridgeJoinTicket struct {
 	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
 }
 
-// ServerBridgeJoinRedemption is the authenticated node proof persisted when a
-// one-time join ticket is consumed. The request nonce has already passed the
-// signed-request replay store before this proof reaches the repository.
+// ServerBridgeJoinRedemption является аутентифицировать узел доказательство сохранённый когда 
+// одноразовый подключение билет является использованный. запрос одноразовое значение имеет уже пройден 
+// подписанный-запрос повторное воспроизведение хранилище до этот доказательство reaches репозиторий.
 type ServerBridgeJoinRedemption struct {
 	NodeID               string
 	IdentityEpoch        int64
@@ -615,10 +615,10 @@ type ServerBridgeJoinRedemption struct {
 	VerifiedAt           time.Time
 }
 
-// ServerBridgeHandoff is a short-lived one-time proxy-to-backend credential.
-// It is minted only after a proxy has consumed the launcher join ticket and is
-// cryptographically bound to both current node identities. Backend validation
-// atomically consumes it, so the original launcher ticket is never replayed.
+// ServerBridgeHandoff является краткоживущий одноразовый прокси-к-серверная часть учётные данные.
+// Это является minted только после прокси имеет использованный лаунчер подключение билет и является
+// cryptographically привязанный к оба текущий узел идентичности. Серверная часть валидация
+// атомарно использовать это, так исходный лаунчер билет является никогда повторное воспроизведение.
 type ServerBridgeHandoff struct {
 	ID                     string    `json:"id"`
 	Username               string    `json:"username"`
@@ -661,9 +661,9 @@ type ServerBridgeHandoff struct {
 	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
 }
 
-// ServerBridgePlayerSession is the authoritative gameplay lifecycle spanning launcher, proxy and backend nodes.
-// One correlation id represents one logical player connection; a newer correlation for the same Never/Minecraft
-// session invalidates and disconnects the previous topology, preventing session cloning.
+// ServerBridgePlayerSession является авторитетный игровой жизненный цикл spanning лаунчер, прокси и серверная часть узлы.
+// Один корреляция ID represents один logical игрок соединение; новый корреляция для одинаковый Never/Minecraft
+// сессия инвалидирует и отключаться предыдущий топология, предотвращать сессия клонирование.
 type ServerBridgePlayerSession struct {
 	CorrelationID       string    `json:"correlationId"`
 	PlayerUUID          string    `json:"playerUuid"`
@@ -694,7 +694,7 @@ type ServerBridgePlayerSession struct {
 	InvalidatedReason   string    `json:"invalidatedReason,omitempty"`
 }
 
-// ServerBridgeTransferHop is one ordered proxy -> backend hop in a correlated gameplay session.
+// ServerBridgeTransferHop является один упорядоченный прокси -> серверная часть hop в correlated игровой сессия.
 type ServerBridgeTransferHop struct {
 	CorrelationID      string    `json:"correlationId"`
 	Sequence           int64     `json:"sequence"`
@@ -710,9 +710,9 @@ type ServerBridgeTransferHop struct {
 	ConsumedAt         time.Time `json:"consumedAt,omitempty"`
 }
 
-// ServerBridgeTopologyEdge records an observed proxy -> backend route. Edges are
-// learned from authenticated handoffs; operators do not patch proxy/server
-// configuration to maintain a parallel routing graph in NeverLauncher.
+// ServerBridgeTopologyEdge записывает наблюдаемый прокси -> серверная часть маршрут. Edges являются
+// learned из аутентифицировать передачи; оператор делать не patch proxy/server
+// конфигурация к maintain parallel маршрутизация graph в NeverLauncher.
 type ServerBridgeTopologyEdge struct {
 	SourceNodeID         string    `json:"sourceNodeId"`
 	TargetNodeID         string    `json:"targetNodeId"`
@@ -733,7 +733,7 @@ type ServerBridgeTopologyEdge struct {
 	CreatedAt            time.Time `json:"createdAt"`
 }
 
-// ServerBridgeRouteTarget is one backend currently admissible for a proxy.
+// ServerBridgeRouteTarget является один серверная часть сейчас admissible для прокси.
 type ServerBridgeRouteTarget struct {
 	NodeID          string    `json:"nodeId"`
 	BackendName     string    `json:"backendName"`
@@ -753,9 +753,9 @@ type ServerBridgeRouteTarget struct {
 	LastHeartbeatAt time.Time `json:"lastHeartbeatAt"`
 }
 
-// ServerBridgeMaintenanceResult is the result of one HA-safe maintenance pass.
-// LeaseAcquired is false when another API instance owns the PostgreSQL advisory
-// transaction lock, which is expected in active/active deployments.
+// ServerBridgeMaintenanceResult является результат один HA-безопасный обслуживание успешно.
+// LeaseAcquired является false когда другой API экземпляр владеет PostgreSQL рекомендательный
+// транзакция блокировка, который является ожидаемый в active/active развёртывание.
 type ServerBridgeMaintenanceResult struct {
 	LeaseAcquired             bool      `json:"leaseAcquired"`
 	ExpiredNoncesDeleted      int64     `json:"expiredNoncesDeleted"`
@@ -773,8 +773,8 @@ type ServerBridgeMaintenanceResult struct {
 	CompletedAt               time.Time `json:"completedAt"`
 }
 
-// ServerBridgeHAStatus is a database-derived health snapshot shared by every
-// API replica. It intentionally contains aggregate operational state only.
+// ServerBridgeHAStatus является база данных-производный работоспособность снимок общий через каждый
+// API реплика. Это намеренно содержит агрегат эксплуатационный состояние только.
 type ServerBridgeHAStatus struct {
 	ObservedAt            time.Time `json:"observedAt"`
 	FreshnessSeconds      int       `json:"freshnessSeconds"`
@@ -792,7 +792,7 @@ type ServerBridgeHAStatus struct {
 	ExpiredNonceBacklog   int64     `json:"expiredNonceBacklog"`
 }
 
-// ServerBridgeTexture is the persistent texture profile used by ServerBridge sessions.
+// ServerBridgeTexture является постоянный texture профиль используется через ServerBridge сессии.
 type ServerBridgeTexture struct {
 	UUID      string    `json:"uuid"`
 	Username  string    `json:"username"`

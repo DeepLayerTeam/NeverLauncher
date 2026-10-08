@@ -1,4 +1,4 @@
-//go:build linux
+//Go:сборка Linux
 
 package extensionhost
 
@@ -86,13 +86,13 @@ func processTreeUsage(rootPID int) (int64, int, error) {
 		count++
 	}
 	if count == 0 {
-		return 0, 0, errors.New("process group not found")
+		return 0, 0, errors.New("группа процессов не found")
 	}
 	return rss, count, nil
 }
 
-// HardenBackendProcess prevents same-uid child processes from attaching to the
-// Backend with ptrace or reading its process memory through procfs on Linux.
+// HardenBackendProcess предотвращает одинаковый-UID дочерний обрабатывает из подключение к 
+// Серверная часть с ptrace или чтение его процесс память через procfs на Linux.
 func HardenBackendProcess() error {
 	_, _, errno := syscall.RawSyscall6(syscall.SYS_PRCTL, uintptr(4), uintptr(0), 0, 0, 0, 0) // PR_SET_DUMPABLE=0
 	if errno != 0 {

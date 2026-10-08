@@ -69,10 +69,10 @@ func loaderGASupport0180(loader, minecraft string) (loaderGASupportEntry0180, bo
 func enforceLoaderGASupport0180(loader, minecraft string, detectedJavaMajor int) (loaderGASupportEntry0180, error) {
 	entry, ok := loaderGASupport0180(loader, minecraft)
 	if !ok {
-		return loaderGASupportEntry0180{}, fmt.Errorf("Loader Compatibility GA 0.18.0: %s Minecraft %s is outside the certified GA support surface", strings.ToLower(strings.TrimSpace(loader)), strings.TrimSpace(minecraft))
+		return loaderGASupportEntry0180{}, fmt.Errorf("Загрузчик Совместимость GA 0.18.0: %s Minecraft %s является вне сертифицированный GA поддержка поверхность", strings.ToLower(strings.TrimSpace(loader)), strings.TrimSpace(minecraft))
 	}
 	if detectedJavaMajor > 0 && detectedJavaMajor != entry.JavaMajor {
-		return loaderGASupportEntry0180{}, fmt.Errorf("Loader Compatibility GA 0.18.0: %s Minecraft %s requires Java %d, materialized Vanilla profile requires Java %d", entry.Loader, entry.MinecraftVersion, entry.JavaMajor, detectedJavaMajor)
+		return loaderGASupportEntry0180{}, fmt.Errorf("Загрузчик Совместимость GA 0.18.0: %s Minecraft %s требует Java %d, материализовать Vanilla профиль требует Java %d", entry.Loader, entry.MinecraftVersion, entry.JavaMajor, detectedJavaMajor)
 	}
 	return entry, nil
 }
@@ -144,7 +144,7 @@ func validateLoaderGASupportPolicy0180() error {
 	for _, entry := range entries {
 		key := entry.Loader + "\x00" + entry.MinecraftVersion
 		if seen[key] {
-			return fmt.Errorf("Loader Compatibility GA duplicate support entry %s/%s", entry.Loader, entry.MinecraftVersion)
+			return fmt.Errorf("Загрузчик Совместимость GA дубликат поддержка запись %s/%s", entry.Loader, entry.MinecraftVersion)
 		}
 		seen[key] = true
 		counts[entry.Loader]++
@@ -152,19 +152,19 @@ func validateLoaderGASupportPolicy0180() error {
 			legacy[entry.MinecraftVersion] = true
 		}
 		if entry.JavaMajor != 8 && entry.JavaMajor != 16 && entry.JavaMajor != 17 && entry.JavaMajor != 21 && entry.JavaMajor != 25 {
-			return fmt.Errorf("Loader Compatibility GA invalid Java major %d for %s/%s", entry.JavaMajor, entry.Loader, entry.MinecraftVersion)
+			return fmt.Errorf("Загрузчик Совместимость GA недопустимый Java крупный %d для %s/%s", entry.JavaMajor, entry.Loader, entry.MinecraftVersion)
 		}
 	}
 	for loader, want := range wantCounts {
 		if counts[loader] != want {
-			return fmt.Errorf("Loader Compatibility GA %s support count=%d want=%d", loader, counts[loader], want)
+			return fmt.Errorf("Загрузчик Совместимость GA %s поддержка счётчик=%d want=%d", loader, counts[loader], want)
 		}
 	}
 	if !legacy["1.7.10"] || !legacy["1.12.2"] || len(legacy) != 2 {
-		return fmt.Errorf("Loader Compatibility GA legacy Forge surface mismatch: %v", legacy)
+		return fmt.Errorf("Загрузчик Совместимость GA устаревший Forge поверхность несоответствие: %v", legacy)
 	}
 	if len(loaderGASupportSHA2560180()) != 64 {
-		return fmt.Errorf("Loader Compatibility GA support digest invalid")
+		return fmt.Errorf("Загрузчик Совместимость GA поддержка хеш недопустимый")
 	}
 	return nil
 }

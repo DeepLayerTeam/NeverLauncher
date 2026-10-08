@@ -11,17 +11,17 @@ import (
 
 func handleExtensionHost0205(args []string) error {
 	if len(args) == 0 {
-		return errors.New("extension host требует подкоманду: list, status, logs, start, stop, restart")
+		return errors.New("хост расширений требует подкоманду: список, состояние, журналы, запуск, остановка, перезапуск")
 	}
 	command := strings.ToLower(strings.TrimSpace(args[0]))
 	args = args[1:]
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("extension host требует --backend <url>")
+		return errors.New("хост расширений требует --серверная часть <URL>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension host требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("хост расширений требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	scope := strings.TrimSpace(flagValue(args, "--scope", "global"))
@@ -40,7 +40,7 @@ func handleExtensionHost0205(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status", "logs", "start", "stop", "restart":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return fmt.Errorf("extension host %s требует extension id", command)
+			return fmt.Errorf("хост расширений %s требует расширение ID", command)
 		}
 		id := url.PathEscape(strings.TrimSpace(args[0]))
 		endpoint := backend + "/api/v1/admin/extension-hosts/" + id
@@ -50,7 +50,7 @@ func handleExtensionHost0205(args []string) error {
 			limit := strings.TrimSpace(flagValue(args, "--limit", ""))
 			if limit != "" {
 				if _, err := strconv.Atoi(limit); err != nil {
-					return errors.New("--limit должен быть числом")
+					return errors.New("--ограничение должен быть числом")
 				}
 				query.Set("limit", limit)
 			}
@@ -67,6 +67,6 @@ func handleExtensionHost0205(args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная extension host подкоманда: %s", command)
+		return fmt.Errorf("неизвестная хост расширений подкоманда: %s", command)
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-//go:embed sql/*.sql
+//Go:embed SQL/*.SQL
 var migrationFS embed.FS
 
 type Migration struct{ Version, Description, Checksum, SQL string }
@@ -101,7 +101,7 @@ func EvaluateApplied(applied map[string]string) (Status, error) {
 		}
 		if checksum != m.Checksum {
 			st.Compatible = false
-			return st, fmt.Errorf("checksum migration %s changed: database=%s binary=%s", version, checksum, m.Checksum)
+			return st, fmt.Errorf("контрольная сумма миграция %s изменён: база данных=%s бинарный файл=%s", version, checksum, m.Checksum)
 		}
 	}
 	for _, m := range ms {
@@ -113,11 +113,11 @@ func EvaluateApplied(applied map[string]string) (Status, error) {
 	sort.Strings(st.Unverified)
 	if len(st.Unknown) > 0 {
 		st.Compatible = false
-		return st, fmt.Errorf("database contains migrations unknown to this binary: %s", strings.Join(st.Unknown, ","))
+		return st, fmt.Errorf("база данных содержит миграция неизвестный к этот бинарный файл: %s", strings.Join(st.Unknown, ","))
 	}
 	if len(st.Unverified) > 0 {
 		st.Compatible = false
-		return st, fmt.Errorf("database contains migrations without sealed checksum: %s; run migration apply with the matching binary", strings.Join(st.Unverified, ","))
+		return st, fmt.Errorf("база данных содержит миграция без запечатанный контрольная сумма: %s; запуск миграция применить с соответствовать бинарный файл", strings.Join(st.Unverified, ","))
 	}
 	return st, nil
 }
@@ -162,10 +162,10 @@ func validateExistingBeforeApply(ctx context.Context, db *sql.DB, ms []Migration
 		}
 		expected, ok := known[version]
 		if !ok {
-			return fmt.Errorf("database contains migration %s unknown to this binary; refusing downgrade/apply", version)
+			return fmt.Errorf("база данных содержит миграция %s неизвестный к этот бинарный файл; refusing downgrade/apply", version)
 		}
 		if checksum != "" && checksum != expected {
-			return fmt.Errorf("migration %s checksum mismatch", version)
+			return fmt.Errorf("миграция %s контрольная сумма несоответствие", version)
 		}
 	}
 	return rows.Err()
@@ -175,16 +175,16 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 	if err := db.PingContext(ctx); err != nil {
 		return Status{}, err
 	}
-	// Serialize the whole validation/apply window across Backend and CLI migrators.
-	// A per-migration transaction lock leaves a downgrade race where a newer binary
-	// can commit an unknown migration after the older binary has validated its catalog.
+	// Serialize whole validation/apply окно через Серверная часть и CLI migrators.
+	// на-миграция транзакция блокировка leaves понижение версии гонка где новый бинарный файл
+	// может фиксация неизвестный миграция после старый бинарный файл имеет проверен его каталог.
 	lockConn, err := db.Conn(ctx)
 	if err != nil {
 		return Status{}, err
 	}
 	defer lockConn.Close()
 	if _, err := lockConn.ExecContext(ctx, `SELECT pg_advisory_lock(718033100100)`); err != nil {
-		return Status{}, fmt.Errorf("acquire migration advisory lock: %w", err)
+		return Status{}, fmt.Errorf("acquire миграция рекомендательный блокировка: %w", err)
 	}
 	defer func() {
 		unlockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -207,11 +207,11 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		return Status{}, err
 	}
 	for _, m := range ms {
-		// Run every migration transaction on the same dedicated connection that
-		// owns the session-level advisory lock above. Opening the transaction via
-		// db.BeginTx may select another pooled PostgreSQL session; that session
-		// would then block forever trying to acquire pg_advisory_xact_lock on a
-		// key already held by lockConn, until the caller context expires.
+		// Запуск каждый миграция транзакция на одинаковый выделенный соединение тот
+		// владеет сессия-уровень рекомендательный блокировка выше. Открытый транзакция через
+		// db.BeginTx может select другой pooled PostgreSQL сессия; тот сессия
+		// будет затем block forever trying к acquire pg_рекомендательный_xact_блокировка на 
+		// ключ уже held через lockConn, до вызывающая сторона context истекает.
 		tx, err := lockConn.BeginTx(ctx, nil)
 		if err != nil {
 			return Status{}, err
@@ -225,12 +225,12 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		if err == nil {
 			if checksum != "" && checksum != m.Checksum {
 				tx.Rollback()
-				return Status{}, fmt.Errorf("migration %s checksum mismatch", m.Version)
+				return Status{}, fmt.Errorf("миграция %s контрольная сумма несоответствие", m.Version)
 			}
 			if checksum == "" {
 				if _, err = tx.ExecContext(ctx, `UPDATE schema_migrations SET checksum=$2,description=CASE WHEN description='' THEN $3 ELSE description END WHERE version=$1 AND checksum=''`, m.Version, m.Checksum, m.Description); err != nil {
 					tx.Rollback()
-					return Status{}, fmt.Errorf("seal migration %s checksum: %w", m.Version, err)
+					return Status{}, fmt.Errorf("запечатывать миграция %s контрольная сумма: %w", m.Version, err)
 				}
 			}
 			if err = tx.Commit(); err != nil {
@@ -244,7 +244,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		}
 		if _, err = tx.ExecContext(ctx, m.SQL); err != nil {
 			tx.Rollback()
-			return Status{}, fmt.Errorf("apply %s: %w", m.Version, err)
+			return Status{}, fmt.Errorf("применить %s: %w", m.Version, err)
 		}
 		if legacyID {
 			_, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(id,version,checksum,description,applied_at) VALUES($1,$1,$2,$3,$4)`, m.Version, m.Checksum, m.Description, time.Now().UTC())

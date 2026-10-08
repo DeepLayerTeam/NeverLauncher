@@ -88,8 +88,8 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 		writeError(w, 400, err.Error())
 		return
 	}
-	// Immediately quarantine every published artifact signed by this key. This
-	// makes revocation effective even for already-installed exact versions.
+	// Немедленно карантин каждый опубликованный артефакт подписанный через этот ключ. Этот
+	// создаёт отзыв действующий даже для уже-установленный точный версии.
 	versions, listErr := s.Repo.SearchExtensionRegistry(r.Context(), model.ExtensionRegistrySearch{IncludeYanked: true})
 	if listErr == nil {
 		for _, item := range versions {
@@ -113,10 +113,10 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"key": key, "runtimeDisabled": blocked}})
 }
 
-// enforceExtensionTrustRuntime02012 closes the time-of-check/time-of-use gap for
-// already running registry extensions. A policy/key/quarantine change is applied
-// to the live host set immediately and persisted as an emergency disable so a
-// backend restart cannot resurrect an artifact rejected by current trust state.
+// enforceExtensionTrustRuntime02012 закрывает time-of-check/time-of-use разрыв для
+// уже работающий реестр расширения. policy/key/quarantine изменять является применённый
+// к актуальный хост задать немедленно и сохранённый как аварийный отключить так 
+// серверная часть перезапуск не может resurrect артефакт отклонён через текущий доверие состояние.
 func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source string) (int, error) {
 	installs, err := s.Repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
@@ -325,13 +325,13 @@ func (s Server) extensionRecoveryBackup02012(w http.ResponseWriter, r *http.Requ
 
 func (s Server) importExtensionRecoveryState02012(ctx context.Context, state model.ExtensionRecoveryExport, restoreInstalls bool) (map[string]int, error) {
 	if state.SchemaVersion != "1.0" {
-		return nil, errors.New("unsupported extension recovery schemaVersion")
+		return nil, errors.New("неподдерживаемый расширение восстановление schemaVersion")
 	}
 	counts := map[string]int{"publishers": 0, "keys": 0, "quarantine": 0, "pins": 0, "installs": 0, "emergencyDisables": 0}
-	// Import in a monotonic trust-safe order. Publisher records are temporarily
-	// activated only so their public keys can be inserted through the normal
-	// repository invariants; the exact active state is restored after keys.
-	// Revoked keys are never reactivated.
+	// Импорт в монотонный доверие-безопасный order. Издатель записывает являются temporarily
+	// activated только так их публичный ключи может быть inserted через обычный
+	// репозиторий инварианты; точный активный состояние является восстановление после ключи.
+	// Отозванный ключи являются никогда reactivated.
 	publisherStates := make([]model.ExtensionRegistryPublisher, 0, len(state.Publishers))
 	for _, p := range state.Publishers {
 		publisherStates = append(publisherStates, p)
@@ -406,7 +406,7 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 			}
 			item, err := s.Repo.GetExtensionRegistryVersion(ctx, wanted.ExtensionID, wanted.CurrentVersion)
 			if err != nil {
-				return counts, fmt.Errorf("restore %s@%s: %w", wanted.ExtensionID, wanted.CurrentVersion, err)
+				return counts, fmt.Errorf("восстановление %s@%s: %w", wanted.ExtensionID, wanted.CurrentVersion, err)
 			}
 			scope := extensionlifecycle.Scope{Scope: wanted.Scope, ScopeID: wanted.ScopeID}
 			cur, curErr := s.Repo.GetExtensionInstallState(ctx, wanted.ExtensionID, wanted.Scope, wanted.ScopeID)
@@ -419,7 +419,7 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 				got = cur
 			}
 			if err != nil {
-				return counts, fmt.Errorf("restore %s: %w", wanted.ExtensionID, err)
+				return counts, fmt.Errorf("восстановление %s: %w", wanted.ExtensionID, err)
 			}
 			if wanted.CurrentState == model.ExtensionInstallStateEnabled && wanted.Enabled {
 				if _, err = mgr.Enable(ctx, got.ExtensionID, scope); err != nil {
@@ -492,9 +492,9 @@ func (s Server) extensionRecoveryRestore02012(w http.ResponseWriter, r *http.Req
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"restored": counts, "stateSha256": backup.StateSHA256}})
 }
 
-// quarantineRejectedUpload02012 persists suspicious bytes into configured
-// storage before returning the rejection. This is intentionally best-effort at
-// the callsite: the artifact is never accepted even if forensic storage fails.
+// quarantineRejectedUpload02012 сохраняет suspicious байты в настраивать
+// хранилище до возвращать отклонение. Этот является намеренно best-effort в
+// callsite: артефакт является никогда принят даже если forensic хранилище завершается ошибкой.
 func (s Server) quarantineRejectedUpload02012(ctx context.Context, tmpPath, uploadSHA, reason string, meta *model.ExtensionRegistryVersion) (model.ExtensionQuarantineEntry, error) {
 	id, err := randomID02012("q-")
 	if err != nil {

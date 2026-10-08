@@ -304,7 +304,7 @@ impl NeverGuardSupervisor {
             let running = handle
                 .child
                 .try_wait()
-                .map_err(|err| format!("не удалось проверить NeverGuard process: {err}"))?
+                .map_err(|err| format!("не удалось проверить NeverGuard процесс: {err}"))?
                 .is_none();
             if running {
                 if let Ok(status) = send_command(handle, "status").await {
@@ -328,7 +328,7 @@ impl NeverGuardSupervisor {
         validate_neverguard_path(&executable)?;
         if !executable.is_file() {
             return Err(format!(
-                "NeverGuard executable отсутствует рядом с Desktop: {}",
+                "NeverGuard исполняемый отсутствует рядом с Настольное приложение: {}",
                 executable.display()
             ));
         }
@@ -366,7 +366,7 @@ impl NeverGuardSupervisor {
             Ok(job) => job,
             Err(err) => {
                 let _ = child.kill().await;
-                return Err(format!("launch заблокирован: NeverGuard lifetime boundary failed: {err}"));
+                return Err(format!("запускать заблокирован: NeverGuard срок жизни граница ошибка: {err}"));
             }
         };
 
@@ -377,12 +377,12 @@ impl NeverGuardSupervisor {
         if let Err(err) = stdin.write_all(&bootstrap_secret).await {
             bootstrap_secret.zeroize();
             let _ = child.kill().await;
-            return Err(format!("не удалось передать NeverGuard bootstrap secret: {err}"));
+            return Err(format!("не удалось передать NeverGuard инициализировать секрет: {err}"));
         }
         if let Err(err) = stdin.shutdown().await {
             bootstrap_secret.zeroize();
             let _ = child.kill().await;
-            return Err(format!("не удалось закрыть NeverGuard bootstrap channel: {err}"));
+            return Err(format!("не удалось закрыть NeverGuard инициализировать канал: {err}"));
         }
 
         let pipe = match connect_client_pipe(&endpoint).await {
@@ -423,16 +423,16 @@ impl NeverGuardSupervisor {
             protection_profile,
         };
         let status_value = send_command(&mut handle, "status").await
-            .map_err(|err| format!("NeverGuard release identity query failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard релиз идентичность query ошибка: {err}"))?;
         let mut status = parse_status(status_value)?;
         validate_status_profile(&status, protection_profile)?;
         status.lifetime_job_enforced = true;
         status.package_manifest_verified = package_manifest_verified;
         let policy_value = send_command(&mut handle, "process-policy")
             .await
-            .map_err(|err| format!("NeverGuard Windows Protection Core query failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard Windows Защита Ядро query ошибка: {err}"))?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
-            .map_err(|err| format!("NeverGuard Windows Protection Core payload повреждён: {err}"))?;
+            .map_err(|err| format!("NeverGuard Windows Защита Ядро полезная нагрузка повреждён: {err}"))?;
         validate_guard_process_policy(&handle, &policy)?;
         *state = Some(handle);
         Ok(status)
@@ -482,7 +482,7 @@ impl NeverGuardSupervisor {
             .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
         let payload = send_command(handle, "integrity-evidence").await?;
         let evidence: NeverGuardIntegrityEvidence = serde_json::from_value(payload)
-            .map_err(|err| format!("NeverGuard integrity evidence payload повреждён: {err}"))?;
+            .map_err(|err| format!("NeverGuard целостность свидетельство полезная нагрузка повреждён: {err}"))?;
         validate_integrity_evidence(handle, &evidence)?;
         Ok(evidence)
     }
@@ -501,7 +501,7 @@ impl NeverGuardSupervisor {
             .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
         let payload = send_command(handle, "process-policy").await?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(payload)
-            .map_err(|err| format!("NeverGuard process policy payload повреждён: {err}"))?;
+            .map_err(|err| format!("NeverGuard процесс политика полезная нагрузка повреждён: {err}"))?;
         validate_guard_process_policy(handle, &policy)?;
         Ok(policy)
     }
@@ -529,20 +529,20 @@ impl NeverGuardSupervisor {
             challenge: challenge.to_string(),
         };
         let request_payload = serde_json::to_string(&request)
-            .map_err(|err| format!("NeverGuard attestation request serialization failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard аттестация запрос serialization ошибка: {err}"))?;
         let mut state = self.inner.lock().await;
         let handle = state
             .as_mut()
             .ok_or_else(|| "NeverGuard process boundary не инициализирован".to_string())?;
         if !handle.protection_profile.is_remote_attestation_eligible() {
             return Err(format!(
-                "NeverGuard remote attestation requires aggressive Windows protection profile; active profile is {}",
+                "NeverGuard удалённый аттестация требует агрессивный Windows защита профиль; активный профиль является {}",
                 handle.protection_profile
             ));
         }
         let payload = send_command_with_payload(handle, "guard-attestation", &request_payload).await?;
         let attestation: NeverGuardRemoteAttestation = serde_json::from_value(payload)
-            .map_err(|err| format!("NeverGuard remote attestation payload повреждён: {err}"))?;
+            .map_err(|err| format!("NeverGuard удалённый аттестация полезная нагрузка повреждён: {err}"))?;
         validate_remote_attestation(handle, challenge_id, challenge, &attestation)?;
         Ok(attestation)
     }
@@ -565,7 +565,7 @@ impl NeverGuardSupervisor {
         let _ = send_command(&mut handle, "shutdown").await;
         match timeout(Duration::from_secs(2), handle.child.wait()).await {
             Ok(Ok(_)) => Ok(()),
-            Ok(Err(err)) => Err(format!("не удалось дождаться NeverGuard shutdown: {err}")),
+            Ok(Err(err)) => Err(format!("не удалось дождаться NeverGuard завершение: {err}")),
             Err(_) => {
                 handle
                     .child
@@ -586,7 +586,7 @@ impl NeverGuardSupervisor {
 #[cfg(windows)]
 fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String> {
     let current_exe = std::env::current_exe()
-        .map_err(|err| format!("не удалось определить Desktop executable для package verification: {err}"))?;
+        .map_err(|err| format!("не удалось определить Настольное приложение исполняемый для пакет проверка: {err}"))?;
     let current_dir = current_exe
         .parent()
         .ok_or_else(|| "Desktop executable не имеет parent directory".to_string())?;
@@ -594,19 +594,19 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         .parent()
         .ok_or_else(|| "NeverGuard executable не имеет parent directory".to_string())?;
     let current_dir = std::fs::canonicalize(current_dir)
-        .map_err(|err| format!("не удалось canonicalize Desktop directory: {err}"))?;
+        .map_err(|err| format!("не удалось canonicalize Настольное приложение каталог: {err}"))?;
     let guard_dir = std::fs::canonicalize(guard_dir)
-        .map_err(|err| format!("не удалось canonicalize NeverGuard directory: {err}"))?;
+        .map_err(|err| format!("не удалось canonicalize NeverGuard каталог: {err}"))?;
     if current_dir != guard_dir {
         return Err("NeverGuard package verification failed: Guard is not adjacent to Desktop".to_string());
     }
     let sensor_path = current_dir.join(NEVERGUARD_SENSOR_FILE_NAME);
     for path in [&current_exe, guard_executable, &sensor_path] {
         let metadata = std::fs::symlink_metadata(path)
-            .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+            .map_err(|err| format!("не удалось stat пакет артефакт {}: {err}", path.display()))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(format!(
-                "NeverGuard package verification rejected non-regular/symlink artifact: {}",
+                "NeverGuard пакет проверка отклонён non-regular/symlink артефакт: {}",
                 path.display()
             ));
         }
@@ -615,7 +615,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let manifest_path = current_dir.join(WINDOWS_PACKAGE_MANIFEST);
     let manifest_link_metadata = std::fs::symlink_metadata(&manifest_path).map_err(|err| {
         format!(
-            "production Windows package manifest отсутствует {}: {err}",
+            "рабочий Windows пакет манифест отсутствует {}: {err}",
             manifest_path.display()
         )
     })?;
@@ -624,7 +624,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     }
     let metadata = std::fs::metadata(&manifest_path).map_err(|err| {
         format!(
-            "production Windows package manifest отсутствует {}: {err}",
+            "рабочий Windows пакет манифест отсутствует {}: {err}",
             manifest_path.display()
         )
     })?;
@@ -632,9 +632,9 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         return Err("Windows package manifest size is invalid".to_string());
     }
     let raw = std::fs::read(&manifest_path)
-        .map_err(|err| format!("не удалось прочитать Windows package manifest: {err}"))?;
+        .map_err(|err| format!("не удалось прочитать Windows пакет манифест: {err}"))?;
     let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
-        .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
+        .map_err(|err| format!("Windows пакет манифест повреждён: {err}"))?;
     let canonical_arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
     let legacy_identity = manifest.schema_version == "1.0" && manifest.platform == "windows-amd64";
     let canonical_identity = manifest.schema_version == "1.1"
@@ -672,18 +672,18 @@ fn verify_package_artifact(manifest: &WindowsPackageManifest, path: &Path) -> Re
         .artifacts
         .iter()
         .find(|artifact| artifact.name.eq_ignore_ascii_case(name))
-        .ok_or_else(|| format!("Windows package manifest does not contain artifact {name}"))?;
+        .ok_or_else(|| format!("Windows пакет манифест делает не contain артефакт {name}"))?;
     let metadata = std::fs::metadata(path)
-        .map_err(|err| format!("не удалось stat package artifact {}: {err}", path.display()))?;
+        .map_err(|err| format!("не удалось stat пакет артефакт {}: {err}", path.display()))?;
     if metadata.len() != artifact.size {
-        return Err(format!("Windows package artifact size mismatch: {name}"));
+        return Err(format!("Windows пакет артефакт размер несоответствие: {name}"));
     }
     let actual = sha256_file(path)?;
     if artifact.sha256.len() != 64
         || !artifact.sha256.bytes().all(|b| b.is_ascii_hexdigit())
         || !actual.eq_ignore_ascii_case(&artifact.sha256)
     {
-        return Err(format!("Windows package artifact SHA-256 mismatch: {name}"));
+        return Err(format!("Windows пакет артефакт SHA-256 несоответствие: {name}"));
     }
     Ok(())
 }
@@ -710,7 +710,7 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 #[cfg(windows)]
 fn resolve_neverguard_executable() -> Result<PathBuf, String> {
     let current = std::env::current_exe()
-        .map_err(|err| format!("не удалось определить путь NeverLauncher Desktop: {err}"))?;
+        .map_err(|err| format!("не удалось определить путь NeverLauncher Настольное приложение: {err}"))?;
     let parent = current
         .parent()
         .ok_or_else(|| "не удалось определить каталог NeverLauncher Desktop".to_string())?;
@@ -732,7 +732,7 @@ async fn connect_client_pipe(endpoint: &str) -> Result<NamedPipeClient, String> 
             Ok(pipe) => return Ok(pipe),
             Err(err) if Instant::now() < deadline => {
                 if !matches!(err.kind(), std::io::ErrorKind::NotFound | std::io::ErrorKind::WouldBlock) {
-                    // ERROR_PIPE_BUSY is reported as a platform-specific Other error on some toolchains.
+                    // ERROR_PIPE_BUSY является отображается как платформа-specific Другой ошибка на некоторые toolchains.
                     if err.raw_os_error() != Some(231) {
                         return Err(format!("не удалось подключиться к NeverGuard IPC {endpoint}: {err}"));
                     }
@@ -867,7 +867,7 @@ async fn send_command_with_payload(
     {
         Ok(result) => result,
         Err(_) => Err(format!(
-            "NeverGuard IPC command {command} превысил timeout"
+            "NeverGuard IPC команда {command} превысил тайм-аут"
         )),
     }
 }
@@ -916,7 +916,7 @@ async fn send_command_inner(
         .checked_add(1)
         .ok_or_else(|| "NeverGuard IPC sequence exhausted".to_string())?;
     let payload: Value = serde_json::from_str(&response.payload)
-        .map_err(|err| format!("NeverGuard IPC response payload повреждён: {err}"))?;
+        .map_err(|err| format!("NeverGuard IPC ответ полезная нагрузка повреждён: {err}"))?;
     if response.ok {
         Ok(payload)
     } else {
@@ -931,7 +931,7 @@ async fn send_command_inner(
 #[cfg(windows)]
 fn parse_status(value: Value) -> Result<NeverGuardStatus, String> {
     let status: NeverGuardStatus = serde_json::from_value(value)
-        .map_err(|err| format!("NeverGuard status payload повреждён: {err}"))?;
+        .map_err(|err| format!("NeverGuard состояние полезная нагрузка повреждён: {err}"))?;
     validate_release_identity(&status, expected_windows_platform())?;
     Ok(status)
 }
@@ -949,20 +949,20 @@ fn expected_windows_platform() -> &'static str {
 fn validate_release_identity(status: &NeverGuardStatus, expected_platform: &str) -> Result<(), String> {
     if status.product_version != env!("CARGO_PKG_VERSION") {
         return Err(format!(
-            "NeverGuard release version mismatch: Desktop={} Guard={}",
+            "NeverGuard релиз версия несоответствие: Настольное приложение={} Защита={}",
             env!("CARGO_PKG_VERSION"),
             status.product_version
         ));
     }
     if status.platform != expected_platform {
         return Err(format!(
-            "NeverGuard platform mismatch: expected {expected_platform}, got {}",
+            "NeverGuard платформа несоответствие: ожидаемый {expected_platform}, получил {}",
             status.platform
         ));
     }
     if status.protocol_version != NEVERGUARD_PROTOCOL_VERSION {
         return Err(format!(
-            "NeverGuard protocol mismatch: Desktop={} Guard={}",
+            "NeverGuard протокол несоответствие: Настольное приложение={} Защита={}",
             NEVERGUARD_PROTOCOL_VERSION,
             status.protocol_version
         ));
@@ -983,7 +983,7 @@ fn validate_status_profile(
 ) -> Result<(), String> {
     if status.windows_protection_profile != expected_profile.as_str() {
         return Err(format!(
-            "NeverGuard Windows protection profile mismatch: expected {expected_profile}, got {}",
+            "NeverGuard Windows защита профиль несоответствие: ожидаемый {expected_profile}, получил {}",
             status.windows_protection_profile
         ));
     }
@@ -1070,7 +1070,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
     let mut token: HANDLE = null_mut();
     if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
         return Err(format!(
-            "NeverGuard cannot open current process token for pipe ACL: {}",
+            "NeverGuard не может открытый текущий процесс токен для pipe ACL: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1106,7 +1106,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
     } == 0
     {
         return Err(format!(
-            "NeverGuard cannot read current user SID for pipe ACL: {}",
+            "NeverGuard не может чтение текущий пользователь SID для pipe ACL: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1120,7 +1120,7 @@ fn current_windows_user_sid_string() -> Result<String, String> {
         || sid_text.is_null()
     {
         return Err(format!(
-            "NeverGuard cannot convert current user SID for pipe ACL: {}",
+            "NeverGuard не может преобразовывать текущий пользователь SID для pipe ACL: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1144,8 +1144,8 @@ fn current_windows_user_sid_string() -> Result<String, String> {
 
 #[cfg(windows)]
 pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> {
-    // Protected DACL: only LocalSystem and the exact launcher account receive access.
-    // Authentication still happens at the HMAC layer, so the ACL is defense in depth.
+    // Защищать DACL: только LocalSystem и точный лаунчер учётная запись получать доступ.
+    // Аутентификация по-прежнему happens в HMAC слой, так ACL является defense в depth.
     let user_sid = current_windows_user_sid_string()?;
     let sddl: Vec<u16> = format!("D:P(A;;GA;;;SY)(A;;GA;;;{user_sid})")
         .encode_utf16()
@@ -1162,7 +1162,7 @@ pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServe
     };
     if converted == 0 || security_descriptor.is_null() {
         return Err(format!(
-            "NeverGuard named pipe security descriptor creation failed: {}",
+            "NeverGuard именованный pipe безопасность дескриптор создание ошибка: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1185,7 +1185,7 @@ pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServe
     unsafe {
         let _ = LocalFree(security_descriptor);
     }
-    result.map_err(|err| format!("не удалось создать hardened NeverGuard named pipe {endpoint}: {err}"))
+    result.map_err(|err| format!("не удалось создать усиленный NeverGuard именованный pipe {endpoint}: {err}"))
 }
 
 #[cfg(windows)]
@@ -1219,7 +1219,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     let observed_parent_pid = observed_windows_parent_pid(guard_pid)?;
     if observed_parent_pid != parent_pid {
         return Err(format!(
-            "NeverGuard actual parent PID mismatch: expected {parent_pid}, observed {observed_parent_pid}"
+            "NeverGuard фактический родительский PID несоответствие: ожидаемый {parent_pid}, наблюдаемый {observed_parent_pid}"
         ));
     }
 
@@ -1227,7 +1227,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     {
         let mut bootstrap_stdin = std::io::stdin();
         std::io::Read::read_exact(&mut bootstrap_stdin, &mut bootstrap_secret)
-            .map_err(|err| format!("NeverGuard bootstrap secret не получен: {err}"))?;
+            .map_err(|err| format!("NeverGuard инициализировать секрет не получен: {err}"))?;
     }
 
     let started_at_unix = now_unix()?;
@@ -1243,7 +1243,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
                 .as_deref()
                 .unwrap_or("no authenticated client connected");
             return Err(format!(
-                "NeverGuard IPC authentication window expired: {detail}"
+                "NeverGuard IPC аутентификация окно истёкший: {detail}"
             ));
         }
 
@@ -1251,7 +1251,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
                 bootstrap_secret.zeroize();
-                return Err(format!("NeverGuard IPC connect failed: {err}"));
+                return Err(format!("NeverGuard IPC подключение ошибка: {err}"));
             }
             Err(_) => {
                 bootstrap_secret.zeroize();
@@ -1291,7 +1291,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
         if let Err(err) = server.disconnect() {
             bootstrap_secret.zeroize();
             return Err(format!(
-                "NeverGuard IPC failed to reset after rejected client: {err}"
+                "NeverGuard IPC ошибка к reset после отклонён клиент: {err}"
             ));
         }
         sleep(Duration::from_millis(10)).await;
@@ -1425,7 +1425,7 @@ async fn serve_authenticated_session(
         }
         if request.sequence != expected_sequence {
             return Err(format!(
-                "NeverGuard IPC replay/out-of-order request rejected: expected {expected_sequence}, got {}",
+                "NeverGuard IPC replay/out-of-order запрос отклонён: ожидаемый {expected_sequence}, получил {}",
                 request.sequence
             ));
         }
@@ -1481,13 +1481,13 @@ async fn serve_authenticated_session(
                     started_at_unix,
                     message: "NeverGuard Windows process boundary authenticated; process policy and production hardening enforced".to_string(),
                 })
-                .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                .map_err(|err| format!("NeverGuard состояние serialization ошибка: {err}"))?,
                 false,
             ),
             "process-policy" => (
                 true,
                 serde_json::to_value(process_policy).map_err(|err| {
-                    format!("NeverGuard process policy serialization failed: {err}")
+                    format!("NeverGuard процесс политика serialization ошибка: {err}")
                 })?,
                 false,
             ),
@@ -1496,20 +1496,20 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("NeverGuard integrity evidence worker failed: {err}"))??;
+                .map_err(|err| format!("NeverGuard целостность свидетельство обработчик ошибка: {err}"))??;
                 let digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &digest));
                 (
                     true,
                     serde_json::to_value(evidence).map_err(|err| {
-                        format!("NeverGuard integrity evidence serialization failed: {err}")
+                        format!("NeverGuard целостность свидетельство serialization ошибка: {err}")
                     })?,
                     false,
                 )
             }
             "guard-attestation" => {
                 let request: GuardAttestationRequest = serde_json::from_str(&request.payload)
-                    .map_err(|err| format!("NeverGuard attestation request payload повреждён: {err}"))?;
+                    .map_err(|err| format!("NeverGuard аттестация запрос полезная нагрузка повреждён: {err}"))?;
                 if request.challenge_id.trim().is_empty()
                     || request.challenge_id.len() > 160
                     || request.challenge.is_empty()
@@ -1521,7 +1521,7 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("NeverGuard remote attestation evidence worker failed: {err}"))??;
+                .map_err(|err| format!("NeverGuard удалённый аттестация свидетельство обработчик ошибка: {err}"))??;
                 let evidence_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &evidence_digest));
                 let mut attestation = NeverGuardRemoteAttestation {
@@ -1541,7 +1541,7 @@ async fn serve_authenticated_session(
                 (
                     true,
                     serde_json::to_value(attestation).map_err(|err| {
-                        format!("NeverGuard remote attestation serialization failed: {err}")
+                        format!("NeverGuard удалённый аттестация serialization ошибка: {err}")
                     })?,
                     false,
                 )
@@ -1549,12 +1549,12 @@ async fn serve_authenticated_session(
             "shutdown" => (true, json!({"shutdown": true}), true),
             other => (
                 false,
-                json!({"error": format!("unsupported NeverGuard command: {other}")}),
+                json!({"error": format!("неподдерживаемый NeverGuard команда: {other}")}),
                 false,
             ),
         };
         let payload = serde_json::to_string(&payload)
-            .map_err(|err| format!("NeverGuard response serialization failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard ответ serialization ошибка: {err}"))?;
         let response = ResponseEnvelope {
             protocol_version: NEVERGUARD_PROTOCOL_VERSION,
             sequence: request.sequence,
@@ -1603,7 +1603,7 @@ where
     T: Serialize,
 {
     let mut bytes = serde_json::to_vec(value)
-        .map_err(|err| format!("NeverGuard IPC serialization failed: {err}"))?;
+        .map_err(|err| format!("NeverGuard IPC serialization ошибка: {err}"))?;
     if bytes.len() > MAX_FRAME_BYTES {
         return Err("NeverGuard IPC frame exceeds limit".to_string());
     }
@@ -1611,11 +1611,11 @@ where
     writer
         .write_all(&bytes)
         .await
-        .map_err(|err| format!("NeverGuard IPC write failed: {err}"))?;
+        .map_err(|err| format!("NeverGuard IPC запись ошибка: {err}"))?;
     writer
         .flush()
         .await
-        .map_err(|err| format!("NeverGuard IPC flush failed: {err}"))
+        .map_err(|err| format!("NeverGuard IPC flush ошибка: {err}"))
 }
 
 #[cfg(windows)]
@@ -1630,7 +1630,7 @@ where
         let read = reader
             .read(&mut one)
             .await
-            .map_err(|err| format!("NeverGuard IPC read failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard IPC чтение ошибка: {err}"))?;
         if read == 0 {
             return Err("NeverGuard IPC peer closed connection".to_string());
         }
@@ -1645,7 +1645,7 @@ where
     if bytes.is_empty() {
         return Err("NeverGuard IPC empty frame rejected".to_string());
     }
-    serde_json::from_slice(&bytes).map_err(|err| format!("NeverGuard IPC JSON rejected: {err}"))
+    serde_json::from_slice(&bytes).map_err(|err| format!("NeverGuard IPC JSON отклонён: {err}"))
 }
 
 #[cfg(windows)]
@@ -1664,9 +1664,9 @@ fn random_id() -> String {
 
 #[cfg(windows)]
 fn decode_hex_32(value: &str, field: &str) -> Result<[u8; 32], String> {
-    let raw = hex::decode(value).map_err(|_| format!("NeverGuard IPC {field} is not valid hex"))?;
+    let raw = hex::decode(value).map_err(|_| format!("NeverGuard IPC {field} является не действительный hex"))?;
     if raw.len() != 32 {
-        return Err(format!("NeverGuard IPC {field} must be 32 bytes"));
+        return Err(format!("NeverGuard IPC {field} должен быть 32 байты"));
     }
     let mut out = [0u8; 32];
     out.copy_from_slice(&raw);
@@ -1825,7 +1825,7 @@ fn now_unix() -> Result<u64, String> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())
-        .map_err(|err| format!("system clock error: {err}"))
+        .map_err(|err| format!("system clock ошибка: {err}"))
 }
 
 pub fn neverguard_executable_name() -> &'static str {
@@ -1843,7 +1843,7 @@ pub fn validate_neverguard_path(path: &Path) -> Result<(), String> {
         .ok_or_else(|| "NeverGuard executable path не содержит file name".to_string())?;
     if !name.eq_ignore_ascii_case(neverguard_executable_name()) {
         return Err(format!(
-            "NeverGuard executable должен называться {}, получено {name}",
+            "NeverGuard исполняемый должен называться {}, получено {name}",
             neverguard_executable_name()
         ));
     }

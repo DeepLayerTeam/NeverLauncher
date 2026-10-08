@@ -9,9 +9,9 @@ const (
 	ExtensionInstallStateError    = "error"
 )
 
-// ExtensionLifecycleTransition is the single atomic persistence operation used
-// after a staged filesystem activation has succeeded. ExpectedGeneration makes
-// concurrent lifecycle mutations fail rather than overwrite each other.
+// ExtensionLifecycleTransition является единый атомарный хранение операция используется
+// после подготовленный файловая система активация имеет succeeded. ExpectedGeneration создаёт
+// конкурентный жизненный цикл изменение завершаться ошибкой вместо чем overwrite каждый другой.
 type ExtensionLifecycleTransition struct {
 	ExtensionID             string
 	Scope                   string
@@ -33,9 +33,9 @@ type ExtensionLifecycleTransition struct {
 	ActivatedAt             *time.Time
 }
 
-// ExtensionInstallRevision is an append-only successful lifecycle transition.
-// BackupPath points at the previous activated payload when the operation moved
-// or removed it, making rollback deterministic and auditable.
+// ExtensionInstallRevision является только добавление успешный жизненный цикл переход.
+// BackupPath точки в предыдущий activated полезная нагрузка когда операция moved
+// или удалён это, making откат детерминированный и auditable.
 type ExtensionInstallRevision struct {
 	ID                  int64     `json:"id"`
 	ExtensionID         string    `json:"extensionId"`

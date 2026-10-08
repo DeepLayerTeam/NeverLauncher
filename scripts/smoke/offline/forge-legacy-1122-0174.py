@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 4):
-    raise SystemExit(f"Forge Legacy 1.12.2 requires VERSION>=0.17.4, got {version}")
+    raise SystemExit(f"Forge Устаревший 1.12.2 требует VERSION>=0.17.4, получил {version}")
 
 
 def read(rel: str) -> str:
@@ -19,23 +19,23 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: missing {missing}")
+        raise SystemExit(f"{name}: отсутствующий {missing}")
 
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected = dict(matrix_globals["FORGE_LEGACY_1122_0174"])
 if expected != {"1.12.2": 8}:
-    raise SystemExit(f"Forge Legacy 0.17.4 canonical grid mismatch: {expected}")
+    raise SystemExit(f"Forge Устаревший 0.17.4 канонический сетка несоответствие: {expected}")
 
 target_doc = json.loads(read("compatibility/targets.json"))
 rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "forge" and row.get("minecraft") == "1.12.2"]
 if len(rows) != 1:
-    raise SystemExit(f"Forge Legacy 0.17.4 requires exactly one Forge 1.12.2 target, got {len(rows)}")
+    raise SystemExit(f"Forge Устаревший 0.17.4 требует точно один Forge 1.12.2 цель, получил {len(rows)}")
 row = rows[0]
 if row.get("javaMajor") != 8 or row.get("scope") != "client" or row.get("os") != "linux" or row.get("arch") != "x86_64":
-    raise SystemExit("Forge Legacy 1.12.2 must be Java 8 client linux/x86_64")
+    raise SystemExit("Forge Устаревший 1.12.2 должен быть Java 8 клиент linux/x86_64")
 if row.get("loaderVersion") != "latest-stable":
-    raise SystemExit("Forge Legacy 1.12.2 must use latest-stable selector with immutable resolved evidence")
+    raise SystemExit("Forge Устаревший 1.12.2 должен использовать последний-стабильный селектор с неизменяемый разрешённый свидетельство")
 
 runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
 require(runtime, [
@@ -77,4 +77,4 @@ require(tests, [
     "TestForgeLegacy1122V1UniversalInstaller", "TestForgeLegacy1122RepackedEmptyProcessorInstaller",
 ], "Forge legacy regression coverage")
 
-print("Forge Legacy 1.12.2 0.17.4 gate: OK (real V1 universal installer + repacked empty-processor fallback + Java 8 actual-client certification)")
+print("Forge Устаревший 1.12.2 0.17.4 контроль: OK (реальный V1 универсальный установщик + repacked пустой-обработчик резервный вариант + Java 8 реальный клиент сертификация)")

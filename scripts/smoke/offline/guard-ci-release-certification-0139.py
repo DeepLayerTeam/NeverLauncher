@@ -7,7 +7,7 @@ import sys
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 13, 9):
-    raise SystemExit("VERSION is older than 0.13.9")
+    raise SystemExit("VERSION является старый чем 0.13.9")
 
 def read(path: str) -> str:
     return (root / path).read_text(encoding="utf-8")
@@ -15,19 +15,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("schemaVersion") != "1.0" or targets.get("productVersion") != version:
-    raise SystemExit("Guard CI targets schema/version mismatch")
+    raise SystemExit("Защита CI цели schema/version несоответствие")
 rows = targets.get("targets")
 if not isinstance(rows, list) or {row.get("os") for row in rows if row.get("required")} != {"linux", "windows", "macos"}:
-    raise SystemExit("Guard CI targets must require linux/windows/macos")
+    raise SystemExit("Защита CI цели должен требовать linux/windows/macos")
 for row in rows:
     checks = set(row.get("requiredChecks", []))
     for required in {"guardIntegrationTest", "artifactHashesVerified", "authenticatedIpcV4", "runtimePolicyEnforced", "guardRelease0139"}:
         if required not in checks:
-            raise SystemExit(f"{row.get('id')}: missing {required}")
+            raise SystemExit(f"{row.get('id')}: отсутствующий {required}")
 
 matrix = read("scripts/guard_ci/matrix.py")
 require(matrix, ["guard-ci-result.json", "artifact filename collision across platforms", "vendorSigningProvenance", "not-certified-by-ci", "packageManifestBound", "repository=args.repository", "Guard CI matrix PASS"], "Guard CI matrix")
@@ -46,4 +46,4 @@ require(preflight, ["guard-ci-release-certification-0139.py", "scripts/guard_ci/
 
 subprocess.run([sys.executable, str(root / "scripts/guard_ci/matrix.py"), "validate", "--targets", str(root / "guard-ci/targets.json")], cwd=root, check=True)
 subprocess.run([sys.executable, str(root / "scripts/guard_ci/test_matrix.py")], cwd=root, check=True)
-print("NeverLauncher 0.13.9+ cross-platform Guard CI matrix + release certification gate: OK")
+print("NeverLauncher 0.13.9+ кроссплатформенный Защита CI матрица + сертификация релиза контроль: OK")

@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// PersistenceSnapshotRepository хранит 0.10.0 write-through snapshots для
-// security/session/server-bridge state. Это не заменяет нормализованные таблицы
+// PersistenceSnapshotRepository хранит 0.10.0 запись-через снимки для
+// security/session/server-bridge состояние. Это не заменяет нормализованные таблицы
 // миграций 0092-0096, а дополняет их быстрым bootstrap-контуром после рестарта API.
 type PersistenceSnapshotRepository interface {
 	EnsurePersistence(ctx context.Context) error

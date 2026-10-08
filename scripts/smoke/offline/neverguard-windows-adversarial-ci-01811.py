@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: {path} missing: {', '.join(missing)}")
+        raise SystemExit(f"[NeverLauncher] Windows Атакующий CI 0.18.11 контроль: {path} отсутствующий: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"недопустимый VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 11):
-    raise SystemExit(f"Windows Adversarial CI gate requires >=0.18.11, got {version}")
+    raise SystemExit(f"Windows Атакующий CI контроль требует >=0.18.11, получил {version}")
 
 runner = read("scripts/guard_ci/windows_adversarial.py")
 require(runner, "scripts/guard_ci/windows_adversarial.py", [
@@ -71,7 +71,7 @@ for test_name in [
     "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
 ]:
     if test_name not in windows_tests:
-        raise SystemExit(f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: live test missing: {test_name}")
+        raise SystemExit(f"[NeverLauncher] Windows Атакующий CI 0.18.11 контроль: актуальный тест отсутствующий: {test_name}")
 
 ci = read(".github/workflows/ci.yml")
 require(ci, ".github/workflows/ci.yml", [
@@ -91,11 +91,11 @@ for manifest in [
     "runtime/neverguard-jvm-probe/Cargo.toml",
 ]:
     if manifest not in ci:
-        raise SystemExit(f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: CI does not build {manifest}")
+        raise SystemExit(f"[NeverLauncher] Windows Атакующий CI 0.18.11 контроль: CI делает не сборка {manifest}")
 
 preflight = read("scripts/release/preflight.sh")
 if "neverguard-windows-adversarial-ci-01811.py" not in preflight or "test_windows_adversarial.py" not in preflight:
-    raise SystemExit("[NeverLauncher] Windows Adversarial CI 0.18.11 gate: release preflight/self-test wiring missing")
+    raise SystemExit("[NeverLauncher] Windows Атакующий CI 0.18.11 контроль: релиз preflight/self-test wiring отсутствующий")
 
 for rel, text in [
     ("scripts/guard_ci/windows_adversarial.py", runner),
@@ -104,6 +104,6 @@ for rel, text in [
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
-            raise SystemExit(f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: placeholder {placeholder!r} in {rel}")
+            raise SystemExit(f"[NeverLauncher] Windows Атакующий CI 0.18.11 контроль: placeholder {placeholder!r} в {rel}")
 
-print(f"[NeverLauncher] Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK ({version})")
+print(f"[NeverLauncher] Windows Атакующий CI attack-simulation + совместимость сертификация 0.18.11 контроль: OK ({version})")

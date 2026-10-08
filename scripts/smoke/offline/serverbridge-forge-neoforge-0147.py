@@ -2,14 +2,14 @@
 from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
-if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 7): raise SystemExit("VERSION is older than 0.14.7")
+if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 7): raise SystemExit("VERSION является старый чем 0.14.7")
 def read(path): return (root / path).read_text(encoding="utf-8")
 def require(text, needles, label):
     missing=[n for n in needles if n not in text]
-    if missing: raise SystemExit(f"{label}: missing {missing}")
+    if missing: raise SystemExit(f"{label}: отсутствующий {missing}")
 api_migration=read("services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
 cli_migration=read("cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
-if api_migration != cli_migration: raise SystemExit("0.14.7 API/CLI Forge/NeoForge migrations differ")
+if api_migration != cli_migration: raise SystemExit("0.14.7 API/CLI Forge/NeoForge миграция differ")
 require(api_migration,["server_bridge_nodes_v2_kind_check","'forge'","'neoforge'","'fabric'"],"0.14.7 PostgreSQL migration")
 settings=read("settings.gradle.kts")
 require(settings,['maven("https://maven.minecraftforge.net/")','maven("https://maven.neoforged.net/releases/")','include("plugins:modloader-family-common")','include("plugins:forge-bridge")','include("plugins:neoforge-bridge")'],"Gradle Forge-family modules")
@@ -45,11 +45,11 @@ e2e=read("e2e/scripts/run-minecraft-e2e.sh"); compose=read("e2e/docker-compose.m
 probe=read("e2e/scripts/minecraft-login-probe.py")
 require(e2e,["compose up -d velocity paper","certify_aux_bridge forge-e2e-p3","certify_aux_bridge neoforge-e2e-p3","wait_bridge_heartbeat \"$service\"","capture_health_evidence \"$service\"","forgeNeoForgeServerBridge:true","health-forge.json","health-neoforge.json","forge)","neoforge)","allow_probe_mode","deny_probe_mode","--enter-configuration","--drive-neoforge-configuration","--allow-pre-configuration-disconnect","NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS","${allow_probe_mode[@]}","${deny_probe_mode[@]}"],"Forge/NeoForge runtime E2E")
 flow=e2e[e2e.index("flow_for_server() {"):e2e.index("flow_for_server velocity-e2e-p3")]
-if flow.index("neoforge)") < flow.index("forge)"): raise SystemExit("NeoForge probe mode must be explicit after Forge mode")
+if flow.index("neoforge)") < flow.index("forge)"): raise SystemExit("NeoForge probe режим должен быть явный после Forge режим")
 require(probe,["--enter-configuration","--drive-neoforge-configuration","--allow-pre-configuration-disconnect","LOGIN_SET_COMPRESSION = 0x03","SERVERBOUND_LOGIN_ACKNOWLEDGED = 0x03","CONFIG_CLIENTBOUND_PING = 0x05","CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS = 0x0E","CONFIG_SERVERBOUND_PONG = 0x05","CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS = 0x07","zlib.decompress","framed_packet","enter_configuration","drive_neoforge_configuration","login-eof","login-reset","login-disconnect","send_protocol_packet(sock, acknowledgement, compression_threshold)","knownPacksResponses={known_packs_responses}","mode=configuration","loginAcknowledged={str(login_acknowledged).lower()}"],"Minecraft 1.21.1 Forge/NeoForge stateful login probe")
 require(compose,["TYPE: FORGE","TYPE: NEOFORGE","FORGE_VERSION: \"52.1.16\"","NEOFORGE_VERSION: \"21.1.251\"","./runtime/plugins/forge:/mods:ro","./runtime/plugins/neoforge:/mods:ro"],"Forge/NeoForge Docker E2E")
 migration=read("e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh")
 require(migration,["0026_fabric_server_bridge_0146","0027_forge_neoforge_server_bridge_0147","kind IN ('forge','neoforge')","non-canonical kind bypassed constraint"],"0.14.6 -> 0.14.7 migration E2E")
 for text,label in ((read("scripts/release/preflight.sh"),"preflight"),(read(".github/workflows/ci.yml"),"CI")):
     require(text,["serverbridge-forge-neoforge-0147.py","run-forge-neoforge-server-bridge-migration-e2e.sh"],f"0.14.7 {label} wiring")
-print(f"NeverLauncher 0.14.7 Forge + NeoForge Server Bridge gate: OK ({version})")
+print(f"NeverLauncher 0.14.7 Forge + NeoForge Сервер Мост контроль: OK ({version})")

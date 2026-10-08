@@ -140,7 +140,7 @@ def main() -> int:
     results = []
     failed = False
     for case in CASES:
-        print(f"[federation-e2e] {case['id']} ...", flush=True)
+        print(f"[federation-e2e] {case['id']}...", flush=True)
         result = run_case(case)
         results.append(result)
         if result["status"] != "passed":
@@ -159,7 +159,7 @@ def main() -> int:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[federation-e2e] report: {OUT}")
+    print(f"[federation-e2e] отчёт: {OUT}")
     return 1 if failed else 0
 
 

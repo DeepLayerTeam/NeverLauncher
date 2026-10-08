@@ -23,9 +23,9 @@ func isServerBridgeMutation0149(r *http.Request) bool {
 	}
 }
 
-// withServerBridgeHardening0149 gives bridge traffic a bounded request lifetime
-// and an independent body ceiling. Node-signed handlers also enforce the same
-// 64 KiB ceiling while canonicalizing the body, providing defense in depth.
+// withServerBridgeHardening0149 gives мост трафик ограниченный запрос срок жизни
+// и независимый тело ceiling. Узел-подписанный обработчики также применять одинаковый
+// 64 KiB ceiling пока canonicalizing тело, предоставлять defense в depth.
 func (s Server) withServerBridgeHardening0149(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !isServerBridgeTraffic0149(r) {

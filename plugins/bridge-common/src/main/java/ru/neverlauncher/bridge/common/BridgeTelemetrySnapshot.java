@@ -3,7 +3,7 @@ package ru.neverlauncher.bridge.common;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Wire snapshot for ServerBridge Protocol v3 telemetry.v1. */
+/** Сетевой снимок для ServerBridge Протокол v3 телеметрия.v1. */
 public record BridgeTelemetrySnapshot(
     long sequence,
     long sampledAtUnixMillis,

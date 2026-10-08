@@ -1,6 +1,6 @@
 [package]
 name = "neverlauncher-desktop"
-version = "0.21.3"
+version = "0.21.4"
 description = "Desktop-клиент NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
@@ -24,7 +24,7 @@ rand = "0.8"
 base64 = "0.22"
 zeroize = "1"
 
-# Hardware-bound device identity. Exact version is pinned because backend
-# selection/fallback semantics are security-sensitive.
+# Привязанный к оборудованию устройство идентичность. Точная версия является закреплённый потому что серверная часть
+# selection/fallback семантика являются безопасность-чувствительный.
 hardware-enclave = { version = "=0.2.10", default-features = false, features = ["signing", "encryption", "linux-tpm"] }
 p256 = { version = "0.13", features = ["ecdsa"] }

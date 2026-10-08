@@ -107,7 +107,7 @@ func (s *passkeyStore117) consumeChallenge(token, purpose string) (webauthnChall
 	h := tokenHash117(strings.TrimSpace(token))
 	rec, ok := s.challenges[h]
 	if !ok || rec.Purpose != purpose || !rec.UsedAt.IsZero() || rec.ExpiresAt.Before(time.Now().UTC()) {
-		return webauthnChallenge117{}, errors.New("WebAuthn transaction invalid or expired")
+		return webauthnChallenge117{}, errors.New("WebAuthn транзакция недопустимый или истёкший")
 	}
 	rec.UsedAt = time.Now().UTC()
 	s.challenges[h] = rec
@@ -131,7 +131,7 @@ func (s *passkeyStore117) saveCredential(c passkeyCredential117) error {
 	defer s.mu.Unlock()
 	key := base64.RawURLEncoding.EncodeToString(c.CredentialID)
 	if existing, ok := s.credentialIndex[key]; ok && existing != c.ID {
-		return errors.New("credential already registered")
+		return errors.New("учётные данные уже регистрировать")
 	}
 	if c.Status == "" {
 		c.Status = "active"
@@ -237,7 +237,7 @@ func (s *passkeyStore117) policy(userID string) string {
 func (s *passkeyStore117) setPolicy(userID, req string) error {
 	req = normalizeMFARequirement117(req)
 	if req == "" {
-		return errors.New("invalid MFA requirement")
+		return errors.New("недопустимый MFA requirement")
 	}
 	if s.persistent != nil {
 		return s.persistent.setPolicy(userID, req)
@@ -291,7 +291,7 @@ func (p *passkeyPostgres117) createChallenge(userID, purpose string, challenge [
 	if userID != "" {
 		nullable = userID
 	}
-	// Bound table growth without making cleanup a separate scheduler dependency.
+	// Привязанный таблица growth без making очистка отдельный планировщик зависимость.
 	_, _ = p.db.ExecContext(ctx, `DELETE FROM webauthn_challenges WHERE expires_at < now()-interval '1 hour' OR (used_at IS NOT NULL AND used_at < now()-interval '1 hour')`)
 	_, err = p.db.ExecContext(ctx, `INSERT INTO webauthn_challenges(id,token_hash,user_id,purpose,challenge,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,now(),now()+interval '5 minutes')`, id, tokenHash117(token), nullable, purpose, challenge, string(raw))
 	return token, err
@@ -309,7 +309,7 @@ func (p *passkeyPostgres117) consumeChallenge(token, purpose string) (webauthnCh
 	var raw []byte
 	err = tx.QueryRowContext(ctx, `SELECT id,user_id,purpose,challenge,metadata,created_at,expires_at FROM webauthn_challenges WHERE token_hash=$1 AND purpose=$2 AND used_at IS NULL AND expires_at>now() FOR UPDATE`, tokenHash117(strings.TrimSpace(token)), purpose).Scan(&rec.ID, &user, &rec.Purpose, &rec.Challenge, &raw, &rec.CreatedAt, &rec.ExpiresAt)
 	if err != nil {
-		return webauthnChallenge117{}, errors.New("WebAuthn transaction invalid or expired")
+		return webauthnChallenge117{}, errors.New("WebAuthn транзакция недопустимый или истёкший")
 	}
 	rec.UserID = user.String
 	_ = json.Unmarshal(raw, &rec.Metadata)
@@ -352,7 +352,7 @@ func (p *passkeyPostgres117) scanCredential(row interface{ Scan(...any) error })
 		return c, err
 	}
 	if count < 0 || count > int64(^uint32(0)) {
-		return c, errors.New("invalid WebAuthn sign counter")
+		return c, errors.New("недопустимый WebAuthn подпись счётчик")
 	}
 	c.SignCount = uint32(count)
 	if lastUsed.Valid {
@@ -496,7 +496,7 @@ func validateFriendlyName117(v string) (string, error) {
 		return "Passkey", nil
 	}
 	if len([]rune(v)) > 80 {
-		return "", fmt.Errorf("friendlyName too long")
+		return "", fmt.Errorf("friendlyName слишком long")
 	}
 	return v, nil
 }

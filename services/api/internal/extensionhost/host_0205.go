@@ -37,8 +37,8 @@ import (
 
 const ProtocolVersion = extensioncontract.HostProtocolVersion
 
-var ErrNoBackendTarget = errors.New("extension does not declare a backend target")
-var ErrHostNotRunning = errors.New("extension host process is not running")
+var ErrNoBackendTarget = errors.New("расширение делает не объявлять серверная часть цель")
+var ErrHostNotRunning = errors.New("хост расширений процесс является не работающий")
 
 type Config struct {
 	ExtensionRoot        string
@@ -286,12 +286,12 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	}
 	ln, err := net.Listen("tcp", s.cfg.Listen)
 	if err != nil {
-		return fmt.Errorf("listen extension host protocol: %w", err)
+		return fmt.Errorf("listen хост расширений протокол: %w", err)
 	}
 	tcp, ok := ln.Addr().(*net.TCPAddr)
 	if !ok || tcp.IP == nil || !tcp.IP.IsLoopback() {
 		_ = ln.Close()
-		return errors.New("extension host protocol must listen on loopback only")
+		return errors.New("хост расширений протокол должен listen на локальная петля только")
 	}
 	s.listener = ln
 	s.baseURL = "http://" + ln.Addr().String()
@@ -309,7 +309,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	go func() {
 		defer s.wg.Done()
 		if err := s.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("extension host protocol server failed: %v", err)
+			log.Printf("хост расширений протокол сервер ошибка: %v", err)
 		}
 	}()
 	go s.monitorLoop()
@@ -359,27 +359,27 @@ func backendTarget(manifest model.ExtensionManifest) (model.ExtensionTarget, err
 
 func safeEntrypoint(root, rel string) (string, error) {
 	if rel == "" || filepath.IsAbs(rel) || strings.Contains(rel, "\\") {
-		return "", errors.New("invalid backend extension entrypoint")
+		return "", errors.New("недопустимый серверное расширение entrypoint")
 	}
 	clean := filepath.Clean(filepath.FromSlash(rel))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", errors.New("backend extension entrypoint escapes payload")
+		return "", errors.New("серверное расширение entrypoint escapes полезная нагрузка")
 	}
 	full := filepath.Join(root, clean)
 	rootAbs, _ := filepath.Abs(root)
 	fullAbs, _ := filepath.Abs(full)
 	if fullAbs == rootAbs || !strings.HasPrefix(fullAbs, rootAbs+string(os.PathSeparator)) {
-		return "", errors.New("backend extension entrypoint escapes payload")
+		return "", errors.New("серверное расширение entrypoint escapes полезная нагрузка")
 	}
 	info, err := os.Lstat(fullAbs)
 	if err != nil {
 		return "", err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return "", errors.New("backend extension entrypoint must be a regular non-symlink file")
+		return "", errors.New("серверное расширение entrypoint должен быть regular non-символическая ссылка файл")
 	}
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
-		return "", errors.New("backend extension entrypoint is not executable")
+		return "", errors.New("серверное расширение entrypoint является не исполняемый")
 	}
 	return fullAbs, nil
 }
@@ -411,18 +411,18 @@ func sanitizedEnvironment(extra map[string]string) []string {
 
 func (s *Supervisor) StartInstallation(ctx context.Context, install model.ExtensionInstall) error {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled {
-		return errors.New("extension must be persistently enabled before host start")
+		return errors.New("расширение должен быть persistently включённый до хост запуск")
 	}
 	key := Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized()
 	if _, emergencyErr := s.repo.GetExtensionEmergencyDisable(ctx, key.ExtensionID, key.Scope, key.ScopeID); emergencyErr == nil {
-		return errors.New("extension is emergency-disabled")
+		return errors.New("расширение является аварийный-отключённый")
 	} else if !errors.Is(emergencyErr, repository.ErrNotFound) {
 		return emergencyErr
 	}
 	if quarantined, quarantineErr := s.repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity); quarantineErr != nil {
 		return quarantineErr
 	} else if quarantined {
-		return errors.New("extension package is quarantined")
+		return errors.New("пакет расширения является карантин")
 	}
 	k := key.String()
 	manifestVersion, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
@@ -455,7 +455,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	}
 	security := s.securityValue0207()
 	if security == nil {
-		return errors.New("extension capability security is unavailable")
+		return errors.New("расширение возможность безопасность является недоступный")
 	}
 	projectID := ""
 	if key.Scope == "project" {
@@ -463,7 +463,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	}
 	effective, err := security.Effective(ctx, install.ExtensionID, install.CurrentVersion, key.Scope, key.ScopeID, projectID)
 	if err != nil {
-		return fmt.Errorf("load extension capability policy: %w", err)
+		return fmt.Errorf("загрузка расширение возможность политика: %w", err)
 	}
 	permissions := map[string]struct{}{}
 	for _, p := range effective {
@@ -477,7 +477,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		existing.mu.Unlock()
 		if active {
 			s.mu.Unlock()
-			return fmt.Errorf("extension host already active for %s", key.ExtensionID)
+			return fmt.Errorf("хост расширений уже активный для %s", key.ExtensionID)
 		}
 	}
 	st.restarts = s.restarts[k]
@@ -487,7 +487,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	s.mu.Unlock()
 	if baseURL == "" {
 		s.removeProcessToken(st)
-		return errors.New("extension host protocol server is not started")
+		return errors.New("хост расширений протокол сервер является не запущен")
 	}
 	cmd := exec.Command(entrypoint)
 	cmd.Dir = payloadRoot
@@ -508,7 +508,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	}
 	if err := cmd.Start(); err != nil {
 		s.removeProcessToken(st)
-		return fmt.Errorf("start backend extension: %w", err)
+		return fmt.Errorf("запуск серверное расширение: %w", err)
 	}
 	st.mu.Lock()
 	st.cmd = cmd
@@ -539,7 +539,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		return errors.New(msg)
 	case <-timer.C:
 		s.failProcess(st, "startup hello timeout", true)
-		return fmt.Errorf("extension host startup timeout after %s", s.cfg.StartupTimeout)
+		return fmt.Errorf("хост расширений запуск тайм-аут после %s", s.cfg.StartupTimeout)
 	case <-ctx.Done():
 		s.failProcess(st, "startup cancelled", true)
 		return ctx.Err()
@@ -565,7 +565,7 @@ func (s *Supervisor) registerTransient0209(st *processState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.baseURL == "" {
-		return errors.New("extension host protocol server is not started")
+		return errors.New("хост расширений протокол сервер является не запущен")
 	}
 	key := st.key.String()
 	if s.transients[key] == nil {
@@ -607,7 +607,7 @@ func (s *Supervisor) stopTransients0209(ctx context.Context, key Key) error {
 			select {
 			case <-done:
 			case <-time.After(2 * time.Second):
-				return errors.New("CLI extension process did not exit after kill")
+				return errors.New("CLI расширение процесс сделал не выход после kill")
 			}
 		case <-ctx.Done():
 			if !timer.Stop() {
@@ -718,7 +718,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 			return
 		}
 		if err := s.StartInstallation(context.Background(), fresh); err != nil && !errors.Is(err, ErrNoBackendTarget) {
-			log.Printf("extension host restart failed %s: %v", st.key.ExtensionID, err)
+			log.Printf("хост расширений перезапуск ошибка %s: %v", st.key.ExtensionID, err)
 		}
 	}()
 }
@@ -777,7 +777,7 @@ func (s *Supervisor) Stop(ctx context.Context, key Key) error {
 		case <-done:
 			return nil
 		case <-time.After(2 * time.Second):
-			return errors.New("extension process did not exit after kill")
+			return errors.New("расширение процесс сделал не выход после kill")
 		}
 	case <-ctx.Done():
 		_ = killProcessTree(cmd.Process)
@@ -958,12 +958,12 @@ func loopbackRequest(r *http.Request) bool {
 }
 func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*processState, bool) {
 	if !loopbackRequest(r) {
-		http.Error(w, "loopback required", http.StatusForbidden)
+		http.Error(w, "локальная петля обязательный", http.StatusForbidden)
 		return nil, false
 	}
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))
 	if !strings.HasPrefix(auth, "Bearer ") {
-		http.Error(w, "bearer token required", http.StatusUnauthorized)
+		http.Error(w, "bearer токен обязательный", http.StatusUnauthorized)
 		return nil, false
 	}
 	token := strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
@@ -971,7 +971,7 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 	st := s.tokens[token]
 	s.mu.RUnlock()
 	if st == nil || subtle.ConstantTimeCompare([]byte(token), []byte(st.token)) != 1 {
-		http.Error(w, "invalid host token", http.StatusUnauthorized)
+		http.Error(w, "недопустимый хост токен", http.StatusUnauthorized)
 		return nil, false
 	}
 	return st, true
@@ -986,7 +986,7 @@ func decodeJSONBody(w http.ResponseWriter, r *http.Request, max int64, out any) 
 	var extra any
 	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
-			return errors.New("trailing JSON")
+			return errors.New("след JSON")
 		}
 		return err
 	}
@@ -1018,11 +1018,11 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.ProtocolVersion != ProtocolVersion || strings.ToLower(strings.TrimSpace(req.ExtensionID)) != st.key.ExtensionID || req.InstanceID != st.instanceID {
-		http.Error(w, "host identity/protocol mismatch", 409)
+		http.Error(w, "хост identity/protocol несоответствие", 409)
 		return
 	}
 	if !extensioncontract.SupportsHostHello(st.manifest.API, req.ExtensionAPIVersion) {
-		http.Error(w, "extension API mismatch", http.StatusConflict)
+		http.Error(w, "расширение API несоответствие", http.StatusConflict)
 		return
 	}
 	callbackURL, err := validateCallbackURL0206(req.CallbackURL)
@@ -1037,7 +1037,7 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.PID != 0 && expectedPID != 0 && req.PID != expectedPID {
 		st.mu.Unlock()
-		http.Error(w, "pid mismatch", 409)
+		http.Error(w, "PID несоответствие", 409)
 		return
 	}
 	now := time.Now().UTC()
@@ -1057,7 +1057,7 @@ func (s *Supervisor) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	st.mu.Lock()
 	if st.state != "running" {
 		st.mu.Unlock()
-		http.Error(w, "host is not running", 409)
+		http.Error(w, "хост является не работающий", 409)
 		return
 	}
 	st.heartbeatAt = time.Now().UTC()
@@ -1086,7 +1086,7 @@ func (s *Supervisor) handleLog(w http.ResponseWriter, r *http.Request) {
 		req.Level = "info"
 	}
 	if len(req.Message) > 64<<10 {
-		http.Error(w, "log message too large", 413)
+		http.Error(w, "сообщение журнала слишком large", 413)
 		return
 	}
 	s.addLog(st, "protocol", req.Level, req.Message, req.Fields)
@@ -1096,7 +1096,7 @@ func (s *Supervisor) handleLog(w http.ResponseWriter, r *http.Request) {
 func (s *Supervisor) permissionAllowed0207(ctx context.Context, st *processState, permission, projectID string) (bool, error) {
 	security := s.securityValue0207()
 	if security == nil {
-		return false, errors.New("extension capability security unavailable")
+		return false, errors.New("расширение возможность безопасность недоступный")
 	}
 	if st.key.Scope == "project" {
 		if projectID == "" {
@@ -1158,11 +1158,11 @@ func (s *Supervisor) scopedProject(st *processState, projectID string) (string, 
 			projectID = st.key.ScopeID
 		}
 		if projectID != st.key.ScopeID {
-			return "", errors.New("project-scoped extension cannot access another project")
+			return "", errors.New("проект-область расширение не может доступ другой проект")
 		}
 	}
 	if projectID == "" {
-		return "", errors.New("projectId is required")
+		return "", errors.New("projectId является обязательный")
 	}
 	return projectID, nil
 }
@@ -1186,10 +1186,10 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "project:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission project:read not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение проект:чтение не granted")}
 		}
 		item, err := s.repo.GetProject(id)
 		if err != nil {
@@ -1203,10 +1203,10 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "release:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission release:read not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение релиз:чтение не granted")}
 		}
 		items, err := s.repo.ListVersions(id)
 		if err != nil {
@@ -1220,13 +1220,13 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "storage:read", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission storage:read not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение хранилище:чтение не granted")}
 		}
 		if strings.TrimSpace(req.Version) == "" || strings.TrimSpace(req.Path) == "" {
-			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("version and path are required")}
+			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("версия и путь являются обязательный")}
 		}
 		reader, size, err := s.storage.Open(id, req.Version, req.Path)
 		if err != nil {
@@ -1234,20 +1234,20 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		defer reader.Close()
 		if size > s.cfg.MaxStorageReadBytes {
-			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("storage object exceeds capability read limit")}
+			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("хранилище объект exceeds возможность чтение ограничение")}
 		}
 		data, err := io.ReadAll(io.LimitReader(reader, s.cfg.MaxStorageReadBytes+1))
 		if err != nil {
 			return capabilityResult0205{status: http.StatusInternalServerError, err: err}
 		}
 		if int64(len(data)) > s.cfg.MaxStorageReadBytes {
-			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("storage object exceeds capability read limit")}
+			return capabilityResult0205{status: http.StatusRequestEntityTooLarge, err: errors.New("хранилище объект exceeds возможность чтение ограничение")}
 		}
 		return capabilityResult0205{value: map[string]any{"size": len(data), "contentBase64": base64.StdEncoding.EncodeToString(data)}, status: http.StatusOK}
 	case "secret.get":
 		security := s.securityValue0207()
 		if security == nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("secrets broker unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("секреты broker недоступный")}
 		}
 		secretScope, secretScopeID := st.key.Scope, st.key.ScopeID
 		projectID := strings.TrimSpace(req.ProjectID)
@@ -1258,18 +1258,18 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "secrets:read", projectID)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission secrets:read not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение секреты:чтение не granted")}
 		}
 		if strings.TrimSpace(req.Name) == "" {
-			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("secret name is required")}
+			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("секрет имя является обязательный")}
 		}
 		plain, err := security.GetSecret(ctx, st.key.ExtensionID, secretScope, secretScopeID, req.Name)
 		if err != nil {
 			if errors.Is(err, repository.ErrNotFound) {
-				return capabilityResult0205{status: http.StatusNotFound, err: errors.New("secret not found")}
+				return capabilityResult0205{status: http.StatusNotFound, err: errors.New("секрет не found")}
 			}
 			return capabilityResult0205{status: http.StatusServiceUnavailable, err: err}
 		}
@@ -1283,29 +1283,29 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "telemetry:write", id)
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission telemetry:write not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение телеметрия:запись не granted")}
 		}
 		eventName := strings.TrimSpace(req.Event)
 		if eventName == "" || len(eventName) > 128 {
-			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("telemetry event is required and must be <=128 chars")}
+			return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("телеметрия событие является обязательный и должен быть <=128 chars")}
 		}
 		s.repo.AddTelemetryEvent(model.TelemetryEvent{ProjectID: id, ProfileID: strings.TrimSpace(req.ProfileID), LauncherVersion: "extension:" + st.key.ExtensionID + "@" + st.install.CurrentVersion, ProfileVersion: st.install.CurrentVersion, Event: eventName, Status: strings.TrimSpace(req.Status), CreatedAt: time.Now().UTC()})
 		return capabilityResult0205{value: map[string]any{"accepted": true}, status: http.StatusAccepted}
 	case "http.fetch":
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "http:outbound", "")
 		if authErr != nil {
-			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
+			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("возможность политика недоступный")}
 		}
 		if !allowed {
-			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission http:outbound not granted")}
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("разрешение HTTP:outbound не granted")}
 		}
 		value, status, err := s.secureHTTPFetch0207(ctx, req.Method, req.URL, req.Headers, req.BodyBase64)
 		return capabilityResult0205{value: value, status: status, err: err}
 	default:
-		return capabilityResult0205{status: http.StatusNotFound, err: errors.New("unknown or unavailable capability")}
+		return capabilityResult0205{status: http.StatusNotFound, err: errors.New("неизвестный или недоступный возможность")}
 	}
 }
 
@@ -1359,7 +1359,7 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 		if capName != "host.health" && capName != "extension.self" {
 			s.auditCapability0207(st, capName, false, "timeout")
 		}
-		http.Error(w, "capability broker timeout", http.StatusGatewayTimeout)
+		http.Error(w, "возможность broker тайм-аут", http.StatusGatewayTimeout)
 	case <-r.Context().Done():
 		return
 	}
@@ -1387,15 +1387,15 @@ func (s *Supervisor) reconcileManifestSubscriptions0206(ctx context.Context, st 
 	callbackReady := st.callbackURL != ""
 	st.mu.Unlock()
 	if !callbackReady {
-		return errors.New("manifest hooks require callbackUrl in authenticated hello")
+		return errors.New("манифест хуки требовать callbackUrl в аутентифицировать hello")
 	}
 	for _, raw := range st.manifest.Hooks {
 		eventType, mode := parseManifestHook0206(raw)
 		if err := s.validateEventPermission0206(st, eventType, mode); err != nil {
-			return fmt.Errorf("manifest hook %q: %w", raw, err)
+			return fmt.Errorf("манифест хук %q: %w", raw, err)
 		}
 		if _, err := bus.Subscribe(ctx, model.ExtensionEventSubscription{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, EventType: eventType, Mode: mode, Enabled: true}); err != nil {
-			return fmt.Errorf("manifest hook %q: %w", raw, err)
+			return fmt.Errorf("манифест хук %q: %w", raw, err)
 		}
 	}
 	return nil
@@ -1410,13 +1410,13 @@ func validateCallbackURL0206(raw string) (string, error) {
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "http" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return "", errors.New("callbackUrl must be a plain http loopback origin")
+		return "", errors.New("callbackUrl должен быть plain HTTP локальная петля источник")
 	}
 	host := u.Hostname()
 	port := u.Port()
 	ip := net.ParseIP(host)
 	if ip == nil || !ip.IsLoopback() || port == "" {
-		return "", errors.New("callbackUrl must use an explicit loopback IP and port")
+		return "", errors.New("callbackUrl должен использовать явный локальная петля IP и port")
 	}
 	return "http://" + net.JoinHostPort(host, port), nil
 }
@@ -1429,20 +1429,20 @@ func (s *Supervisor) eventBusValue0206() *eventbus.Bus {
 func (s *Supervisor) validateEventPermission0206(st *processState, eventType, mode string) error {
 	spec, ok := eventbus.Spec(eventType)
 	if !ok {
-		return fmt.Errorf("unsupported event type %q", eventType)
+		return fmt.Errorf("неподдерживаемый тип события %q", eventType)
 	}
 	if !s.requirePermission(st, "events:subscribe") {
-		return errors.New("permission events:subscribe required")
+		return errors.New("разрешение события:subscribe обязательный")
 	}
 	if spec.CategoryPermission != "" && !s.requirePermission(st, spec.CategoryPermission) {
-		return fmt.Errorf("permission %s required", spec.CategoryPermission)
+		return fmt.Errorf("разрешение %s обязательный", spec.CategoryPermission)
 	}
 	if mode == model.ExtensionEventModeSync {
 		if !spec.SyncAllowed {
-			return fmt.Errorf("event %s is async-only", eventType)
+			return fmt.Errorf("событие %s является асинхронный-только", eventType)
 		}
 		if !s.requirePermission(st, "events:sync") {
-			return errors.New("permission events:sync required")
+			return errors.New("разрешение события:синхронизация обязательный")
 		}
 	}
 	return nil
@@ -1460,7 +1460,7 @@ func (s *Supervisor) handleEventSubscriptions(w http.ResponseWriter, r *http.Req
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "шина событий недоступный", 503)
 		return
 	}
 	items, err := bus.Subscriptions(r.Context(), st.key.ExtensionID, st.key.Scope, st.key.ScopeID)
@@ -1477,7 +1477,7 @@ func (s *Supervisor) handleEventSubscribe(w http.ResponseWriter, r *http.Request
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "шина событий недоступный", 503)
 		return
 	}
 	var req eventSubscriptionRequest0206
@@ -1499,7 +1499,7 @@ func (s *Supervisor) handleEventSubscribe(w http.ResponseWriter, r *http.Request
 	callbackReady := st.callbackURL != ""
 	st.mu.Unlock()
 	if !callbackReady {
-		http.Error(w, "callbackUrl must be registered before subscribing", http.StatusConflict)
+		http.Error(w, "callbackUrl должен быть регистрировать до subscribing", http.StatusConflict)
 		return
 	}
 	item, err := bus.Subscribe(r.Context(), model.ExtensionEventSubscription{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, EventType: req.EventType, Mode: req.Mode, Enabled: true})
@@ -1517,18 +1517,18 @@ func (s *Supervisor) handleEventUnsubscribe(w http.ResponseWriter, r *http.Reque
 	}
 	bus := s.eventBusValue0206()
 	if bus == nil {
-		http.Error(w, "event bus unavailable", 503)
+		http.Error(w, "шина событий недоступный", 503)
 		return
 	}
 	id, err := strconv.ParseInt(strings.TrimSpace(r.PathValue("subscriptionId")), 10, 64)
 	if err != nil || id < 1 {
-		http.Error(w, "invalid subscription id", 400)
+		http.Error(w, "недопустимый subscription ID", 400)
 		return
 	}
 	if err := bus.Unsubscribe(r.Context(), id, st.key.ExtensionID, st.key.Scope, st.key.ScopeID); err != nil {
 		s.auditCapability0207(st, "events.unsubscribe", false, strconv.FormatInt(id, 10))
 		if errors.Is(err, repository.ErrNotFound) {
-			http.Error(w, "subscription not found", 404)
+			http.Error(w, "subscription не found", 404)
 		} else {
 			http.Error(w, err.Error(), 500)
 		}
@@ -1560,7 +1560,7 @@ func (s *Supervisor) callbackRequest0206(ctx context.Context, sub model.Extensio
 	}
 	if err := s.validateEventPermission0206(st, event.Type, sub.Mode); err != nil {
 		s.auditCapability0207(st, "events.deliver:"+event.Type+":"+sub.Mode, false, "permission-revoked")
-		return nil, fmt.Errorf("event capability revoked: %w", err)
+		return nil, fmt.Errorf("событие возможность отозванный: %w", err)
 	}
 	st.mu.Lock()
 	base := st.callbackURL
@@ -1588,7 +1588,7 @@ func (s *Supervisor) DeliverExtensionEvent(ctx context.Context, sub model.Extens
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("extension event callback returned HTTP %d", resp.StatusCode)
+		return fmt.Errorf("расширение событие обратный вызов возвращён HTTP %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -1600,27 +1600,27 @@ func (s *Supervisor) DeliverExtensionHook(ctx context.Context, sub model.Extensi
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
-		return model.ExtensionHookResult{}, fmt.Errorf("extension hook callback returned HTTP %d", resp.StatusCode)
+		return model.ExtensionHookResult{}, fmt.Errorf("расширение хук обратный вызов возвращён HTTP %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, (64<<10)+1))
 	if err != nil {
-		return model.ExtensionHookResult{}, fmt.Errorf("read hook response: %w", err)
+		return model.ExtensionHookResult{}, fmt.Errorf("чтение хук ответ: %w", err)
 	}
 	if len(body) > 64<<10 {
-		return model.ExtensionHookResult{}, errors.New("extension hook response exceeds 64 KiB")
+		return model.ExtensionHookResult{}, errors.New("расширение хук ответ exceeds 64 KiB")
 	}
 	var result model.ExtensionHookResult
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&result); err != nil {
-		return model.ExtensionHookResult{}, fmt.Errorf("decode hook response: %w", err)
+		return model.ExtensionHookResult{}, fmt.Errorf("decode хук ответ: %w", err)
 	}
 	if dec.More() {
-		return model.ExtensionHookResult{}, errors.New("extension hook response contains trailing JSON")
+		return model.ExtensionHookResult{}, errors.New("расширение хук ответ содержит след JSON")
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return model.ExtensionHookResult{}, errors.New("extension hook response contains trailing data")
+		return model.ExtensionHookResult{}, errors.New("расширение хук ответ содержит след данные")
 	}
 	return result, nil
 }

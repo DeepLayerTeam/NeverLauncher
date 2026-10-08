@@ -11,7 +11,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 
-/** Protocol v3 security/certification canonicals shared by every ServerBridge adapter. */
+/** Протокол v3 security/certification канонический общий через каждый ServerBridge адаптер. */
 final class BridgeProtocolSecurity {
     static final String DOMAIN = "NeverLauncher-ServerBridge-Protocol-v3";
     static final String PROFILE = "serverbridge3-security-01912";

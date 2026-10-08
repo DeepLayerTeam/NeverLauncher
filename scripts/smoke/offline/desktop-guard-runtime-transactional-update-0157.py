@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 7):
-    raise SystemExit(f"Desktop/Guard/Runtime transactional update gate requires VERSION>=0.15.7, got {VERSION}")
+    raise SystemExit(f"Desktop/Guard/Runtime транзакционный обновление контроль требует VERSION>=0.15.7, получил {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 
 core_go = read("cli/cmd/neverlauncher/component_update.go")
@@ -67,10 +67,10 @@ require(tests, [
 
 ci = read(".github/workflows/ci.yml")
 if "desktop-guard-runtime-transactional-update-0157.py" not in ci or ci.count("update component-self-test") < 4:
-    raise SystemExit("0.15.7 component updater native CI coverage is incomplete")
+    raise SystemExit("0.15.7 компонент обновлятор нативный CI покрытие является неполный")
 preflight = read("scripts/release/preflight.sh")
 if "desktop-guard-runtime-transactional-update-0157.py" not in preflight:
-    raise SystemExit("0.15.7 component updater preflight gate missing")
+    raise SystemExit("0.15.7 компонент обновлятор предварительная проверка контроль отсутствующий")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestComponent|TestWindows|TestLinux|TestMacOS", "-count=1"],
@@ -78,4 +78,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Desktop/Guard/Runtime transactional update gate: OK")
+print(f"NeverLauncher {VERSION} Desktop/Guard/Runtime транзакционный обновление контроль: OK")

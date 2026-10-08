@@ -1,15 +1,15 @@
 # NeverExtensions SDK 0.21.0
 
-This directory is the source-of-truth SDK shipped with NeverLauncher 0.21.0.
+Этот каталог является исходник--truth SDK поставляемый с NeverLauncher 0.21.0.
 
-- `backend/go` — authenticated Extension Host Protocol client, capabilities, logs, heartbeat and event/hook callbacks.
-- `admin/typescript` — typed sandboxed Admin `postMessage` bridge.
-- `desktop/typescript` — typed sandboxed Desktop/Tauri-broker bridge.
-- `desktop/rust` — generated Desktop protocol types for native companion code, without privileged Tauri access.
-- `cli/go` — authenticated CLI target application/command SDK.
-- `api/extension-host-protocol.json` — canonical protocol type source used by `scripts/sdk/generate-types.py`.
+- `backend/go` — аутентифицировать Хост расширений Протокол клиент, возможности, журналы, сигнал состояния и event/hook обратный вызов.
+- `admin/typescript` — типизированный песочница Администратор `postMessage` мост.
+- `desktop/typescript` — типизированный песочница Desktop/Tauri-broker мост.
+- `desktop/rust` — сгенерированный Настольное приложение протокол types для нативный companion код, без привилегированный Tauri доступ.
+- `cli/go` — аутентифицировать CLI цель application/command SDK.
+- `api/extension-host-protocol.json` — канонический протокол type исходник используется через `scripts/sdk/generate-types.py`.
 
-Developer lifecycle:
+Разработчик жизненный цикл:
 
 ```sh
 nl extension init --target backend,admin,desktop,cli --out my-extension
@@ -18,4 +18,4 @@ nl extension test my-extension
 nl extension dev my-extension --target backend --grant telemetry:write
 ```
 
-`NEVERLAUNCHER_SDK_ROOT` or `--sdk-root` can point builds at a local SDK checkout. Without it, standard Go module resolution is used.
+`NEVERLAUNCHER_SDK_ROOT` или `--sdk-root` может точка собирает в локальный SDK checkout. Без это, standard Go модуль разрешение является используется.

@@ -12,35 +12,35 @@ ROOT = Path(__file__).resolve().parents[3]
 def read(path: str) -> str:
     p = ROOT / path
     if not p.is_file():
-        raise SystemExit(f"missing required file: {path}")
+        raise SystemExit(f"отсутствующий обязательный файл: {path}")
     return p.read_text(encoding="utf-8")
 
 
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [item for item in needles if item not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
 
 
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 try:
     version_tuple = tuple(int(part) for part in version.split("."))
 except ValueError as exc:
-    raise SystemExit(f"invalid VERSION: {version}") from exc
+    raise SystemExit(f"недопустимый VERSION: {version}") from exc
 if version_tuple < (0, 12, 9):
-    raise SystemExit(f"VERSION must be >= 0.12.9, got {version}")
+    raise SystemExit(f"VERSION должен быть >= 0.12.9, получил {version}")
 
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version or targets.get("schemaVersion") != "1.0":
-    raise SystemExit("Device Trust target document version/schema mismatch")
+    raise SystemExit("Доверие к устройству цель документ version/schema несоответствие")
 rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) != 4:
-    raise SystemExit("public Device Trust matrix must define exactly four required Device Trust targets")
+    raise SystemExit("публичный Доверие к устройству матрица должен define точно четыре обязательный Доверие к устройству цели")
 if any(row.get("required") is not True for row in rows):
-    raise SystemExit("every Device Trust target must be required")
+    raise SystemExit("каждый Доверие к устройству цель должен быть обязательный")
 if any("status" in row or "passed" in row for row in rows):
-    raise SystemExit("Device Trust targets must not contain editable pass/fail state")
+    raise SystemExit("Доверие к устройству цели должен не contain editable pass/fail состояние")
 expected = {
     "postgres-protocol-linux-x64": ("protocol-e2e", "linux"),
     "native-linux": ("native-tests", "linux"),
@@ -49,7 +49,7 @@ expected = {
 }
 actual = {str(row.get("id")): (row.get("kind"), row.get("os")) for row in rows}
 if actual != expected:
-    raise SystemExit(f"unexpected public Device Trust targets: {actual!r}")
+    raise SystemExit(f"unexpected публичный Доверие к устройству цели: {actual!r}")
 
 matrix = read("scripts/device_trust/matrix.py")
 require(matrix, [
@@ -115,15 +115,15 @@ require(workflow, [
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "device-trust-e2e-matrix-0129.py" not in ci or "device-trust-e2e-matrix-0129.py" not in preflight:
-    raise SystemExit("0.12.9 release gate is not wired into CI/preflight")
+    raise SystemExit("0.12.9 контроль выпуска является не wired в CI/preflight")
 if "run-device-trust-e2e.sh" not in ci:
-    raise SystemExit("main CI production E2E does not execute Device Trust PostgreSQL lifecycle")
+    raise SystemExit("главный CI рабочий E2E делает не execute Доверие к устройству PostgreSQL жизненный цикл")
 if "RUN_DEVICE_TRUST_E2E" not in preflight:
-    raise SystemExit("strict preflight does not expose Device Trust E2E execution")
+    raise SystemExit("строгий предварительная проверка делает не предоставлять Доверие к устройству E2E выполнение")
 
 subprocess.run(["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-e2e.sh")], check=True)
 subprocess.run([sys.executable, str(ROOT / "e2e/scripts/test_device_trust_crypto.py")], check=True)
 subprocess.run([sys.executable, str(ROOT / "e2e/scripts/test_webauthn_test_authenticator.py")], check=True)
 subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/matrix.py"), "validate", "--targets", str(targets_path)], check=True)
 subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True)
-print(f"[NeverLauncher] Device Trust E2E + public trust matrix 0.12.9+ gate OK ({version})")
+print(f"[NeverLauncher] Доверие к устройству E2E + публичный доверие матрица 0.12.9+ контроль OK ({version})")

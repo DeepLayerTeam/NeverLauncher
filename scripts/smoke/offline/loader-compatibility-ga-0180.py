@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3])
 if core < (0, 18, 0):
-    raise SystemExit(f"Loader Compatibility GA requires VERSION>=0.18.0, got {version}")
+    raise SystemExit(f"Загрузчик Совместимость GA требует VERSION>=0.18.0, получил {version}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: missing {missing}")
+        raise SystemExit(f"{name}: отсутствующий {missing}")
 
 runtime = read("cli/cmd/neverlauncher/loader_ga.go")
 require(runtime, [
@@ -62,11 +62,11 @@ require(tests, [
 targets = json.loads(read("compatibility/targets.json"))["targets"]
 required = [row for row in targets if row.get("required")]
 if len(required) != 292:
-    raise SystemExit(f"Loader Compatibility GA requires 292 required targets, got {len(required)}")
+    raise SystemExit(f"Загрузчик Совместимость GA требует 292 обязательный цели, получил {len(required)}")
 family_counts = Counter(row.get("loader") for row in required)
 expected_families = {"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
 if dict(family_counts) != expected_families:
-    raise SystemExit(f"Loader Compatibility GA family coverage mismatch: {dict(family_counts)}")
+    raise SystemExit(f"Загрузчик Совместимость GA семейство покрытие несоответствие: {dict(family_counts)}")
 
 unique_versions = {
     loader: sorted({row["minecraft"] for row in required if row.get("loader") == loader})
@@ -75,8 +75,8 @@ unique_versions = {
 expected_unique = {"fabric": 48, "quilt": 48, "forge": 45, "neoforge": 22}
 for loader, want in expected_unique.items():
     if len(unique_versions[loader]) != want:
-        raise SystemExit(f"Loader Compatibility GA {loader} unique versions={len(unique_versions[loader])}, want={want}")
+        raise SystemExit(f"Загрузчик Совместимость GA {loader} уникальный версии={len(unique_versions[loader])}, want={want}")
 if "1.7.10" not in unique_versions["forge"] or "1.12.2" not in unique_versions["forge"]:
-    raise SystemExit("Loader Compatibility GA must include Forge legacy 1.7.10 and 1.12.2")
+    raise SystemExit("Загрузчик Совместимость GA должен включать Forge устаревший 1.7.10 и 1.12.2")
 
-print("Loader Compatibility GA 0.18.0 gate: OK (runtime-enforced 163 loader/version lines, 292/292 release targets, Fabric/Quilt/Forge/NeoForge + legacy)")
+print("Загрузчик Совместимость GA 0.18.0 контроль: OK (среда выполнения-применять 163 loader/version строка, 292/292 релиз цели, Fabric/Quilt/Forge/NeoForge + устаревший)")

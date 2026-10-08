@@ -50,8 +50,8 @@ def safe_rel(rel: str) -> bool:
     for part in p.parts:
         if part not in EXCLUDED_PARTS:
             continue
-        # scripts/build contains the canonical ServerBridge production build entrypoint.
-        # Other build directories remain generated output and must stay excluded.
+        # scripts/build содержит канонический ServerBridge рабочий сборка entrypoint.
+        # Другой сборка каталоги оставаться сгенерированный вывод и должен оставаться excluded.
         if part == "build" and len(p.parts) >= 2 and p.parts[0] == "scripts" and p.parts[1] == "build":
             continue
         return False
@@ -104,14 +104,14 @@ def main() -> int:
     out = Path(ns.output).resolve()
     files = tracked_files(root)
     if not files:
-        raise SystemExit("source allowlist пуст")
+        raise SystemExit("исходник список разрешений пуст")
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         for rel in files:
             zf.write(root / rel, rel)
     if ns.list_file:
         Path(ns.list_file).write_text("\n".join(files) + "\n", encoding="utf-8")
-    print(f"source-package: {len(files)} allowlisted files -> {out}")
+    print(f"исходник-пакет: {len(files)} список разрешений файлы -> {out}")
     return 0
 
 

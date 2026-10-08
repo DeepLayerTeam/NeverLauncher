@@ -1,7 +1,7 @@
--- NeverLauncher 0.14.2 — Cryptographic Node Identities.
--- ServerBridge nodes authenticate every privileged request with an Ed25519
--- signature. PostgreSQL stores only public identity material and consumed nonces;
--- legacy 0.14.1 bearer hashes are retired and never accepted by 0.14.2 runtime.
+-- NeverLauncher 0.14.2 — Криптографический Узел Идентичности.
+-- ServerBridge узлы аутентифицировать каждый привилегированный запрос с Ed25519
+-- подпись. PostgreSQL хранит только публичный идентичность материал и использованный одноразовые значения;
+-- устаревший 0.14.1 bearer хеширует являются выведенный из эксплуатации и никогда принят через 0.14.2 среда выполнения.
 
 ALTER TABLE server_bridge_nodes_v2
     ADD COLUMN IF NOT EXISTS key_algorithm TEXT NOT NULL DEFAULT '',
@@ -13,9 +13,9 @@ ALTER TABLE server_bridge_nodes_v2
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_status_check;
 
--- Bearer credentials are retired globally, including disabled nodes. Keeping an
--- unusable legacy credential hash would add secret-derived material with no
--- operational purpose after the cryptographic identity boundary change.
+-- Bearer учётные данные являются выведенный из эксплуатации глобально, включая отключённый узлы. Сохранять 
+-- unusable устаревший учётные данные хеш будет добавлять секрет-производный материал с нет
+-- эксплуатационный назначение после криптографический идентичность граница изменять.
 UPDATE server_bridge_nodes_v2
 SET token_hash='', token_prefix=''
 WHERE token_hash<>'' OR token_prefix<>'';
@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS server_bridge_node_nonces_v2 (
 CREATE INDEX IF NOT EXISTS idx_server_bridge_node_nonces_v2_expiry
     ON server_bridge_node_nonces_v2(expires_at);
 
--- Active joins authenticated under a retired bearer identity must not survive the
--- identity boundary change. Fresh joins are issued only after node enrollment.
+-- Активный подключается аутентифицировать под выведенный из эксплуатации bearer идентичность должен не переживать 
+-- идентичность граница изменять. Актуальный подключается являются выданный только после узел регистрация.
 UPDATE server_bridge_join_tickets_v2
 SET status='invalidated', invalidated_at=now()
 WHERE status='active';

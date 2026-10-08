@@ -1,4 +1,4 @@
--- NeverLauncher 0.19.3: bounded ServerBridge v3 telemetry history.
+-- NeverLauncher 0.19.3: ограниченный ServerBridge v3 телеметрия история.
 ALTER TABLE server_bridge_nodes_v2
     ADD COLUMN IF NOT EXISTS telemetry_latest JSONB NOT NULL DEFAULT '{}'::jsonb,
     ADD COLUMN IF NOT EXISTS telemetry_sampled_at TIMESTAMPTZ;

@@ -55,7 +55,7 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
 
   async function authorized(path: string, init?: RequestInit): Promise<Response> {
     const base = backendUrl.trim().replace(/\/$/, '');
-    if (!base || !token) throw new Error('Desktop session is required for extension runtime');
+    if (!base || !token) throw new Error('Для среды выполнения расширения требуется сессия настольного приложения');
     const headers = new Headers(init?.headers || {});
     headers.set('Authorization', `Bearer ${token}`);
     if (init?.body) headers.set('Content-Type', 'application/json');
@@ -68,7 +68,7 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
       const response = await authorized('/api/v1/desktop/extensions/catalog');
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
-      if (payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Desktop extension catalog protocol/API mismatch');
+      if (payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Несовпадение протокола/API каталога расширений настольного приложения');
       const next = (payload?.data?.items ?? []) as DesktopExtensionCatalogItem[];
       setItems(next);
       if (!next.length) { setSelected(''); setPageId(''); setHtml(''); return; }
@@ -155,18 +155,18 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
 
   return <section className="desktopExtensions0209">
     <div className="desktopExtensionsHeader">
-      <div><h3>Desktop Extensions</h3><p>Standalone extension UI runs in an opaque-origin sandbox. Tauri access is available only through the permission-aware parent bridge.</p></div>
+      <div><h3>Настольное приложение Расширения</h3><p>Автономный расширение UI запускает в непрозрачный-источник песочница. Tauri доступ является доступный только через разрешение-учитывающий родительский мост.</p></div>
       <button onClick={() => void refresh()}>Обновить</button>
     </div>
     {error && <pre>{error}</pre>}
-    {!items.length ? <p>Нет доступных enabled Desktop extensions.</p> : <div className="desktopExtensionsLayout">
+    {!items.length ? <p>Нет доступных включённый Настольное приложение расширения.</p> : <div className="desktopExtensionsLayout">
       <aside className="desktopExtensionNav">
         {items.map((item) => <button key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`} className={selected === item.extensionId ? 'active' : ''} onClick={() => { setSelected(item.extensionId); setPageId(item.desktop.pages?.[0]?.id ?? ''); }}>{item.name}<small>{item.version} · {item.scope}{item.scopeId ? `/${item.scopeId}` : ''}</small></button>)}
         {current && navigation.map((entry) => <button key={entry.id} className={pageId === entry.pageId ? 'active sub' : 'sub'} onClick={() => setPageId(entry.pageId)}>{entry.label}</button>)}
       </aside>
       <div className="desktopExtensionSurface">
-        <div className="desktopExtensionToolbar"><strong>{pages.find((p) => p.id === pageId)?.title ?? current?.name}</strong><span>{current?.bridgeAllowed ? 'Tauri bridge granted' : 'sandbox only'}</span>{actions.map((action) => <button key={action.id} onClick={() => triggerAction(action)}>{action.label}</button>)}</div>
-        {html ? <iframe ref={iframeRef} title={`${current?.name ?? 'Extension'}:${pageId}`} sandbox="allow-scripts" srcDoc={html} onLoad={notifyContext} /> : <div className="desktopExtensionEmpty">Extension UI unavailable.</div>}
+        <div className="desktopExtensionToolbar"><strong>{pages.find((p) => p.id === pageId)?.title ?? current?.name}</strong><span>{current?.bridgeAllowed ? 'Мост Tauri разрешён' : 'только песочница'}</span>{actions.map((action) => <button key={action.id} onClick={() => triggerAction(action)}>{action.label}</button>)}</div>
+        {html ? <iframe ref={iframeRef} title={`${current?.name ?? 'Extension'}:${pageId}`} sandbox="allow-scripts" srcDoc={html} onLoad={notifyContext} /> : <div className="desktopExtensionEmpty">Расширение UI недоступный.</div>}
       </div>
     </div>}
   </section>;

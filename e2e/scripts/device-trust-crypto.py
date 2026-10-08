@@ -15,7 +15,7 @@ def b64url(raw: bytes) -> str:
 def run_bytes(*args: str, input_bytes: bytes | None = None) -> bytes:
     proc = subprocess.run(args, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if proc.returncode != 0:
-        raise SystemExit(f"command failed ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}")
+        raise SystemExit(f"команда ошибка ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}")
     return proc.stdout
 
 
@@ -64,26 +64,26 @@ def public_key(algorithm: str, key: Path) -> str:
     der = run_bytes("openssl", "pkey", "-in", str(key), "-pubout", "-outform", "DER")
     if algorithm == "ed25519":
         if len(der) < 32:
-            raise SystemExit("Ed25519 SPKI is too short")
+            raise SystemExit("Ed25519 SPKI является слишком short")
         raw = der[-32:]
         if len(raw) != 32:
-            raise SystemExit("invalid Ed25519 raw public key")
+            raise SystemExit("недопустимый Ed25519 сырой открытый ключ")
         return b64url(raw)
     if algorithm == "p256":
         if len(der) < 65:
-            raise SystemExit("P-256 SPKI is too short")
+            raise SystemExit("P-256 SPKI является слишком short")
         raw = der[-65:]
         if len(raw) != 65 or raw[0] != 0x04:
-            raise SystemExit("invalid P-256 uncompressed public key")
+            raise SystemExit("недопустимый P-256 uncompressed открытый ключ")
         return b64url(raw)
-    raise SystemExit(f"unsupported algorithm: {algorithm}")
+    raise SystemExit(f"неподдерживаемый algorithm: {algorithm}")
 
 
 def sign(algorithm: str, key: Path, payload: Path) -> str:
     if algorithm == "ed25519":
         raw = run_bytes("openssl", "pkeyutl", "-sign", "-rawin", "-inkey", str(key), "-in", str(payload))
         if len(raw) != 64:
-            raise SystemExit(f"unexpected Ed25519 signature length: {len(raw)}")
+            raise SystemExit(f"unexpected Ed25519 подпись length: {len(raw)}")
         return b64url(raw)
     if algorithm == "p256":
         with tempfile.NamedTemporaryFile(prefix="nl-dt-", suffix=".der", delete=False) as tmp:
@@ -93,11 +93,11 @@ def sign(algorithm: str, key: Path, payload: Path) -> str:
             return b64url(der_ecdsa_to_p1363(tmp_path.read_bytes()))
         finally:
             tmp_path.unlink(missing_ok=True)
-    raise SystemExit(f"unsupported algorithm: {algorithm}")
+    raise SystemExit(f"неподдерживаемый algorithm: {algorithm}")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher Device Trust E2E crypto helper")
+    parser = argparse.ArgumentParser(description="NeverLauncher Доверие к устройству E2E crypto вспомогательный модуль")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("public")
     p.add_argument("--algorithm", choices=["ed25519", "p256"], required=True)

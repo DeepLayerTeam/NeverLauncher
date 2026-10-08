@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 2):
-    raise SystemExit(f"Quilt Compatibility II requires VERSION>=0.17.2, got {version}")
+    raise SystemExit(f"Quilt Совместимость II требует VERSION>=0.17.2, получил {version}")
 
 
 def read(rel: str) -> str:
@@ -19,35 +19,35 @@ def read(rel: str) -> str:
 def require(text: str, tokens: list[str], name: str) -> None:
     missing = [token for token in tokens if token not in text]
     if missing:
-        raise SystemExit(f"{name}: missing {missing}")
+        raise SystemExit(f"{name}: отсутствующий {missing}")
 
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["QUILT_COMPATIBILITY_II_0172"])
 if len(expected) != 48 or expected.get("1.14") != 8 or expected.get("1.17") != 16 or expected.get("1.20.5") != 21 or expected.get("26.3") != 25:
-    raise SystemExit("Quilt 0.17.2 canonical release grid is incomplete")
+    raise SystemExit("Quilt 0.17.2 канонический релиз сетка является неполный")
 
 target_doc = json.loads(read("compatibility/targets.json"))
 quilt_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(quilt_rows) != len(expected):
-    raise SystemExit(f"Quilt 0.17.2 requires exactly {len(expected)} required targets, got {len(quilt_rows)}")
+    raise SystemExit(f"Quilt 0.17.2 требует точно {len(expected)} обязательный цели, получил {len(quilt_rows)}")
 by_version: dict[str, dict] = {}
 for row in quilt_rows:
     minecraft = row.get("minecraft")
     if minecraft in by_version:
-        raise SystemExit(f"Quilt 0.17.2 duplicate Minecraft target: {minecraft}")
+        raise SystemExit(f"Quilt 0.17.2 дубликат Minecraft цель: {minecraft}")
     by_version[minecraft] = row
 if set(by_version) != set(expected):
-    raise SystemExit(f"Quilt 0.17.2 release grid mismatch: missing={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
+    raise SystemExit(f"Quilt 0.17.2 релиз сетка несоответствие: отсутствующий={sorted(set(expected)-set(by_version))} extra={sorted(set(by_version)-set(expected))}")
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]
     expected_scope = "integration" if minecraft == "1.21.1" else "client"
     if row.get("javaMajor") != java_major or row.get("scope") != expected_scope:
-        raise SystemExit(f"Quilt {minecraft} must be Java {java_major} scope={expected_scope}")
+        raise SystemExit(f"Quilt {minecraft} должен быть Java {java_major} область={expected_scope}")
     if row.get("os") != "linux" or row.get("arch") != "x86_64":
-        raise SystemExit(f"Quilt {minecraft} must be certified on linux/x86_64")
+        raise SystemExit(f"Quilt {minecraft} должен быть сертифицированный на linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
-        raise SystemExit(f"Quilt {minecraft} must resolve latest-stable at execution time")
+        raise SystemExit(f"Quilt {minecraft} должен разрешать последний-стабильный в выполнение время")
 
 loader_runtime = read("cli/cmd/neverlauncher/loader_runtime.go")
 require(loader_runtime, [
@@ -102,4 +102,4 @@ require(tests, [
     "TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases",
 ], "Quilt 0.17.2 regression coverage")
 
-print(f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} stable Quilt releases, 1.14..26.3, Java 8/16/17/21/25)")
+print(f"Quilt Совместимость II 0.17.2 контроль: OK ({len(quilt_rows)} стабильный Quilt релизы, 1.14..26.3, Java 8/16/17/21/25)")

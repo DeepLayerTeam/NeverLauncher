@@ -69,4 +69,4 @@ SQL
 then echo '[forge-neoforge-migration] non-canonical kind bypassed constraint' >&2; exit 1; fi
 count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2 WHERE kind IN ('forge','neoforge')")"; [[ "$count" == 2 ]]
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$count" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingNodePreserved:true,forgeNeoForgeKindsAccepted:true,nonCanonicalKindRejected:true,nodeCount:$count}' > "$RESULT_DIR/forge-neoforge-server-bridge-migration.json"
-printf '[forge-neoforge-migration] PASS 0.14.6 -> 0.14.7 Forge + NeoForge schema semantics\n'
+printf '[Forge-NeoForge-миграция] PASS 0.14.6 -> 0.14.7 Forge + NeoForge схема семантика\n'

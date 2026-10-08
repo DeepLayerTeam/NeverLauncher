@@ -143,7 +143,7 @@ func (r *MemoryRepository) FailDurableJob(_ context.Context, id, leaseToken, wor
 
 func (r *MemoryRepository) TerminateDurableJob(_ context.Context, id, leaseToken, terminalStatus, reason string) (model.DurableJob, error) {
 	if terminalStatus != model.DurableJobStatusRevoked && terminalStatus != model.DurableJobStatusFailed && terminalStatus != model.DurableJobStatusDead {
-		return model.DurableJob{}, errors.New("invalid terminal job status")
+		return model.DurableJob{}, errors.New("недопустимый конечный задача состояние")
 	}
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()

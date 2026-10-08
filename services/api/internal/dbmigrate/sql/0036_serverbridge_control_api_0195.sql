@@ -1,4 +1,4 @@
--- NeverLauncher 0.19.5: durable, idempotent Backend -> Bridge control queue.
+-- NeverLauncher 0.19.5: долговременный, идемпотентный Серверная часть -> Мост управление очередь.
 CREATE TABLE IF NOT EXISTS server_bridge_control_commands_v3 (
     id TEXT PRIMARY KEY CHECK (length(id) BETWEEN 8 AND 128),
     server_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id) ON DELETE CASCADE,
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_server_bridge_control_pending_v3
 CREATE INDEX IF NOT EXISTS idx_server_bridge_control_retention_v3
     ON server_bridge_control_commands_v3(updated_at);
 
--- Existing administrator role gains explicit control permissions. Owner already carries '*'.
+-- Существующий администратор роль получает явный управление разрешения. Владелец уже содержит '*'.
 UPDATE roles
 SET permissions = CASE
     WHEN permissions ? 'serverbridge:control' THEN permissions

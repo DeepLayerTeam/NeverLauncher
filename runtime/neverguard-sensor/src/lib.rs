@@ -149,10 +149,10 @@ impl ModuleEventSlot {
     }
 }
 
-// The producer side only writes a slot after reserving a unique ring index and
-// publishes it with Release. The worker is the only consumer and clears slots
-// after an Acquire load. Loader notifications are therefore allocation-free and
-// never take a process-global lock while the Windows loader lock is held.
+// producer побочный только записывает slot после reserving уникальный кольцо индекс и
+// публикует это с Релиз. обработчик является только consumer и clears slots
+// после Acquire загрузка. Загрузчик notifications являются поэтому выделение-free и
+// никогда take процесс-глобальный блокировка пока Windows загрузчик блокировка является held.
 unsafe impl Sync for ModuleEventSlot {}
 
 static MODULE_RING: [ModuleEventSlot; MODULE_RING_CAPACITY] =
@@ -173,8 +173,8 @@ fn unicode_for_entry(entry: &LdrDllNotificationEntry) -> Option<UnicodeString> {
     if source.is_null() {
         None
     } else {
-        // SAFETY: the structure is owned by the loader and documented as valid
-        // for the duration of this notification callback.
+        // SAFETY: structure является принадлежащий через загрузчик и описан как действительный
+        // для duration этот notification обратный вызов.
         Some(unsafe { *source })
     }
 }
@@ -214,18 +214,18 @@ fn queue_module_event(reason: u32, entry: &LdrDllNotificationEntry) {
             if available > MODULE_PATH_WCHARS {
                 event.flags |= MODULE_EVENT_FLAG_PATH_TRUNCATED;
             }
-            // Avoid allocation, filesystem calls, synchronization primitives,
-            // and calls into other modules from the loader notification.
+            // Avoid выделение, файловая система вызов, synchronization примитивы,
+            // и вызов в другой модули из загрузчик notification.
             for index in 0..to_copy {
-                // SAFETY: UNICODE_STRING.Length bounds the readable UTF-16 data
-                // supplied by the Windows loader for this callback.
+                // SAFETY: UNICODE_STRING.Length привязанный readable UTF-16 данные
+                // supplied через Windows загрузчик для этот обратный вызов.
                 event.path[index] = unsafe { *name.buffer.add(index) };
             }
         }
     }
 
-    // SAFETY: the slot is exclusively owned by this reserved write index until
-    // ready becomes true. The consumer clears ready before the ring can reuse it.
+    // SAFETY: slot является exclusively принадлежащий через этот reserved запись индекс до
+    // готовый становится true. consumer clears готовый до кольцо может повторное использование это.
     unsafe {
         *slot.event.get() = event;
     }
@@ -242,12 +242,12 @@ unsafe extern "system" fn module_notification(
     }
     match notification_reason {
         MODULE_EVENT_REASON_LOADED => {
-            // SAFETY: the union member is selected by NotificationReason.
+            // SAFETY: union member является selected через NotificationReason.
             let entry = unsafe { (*notification_data).loaded };
             queue_module_event(MODULE_EVENT_REASON_LOADED, &entry);
         }
         MODULE_EVENT_REASON_UNLOADED => {
-            // SAFETY: the union member is selected by NotificationReason.
+            // SAFETY: union member является selected через NotificationReason.
             let entry = unsafe { (*notification_data).unloaded };
             queue_module_event(MODULE_EVENT_REASON_UNLOADED, &entry);
         }
@@ -261,8 +261,8 @@ fn register_module_notifications() -> Result<(), ()> {
     MODULE_READ_INDEX.store(0, Ordering::Release);
     MODULE_DROPPED_EVENTS.store(0, Ordering::Release);
     let mut cookie = std::ptr::null_mut();
-    // SAFETY: callback and cookie pointers remain valid for the lifetime of the
-    // loaded Sensor DLL; Flags must be zero per LdrRegisterDllNotification.
+    // SAFETY: обратный вызов и cookie pointers оставаться действительный для срок жизни 
+    // загружен Sensor DLL; Флаги должен быть zero на LdrRegisterDllNotification.
     let status = unsafe {
         LdrRegisterDllNotification(0, module_notification, std::ptr::null_mut(), &mut cookie)
     };
@@ -276,8 +276,8 @@ fn register_module_notifications() -> Result<(), ()> {
 fn unregister_module_notifications() {
     let cookie = MODULE_NOTIFICATION_COOKIE.swap(std::ptr::null_mut(), Ordering::AcqRel);
     if !cookie.is_null() {
-        // SAFETY: cookie was returned by LdrRegisterDllNotification and is
-        // exchanged exactly once before unregistration.
+        // SAFETY: cookie был возвращён через LdrRegisterDllNotification и является
+        // обмен точно один раз до unregistration.
         unsafe {
             let _ = LdrUnregisterDllNotification(cookie);
         }
@@ -653,8 +653,8 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             if !slot.ready.load(Ordering::Acquire) {
                 break;
             }
-            // SAFETY: ready=true publishes a completely initialized Copy value
-            // and this worker is the single consumer for the ring.
+            // SAFETY: готовый=true публикует completely initialized Копировать value
+            // и этот обработчик является единый consumer для кольцо.
             let event = unsafe { *slot.event.get() };
             slot.ready.store(false, Ordering::Release);
             MODULE_READ_INDEX.store(read + 1, Ordering::Release);
@@ -1061,10 +1061,10 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     channel.secret.zeroize();
 }
 
-/// JVM native-agent entry point. Module notification is registered before the
-/// startup proof is accepted. The JVM remains inside Agent_OnLoad until the
-/// parent authenticates the Sensor, captures a baseline and returns a signed
-/// Module Guard arm acknowledgement. Any failure aborts VM startup.
+/// JVM нативный-agent запись точка. Модуль notification является регистрировать до 
+/// запуск доказательство является принят. JVM остаётся внутри Agent_OnLoad до 
+/// родительский аутентифицировать Sensor, captures базовая линия и возвращает подписанный
+/// Модуль Защита arm acknowledgement. Любой ошибка aborts VM запуск.
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Agent_OnLoad(

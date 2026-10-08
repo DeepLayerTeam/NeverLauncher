@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"недопустимый VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 6):
-    raise SystemExit(f"Windows production hardening gate requires >=0.13.6, got {version}")
+    raise SystemExit(f"Windows рабочий усиление защиты контроль требует >=0.13.6, получил {version}")
 
 policy = read("runtime/neverruntime/src/windows_policy.rs")
 require(policy, [
@@ -88,7 +88,7 @@ core_v2_pre_runtime = (
 )
 if not (legacy_pre_runtime or core_v2_pre_runtime):
     raise SystemExit(
-        "NeverGuard pre-runtime hardening missing: legacy hardening/policy pair or Protection Core II initializer"
+        "NeverGuard pre-среда выполнения усиление защиты отсутствующий: устаревший hardening/policy пара или Защита Ядро II initializer"
     )
 
 release = read("scripts/release/build-windows-desktop.ps1")
@@ -119,9 +119,9 @@ require(integration, [
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "windows-production-hardening-0136.py" not in ci:
-    raise SystemExit("0.13.6 hardening gate is not wired into CI")
+    raise SystemExit("0.13.6 усиление защиты контроль является не wired в CI")
 if "windows-production-hardening-0136.py" not in preflight:
-    raise SystemExit("0.13.6 hardening gate is not wired into release preflight")
+    raise SystemExit("0.13.6 усиление защиты контроль является не wired в релиз предварительная проверка")
 require(ci, [
     "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests",
     "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows",
@@ -137,4 +137,4 @@ require(security, [
     "Authenticode",
 ], "0.13.6 security documentation")
 
-print(f"[NeverLauncher] Windows production hardening 0.13.6 gate OK: {version}")
+print(f"[NeverLauncher] Windows рабочий усиление защиты 0.13.6 контроль OK: {version}")

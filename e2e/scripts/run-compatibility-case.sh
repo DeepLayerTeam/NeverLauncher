@@ -26,14 +26,14 @@ valid_id() { [[ "$1" =~ ^[a-z0-9][a-z0-9._-]{2,95}$ ]]; }
 valid_version() { [[ "$1" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]]; }
 
 if ! valid_id "$TARGET_ID" || ! valid_version "$MINECRAFT"; then
-  echo "[compat] invalid target metadata" >&2
+  echo "[compat] недопустимый цель метаданные" >&2
   exit 2
 fi
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "[compat] invalid loader" >&2; exit 2 ;; esac
 case "$SCOPE" in client|integration) ;; *) echo "[compat] invalid certification scope" >&2; exit 2 ;; esac
 case "$MATCHING_SERVER" in true|false) ;; *) echo "[compat] matchingServer must be true/false" >&2; exit 2 ;; esac
 if [[ "$MATCHING_SERVER" == "true" && ! ( "$SCOPE" == "client" && "$LOADER" == "vanilla" && "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
-  echo "[compat] matchingServer requires Vanilla client scope on linux/x86_64" >&2
+  echo "[compat] matchingServer требует Vanilla клиент область на linux/x86_64" >&2
   exit 2
 fi
 case "$TARGET_OS" in linux|windows|macos) ;; *) echo "[compat] unsupported target OS" >&2; exit 2 ;; esac
@@ -41,11 +41,11 @@ case "$TARGET_ARCH" in x86_64|aarch64) ;; *) echo "[compat] unsupported target a
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[compat] java major is required" >&2; exit 2; }
 [[ -n "$JAVA_BIN" ]] || { echo "[compat] target Java executable is unavailable" >&2; exit 2; }
 if [[ "$SCOPE" == "integration" && ! ( "$TARGET_OS" == "linux" && "$TARGET_ARCH" == "x86_64" ) ]]; then
-  echo "[compat] integration scope currently requires linux/x86_64; cross-platform targets use client scope" >&2
+  echo "[compat] интеграционный область сейчас требует linux/x86_64; кроссплатформенный цели использовать клиент область" >&2
   exit 2
 fi
 if [[ "$SCOPE" == "client" && "$LOADER" != "vanilla" && "$LOADER" != "fabric" && "$LOADER" != "quilt" && "$LOADER" != "forge" && "$LOADER" != "neoforge" ]]; then
-  echo "[compat] client scope is supported for Vanilla, Fabric, Quilt and Forge targets" >&2
+  echo "[compat] клиент область является поддерживаемый для Vanilla, Fabric, Quilt и Forge цели" >&2
   exit 2
 fi
 

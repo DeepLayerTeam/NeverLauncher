@@ -124,9 +124,9 @@ public final class BridgeConfig {
             Path absolute = configPath.toAbsolutePath().normalize();
             Path parent = absolute.getParent();
             if (parent != null) Files.createDirectories(parent);
-            // Deliberately write comments only. Runtime values continue to come from
-            // environment variables/defaults, so installing the JAR/mod never patches
-            // Paper/Velocity/Bungee/Fabric/Forge configuration and never freezes env.
+            // Намеренно запись comments только. Среда выполнения значения continue к come из
+            // окружение variables/defaults, так установка JAR/mod никогда patches
+            // Paper/Velocity/Bungee/Fabric/Forge конфигурация и никогда фиксирует env.
             String template = "# NeverLauncher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
                 "# No Minecraft/proxy configuration is modified by this plugin.\n" +
                 "# Defaults: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
@@ -135,8 +135,8 @@ public final class BridgeConfig {
             Files.writeString(absolute, template, java.nio.charset.StandardCharsets.UTF_8,
                 java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
         } catch (IOException | SecurityException ignored) {
-            // Read-only plugin/mod directories are valid zero-patch deployments;
-            // environment/default configuration remains authoritative.
+            // Только для чтения plugin/mod каталоги являются действительный без патчей развёртывание;
+            // environment/default конфигурация остаётся авторитетный.
         }
     }
 

@@ -466,8 +466,8 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes())
-	// ParseMultipartForm keeps only a bounded prefix in RAM and spools larger
-	// file parts to disk. Storage.Save then consumes the file as a stream.
+	// ParseMultipartForm сохраняет только ограниченный prefix в RAM и spools larger
+	// файл parts к диск. Хранилище.Сохранение затем использовать файл как поток.
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "не удалось прочитать multipart-запрос или превышен лимит размера")
 		return

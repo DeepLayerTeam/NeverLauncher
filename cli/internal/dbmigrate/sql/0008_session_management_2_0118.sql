@@ -1,6 +1,6 @@
--- NeverLauncher 0.11.8 — Session Management 2.0.
--- Adds device metadata and observable risk state without weakening the existing
--- refresh-token family source of truth.
+-- NeverLauncher 0.11.8 — Сессия Управление 2.0.
+-- Добавляет устройство метаданные и observable риск состояние без weakening существующий
+-- токен обновления семейство источник истины.
 
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS last_ip TEXT NOT NULL DEFAULT '';
 ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS last_user_agent TEXT NOT NULL DEFAULT '';

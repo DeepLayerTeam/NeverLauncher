@@ -76,4 +76,4 @@ for envfile in ("deploy/production/env.production.example", "cli/cmd/neverlaunch
     ):
         require(key in env, f"{envfile} missing {key}")
 
-print("NeverExtensions Permissions & Capability Security 0.20.7 production gate: OK")
+print("NeverExtensions Разрешения и Возможность Безопасность 0.20.7 рабочий контроль: OK")

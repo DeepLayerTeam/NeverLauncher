@@ -25,4 +25,4 @@ TARGETS=(velocity bungeecord waterfall bukkit spigot paper purpur folia fabric q
 for target in "${TARGETS[@]}"; do
   java -cp "$TMP/classes" ru.neverlauncher.bridge.common.ServerBridgeSecurityCertification01912Harness "$target"
 done
-printf 'ServerBridge security E2E executed: %d targets x 10 scenarios\n' "${#TARGETS[@]}"
+printf 'ServerBridge безопасность E2E executed: %d цели x 10 сценарии\n' "${#TARGETS[@]}"

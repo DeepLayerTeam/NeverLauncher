@@ -55,7 +55,7 @@ func validateBridgeNodeIdentity0142(algorithm, publicKey string) (string, string
 	publicKey = strings.TrimSpace(publicKey)
 	raw, err := base64.RawURLEncoding.DecodeString(publicKey)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
-		return "", "", "", fmt.Errorf("publicKey должен быть Ed25519 raw public key (32 bytes) в base64url без padding")
+		return "", "", "", fmt.Errorf("publicKey должен быть Ed25519 сырой открытый ключ (32 байты) в основа64URL без padding")
 	}
 	canonical := base64.RawURLEncoding.EncodeToString(raw)
 	sum := sha256.Sum256(raw)

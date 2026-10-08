@@ -10,10 +10,10 @@ import java.util.HexFormat;
 import java.util.List;
 
 /**
- * Process-scoped runtime identity attested by the long-lived Ed25519 node key.
- * The runtime id is deterministic for a node identity + JVM process, so plugin
- * reloads in the same JVM do not look like server restarts while a JVM/process
- * replacement necessarily yields a different id.
+ * Процесс-область среда выполнения идентичность attested через long-lived Ed25519 узел ключ.
+ *  среда выполнения ID является детерминированный для узел идентичность + JVM процесс, так плагин
+ * перезагрузка в одинаковый JVM делать не look like сервер перезапуски пока JVM/процесс
+ * замена necessarily yields другой ID.
  */
 public final class BridgeRuntimeIdentity {
     public static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-RuntimeIdentity-v1";

@@ -1,14 +1,14 @@
--- NeverLauncher 0.13.10 — NeverGuard migration, compatibility and stabilization.
+-- NeverLauncher 0.13.10 — NeverGuard миграция, совместимость и стабилизация.
 --
--- 0.13.5 introduced a persisted Guard integrity snapshot on minecraft_sessions,
--- but the first schema only constrained individual hashes. 0.13.10 makes the
--- persisted state atomic: a row is either legacy/non-Guard with no snapshot, or
--- it carries the complete server-verified Guard snapshot used by live
--- Minecraft/ServerBridge authorization.
+-- 0.13.5 добавленный сохранённый Защита целостность снимок на Minecraft_сессии,
+-- но первый схема только constrained individual хеширует. 0.13.10 создаёт 
+-- сохранённый состояние атомарный: строка является любой legacy/non-Guard с нет снимок, или
+-- это содержит полный сервер-проверен Защита снимок используется через актуальный
+-- Minecraft/ServerBridge авторизация.
 --
--- Fail closed on ambiguous pre-upgrade rows. Silently inventing or deleting a
--- partial security snapshot would change the authorization meaning of an
--- already-issued Minecraft credential.
+-- Отказ с блокировкой на ambiguous pre-обновление строки. Без уведомления inventing или удаление 
+-- частичный безопасность снимок будет изменять авторизация meaning 
+-- уже выданный Minecraft учётные данные.
 DO $$
 BEGIN
     IF EXISTS (

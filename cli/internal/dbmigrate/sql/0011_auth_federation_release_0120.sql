@@ -1,8 +1,8 @@
--- NeverLauncher 0.12.0 — Auth Federation Release invariants.
--- Local password authentication is a first-class provider and must obey the same
--- canonical identity boundary as SQL/HTTP/OIDC/Microsoft providers.
+-- NeverLauncher 0.12.0 — Аутентификация Федерация Релиз инварианты.
+-- Локальный пароль аутентификация является первый-класс провайдер и должен obey одинаковый
+-- канонический идентичность граница как SQL/HTTP/OIDC/Microsoft провайдеры.
 
--- Backfill canonical local identities for every password-capable Never user.
+-- Backfill канонический локальный идентичности для каждый поддерживающий пароль Никогда пользователь.
 INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
 SELECT 'identity-local-' || u.id, u.id, 'local', u.id, u.email, u.email, u.display_name, '{}'::jsonb, now(), now()
 FROM users u
@@ -10,7 +10,7 @@ LEFT JOIN auth_identities ai ON ai.user_id=u.id AND ai.provider='local'
 WHERE btrim(coalesce(u.password_hash,''))<>'' AND ai.id IS NULL
 ON CONFLICT DO NOTHING;
 
--- Normalize stale local identity metadata without altering external identities.
+-- Нормализовать устаревший локальный идентичность метаданные без altering внешний идентичности.
 UPDATE auth_identities ai
 SET subject=u.id,
     email=u.email,
@@ -52,8 +52,8 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- Deferred constraint triggers keep password-capable users and local identities
--- consistent even when a user/password and its identity are changed in one transaction.
+-- Deferred ограничение triggers сохранять поддерживающий пароль пользователи и локальный идентичности
+-- consistent даже когда user/password и его идентичность являются изменён в один транзакция.
 CREATE OR REPLACE FUNCTION neverlauncher_check_local_identity_for_user() RETURNS trigger AS $$
 DECLARE local_subject TEXT;
 BEGIN

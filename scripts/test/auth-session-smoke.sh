@@ -9,7 +9,7 @@ API_URL="http://${API_ADDR}"
 LOG_FILE="${TMPDIR:-/tmp}/neverlauncher-auth-session-smoke.log"
 
 if [[ ! -x "${API_BIN}" ]]; then
-  echo "[NeverLauncher] API binary не найден, собираю offline memory-only" >&2
+  echo "[NeverLauncher] API бинарный файл не найден, собираю автономный память-только" >&2
   ( cd "${ROOT_DIR}/services/api" && go build -tags neverlauncher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o neverlauncher-api ./cmd/neverlauncher-api )
   API_BIN="${ROOT_DIR}/services/api/neverlauncher-api"
 fi
@@ -28,7 +28,7 @@ curl -fsS "${API_URL}/health" | grep -q "${VERSION}"
 
 status=$(curl -sS -o /tmp/nl-auth-smoke-unauth.json -w '%{http_code}' "${API_URL}/api/v1/auth/accounts")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 для protected endpoint без токена, получено ${status}" >&2
+  echo "Ожидался 401 для защищать эндпоинт без токена, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-unauth.json >&2 || true
   exit 1
 fi
@@ -48,7 +48,7 @@ refresh_json=$(curl -fsS -X POST "${API_URL}/api/v1/auth/refresh" \
 new_access=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["accessToken"])' <<<"${refresh_json}")
 new_refresh=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["refreshToken"])' <<<"${refresh_json}")
 if [[ "${new_refresh}" == "${refresh}" ]]; then
-  echo "Refresh token не был ротирован" >&2
+  echo "Токен обновления не был ротирован" >&2
   exit 1
 fi
 
@@ -60,7 +60,7 @@ if [[ "${status}" != "401" ]]; then
   exit 1
 fi
 
-# 0.11.1 regression: replay consumed refresh token must compromise the whole family.
+# 0.11.1 регрессия: повторное воспроизведение использованный токен обновления должен компрометация whole семейство.
 replay_login=$(curl -fsS -X POST "${API_URL}/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@neverlauncher.local","password":"admin","deviceId":"auth-smoke-replay"}')
@@ -73,15 +73,15 @@ status=$(curl -sS -o /tmp/nl-auth-smoke-replay.json -w '%{http_code}' -X POST "$
   -H 'Content-Type: application/json' \
   -d "{\"refreshToken\":\"${replay_old}\"}")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 при replay consumed refresh token, получено ${status}" >&2
+  echo "Ожидался 401 при повторное воспроизведение использованный токен обновления, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-replay.json >&2 || true
   exit 1
 fi
 status=$(curl -sS -o /tmp/nl-auth-smoke-family-revoked.json -w '%{http_code}' "${API_URL}/api/v1/auth/accounts" -H "Authorization: Bearer ${replay_access}")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 для access token из compromised refresh family, получено ${status}" >&2
+  echo "Ожидался 401 для токен доступа из компрометация обновление семейство, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-family-revoked.json >&2 || true
   exit 1
 fi
 
-echo "[NeverLauncher] Auth session smoke OK for ${VERSION}"
+echo "[NeverLauncher] Аутентификация сессия smoke OK для ${VERSION}"

@@ -85,7 +85,7 @@ mod imp {
 
     fn resolve_sensor_path() -> Result<PathBuf, String> {
         let current = std::env::current_exe()
-            .map_err(|err| format!("не удалось определить executable для NeverGuard Sensor: {err}"))?;
+            .map_err(|err| format!("не удалось определить исполняемый для NeverGuard Sensor: {err}"))?;
         let parent = current
             .parent()
             .ok_or_else(|| "NeverGuard Sensor: executable не имеет parent directory".to_string())?;
@@ -158,7 +158,7 @@ mod imp {
         for arg in command.as_std().get_args() {
             if let Some(label) = forbidden_instrumentation_token(&arg.to_string_lossy()) {
                 return Err(format!(
-                    "NeverGuard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
+                    "NeverGuard Отладка и Инструментирование Защита отклонён запуск инструментирование option {label}"
                 ));
             }
         }
@@ -166,7 +166,7 @@ mod imp {
             if let Some(value) = effective_command_env(command, name) {
                 if let Some(label) = java_options_contains_forbidden(&value) {
                     return Err(format!(
-                        "NeverGuard Debug & Instrumentation Guard rejected {label} from {name}"
+                        "NeverGuard Отладка и Инструментирование Защита отклонён {label} из {name}"
                     ));
                 }
             }
@@ -180,19 +180,19 @@ mod imp {
     ) -> Result<WindowsSensorBootstrap, String> {
         validate_startup_instrumentation_boundary(command)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
-            format!("NeverGuard Sensor DLL is unavailable {}: {err}", sensor_path.display())
+            format!("NeverGuard Sensor DLL является недоступный {}: {err}", sensor_path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
             return Err("NeverGuard Sensor должен быть непустым regular non-symlink DLL".to_string());
         }
         #[cfg(not(debug_assertions))]
         verify_windows_authenticode_trust(&sensor_path)
-            .map_err(|err| format!("NeverGuard Sensor Authenticode verification failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard Sensor Authenticode проверка ошибка: {err}"))?;
 
         let module_guard_policy = policy_for_command(command, &sensor_path)?;
         let endpoint = sensor_endpoint();
         let server = create_secure_pipe_server(&endpoint)
-            .map_err(|err| format!("NeverGuard Sensor startup pipe creation failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard Sensor запуск pipe создание ошибка: {err}"))?;
         let mut secret = [0u8; 32];
         OsRng.fill_bytes(&mut secret);
 
@@ -236,13 +236,13 @@ mod imp {
             timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
                 .map_err(|_| "NeverGuard Sensor did not load before JVM startup timeout".to_string())?
-                .map_err(|err| format!("NeverGuard Sensor startup pipe connect failed: {err}"))?;
+                .map_err(|err| format!("NeverGuard Sensor запуск pipe подключение ошибка: {err}"))?;
 
             let mut packet = [0u8; 48];
             timeout(Duration::from_secs(3), server.read_exact(&mut packet))
                 .await
                 .map_err(|_| "NeverGuard Sensor startup authentication timed out".to_string())?
-                .map_err(|err| format!("NeverGuard Sensor startup packet read failed: {err}"))?;
+                .map_err(|err| format!("NeverGuard Sensor запуск packet чтение ошибка: {err}"))?;
 
             if &packet[..8] != SENSOR_MAGIC {
                 packet.zeroize();
@@ -281,7 +281,7 @@ mod imp {
                 runtime_policy,
             )
             .await
-            .map_err(|err| format!("NeverGuard Module Guard arm failed: {err}"))?;
+            .map_err(|err| format!("NeverGuard Модуль Защита arm ошибка: {err}"))?;
 
             Ok(WindowsSensorSession {
                 protocol_version: protocol,
@@ -294,8 +294,8 @@ mod imp {
         }
     }
 
-    /// Authenticates the early JVM sensor, arms continuous Module Guard before
-    /// Agent_OnLoad returns and terminates the JVM if either stage fails.
+    /// Аутентифицировать early JVM sensor, arms непрерывный Модуль Защита до
+    /// Agent_OnLoad возвращает и terminates JVM если любой подготавливать завершается ошибкой.
     pub async fn authenticate_sensor_or_kill(
         bootstrap: WindowsSensorBootstrap,
         child: &mut tokio::process::Child,

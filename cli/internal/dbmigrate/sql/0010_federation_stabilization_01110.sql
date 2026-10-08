@@ -1,5 +1,5 @@
--- NeverLauncher 0.11.10 — Federation E2E / migration stabilization.
--- Refuse already-corrupt authentication state before adding relational invariants.
+-- NeverLauncher 0.11.10 — Федерация E2E / миграция стабилизация.
+-- Refuse уже-corrupt аутентификация состояние до добавляя реляционный инварианты.
 
 DO $$
 DECLARE broken BIGINT;
@@ -58,7 +58,7 @@ END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_refresh_tokens_one_current_per_family
     ON refresh_tokens(family_id) WHERE status='current';
 
--- Composite unique keys make cross-table ownership enforceable by foreign keys.
+-- Составной уникальный ключи создавать cross-таблица владение enforceable через внешний ключи.
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='refresh_token_families_id_session_user_key') THEN
         ALTER TABLE refresh_token_families

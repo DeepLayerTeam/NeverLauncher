@@ -14,11 +14,11 @@ import (
 
 func handleAuth(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные auth-подкоманды: login, capabilities, accounts, roles, sessions, revoke, logout-all, session-policy, password-policy")
+		return errors.New("доступные auth-подкоманды: вход, возможности, учётные записи, роли, сессии, отзыв, выход-все, сессия-политика, пароль-политика")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("auth-команды требуют --backend <url>")
+		return errors.New("auth-команды требуют --серверная часть <URL>")
 	}
 	out := flagValue(args, "--output", "")
 	var payload map[string]any
@@ -27,7 +27,7 @@ func handleAuth(args []string) error {
 	case "login":
 		email, password := flagValue(args, "--email", ""), flagValue(args, "--password", "")
 		if email == "" || password == "" {
-			return errors.New("auth login требует --email и --password")
+			return errors.New("аутентификация вход требует --электронная почта и --пароль")
 		}
 		body := map[string]any{"email": email, "password": password, "deviceId": flagValue(args, "--device", "nl-cli")}
 		if totp := flagValue(args, "--totp", ""); totp != "" {
@@ -61,11 +61,11 @@ func handleAuth(args []string) error {
 
 func handleObservability(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные operations-подкоманды: status, readiness, diagnostics, diagnostics-bundle")
+		return errors.New("доступные operations-подкоманды: состояние, готовность, диагностика, диагностика-комплект")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("operations-команды требуют --backend <url>")
+		return errors.New("operations-команды требуют --серверная часть <URL>")
 	}
 	out := flagValue(args, "--output", "")
 	var payload map[string]any
@@ -124,7 +124,7 @@ func operationsSupportSummaryModel() map[string]any {
 
 func handleSecurity(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные security-подкоманды: check, hardening, supply-chain, keys, rotate-key, revocation-list, trust-policy, trust-verify, sbom, provenance, attest, verify-signature, manifest-policy, release-policy, desktop-policy")
+		return errors.New("доступные security-подкоманды: проверка, усиление защиты, supply-цепочка, ключи, ротировать-ключ, отзыв-список, доверие-политика, доверие-проверять, SBOM, происхождение, attest, проверять-подпись, манифест-политика, релиз-политика, настольное приложение-политика")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -194,7 +194,7 @@ func handleSecurity(args []string) error {
 		publicKey := flagValue(args, "--public-key", "")
 		if artifact == "release" || artifact == "release-bundle" {
 			if path == "" {
-				return errors.New("security verify-signature --artifact release требует --path <release-dir>")
+				return errors.New("безопасность проверять-подпись --артефакт релиз требует --путь <релиз-dir>")
 			}
 			trustState := flagValue(args, "--trust-state", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE")))
 			trustPolicy := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE")))
@@ -292,7 +292,7 @@ func writeOrPrintJSON(out string, payload any) error {
 
 func handleBackup(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные backup-подкоманды: status, create, inspect, restore-dry-run, restore, audit-export, diagnostics-bundle")
+		return errors.New("доступные backup-подкоманды: состояние, создавать, inspect, восстановление-dry-запуск, восстановление, аудит-экспорт, диагностика-комплект")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -302,52 +302,52 @@ func handleBackup(args []string) error {
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup status требует --backend <url> и --token/NEVERLAUNCHER_TOKEN для product-проверки")
+		return errors.New("резервное копирование состояние требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN для product-проверки")
 	case "create":
 		if payload, ok, err := adminBackendPost(args, "/api/v1/operations/backups", nil); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup create требует --backend <url> и --token/NEVERLAUNCHER_TOKEN; локальный dry-run больше не считается product backup")
+		return errors.New("резервное копирование создавать требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN; локальный пробный запуск больше не считается продукт резервное копирование")
 	case "inspect":
 		backupID := flagValue(args, "--id", "")
 		if backupID == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {
 			backupID = args[1]
 		}
 		if backupID == "" {
-			return errors.New("backup inspect требует --id <backupId>")
+			return errors.New("резервное копирование inspect требует --ID <backupId>")
 		}
 		if payload, ok, err := adminBackendGet(args, "/api/v1/operations/backups/"+backupID); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup inspect требует --backend <url> и --token/NEVERLAUNCHER_TOKEN")
+		return errors.New("резервное копирование inspect требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN")
 	case "restore-dry-run":
 		backupID := backupIDFromArgs(args)
 		if backupID == "" {
-			return errors.New("backup restore-dry-run требует --id <backupId>")
+			return errors.New("восстановление из резервной копии-пробный запуск требует --ID <backupId>")
 		}
 		if payload, ok, err := adminBackendPost(args, "/api/v1/operations/backups/"+backupID+"/restore-dry-run", nil); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup restore-dry-run требует --backend <url> и --token/NEVERLAUNCHER_TOKEN")
+		return errors.New("восстановление из резервной копии-пробный запуск требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN")
 	case "restore":
 		backupID := backupIDFromArgs(args)
 		if backupID == "" {
-			return errors.New("backup restore требует --id <backupId>")
+			return errors.New("восстановление из резервной копии требует --ID <backupId>")
 		}
 		confirm := flagValue(args, "--confirm", "")
 		if confirm != backupID {
-			return fmt.Errorf("backup restore требует точное подтверждение --confirm %s", backupID)
+			return fmt.Errorf("восстановление из резервной копии требует точное подтверждение --confirm %s", backupID)
 		}
 		database := strings.EqualFold(flagValue(args, "--database", "false"), "true")
 		storageRestore := strings.EqualFold(flagValue(args, "--storage", "false"), "true")
 		if !database && !storageRestore {
-			return errors.New("backup restore требует --database true и/или --storage true")
+			return errors.New("восстановление из резервной копии требует --база данных true и/или --хранилище true")
 		}
 		body := map[string]any{"confirm": confirm, "database": database, "storage": storageRestore}
 		if payload, ok, err := adminBackendPost(args, "/api/v1/operations/backups/"+backupID+"/restore", body); err != nil {
@@ -355,21 +355,21 @@ func handleBackup(args []string) error {
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup restore требует --backend <url> и --token/NEVERLAUNCHER_TOKEN")
+		return errors.New("восстановление из резервной копии требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN")
 	case "audit-export":
 		if payload, ok, err := adminBackendGet(args, "/api/v1/operations/audit/export"); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup audit-export требует --backend <url> и --token/NEVERLAUNCHER_TOKEN")
+		return errors.New("резервное копирование аудит-экспорт требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN")
 	case "diagnostics-bundle":
 		if payload, ok, err := adminBackendGet(args, "/api/v1/operations/diagnostics-bundle"); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup diagnostics-bundle требует --backend <url> и --token/NEVERLAUNCHER_TOKEN")
+		return errors.New("резервное копирование диагностика-комплект требует --серверная часть <URL> и --токен/NEVERLAUNCHER_TOKEN")
 	default:
 		return fmt.Errorf("неизвестная backup-подкоманда: %s", args[0])
 	}
@@ -385,7 +385,7 @@ func backupIDFromArgs(args []string) string {
 
 func handleDB(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные db-подкоманды: migrations, migration-doctor, migrate, status, validate, repository")
+		return errors.New("доступные db-подкоманды: миграция, миграция-doctor, мигрировать, состояние, проверять, репозиторий")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -436,7 +436,7 @@ func handleDB(args []string) error {
 		return nil
 	case "migrate":
 		if len(args) < 2 {
-			return errors.New("db migrate требует подкоманду: plan, apply или verify")
+			return errors.New("db мигрировать требует подкоманду: plan, применить или проверять")
 		}
 		migrations, err := dbmigrate.List()
 		if err != nil {
@@ -485,7 +485,7 @@ func handleDB(args []string) error {
 			printJSON(report)
 			return nil
 		default:
-			return fmt.Errorf("неизвестная db migrate подкоманда: %s", args[1])
+			return fmt.Errorf("неизвестная db мигрировать подкоманда: %s", args[1])
 		}
 	case "status":
 		status := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "repository": "postgres", "mode": "real-sql-repository", "fallbackToMemory": false, "tables": productionTables(), "requiredCapabilities": []string{"transactions", "indexes", "constraints", "audit-events", "storage-consistency", "telemetry-events", "crash-reports", "transactional-version-publish"}}
@@ -515,16 +515,16 @@ func handleDB(args []string) error {
 
 func handleStorage(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные storage-подкоманды: audit, consistency")
+		return errors.New("доступные storage-подкоманды: аудит, consistency")
 	}
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" {
-		return errors.New("storage audit/consistency требуют --backend")
+		return errors.New("хранилище audit/consistency требуют --серверная часть")
 	}
 	if token == "" {
-		return errors.New("storage audit/consistency требуют --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("хранилище audit/consistency требуют --токен или NEVERLAUNCHER_TOKEN")
 	}
 	var endpoint string
 	switch args[0] {
@@ -533,7 +533,7 @@ func handleStorage(args []string) error {
 	case "consistency":
 		endpoint = "/api/v1/operations/storage/consistency"
 	default:
-		return fmt.Errorf("неизвестная storage-подкоманда: %s; cleanup удалён, поскольку production cleanup без atomic backend primitive небезопасен", args[0])
+		return fmt.Errorf("неизвестная storage-подкоманда: %s; очистка удалён, поскольку рабочий очистка без атомарный серверная часть primitive небезопасен", args[0])
 	}
 	payload, err := httpJSONWithAuth("GET", backend+endpoint, nil, token)
 	if err != nil {
@@ -555,16 +555,16 @@ func handleTenantAudit(args []string) error {
 
 func handleMigrate(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные migrate-подкоманды: plan, apply, rollback")
+		return errors.New("доступные migrate-подкоманды: plan, применить, откат")
 	}
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" {
-		return errors.New("migrate требует --backend")
+		return errors.New("мигрировать требует --серверная часть")
 	}
 	if token == "" {
-		return errors.New("migrate требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("мигрировать требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 	switch args[0] {
 	case "plan":
@@ -583,7 +583,7 @@ func handleMigrate(args []string) error {
 		backupID := strings.TrimSpace(flagValue(args, "--backup-id", ""))
 		confirm := strings.TrimSpace(flagValue(args, "--confirm", ""))
 		if backupID == "" || confirm != backupID {
-			return errors.New("migrate rollback требует --backup-id <id> и точный --confirm <id>")
+			return errors.New("мигрировать откат требует --резервное копирование-ID <ID> и точный --confirm <ID>")
 		}
 		body := map[string]any{"confirm": backupID, "database": true, "storage": flagBool(args, "--storage", true)}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/operations/backups/"+url.PathEscape(backupID)+"/restore", body, token)

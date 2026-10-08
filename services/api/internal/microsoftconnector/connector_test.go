@@ -55,14 +55,14 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 				return
 			}
 			if r.Form.Get("client_id") != testClientID {
-				http.Error(w, "client mismatch", http.StatusBadRequest)
+				http.Error(w, "клиент несоответствие", http.StatusBadRequest)
 				return
 			}
 			if r.Form.Get("grant_type") == "authorization_code" {
 				verifier := r.Form.Get("code_verifier")
 				sum := sha256.Sum256([]byte(verifier))
 				if base64.RawURLEncoding.EncodeToString(sum[:]) != expectedChallenge {
-					http.Error(w, "pkce mismatch", http.StatusBadRequest)
+					http.Error(w, "pkce несоответствие", http.StatusBadRequest)
 					return
 				}
 				writeMicrosoftJSONTest(w, microsoftTokenResponseTest(t, key, authority, expectedNonce, "refresh-1"))

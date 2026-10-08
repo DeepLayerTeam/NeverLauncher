@@ -1,16 +1,16 @@
-//go:build neverlauncher_nopgx && linux && cgo
+//Go:сборка neverlauncher_nopgx && Linux && cgo
 
 package sqlconnector
 
 /*
 #cgo LDFLAGS: -lcrypt
-#include <stdlib.h>
-#include <string.h>
-#include <crypt.h>
-static char* nl_crypt(const char *password, const char *setting) {
-    struct crypt_data data;
-    memset(&data, 0, sizeof(data));
-    return crypt_r(password, setting, &data);
+#включать <stdlib.h>
+#включать <string.h>
+#включать <crypt.h>
+static char* nl_crypt(const char *пароль, const char *setting) {
+    struct crypt_данные данные;
+    memset(&данные, 0, sizeof(данные));
+    возвращать crypt_r(пароль, setting, &данные);
 }
 */
 import "C"

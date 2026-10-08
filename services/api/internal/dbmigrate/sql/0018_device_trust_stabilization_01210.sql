@@ -1,26 +1,26 @@
--- NeverLauncher 0.12.10 — Device Trust migration + stabilization.
+-- NeverLauncher 0.12.10 — Доверие к устройству миграция + стабилизация.
 --
--- This migration closes the relational gaps left intentionally open while the
--- Device Trust lifecycle was being built across 0.12.1–0.12.9. It is fail-closed
--- for ownership/corruption problems, but safely normalizes states that older
--- releases could legitimately leave behind (revoked-device attestation state,
--- empty-string optional references and expired one-shot challenges).
+-- Этот миграция закрывает реляционный gaps left намеренно открытый пока 
+-- Доверие к устройству жизненный цикл был являясь built через 0.12.1–0.12.9. Это является отказ с блокировкой
+-- для ownership/corruption problems, но безопасно нормализовать состояния тот старый
+-- релизы может legitimately leave behind (отозванный-устройство аттестация состояние,
+-- пустой-string необязательный ссылки и истёкший одноразовый запросы).
 
--- 0.12.8 introduced key-rotate/key-recover challenges, but the 0.12.4 purpose
--- constraint still allowed only register/session-bind/attest. Drop it before the
--- validation block so production PostgreSQL can actually persist replacement
--- challenges after this migration.
+-- 0.12.8 добавленный key-rotate/key-recover запросы, но 0.12.4 назначение
+-- ограничение по-прежнему разрешён только register/session-bind/attest. Drop это до 
+-- валидация block так рабочий PostgreSQL может фактически сохранять замена
+-- запросы после этот миграция.
 ALTER TABLE device_challenges DROP CONSTRAINT IF EXISTS device_challenges_purpose_check;
 
--- Empty-string replacement links were a storage sentinel in 0.12.8. Convert the
--- optional relation to SQL NULL so it can be protected by a real foreign key.
+-- Пустой-string замена связывает были хранилище sentinel в 0.12.8. Преобразовывать 
+-- необязательный relation к SQL NULL так это может быть защищать через реальный внешний ключ.
 ALTER TABLE trusted_devices ALTER COLUMN replaced_by_device_id DROP NOT NULL;
 ALTER TABLE trusted_devices ALTER COLUMN replaced_by_device_id DROP DEFAULT;
 UPDATE trusted_devices SET replaced_by_device_id=NULL WHERE btrim(COALESCE(replaced_by_device_id,''))='';
 
--- Revoked rows created before challenge-response attestation existed can carry
--- attestation_state='unattested'. Revocation is stronger than attestation state,
--- so normalize them without granting any trust.
+-- Отозванный строки создан до запрос-ответ аттестация existed может carry
+-- аттестация_состояние='unattested'. Отзыв является stronger чем аттестация состояние,
+-- так нормализовать их без предоставляя любой доверие.
 UPDATE trusted_devices
 SET trust_state='revoked',
     assurance='proof-of-possession',
@@ -32,14 +32,14 @@ SET trust_state='revoked',
     revoked_reason=CASE WHEN btrim(revoked_reason)='' THEN 'legacy-device-revoked' ELSE revoked_reason END
 WHERE status='revoked';
 
--- Expired one-shot challenges no longer need to remain pending. Marking them
--- consumed is security-preserving and keeps the partial expiry index bounded.
+-- Истёкший одноразовый запросы нет дольше need к оставаться ожидающий. Marking их
+-- использованный является безопасность-сохраняя и сохраняет частичный истечение индекс ограниченный.
 UPDATE device_challenges
 SET consumed_at=expires_at
 WHERE consumed_at IS NULL AND expires_at<=now();
 
--- Optional Minecraft trust snapshots used '' before 0.12.10. NULL preserves the
--- legacy-Yggdrasil compatibility path while allowing ownership FKs below.
+-- Необязательный Minecraft доверие снимки используется '' до 0.12.10. NULL сохраняет 
+-- устаревший-Yggdrasil совместимость путь пока разрешать владение FKs ниже.
 ALTER TABLE minecraft_sessions ALTER COLUMN trusted_device_id DROP NOT NULL;
 ALTER TABLE minecraft_sessions ALTER COLUMN trusted_device_id DROP DEFAULT;
 UPDATE minecraft_sessions SET trusted_device_id=NULL WHERE btrim(COALESCE(trusted_device_id,''))='';
@@ -120,15 +120,15 @@ BEGIN
     END IF;
 END $$;
 
--- Canonical device challenge purposes now cover the complete shipping lifecycle.
+-- Канонический устройство запрос назначение теперь cover полный поставка жизненный цикл.
 ALTER TABLE device_challenges ADD CONSTRAINT device_challenges_purpose_check
     CHECK (purpose IN ('register','session-bind','attest','key-rotate','key-recover'));
 ALTER TABLE device_challenges DROP CONSTRAINT IF EXISTS device_challenges_metadata_object_check;
 ALTER TABLE device_challenges ADD CONSTRAINT device_challenges_metadata_object_check
     CHECK (jsonb_typeof(metadata)='object');
 
--- Internal lifecycle shape: revocation cannot be represented as an active trusted
--- device, and replacement metadata must be complete or absent.
+-- Внутренний жизненный цикл форма: отзыв не может быть представленный как активный доверенный
+-- устройство, и замена метаданные должен быть полный или отсутствующий.
 ALTER TABLE trusted_devices DROP CONSTRAINT IF EXISTS trusted_devices_lifecycle_check;
 ALTER TABLE trusted_devices ADD CONSTRAINT trusted_devices_lifecycle_check CHECK (
     (status='active' AND trust_state='verified' AND attestation_state IN ('unattested','verified') AND revoked_at IS NULL AND btrim(revoked_reason)='') OR
@@ -148,8 +148,8 @@ ALTER TABLE auth_sessions ADD CONSTRAINT auth_sessions_device_binding_shape_chec
     AND NOT (status='active' AND device_trust_state='revoked')
 );
 
--- Composite ownership keys allow the database to reject cross-user references,
--- not merely rely on HTTP/repository checks.
+-- Составной владение ключи разрешать база данных к отклонять межпользовательский ссылки,
+-- не всего лишь rely на HTTP/репозиторий проверяет.
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='trusted_devices_id_user_key' AND conrelid='trusted_devices'::regclass) THEN
         ALTER TABLE trusted_devices ADD CONSTRAINT trusted_devices_id_user_key UNIQUE(id,user_id);

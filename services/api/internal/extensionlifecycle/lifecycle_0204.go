@@ -89,10 +89,10 @@ func normalizeScope0204(scope Scope) (Scope, error) {
 		scope.ScopeID = ""
 	case "project":
 		if scope.ScopeID == "" {
-			return Scope{}, errors.New("project scope requires scopeId")
+			return Scope{}, errors.New("область проекта требует scopeId")
 		}
 	default:
-		return Scope{}, errors.New("scope must be global or project")
+		return Scope{}, errors.New("область должен быть глобальный или проект")
 	}
 	return scope, nil
 }
@@ -100,11 +100,11 @@ func normalizeScope0204(scope Scope) (Scope, error) {
 func safeExtensionID0204(id string) (string, error) {
 	id = strings.ToLower(strings.TrimSpace(id))
 	if id == "" || len(id) > 128 {
-		return "", errors.New("invalid extension id")
+		return "", errors.New("недопустимый расширение ID")
 	}
 	for _, r := range id {
 		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
-			return "", errors.New("invalid extension id")
+			return "", errors.New("недопустимый расширение ID")
 		}
 	}
 	return id, nil
@@ -187,9 +187,9 @@ func (m *Manager) acquireOperationLock0204(scope Scope, id, op string) (func(), 
 			_ = os.Remove(p)
 			continue
 		}
-		return nil, fmt.Errorf("extension lifecycle operation is already locked: %s/%s", scope.Scope, id)
+		return nil, fmt.Errorf("жизненный цикл расширения операция является уже блокировка: %s/%s", scope.Scope, id)
 	}
-	return nil, errors.New("failed to acquire extension lifecycle lock")
+	return nil, errors.New("ошибка к acquire жизненный цикл расширения блокировка")
 }
 
 func readFileOptional0204(path string) ([]byte, bool, error) {
@@ -272,7 +272,7 @@ func writePredictedLock0204(path string, tr model.ExtensionLifecycleTransition, 
 func (m *Manager) validateScope0204(scope Scope) error {
 	if scope.Scope == "project" {
 		if _, err := m.Repo.GetProject(scope.ScopeID); err != nil {
-			return fmt.Errorf("project scope not found: %w", err)
+			return fmt.Errorf("область проекта не found: %w", err)
 		}
 	}
 	return nil
@@ -287,24 +287,24 @@ func currentOrAbsent0204(repo repository.Repository, ctx context.Context, id str
 
 func publisherKey0204(key model.ExtensionRegistryPublisherKey) (ed25519.PublicKey, error) {
 	if !key.Active || key.RevokedAt != nil || key.Algorithm != "Ed25519" {
-		return nil, errors.New("publisher key is inactive/revoked")
+		return nil, errors.New("издатель ключ является inactive/revoked")
 	}
 	raw, err := base64.StdEncoding.DecodeString(key.PublicKeyBase64)
 	if err != nil || len(raw) != ed25519.PublicKeySize {
-		return nil, errors.New("registry contains invalid Ed25519 public key")
+		return nil, errors.New("реестр содержит недопустимый Ed25519 открытый ключ")
 	}
 	return ed25519.PublicKey(raw), nil
 }
 
 func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionRegistryVersion) (preparedArtifact0204, error) {
 	if _, err := extensiontrust.EvaluatePublication(ctx, m.Repo, item); err != nil {
-		return preparedArtifact0204{}, fmt.Errorf("extension trust policy rejected artifact: %w", err)
+		return preparedArtifact0204{}, fmt.Errorf("расширение доверие политика отклонён артефакт: %w", err)
 	}
 	if item.YankedAt != nil {
-		return preparedArtifact0204{}, errors.New("yanked registry version cannot be installed")
+		return preparedArtifact0204{}, errors.New("yanked реестр версия не может быть установленный")
 	}
 	if m.Storage == nil {
-		return preparedArtifact0204{}, errors.New("extension lifecycle storage is not configured")
+		return preparedArtifact0204{}, errors.New("жизненный цикл расширения хранилище является не настраивать")
 	}
 	if err := os.MkdirAll(filepath.Join(m.Root, ".downloads"), 0o750); err != nil {
 		return preparedArtifact0204{}, err
@@ -315,7 +315,7 @@ func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionR
 	}
 	defer reader.Close()
 	if size != item.Artifact.Size {
-		return preparedArtifact0204{}, errors.New("registry artifact storage size mismatch")
+		return preparedArtifact0204{}, errors.New("реестр артефакт хранилище размер несоответствие")
 	}
 	tmp, err := os.CreateTemp(filepath.Join(m.Root, ".downloads"), "artifact-*.nlext")
 	if err != nil {
@@ -335,7 +335,7 @@ func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionR
 		return preparedArtifact0204{}, err
 	}
 	if written != item.Artifact.Size || hex.EncodeToString(h.Sum(nil)) != item.Artifact.SHA256 {
-		return preparedArtifact0204{}, errors.New("registry artifact bytes do not match immutable metadata")
+		return preparedArtifact0204{}, errors.New("реестр артефакт байты делать не соответствовать неизменяемый метаданные")
 	}
 	if err := tmp.Sync(); err != nil {
 		return preparedArtifact0204{}, err
@@ -356,7 +356,7 @@ func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionR
 		return preparedArtifact0204{}, err
 	}
 	if verified.PackageIdentity != item.Artifact.PackageIdentity || verified.SHA256 != item.Artifact.SHA256 || verified.Manifest.ID != item.ExtensionID || verified.Manifest.Version != item.Version || verified.Manifest.Publisher != item.PublisherID {
-		return preparedArtifact0204{}, errors.New("verified artifact identity does not match registry publication")
+		return preparedArtifact0204{}, errors.New("проверен артефакт идентичность делает не соответствовать реестр публикация")
 	}
 	ok = true
 	return preparedArtifact0204{Path: p, Verified: verified}, nil
@@ -391,13 +391,13 @@ func activateStaged0204(current, stage, backup string) (func(), error) {
 	hadCurrent := pathExists0204(current)
 	if hadCurrent {
 		if backup == "" {
-			return nil, errors.New("backup path required when replacing activated extension")
+			return nil, errors.New("резервное копирование путь обязательный когда заменять activated расширение")
 		}
 		if err := os.MkdirAll(filepath.Dir(backup), 0o750); err != nil {
 			return nil, err
 		}
 		if pathExists0204(backup) {
-			return nil, errors.New("extension backup path already exists")
+			return nil, errors.New("расширение резервное копирование путь уже существует")
 		}
 		if err := os.Rename(current, backup); err != nil {
 			return nil, err
@@ -427,7 +427,7 @@ func deactivateCurrent0204(current, backup string) (func(), error) {
 		return nil, err
 	}
 	if pathExists0204(backup) {
-		return nil, errors.New("extension backup path already exists")
+		return nil, errors.New("расширение резервное копирование путь уже существует")
 	}
 	if err := os.Rename(current, backup); err != nil {
 		return nil, err
@@ -462,13 +462,13 @@ func copyTree0204(src, dst string) error {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("symlink found in lifecycle backup")
+			return errors.New("символическая ссылка found в жизненный цикл резервное копирование")
 		}
 		if d.IsDir() {
 			return os.Mkdir(target, info.Mode().Perm())
 		}
 		if !info.Mode().IsRegular() {
-			return errors.New("special file found in lifecycle backup")
+			return errors.New("special файл found в жизненный цикл резервное копирование")
 		}
 		in, err := os.Open(path)
 		if err != nil {
@@ -515,7 +515,7 @@ func (m *Manager) commitWithLockfile0204(ctx context.Context, before model.Exten
 		return next, err
 	}
 	if err := atomicWrite0204(lockPath, actualBytes, 0o640); err != nil {
-		return next, fmt.Errorf("lifecycle committed but lockfile refresh failed: %w", err)
+		return next, fmt.Errorf("жизненный цикл committed но lockfile обновление ошибка: %w", err)
 	}
 	m.pruneBackups0204(Scope{Scope: tr.Scope, ScopeID: tr.ScopeID}, tr.ExtensionID)
 	return next, nil
@@ -543,7 +543,7 @@ func (m *Manager) Install(ctx context.Context, item model.ExtensionRegistryVersi
 		return model.ExtensionInstall{}, err
 	}
 	if before.CurrentState != model.ExtensionInstallStateAbsent {
-		return model.ExtensionInstall{}, fmt.Errorf("extension %s is already installed; use update", id)
+		return model.ExtensionInstall{}, fmt.Errorf("расширение %s является уже установленный; использовать обновление", id)
 	}
 	prepared, err := m.prepareArtifact0204(ctx, item)
 	if err != nil {
@@ -563,7 +563,7 @@ func (m *Manager) Install(ctx context.Context, item model.ExtensionRegistryVersi
 	}
 	current := currentDir0204(m.Root, scope, id)
 	if pathExists0204(current) {
-		return model.ExtensionInstall{}, errors.New("activated extension directory exists while persistent state is absent")
+		return model.ExtensionInstall{}, errors.New("activated расширение каталог существует пока постоянный состояние является отсутствующий")
 	}
 	rollbackFS, err := activateStaged0204(current, stage, "")
 	if err != nil {
@@ -596,7 +596,7 @@ func (m *Manager) Update(ctx context.Context, item model.ExtensionRegistryVersio
 		return model.ExtensionInstall{}, err
 	}
 	if before.CurrentState == model.ExtensionInstallStateAbsent {
-		return model.ExtensionInstall{}, errors.New("extension is not activated; use install")
+		return model.ExtensionInstall{}, errors.New("расширение является не activated; использовать установка")
 	}
 	if before.CurrentVersion == item.Version && before.CurrentPackageIdentity == item.Artifact.PackageIdentity {
 		return before, nil
@@ -656,11 +656,11 @@ func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, en
 		return model.ExtensionInstall{}, err
 	}
 	if before.CurrentState == model.ExtensionInstallStateAbsent {
-		return model.ExtensionInstall{}, errors.New("extension is not installed")
+		return model.ExtensionInstall{}, errors.New("расширение является не установленный")
 	}
 	if enabled {
 		if _, emergencyErr := m.Repo.GetExtensionEmergencyDisable(ctx, id, scope.Scope, scope.ScopeID); emergencyErr == nil {
-			return model.ExtensionInstall{}, errors.New("extension is emergency-disabled; clear the persistent kill-switch before enabling")
+			return model.ExtensionInstall{}, errors.New("расширение является аварийный-отключённый; clear постоянный kill-переключение до enabling")
 		} else if !errors.Is(emergencyErr, repository.ErrNotFound) {
 			return model.ExtensionInstall{}, emergencyErr
 		}
@@ -743,7 +743,7 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 		}
 	}
 	if target == nil {
-		return model.ExtensionInstall{}, errors.New("no restorable extension backup is available")
+		return model.ExtensionInstall{}, errors.New("нет restorable расширение резервное копирование является доступный")
 	}
 	stage, err := makeStage0204(m.Root, scope, id)
 	if err != nil {
@@ -817,17 +817,17 @@ func (m *Manager) VerifyLockfile(ctx context.Context, id string, scope Scope) er
 		return err
 	}
 	if lock.ExtensionID != state.ExtensionID || lock.Scope != state.Scope || lock.ScopeID != state.ScopeID || lock.DesiredVersion != state.DesiredVersion || lock.CurrentVersion != state.CurrentVersion || lock.DesiredState != state.DesiredState || lock.CurrentState != state.CurrentState || lock.PackageIdentity != state.PackageIdentity || lock.CurrentPackageIdentity != state.CurrentPackageIdentity || lock.Generation != state.Generation {
-		return errors.New("persistent extension lockfile does not match repository state")
+		return errors.New("постоянный расширение lockfile делает не соответствовать репозиторий состояние")
 	}
 	if state.CurrentState != model.ExtensionInstallStateAbsent && !pathExists0204(currentDir0204(m.Root, scope, id)) {
-		return errors.New("repository says extension is active but current payload directory is missing")
+		return errors.New("репозиторий says расширение является активный но текущий полезная нагрузка каталог является отсутствующий")
 	}
 	return nil
 }
 
-// CurrentPayloadDir returns the canonical activated payload directory for one
-// persisted extension installation. Extension Host uses this instead of
-// reconstructing lifecycle paths independently.
+// CurrentPayloadDir возвращает канонический activated полезная нагрузка каталог для один
+// сохранённый расширение установка. Хост расширений использует этот вместо этого 
+// reconstructing жизненный цикл пути независимо.
 func CurrentPayloadDir(root, scope, scopeID, extensionID string) (string, error) {
 	s, err := normalizeScope0204(Scope{Scope: scope, ScopeID: scopeID})
 	if err != nil {

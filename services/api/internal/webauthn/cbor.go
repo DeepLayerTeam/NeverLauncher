@@ -52,7 +52,7 @@ func (d *cborDecoder) read() (any, error) {
 		return out, nil
 	case 4:
 		if n > 1024 {
-			return nil, errors.New("CBOR: array too large")
+			return nil, errors.New("CBOR: array слишком large")
 		}
 		out := make([]any, 0, int(n))
 		for j := uint64(0); j < n; j++ {
@@ -65,7 +65,7 @@ func (d *cborDecoder) read() (any, error) {
 		return out, nil
 	case 5:
 		if n > 1024 {
-			return nil, errors.New("CBOR: map too large")
+			return nil, errors.New("CBOR: сопоставление слишком large")
 		}
 		out := make(map[any]any, int(n))
 		for j := uint64(0); j < n; j++ {
@@ -80,7 +80,7 @@ func (d *cborDecoder) read() (any, error) {
 			switch k.(type) {
 			case string, int64, uint64:
 			default:
-				return nil, errors.New("CBOR: unsupported map key")
+				return nil, errors.New("CBOR: неподдерживаемый сопоставление ключ")
 			}
 			out[k] = v
 		}
@@ -96,10 +96,10 @@ func (d *cborDecoder) read() (any, error) {
 		case 22, 23:
 			return nil, nil
 		default:
-			return nil, fmt.Errorf("CBOR: unsupported simple value %d", ai)
+			return nil, fmt.Errorf("CBOR: неподдерживаемый simple value %d", ai)
 		}
 	default:
-		return nil, errors.New("CBOR: unsupported major type")
+		return nil, errors.New("CBOR: неподдерживаемый крупный type")
 	}
 }
 
@@ -136,7 +136,7 @@ func (d *cborDecoder) argument(ai byte) (uint64, error) {
 		d.i += 8
 		return v, nil
 	default:
-		return 0, errors.New("CBOR: indefinite/reserved length is not accepted")
+		return 0, errors.New("CBOR: indefinite/reserved length является не принят")
 	}
 }
 

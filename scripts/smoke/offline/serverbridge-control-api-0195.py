@@ -5,7 +5,7 @@ import re
 ROOT = Path(__file__).resolve().parents[3]
 version = tuple(map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3]))
 if version < (0, 19, 5):
-    raise SystemExit(f"ServerBridge Control API gate requires VERSION>=0.19.5, got {version}")
+    raise SystemExit(f"ServerBridge Управление API контроль требует VERSION>=0.19.5, получил {version}")
 
 required = [
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeControlCommand.java",
@@ -20,7 +20,7 @@ required = [
 ]
 for rel in required:
     if not (ROOT / rel).is_file():
-        raise SystemExit(f"missing 0.19.5 Control API production file: {rel}")
+        raise SystemExit(f"отсутствующий 0.19.5 Управление API рабочий файл: {rel}")
 
 checks = {
     "services/api/internal/httpapi/routes_bridge.go": [
@@ -80,9 +80,9 @@ for rel, needles in checks.items():
     text = (ROOT / rel).read_text(encoding="utf-8")
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{rel}: missing {needle!r}")
+            raise SystemExit(f"{rel}: отсутствующий {needle!r}")
 
-# OS shell/process execution is forbidden in the complete Control API path.
+# OS shell/process выполнение является forbidden в полный Управление API путь.
 control_sources = [
     ROOT / "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java",
     ROOT / "plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.java",
@@ -96,11 +96,11 @@ for path in control_sources:
     text = path.read_text(encoding="utf-8")
     for forbidden in ("ProcessBuilder", "Runtime.getRuntime().exec", "java.lang.Process", "server.shell"):
         if forbidden in text:
-            raise SystemExit(f"{path.relative_to(ROOT)}: forbidden arbitrary process execution marker {forbidden!r}")
+            raise SystemExit(f"{path.relative_to(ROOT)}: forbidden произвольный процесс выполнение маркер {forbidden!r}")
 
 migration = (ROOT / "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql").read_text(encoding="utf-8")
 for required_sql in ("UNIQUE (server_id, requested_by, idempotency_key)", "runtime_epoch", "runtime_id", "serverbridge:control", "serverbridge:console"):
     if required_sql not in migration:
-        raise SystemExit(f"control migration missing {required_sql!r}")
+        raise SystemExit(f"управление миграция отсутствующий {required_sql!r}")
 
-print("ServerBridge 0.19.5 Control API production gate: PASS")
+print("ServerBridge 0.19.5 Управление API рабочий контроль: PASS")

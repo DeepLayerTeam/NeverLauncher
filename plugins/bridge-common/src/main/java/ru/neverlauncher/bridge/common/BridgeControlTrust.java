@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-/** Durable trust store with overlap-key rotation authenticated by the already trusted key. */
+/** Долговременный доверие хранилище с overlap-ротация ключей аутентифицировать через уже доверенный ключ. */
 final class BridgeControlTrust {
     private final Path trustFile;
     private final String configuredPublicKey;
@@ -56,9 +56,9 @@ final class BridgeControlTrust {
         if (!activeValid) return false; // every document must prove possession of the announced active key
 
         LinkedHashSet<String> anchors = new LinkedHashSet<>(pinnedPublicKeys);
-        // The configured key is a bootstrap anchor only. Once a signed capability
-        // document has established durable pins, removed overlap keys must stop
-        // authorizing future rotations or commands.
+        // настраивать ключ является инициализировать якорь только. Один раз подписанный возможность
+        // документ имеет established долговременный закрепляет, удалён перекрытие ключи должен остановка
+        // авторизовать future ротация или команды.
         if (anchors.isEmpty() && !configuredPublicKey.isBlank()) anchors.add(configuredPublicKey);
         boolean anchored = false;
         if (anchors.isEmpty()) {

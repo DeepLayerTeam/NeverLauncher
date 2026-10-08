@@ -1,4 +1,4 @@
-name: NeverLauncher Compatibility Matrix
+name: NeverLauncher Матрица совместимости
 
 on:
   push:
@@ -19,14 +19,14 @@ env:
 
 jobs:
   matrix-plan:
-    name: Validate compatibility targets
+    name: Проверять совместимость цели
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
       - id: plan
-        name: Validate and generate immutable CI plan
+        name: Проверять и генерировать неизменяемый CI plan
         shell: bash
         run: |
           set -euo pipefail
@@ -47,16 +47,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
-      - name: Install target Java ${{ matrix.javaMajor }}
+      - name: Установка цель Java ${{ matrix.javaMajor }}
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
           java-version: ${{ matrix.javaMajor }}
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
-      - name: Pin target Java executable for the Minecraft client
+      - name: Закреплять цель Java исполняемый для Minecraft клиент
         shell: bash
         run: printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$(command -v java)" >> "$GITHUB_ENV"
-      - name: Restore Java 21 for NeverLauncher/Gradle build tooling
+      - name: Восстановление Java 21 для NeverLauncher/Gradle сборка инструментарий
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
@@ -67,7 +67,7 @@ jobs:
         if: matrix.scope == 'integration'
         with:
           gradle-version: '9.7.1'
-      - name: Install actual Minecraft E2E dependencies
+      - name: Установка фактический Minecraft E2E зависимости
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -75,7 +75,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Run actual-client compatibility target
+      - name: Запуск реальный клиент совместимость цель
         env:
           NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
           NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
@@ -89,7 +89,7 @@ jobs:
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
-      - name: Upload machine-verifiable compatibility result
+      - name: Загрузка машинно проверяемый совместимость результат
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -138,19 +138,19 @@ jobs:
           retention-days: 14
 
   publish-matrix:
-    name: Publish public compatibility matrix
+    name: Публикация публичный матрица совместимости
     if: always() && needs.matrix-plan.result == 'success' && needs.compatibility-e2e.result != 'cancelled'
     needs: [matrix-plan, compatibility-e2e]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Download compatibility evidence
+      - name: Загрузка совместимость свидетельство
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: compatibility-*
           path: compatibility-results
-      - name: Aggregate and validate matrix
+      - name: Агрегат и проверять матрица
         shell: bash
         run: |
           set +e
@@ -171,11 +171,11 @@ jobs:
           fi
           cat compatibility-public/aggregate.log
           exit "$rc"
-      - name: Upload public matrix JSON and Markdown
+      - name: Загрузка публичная матрица JSON и Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-compatibility-matrix-${{ github.run_id }}
+          name: neverlauncher-совместимость-матрица-${{ github.run_id }}
           path: |
             compatibility-public/matrix.json
             compatibility-public/matrix.md

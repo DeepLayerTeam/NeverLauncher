@@ -174,7 +174,7 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
     let identity = inspect_jvm_identity()?;
     if !CERTIFIED_JAVA_MAJORS.contains(&identity.java_major) {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection unsupported Java major {}; certified majors are 8/16/17/21/25",
+            "NeverGuard JVM-Учитывающий Защита неподдерживаемый Java крупный {}; сертифицированный крупный являются 8/16/17/21/25",
             identity.java_major
         ));
     }
@@ -218,14 +218,14 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if foreign != 0 {
         let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}"
+            "NeverGuard JVM-Учитывающий Защита отклонён {foreign} исполняемый MEM_PRIVATE переход(s) вне JVM.DLL происхождение; последний вызывающая сторона=0x{caller:X}"
         ));
     }
     let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     if unknown != 0 {
         let caller = LAST_UNKNOWN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}"
+            "NeverGuard JVM-Учитывающий Защита отклонён {unknown} исполняемый MEM_PRIVATE переход(s) с неизвестный JVM происхождение; последний вызывающая сторона=0x{caller:X}"
         ));
     }
 
@@ -263,10 +263,10 @@ pub fn shutdown() {
     }
 }
 
-/// Captures the caller chain while executing inside the NeverGuard IAT wrapper.
-/// HotSpot's Windows memory implementation calls VirtualAlloc/VirtualProtect from
-/// jvm.dll, so a legitimate JIT/code-cache transition must have its direct external
-/// caller in the immutable jvm.dll image range. The operation is allocation-free.
+/// Captures вызывающая сторона цепочка пока executing внутри NeverGuard IAT обёртка.
+/// HotSpot's Windows память реализация вызов VirtualAlloc/VirtualProtect из
+/// JVM.DLL, так legitimate JIT/код-кэш переход должен имеют его прямой внешний
+/// вызывающая сторона в неизменяемый JVM.DLL образ диапазон. операция является выделение-free.
 pub fn capture_transition_provenance() -> TransitionProvenance {
     if !JVM_ACTIVE.load(Ordering::Acquire) {
         return TransitionProvenance {
@@ -305,10 +305,10 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
         };
     }
 
-    // Find the first return address after the Sensor's own wrapper frames.
-    // Looking for "any" jvm.dll frame is insufficient: JNI/native code invoked
-    // by HotSpot naturally has jvm.dll deeper in its stack. Only the direct
-    // external caller of our IAT wrapper is allowed to authorize JIT memory.
+    // Find первый возвращать адрес после Sensor's собственный обёртка кадр.
+    // Looking для "любой" JVM.DLL кадр является insufficient: JNI/нативный код invoked
+    // через HotSpot naturally имеет JVM.DLL deeper в его стек. Только прямой
+    // внешний вызывающая сторона наш IAT обёртка является разрешён к авторизовать JIT память.
     let mut saw_sensor_frame = false;
     for frame in frames.iter().take(captured) {
         let address = *frame as usize;
@@ -338,9 +338,9 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
     }
 }
 
-/// Records only transitions whose resulting target is committed executable
-/// MEM_PRIVATE memory. Image code-page changes remain owned by Memory Integrity,
-/// preserving its independent code-drift detection path.
+/// Записывает только переходы чей результат цель является committed исполняемый
+/// MEM_PRIVATE память. Образ кодовая страница изменяет оставаться принадлежащий через Память Целостность,
+/// сохраняя его независимый код-расхождение обнаружение путь.
 pub fn observe_memory_transition(
     address: *mut c_void,
     protect: u32,
@@ -387,7 +387,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
     let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
     if unsafe { GetModuleHandleExW(flags, address, &mut module) } == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot resolve Sensor module: {}",
+            "NeverGuard JVM-Учитывающий Защита не может разрешать Sensor модуль: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -404,7 +404,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot query Sensor module information: {}",
+            "NeverGuard JVM-Учитывающий Защита не может query Sensor модуль information: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -473,7 +473,7 @@ fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot query jvm.dll module information: {}",
+            "NeverGuard JVM-Учитывающий Защита не может query JVM.DLL модуль information: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -496,7 +496,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
         as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot resolve jvm.dll path: {}",
+            "NeverGuard JVM-Учитывающий Защита не может разрешать JVM.DLL путь: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -509,7 +509,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     let size = unsafe { GetFileVersionInfoSizeW(path_w.as_ptr(), &mut handle) };
     if size == 0 {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot read jvm.dll version resource: {}",
+            "NeverGuard JVM-Учитывающий Защита не может чтение JVM.DLL версия ресурс: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -519,7 +519,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     } == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot load jvm.dll version resource: {}",
+            "NeverGuard JVM-Учитывающий Защита не может загрузка JVM.DLL версия ресурс: {}",
             std::io::Error::last_os_error()
         ));
     }

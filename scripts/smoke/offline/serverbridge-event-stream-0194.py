@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 version = tuple(map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3]))
 if version < (0, 19, 4):
-    raise SystemExit("VERSION is older than the event-stream 0.19.4 release")
+    raise SystemExit("VERSION является старый чем событие-поток 0.19.4 релиз")
 
 required_files = [
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeEventRecord.java",
@@ -18,7 +18,7 @@ required_files = [
 ]
 for rel in required_files:
     if not (ROOT / rel).is_file():
-        raise SystemExit(f"missing ServerBridge event-stream production file: {rel}")
+        raise SystemExit(f"отсутствующий ServerBridge событие-поток рабочий файл: {rel}")
 
 checks = {
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java": [
@@ -71,7 +71,7 @@ for rel, needles in checks.items():
     text = (ROOT / rel).read_text(encoding="utf-8")
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{rel}: missing {needle!r}")
+            raise SystemExit(f"{rel}: отсутствующий {needle!r}")
 
 required_types = {
     "server.startup", "server.ready", "server.shutdown", "server.crash", "server.error",
@@ -81,6 +81,6 @@ required_types = {
 event_source = (ROOT / "services/api/internal/httpapi/server_bridge_events_0194.go").read_text(encoding="utf-8")
 for event_type in sorted(required_types):
     if f'"{event_type}"' not in event_source:
-        raise SystemExit(f"missing event type {event_type}")
+        raise SystemExit(f"отсутствующий тип события {event_type}")
 
-print("ServerBridge 0.19.4 ordered event-stream production gate: PASS")
+print("ServerBridge 0.19.4 упорядоченный событие-поток рабочий контроль: PASS")

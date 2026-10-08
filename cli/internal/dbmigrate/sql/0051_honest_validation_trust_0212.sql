@@ -1,5 +1,5 @@
--- NeverLauncher 0.21.2 — honest validation and explicit trust boundaries.
--- Integrity checks and runtime evidence are independent durable records.
+-- NeverLauncher 0.21.2 — честная проверка и явный границы доверия.
+-- Целостность проверяет и свидетельство реального запуска являются независимый долговременный записывает.
 
 CREATE TABLE IF NOT EXISTS package_integrity_checks (
     id TEXT PRIMARY KEY,
@@ -64,13 +64,13 @@ CREATE TABLE IF NOT EXISTS project_validation_policies (
 INSERT INTO project_validation_policies(project_id,required_level,require_server_join)
 SELECT id,'integrity',false FROM projects ON CONFLICT(project_id) DO NOTHING;
 
--- Legacy smoke state represented file/storage verification only. Preserve the
--- package as staged so it must obtain a canonical integrity record before the
--- next publish attempt; already-published releases remain immutable.
+-- Устаревший smoke состояние представленный file/storage проверка только. Preserve 
+-- пакет как подготовленный так это должен obtain канонический целостность запись до 
+-- следующий публикация попытка; уже-опубликованный релизы оставаться неизменяемый.
 UPDATE release_versions SET status='staged',updated_at=now() WHERE status IN ('smoke-passed','smoke-failed');
 
--- Existing challenge-response evidence proves key possession/local binding,
--- not remote TPM/Secure-Enclave provenance. No migration elevates assurance.
+-- Существующий запрос-ответ свидетельство доказывает ключ possession/local привязка,
+-- не удалённый TPM/Защищённый-Анклав происхождение. Нет миграция elevates уверенность.
 ALTER TABLE trusted_devices ADD COLUMN IF NOT EXISTS remote_hardware_provenance TEXT NOT NULL DEFAULT 'not-verified';
 ALTER TABLE trusted_devices DROP CONSTRAINT IF EXISTS trusted_devices_remote_hardware_provenance_0212;
 ALTER TABLE trusted_devices ADD CONSTRAINT trusted_devices_remote_hardware_provenance_0212

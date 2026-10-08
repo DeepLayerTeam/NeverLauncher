@@ -21,7 +21,7 @@ TEST_MARKERS = {
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Create machine-verifiable native Device Trust result")
+    parser = argparse.ArgumentParser(description="Создавать машинно проверяемый нативный Доверие к устройству результат")
     parser.add_argument("--target-id", required=True)
     parser.add_argument("--os", required=True)
     parser.add_argument("--arch", required=True)
@@ -58,7 +58,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if failed:
-        raise SystemExit("native Device Trust evidence missing checks: " + ", ".join(failed))
+        raise SystemExit("нативный Доверие к устройству свидетельство отсутствующий проверяет: " + ", ".join(failed))
     print(json.dumps(payload, ensure_ascii=False))
     return 0
 

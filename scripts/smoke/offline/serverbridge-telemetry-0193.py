@@ -15,7 +15,7 @@ required_files = [
 ]
 for rel in required_files:
     if not (ROOT / rel).is_file():
-        raise SystemExit(f"missing telemetry production file: {rel}")
+        raise SystemExit(f"отсутствующий телеметрия рабочий файл: {rel}")
 
 checks = {
     "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java": [
@@ -56,10 +56,10 @@ for rel, needles in checks.items():
     text = (ROOT / rel).read_text(encoding="utf-8")
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{rel}: missing {needle!r}")
+            raise SystemExit(f"{rel}: отсутствующий {needle!r}")
 
 version = tuple(map(int, (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3]))
 if version < (0, 19, 3):
-    raise SystemExit("VERSION is older than the telemetry-compatible 0.19.3 release")
+    raise SystemExit("VERSION является старый чем телеметрия-compatible 0.19.3 релиз")
 
-print("ServerBridge 0.19.3 telemetry production gate: PASS")
+print("ServerBridge 0.19.3 телеметрия рабочий контроль: PASS")

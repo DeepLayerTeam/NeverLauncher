@@ -1,4 +1,4 @@
-name: macOS Production Delivery
+name: macOS Рабочий Доставка
 
 on:
   workflow_call:
@@ -27,7 +27,7 @@ env:
 
 jobs:
   notarized-macos:
-    name: Developer ID + notarized macOS x64/ARM64
+    name: Разработчик ID + нотариально заверенный macOS x64/ARM64
     runs-on: macos-14
     timeout-minutes: 75
     steps:
@@ -48,7 +48,7 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Validate required signing secrets
+      - name: Проверять обязательный подписание секреты
         shell: bash
         env:
           MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
@@ -64,7 +64,7 @@ jobs:
             test -n "${!name:-}" || { echo "missing required secret: ${name}" >&2; exit 2; }
           done
 
-      - name: Import Developer ID certificate and configure notarytool
+      - name: Импорт Разработчик ID сертификат и настраивать notarytool
         shell: bash
         env:
           MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
@@ -90,7 +90,7 @@ jobs:
             --issuer "$APPLE_NOTARY_ISSUER_ID"
           echo "NEVERLAUNCHER_SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
 
-      - name: Build, sign, notarize and staple x64 + ARM64 packages
+      - name: Сборка, подпись, notarize и staple x64 + ARM64 пакеты
         shell: bash
         env:
           NEVERLAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
@@ -98,7 +98,7 @@ jobs:
           NEVERLAUNCHER_MACOS_NOTARY_PROFILE: neverlauncher-ci-notary
         run: bash scripts/release/build-macos-production.sh
 
-      - name: Verify production evidence and delivery binding
+      - name: Проверять рабочий свидетельство и доставка привязка
         shell: bash
         run: |
           set -euo pipefail
@@ -110,7 +110,7 @@ jobs:
           python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
           python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
 
-      - name: Remove imported signing material
+      - name: Удалять импорт подписание материал
         if: always()
         shell: bash
         run: |
@@ -119,10 +119,10 @@ jobs:
             security delete-keychain "$NEVERLAUNCHER_SIGNING_KEYCHAIN" || true
           fi
 
-      - name: Upload notarized macOS delivery
+      - name: Загрузка нотариально заверенный macOS доставка
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macos-notarized-${{ github.sha }}
+          name: neverlauncher-macOS-нотариально заверенный-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-cli-macos-x64
             dist/release-*/neverlauncher-cli-macos-arm64

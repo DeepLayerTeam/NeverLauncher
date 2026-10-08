@@ -262,7 +262,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 		return tx, err
 	}
 	if len(raw) <= aead.NonceSize() {
-		return tx, errors.New("short OIDC transaction")
+		return tx, errors.New("short OIDC транзакция")
 	}
 	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("NeverLauncher/OIDC/0.11.5"))
 	if err != nil {
@@ -272,17 +272,17 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 		return tx, err
 	}
 	if tx.ExpiresAt <= time.Now().UTC().Unix() || tx.ExpiresAt > time.Now().UTC().Add(oidcTransactionTTL115+time.Minute).Unix() {
-		return tx, errors.New("expired OIDC transaction")
+		return tx, errors.New("истёкший OIDC транзакция")
 	}
 	if tx.ProviderID == "" || tx.RedirectURI == "" || tx.State == "" || tx.Nonce == "" || tx.PKCEVerifier == "" {
-		return tx, errors.New("incomplete OIDC transaction")
+		return tx, errors.New("неполный OIDC транзакция")
 	}
 	return tx, nil
 }
 func (s Server) oidcAEAD115() (cipher.AEAD, error) {
 	secret := strings.TrimSpace(s.Config.AuthTokenSecret)
 	if secret == "" {
-		return nil, errors.New("auth token secret is empty")
+		return nil, errors.New("аутентификация токен секрет является пустой")
 	}
 	key := sha256.Sum256([]byte("NeverLauncher/OIDC/transaction/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])

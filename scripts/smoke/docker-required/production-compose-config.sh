@@ -17,7 +17,7 @@ grep -q "proxy_pass http://api:8080" "${NGINX_FILE}"
 if command -v docker >/dev/null 2>&1; then
   (cd "${ROOT_DIR}/deploy/production" && docker compose -f docker-compose.yml --env-file env.production.example config >/tmp/neverlauncher-compose-10000.yml)
 else
-  echo "[NeverLauncher] docker не найден: выполнена статическая проверка production compose"
+  echo "[NeverLauncher] Docker не найден: выполнена статическая проверка рабочий compose"
 fi
 
-echo "[NeverLauncher] production compose config smoke OK"
+echo "[NeverLauncher] рабочий compose конфигурация smoke OK"

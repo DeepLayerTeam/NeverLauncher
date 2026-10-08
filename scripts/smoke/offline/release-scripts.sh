@@ -3,9 +3,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "${ROOT_DIR}"
 
-# Source ZIPs do not reliably preserve Unix executable bits. Release gates invoke
-# shell scripts explicitly via bash, so validate presence + syntax rather than a
-# filesystem mode bit that is unrelated to script correctness.
+# Исходник ZIPs делать не reliably preserve Unix исполняемый bits. Контроли выпуска invoke
+# оболочка скрипт явно через bash, так проверять присутствие + syntax вместо чем 
+# файловая система режим бит тот является unrelated к скрипт корректность.
 for script in scripts/release/preflight.sh scripts/test/run-release-smoke.sh scripts/build/bridge-plugins.sh scripts/release/build-release.sh scripts/release/build-linux-production.sh scripts/smoke/release-required/release-bundle.sh; do
   test -f "$script"
   bash -n "$script"
@@ -28,9 +28,9 @@ python3 -m py_compile \
   scripts/smoke/offline/guard-ci-release-certification-0139.py \
   scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
 
-# The source package is a production artifact, not just a syntax-checked helper.
-# Verify that current policy/certification inputs and the canonical bridge build
-# entrypoint survive the allowlist used by build-release.sh.
+# исходник пакет является рабочий артефакт, не just syntax-проверен вспомогательный модуль.
+# Проверять тот текущий policy/certification inputs и канонический мост сборка
+# entrypoint переживать список разрешений используется через сборка-релиз.sh.
 source_package_tmp="$(mktemp -d)"
 trap 'rm -rf "${source_package_tmp}"' EXIT
 python3 scripts/release/source-package.py \

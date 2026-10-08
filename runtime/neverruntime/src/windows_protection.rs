@@ -51,7 +51,7 @@ impl FromStr for WindowsProtectionProfile {
             "compat" => Ok(Self::Compat),
             "aggressive" => Ok(Self::Aggressive),
             other => Err(format!(
-                "unsupported NeverGuard Windows protection profile {other:?}; expected audit, compat or aggressive"
+                "неподдерживаемый NeverGuard Windows защита профиль {other:?}; ожидаемый аудит, compat или агрессивный"
             )),
         }
     }
@@ -62,7 +62,7 @@ pub fn protection_profile_from_environment() -> Result<WindowsProtectionProfile,
         Ok(value) if !value.trim().is_empty() => value.parse(),
         Ok(_) | Err(std::env::VarError::NotPresent) => Ok(WindowsProtectionProfile::Aggressive),
         Err(std::env::VarError::NotUnicode(_)) => Err(format!(
-            "{NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV} is not valid UTF-8"
+            "{NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV} является не действительный UTF-8"
         )),
     }
 }

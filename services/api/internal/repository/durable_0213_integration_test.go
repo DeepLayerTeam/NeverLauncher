@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//Go:сборка!neverlauncher_nopgx
 
 package repository
 

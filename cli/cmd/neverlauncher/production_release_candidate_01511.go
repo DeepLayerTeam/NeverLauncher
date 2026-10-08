@@ -79,7 +79,7 @@ func productionReleaseCandidateRequiredGates01511(ver string) []string {
 func normalizeSourceCommit01511(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if !sourceCommitRE01511.MatchString(value) {
-		return "", fmt.Errorf("production release candidate requires exact 40/64-hex source commit, got %q", value)
+		return "", fmt.Errorf("рабочий кандидат в релиз требует точный 40/64-hex исходник фиксация, получил %q", value)
 	}
 	return value, nil
 }
@@ -106,11 +106,11 @@ func productionReleaseCandidateCohort01511(dir string) ([]productionReleaseCandi
 		}
 		clean, err := safeReleaseRelativePath0158(name)
 		if err != nil || clean != name {
-			return nil, fmt.Errorf("release candidate cohort path %q invalid", name)
+			return nil, fmt.Errorf("кандидат в релиз группа путь %q недопустимый", name)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("hash release candidate cohort %s: %w", name, err)
+			return nil, fmt.Errorf("хеш кандидат в релиз группа %s: %w", name, err)
 		}
 		cohort = append(cohort, productionReleaseCandidateArtifact01511{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -156,7 +156,7 @@ func provenanceSourceCommit01511(path string) (string, error) {
 		} `json:"predicate"`
 	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return "", fmt.Errorf("invalid PROVENANCE.json: %w", err)
+		return "", fmt.Errorf("недопустимый PROVENANCE.JSON: %w", err)
 	}
 	return normalizeSourceCommit01511(payload.Predicate.BuildDefinition.ExternalParameters.SourceCommit)
 }
@@ -169,61 +169,61 @@ func verifyProductionReleaseCandidatePrerequisites01511(dir, ver, sourceCommit s
 	for _, file := range []string{compatibilityCertificationReleaseFile, deviceTrustCertificationReleaseFile, guardCICertificationReleaseFile} {
 		certCommit, err := readCertificationCommit01511(filepath.Join(dir, file))
 		if err != nil {
-			return fmt.Errorf("production release candidate requires %s with exact source commit: %w", file, err)
+			return fmt.Errorf("рабочий кандидат в релиз требует %s с точный исходник фиксация: %w", file, err)
 		}
 		if !strings.EqualFold(certCommit, commit) {
-			return fmt.Errorf("%s source commit mismatch: candidate=%s certification=%s", file, commit, certCommit)
+			return fmt.Errorf("%s исходник фиксация несоответствие: кандидат=%s сертификация=%s", file, commit, certCommit)
 		}
 	}
 	provCommit, err := provenanceSourceCommit01511(filepath.Join(dir, "PROVENANCE.json"))
 	if err != nil {
-		return fmt.Errorf("production provenance source commit: %w", err)
+		return fmt.Errorf("рабочий происхождение исходник фиксация: %w", err)
 	}
 	if !strings.EqualFold(provCommit, commit) {
-		return fmt.Errorf("PROVENANCE.json sourceCommit mismatch: candidate=%s provenance=%s", commit, provCommit)
+		return fmt.Errorf("PROVENANCE.JSON sourceCommit несоответствие: кандидат=%s происхождение=%s", commit, provCommit)
 	}
 	if err := verifyCompatibilityCertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Minecraft Compatibility certification: %w", err)
+		return fmt.Errorf("Minecraft Совместимость сертификация: %w", err)
 	}
 	if err := verifyDeviceTrustCertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Device Trust certification: %w", err)
+		return fmt.Errorf("Доверие к устройству сертификация: %w", err)
 	}
 	if err := verifyGuardCICertificationInBundle(dir, ver); err != nil {
-		return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
+		return fmt.Errorf("Кроссплатформенный Защита CI сертификация: %w", err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
-		return fmt.Errorf("ServerBridge certification: %w", err)
+		return fmt.Errorf("ServerBridge сертификация: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
-		return fmt.Errorf("Delivery Manifest: %w", err)
+		return fmt.Errorf("Доставка Манифест: %w", err)
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, strict); err != nil {
-		return fmt.Errorf("Windows production signing: %w", err)
+		return fmt.Errorf("Windows рабочий подписание: %w", err)
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		if err := verifyWindowsProtectionRelease01812(dir, ver); err != nil {
-			return fmt.Errorf("Windows Protection RC certification: %w", err)
+			return fmt.Errorf("Windows Защита RC сертификация: %w", err)
 		}
 	}
 	if windowsProtectionGARequired0190(ver) {
 		if err := verifyWindowsProtectionGA0190(dir, ver); err != nil {
-			return fmt.Errorf("Windows Protection GA certification: %w", err)
+			return fmt.Errorf("Windows Защита GA сертификация: %w", err)
 		}
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
-		return fmt.Errorf("Linux production packages: %w", err)
+		return fmt.Errorf("Linux рабочий пакеты: %w", err)
 	}
 	if err := verifyMacOSNotarizationEvidence0154(dir, ver, strict); err != nil {
-		return fmt.Errorf("macOS production notarization: %w", err)
+		return fmt.Errorf("macOS рабочий notarization: %w", err)
 	}
 	if err := verifyManagedJREDistribution0155(dir, ver, true); err != nil {
-		return fmt.Errorf("Managed JRE Distribution: %w", err)
+		return fmt.Errorf("Управляемый JRE Дистрибутив: %w", err)
 	}
 	if err := verifyPublicProductionDeliveryMatrix0159(dir, ver); err != nil {
-		return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		return fmt.Errorf("Публичный Рабочий Доставка Матрица: %w", err)
 	}
 	if _, err := loadReleaseTrustPolicy0158(filepath.Join(dir, releaseTrustPolicyFile0158)); err != nil {
-		return fmt.Errorf("Release Verification v2 trust policy: %w", err)
+		return fmt.Errorf("Релиз Проверка v2 доверие политика: %w", err)
 	}
 	return nil
 }
@@ -238,7 +238,7 @@ func writeProductionReleaseCandidateDocument01511(dir, ver, sourceCommit string)
 		return err
 	}
 	if len(cohort) == 0 {
-		return errors.New("production release candidate cohort is empty")
+		return errors.New("рабочий кандидат в релиз группа является пустой")
 	}
 	cert := productionReleaseCandidate01511{
 		SchemaVersion: "1.0",
@@ -271,29 +271,29 @@ func writeProductionReleaseCandidate01511(dir, ver, sourceCommit string, strict 
 func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, productionReleaseCandidateFile01511))
 	if err != nil {
-		return "", fmt.Errorf("read %s: %w", productionReleaseCandidateFile01511, err)
+		return "", fmt.Errorf("чтение %s: %w", productionReleaseCandidateFile01511, err)
 	}
 	var cert productionReleaseCandidate01511
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return "", fmt.Errorf("invalid %s: %w", productionReleaseCandidateFile01511, err)
+		return "", fmt.Errorf("недопустимый %s: %w", productionReleaseCandidateFile01511, err)
 	}
 	commit, err := normalizeSourceCommit01511(cert.SourceCommit)
 	if err != nil {
 		return "", err
 	}
 	if cert.SchemaVersion != "1.0" || cert.Product != "NeverLauncher" || cert.Version != ver || cert.Status != "production-release-candidate" {
-		return "", errors.New("production release candidate metadata mismatch")
+		return "", errors.New("рабочий кандидат в релиз метаданные несоответствие")
 	}
 	if _, err := time.Parse(time.RFC3339, cert.CreatedAt); err != nil {
-		return "", fmt.Errorf("production release candidate createdAt invalid: %w", err)
+		return "", fmt.Errorf("рабочий кандидат в релиз createdAt недопустимый: %w", err)
 	}
 	expectedGates := productionReleaseCandidateRequiredGates01511(ver)
 	if len(cert.RequiredGates) != len(expectedGates) {
-		return "", errors.New("production release candidate required gate set mismatch")
+		return "", errors.New("рабочий кандидат в релиз обязательный контроль задать несоответствие")
 	}
 	for i := range expectedGates {
 		if cert.RequiredGates[i] != expectedGates[i] {
-			return "", fmt.Errorf("production release candidate gate #%d mismatch: expected=%s actual=%s", i+1, expectedGates[i], cert.RequiredGates[i])
+			return "", fmt.Errorf("рабочий кандидат в релиз контроль #%d несоответствие: ожидаемый=%s фактический=%s", i+1, expectedGates[i], cert.RequiredGates[i])
 		}
 	}
 	actualCohort, err := productionReleaseCandidateCohort01511(dir)
@@ -301,17 +301,17 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 		return "", err
 	}
 	if len(actualCohort) != len(cert.Cohort) {
-		return "", fmt.Errorf("production release candidate cohort size mismatch: certified=%d actual=%d", len(cert.Cohort), len(actualCohort))
+		return "", fmt.Errorf("рабочий кандидат в релиз группа размер несоответствие: сертифицированный=%d фактический=%d", len(cert.Cohort), len(actualCohort))
 	}
 	for i := range actualCohort {
 		a, c := actualCohort[i], cert.Cohort[i]
 		if a.Name != c.Name || a.Size != c.Size || !strings.EqualFold(a.SHA256, c.SHA256) {
-			return "", fmt.Errorf("production release candidate cohort mismatch at %s", a.Name)
+			return "", fmt.Errorf("рабочий кандидат в релиз группа несоответствие в %s", a.Name)
 		}
 	}
 	digest := productionReleaseCandidateCohortDigest01511(actualCohort)
 	if !strings.EqualFold(digest, strings.TrimSpace(cert.CohortSHA256)) {
-		return "", errors.New("production release candidate cohortSha256 mismatch")
+		return "", errors.New("рабочий кандидат в релиз cohortSha256 несоответствие")
 	}
 	return commit, nil
 }

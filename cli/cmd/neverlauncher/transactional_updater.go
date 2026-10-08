@@ -85,7 +85,7 @@ type transactionalUpdater0156 struct {
 
 func newTransactionalUpdater0156(root string) (*transactionalUpdater0156, error) {
 	if strings.TrimSpace(root) == "" {
-		return nil, errors.New("updater root пуст")
+		return nil, errors.New("обновлятор корень пуст")
 	}
 	abs, err := filepath.Abs(root)
 	if err != nil {
@@ -93,11 +93,11 @@ func newTransactionalUpdater0156(root string) (*transactionalUpdater0156, error)
 	}
 	abs = filepath.Clean(abs)
 	if err := os.MkdirAll(abs, 0o755); err != nil {
-		return nil, fmt.Errorf("создание updater root: %w", err)
+		return nil, fmt.Errorf("создание обновлятор корень: %w", err)
 	}
 	realRoot, err := filepath.EvalSymlinks(abs)
 	if err != nil {
-		return nil, fmt.Errorf("resolve updater root: %w", err)
+		return nil, fmt.Errorf("разрешать обновлятор корень: %w", err)
 	}
 	abs, err = filepath.Abs(realRoot)
 	if err != nil {
@@ -125,7 +125,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 			return nil, err
 		}
 		if filepath.Clean(reqRoot) != u.root {
-			return nil, fmt.Errorf("updater request root mismatch: request=%s engine=%s", filepath.Clean(reqRoot), u.root)
+			return nil, fmt.Errorf("обновлятор запрос корень несоответствие: запрос=%s движок=%s", filepath.Clean(reqRoot), u.root)
 		}
 	}
 	if err := u.acquireLock(false); err != nil {
@@ -135,24 +135,24 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 
 	recovered, err := u.recoverIncompleteLocked()
 	if err != nil {
-		return nil, fmt.Errorf("automatic updater recovery: %w", err)
+		return nil, fmt.Errorf("автоматический обновлятор восстановление: %w", err)
 	}
 	if _, err := u.stabilizeTerminalPayloads01510(); err != nil {
-		return nil, fmt.Errorf("automatic updater terminal cleanup: %w", err)
+		return nil, fmt.Errorf("автоматический обновлятор конечный очистка: %w", err)
 	}
 	journal, err := u.prepareLocked(req)
 	if err != nil {
-		// prepare never mutates live bytes, but it may already have created a durable
-		// staging journal. Terminalize it so the next run does not inherit noise.
+		// prepare никогда mutates актуальный байты, но это может уже имеют создан долговременный
+		// подготовка журнал. Terminalize это так следующий запуск делает не inherit noise.
 		_, _ = u.recoverIncompleteLocked()
 		return nil, err
 	}
 	if err := u.commitLocked(journal, req.Verify); err != nil {
 		rollbackErr := u.rollbackLocked(journal, err)
 		if rollbackErr != nil {
-			return nil, fmt.Errorf("transaction %s failed: %v; rollback failed: %w", journal.ID, err, rollbackErr)
+			return nil, fmt.Errorf("транзакция %s ошибка: %v; откат ошибка: %w", journal.ID, err, rollbackErr)
 		}
-		return nil, fmt.Errorf("transaction %s rolled back: %w", journal.ID, err)
+		return nil, fmt.Errorf("транзакция %s rolled back: %w", journal.ID, err)
 	}
 	return map[string]any{
 		"schemaVersion": updaterCoreSchema0156,
@@ -198,24 +198,24 @@ func (u *transactionalUpdater0156) acquireLock(force bool) error {
 			return nil
 		}
 		if !errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("updater lock: %w", err)
+			return fmt.Errorf("обновлятор блокировка: %w", err)
 		}
 		lockRaw, readErr := os.ReadFile(u.lockPath)
 		if readErr != nil {
-			return fmt.Errorf("updater lock уже существует и не читается: %w", readErr)
+			return fmt.Errorf("обновлятор блокировка уже существует и не читается: %w", readErr)
 		}
 		var existing updaterLock0156
 		if json.Unmarshal(lockRaw, &existing) == nil && existing.PID > 0 && updaterProcessAlive0156(existing.PID) && !force {
-			return fmt.Errorf("updater занят процессом pid=%d", existing.PID)
+			return fmt.Errorf("обновлятор занят процессом PID=%d", existing.PID)
 		}
 		if !force && existing.PID <= 0 {
-			return errors.New("updater lock повреждён; используйте update recover --force")
+			return errors.New("обновлятор блокировка повреждён; используйте обновление восстанавливать --force")
 		}
 		if err := os.Remove(u.lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("удаление stale updater lock: %w", err)
+			return fmt.Errorf("удаление устаревший обновлятор блокировка: %w", err)
 		}
 	}
-	return errors.New("не удалось получить updater lock")
+	return errors.New("не удалось получить обновлятор блокировка")
 }
 
 func (u *transactionalUpdater0156) releaseLock() {
@@ -229,7 +229,7 @@ func (u *transactionalUpdater0156) releaseLock() {
 
 func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updaterJournal0156, error) {
 	if !u.lockHeld {
-		return nil, errors.New("updater lock не удерживается")
+		return nil, errors.New("обновлятор блокировка не удерживается")
 	}
 	if strings.TrimSpace(req.Namespace) == "" {
 		req.Namespace = "default"
@@ -273,7 +273,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		return nil, err
 	}
 
-	// Stage verified bytes before touching the live tree.
+	// Подготавливать проверен байты до touching актуальный дерево.
 	for _, spec := range files {
 		stagePath := filepath.Join(stageDir, filepath.FromSlash(spec.Path))
 		if err := os.MkdirAll(filepath.Dir(stagePath), 0o755); err != nil {
@@ -285,19 +285,19 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		}
 		if len(spec.Data) > 0 || (spec.Data != nil && spec.Size == 0) {
 			if err := writeUpdaterBytes0156(stagePath, spec.Data, mode); err != nil {
-				return nil, fmt.Errorf("stage %s: %w", spec.Path, err)
+				return nil, fmt.Errorf("подготавливать %s: %w", spec.Path, err)
 			}
 		} else {
 			if err := copyUpdaterSource0156(spec.Source, stagePath, mode); err != nil {
-				return nil, fmt.Errorf("stage %s: %w", spec.Path, err)
+				return nil, fmt.Errorf("подготавливать %s: %w", spec.Path, err)
 			}
 		}
 		if err := verifyUpdaterFile0156(stagePath, spec.Size, spec.SHA256); err != nil {
-			return nil, fmt.Errorf("stage verify %s: %w", spec.Path, err)
+			return nil, fmt.Errorf("подготавливать проверять %s: %w", spec.Path, err)
 		}
 	}
 
-	// Capture all live paths before any replacement/removal. This is the rollback boundary.
+	// Capture все актуальный пути до любой replacement/removal. Этот является откат граница.
 	touchedPaths := make([]string, 0, len(files)+len(remove))
 	for _, spec := range files {
 		touchedPaths = append(touchedPaths, spec.Path)
@@ -313,16 +313,16 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		info, statErr := os.Lstat(dst)
 		if statErr == nil {
 			if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-				return nil, fmt.Errorf("updater target должен быть regular file: %s", rel)
+				return nil, fmt.Errorf("обновлятор цель должен быть regular файл: %s", rel)
 			}
 			touched.HadOriginal = true
 			touched.OriginalMode = uint32(info.Mode().Perm())
 			backup := filepath.Join(backupDir, filepath.FromSlash(rel))
 			if err := copyUpdaterSource0156(dst, backup, info.Mode().Perm()); err != nil {
-				return nil, fmt.Errorf("backup %s: %w", rel, err)
+				return nil, fmt.Errorf("резервное копирование %s: %w", rel, err)
 			}
 		} else if !errors.Is(statErr, os.ErrNotExist) {
-			return nil, fmt.Errorf("inspect target %s: %w", rel, statErr)
+			return nil, fmt.Errorf("inspect цель %s: %w", rel, statErr)
 		}
 		journal.Touched = append(journal.Touched, touched)
 	}
@@ -335,7 +335,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 
 func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, verify func() error) error {
 	if journal.Phase != "prepared" {
-		return fmt.Errorf("transaction %s phase=%s, ожидался prepared", journal.ID, journal.Phase)
+		return fmt.Errorf("транзакция %s phase=%s, ожидался prepared", journal.ID, journal.Phase)
 	}
 	journal.Phase = "committing"
 	if err := u.writeJournal(journal); err != nil {
@@ -350,7 +350,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		}
 		stage := filepath.Join(stageDir, filepath.FromSlash(file.Path))
 		if err := verifyUpdaterFile0156(stage, file.Size, file.SHA256); err != nil {
-			return fmt.Errorf("pre-switch verify %s: %w", file.Path, err)
+			return fmt.Errorf("pre-переключение проверять %s: %w", file.Path, err)
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
@@ -362,15 +362,15 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		}
 		if err := copyUpdaterSource0156(stage, tmp, mode); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("prepare live replacement %s: %w", file.Path, err)
+			return fmt.Errorf("prepare актуальный замена %s: %w", file.Path, err)
 		}
 		if err := verifyUpdaterFile0156(tmp, file.Size, file.SHA256); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("replacement verify %s: %w", file.Path, err)
+			return fmt.Errorf("замена проверять %s: %w", file.Path, err)
 		}
 		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("atomic switch %s: %w", file.Path, err)
+			return fmt.Errorf("атомарный переключение %s: %w", file.Path, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 		journal.Applied = append(journal.Applied, file.Path)
@@ -392,10 +392,10 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return fmt.Errorf("updater remove target должен быть regular file: %s", rel)
+			return fmt.Errorf("обновлятор удалять цель должен быть regular файл: %s", rel)
 		}
 		if err := os.Remove(dst); err != nil {
-			return fmt.Errorf("remove obsolete %s: %w", rel, err)
+			return fmt.Errorf("удалять устаревший %s: %w", rel, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 		journal.Applied = append(journal.Applied, rel)
@@ -410,7 +410,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	}
 	if verify != nil {
 		if err := verify(); err != nil {
-			return fmt.Errorf("post-apply verification: %w", err)
+			return fmt.Errorf("post-применить проверка: %w", err)
 		}
 	}
 	for _, file := range journal.Files {
@@ -419,7 +419,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if err := verifyUpdaterFile0156(dst, file.Size, file.SHA256); err != nil {
-			return fmt.Errorf("final verify %s: %w", file.Path, err)
+			return fmt.Errorf("итоговый проверять %s: %w", file.Path, err)
 		}
 	}
 	for _, rel := range journal.Remove {
@@ -428,7 +428,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 			return err
 		}
 		if _, err := os.Lstat(dst); err == nil {
-			return fmt.Errorf("final verify obsolete path still exists: %s", rel)
+			return fmt.Errorf("итоговый проверять устаревший путь по-прежнему существует: %s", rel)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
@@ -438,7 +438,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	if err := u.writeJournal(journal); err != nil {
 		return err
 	}
-	// Rollback bytes are unnecessary after a durable committed journal. Keep the journal for audit/status.
+	// Откат байты являются unnecessary после долговременный committed журнал. Сохранять журнал для audit/status.
 	_ = os.RemoveAll(filepath.Join(u.transactionDir(journal.ID), "stage"))
 	_ = os.RemoveAll(filepath.Join(u.transactionDir(journal.ID), "backup"))
 	syncDirBestEffort0156(u.transactionDir(journal.ID))
@@ -450,8 +450,8 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 	if cause != nil {
 		journal.Error = cause.Error()
 	}
-	// Journal persistence failure must never prevent restoration of already-switched bytes.
-	// We retry with the terminal state after live-tree recovery is complete.
+	// Журнал хранение ошибка должен никогда предотвращать restoration уже-переключение байты.
+	// Мы повторить с конечный состояние после актуальный-дерево восстановление является полный.
 	_ = u.writeJournal(journal)
 	backupDir := filepath.Join(u.transactionDir(journal.ID), "backup")
 	for i := len(journal.Touched) - 1; i >= 0; i-- {
@@ -463,7 +463,7 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		if !touched.HadOriginal {
 			if info, statErr := os.Lstat(dst); statErr == nil {
 				if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-					return fmt.Errorf("rollback refuses non-regular target: %s", touched.Path)
+					return fmt.Errorf("откат refuses non-regular цель: %s", touched.Path)
 				}
 				if err := os.Remove(dst); err != nil {
 					return err
@@ -485,11 +485,11 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		tmp := dst + ".nl0156-rollback-" + journal.ID
 		if err := copyUpdaterSource0156(backup, tmp, mode); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("rollback copy %s: %w", touched.Path, err)
+			return fmt.Errorf("откат копировать %s: %w", touched.Path, err)
 		}
 		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
-			return fmt.Errorf("rollback switch %s: %w", touched.Path, err)
+			return fmt.Errorf("откат переключение %s: %w", touched.Path, err)
 		}
 		syncDirBestEffort0156(filepath.Dir(dst))
 	}
@@ -498,7 +498,7 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 		return err
 	}
 	if err := removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID)); err != nil {
-		return fmt.Errorf("cleanup rolled-back transaction payload: %w", err)
+		return fmt.Errorf("очистка rolled-back транзакция полезная нагрузка: %w", err)
 	}
 	return nil
 }
@@ -529,15 +529,15 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 		case "committed", "rolled-back":
 			continue
 		case "staging":
-			// No live bytes were touched yet; record a terminal rollback state.
+			// Нет актуальный байты были touched yet; запись конечный откат состояние.
 			journal.Phase = "rolled-back"
 			journal.Error = "recovered incomplete staging transaction"
 			if err := u.writeJournal(journal); err != nil {
 				return recovered, err
 			}
 		default:
-			if err := u.rollbackLocked(journal, errors.New("crash recovery")); err != nil {
-				return recovered, fmt.Errorf("recover transaction %s: %w", id, err)
+			if err := u.rollbackLocked(journal, errors.New("восстановление после сбоя")); err != nil {
+				return recovered, fmt.Errorf("восстанавливать транзакция %s: %w", id, err)
 			}
 		}
 		recovered = append(recovered, id)
@@ -660,11 +660,11 @@ func (u *transactionalUpdater0156) readJournal(id string) (*updaterJournal0156, 
 		return nil, err
 	}
 	if journal.SchemaVersion != updaterCoreSchema0156 || journal.ID != id {
-		return nil, fmt.Errorf("invalid updater journal %s", id)
+		return nil, fmt.Errorf("недопустимый обновлятор журнал %s", id)
 	}
 	root, err := filepath.Abs(journal.Root)
 	if err != nil || filepath.Clean(root) != u.root {
-		return nil, fmt.Errorf("updater journal %s root mismatch", id)
+		return nil, fmt.Errorf("обновлятор журнал %s корень несоответствие", id)
 	}
 	return &journal, nil
 }
@@ -677,7 +677,7 @@ func (u *transactionalUpdater0156) safeLivePath(rel string) (string, error) {
 	clean := filepath.Clean(dst)
 	relToRoot, err := filepath.Rel(u.root, clean)
 	if err != nil || relToRoot == ".." || strings.HasPrefix(relToRoot, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("updater path escapes root: %s", rel)
+		return "", fmt.Errorf("обновлятор путь escapes корень: %s", rel)
 	}
 	parent := filepath.Dir(clean)
 	for p := parent; p != u.root; p = filepath.Dir(p) {
@@ -689,14 +689,14 @@ func (u *transactionalUpdater0156) safeLivePath(rel string) (string, error) {
 			return "", err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("updater refuses symlink parent: %s", rel)
+			return "", fmt.Errorf("обновлятор refuses символическая ссылка родительский: %s", rel)
 		}
 		if !info.IsDir() {
-			return "", fmt.Errorf("updater parent is not directory: %s", rel)
+			return "", fmt.Errorf("обновлятор родительский является не каталог: %s", rel)
 		}
 	}
 	if info, err := os.Lstat(clean); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return "", fmt.Errorf("updater refuses symlink target: %s", rel)
+		return "", fmt.Errorf("обновлятор refuses символическая ссылка цель: %s", rel)
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
@@ -719,16 +719,16 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 		}
 		key := pathKey(rel)
 		if previous, ok := seen[key]; ok {
-			return nil, nil, fmt.Errorf("duplicate updater path %s (%s)", rel, previous)
+			return nil, nil, fmt.Errorf("дубликат обновлятор путь %s (%s)", rel, previous)
 		}
 		if file.Size < 0 || len(strings.TrimSpace(file.SHA256)) != 64 {
-			return nil, nil, fmt.Errorf("invalid updater metadata for %s", rel)
+			return nil, nil, fmt.Errorf("недопустимый обновлятор метаданные для %s", rel)
 		}
 		if _, err := hex.DecodeString(file.SHA256); err != nil {
-			return nil, nil, fmt.Errorf("invalid updater SHA-256 for %s", rel)
+			return nil, nil, fmt.Errorf("недопустимый обновлятор SHA-256 для %s", rel)
 		}
 		if len(file.Data) == 0 && file.Data == nil && strings.TrimSpace(file.Source) == "" {
-			return nil, nil, fmt.Errorf("updater source отсутствует для %s", rel)
+			return nil, nil, fmt.Errorf("обновлятор исходник отсутствует для %s", rel)
 		}
 		file.Path = rel
 		file.SHA256 = strings.ToLower(file.SHA256)
@@ -743,7 +743,7 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 		}
 		key := pathKey(rel)
 		if previous, ok := seen[key]; ok {
-			return nil, nil, fmt.Errorf("updater path %s одновременно %s и remove", rel, previous)
+			return nil, nil, fmt.Errorf("обновлятор путь %s одновременно %s и удалять", rel, previous)
 		}
 		seen[key] = "remove"
 		normalizedRemove = append(normalizedRemove, rel)
@@ -755,25 +755,25 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 
 func validateUpdaterPath0156(rel string) error {
 	if rel == "" || strings.ContainsRune(rel, '\x00') || strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "\\") {
-		return fmt.Errorf("небезопасный updater path: %q", rel)
+		return fmt.Errorf("небезопасный обновлятор путь: %q", rel)
 	}
 	if strings.Contains(rel, "\\") {
-		return fmt.Errorf("updater path должен использовать '/': %q", rel)
+		return fmt.Errorf("обновлятор путь должен использовать '/': %q", rel)
 	}
 	first := rel
 	if i := strings.IndexByte(first, '/'); i >= 0 {
 		first = first[:i]
 	}
 	if strings.Contains(first, ":") || filepath.VolumeName(filepath.FromSlash(rel)) != "" {
-		return fmt.Errorf("updater path не может содержать volume/drive prefix: %q", rel)
+		return fmt.Errorf("обновлятор путь не может содержать volume/drive prefix: %q", rel)
 	}
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
 	if clean != rel || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return fmt.Errorf("небезопасный updater path: %q", rel)
+		return fmt.Errorf("небезопасный обновлятор путь: %q", rel)
 	}
 	lower := strings.ToLower(rel)
 	if lower == updaterCoreDir0156 || strings.HasPrefix(lower, updaterCoreDir0156+"/") {
-		return fmt.Errorf("updater payload не может изменять control directory: %s", rel)
+		return fmt.Errorf("обновлятор полезная нагрузка не может изменять управление каталог: %s", rel)
 	}
 	return nil
 }
@@ -784,7 +784,7 @@ func copyUpdaterSource0156(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return errors.New("source должен быть regular file и не symlink")
+		return errors.New("исходник должен быть regular файл и не символическая ссылка")
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
@@ -856,7 +856,7 @@ func verifyUpdaterFile0156(path string, expectedSize int64, expectedSHA string) 
 		return err
 	}
 	if size != expectedSize || !strings.EqualFold(sum, expectedSHA) {
-		return fmt.Errorf("checksum/size mismatch: size=%d/%d sha256=%s/%s", size, expectedSize, sum, strings.ToLower(expectedSHA))
+		return fmt.Errorf("checksum/size несоответствие: размер=%d/%d sha256=%s/%s", size, expectedSize, sum, strings.ToLower(expectedSHA))
 	}
 	return nil
 }

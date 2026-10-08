@@ -8,7 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: missing {rel}")
+        raise SystemExit(f"[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: отсутствующий {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -16,12 +16,12 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: {rel} missing {missing}"
+            f"[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: {rel} отсутствующий {missing}"
         )
 
 
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 7):
-    raise SystemExit(f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: VERSION is {VERSION}")
+    raise SystemExit(f"[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: VERSION является {VERSION}")
 
 sensor = read("runtime/neverguard-sensor/src/debug_instrumentation.rs")
 stream = read("runtime/neverguard-sensor/src/lib.rs")
@@ -48,7 +48,7 @@ require(sensor, "runtime/neverguard-sensor/src/debug_instrumentation.rs", [
 for forbidden in ["DebugActiveProcess(", "WriteProcessMemory", "CreateRemoteThread", "NtSetInformationThread"]:
     if forbidden in sensor:
         raise SystemExit(
-            f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: Sensor uses forbidden anti-analysis primitive {forbidden}"
+            f"[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: Sensor использует forbidden anti-analysis primitive {forbidden}"
         )
 
 require(stream, "runtime/neverguard-sensor/src/lib.rs", [
@@ -109,7 +109,7 @@ require(ci, ".github/workflows/ci.yml", [
     "--test neverguard_sensor_windows",
 ])
 if "neverguard-debug-instrumentation-0187.py" not in preflight:
-    raise SystemExit("[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: preflight wiring missing")
+    raise SystemExit("[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: предварительная проверка wiring отсутствующий")
 
 for rel, text in [
     ("runtime/neverguard-sensor/src/debug_instrumentation.rs", sensor),
@@ -119,7 +119,7 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: placeholder {placeholder!r} in {rel}"
+                f"[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: placeholder {placeholder!r} в {rel}"
             )
 
-print("[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: OK")
+print("[NeverLauncher] Отладка и Инструментирование Защита 0.18.7 контроль: OK")

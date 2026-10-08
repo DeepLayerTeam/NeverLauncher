@@ -60,7 +60,7 @@ func ValidatePersistenceConfig950(cfg config.Config) error {
 		return nil
 	}
 	if isProduction950(cfg.Environment) && isMemoryRepository950(cfg.RepositoryDriver) {
-		return errors.New("production mode требует NEVERLAUNCHER_REPOSITORY_DRIVER=postgres: memory repository запрещён для 0.10.0 persistence")
+		return errors.New("рабочий режим требует NEVERLAUNCHER_REPOSITORY_DRIVER=PostgreSQL: память репозиторий запрещён для 0.10.0 хранение")
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (s Server) flushPersistenceState950(reason string) error {
 
 func (p persistenceSQL950) open() (*sql.DB, error) {
 	if strings.TrimSpace(p.dsn) == "" {
-		return nil, errors.New("database dsn пуст")
+		return nil, errors.New("база данных dsn пуст")
 	}
 	driver := strings.TrimSpace(p.driverName)
 	if driver == "" {

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CANONICAL_VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
-  echo "Ошибка: версия release задаётся только через VERSION=${CANONICAL_VERSION}; передано: $1" >&2
+  echo "Ошибка: версия релиз задаётся только через VERSION=${CANONICAL_VERSION}; передано: $1" >&2
   exit 2
 fi
 VERSION="${CANONICAL_VERSION}"
@@ -36,13 +36,13 @@ mkdir -p "${OUT_DIR}" "${WORK_DIR}"
 log() { printf '[NeverLauncher %s] %s\n' "${VERSION}" "$*"; }
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Ошибка: production release требует команду '$1'" >&2
+    echo "Ошибка: рабочий релиз требует команду '$1'" >&2
     exit 1
   fi
 }
 require_file() {
   if [[ ! -f "$1" ]]; then
-    echo "Ошибка: обязательный release artifact отсутствует: $1" >&2
+    echo "Ошибка: обязательный артефакт релиза отсутствует: $1" >&2
     exit 1
   fi
 }
@@ -169,7 +169,7 @@ PYVER
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require git
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
-    echo "Ошибка: ${VERSION} Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort" >&2
+    echo "Ошибка: ${VERSION} Рабочий Кандидат в релиз требует полный Совместимость + Доверие к устройству + Защита CI сертификация группа" >&2
     exit 1
   }
   require_file "${COMPATIBILITY_MATRIX}"
@@ -179,7 +179,7 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${GUARD_CI_MATRIX}"
   require_file "${GUARD_CI_TARGETS}"
   git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-    echo "Ошибка: ${VERSION} Production Release Candidate должен собираться из git checkout" >&2
+    echo "Ошибка: ${VERSION} Рабочий Кандидат в релиз должен собираться из git checkout" >&2
     exit 1
   }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
@@ -189,28 +189,28 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
     exit 1
   }
   [[ "${SOURCE_COMMIT}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]] || {
-    echo "Ошибка: некорректный exact source commit: ${SOURCE_COMMIT}" >&2
+    echo "Ошибка: некорректный точный исходник фиксация: ${SOURCE_COMMIT}" >&2
     exit 1
   }
   git -C "${ROOT_DIR}" diff --quiet HEAD -- || {
-    echo "Ошибка: Production Release Candidate запрещает изменения tracked-файлов относительно HEAD" >&2
+    echo "Ошибка: Рабочий Кандидат в релиз запрещает изменения tracked-файлов относительно HEAD" >&2
     exit 1
   }
   git -C "${ROOT_DIR}" diff --cached --quiet || {
-    echo "Ошибка: Production Release Candidate запрещает staged изменения относительно HEAD" >&2
+    echo "Ошибка: Рабочий Кандидат в релиз запрещает подготовленный изменения относительно HEAD" >&2
     exit 1
   }
 fi
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   [[ -n "${WINDOWS_ADVERSARIAL_CERTIFICATE}" ]] || {
-    echo "Ошибка: ${VERSION} Windows Protection RC требует NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
+    echo "Ошибка: ${VERSION} Windows Защита RC требует NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
     exit 1
   }
   require_file "${WINDOWS_ADVERSARIAL_CERTIFICATE}"
 fi
 if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
   [[ "${VERSION}" != *-* && "${VERSION}" != *+* ]] || {
-    echo "Ошибка: Production Delivery Release требует GA SemVer без prerelease/build suffix: ${VERSION}" >&2
+    echo "Ошибка: Рабочий Доставка Релиз требует GA SemVer без prerelease/build suffix: ${VERSION}" >&2
     exit 1
   }
   python3 - "${PUBLIC_RELEASE_BASE_URL}" "${VERSION}" <<'PYURL'
@@ -225,25 +225,25 @@ fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
+    echo "Ошибка: ${VERSION} рабочий релиз требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с нативный x64+ARM64 выходные данные" >&2
     exit 1
   }
 fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${MACOS_PRODUCTION_ARTIFACTS_DIR}" && -d "${MACOS_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
+    echo "Ошибка: ${VERSION} комплект релиза требует NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 доставка выходные данные" >&2
     exit 1
   }
 fi
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
   [[ -n "${MANAGED_JRE_ARTIFACTS_DIR}" && -d "${MANAGED_JRE_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Managed JRE Distribution" >&2
+    echo "Ошибка: ${VERSION} комплект релиза требует NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Управляемый JRE Дистрибутив" >&2
     exit 1
   }
 fi
 if [[ "${GUARD_CERT_REQUIRED}" == "1" ]]; then
   [[ -n "${GUARD_CI_MATRIX}" && -n "${GUARD_CI_TARGETS}" && -n "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_GUARD_CI_MATRIX_FILE, NEVERLAUNCHER_GUARD_CI_TARGETS_FILE и NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
+    echo "Ошибка: ${VERSION} рабочий релиз требует NEVERLAUNCHER_GUARD_CI_MATRIX_FILE, NEVERLAUNCHER_GUARD_CI_TARGETS_FILE и NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
     exit 1
   }
   require_file "${GUARD_CI_MATRIX}"
@@ -264,7 +264,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD
     SOURCE_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
   fi
   if [[ -z "${SOURCE_COMMIT}" ]]; then
-    echo "Ошибка: certified release требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
+    echo "Ошибка: сертифицированный релиз требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
     exit 1
   fi
 fi
@@ -294,7 +294,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   )
   chmod +x "${OUT_DIR}/neverlauncher-api-linux-amd64"
 fi
-printf 'apiBuildMode=pgx-production\n' > "${OUT_DIR}/BUILD_NOTES.txt"
+printf 'apiBuildMode=pgx-рабочий\n' > "${OUT_DIR}/BUILD_NOTES.txt"
 
 log "Сборка Admin Web"
 (
@@ -508,7 +508,7 @@ require_file "${RELEASE_CLI}"
 
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
   log "Проверка Managed JRE manifest/evidence и шести native Java targets"
-  # DELIVERY_MANIFEST.json будет сформирован release build ниже; до этого проверяем source artifacts через production Go tests/static gate.
+  # DELIVERY_MANIFEST.JSON будет сформирован релиз сборка ниже; до этого проверяем исходник артефакты через рабочий Go tests/static контроль.
   python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
 fi
 

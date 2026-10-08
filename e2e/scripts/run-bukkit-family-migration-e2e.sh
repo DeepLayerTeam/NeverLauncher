@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[bukkit-family-migration] materialize exact 0.14.3 database through migration 0023\n'
+printf '[Bukkit-семейство-миграция] материализовать точный 0.14.3 база данных через миграция 0023\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -88,7 +88,7 @@ shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0024_bukkit_family_0144'")"
 [[ "$target_sealed" == "true" ]] || { echo "Bukkit family migration is not sealed: 0024_bukkit_family_0144" >&2; exit 1; }
 
-printf '[bukkit-family-migration] verify existing node and every new Bukkit-family kind\n'
+printf '[Bukkit-семейство-миграция] проверять существующий узел и каждый новый Bukkit-семейство тип\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='paper-before-0144'")" == "paper" ]]
 for kind in bukkit spigot paper purpur folia; do
   fingerprint="$(printf '%s' "$kind" | sha256sum | awk '{print $1}')"
@@ -113,7 +113,7 @@ INSERT INTO server_bridge_nodes_v2(
 );
 SQL
 then
-  echo '[bukkit-family-migration] invalid ServerBridge kind bypassed PostgreSQL constraint' >&2
+  echo '[Bukkit-семейство-миграция] недопустимый ServerBridge тип обход PostgreSQL ограничение' >&2
   exit 1
 fi
 
@@ -123,4 +123,4 @@ family_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$family_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingPaperPreserved:true,bukkitFamilyKindsAccepted:true,invalidKindRejected:true,familyNodeCount:$count}' \
   > "$RESULT_DIR/bukkit-family-migration.json"
-printf '[bukkit-family-migration] PASS 0.14.3 -> 0.14.4 Bukkit family schema semantics\n'
+printf '[Bukkit-семейство-миграция] PASS 0.14.3 -> 0.14.4 Bukkit семейство схема семантика\n'

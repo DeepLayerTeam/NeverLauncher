@@ -32,7 +32,7 @@ EXE_SUFFIX=""
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
 NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime$EXE_SUFFIX"
 
-printf '[vanilla-cert] build CLI and NeverRuntime for %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
+printf '[Vanilla-cert] сборка CLI и NeverRuntime для %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/neverlauncher
@@ -40,7 +40,7 @@ printf '[vanilla-cert] build CLI and NeverRuntime for %s/%s\n' "$TARGET_OS" "$TA
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[vanilla-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
-printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
+printf '[Vanilla-cert] материализовать Mojang Vanilla %s для %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
 "$NL_BIN" runtime vanilla-package \
   --minecraft "$MINECRAFT_VERSION" \
   --client-dir "$RUNTIME_DIR/materialized-client" \
@@ -78,7 +78,7 @@ if not (minecraft.get('version') == mc and minecraft.get('loader') == 'vanilla' 
     raise SystemExit('invalid client package runtime settings')
 PY
 
-printf '[vanilla-cert] launch actual Mojang client with Java %s on %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
+printf '[Vanilla-cert] запускать фактический Mojang клиент с Java %s на %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
 if [[ "$TARGET_OS" == "linux" ]]; then
@@ -126,4 +126,4 @@ payload={
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[vanilla-cert] PASS %s / Java %s / %s/%s\n' "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
+printf '[Vanilla-cert] PASS %s / Java %s / %s/%s\n' "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"

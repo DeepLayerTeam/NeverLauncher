@@ -121,7 +121,7 @@ func TestVanillaMetadataRecoveryExactVersionOnly(t *testing.T) {
 	var server *httptest.Server
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !manifestUp.Load() {
-			http.Error(w, "upstream unavailable", http.StatusServiceUnavailable)
+			http.Error(w, "вышестоящий проект недоступный", http.StatusServiceUnavailable)
 			return
 		}
 		switch r.URL.Path {

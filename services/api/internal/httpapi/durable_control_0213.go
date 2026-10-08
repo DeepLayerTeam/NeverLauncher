@@ -21,7 +21,7 @@ import (
 
 const durablePublishJobKind0213 = "package-publish"
 
-var errDurableAuthorizationRevoked0213 = errors.New("publish authorization revoked")
+var errDurableAuthorizationRevoked0213 = errors.New("публикация авторизация отозванный")
 
 func randomWorkerID0213(prefix string) string {
 	var b [12]byte
@@ -34,14 +34,14 @@ func randomWorkerID0213(prefix string) string {
 func (s Server) durableControlPlane0213() (repository.DurableControlPlane, error) {
 	cp, ok := s.Repo.(repository.DurableControlPlane)
 	if !ok {
-		return nil, errors.New("repository does not implement durable control plane")
+		return nil, errors.New("репозиторий делает не implement долговременный плоскость управления")
 	}
 	return cp, nil
 }
 
-// StartDurableControlPlane0213 starts restart recovery for persisted publish jobs
-// and transactional outbox delivery. It is safe to run on every API replica:
-// PostgreSQL SKIP LOCKED + leases ensure a single active worker per item.
+// StartDurableControlPlane0213 запускает восстановление после перезапуска для сохранённый публикация задачи
+// и транзакционная исходящая очередь доставка. Это является безопасный к запуск на каждый API реплика:
+// PostgreSQL SKIP LOCKED + аренды гарантировать единый активный обработчик на item.
 func (s Server) StartDurableControlPlane0213(parent context.Context) (context.CancelFunc, error) {
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
@@ -54,7 +54,7 @@ func (s Server) StartDurableControlPlane0213(parent context.Context) (context.Ca
 		defer ticker.Stop()
 		for {
 			if err := s.runDurableTick0213(ctx, cp, worker); err != nil && !errors.Is(err, context.Canceled) {
-				log.Printf("durable control-plane tick failed: %v", err)
+				log.Printf("долговременный управление-плоскость tick ошибка: %v", err)
 			}
 			select {
 			case <-ctx.Done():
@@ -73,7 +73,7 @@ func (s Server) runDurableTick0213(ctx context.Context, cp repository.DurableCon
 	}
 	for _, job := range jobs {
 		if _, err := s.executeDurablePublishJob0213(ctx, cp, job, worker); err != nil {
-			log.Printf("durable publish job %s: %v", job.ID, err)
+			log.Printf("долговременный публикация задача %s: %v", job.ID, err)
 		}
 	}
 	return s.drainOutbox0213(ctx, cp, worker, 32)
@@ -115,7 +115,7 @@ func (s Server) enqueuePublishJob0213(r *http.Request, lookup packageLookup) (mo
 		idempotencyKey = "auto:" + claims.Sub + ":" + lookup.Release.ID + ":" + manifestDigest
 	}
 	if len(idempotencyKey) > 240 {
-		return model.DurableJob{}, false, errors.New("Idempotency-Key too long")
+		return model.DurableJob{}, false, errors.New("Идемпотентность-Ключ слишком long")
 	}
 	job := model.DurableJob{
 		Kind:           durablePublishJobKind0213,
@@ -145,7 +145,7 @@ func (s Server) publishDurably0213(r *http.Request, lookup packageLookup) (model
 		return current.Release, job, false, nil
 	}
 	if job.Status == model.DurableJobStatusRevoked || job.Status == model.DurableJobStatusFailed || job.Status == model.DurableJobStatusDead {
-		return model.ReleaseVersion{}, job, false, fmt.Errorf("durable publish job is %s: %s", job.Status, job.LastError)
+		return model.ReleaseVersion{}, job, false, fmt.Errorf("долговременный публикация задача является %s: %s", job.Status, job.LastError)
 	}
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
@@ -186,7 +186,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 	}
 	if payload.PackageID != job.ResourceID || payload.ExpectedManifestDigest == "" || payload.ExpectedArtifactDigest == "" {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job payload identity mismatch")
-		return model.ReleaseVersion{}, errors.New("publish job payload identity mismatch")
+		return model.ReleaseVersion{}, errors.New("публикация задача полезная нагрузка идентичность несоответствие")
 	}
 
 	decision := s.authorizationService().Authorize(ctx,
@@ -241,9 +241,9 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, err
 	}
 
-	// Authorization is intentionally checked a second time immediately before
-	// the irreversible database commit. A role/service-token revocation that
-	// happens while evidence/signatures are being verified must still stop the job.
+	// Авторизация является намеренно проверен второй время немедленно до
+	// необратимый база данных фиксация. role/service-token отзыв тот
+	// happens пока evidence/signatures являются являясь проверен должен по-прежнему остановка задача.
 	decision = s.authorizationService().Authorize(ctx,
 		authorization.Actor{Kind: authorization.ActorUser, ID: job.ActorID},
 		job.Action,
@@ -348,6 +348,6 @@ func (s Server) deliverOutboxEvent0213(ctx context.Context, out model.DurableOut
 		}
 		return s.EventBus.ReleasePublished(ctx, p.ActorID, lookup.Release)
 	default:
-		return fmt.Errorf("unsupported durable outbox event %q", out.EventType)
+		return fmt.Errorf("неподдерживаемый долговременный исходящая очередь событие %q", out.EventType)
 	}
 }

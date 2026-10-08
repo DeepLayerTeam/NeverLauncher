@@ -1,5 +1,5 @@
--- NeverLauncher 0.11.7 — Passkeys / WebAuthn + MFA 2.0.
--- WebAuthn challenges are single-use and PostgreSQL-backed for multi-instance deployments.
+-- NeverLauncher 0.11.7 — Ключи доступа / WebAuthn + MFA 2.0.
+-- WebAuthn запросы являются одноразовый и PostgreSQL-основанный для multi-экземпляр развёртывание.
 
 CREATE TABLE IF NOT EXISTS webauthn_credentials (
     id TEXT PRIMARY KEY,

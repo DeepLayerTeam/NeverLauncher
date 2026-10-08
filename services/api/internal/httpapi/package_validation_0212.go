@@ -162,15 +162,15 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 }
 
 func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
-	// Compatibility route: the historical operation never launched Minecraft.
-	// It now calls the canonical integrity implementation and states this explicitly.
+	// Совместимость маршрут: исторический операция никогда запускать Minecraft.
+	// Это теперь вызов канонический целостность реализация и состояния этот явно.
 	s.packageIntegrityCheck0212(w, r)
 }
 
 func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return nil, errors.New("empty runtime validation key")
+		return nil, errors.New("пустой проверка реального запуска ключ")
 	}
 	if raw, err := hex.DecodeString(value); err == nil && len(raw) == ed25519.PublicKeySize {
 		return ed25519.PublicKey(raw), nil
@@ -180,32 +180,32 @@ func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 			return ed25519.PublicKey(raw), nil
 		}
 	}
-	return nil, errors.New("runtime validation public key must be raw Ed25519 hex/base64")
+	return nil, errors.New("проверка реального запуска открытый ключ должен быть сырой Ed25519 hex/base64")
 }
 
 func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error) {
 	raw := strings.TrimSpace(s.Config.RuntimeValidationKeysJSON)
 	if raw == "" {
-		return nil, errors.New("runtime validation trust set is not configured")
+		return nil, errors.New("проверка реального запуска доверие задать является не настраивать")
 	}
 	var cfg map[string]string
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return nil, errors.New("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON must be a JSON object")
+		return nil, errors.New("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON должен быть JSON объект")
 	}
 	out := make(map[string]ed25519.PublicKey, len(cfg))
 	for id, val := range cfg {
 		id = strings.TrimSpace(id)
 		if id == "" {
-			return nil, errors.New("runtime validation key id is empty")
+			return nil, errors.New("проверка реального запуска ключ ID является пустой")
 		}
 		key, err := decodeRuntimeValidationKey0212(val)
 		if err != nil {
-			return nil, fmt.Errorf("runtime validation key %q: %w", id, err)
+			return nil, fmt.Errorf("проверка реального запуска ключ %q: %w", id, err)
 		}
 		out[id] = key
 	}
 	if len(out) == 0 {
-		return nil, errors.New("runtime validation trust set is empty")
+		return nil, errors.New("проверка реального запуска доверие задать является пустой")
 	}
 	return out, nil
 }
@@ -380,10 +380,10 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 	}
 	integrity, err := s.Repo.LatestIntegrityCheck(ctx, lookup.Release.ID)
 	if err != nil {
-		return errors.New("publish требует integrity-check текущего package")
+		return errors.New("публикация требует целостность-проверка текущего пакет")
 	}
 	if integrity.Result != "passed" || integrity.ManifestDigest != manifestDigest || integrity.ArtifactDigest != artifactDigest {
-		return errors.New("publish требует актуальный integrity PASS для текущих manifest/files")
+		return errors.New("публикация требует актуальный целостность PASS для текущих manifest/files")
 	}
 	policy, err := s.Repo.GetProjectValidationPolicy(ctx, lookup.Release.ProjectID)
 	if err != nil {
@@ -394,7 +394,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 	}
 	keys, err := s.runtimeValidationKeys0212()
 	if err != nil {
-		return fmt.Errorf("publish runtime trust set unavailable: %w", err)
+		return fmt.Errorf("публикация среда выполнения доверие задать недоступный: %w", err)
 	}
 	items, err := s.Repo.ListRuntimeValidations(ctx, lookup.Release.ID)
 	if err != nil {
@@ -414,9 +414,9 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 		}
 	}
 	if policy.RequireServerJoin {
-		return errors.New("publish policy требует подписанный runtime PASS текущего manifest с actual client и server join")
+		return errors.New("политика публикации требует подписанный среда выполнения PASS текущего манифест с реальный клиент и подключение к серверу")
 	}
-	return errors.New("publish policy требует подписанный runtime PASS текущего manifest с actual client")
+	return errors.New("политика публикации требует подписанный среда выполнения PASS текущего манифест с реальный клиент")
 }
 
 func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) bool {
@@ -446,20 +446,20 @@ func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) b
 	return true
 }
 
-// prepareAdminPublish0212 preserves the convenient admin publish operation but
-// routes it through the same signed/staged/integrity evidence used by the
-// canonical package pipeline. Runtime-required policies still require external
-// signed runtime evidence before the final publish can proceed.
+// prepareAdminPublish0212 сохраняет convenient администратор публикация операция но
+// маршруты это через одинаковый signed/staged/integrity свидетельство используется через 
+// канонический пакет конвейер. Среда выполнения-обязательный политики по-прежнему требовать внешний
+// подписанный свидетельство реального запуска до итоговый публикация может proceed.
 func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVersion) (packageLookup, error) {
 	if release.Status == "published" {
-		return packageLookup{}, errors.New("release уже опубликован; published manifest immutable")
+		return packageLookup{}, errors.New("релиз уже опубликован; опубликованный манифест неизменяемый")
 	}
 	files, err := s.Repo.ListFiles(release.ProjectID, release.ID)
 	if err != nil {
 		return packageLookup{}, err
 	}
 	if len(files) == 0 {
-		return packageLookup{}, errors.New("publish требует package files и integrity evidence")
+		return packageLookup{}, errors.New("публикация требует пакет файлы и целостность свидетельство")
 	}
 	if s.verifyManifestSignature(release.Manifest) != nil || !manifestFilesMatch0212(release.Manifest, files) {
 		manifest := release.Manifest
@@ -507,7 +507,7 @@ func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVe
 			return packageLookup{}, runErr
 		}
 		if result.Result != "passed" {
-			return packageLookup{}, errors.New("package integrity check failed")
+			return packageLookup{}, errors.New("пакет проверка целостности ошибка")
 		}
 	}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {

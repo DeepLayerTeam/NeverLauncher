@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 6):
-    raise SystemExit(f"Unified Transactional Updater Core gate requires VERSION>=0.15.6, got {VERSION}")
+    raise SystemExit(f"Единый Транзакционный Обновлятор Ядро контроль требует VERSION>=0.15.6, получил {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 
 core_go = read("cli/cmd/neverlauncher/transactional_updater.go")
@@ -105,11 +105,11 @@ for required in [
     'neverlauncher-cli-linux-${{ matrix.arch }}" update self-test',
 ]:
     if required not in ci:
-        raise SystemExit(f"CI updater gate missing: {required}")
+        raise SystemExit(f"CI обновлятор контроль отсутствующий: {required}")
 
 preflight = read("scripts/release/preflight.sh")
 if "unified-transactional-updater-core-0156.py" not in preflight:
-    raise SystemExit("preflight updater gate missing")
+    raise SystemExit("предварительная проверка обновлятор контроль отсутствующий")
 
 subprocess.run(
     ["go", "test", "./cmd/neverlauncher", "-run", "TestTransactionalUpdater|TestClientLifecycleInstallRepairCleanupRollback", "-count=1"],
@@ -117,4 +117,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Unified Transactional Updater Core gate: OK")
+print(f"NeverLauncher {VERSION} Единый Транзакционный Обновлятор Ядро контроль: OK")

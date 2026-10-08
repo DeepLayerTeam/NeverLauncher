@@ -61,8 +61,8 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 		t.Fatalf("capabilities were not canonicalized: %s", got)
 	}
 
-	// Process facts are part of both the deterministic runtime id and Ed25519
-	// attestation. Changing PID without minting a new runtime identity must fail.
+	// Процесс facts являются part оба детерминированный среда выполнения ID и Ed25519
+	// аттестация. Изменять PID без minting новый среда выполнения идентичность должен завершаться ошибкой.
 	tampered := runtimeContract
 	tampered.ProcessID++
 	req.Runtime = &tampered
@@ -70,7 +70,7 @@ func TestServerBridgeRuntimeIdentity0192VerifiesNodeBoundProcessIdentity(t *test
 		t.Fatalf("tampered process identity accepted: %v", err)
 	}
 
-	// Discovery facts are covered by the Ed25519 runtime signature.
+	// Обнаружение facts являются covered через Ed25519 среда выполнения подпись.
 	tampered = runtimeContract
 	tampered.MinecraftVersion = "1.21.2"
 	req.Runtime = &tampered
@@ -112,8 +112,8 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 		t.Fatalf("overlapping replacement was not detected: %+v err=%v", repl, err)
 	}
 
-	// A late heartbeat from the replaced JVM must never flip the active runtime
-	// back to an older process generation.
+	// late сигнал состояния из заменять JVM должен никогда flip активный среда выполнения
+	// back к старый процесс генерация.
 	if _, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, base); err == nil || !strings.Contains(err.Error(), "older than active runtime") {
 		t.Fatalf("superseded runtime reclaimed active state: %v", err)
 	}

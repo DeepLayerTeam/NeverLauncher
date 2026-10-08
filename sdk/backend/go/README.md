@@ -1,6 +1,6 @@
-# NeverExtensions Backend Go SDK
+# NeverExtensions Серверная часть Go SDK
 
-Production client for Extension Host Protocol v1. The SDK performs authenticated `hello`, heartbeat, structured logs, capability broker calls, durable event subscriptions and loopback event/hook callbacks. It only reads the `NEVERLAUNCHER_EXTENSION_*` environment supplied by the Backend supervisor.
+Рабочий клиент для Хост расширений Протокол v1. SDK выполняет аутентифицировать `hello`, сигнал состояния, структурированный журналы, возможность broker вызов, долговременный событие subscriptions и локальная петля event/hook обратный вызов. Это только читает `NEVERLAUNCHER_EXTENSION_*` окружение supplied через Серверная часть супервизор.
 
 ```go
 client, err := neverextensions.NewFromEnvironment()

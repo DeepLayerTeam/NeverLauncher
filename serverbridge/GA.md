@@ -1,25 +1,25 @@
 # ServerBridge 3 GA — NeverLauncher 0.20.0
 
-ServerBridge 3 is GA in NeverLauncher 0.20.0. Protocol v3 is frozen: the canonical feature-set digest is `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`. Protocol v2 remains accepted by Backend only as `compatibility-deprecated`; new 0.20.0 bridges negotiate v3 only.
+ServerBridge 3 является GA в NeverLauncher 0.20.0. Протокол v3 является зафиксированный: канонический набор возможностей хеш является `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`. Протокол v2 остаётся принят через Серверная часть только как `compatibility-deprecated`; новый 0.20.0 мост согласовывать v3 только.
 
-## Production migration v2 → v3
+## Рабочий миграция v2 → v3
 
-1. Apply database migration `0041_serverbridge3_ga_0200` with `nl db migrate apply`, then verify it with `nl db migrate verify`.
-2. Keep the 0.20.0 Backend healthy and verify `GET /api/v1/server-bridge/capabilities` reports `protocolV3Frozen=true`, `protocolV3Status=ga-frozen` and the frozen digest above.
-3. For every managed node run `nl server-bridge migrate-v3 --server-dir <dir> --artifacts-dir <release-artifacts>`. The command performs the normal certified transactional upgrade, preserves the Ed25519 node identity, supports `--dry-run`, and records `.neverlauncher/server-bridge/protocol-v3-ga-migration.json` after success.
-4. Restart the Minecraft/proxy process when reported by the installer. Confirm the node appears as Protocol v3 in `GET /api/v1/server-bridge/overview`.
-5. Keep Protocol v2 only for remaining legacy nodes. v2 responses carry deprecation/migration headers and the Admin UI counts nodes still requiring migration.
+1. Применить база данных миграция `0041_serverbridge3_ga_0200` с `nl db migrate apply`, затем проверять это с `nl db migrate verify`.
+2. Сохранять 0.20.0 Серверная часть работоспособный и проверять `GET /api/v1/server-bridge/capabilities` сообщает `protocolV3Frozen=true`, `protocolV3Status=ga-frozen` и зафиксированный хеш выше.
+3. Для каждый управляемый узел запуск `nl server-bridge migrate-v3 --server-dir <dir> --artifacts-dir <release-artifacts>`. команда выполняет обычный сертифицированный транзакционный обновление, сохраняет Ed25519 узел идентичность, поддерживает `--dry-run`, и записывает `.neverlauncher/server-bridge/protocol-v3-ga-migration.json` после успех.
+4. Перезапуск Minecraft/proxy процесс когда отображается через установщик. Confirm узел appears как Протокол v3 в `GET /api/v1/server-bridge/overview`.
+5. Сохранять Протокол v2 только для оставаться устаревший узлы. v2 ответы carry deprecation/migration заголовки и Панель администратора счётчики узлы по-прежнему требовать миграция.
 
-The migration does not patch Minecraft/authlib/core. Rollback remains the existing `nl server-bridge rollback` path and restores the previous managed bridge artifact/state while preserving the node identity.
+ миграция делает не patch Minecraft/authlib/core. Откат остаётся существующий `nl server-bridge rollback` путь и восстанавливает предыдущий управляемый мост artifact/state пока сохраняя узел идентичность.
 
-## Certification and installation
+## Сертификация и установка
 
-A GA release is valid only when `SERVERBRIDGE3_CERTIFICATION.json` has schema `1.1`, `ga=true`, `protocolV3Frozen=true`, the exact frozen feature digest, `protocolV2Mode=compatibility-deprecated`, `installerUpgradePath=true`, `unifiedOperatorAPI=/api/v1/server-bridge/overview`, and hashes for all 14 supported artifacts. `BRIDGE_RELEASE_ALLOWLIST.json` remains schema `3.0` and carries the same GA protocol policy plus the security profile and exact per-platform SHA-256 values.
+ GA релиз является действительный только когда `SERVERBRIDGE3_CERTIFICATION.json` имеет схема `1.1`, `ga=true`, `protocolV3Frozen=true`, точный зафиксированный возможность хеш, `protocolV2Mode=compatibility-deprecated`, `installerUpgradePath=true`, `unifiedOperatorAPI=/api/v1/server-bridge/overview`, и хеширует для все 14 поддерживаемый артефакты. `BRIDGE_RELEASE_ALLOWLIST.json` остаётся схема `3.0` и содержит одинаковый GA протокол политика плюс профиль безопасности и точный на-платформа SHA-256 значения.
 
-`nl server-bridge install`, `upgrade`, and `migrate-v3` reject a 0.20.x artifact whose certification/allowlist does not satisfy this GA boundary unless the explicit development-only unverified override is used.
+`nl server-bridge install`, `upgrade`, и `migrate-v3` отклонять 0.20.x артефакт чей certification/allowlist делает не satisfy этот GA граница если не явный разработка-только unverified override является используется.
 
-## Operator API and Admin UI
+## Оператор API и Панель администратора
 
-`GET /api/v1/server-bridge/overview` is the single authenticated operator view for topology, control history, latest telemetry, node/runtime state, Protocol v2 migration status, upgrade recommendations, and ServerBridge audit events. The Admin UI consumes this endpoint directly.
+`GET /api/v1/server-bridge/overview` является единый аутентифицировать оператор view для топология, управление история, последний телеметрия, node/runtime состояние, Протокол v2 миграция состояние, обновление recommendations, и ServerBridge события аудита. Панель администратора использовать этот эндпоинт напрямую.
 
-The public compatibility matrix is `GET /api/v1/server-bridge/matrix` and `serverbridge/MATRIX.md`. It lists all 14 release targets and explicitly marks Protocol v3 as GA/frozen and Protocol v2 as compatibility/deprecated.
+ публичный матрица совместимости является `GET /api/v1/server-bridge/matrix` и `serverbridge/MATRIX.md`. Это список все 14 релиз цели и явно marks Протокол v3 как GA/frozen и Протокол v2 как compatibility/deprecated.

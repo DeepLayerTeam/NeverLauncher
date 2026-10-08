@@ -1,22 +1,22 @@
-# NeverLauncher 0.20.0 — Public ServerBridge Matrix
+# NeverLauncher 0.20.0 — Публичный ServerBridge Матрица
 
-> ServerBridge 3 GA compatibility matrix. Protocol v3 is frozen; Protocol v2 is compatibility/deprecation-only and must migrate with `nl server-bridge migrate-v3`. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.
+> ServerBridge 3 GA матрица совместимости. Протокол v3 является зафиксированный; Протокол v2 является compatibility/deprecation-only и должен мигрировать с `nl server-bridge migrate-v3`. Среда выполнения PASS свидетельство является созданный через CI; Bukkit, Quilt и Sponge объявлять сборка-совместимость где CI не может legally/practically redistribute полный цель среда выполнения; Vanilla является сертифицированный через вспомогательный процесс RCON harness.
 
-| Platform | Family | Role | Minecraft | Coverage | Protocol | v2 compatibility | Zero-patch | Node identity | One-time join | Handoff |
+| Платформа | Семейство | Роль | Minecraft | Покрытие | Протокол | v2 совместимость | Без патчей | Узел идентичность | Одноразовый подключение | Передача |
 |---|---|---|---|---|---:|---|---:|---:|---:|---:|
-| `velocity` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | source |
-| `bungeecord` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | source |
-| `waterfall` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | source |
-| `bukkit` | `bukkit` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `spigot` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `paper` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `purpur` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `folia` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `fabric` | `fabric` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `quilt` | `quilt` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `forge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `neoforge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `sponge` | `sponge` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
-| `vanilla` | `vanilla-sidecar` | `backend` | `1.21.1` | `sidecar-rcon-e2e` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | target |
+| `velocity` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | исходник |
+| `bungeecord` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | исходник |
+| `waterfall` | `proxy` | `proxy` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | исходник |
+| `bukkit` | `bukkit` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `spigot` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `paper` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `purpur` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `folia` | `bukkit` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `fabric` | `fabric` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `quilt` | `quilt` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `forge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `neoforge` | `modloader` | `backend` | `1.21.1` | `runtime-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `sponge` | `sponge` | `backend` | `1.21.1` | `build-compatibility` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
+| `vanilla` | `vanilla-sidecar` | `backend` | `1.21.1` | `sidecar-rcon-e2e` | 3 GA (зафиксированный) | устаревший; мигрировать к v3 | да | Ed25519 | да | цель |
 
-Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.
+Среда выполнения состояние является не hard-coded в этот документ; CI свидетельство является подключение к точный commit/run.

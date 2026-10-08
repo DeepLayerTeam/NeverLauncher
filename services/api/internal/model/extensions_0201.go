@@ -2,21 +2,21 @@ package model
 
 import "time"
 
-// ExtensionTarget is one executable/UI target declared by a canonical
-// neverlauncher-extension.json manifest.
+// ExtensionTarget является один executable/UI цель объявлять через канонический
+// neverlauncher-расширение.JSON манифест.
 type ExtensionTarget struct {
 	Kind       string `json:"kind"`
 	Entrypoint string `json:"entrypoint"`
 }
 
-// ExtensionAdminPage declares a sandboxed Admin page rendered by the host.
+// ExtensionAdminPage объявлять песочница Администратор страница rendered через хост.
 type ExtensionAdminPage struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
 }
 
-// ExtensionAdminNavigation contributes one sidebar entry backed by an Admin page.
+// ExtensionAdminNavigation contributes один sidebar запись основанный через Администратор страница.
 type ExtensionAdminNavigation struct {
 	ID     string `json:"id"`
 	Label  string `json:"label"`
@@ -24,7 +24,7 @@ type ExtensionAdminNavigation struct {
 	Order  int    `json:"order,omitempty"`
 }
 
-// ExtensionAdminWidget contributes a dashboard iframe backed by an Admin page.
+// ExtensionAdminWidget contributes dashboard iframe основанный через Администратор страница.
 type ExtensionAdminWidget struct {
 	ID     string `json:"id"`
 	Title  string `json:"title"`
@@ -32,8 +32,8 @@ type ExtensionAdminWidget struct {
 	Height int    `json:"height,omitempty"`
 }
 
-// ExtensionAdminAction contributes a toolbar action that activates a page and
-// delivers the action ID over the typed Admin bridge.
+// ExtensionAdminAction contributes toolbar действие тот activates страница и
+// доставляет действие ID над типизированный Администратор мост.
 type ExtensionAdminAction struct {
 	ID        string `json:"id"`
 	Label     string `json:"label"`
@@ -41,9 +41,9 @@ type ExtensionAdminAction struct {
 	Placement string `json:"placement,omitempty"`
 }
 
-// ExtensionAdminContributions are declarative slot bindings. The executable UI
-// stays inside the sandboxed admin target iframe; these values never inject JS
-// into the NeverLauncher Admin bundle.
+// ExtensionAdminContributions являются declarative slot привязка. исполняемый UI
+// оставаться внутри песочница администратор цель iframe; эти значения никогда inject JS
+// в NeverLauncher Администратор комплект.
 type ExtensionAdminContributions struct {
 	Pages            []ExtensionAdminPage       `json:"pages,omitempty"`
 	Navigation       []ExtensionAdminNavigation `json:"navigation,omitempty"`
@@ -51,14 +51,14 @@ type ExtensionAdminContributions struct {
 	Actions          []ExtensionAdminAction     `json:"actions,omitempty"`
 }
 
-// ExtensionDesktopPage declares one sandboxed Desktop page.
+// ExtensionDesktopPage объявлять один песочница Настольное приложение страница.
 type ExtensionDesktopPage struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
 }
 
-// ExtensionDesktopNavigation contributes a Desktop sidebar entry.
+// ExtensionDesktopNavigation contributes Настольное приложение sidebar запись.
 type ExtensionDesktopNavigation struct {
 	ID     string `json:"id"`
 	Label  string `json:"label"`
@@ -66,7 +66,7 @@ type ExtensionDesktopNavigation struct {
 	Order  int    `json:"order,omitempty"`
 }
 
-// ExtensionDesktopAction contributes an action delivered to the sandboxed page.
+// ExtensionDesktopAction contributes действие доставлять к песочница страница.
 type ExtensionDesktopAction struct {
 	ID        string `json:"id"`
 	Label     string `json:"label"`
@@ -74,45 +74,45 @@ type ExtensionDesktopAction struct {
 	Placement string `json:"placement,omitempty"`
 }
 
-// ExtensionDesktopContributions bind an isolated Desktop target to launcher slots.
+// ExtensionDesktopContributions привязывать изолированный Настольное приложение цель к лаунчер slots.
 type ExtensionDesktopContributions struct {
 	Pages      []ExtensionDesktopPage       `json:"pages,omitempty"`
 	Navigation []ExtensionDesktopNavigation `json:"navigation,omitempty"`
 	Actions    []ExtensionDesktopAction     `json:"actions,omitempty"`
 }
 
-// ExtensionCLICommand is one namespaced command exposed by a CLI target.
+// ExtensionCLICommand является один пространство имён команда предоставлять через CLI цель.
 type ExtensionCLICommand struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Usage       string `json:"usage,omitempty"`
 }
 
-// ExtensionCLIContributions describe the namespace that nl resolves before
-// starting the isolated CLI target through the Extension Host Protocol.
+// ExtensionCLIContributions описывать пространство имён тот nl разрешает до
+// запуск изолированный CLI цель через Хост расширений Протокол.
 type ExtensionCLIContributions struct {
 	Namespace string                `json:"namespace"`
 	Commands  []ExtensionCLICommand `json:"commands"`
 }
 
-// ExtensionDependency declares another extension required by a concrete
-// immutable extension version.
+// ExtensionDependency объявлять другой расширение обязательный через конкретный
+// неизменяемый расширение версия.
 type ExtensionDependency struct {
 	ID       string `json:"id"`
 	Version  string `json:"version"`
 	Optional bool   `json:"optional,omitempty"`
 }
 
-// ExtensionConflict declares an incompatible extension/version range.
-// Version uses the NeverExtensions SemVer range grammar introduced in 0.20.11.
+// ExtensionConflict объявлять incompatible extension/version диапазон.
+// Версия использует NeverExtensions SemVer диапазон grammar добавленный в 0.20.11.
 type ExtensionConflict struct {
 	ID      string `json:"id"`
 	Version string `json:"version"`
 }
 
-// ExtensionManifest is the canonical NeverExtensions manifest introduced in
-// NeverLauncher 0.20.1. It replaces newly-authored neverlauncher-plugin.json
-// manifests while the CLI can still import the legacy format.
+// ExtensionManifest является канонический NeverExtensions манифест добавленный в
+// NeverLauncher 0.20.1. Это заменяет вновь-authored neverlauncher-плагин.JSON
+// манифесты пока CLI может по-прежнему импорт устаревший формат.
 type ExtensionManifest struct {
 	SchemaVersion string                         `json:"schemaVersion"`
 	ID            string                         `json:"id"`
@@ -134,7 +134,7 @@ type ExtensionManifest struct {
 	CLI           *ExtensionCLIContributions     `json:"cli,omitempty"`
 }
 
-// Extension is the stable identity shared by all immutable versions.
+// Расширение является стабильный идентичность общий через все неизменяемый версии.
 type Extension struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -146,8 +146,8 @@ type Extension struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// ExtensionVersion stores one immutable canonical manifest. ManifestSHA256 is
-// computed from deterministic canonical JSON before persistence.
+// ExtensionVersion хранит один неизменяемый канонический манифест. ManifestSHA256 является
+// computed из детерминированный канонический JSON до хранение.
 type ExtensionVersion struct {
 	ExtensionID    string            `json:"extensionId"`
 	Version        string            `json:"version"`
@@ -158,13 +158,13 @@ type ExtensionVersion struct {
 	CreatedAt      time.Time         `json:"createdAt"`
 }
 
-// ExtensionInstall is the persisted desired/current lifecycle state. The 0.20.4
-// lifecycle manager owns transitions; the 0.20.5 Extension Host consumes enabled state.
+// ExtensionInstall является сохранённый desired/current жизненный цикл состояние. 0.20.4
+// жизненный цикл диспетчер владеет переходы; 0.20.5 Хост расширений использовать включённый состояние.
 type ExtensionInstall struct {
 	ExtensionID string `json:"extensionId"`
 	Scope       string `json:"scope"`
 	ScopeID     string `json:"scopeId,omitempty"`
-	// Version is retained as the 0.20.1 compatibility alias for DesiredVersion.
+	// Версия является сохранённый как 0.20.1 совместимость псевдоним для DesiredVersion.
 	Version                 string     `json:"version"`
 	DesiredVersion          string     `json:"desiredVersion"`
 	CurrentVersion          string     `json:"currentVersion,omitempty"`

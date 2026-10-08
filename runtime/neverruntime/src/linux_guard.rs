@@ -98,7 +98,7 @@ impl NeverGuardSupervisor {
     pub async fn ensure_started(&self)->Result<NeverGuardStatus,String>{
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
-            if handle.child.try_wait().map_err(|e|format!("NeverGuard process check failed: {e}"))?.is_none(){
+            if handle.child.try_wait().map_err(|e|format!("NeverGuard процесс проверка ошибка: {e}"))?.is_none(){
                 if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
@@ -111,10 +111,10 @@ impl NeverGuardSupervisor {
         let mut command=Command::new(&executable);
         command.arg("--socket").arg(&endpoint).arg("--parent-pid").arg(parent_pid.to_string()).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
         prepare_guard_command(&mut command);
-        let mut child=command.spawn().map_err(|e|format!("failed to spawn NeverGuard {}: {e}",executable.display()))?;
+        let mut child=command.spawn().map_err(|e|format!("ошибка к запуск процесса NeverGuard {}: {e}",executable.display()))?;
         let guard_pid=child.id().ok_or_else(||"NeverGuard PID unavailable".to_string())?;
         let mut stdin=child.stdin.take().ok_or_else(||"NeverGuard bootstrap stdin unavailable".to_string())?;
-        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("NeverGuard bootstrap write failed: {e}")); }
+        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("NeverGuard инициализировать запись ошибка: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
@@ -122,7 +122,7 @@ impl NeverGuardSupervisor {
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
-        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("NeverGuard release identity query failed: {e}"))?;
+        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("NeverGuard релиз идентичность query ошибка: {e}"))?;
         let mut status=parse_status(status_value)?; status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
         *state=Some(handle); Ok(status)
     }
@@ -145,18 +145,18 @@ fn runtime_dir()->Result<PathBuf,String>{
     let p = std::env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{uid}")));
-    let m=std::fs::metadata(&p).map_err(|e|format!("stat Linux runtime directory {} failed: {e}",p.display()))?;
+    let m=std::fs::metadata(&p).map_err(|e|format!("stat Linux среда выполнения каталог {} ошибка: {e}",p.display()))?;
     if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Linux runtime directory must be owned by current uid with no group/world access".into())}
-    let d=p.join("neverlauncher"); std::fs::create_dir_all(&d).map_err(|e|format!("create runtime dir failed: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
+    let d=p.join("neverlauncher"); std::fs::create_dir_all(&d).map_err(|e|format!("создавать среда выполнения dir ошибка: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{ let mut r=[0u8;8];OsRng.fill_bytes(&mut r);Ok(runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)))) }
 fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("socket parent missing")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("NeverGuard socket outside private runtime directory".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("socket filename invalid")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("NeverGuard socket name malformed".into())} Ok(()) }
-fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} failed: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} must be a regular non-symlink file",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} must not be group/world writable",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} is not executable",path.display()))}; Ok(()) }
+fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} ошибка: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть regular non-символическая ссылка файл",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} должен быть принадлежащий через текущий UID или корень",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} должен не быть group/world writable",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} является не исполняемый",path.display()))}; Ok(()) }
 fn sha256_file(path:&Path)->Result<String,String>{let f=File::open(path).map_err(|e|e.to_string())?;let mut r=BufReader::new(f);let mut h=Sha256::new();let mut b=[0u8;65536];loop{let n=r.read(&mut b).map_err(|e|e.to_string())?;if n==0{break}h.update(&b[..n]);}Ok(hex::encode(h.finalize()))}
 fn verify_linux_package_manifest(guard:&Path)->Result<(),String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
     let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and NeverGuard must be in same package directory".into())}
-    let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?; let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Linux package manifest JSON invalid: {e}"))?;
+    let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?; let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Linux пакет манифест JSON недопустимый: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
     let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==NEVERGUARD_LINUX_HARDENING_VERSION;
     let canonical=m.schema_version=="1.0"&&m.platform=="linux"&&m.architecture==canonical_arch;
@@ -165,22 +165,22 @@ fn verify_linux_package_manifest(guard:&Path)->Result<(),String>{
         let name=path.file_name().and_then(|v|v.to_str()).ok_or("artifact name invalid")?;
         let a=m.artifacts.iter().find(|a|{
             if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
-        }).ok_or_else(||format!("artifact {name} missing from Linux package manifest"))?;
+        }).ok_or_else(||format!("артефакт {name} отсутствующий из Linux пакет манифест"))?;
         let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;
-        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux package artifact verification failed: {name}"))}
+        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Linux пакет артефакт проверка ошибка: {name}"))}
     }
     Ok(())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("desktop parent missing")?.join("neverguard"))}
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
-    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
+    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix сокет подключение ошибка: {e}"))}sleep(Duration::from_millis(40)).await}}
     }
 }
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
     let fd=stream.as_raw_fd(); let mut cred=libc::ucred{pid:0,uid:0,gid:0}; let mut len=std::mem::size_of::<libc::ucred>() as libc::socklen_t;
     let rc=unsafe{libc::getsockopt(fd,libc::SOL_SOCKET,libc::SO_PEERCRED,&mut cred as *mut _ as *mut libc::c_void,&mut len)};
-    if rc!=0{return Err(format!("SO_PEERCRED failed: {}",std::io::Error::last_os_error()))} if cred.pid as u32!=expected_pid||cred.uid!=expected_uid{return Err(format!("NeverGuard peer credential mismatch pid={} uid={}",cred.pid,cred.uid))} Ok(())
+    if rc!=0{return Err(format!("SO_PEERCRED ошибка: {}",std::io::Error::last_os_error()))} if cred.pid as u32!=expected_pid||cred.uid!=expected_uid{return Err(format!("NeverGuard узел учётные данные несоответствие PID={} UID={}",cred.pid,cred.uid))} Ok(())
 }
 
 async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guard_pid:u32,secret:&[u8;32])->Result<(UnixStream,[u8;32],NeverGuardStatus),String>{
@@ -198,19 +198,19 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     let seq=h.next_sequence; let id=random_id(); let mac=request_mac(&h.session_key,seq,&id,command,payload); let req=RequestEnvelope{protocol_version:NEVERGUARD_PROTOCOL_VERSION,sequence:seq,request_id:id.clone(),command:command.into(),payload:payload.into(),mac:hex::encode(mac)};
     timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"NeverGuard IPC write timeout".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
-    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("NeverGuard IPC read timeout for {command}"))??;
-    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("NeverGuard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("NeverGuard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("NeverGuard response JSON invalid: {e}"))
+    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("NeverGuard IPC чтение тайм-аут для {command}"))??;
+    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("NeverGuard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("NeverGuard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("NeverGuard ответ JSON недопустимый: {e}"))
 }
-fn parse_status(v:Value)->Result<NeverGuardStatus,String>{let s:NeverGuardStatus=serde_json::from_value(v).map_err(|e|format!("NeverGuard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&NeverGuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("NeverGuard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="linux-amd64"{return Err(format!("NeverGuard platform mismatch: expected linux-amd64, got {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("NeverGuard protocol mismatch: Desktop={} Guard={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
+fn parse_status(v:Value)->Result<NeverGuardStatus,String>{let s:NeverGuardStatus=serde_json::from_value(v).map_err(|e|format!("NeverGuard состояние недопустимый: {e}"))?;validate_release_identity(&s)?;Ok(s)}
+fn validate_release_identity(s:&NeverGuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("NeverGuard релиз версия несоответствие: Настольное приложение={} Защита={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="linux-amd64"{return Err(format!("NeverGuard платформа несоответствие: ожидаемый linux-amd64, получил {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("NeverGuard протокол несоответствие: Настольное приложение={} Защита={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let l=p.linux.as_ref().ok_or("Linux process policy details missing")?;if p.schema!=NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!l.no_new_privs||!l.dumpable_disabled||!l.core_dumps_disabled||!l.ptrace_restricted||!l.parent_death_signal||!l.private_umask{return Err("NeverGuard Linux process policy rejected".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&NeverGuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&NeverGuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Linux Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
 
 pub async fn run_linux_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
-    validate_endpoint(&endpoint)?; let hard=ensure_linux_production_hardening()?; let policy=policy_report()?; let observed=crate::integrity::observed_linux_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("NeverGuard Linux parent mismatch expected={parent_pid} observed={observed}"))}
-    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("bootstrap secret read failed: {e}"))?; }
-    if endpoint.exists(){return Err("NeverGuard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
+    validate_endpoint(&endpoint)?; let hard=ensure_linux_production_hardening()?; let policy=policy_report()?; let observed=crate::integrity::observed_linux_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("NeverGuard Linux родительский несоответствие ожидаемый={parent_pid} наблюдаемый={observed}"))}
+    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("инициализировать секрет чтение ошибка: {e}"))?; }
+    if endpoint.exists(){return Err("NeverGuard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("привязывать {} ошибка: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
     let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("NeverGuard Unix socket ACL verification failed".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
     loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("NeverGuard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"NeverGuard accept timeout".to_string())?.map_err(|e|e.to_string())?;
@@ -234,12 +234,12 @@ async fn build_integrity_evidence(
         .ok_or_else(|| "Linux process policy details missing".to_string())?;
     let mut evidence = tokio::task::spawn_blocking(move || collect_linux_integrity_evidence(parent_pid))
         .await
-        .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
+        .map_err(|err| format!("NeverGuard целостность обработчик ошибка: {err}"))??;
 
-    // PR_GET_PDEATHSIG is task/thread-local on Linux. The policy report is captured
-    // on NeverGuard's original task before heavy evidence collection is moved to a
-    // blocking worker. Re-bind those already verified hardening facts here instead
-    // of treating the worker thread's task-local state as the Guard process state.
+    // PR_GET_PDEATHSIG является task/thread-local на Linux. политика отчёт является captured
+    // на NeverGuard's исходный task до heavy свидетельство коллекция является moved к 
+    // blocking обработчик. Re-привязывать те уже проверен усиление защиты facts здесь вместо этого
+    // treating обработчик thread's task-локальный состояние как Защита процесс состояние.
     let guard_security = evidence
         .guard
         .linux
@@ -263,7 +263,7 @@ async fn build_guard_attestation(
     payload: &str,
 ) -> Result<NeverGuardRemoteAttestation, String> {
     let request: GuardAttestationRequest = serde_json::from_str(payload)
-        .map_err(|err| format!("attestation request invalid: {err}"))?;
+        .map_err(|err| format!("аттестация запрос недопустимый: {err}"))?;
     let evidence = build_integrity_evidence(parent_pid, key, policy).await?;
     let mut attestation = NeverGuardRemoteAttestation {
         schema: NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA.into(),
@@ -336,34 +336,34 @@ async fn serve_commands(
                     started_at_unix: started,
                     message: "NeverGuard Linux production boundary ready".into(),
                 })
-                .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                .map_err(|err| format!("NeverGuard состояние serialization ошибка: {err}"))?,
                 false,
             ),
             "process-policy" => (
                 true,
                 serde_json::to_string(&policy)
-                    .map_err(|err| format!("NeverGuard process policy serialization failed: {err}"))?,
+                    .map_err(|err| format!("NeverGuard процесс политика serialization ошибка: {err}"))?,
                 false,
             ),
             "integrity-evidence" => match build_integrity_evidence(parent_pid, &key, &policy).await {
                 Ok(evidence) => (
                     true,
                     serde_json::to_string(&evidence)
-                        .map_err(|err| format!("NeverGuard integrity serialization failed: {err}"))?,
+                        .map_err(|err| format!("NeverGuard целостность serialization ошибка: {err}"))?,
                     false,
                 ),
-                Err(err) => (false, format!("NeverGuard integrity evidence failed: {err}"), false),
+                Err(err) => (false, format!("NeverGuard целостность свидетельство ошибка: {err}"), false),
             },
             "guard-attestation" => {
                 match build_guard_attestation(parent_pid, &key, &policy, &request.payload).await {
                     Ok(attestation) => (
                         true,
                         serde_json::to_string(&attestation).map_err(|err| {
-                            format!("NeverGuard attestation serialization failed: {err}")
+                            format!("NeverGuard аттестация serialization ошибка: {err}")
                         })?,
                         false,
                     ),
-                    Err(err) => (false, format!("NeverGuard attestation failed: {err}"), false),
+                    Err(err) => (false, format!("NeverGuard аттестация ошибка: {err}"), false),
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
@@ -392,7 +392,7 @@ async fn serve_commands(
 
 async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
 async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(one[0]);}if b.is_empty(){return Err("empty IPC frame".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
-fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n} invalid length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
+fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} недопустимый hex"))?;if b.len()!=32{return Err(format!("{n} недопустимый length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
 #[derive(Clone, Copy)]
 struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,started:u64,client_nonce:&'a [u8;32],server_nonce:&'a [u8;32]}
 #[derive(Clone, Copy)]

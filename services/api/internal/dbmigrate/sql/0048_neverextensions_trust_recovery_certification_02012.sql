@@ -1,4 +1,4 @@
--- NeverLauncher 0.20.12: Trust, Recovery & Certification.
+-- NeverLauncher 0.20.12: Доверие, Восстановление и Сертификация.
 
 CREATE TABLE IF NOT EXISTS extension_trust_policy (
     singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),

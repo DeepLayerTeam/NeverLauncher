@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Validate GA source contract
+      - name: Проверять GA исходник контракт
         shell: bash
         run: |
           python3 scripts/compatibility/neverextensions_ga_0210.py validate
@@ -52,13 +52,13 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
 
-      - name: Backend NeverExtensions GA tests
+      - name: Серверная часть NeverExtensions GA тесты
         shell: bash
         run: |
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
           (cd services/api && go build ./cmd/neverlauncher-api)
 
-      - name: CLI and SDK tests
+      - name: CLI и SDK тесты
         shell: bash
         run: |
           (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher)
@@ -68,17 +68,17 @@ jobs:
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk
 
-      - name: Admin host build
+      - name: Администратор хост сборка
         shell: bash
         run: |
           (cd apps/admin && npm ci && npm run build)
 
-      - name: Desktop host build
+      - name: Настольное приложение хост сборка
         shell: bash
         run: |
           (cd apps/desktop && npm ci && npm run build)
 
-      - name: Write GA evidence
+      - name: Запись GA свидетельство
         shell: bash
         run: |
           mkdir -p evidence
@@ -91,7 +91,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-ga-evidence-${{ matrix.target }}
+          name: neverextensions-ga-свидетельство-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
 
   certificate:
@@ -107,12 +107,12 @@ jobs:
           pattern: neverextensions-ga-evidence-*
           path: evidence-raw
           merge-multiple: true
-      - name: Build fail-closed public matrix and certificate
+      - name: Сборка отказ с блокировкой публичная матрица и сертификат
         run: |
           python3 scripts/compatibility/neverextensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_GA_COMPATIBILITY.json --out-md NEVEREXTENSIONS_GA_COMPATIBILITY.md --out-certificate NEVEREXTENSIONS_GA_CERTIFICATE.json
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-0.21.0-ga-certification
+          name: neverextensions-0.21.0-ga-сертификация
           path: |
             NEVEREXTENSIONS_GA_COMPATIBILITY.json
             NEVEREXTENSIONS_GA_COMPATIBILITY.md

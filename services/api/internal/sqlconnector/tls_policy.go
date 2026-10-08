@@ -31,14 +31,14 @@ func validatePostgresTLS(cfg RuntimeConfig) error {
 		case "require", "verify-ca", "verify-full":
 			return nil
 		default:
-			return fmt.Errorf("PostgreSQL TLS is required: sslmode=%s may use plaintext; use sslmode=require/verify-ca/verify-full", mode)
+			return fmt.Errorf("PostgreSQL TLS является обязательный: sslmode=%s может использовать открытый текст; использовать sslmode=require/verify-ca/verify-full", mode)
 		}
 	}
 	switch mode {
 	case "verify-full", "verify-ca":
 		return nil
 	default:
-		return fmt.Errorf("PostgreSQL TLS verification is required: use sslmode=verify-full/verify-ca or explicitly allowInsecureTls")
+		return fmt.Errorf("PostgreSQL TLS проверка является обязательный: использовать sslmode=verify-full/verify-ca или явно allowInsecureTls")
 	}
 }
 
@@ -48,22 +48,22 @@ func validateMySQLTLSMode(cfg RuntimeConfig, tlsMode string) error {
 	}
 	mode := strings.ToLower(strings.TrimSpace(tlsMode))
 	if mode == "" || mode == "false" {
-		return fmt.Errorf("MySQL/MariaDB TLS is required: configure tls=true")
+		return fmt.Errorf("MySQL/MariaDB TLS является обязательный: настраивать TLS=true")
 	}
 	if cfg.AllowInsecureTLS {
 		switch mode {
 		case "true", "skip-verify":
 			return nil
 		default:
-			return fmt.Errorf("MySQL/MariaDB TLS is required without plaintext fallback; tls=%s is not allowed", mode)
+			return fmt.Errorf("MySQL/MariaDB TLS является обязательный без открытый текст резервный вариант; TLS=%s является не разрешён", mode)
 		}
 	}
 	switch mode {
 	case "true":
 		return nil
 	case "skip-verify", "preferred":
-		return fmt.Errorf("MySQL/MariaDB TLS verification is required; tls=%s is not allowed", mode)
+		return fmt.Errorf("MySQL/MariaDB TLS проверка является обязательный; TLS=%s является не разрешён", mode)
 	default:
-		return fmt.Errorf("MySQL/MariaDB TLS verification requires tls=true; custom TLS config %q is not registered by NeverLauncher", mode)
+		return fmt.Errorf("MySQL/MariaDB TLS проверка требует TLS=true; custom TLS конфигурация %q является не регистрировать через NeverLauncher", mode)
 	}
 }

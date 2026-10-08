@@ -1,320 +1,326 @@
-## Durable Boundaries & Certification — 0.21.3
+## Полная русификация — 0.21.4
 
-`0.21.3` moves publication correctness out of process memory. Package mutations use PostgreSQL distributed leases with monotonically increasing fencing tokens; publish is a persisted idempotent job that survives API restart, re-checks live authorization immediately before commit and atomically CAS-publishes the exact validated manifest/status while writing its audit/outbox state in the same transaction. Multiple API replicas claim work and outbox delivery with `FOR UPDATE SKIP LOCKED`.
+`0.21.4` переводит человекочитаемую часть NeverLauncher на русский язык без изменения машинных контрактов. Русифицированы основная документация, руководства по развёртыванию и безопасности, комментарии и doc-комментарии в исходном коде, пользовательские сообщения API/CLI, подписи Admin/Desktop, описания OpenAPI, тексты CI и служебных сценариев.
 
-Runtime validation `runId` values are durable single-use nonces, so restart cannot make signed evidence reusable. Publication events are written to a transactional outbox and delivered into the existing NeverExtensions event bus with retry leases. `GET /api/v1/jobs/{jobId}` exposes persisted job state without granting cross-project visibility. CI includes PostgreSQL multi-replica lease/restart certification and a source gate that rejects direct publish bypasses.
+Имена продуктов и технологий, кодовые идентификаторы, URL, пути, переменные окружения, JSON/OpenAPI-ключи, значения enum/status, SQL-схема, имена HTTP-заголовков, криптографические домены и другие протокольные значения сохранены без перевода, поскольку их изменение нарушило бы совместимость. Версия не меняет рабочие границы авторизации, проверки, доверия и долговременной публикации, реализованные в 0.21.1–0.21.3.
 
-## Honest Validation & Trust Boundaries — 0.21.2
+## Надёжные долговременные границы и сертификация — 0.21.3
 
-`0.21.2` separates package integrity from real runtime evidence. `POST /api/v1/packages/{packageId}/integrity-check` verifies stored bytes, SHA-256 metadata, the Ed25519 manifest signature and compatibility metadata, but never launches Minecraft. The legacy `/smoke-test` alias uses that same path and reports `runtimeExecuted=false` / `runtimeStatus=not-checked`.
+`0.21.3` переносит корректность публикации из памяти процесса в долговременные границы PostgreSQL. Изменения пакетов защищены распределёнными арендами с монотонными токенами ограждения. Публикация выполняется как сохраняемая идемпотентная задача: она переживает перезапуск API, повторно проверяет актуальную авторизацию непосредственно перед фиксацией и атомарно публикует только ожидаемое состояние и точный хеш манифеста. Состояние аудита и транзакционной исходящей очереди записывается в той же транзакции. Несколько реплик API захватывают задачи и события через `FOR UPDATE SKIP LOCKED`.
 
-Projects can keep the default `integrity` publish policy or require `runtime` validation, optionally including a real server join. Runtime evidence is an Ed25519-signed `neverlauncher/runtime-validation/v1` document tied to the exact current manifest digest and a trusted key from `NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON`. CI can create the signed payload with `nl pipeline runtime-sign` and submit it with `nl pipeline runtime-submit`; publish rejects missing, stale, mismatched or untrusted evidence.
+`runId` проверки реального запуска хранится как долговременное одноразовое значение, поэтому перезапуск не позволяет повторно использовать подписанное свидетельство. События публикации записываются в транзакционную исходящую очередь и доставляются в существующую шину событий NeverExtensions с повторными арендами. `GET /api/v1/jobs/{jobId}` возвращает сохранённое состояние задачи с соблюдением межпроектной изоляции. CI включает многорепликовую PostgreSQL-сертификацию перезапуска и ограждения, а также проверку исходного кода на прямые обходы долговременной публикации.
 
-Device responses now expose a structured `trustAssessment`. Local hardware-bound P-256 key possession remains distinct from remote TPM/Secure-Enclave provenance; existing devices are migrated as `remoteHardwareProvenance=not-verified` and do not gain assurance automatically. Backend extension processes are reported as `trusted-process`; existing process-tree/resource limits are not described as an OS sandbox.
+## Честная проверка и границы доверия — 0.21.2
 
-## Authorization Foundation & Frozen Coverage — 0.21.1
+`0.21.2` разделяет проверку целостности пакета и свидетельство фактического запуска. `POST /api/v1/packages/{packageId}/integrity-check` проверяет сохранённые байты, метаданные SHA-256, подпись манифеста Ed25519 и метаданные совместимости, но не запускает Minecraft. Устаревший псевдоним `/smoke-test` использует тот же путь проверки целостности и явно сообщает `runtimeExecuted=false` и `runtimeStatus=not-checked`.
 
-`0.21.1` moves authorization decisions out of JWT snapshots and into the live repository-backed policy path. Global roles and project memberships are evaluated separately, `project_user_roles` is authoritative, project/package handlers resolve the concrete resource scope before mutation, and role/membership revocation applies to already-issued sessions. New local Minecraft GameProfile identities are persisted independently from internal Never user IDs.
+Проект может использовать политику публикации `integrity` или требовать `runtime`, при необходимости с фактическим подключением к серверу. Свидетельство запуска — подписанный Ed25519 документ `neverlauncher/runtime-validation/v1`, связанный с точным хешем текущего манифеста и доверенным ключом из `NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON`. CI формирует его через `nl pipeline runtime-sign`, отправляет через `nl pipeline runtime-submit`, а публикация отклоняет отсутствующее, устаревшее, несоответствующее или подписанное недоверенным ключом свидетельство.
 
-The release also ships an executable frozen-coverage gate under `scripts/compatibility/authorization_frozen_coverage_0211.py`. It seals the security-sensitive 0.21.1 sources, enforces G01-G35/M01-M19 evidence references and verifies the pinned GravitLauncher v5.7.12→v5.7.13 upstream delta in CI.
+Ответы об устройствах содержат структурированную `trustAssessment`. Владение локальным аппаратно привязанным ключом P-256 отделено от удалённо подтверждённого происхождения TPM/Защищённый Анклав; существующие устройства мигрируют с `remoteHardwareProvenance=not-verified` и не получают более высокий уровень доверия автоматически. Серверные расширения честно обозначаются как `trusted-process`: ограничения дерева процессов и ресурсов не называются песочницей ОС.
+
+## Основа авторизации и зафиксированное покрытие — 0.21.1
+
+`0.21.1` переносит решения авторизации из снимка разрешений JWT в актуальный путь, основанный на репозитории. Глобальные роли и участия в проектах оцениваются раздельно, `project_user_roles` является авторитетным источником проектных ролей, а обработчики проектов и пакетов разрешают конкретную область ресурса до изменения. Отзыв роли или участия начинает действовать и для уже выданной сессии. Новые локальные UUID Minecraft GameProfile сохраняются независимо от внутреннего ID пользователя NeverLauncher.
+
+Исполняемый контроль `scripts/compatibility/authorization_frozen_coverage_0211.py` фиксирует чувствительные к безопасности исходники, проверяет реестр свидетельств G01–G35/M01–M19 и закреплённую разницу GravitLauncher `v5.7.12` → `v5.7.13` в CI.
 
 ## NeverExtensions GA — 0.21.0
 
-`0.21.0` freezes the production NeverExtensions contract: Extension Package `1.0`, Manifest `2.0`, Host Protocol `1.0` and Extension API `1.0`. New registry publications use `api: 1.0`; already signed 0.20 packages with the legacy `api: 3.7` marker are accepted only as a compatibility alias so their signed payload is never rewritten. Backend startup performs fail-closed GA reconciliation of lifecycle state, lockfiles, registry identity, publisher/key trust, quarantine/emergency state, permissions, dependencies and conflicts before extensions are allowed to run.
+`0.21.0` фиксирует рабочие контракты NeverExtensions: Пакет `1.0`, Манифест `2.0`, Хост Протокол `1.0` и Расширение API `1.0`. Новые публикации реестра используют `api: 1.0`; уже подписанные пакеты 0.20 с устаревшим маркером `api: 3.7` принимаются только как совместимый псевдоним, поэтому их подписанная нагрузка никогда не переписывается. Запуск на серверной части выполняет закрытое согласование состояния жизненного цикла, файлов блокировок, идентичности реестра, доверия издателя и ключа, карантина, аварийного отключения, разрешений, зависимостей и конфликтов до разрешения запуска расширения.
 
-All four host surfaces (Backend/Admin/Desktop/CLI) and their SDKs negotiate Extension API v1. Source extensions can be upgraded atomically with `nl extension upgrade-source <path>`; signed `.nlext` artifacts must be rebuilt and re-signed. Release/certification details and the public matrix process are documented in `neverextensions/GA.md`; CI collects independent Linux, Windows and macOS evidence before producing the GA certificate.
+Все четыре поверхности хоста — Серверная часть, Администратор, Настольное приложение и CLI — и соответствующие SDK согласовывают Расширение API v1. Исходный код расширения можно атомарно обновить через `nl extension upgrade-source <path>`; подписанные `.nlext` после изменения должны быть пересобраны и подписаны заново. Подробности сертификации и публичная матрица описаны в `neverextensions/GA.md`; CI собирает независимые свидетельства Linux, Windows и macOS перед формированием сертификата GA.
 
-## NeverExtensions Core — 0.20.1
+## Ядро NeverExtensions — 0.20.1
 
-`0.20.1` introduces the first production persistence layer for NeverExtensions. The canonical manifest is now `neverlauncher-extension.json` schema `2.0`; one immutable extension version can declare multiple `backend`, `admin`, `desktop` and `cli` targets, requested permissions, hooks and dependencies. The Backend persists extension identity/version metadata through the normal Repository implementation rather than an in-memory declaration or a disconnected table.
+`0.20.1` добавляет первый рабочий слой хранения NeverExtensions. Канонический манифест — `neverlauncher-extension.json` схемы `2.0`; одна неизменяемая версия расширения может объявлять цели `backend`, `admin`, `desktop` и `cli`, запрошенные разрешения, хуки и зависимости. Серверная часть сохраняет идентичность и версии расширений через обычную реализацию Репозиторий, а не в памяти процесса и не в отдельной декларативной подсистеме.
 
-PostgreSQL migration `0042_neverextensions_core_0201` creates `extensions`, `extension_versions`, `extension_permissions`, `extension_dependencies` and `extension_installs`. Registering a version is transactional: the manifest is normalized, hashed with SHA-256 and immutable by `(extensionId, version)`; an existing extension publisher cannot be replaced by a different publisher. Core Admin routes require `extension:manage` and expose registration/read operations only; process lifecycle and remote registry behavior remain separate later NeverExtensions milestones.
+Миграция PostgreSQL `0042_neverextensions_core_0201` создаёт `extensions`, `extension_versions`, `extension_permissions`, `extension_dependencies` и `extension_installs`. Регистрация версии транзакционна: манифест нормализуется, хешируется SHA-256 и становится неизменяемым по `(extensionId, version)`; издатель существующего расширения не может быть подменён другим издателем. Административные маршруты ядра требуют `extension:manage` и предоставляют только рабочие операции регистрации и чтения; жизненный цикл процессов и удалённый реестр развиваются отдельными этапами NeverExtensions.
 
-CLI uses `nl extension template|validate|import-legacy`. `nl sdk init` writes `neverlauncher-extension.json`. Existing `neverlauncher-plugin.json` files can be converted with `nl extension import-legacy <path> --publisher <publisher>`; new manifests are not generated in the legacy format.
+CLI предоставляет `nl extension template|validate|import-legacy`, а `nl sdk init` создаёт `neverlauncher-extension.json`. Существующий `neverlauncher-plugin.json` можно преобразовать через `nl extension import-legacy <path> --publisher <publisher>`; новые манифесты не генерируются в устаревшем формате.
 
 ## ServerBridge 3 GA — 0.20.0
 
-`0.20.0` переводит ServerBridge 3 в GA без изменения замороженного wire contract Protocol v3. Полный v3 feature-set имеет фиксированный digest `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`; новый Bridge не делает downgrade до v2, а Backend сохраняет Protocol v2 только в режиме `compatibility-deprecated`. Production migration выполняется командой `nl server-bridge migrate-v3`: она проверяет GA capabilities Backend, использует существующий certified transactional upgrade/dry-run/rollback путь, сохраняет Ed25519 node identity и записывает migration receipt.
+`0.20.0` переводит ServerBridge 3 в GA без изменения замороженного сетевой контракт Протокол v3. Полный v3 набор возможностей имеет фиксированный хеш `098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc`; новый Мост не делает понижение версии до v2, а Серверная часть сохраняет Протокол v2 только в режиме `compatibility-deprecated`. Рабочий миграция выполняется командой `nl server-bridge migrate-v3`: она проверяет GA возможности Серверная часть, использует существующий сертифицированный транзакционный upgrade/dry-run/rollback путь, сохраняет Ed25519 узел идентичность и записывает миграция receipt.
 
-GA release boundary требует `SERVERBRIDGE3_CERTIFICATION.json` schema 1.1 и schema 3.0 release allowlist с exact SHA-256 всех 14 adapters. `GET /api/v1/server-bridge/overview` объединяет node/runtime state, telemetry, topology, control history и audit в одном operator API; Admin UI отображает этот overview напрямую. Public compatibility policy опубликован в `serverbridge/MATRIX.md` и `GET /api/v1/server-bridge/matrix`. Полная процедура миграции и сертификации: `serverbridge/GA.md`.
+GA релиз граница требует `SERVERBRIDGE3_CERTIFICATION.json` схема 1.1 и схема 3.0 релиз список разрешений с точный SHA-256 всех 14 адаптеры. `GET /api/v1/server-bridge/overview` объединяет node/runtime состояние, телеметрия, топология, управление история и аудит в одном оператор API; Панель администратора отображает этот обзор напрямую. Публичный совместимость политика опубликован в `serverbridge/MATRIX.md` и `GET /api/v1/server-bridge/matrix`. Полная процедура миграции и сертификации: `serverbridge/GA.md`.
 
-## Security & Certification — 0.19.12
+## Безопасность и Сертификация — 0.19.12
 
-`0.19.12` закрепляет ServerBridge Protocol v3 как единственный security profile для нового Bridge release: capability negotiation подписывается Backend Ed25519 key и содержит canonical capability digest, а node requests, events и control commands используют единый domain `NeverLauncher-ServerBridge-Protocol-v3`. Подписи связаны с node fingerprint, текущим `runtimeId`, identity/runtime epoch и полным сертифицированным security feature-set; downgrade или перенос подписанного сообщения на другой runtime fail-closed отклоняется.
+`0.19.12` закрепляет ServerBridge Протокол v3 как единственный профиль безопасности для нового Мост релиз: возможность согласование подписывается Серверная часть Ed25519 ключ и содержит канонический возможность хеш, а узел запросы, события и команды управления используют единый домен `NeverLauncher-ServerBridge-Protocol-v3`. Подписи связаны с узел отпечаток, текущим `runtimeId`, identity/runtime эпоха и полным сертифицированным защитная функция-задать; понижение версии или перенос подписанного сообщения на другой среда выполнения отказ с блокировкой отклоняется.
 
-Backend сохраняет rolling compatibility со старым fleet, но Bridge 0.19.12 больше не предлагает Protocol v2. Для zero-downtime Backend signing-key rotation задайте новый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY` и старый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY`: capability document и команды публикуют overlap signatures, Bridges закрепляют новую пару, после чего previous key удаляется из окружения. Удалённый ключ перестаёт быть trust anchor после обновления durable pin-set.
+Серверная часть сохраняет скользящая совместимость со старым fleet, но Мост 0.19.12 больше не предлагает Протокол v2. Для без простоя Серверная часть signing-ротация ключей задайте новый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY` и старый `NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY`: возможность документ и команды публикуют перекрытие подписи, Мост закрепляют новую пару, после чего предыдущий ключ удаляется из окружения. Удалённый ключ перестаёт быть якорь доверия после обновления долговременный закреплять-задать.
 
-Официальный ServerBridge 3 release allowlist имеет `schemaVersion=3.0`, Protocol 3, security profile/digest и ровно шесть обязательных security capabilities; CLI, Backend и release certifier проверяют эту метаинформацию и SHA-256 всех 14 platform artifacts. Adversarial E2E matrix покрывает 14 targets × 10 сценариев, включая tampered bridge/node/event/command, replay event/command, runtime rebind, downgrade и online key rotation. Новая DB migration не требуется.
+Официальный ServerBridge 3 релиз список разрешений имеет `schemaVersion=3.0`, Протокол 3, безопасность profile/digest и ровно шесть обязательных безопасность возможности; CLI, Серверная часть и релиз сертификатор проверяют эту метаинформацию и SHA-256 всех 14 платформа артефакты. Атакующий E2E матрица покрывает 14 цели × 10 сценариев, включая подменённый bridge/node/event/command, повторное воспроизведение event/command, среда выполнения rebind, понижение версии и сетевой ротация ключей. Новая DB миграция не требуется.
 
-## HA Control Plane — 0.19.11
+## HA Плоскость управления — 0.19.11
 
-`0.19.11` переводит ServerBridge control channel в multi-replica режим. Bridge принимает упорядоченный список `backend.urls`/`NEVERLAUNCHER_BACKEND_URLS`, держит active endpoint и автоматически переключается только при transport failure или `502/503/504`; `401/403` остаются terminal fail-closed ответами и не обходятся через другой Backend. Каждый runtime хранит стабильный `channelId` и durable high-water `deliverySequence`, поэтому reconnect или смена API replica продолжают канал с последнего подтверждённого ACK.
+`0.19.11` переводит ServerBridge канал управления в многорепликовый режим. Мост принимает упорядоченный список `backend.urls`/`NEVERLAUNCHER_BACKEND_URLS`, держит активный эндпоинт и автоматически переключается только при транспорт ошибка или `502/503/504`; `401/403` остаются конечный отказ с блокировкой ответами и не обходятся через другой Серверная часть. Каждый среда выполнения хранит стабильный `channelId` и долговременный high-water `deliverySequence`, поэтому переподключение или смена API реплика продолжают канал с последнего подтверждённого ACK.
 
-PostgreSQL остаётся durable source of truth: admission защищён существующим idempotency key, delivery получает глобальную sequence, `lease_owner`/`lease_token` и row lock `FOR UPDATE SKIP LOCKED`; ACK проверяет runtime, sequence, channel и fencing token и является идемпотентным между репликами. Redis используется как второй ephemeral distributed fence и channel-presence registry. При обязательном HA (`NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true`) недоступность Redis блокирует выдачу/ACK, а не переключает control path на process-local state. Локальный Bridge execution journal использует стабильный execution digest, поэтому повторная доставка после lost ACK/lease expiry не повторяет завершённый Minecraft side effect.
+PostgreSQL остаётся долговременный источник истины: допуск защищён существующим ключ идемпотентности, доставка получает глобальную последовательность, `lease_owner`/`lease_token` и блокировка строки `FOR UPDATE SKIP LOCKED`; ACK проверяет среда выполнения, последовательность, канал и токен ограждения и является идемпотентным между репликами. Redis используется как второй временный распределённый fence и канал-присутствие реестр. При обязательном HA (`NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true`) недоступность Redis блокирует выдачу/ACK, а не переключает управление путь на локальный для процесса состояние. Локальный Мост выполнение журнал использует стабильный выполнение хеш, поэтому повторная доставка после потерянный ACK/аренда истечение не повторяет завершённый Minecraft побочный эффект.
 
-Production: задайте одинаковые PostgreSQL/Redis для всех Backend replicas, уникальный `NEVERLAUNCHER_REPLICA_ID` на replica и несколько HTTPS origin в `backend.urls`. Migration `0040_serverbridge_ha_control_plane_01911` добавляет sequencing/fencing columns и индексы к существующей durable control queue.
+Рабочий: задайте одинаковые PostgreSQL/Redis для всех Серверная часть реплики, уникальный `NEVERLAUNCHER_REPLICA_ID` на реплика и несколько HTTPS источник в `backend.urls`. Миграция `0040_serverbridge_ha_control_plane_01911` добавляет sequencing/fencing столбцы и индексы к существующей долговременный управление очередь.
 
-## ServerBridge Host — 0.19.10
+## ServerBridge Хост — 0.19.10
 
-`0.19.10` добавляет опциональный host-side supervisor для ServerBridge: `nl server-bridge host configure|start|run|stop|restart|status|logs`. Host запускает существующий Minecraft/proxy entry point как отдельный JVM-процесс, не заменяет Minecraft main class и не меняет authlib/core. Для Bukkit/Proxy/Fabric/Quilt/Sponge/legacy Forge используется `java -jar`; modern Forge/NeoForge поддерживает штатные `@unix_args.txt` / `@win_args.txt`.
+`0.19.10` добавляет опциональный хост-побочный супервизор для ServerBridge: `nl server-bridge host configure|start|run|stop|restart|status|logs`. Хост запускает существующий Minecraft/proxy запись точка как отдельный JVM-процесс, не заменяет Minecraft главный класс и не меняет authlib/core. Для Bukkit/Proxy/Fabric/Quilt/Sponge/legacy Forge используется `java -jar`; современный Forge/NeoForge поддерживает штатные `@unix_args.txt` / `@win_args.txt`.
 
-Java/JRE выбирается через `--java`, `NEVERLAUNCHER_SERVERBRIDGE_JAVA`, `JAVA_HOME` или PATH и проверяется реальным `java -version`. Конфиг хранит JVM/server args и restart policy; runtime state атомарно фиксирует supervisor PID, Minecraft PID, command, exit code, crash count, restart count и timestamps. На Unix Minecraft работает в отдельной process group с SIGTERM/SIGKILL fallback; на Windows используется отдельная process group и detached supervisor. Stdout/stderr пишутся раздельно и в общий timestamped stream, `host logs --follow` позволяет читать поток без доступа к JVM stdin. Exclusive lock и stale-PID проверка не дают двум supervisor одновременно управлять одним server root.
+Java/JRE выбирается через `--java`, `NEVERLAUNCHER_SERVERBRIDGE_JAVA`, `JAVA_HOME` или PATH и проверяется реальным `java -version`. Конфиг хранит JVM/сервер args и перезапуск политика; среда выполнения состояние атомарно фиксирует супервизор PID, Minecraft PID, команда, выход код, сбой счётчик, перезапуск счётчик и метки времени. На Unix Minecraft работает в отдельной группа процессов с SIGTERM/SIGKILL резервный вариант; на Windows используется отдельная группа процессов и отсоединённый супервизор. Stdout/stderr пишутся раздельно и в общий метка времени поток, `host logs --follow` позволяет читать поток без доступа к JVM стандартный ввод. Эксклюзивный блокировка и stale-PID проверка не дают двум супервизор одновременно управлять одним сервер корень.
 
 Пример: `nl server-bridge host configure --server-root /srv/paper --platform paper --server-jar paper.jar --java /opt/jre21/bin/java --jvm-arg -Xms2G --jvm-arg -Xmx4G --restart-policy on-failure`, затем `nl server-bridge host start --server-root /srv/paper`, `status`, `logs --follow`, `restart` или `stop`.
 
-## ServerBridge 3 Zero-Patch Provisioning — 0.19.9
+## ServerBridge 3 Без патчей Предоставление учётной записи — 0.19.9
 
-`0.19.9` добавляет рабочий provisioning для уже поддерживаемых ServerBridge-платформ: `nl server-bridge detect`, `install`, `enroll`, `status`, `upgrade`, `rollback`. CLI определяет ядро по реальному server/proxy/modloader layout и JAR metadata, fail-closed отклоняет несертифицированные hybrid cores, выбирает platform-matched release JAR и проверяет его SHA-256, ServerBridge 3 certification и обязательные platform entries.
+`0.19.9` добавляет рабочий предоставление учётной записи для уже поддерживаемых ServerBridge-платформ: `nl server-bridge detect`, `install`, `enroll`, `status`, `upgrade`, `rollback`. CLI определяет ядро по реальному server/proxy/modloader структура и JAR метаданные, отказ с блокировкой отклоняет несертифицированные гибридный ядра, выбирает соответствующий платформе релиз JAR и проверяет его SHA-256, ServerBridge 3 сертификация и обязательные платформа записи.
 
-`install`/`upgrade` меняют только ServerBridge-owned files: JAR/mod/sidecar, его config, локальную Ed25519 identity, enrollment request и transaction state. `server.properties`, proxy/core JAR, authlib и конфигурация самого ядра не патчатся. Node private key остаётся только на сервере; enrollment request содержит только public key/fingerprint. `--dry-run` не меняет файловую систему, а каждая запись ведётся через transaction backup с автоматическим rollback при ошибке и явным `nl server-bridge rollback`. Для Vanilla устанавливается исполняемый sidecar launcher; существующая RCON-конфигурация ядра не переписывается.
+`install`/`upgrade` меняют только ServerBridge-принадлежащий файлы: JAR/mod/sidecar, его конфигурация, локальную Ed25519 идентичность, регистрация запрос и транзакция состояние. `server.properties`, proxy/core JAR, authlib и конфигурация самого ядра не патчатся. Узел закрытый ключ остаётся только на сервере; регистрация запрос содержит только публичный key/fingerprint. `--dry-run` не меняет файловую систему, а каждая запись ведётся через транзакция резервное копирование с автоматическим откат при ошибке и явным `nl server-bridge rollback`. Для Vanilla устанавливается исполняемый вспомогательный процесс лаунчер; существующая RCON-конфигурация ядра не переписывается.
 
-Пример: `nl server-bridge install --server-root /srv/paper --artifact-dir /opt/neverlauncher/release --backend https://launcher.example.com --server-id paper-main --project prod --profile survival --dry-run`, затем без `--dry-run` и `nl server-bridge enroll --server-root /srv/paper --token ...`.
+Пример: `nl server-bridge install --server-root /srv/paper --artifact-dir /opt/neverlauncher/release --backend https://launcher.example.com --server-id paper-main --project prod --profile survival --dry-run`, затем без `--dry-run` и `nl server-bridge enroll --server-root /srv/paper --token...`.
 
-## ServerBridge 3 Universal Server Adapters — 0.19.8
+## ServerBridge 3 Универсальный Сервер Адаптеры — 0.19.8
 
-`0.19.8` переводит ServerBridge на единый capability-based adapter contract для 14 target-платформ. К существующим Velocity/Bungee/Waterfall, Bukkit/Spigot/Paper/Purpur/Folia и Fabric/Forge/NeoForge добавлены Quilt, Sponge и stock Vanilla sidecar. Vanilla честно не объявляет pre-login gate: он использует локальный RCON и bounded `latest.log` tail для control/telemetry/events. Hybrid cores не наследуют universal certification и допускаются только через отдельную certification matrix.
+`0.19.8` переводит ServerBridge на единый возможность-based адаптер контракт для 14 target-платформ. К существующим Velocity/Bungee/Waterfall, Bukkit/Spigot/Paper/Purpur/Folia и Fabric/Forge/NeoForge добавлены Quilt, Sponge и stock Vanilla вспомогательный процесс. Vanilla честно не объявляет до входа контроль: он использует локальный RCON и ограниченный `latest.log` tail для control/telemetry/events. Гибридный ядра не наследуют универсальный сертификация и допускаются только через отдельную сертификация матрица.
 
-## ServerBridge 3 Player Session Integration 3 — 0.19.7
+## ServerBridge 3 Игрок Сессия Интеграционный 3 — 0.19.7
 
-`0.19.7` связывает launcher join, proxy и конечный backend одним 256-bit `sessionCorrelationId`. PostgreSQL хранит единственную активную gameplay correlation для Never/Minecraft session, runtime-bound proxy/backend presence и монотонную transfer chain. Новый transfer переводится в `recheck_required` и завершается только после повторной Device Trust + Guard/Minecraft Integrity проверки на target. Попытка session cloning атомарно инвалидирует предыдущую correlation и ставит durable `player.kick` через Control API на прежний proxy/backend. Session/device revoke, runtime replacement и permanent trust/integrity failure распространяют invalidate/disconnect на всю topology. Protocol v2 остаётся rolling-upgrade путём без выдуманной runtime identity.
+`0.19.7` связывает лаунчер подключение, прокси и конечный серверная часть одним 256-бит `sessionCorrelationId`. PostgreSQL хранит единственную активную игровой корреляция для Never/Minecraft сессия, привязанный к среде выполнения proxy/backend присутствие и монотонную переход цепочка. Новый переход переводится в `recheck_required` и завершается только после повторной Доверие к устройству + Guard/Minecraft Целостность проверки на цель. Попытка сессия клонирование атомарно инвалидирует предыдущую корреляция и ставит долговременный `player.kick` через Управление API на прежний proxy/backend. Session/device отзыв, среда выполнения замена и постоянный trust/integrity ошибка распространяют invalidate/disconnect на всю топология. Протокол v2 остаётся поэтапный-обновление путём без выдуманной среда выполнения идентичность.
 
-## ServerBridge 3 Topology & Routing 2 — 0.19.6
+## ServerBridge 3 Топология и Маршрутизация 2 — 0.19.6
 
-`0.19.6` переводит topology из исторически изученных handoff-edges в realtime routing plane. Каждый Protocol v3 node публикует Ed25519-подписанный snapshot, связанный с текущим `runtimeId`: `ready/maintenance/draining`, health, players/capacity и accepting state. Proxy получает только свежие допустимые backend nodes, а Backend повторно проверяет runtime/health/capacity при выдаче и redemption handoff и при прямом validate-join. Handoff v3 сохраняет source+target routing proofs; Protocol v2 остаётся для rolling upgrade. Stale topology автоматически отключается и удаляется bounded maintenance.
+`0.19.6` переводит топология из исторически изученных передача-edges в в реальном времени маршрутизация плоскость. Каждый Протокол v3 узел публикует Ed25519-подписанный снимок, связанный с текущим `runtimeId`: `ready/maintenance/draining`, работоспособность, players/capacity и принимающий состояние. Прокси получает только свежие допустимые серверная часть узлы, а Серверная часть повторно проверяет runtime/health/capacity при выдаче и использование передача и при прямом проверять-подключение. Передача v3 сохраняет исходник+цель маршрутизация доказательство; Протокол v2 остаётся для поэтапный обновление. Устаревший топология автоматически отключается и удаляется ограниченный обслуживание.
 
-## ServerBridge 3 Control API — 0.19.5
+## ServerBridge 3 Управление API — 0.19.5
 
-`0.19.5` добавляет production Backend→Bridge control channel поверх Protocol v3. Команды создаются только через RBAC (`serverbridge:control`, отдельно `serverbridge:console`), привязываются к активному `runtimeId/runtimeEpoch`, имеют обязательный idempotency key и durable PostgreSQL lifecycle. Bridge получает команды signed-node polling, проверяет отдельную Ed25519 подпись Backend, фиксирует локальный execution journal до side effect и отправляет signed ACK. Повторная доставка не повторяет завершённый side effect; неопределённое выполнение после crash/reload помечается `indeterminate`.
+`0.19.5` добавляет рабочий Серверная часть→Мост канал управления поверх Протокол v3. Команды создаются только через RBAC (`serverbridge:control`, отдельно `serverbridge:console`), привязываются к активному `runtimeId/runtimeEpoch`, имеют обязательный ключ идемпотентности и долговременный PostgreSQL жизненный цикл. Мост получает команды подписанный-узел polling, проверяет отдельную Ed25519 подпись Серверная часть, фиксирует локальный выполнение журнал до побочный эффект и отправляет подписанный ACK. Повторная доставка не повторяет завершённый побочный эффект; неопределённое выполнение после crash/reload помечается `indeterminate`.
 
-Поддерживаются `kick`, `broadcast`, whitelist/ban, save, maintenance/drain, graceful shutdown и platform console commands. Console проходит двойной allowlist — Backend и локальный Bridge config. Выполнение идёт только через native Minecraft/proxy APIs/schedulers; произвольный OS shell execution не используется. Все queue/delivery/completion transitions пишутся в audit trail, а terminal delivery rows очищаются bounded maintenance без удаления `audit_events`.
+Поддерживаются `kick`, `broadcast`, whitelist/ban, сохранение, maintenance/drain, graceful завершение и платформа консоль команды. Консоль проходит двойной список разрешений — Серверная часть и локальный Мост конфигурация. Выполнение идёт только через нативный Minecraft/proxy APIs/schedulers; произвольный OS оболочка выполнение не используется. Все queue/delivery/completion переходы пишутся в аудит след, а конечный доставка строки очищаются ограниченный обслуживание без удаления `audit_events`.
 
-## ServerBridge 3 Server Event Stream — 0.19.4
+## ServerBridge 3 Сервер Событие Поток — 0.19.4
 
-`0.19.4` добавляет production ordered event stream поверх ServerBridge Protocol v3. Каждый event получает монотонную sequence внутри конкретного verified runtime epoch, SHA-256 payload digest и отдельную Ed25519 подпись node identity; HTTP batch дополнительно проходит существующую signed-node nonce/replay protection. Bridge хранит high-water sequence и неподтверждённые events в bounded append-only journal, поэтому reconnect/plugin reload повторяет тот же batch до подтверждённого ACK без генерации новой sequence.
+`0.19.4` добавляет рабочий упорядоченный событие поток поверх ServerBridge Протокол v3. Каждый событие получает монотонную последовательность внутри конкретного проверен среда выполнения эпоха, SHA-256 полезная нагрузка хеш и отдельную Ed25519 подпись узел идентичность; HTTP пакет дополнительно проходит существующую подписанный-узел nonce/replay защита. Мост хранит high-water последовательность и неподтверждённые события в ограниченный только добавление журнал, поэтому reconnect/plugin перезагрузка повторяет тот же пакет до подтверждённого ACK без генерации новой последовательность.
 
-Backend принимает batches до 64 events, требует непрерывную последовательность, связывает event с active `runtimeId/runtimeEpoch`, идемпотентно принимает повтор уже сохранённого `(sequence,eventId,digest,signature)` и fail-closed отклоняет gap либо conflicting replay. PostgreSQL сохраняет event row, contiguous ACK cursor и `audit_events` в одной transaction. Raw delivery rows очищаются bounded maintenance после 30 дней; audit trail остаётся отдельной постоянной записью. Platform hooks публикуют startup/ready/shutdown/error/crash, player login/join/quit/kick, world load/unload и proxy connect/switch там, где соответствующее API существует.
+Серверная часть принимает пакеты до 64 события, требует непрерывную последовательность, связывает событие с активный `runtimeId/runtimeEpoch`, идемпотентно принимает повтор уже сохранённого `(sequence,eventId,digest,signature)` и отказ с блокировкой отклоняет разрыв либо конфликтующий повторное воспроизведение. PostgreSQL сохраняет событие строка, contiguous ACK курсор и `audit_events` в одной транзакция. Сырой доставка строки очищаются ограниченный обслуживание после 30 дней; аудит след остаётся отдельной постоянной записью. Платформа хуки публикуют startup/ready/shutdown/error/crash, игрок login/join/quit/kick, мир load/unload и прокси connect/switch там, где соответствующее API существует.
 
-## ServerBridge 3 Server Telemetry — 0.19.3
+## ServerBridge 3 Сервер Телеметрия — 0.19.3
 
-`0.19.3` добавляет production telemetry непосредственно в подписанный Protocol v3 heartbeat. JVM-метрики снимаются через MXBeans (heap/non-heap, GC totals/deltas, thread/daemon/peak counts), а игровые метрики публикуются platform adapter-ом только с разрешённого server/proxy thread и передаются HTTP heartbeat через immutable bounded snapshot.
+`0.19.3` добавляет рабочий телеметрия непосредственно в подписанный Протокол v3 сигнал состояния. JVM-метрики снимаются через MXBeans (heap/non-heap, GC totals/deltas, thread/daemon/peak счётчики), а игровые метрики публикуются платформа adapter-ом только с разрешённого server/proxy поток и передаются HTTP сигнал состояния через неизменяемый ограниченный снимок.
 
-Paper/Spigot/Bukkit/Purpur собирают TPS/MSPT, players, worlds/dimensions и bounded chunk/entity counters; Folia намеренно не обходит region-owned chunks/entities из global scheduler и помечает их unsupported. Fabric/Forge/NeoForge используют tick hooks и bounded entity enumeration, Velocity/BungeeCord/Waterfall публикуют proxy player capacity. Backend принимает telemetry только при negotiated `telemetry.server-v1`, связывает snapshot с уже проверенным Ed25519 runtime identity, хранит latest snapshot на node и bounded history в PostgreSQL (`0034_serverbridge_telemetry_0193`): hot-path cap около 4096 samples/node плюс HA-retention старше 7 дней.
+Paper/Spigot/Bukkit/Purpur собирают TPS/MSPT, игроки, worlds/dimensions и ограниченный chunk/entity счётчики; Folia намеренно не обходит region-принадлежащий chunks/entities из глобальный планировщик и помечает их неподдерживаемый. Fabric/Forge/NeoForge используют tick хуки и ограниченный entity enumeration, Velocity/BungeeCord/Waterfall публикуют прокси игрок ёмкость. Серверная часть принимает телеметрия только при согласовывать `telemetry.server-v1`, связывает снимок с уже проверенным Ed25519 среда выполнения идентичность, хранит последний снимок на узел и ограниченный история в PostgreSQL (`0034_serverbridge_telemetry_0193`): hot-путь cap около 4096 samples/node плюс HA-хранение старше 7 дней.
 
-## ServerBridge 3: обнаружение узла и Runtime Identity — 0.19.2
+## ServerBridge 3: обнаружение узла и Среда выполнения Идентичность — 0.19.2
 
-`0.19.2` добавляет рабочую runtime discovery/identity цепочку поверх Protocol v3. Каждый platform bridge автоматически определяет Minecraft version, Java runtime, platform/loader, server brand, hostname/node name и фактические bridge capabilities. JVM instance получает детерминированный `runtimeId`, связанный с node ID, Ed25519 key fingerprint, JVM start time, PID и hostname; весь immutable runtime descriptor отдельно подписывается зарегистрированным Ed25519 node key.
+`0.19.2` добавляет рабочую среда выполнения discovery/identity цепочку поверх Протокол v3. Каждый платформа мост автоматически определяет Minecraft версия, Java среда выполнения, platform/loader, сервер бренд, hostname/node имя и фактические мост возможности. JVM экземпляр получает детерминированный `runtimeId`, связанный с узел ID, Ed25519 отпечаток ключа, JVM запуск время, PID и имя хоста; весь неизменяемый среда выполнения дескриптор отдельно подписывается зарегистрированным Ed25519 узел ключ.
 
-Backend независимо пересчитывает runtime ID, проверяет runtime signature и node fingerprint, атомарно сохраняет current runtime и историю `runtime_epoch` в PostgreSQL. Новый runtime ID после stale predecessor фиксируется как `restart`, а новый runtime ID при ещё свежем predecessor — как overlapping `replacement`; одинаковый runtime ID допускает только неизменный identity digest. Runtime discovery включается согласованной парой feature flags `runtime.node-discovery-v1` + `security.runtime-identity-ed25519`, поэтому bridge 0.19.2 сохраняет rolling compatibility с backend 0.19.1, а backend 0.19.2 продолжает принимать 0.19.1/v3 и 0.19.0/v2 clients без runtime attestation.
+Серверная часть независимо пересчитывает среда выполнения ID, проверяет среда выполнения подпись и узел отпечаток, атомарно сохраняет текущий среда выполнения и историю `runtime_epoch` в PostgreSQL. Новый среда выполнения ID после устаревший predecessor фиксируется как `restart`, а новый среда выполнения ID при ещё свежем predecessor — как overlapping `replacement`; одинаковый среда выполнения ID допускает только неизменный идентичность хеш. Среда выполнения обнаружение включается согласованной парой флаги функций `runtime.node-discovery-v1` + `security.runtime-identity-ed25519`, поэтому мост 0.19.2 сохраняет скользящая совместимость с серверная часть 0.19.1, а серверная часть 0.19.2 продолжает принимать 0.19.1/v3 и 0.19.0/v2 клиенты без среда выполнения аттестация.
 
 ## ServerBridge 3 — 0.19.1
 
-`0.19.1` переводит рабочий ServerBridge runtime на Protocol v3 с реальным capability negotiation через `GET /api/v1/server-bridge/capabilities`. Backend и bridge имеют отдельные v2/v3 wire contracts; v3 требует negotiated feature flags, а v2 остаётся рабочим для rolling upgrade. Bridge 0.19.1 кэширует negotiation на 5 минут и откатывается на v2 только если capabilities route отсутствует (`404`), поэтому backend failures не маскируются downgrade.
+`0.19.1` переводит рабочий ServerBridge среда выполнения на Протокол v3 с реальным возможность согласование через `GET /api/v1/server-bridge/capabilities`. Серверная часть и мост имеют отдельные v2/v3 сетевой контракты; v3 требует согласовывать флаги функций, а v2 остаётся рабочим для поэтапный обновление. Мост 0.19.1 кэширует согласование на 5 минут и откатывается на v2 только если возможности маршрут отсутствует (`404`), поэтому серверная часть ошибка не маскируются понижение версии.
 
-PostgreSQL migration `0031_serverbridge_protocol_v3_0191` разрешает protocol versions 2/3 у node и one-time join ticket; heartbeat сохраняет реально negotiated protocol ноды. Release boundary требует `SERVERBRIDGE3_CERTIFICATION.json` и наличие negotiation runtime в platform JAR. Public matrix/diagnostics публикуют current protocol `3`, supported `[3,2]` и feature flags.
+PostgreSQL миграция `0031_serverbridge_protocol_v3_0191` разрешает протокол версии 2/3 у узел и одноразовый подключение билет; сигнал состояния сохраняет реально согласовывать протокол ноды. Релиз граница требует `SERVERBRIDGE3_CERTIFICATION.json` и наличие согласование среда выполнения в платформа JAR. Публичный matrix/diagnostics публикуют текущий протокол `3`, поддерживаемый `[3,2]` и флаги функций.
 
-## NeverGuard Windows Protection GA — 0.19.0
+## NeverGuard Windows Защита GA — 0.19.0
 
-NeverLauncher `0.19.0` переводит накопленный Windows protection stack `0.18.1–0.18.12` в production GA. Официальный Windows release считается GA только при aggressive/fail-closed user-mode boundary: подписанный ранний Sensor, Continuous Module Guard, IAT Hook Engine, executable-memory integrity, Thread & Process Integrity, Debug & Instrumentation Guard, JVM-aware enforcement для Java 8/16/17/21/25, Sensor↔Guard Continuous Guard и post-launch Attestation v2 с одноразовым ServerBridge join ticket.
+NeverLauncher `0.19.0` переводит накопленный Windows защита стек `0.18.1–0.18.12` в рабочий GA. Официальный Windows релиз считается GA только при aggressive/fail-closed пользовательский режим граница: подписанный ранний Sensor, Непрерывный Модуль Защита, IAT Хук Движок, исполняемый-память целостность, Поток и Процесс Целостность, Отладка и Инструментирование Защита, JVM-учитывающий принудительное применение для Java 8/16/17/21/25, Sensor↔Защита Непрерывный Защита и после запуска Аттестация v2 с одноразовым ServerBridge подключение билет.
 
-`WINDOWS_PROTECTION_GA_CERTIFICATE.json` не является декларацией: CLI сначала заново проверяет RC certificate, adversarial evidence и Authenticode production boundary, затем хэширует exact Windows release cohort и проверяет package manifests/ZIP на отсутствие kernel `.sys` payload. GA certificate включается в Production Release Candidate и Production Delivery Release, якорится в `RELEASE_MANIFEST.json` и обязателен для `release publish-check`. Audit/compat остаются диагностическими профилями, но remote production attestation допустима только для `aggressive`.
+`WINDOWS_PROTECTION_GA_CERTIFICATE.json` не является декларацией: CLI сначала заново проверяет RC сертификат, атакующий свидетельство и Authenticode рабочий граница, затем хэширует точный Windows релиз группа и проверяет пакет манифесты/ZIP на отсутствие ядро `.sys` полезная нагрузка. GA сертификат включается в Рабочий Кандидат в релиз и Рабочий Доставка Релиз, якорится в `RELEASE_MANIFEST.json` и обязателен для `release publish-check`. Audit/compat остаются диагностическими профилями, но удалённый рабочий аттестация допустима только для `aggressive`.
 
-## Windows Protection RC — 0.18.12
+## Windows Защита RC — 0.18.12
 
-NeverLauncher `0.18.12` делает Windows protection certification частью официальной release boundary. После полного 0.18.11 adversarial matrix production pipeline импортирует exact-commit `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, повторно проверяет Authenticode/RFC3161 для Windows x64/ARM64 и хэширует фактические CLI/Desktop/NeverGuard/Sensor/NeverRuntime binaries, package ZIP, package manifests, signing evidence и allowlist. На основе этих bytes создаётся `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` с aggressive profile, обязательным capability set и детерминированным `boundarySha256`/`certificateId`.
+NeverLauncher `0.18.12` делает Windows защита сертификация частью официальной релиз граница. После полного 0.18.11 атакующий матрица рабочий конвейер импортирует точный-фиксация `WINDOWS_ADVERSARIAL_CERTIFICATE.json`, повторно проверяет Authenticode/RFC3161 для Windows x64/ARM64 и хэширует фактические CLI/Desktop/NeverGuard/Sensor/NeverRuntime бинарные файлы, пакет ZIP, пакет манифесты, подписание свидетельство и список разрешений. На основе этих байты создаётся `WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json` с агрессивный профиль, обязательным возможность задать и детерминированным `boundarySha256`/`certificateId`.
 
-`nl release windows-protection-verify` и `nl release publish-check` заново строят ожидаемую границу из содержимого release bundle, поэтому сертификат нельзя сохранить валидным после замены DLL/EXE/package manifest/adversarial evidence. RC certificate входит в exact `PRODUCTION_RELEASE_CANDIDATE.json` cohort, а stable `PRODUCTION_DELIVERY_RELEASE.json` якорит и сам RC, и adversarial certificate. Это release certification для заявленной user-mode Windows boundary; она не превращает NeverGuard в kernel/administrator-equivalent protection.
+`nl release windows-protection-verify` и `nl release publish-check` заново строят ожидаемую границу из содержимого комплект релиза, поэтому сертификат нельзя сохранить валидным после замены DLL/EXE/пакет manifest/adversarial свидетельство. RC сертификат входит в точный `PRODUCTION_RELEASE_CANDIDATE.json` группа, а стабильный `PRODUCTION_DELIVERY_RELEASE.json` якорит и сам RC, и атакующий сертификат. Это сертификация релиза для заявленной пользовательский режим Windows граница; она не превращает NeverGuard в kernel/administrator-equivalent защита.
 
-## Windows Adversarial CI — 0.18.11
+## Windows Атакующий CI — 0.18.11
 
-NeverLauncher `0.18.11` превращает накопленные Windows Guard fixtures в единый исполняемый adversarial certification pipeline. На `windows-2022` для Java `8/16/17/21/25` запускаются пять compatibility-positive и шесть adversarial-negative сценариев: Sensor startup, trusted module/Continuous Guard/process tree/HotSpot JIT, а также unsigned DLL, code-page drift, private executable thread, startup instrumentation, live debugger attach и foreign executable allocation.
+NeverLauncher `0.18.11` превращает накопленные Windows Защита фикстура в единый исполняемый атакующий сертификация конвейер. На `windows-2022` для Java `8/16/17/21/25` запускаются пять совместимость-positive и шесть атакующий-negative сценариев: Sensor запуск, доверенный module/Continuous Guard/process tree/HotSpot JIT, а также неподписанный DLL, кодовая страница расхождение, закрытый исполняемый поток, запуск инструментирование, актуальный отладчик подключение и внешний исполняемый выделение.
 
-Каждый сценарий выполняется отдельно и сохраняет проверяемый result с exit code, timeout и SHA-256 вывода; result дополнительно связан с SHA-256 `neverguard-sensor.dll` и четырёх adversarial fixtures, Git commit и GitHub run. Aggregate job выпускает `WINDOWS_ADVERSARIAL_CERTIFICATE.json` только при полном покрытии всех пяти JVM и всех 55 обязательных executions. Это operational CI certification поверх реального Guard/Sensor кода, а не декларативная compatibility table.
+Каждый сценарий выполняется отдельно и сохраняет проверяемый результат с выход код, тайм-аут и SHA-256 вывода; результат дополнительно связан с SHA-256 `neverguard-sensor.dll` и четырёх атакующий фикстура, Git фиксация и GitHub запуск. Агрегат задача выпускает `WINDOWS_ADVERSARIAL_CERTIFICATE.json` только при полном покрытии всех пяти JVM и всех 55 обязательных выполнение. Это эксплуатационный CI сертификация поверх реального Guard/Sensor кода, а не декларативная совместимость таблица.
 
-## Attestation v2 — 0.18.10
+## Аттестация v2 — 0.18.10
 
-NeverLauncher 0.18.10 переводит Windows remote attestation с одного pre-launch snapshot на двухфазную модель. Guard Attestation v1 остаётся bootstrap-границей для выдачи Minecraft session, затем защищённая JVM запускается с Sensor/Module Guard/Continuous Guard, и Desktop формирует `neverguard/windows-guard-attestation/v2` уже из фактического live `ProcessSupervisor` state.
+NeverLauncher 0.18.10 переводит Windows удалённый аттестация с одного pre-запускать снимок на двухфазную модель. Защита Аттестация v1 остаётся bootstrap-границей для выдачи Minecraft сессия, затем защищённая JVM запускается с Sensor/Module Guard/Continuous Защита, и Настольное приложение формирует `neverguard/windows-guard-attestation/v2` уже из фактического актуальный `ProcessSupervisor` состояние.
 
-Attestation v2 включает свежие Module/Hook/Memory/Thread/Debug/JVM-aware/Continuous evidence, runtime PID, heartbeat/cross-check counters, Sensor/Guard sequences и rolling event-chain hashes. Backend независимо пересчитывает canonical SHA-256, проверяет freshness и component versions, затем проверяет hardware-bound P-256 device signature. Успешная проверка выдаёт одноразовый 45-секундный Continuous Guard ticket; Windows ServerBridge join при обязательной Guard policy принимает его только один раз и дополнительно связывает с launcher version и Guard/Desktop hashes той же integrity-verified Minecraft session. Ошибка v2 или последующего join приводит к остановке уже запущенной JVM.
+Аттестация v2 включает свежие Module/Hook/Memory/Thread/Debug/JVM-aware/Continuous свидетельство, среда выполнения PID, heartbeat/cross-check счётчики, Sensor/Guard последовательности и поэтапный событие-цепочка хеширует. Серверная часть независимо пересчитывает канонический SHA-256, проверяет актуальность и компонент версии, затем проверяет привязанный к оборудованию P-256 устройство подпись. Успешная проверка выдаёт одноразовый 45-секундный Непрерывный Защита билет; Windows ServerBridge подключение при обязательной Защита политика принимает его только один раз и дополнительно связывает с лаунчер версия и Guard/Desktop хеширует той же целостность-проверен Minecraft сессия. Ошибка v2 или последующего подключение приводит к остановке уже запущенной JVM.
 
-## Continuous Guard — 0.18.9
+## Непрерывный Защита — 0.18.9
 
-NeverLauncher 0.18.9 добавляет двусторонний runtime cross-check между ранним `neverguard-sensor.dll` и родительским NeverGuard/Runtime security boundary. Помимо существующего HMAC/sequence event stream Sensor теперь ведёт независимую transport event-chain по каждому реально переданному authenticated packet. Перед выходом из `Agent_OnLoad` Sensor отправляет шестой обязательный proof `CONTINUOUS_READY`; parent должен независимо получить тот же chain digest и вернуть HMAC-защищённый Guard ACK, привязанный к Sensor sequence, Guard sequence и текущему chain digest.
+NeverLauncher 0.18.9 добавляет двусторонний среда выполнения cross-проверка между ранним `neverguard-sensor.dll` и родительским NeverGuard/Runtime граница безопасности. Помимо существующего HMAC/последовательность событие поток Sensor теперь ведёт независимую транспорт событие-цепочка по каждому реально переданному аутентифицировать packet. Перед выходом из `Agent_OnLoad` Sensor отправляет шестой обязательный доказательство `CONTINUOUS_READY`; родительский должен независимо получить тот же цепочка хеш и вернуть HMAC-защищённый Защита ACK, привязанный к Sensor последовательность, Защита последовательность и текущему цепочка хеш.
 
-После запуска Sensor выполняет cross-check раз в секунду. Каждый `CONTINUOUS_HEARTBEAT` содержит предыдущий event-chain digest и последний подтверждённый Guard sequence; parent сверяет их со своей независимой копией, включает heartbeat в chain и отвечает новым signed ACK. Sensor проверяет ACK через отдельный domain-separated HMAC и `PeekNamedPipe` timeout. Потеря parent heartbeat, sequence drift, HMAC mismatch или chain mismatch приводит к `CONTINUOUS_TAMPER`/fail-closed остановке JVM. Runtime report публикует Sensor/Guard heartbeat counters, cross-check count, sequences и последние SHA-256 chain roots.
+После запуска Sensor выполняет cross-проверка раз в секунду. Каждый `CONTINUOUS_HEARTBEAT` содержит предыдущий событие-цепочка хеш и последний подтверждённый Защита последовательность; родительский сверяет их со своей независимой копией, включает сигнал состояния в цепочка и отвечает новым подписанный ACK. Sensor проверяет ACK через отдельный домен-отдельный HMAC и `PeekNamedPipe` тайм-аут. Потеря родительский сигнал состояния, последовательность расхождение, HMAC несоответствие или цепочка несоответствие приводит к `CONTINUOUS_TAMPER`/отказ с блокировкой остановке JVM. Среда выполнения отчёт публикует Sensor/Guard сигнал состояния счётчики, cross-проверка счётчик, последовательности и последние SHA-256 цепочка корни.
 
-## JVM-Aware Protection — 0.18.8
+## JVM-Учитывающий Защита — 0.18.8
 
-NeverLauncher 0.18.8 делает executable-memory policy JVM-aware вместо правила «любой перехваченный `VirtualAlloc/VirtualProtect` допустим». Ранний Sensor определяет загруженный HotSpot `jvm.dll`, извлекает его реальный Java major из Windows version resource и допускает aggressive protection только для сертифицированной базы Java `8/16/17/21/25`. Для каждого нового executable `MEM_PRIVATE` transition Hook Engine снимает native call stack без выделений памяти; JIT/Code Cache transition считается доверенным только когда stack содержит frame внутри текущего `jvm.dll`.
+NeverLauncher 0.18.8 делает исполняемый-память политика JVM-учитывающий вместо правила «любой перехваченный `VirtualAlloc/VirtualProtect` допустим». Ранний Sensor определяет загруженный HotSpot `jvm.dll`, извлекает его реальный Java крупный из Windows версия ресурс и допускает агрессивный защита только для сертифицированной базы Java `8/16/17/21/25`. Для каждого нового исполняемый `MEM_PRIVATE` переход Хук Движок снимает нативный вызов стек без выделений памяти; JIT/Код Кэш переход считается доверенным только когда стек содержит кадр внутри текущего `jvm.dll`.
 
-Это не запрещает HotSpot JIT и не применяет `ProhibitDynamicCode` к Java: baseline executable private regions сохраняются как раннее JVM состояние, а subsequent JIT transitions учитываются отдельно. `MEM_IMAGE` остаётся под Memory Integrity, thread start origin — под Thread & Process Integrity. Foreign native module, который создаёт executable private memory вне `jvm.dll` provenance, получает отдельный JVM-aware violation и runtime завершается fail-closed. Windows CI проверяет ту же политику на Temurin Java 8/16/17/21/25 реальным JIT workload и adversarial DLL.
+Это не запрещает HotSpot JIT и не применяет `ProhibitDynamicCode` к Java: базовая линия исполняемый закрытый регионы сохраняются как раннее JVM состояние, а subsequent JIT переходы учитываются отдельно. `MEM_IMAGE` остаётся под Память Целостность, поток запуск источник — под Поток и Процесс Целостность. Внешний нативный модуль, который создаёт исполняемый закрытый память вне `jvm.dll` происхождение, получает отдельный JVM-учитывающий нарушение и среда выполнения завершается отказ с блокировкой. Windows CI проверяет ту же политику на Temurin Java 8/16/17/21/25 реальным JIT workload и атакующий DLL.
 
-## Защита от отладки и instrumentation — 0.18.7
+## Защита от отладки и инструментирование — 0.18.7
 
-NeverLauncher 0.18.7 закрывает штатные user-mode debug/instrumentation boundaries защищаемой JVM. До spawn NeverRuntime отклоняет сторонние Java/JVMTI agents, JDWP/debug options и instrumentation, пришедшую через стандартные Java option environment variables; затем сам добавляет `-XX:+DisableAttachMechanism`. Внутри JVM ранний Sensor проверяет локальный/remote debugger state и kernel-reported debug port/object/flags каждые 250 мс. Обнаружение debugger attach или противоречивого debug state приводит к fail-closed завершению runtime.
+NeverLauncher 0.18.7 закрывает штатные пользовательский режим debug/instrumentation границы защищаемой JVM. До запуск процесса NeverRuntime отклоняет сторонние Java/JVMTI agents, JDWP/отладка options и инструментирование, пришедшую через стандартные Java option переменные окружения; затем сам добавляет `-XX:+DisableAttachMechanism`. Внутри JVM ранний Sensor проверяет локальный/удалённый отладчик состояние и ядро-отображается отладка port/object/flags каждые 250 мс. Обнаружение отладчик подключение или противоречивого отладка состояние приводит к отказ с блокировкой завершению среда выполнения.
 
-`Agent_OnLoad` теперь требует четыре последовательных authenticated proofs: Hook Engine, Memory Integrity, Thread & Process Integrity и `DEBUG_INSTRUMENTATION_READY`. Runtime report содержит состояние attach hardening, независимые debug indicators, check/violation counters и `stateSha256`. Реализация не скрывает процесс от Windows/EDR и не использует kernel driver или anti-debug bypass primitives.
+`Agent_OnLoad` теперь требует четыре последовательных аутентифицировать доказательство: Хук Движок, Память Целостность, Поток и Процесс Целостность и `DEBUG_INSTRUMENTATION_READY`. Среда выполнения отчёт содержит состояние подключение усиление защиты, независимые отладка indicators, check/violation счётчики и `stateSha256`. Реализация не скрывает процесс от Windows/EDR и не использует ядро драйвер или anti-отладка обход примитивы.
 
-## Thread & Process Integrity — 0.18.6
+## Поток и Процесс Целостность — 0.18.6
 
-NeverLauncher 0.18.6 добавляет непрерывный контроль потоков и дерева процессов защищаемой JVM. `neverguard-sensor.dll` перечисляет live TID, получает их реальный Win32 start address через `NtQueryInformationThread`, проверяет backing memory и origin module; нормальные JVM/GC/compiler threads разрешены, но старт потока из executable `MEM_PRIVATE`/`MEM_MAPPED` memory считается suspicious runtime transition и обрабатывается fail-closed. Проверка выполняется чаще общего heartbeat, чтобы короткое окно между событиями не превращалось в единственную линию защиты.
+NeverLauncher 0.18.6 добавляет непрерывный контроль потоков и дерева процессов защищаемой JVM. `neverguard-sensor.dll` перечисляет актуальный TID, получает их реальный Win32 запуск адрес через `NtQueryInformationThread`, проверяет backing память и источник модуль; нормальные JVM/GC/compiler потоки разрешены, но старт потока из исполняемый `MEM_PRIVATE`/`MEM_MAPPED` память считается suspicious среда выполнения переход и обрабатывается отказ с блокировкой. Проверка выполняется чаще общего сигнал состояния, чтобы короткое окно между событиями не превращалось в единственную линию защиты.
 
-Внешний NeverRuntime одновременно использует уже обязательный non-breakaway Job Object как process-tree boundary: JVM root и все наблюдаемые descendants должны оставаться членами того же Job Object. Evidence содержит thread/process counts, lifecycle transitions, descendant peak, `threadSetSha256`, `threadOriginSetSha256` и `processTreeSha256`. `Agent_OnLoad` не возвращает управление JVM до третьего authenticated startup proof `THREAD_PROCESS_READY`.
+Внешний NeverRuntime одновременно использует уже обязательный без отделения Задача Объект как дерево процессов граница: JVM корень и все наблюдаемые descendants должны оставаться членами того же Задача Объект. Свидетельство содержит thread/process счётчики, жизненный цикл переходы, descendant peak, `threadSetSha256`, `threadOriginSetSha256` и `processTreeSha256`. `Agent_OnLoad` не возвращает управление JVM до третьего аутентифицировать запуск доказательство `THREAD_PROCESS_READY`.
 
-## Memory Integrity — 0.18.5
+## Память Целостность — 0.18.5
 
-NeverLauncher 0.18.5 расширяет `neverguard-sensor.dll` непрерывным контролем executable memory внутри защищаемой JVM. Sensor снимает `VirtualQuery` map, хеширует executable `MEM_IMAGE` code regions и на каждом heartbeat проверяет их содержимое и protection state. JVM JIT не ошибочно считается immutable code: executable `MEM_PRIVATE` regions контролируются по startup baseline и наблюдаемым `VirtualAlloc`/`VirtualProtect` transitions от Aggressive Hook Engine. Неизвестная executable private/mapped memory, потеря transition events или code-page drift переводят runtime в fail-closed.
+NeverLauncher 0.18.5 расширяет `neverguard-sensor.dll` непрерывным контролем исполняемый память внутри защищаемой JVM. Sensor снимает `VirtualQuery` сопоставление, хеширует исполняемый `MEM_IMAGE` код регионы и на каждом сигнал состояния проверяет их содержимое и защита состояние. JVM JIT не ошибочно считается неизменяемый код: исполняемый `MEM_PRIVATE` регионы контролируются по запуск базовая линия и наблюдаемым `VirtualAlloc`/`VirtualProtect` переходы от Агрессивный Хук Движок. Неизвестная исполняемый private/mapped память, потеря переход события или кодовая страница расхождение переводят среда выполнения в отказ с блокировкой.
 
-Parent принимает запуск только после двух authenticated proofs: `HOOK_READY` и `MEMORY_READY`. Runtime report содержит executable/image/dynamic/RWX counts, executable bytes, observed transition count, integrity checks, `codeSetSha256` и `executableMapSha256`.
+Родительский принимает запуск только после двух аутентифицировать доказательство: `HOOK_READY` и `MEMORY_READY`. Среда выполнения отчёт содержит executable/image/dynamic/RWX счётчики, исполняемый байты, наблюдаемый переход счётчик, целостность проверяет, `codeSetSha256` и `executableMapSha256`.
 
-## Aggressive Hook Engine I — 0.18.4
+## Агрессивный Хук Движок I — 0.18.4
 
-NeverLauncher 0.18.4 добавляет в `neverguard-sensor.dll` ограниченный user-mode hook engine. До запуска Java/Minecraft main Sensor меняет выбранные IAT-импорты в разрешённых JVM/native-модулях для `LoadLibrary*`, `VirtualAlloc` и `VirtualProtect`, проверяет исходную цель как ожидаемый Windows export и отправляет NeverRuntime аутентифицированное доказательство `HOOK_READY`. Глобальные Windows hooks не устанавливаются, память чужих процессов не изменяется.
+NeverLauncher 0.18.4 добавляет в `neverguard-sensor.dll` ограниченный пользовательский режим хук движок. До запуска Java/Minecraft главный Sensor меняет выбранные IAT-импорты в разрешённых JVM/native-модулях для `LoadLibrary*`, `VirtualAlloc` и `VirtualProtect`, проверяет исходную цель как ожидаемый Windows экспорт и отправляет NeverRuntime аутентифицированное доказательство `HOOK_READY`. Глобальные Windows хуки не устанавливаются, память чужих процессов не изменяется.
 
-Покрытие hooks непрерывно пересчитывается при загрузке DLL. Каждый установленный IAT slot проверяется на drift, логический набор hooks хешируется, а tampering обрабатывается fail-closed. При штатной выгрузке Sensor исходные IAT pointers восстанавливаются. Runtime report содержит число hooked modules/slots, количество перехваченных вызовов, integrity checks, SHA-256 набора hooks и нарушения.
+Покрытие хуки непрерывно пересчитывается при загрузке DLL. Каждый установленный IAT slot проверяется на расхождение, логический набор хуки хешируется, а подмена обрабатывается отказ с блокировкой. При штатной выгрузке Sensor исходные IAT pointers восстанавливаются. Среда выполнения отчёт содержит число хук modules/slots, количество перехваченных вызовов, целостность проверяет, SHA-256 набора хуки и нарушения.
 
 # NeverLauncher
 
-## Module Guard — 0.18.3
+## Модуль Защита — 0.18.3
 
-NeverLauncher 0.18.3 переводит Windows NeverGuard с одних периодических module snapshots на непрерывный контроль DLL внутри JVM. `neverguard-sensor.dll` регистрирует `LdrRegisterDllNotification` до выхода из `Agent_OnLoad`; loader callback не выполняет файловый I/O и не аллоцирует память, а пишет load/unload records в фиксированный atomic ring. Отдельный Sensor worker передаёт ordered HMAC-SHA-256 event stream и heartbeat по уже защищённому Named Pipe. JVM не получает управление Java/Minecraft main, пока parent не снимет внешний ToolHelp baseline и не вернёт authenticated Module Guard arm acknowledgement.
+NeverLauncher 0.18.3 переводит Windows NeverGuard с одних периодических модуль снимки на непрерывный контроль DLL внутри JVM. `neverguard-sensor.dll` регистрирует `LdrRegisterDllNotification` до выхода из `Agent_OnLoad`; загрузчик обратный вызов не выполняет файловый I/O и не аллоцирует память, а пишет load/unload записывает в фиксированный атомарный кольцо. Отдельный Sensor обработчик передаёт упорядоченный HMAC-SHA-256 событие поток и сигнал состояния по уже защищённому Именованный Pipe. JVM не получает управление Java/Minecraft главный, пока родительский не снимет внешний ToolHelp базовая линия и не вернёт аутентифицировать Модуль Защита arm acknowledgement.
 
-Parent сверяет строгую последовательность и MAC каждого события, хэширует принятые загрузки в rolling event chain и регулярно сопоставляет event-derived module set с независимым ToolHelp snapshot. Windows/Java/runtime roots считаются доверенными runtime boundaries; DLL вне этих roots должна пройти Authenticode. Потеря heartbeat, overflow event ring, sequence/MAC mismatch, неизвестный unload, неподписанная DLL вне roots или snapshot drift завершают JVM fail-closed. Supervised status отдаёт живой `moduleGuard` report с baseline/current module count, load/unload/heartbeat counters, `eventChainSha256`, `moduleSetSha256` и violation state.
+Родительский сверяет строгую последовательность и MAC каждого события, хэширует принятые загрузки в поэтапный событие цепочка и регулярно сопоставляет событие-производный модуль задать с независимым ToolHelp снимок. Windows/Java/runtime корни считаются доверенными среда выполнения границы; DLL вне этих корни должна пройти Authenticode. Потеря сигнал состояния, overflow событие кольцо, последовательность/MAC несоответствие, неизвестный выгрузка, неподписанная DLL вне корни или снимок расхождение завершают JVM отказ с блокировкой. Контролируемый состояние отдаёт живой `moduleGuard` отчёт с baseline/current модуль счётчик, load/unload/heartbeat счётчики, `eventChainSha256`, `moduleSetSha256` и нарушение состояние.
 
-0.18.3 остаётся user-mode boundary: administrator/kernel attacker и уже получивший полный arbitrary in-process memory-write примитив противник не объявляются нейтрализованными этим слоем. Module Guard усиливает раннее обнаружение/остановку DLL/module tampering, а memory/hook integrity относятся к следующим этапам NeverGuard.
+0.18.3 остаётся пользовательский режим граница: administrator/kernel злоумышленник и уже получивший полный произвольный внутри процесса память-запись примитив противник не объявляются нейтрализованными этим слоем. Модуль Защита усиливает раннее обнаружение/остановку DLL/модуль подмена, а memory/hook целостность относятся к следующим этапам NeverGuard.
 
 ## NeverGuard Sensor — 0.18.2
 
-NeverLauncher 0.18.2 добавляет реальный Windows JVM sensor как отдельный native `cdylib` — `neverguard-sensor.dll`. Desktop/NeverRuntime добавляет его через `-agentpath` **до пользовательских JVM-аргументов и до Java main**, а JVM вызывает экспортированный `Agent_OnLoad` при старте VM. Sensor обязан выполнить одноразовый HMAC-SHA-256 startup proof через защищённый current-user Named Pipe; proof привязан к protocol version и PID запущенной JVM. Родитель принимает runtime только после проверки proof. При timeout, неверном PID/HMAC или отсутствии Sensor JVM принудительно завершается.
+NeverLauncher 0.18.2 добавляет реальный Windows JVM sensor как отдельный нативный `cdylib` — `neverguard-sensor.dll`. Desktop/NeverRuntime добавляет его через `-agentpath` **до пользовательских JVM-аргументов и до Java главный**, а JVM вызывает экспортированный `Agent_OnLoad` при старте VM. Sensor обязан выполнить одноразовый HMAC-SHA-256 запуск доказательство через защищённый текущий-пользователь Именованный Pipe; доказательство привязан к протокол версия и PID запущенной JVM. Родитель принимает среда выполнения только после проверки доказательство. При тайм-аут, неверном PID/HMAC или отсутствии Sensor JVM принудительно завершается.
 
-В production Sensor является частью той же Windows release boundary, что Desktop/Guard/Runtime: x64 и ARM64 DLL собираются release pipeline, проходят PE architecture check, подписываются Authenticode/RFC3161 тем же production signing context, входят в `WINDOWS_PACKAGE_MANIFEST`, component-update manifest и signing evidence. Перед `-agentpath` release runtime повторно проверяет, что DLL — обычный непустой файл и её Authenticode trust валиден. `neverguard-sensor.dll` обновляется атомарно вместе с Desktop/Guard/Runtime. Windows CI отдельно собирает DLL и запускает настоящую Temurin JVM с `-agentpath`, затем требует успешный `Agent_OnLoad` handshake.
+В рабочий Sensor является частью той же Windows релиз граница, что Desktop/Guard/Runtime: x64 и ARM64 DLL собираются релиз конвейер, проходят PE архитектура проверка, подписываются Authenticode/RFC3161 тем же рабочий подписание context, входят в `WINDOWS_PACKAGE_MANIFEST`, компонент-обновление манифест и подписание свидетельство. Перед `-agentpath` релиз среда выполнения повторно проверяет, что DLL — обычный непустой файл и её Authenticode доверие валиден. `neverguard-sensor.dll` обновляется атомарно вместе с Desktop/Guard/Runtime. Windows CI отдельно собирает DLL и запускает настоящую Temurin JVM с `-agentpath`, затем требует успешный `Agent_OnLoad` рукопожатие.
 
-Эта версия подтверждает раннюю загрузку доверенного Sensor и создаёт in-process security boundary для следующих этапов Module Guard/hooks. Она не заявляет непрерывный anti-tamper, защиту от kernel/administrator attacker или kernel-equivalent guarantees.
+Эта версия подтверждает раннюю загрузку доверенного Sensor и создаёт внутри процесса граница безопасности для следующих этапов Модуль Guard/hooks. Она не заявляет непрерывный anti-подмена, защиту от kernel/administrator злоумышленник или ядро-equivalent guarantees.
 
-## Windows Protection Core II — 0.18.1
+## Windows Защита Ядро II — 0.18.1
 
-NeverLauncher 0.18.1 переводит Windows NeverGuard на исполняемую profile/capability модель. Профили `audit`, `compat` и `aggressive` отличаются фактически применяемыми Windows process mitigations; после `SetProcessMitigationPolicy` Guard считывает состояние обратно через `GetProcessMitigationPolicy`, проверяет реальное membership в launcher Job Object и публикует authenticated capability report через HMAC IPC. Desktop проверяет report до перехода Guard в ready-state.
+NeverLauncher 0.18.1 переводит Windows NeverGuard на исполняемую profile/capability модель. Профили `audit`, `compat` и `aggressive` отличаются фактически применяемыми Windows процесс меры защиты; после `SetProcessMitigationPolicy` Защита считывает состояние обратно через `GetProcessMitigationPolicy`, проверяет реальное участие в лаунчер Задача Объект и публикует аутентифицировать возможность отчёт через HMAC IPC. Настольное приложение проверяет отчёт до перехода Защита в готовый-состояние.
 
-По умолчанию используется `aggressive`. Профиль можно задать переменной процесса `NEVERGUARD_WINDOWS_PROTECTION_PROFILE=audit|compat|aggressive`; Desktop передаёт выбранное значение в Guard отдельным `--protection-profile`. `audit` предназначен для измерения совместимости, `compat` сохраняет совместимые hardening controls без запрета dynamic code, а `aggressive` требует полный Guard mitigation set и является единственным профилем, допускаемым к remote Guard Attestation. Ни `audit`, ни `compat` не могут выдать себя за high-trust `aggressive`: профиль, required bits, observed bits, capability-model version и Job binding проверяются после authenticated IPC handshake.
+По умолчанию используется `aggressive`. Профиль можно задать переменной процесса `NEVERGUARD_WINDOWS_PROTECTION_PROFILE=audit|compat|aggressive`; Настольное приложение передаёт выбранное значение в Защита отдельным `--protection-profile`. `audit` предназначен для измерения совместимости, `compat` сохраняет совместимые усиление защиты средства управления без запрета динамический код, а `aggressive` требует полный Защита мера защиты задать и является единственным профилем, допускаемым к удалённый Защита Аттестация. Ни `audit`, ни `compat` не могут выдать себя за high-доверие `aggressive`: профиль, обязательный bits, наблюдаемый bits, возможность-модель версия и Задача привязка проверяются после аутентифицировать IPC рукопожатие.
 
-## Loader Hardening — 0.17.10
+## Загрузчик Усиление защиты — 0.17.10
 
-NeverLauncher 0.17.10 усиливает production loader path для Fabric, Quilt, Forge и NeoForge: immutable resolution replay использует content-addressed SHA-256 cache и может восстановить pinned profile/installer без mutable upstream. Повреждённые cache entries quarantined и не принимаются как валидные.
+NeverLauncher 0.17.10 усиливает рабочий загрузчик путь для Fabric, Quilt, Forge и NeoForge: неизменяемый разрешение повторное воспроизведение использует адресуемый по содержимому SHA-256 кэш и может восстановить закреплённый profile/installer без изменяемый вышестоящий проект. Повреждённые кэш записи карантин и не принимаются как валидные.
 
-Forge/NeoForge processors ведут durable recovery journal (`running` / `failed` / `completed`) с identity каждого processor и SHA-256 installer. После crash verified outputs восстанавливаются без повторного запуска, а неполные/повреждённые outputs quarantined и processor выполняется заново. Release certification требует cache-only/upstream-independent recovery на четырёх current Linux x64 anchors; Forge/NeoForge дополнительно обязаны доказать installer и processor recovery.
+Forge/NeoForge обработчики ведут долговременный восстановление журнал (`running` / `failed` / `completed`) с идентичность каждого обработчик и SHA-256 установщик. После сбой проверен выходные данные восстанавливаются без повторного запуска, а неполные/повреждённые выходные данные карантин и обработчик выполняется заново. Сертификация релиза требует cache-only/upstream-independent восстановление на четырёх текущий Linux x64 якоря; Forge/NeoForge дополнительно обязаны доказать установщик и обработчик восстановление.
 
-## Cross-platform Loaders — 0.17.9
+## Кроссплатформенный Загрузчики — 0.17.9
 
-NeverLauncher 0.17.9 переносит рабочий Fabric/Quilt/Forge/NeoForge client certification на **Windows, Linux и macOS в x64 и ARM64**. Для current anchors (`Fabric/Quilt/Forge 26.3`, `NeoForge 26.2`) обязательны все шесть OS/arch-пар; исторические широкие loader-линии сохраняются как Linux x64 regression-база.
+NeverLauncher 0.17.9 переносит рабочий Fabric/Quilt/Forge/NeoForge клиент сертификация на **Windows, Linux и macOS в x64 и ARM64**. Для текущий якоря (`Fabric/Quilt/Forge 26.3`, `NeoForge 26.2`) обязательны все шесть OS/arch-пар; исторические широкие loader-линии сохраняются как Linux x64 regression-база.
 
-Materializer получает exact target и обязан создать только соответствующее `natives/<os>/<arch>` дерево (`macOS` → Mojang `osx`). NeverRuntime теперь возвращает фактически выбранный `nativesDirectory`; отдельный verifier сверяет его с materializer evidence, проверяет SHA-256 каждого native-файла и формирует `nativeTreeSha256`. PASS также требует реальный запуск loader profile на target Java/OS/arch. Release certification хранит 24 `crossPlatformLoaderTargets`, а bundle verifier повторно вычисляет coverage.
+Материализатор получает точный цель и обязан создать только соответствующее `natives/<os>/<arch>` дерево (`macOS` → Mojang `osx`). NeverRuntime теперь возвращает фактически выбранный `nativesDirectory`; отдельный проверяющий модуль сверяет его с материализатор свидетельство, проверяет SHA-256 каждого native-файла и формирует `nativeTreeSha256`. PASS также требует реальный запуск загрузчик профиль на цель Java/OS/arch. Сертификация релиза хранит 24 `crossPlatformLoaderTargets`, а комплект проверяющий модуль повторно вычисляет покрытие.
 
-## Loader-native E2E — 0.17.8
+## Нативный для загрузчика E2E — 0.17.8
 
-NeverLauncher 0.17.8 добавляет обязательный production E2E для **настоящей пары loader client ↔ loader server** на Fabric, Quilt, Forge и NeoForge. Для integration anchor Minecraft 1.21.1 compatibility pipeline сначала разрешает loader в concrete immutable version, затем поднимает отдельный dedicated server того же loader и **той же exact version**, проверяет loader runtime artifacts на сервере и запускает уже materialized NeverLauncher client через NeverRuntime с direct-connect на этот сервер.
+NeverLauncher 0.17.8 добавляет обязательный рабочий E2E для **настоящей пары загрузчик клиент ↔ загрузчик сервер** на Fabric, Quilt, Forge и NeoForge. Для интеграционный якорь Minecraft 1.21.1 совместимость конвейер сначала разрешает загрузчик в конкретный неизменяемый версия, затем поднимает отдельный выделенный сервер того же загрузчик и **той же точная версия**, проверяет загрузчик среда выполнения артефакты на сервере и запускает уже материализовать NeverLauncher клиент через NeverRuntime с прямой-подключение на этот сервер.
 
-PASS требует healthy dedicated server, точного loader artifact, успешного actual-client certification и фактической строки `NeverLauncherCertification joined the game` в server log. Evidence (`loader-native-server.json`, client result, server log/process/artifact list и health) входит в aggregate matrix, release certification хранит четыре обязательных `loaderNativeTargets`, а bundle verifier повторно сверяет coverage. Existing Paper integration/revoke path и 0.17.7 immutable resolution lock остаются обязательными и не заменяются этим тестом.
+PASS требует работоспособный выделенный сервер, точного загрузчик артефакт, успешного реальный клиент сертификация и фактической строки `NeverLauncherCertification joined the game` в сервер журнал. Свидетельство (`loader-native-server.json`, клиент результат, сервер log/process/artifact список и работоспособность) входит в агрегат матрица, сертификация релиза хранит четыре обязательных `loaderNativeTargets`, а комплект проверяющий модуль повторно сверяет покрытие. Существующий Paper integration/revoke путь и 0.17.7 неизменяемый разрешение блокировка остаются обязательными и не заменяются этим тестом.
 
-## Loader Resolution & Pinning — 0.17.7
+## Загрузчик Разрешение и Закрепление — 0.17.7
 
-NeverLauncher 0.17.7 делает разрешение Fabric/Quilt/Forge/NeoForge воспроизводимым: mutable selector (`latest-stable`/`stable`/`recommended`) используется только при первом разрешении, после чего materializer сохраняет immutable resolution lock с concrete loader version, provenance source SHA-256, SHA-256 фактического Meta profile/installer и SHA-256 итогового runtime profile. Повторный materialize с тем же selector обязан воспроизвести тот же lock и те же bytes; изменение upstream payload/profile или lock приводит к fail-closed ошибке.
+NeverLauncher 0.17.7 делает разрешение Fabric/Quilt/Forge/NeoForge воспроизводимым: изменяемый селектор (`latest-stable`/`stable`/`recommended`) используется только при первом разрешении, после чего материализатор сохраняет неизменяемый разрешение блокировка с конкретный загрузчик версия, происхождение исходник SHA-256, SHA-256 фактического Мета profile/installer и SHA-256 итогового среда выполнения профиль. Повторный материализовать с тем же селектор обязан воспроизвести тот же блокировка и те же байты; изменение вышестоящий проект payload/profile или блокировка приводит к отказ с блокировкой ошибке.
 
-Compatibility E2E выполняет materialization дважды и требует `resolutionPinned=true`, совпадающие `resolutionLockSha256`/`reproducibilitySha256`, raw `<loader>-resolution-lock.json` и concrete resolved loader version. Release certification переносит эти данные в `loaderPins` и bundle verifier повторно пересчитывает их из embedded matrix/targets, поэтому reproducibility evidence нельзя подменить после сертификации.
+Совместимость E2E выполняет материализация дважды и требует `resolutionPinned=true`, совпадающие `resolutionLockSha256`/`reproducibilitySha256`, сырой `<loader>-resolution-lock.json` и конкретный разрешённый загрузчик версия. Сертификация релиза переносит эти данные в `loaderPins` и комплект проверяющий модуль повторно пересчитывает их из встроенный matrix/targets, поэтому reproducibility свидетельство нельзя подменить после сертификации.
 
-## NeoForge Compatibility II — 0.17.6
+## NeoForge Совместимость II — 0.17.6
 
-NeverLauncher 0.17.6 делает **NeoForge 1.20.1 → current stable 26.2** отдельной production compatibility-линией: 22 обязательных targets на exact Java 17/21/25, `1.21.1` остаётся полным integration E2E, остальные версии проходят actual-client certification на Linux x86_64. Для 1.20.1 используется реальная историческая публикация `net.neoforged:forge` (`1.20.1-47.x`); начиная с 1.20.2 применяется `net.neoforged:neoforge`, а 26.x разрешается по полной схеме Minecraft version (`26.2` → `26.2.0.x`).
+NeverLauncher 0.17.6 делает **NeoForge 1.20.1 → текущий стабильный 26.2** отдельной рабочий compatibility-линией: 22 обязательных цели на точный Java 17/21/25, `1.21.1` остаётся полным интеграционный E2E, остальные версии проходят реальный клиент сертификация на Linux x86_64. Для 1.20.1 используется реальная историческая публикация `net.neoforged:forge` (`1.20.1-47.x`); начиная с 1.20.2 применяется `net.neoforged:neoforge`, а 26.x разрешается по полной схеме Minecraft версия (`26.2` → `26.2.0.x`).
 
-Client certification выполняет официальный NeoForge installer/processors, проверяет processor outputs, materialized Maven libraries и generated version profile, затем `nl client verify` проверяет package, а NeverRuntime запускает фактический NeoForge profile на exact target Java. PASS требует concrete immutable resolved loader version и raw `neoforge-install.json` / `neoforge-certification.json` evidence; missing/duplicate release, wrong Java/scope/platform или mutable loader блокируют release.
+Клиент сертификация выполняет официальный NeoForge installer/processors, проверяет обработчик выходные данные, материализовать Maven библиотеки и сгенерированный версия профиль, затем `nl client verify` проверяет пакет, а NeverRuntime запускает фактический NeoForge профиль на точный цель Java. PASS требует конкретный неизменяемый разрешённый загрузчик версия и сырой `neoforge-install.json` / `neoforge-certification.json` свидетельство; missing/duplicate релиз, неверный Java/scope/platform или изменяемый загрузчик блокируют релиз.
 
-## Forge Legacy 1.7.10 — 0.17.5
+## Forge Устаревший 1.7.10 — 0.17.5
 
-NeverLauncher 0.17.5 добавляет отдельный production path для **Forge 1.7.10 LaunchWrapper/FML legacy**. V1 `install_profile.json` разбирается как настоящий legacy installer: universal JAR извлекается из `install.filePath`, проверяется и размещается в Maven tree; `versionInfo` без `inheritsFrom` безопасно нормализуется к Vanilla 1.7.10, сохраняя LaunchWrapper metadata и `cpw.mods.fml.common.launcher.FMLTweaker`. Старый официальный `http://files.minecraftforge.net/maven/` канонизируется только в официальный HTTPS Forge Maven.
+NeverLauncher 0.17.5 добавляет отдельный рабочий путь для **Forge 1.7.10 LaunchWrapper/FML устаревший**. V1 `install_profile.json` разбирается как настоящий устаревший установщик: универсальный JAR извлекается из `install.filePath`, проверяется и размещается в Maven дерево; `versionInfo` без `inheritsFrom` безопасно нормализуется к Vanilla 1.7.10, сохраняя LaunchWrapper метаданные и `cpw.mods.fml.common.launcher.FMLTweaker`. Старый официальный `http://files.minecraftforge.net/maven/` канонизируется только в официальный HTTPS Forge Maven.
 
-NeverRuntime поддерживает legacy native classifier metadata без современного `downloads.classifiers`: путь classifier выводится из Maven-coordinate, а неполные современные classifier maps по-прежнему отклоняются. Обязательная certification-цель — Forge 1.7.10, Java 8, Linux x86_64, package verify и фактический client launch через NeverRuntime с immutable resolved Forge version. Forge 1.12.2 и processor-based Forge 1.13.2+ сохраняют отдельные regression/release gates.
+NeverRuntime поддерживает устаревший нативный классификатор метаданные без современного `downloads.classifiers`: путь классификатор выводится из Maven-coordinate, а неполные современные классификатор сопоставляет по-прежнему отклоняются. Обязательная certification-цель — Forge 1.7.10, Java 8, Linux x86_64, пакет проверять и фактический клиент запускать через NeverRuntime с неизменяемый разрешённый Forge версия. Forge 1.12.2 и основанный на обработчиках Forge 1.13.2+ сохраняют отдельные regression/release контроли.
 
-## Forge Legacy 1.12.2 — 0.17.4
+## Forge Устаревший 1.12.2 — 0.17.4
 
-NeverLauncher 0.17.4 добавляет отдельный production materializer для **настоящего Forge 1.12.2 legacy installer**. Классический V1 `install_profile.json` (`install` + `versionInfo`) обрабатывается без эмуляции modern processors: universal JAR извлекается из `install.filePath`, публикуется в Maven layout, проверяется по SHA-1, исходный `versionInfo` сохраняется как launch profile, а старые `clientreq`/`checksums` учитываются при client materialization.
+NeverLauncher 0.17.4 добавляет отдельный рабочий материализатор для **настоящего Forge 1.12.2 устаревший установщик**. Классический V1 `install_profile.json` (`install` + `versionInfo`) обрабатывается без эмуляции современный обработчики: универсальный JAR извлекается из `install.filePath`, публикуется в Maven структура, проверяется по SHA-1, исходный `versionInfo` сохраняется как запускать профиль, а старые `clientreq`/`checksums` учитываются при клиент материализация.
 
-Также поддерживается официальный переупакованный 1.12.2 layout с `version.json` и пустыми `data/processors`: embedded universal Maven artifact материализуется через отдельный `legacy-v2-empty-processors` path. Оба режима обязаны дать `net.minecraft.launchwrapper.Launch` + `FMLTweaker`, package integrity и фактический запуск Forge profile через NeverRuntime на exact Java 8. Modern Forge 1.13.2+ остаётся processor-based и не ослабляется.
+Также поддерживается официальный переупакованный 1.12.2 структура с `version.json` и пустыми `data/processors`: встроенный универсальный Maven артефакт материализуется через отдельный `legacy-v2-empty-processors` путь. Оба режима обязаны дать `net.minecraft.launchwrapper.Launch` + `FMLTweaker`, пакет целостность и фактический запуск Forge профиль через NeverRuntime на точный Java 8. Современный Forge 1.13.2+ остаётся основанный на обработчиках и не ослабляется.
 
-## Forge Modern — 0.17.3
+## Forge Современный — 0.17.3
 
-NeverLauncher 0.17.3 делает **processor-based Forge 1.13.2+ → current** отдельной production compatibility-линией. Обязательная матрица содержит 43 Forge release points `1.13.2`–`26.3` на exact Java 8/16/17/21/25. Client targets выполняют официальный Forge installer pipeline: verified installer.jar, embedded/profile Maven libraries, client processors и их outputs, generated version profile, package integrity и реальный launch через NeverRuntime. `1.21.1` сохраняет полный integration E2E.
+NeverLauncher 0.17.3 делает **основанный на обработчиках Forge 1.13.2+ → текущий** отдельной рабочий compatibility-линией. Обязательная матрица содержит 43 Forge релиз точки `1.13.2`–`26.3` на точный Java 8/16/17/21/25. Клиент цели выполняют официальный Forge установщик конвейер: проверен установщик.JAR, embedded/profile Maven библиотеки, клиент обработчики и их выходные данные, сгенерированный версия профиль, пакет целостность и реальный запускать через NeverRuntime. `1.21.1` сохраняет полный интеграционный E2E.
 
-Forge installer executor поддерживает spec v1 inline tokens (`{MINECRAFT_VERSION}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}` и installer data/artifact values), требует минимум один client processor и fail-closed отклоняет legacy/non-processor installer. `latest-stable` должен разрешиться в concrete immutable Forge version до PASS.
+Forge установщик исполнитель поддерживает spec v1 inline токены (`{MINECRAFT_VERSION}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}` и установщик data/artifact значения), требует минимум один клиент обработчик и отказ с блокировкой отклоняет legacy/non-processor установщик. `latest-stable` должен разрешиться в конкретный неизменяемый Forge версия до PASS.
 
-## Quilt Compatibility II — 0.17.2
+## Quilt Совместимость II — 0.17.2
 
-NeverLauncher 0.17.2 расширяет production-сертификацию на **Quilt 1.14+ → current**. Обязательная Quilt-линия содержит 48 stable Minecraft release ID от `1.14` до `26.3` с exact Java 8/16/17/21/25. Для client-scope target CI использует официальный Quilt Meta v3, материализует настоящий Vanilla+Quilt client tree и Maven libraries, проверяет package integrity, разрешает `latest-stable` в конкретный immutable Quilt Loader и запускает materialized Quilt profile (`KnotClient`) через NeverRuntime на exact Java. `1.21.1` сохраняет полный integration E2E.
+NeverLauncher 0.17.2 расширяет production-сертификацию на **Quilt 1.14+ → текущий**. Обязательная Quilt-линия содержит 48 стабильный Minecraft релиз ID от `1.14` до `26.3` с точный Java 8/16/17/21/25. Для клиент-область цель CI использует официальный Quilt Мета v3, материализует настоящий Vanilla+Quilt клиент дерево и Maven библиотеки, проверяет пакет целостность, разрешает `latest-stable` в конкретный неизменяемый Quilt Загрузчик и запускает материализовать Quilt профиль (`KnotClient`) через NeverRuntime на точный Java. `1.21.1` сохраняет полный интеграционный E2E.
 
-Quilt `latest-stable` теперь fail-closed исключает prerelease Loader (`beta`/`rc`/другой semver prerelease), даже когда Quilt Meta не публикует Fabric-style `stable` flag. Release certification требует всю Quilt-линию и блокирует missing/duplicate releases, неверный Java/scope/platform, mutable resolved Loader, неполное evidence или незапущенный реальный Quilt client. Fabric Compatibility II 0.17.1 и все предыдущие GA/hardening gates сохраняются.
+Quilt `latest-stable` теперь отказ с блокировкой исключает предварительный релиз Загрузчик (`beta`/`rc`/другой SemVer предварительный релиз), даже когда Quilt Мета не публикует Fabric-style `stable` flag. Сертификация релиза требует всю Quilt-линию и блокирует missing/duplicate релизы, неверный Java/scope/platform, изменяемый разрешённый Загрузчик, неполное свидетельство или незапущенный реальный Quilt клиент. Fabric Совместимость II 0.17.1 и все предыдущие GA/hardening контроли сохраняются.
 
-## Fabric Compatibility II — 0.17.1
+## Fabric Совместимость II — 0.17.1
 
-NeverLauncher 0.17.1 добавляет production-сертификацию **Fabric 1.14+ → current** поверх Minecraft Compatibility II GA. Обязательная Fabric-линия содержит 48 stable Minecraft release ID от `1.14` до `26.3` и exact Java 8/16/17/21/25. Для client-scope target CI использует официальный Fabric Meta, материализует настоящий Vanilla+Fabric client tree и Maven libraries, проверяет package integrity, фиксирует конкретный immutable Fabric Loader и запускает materialized Fabric profile через NeverRuntime на exact Java. `1.21.1` сохраняет полный integration E2E.
+NeverLauncher 0.17.1 добавляет production-сертификацию **Fabric 1.14+ → текущий** поверх Minecraft Совместимость II GA. Обязательная Fabric-линия содержит 48 стабильный Minecraft релиз ID от `1.14` до `26.3` и точный Java 8/16/17/21/25. Для клиент-область цель CI использует официальный Fabric Мета, материализует настоящий Vanilla+Fabric клиент дерево и Maven библиотеки, проверяет пакет целостность, фиксирует конкретный неизменяемый Fabric Загрузчик и запускает материализовать Fabric профиль через NeverRuntime на точный Java. `1.21.1` сохраняет полный интеграционный E2E.
 
-Release certification fail-closed требует всю Fabric-линейку: пропуск или дубль версии, wrong Java/scope/platform, mutable `latest-stable` в фактическом result, неполное evidence или незапущенный реальный Fabric client блокируют release. Minecraft Compatibility II GA 0.17.0, JRE attestation, Compatibility Hardening 0.16.11, Actual Client E2E II и остальные loader-family gates сохраняются без ослабления.
+Сертификация релиза отказ с блокировкой требует всю Fabric-линейку: пропуск или дубль версии, неверный Java/scope/platform, изменяемый `latest-stable` в фактическом результат, неполное свидетельство или незапущенный реальный Fabric клиент блокируют релиз. Minecraft Совместимость II GA 0.17.0, JRE аттестация, Совместимость Усиление защиты 0.16.11, Реальный клиент E2E II и остальные загрузчик-семейство контроли сохраняются без ослабления.
 
-## Compatibility Hardening — 0.16.11
+## Совместимость Усиление защиты — 0.16.11
 
-NeverLauncher 0.16.11 усиливает рабочий compatibility path на отказах cache/upstream и на локальных trust boundaries. Vanilla artifacts теперь продолжают прерванные загрузки через HTTP Range только при корректном `206 Content-Range`, после чего по-прежнему обязаны совпасть с Mojang SHA-1/size; повреждённый готовый cache переносится в ограниченный quarantine. Exact-version `version.json` сохраняется как проверенный snapshot и может использоваться при недоступности Mojang upstream, но `latest`/snapshot aliases никогда не восстанавливаются из потенциально stale cache. Native extraction ограничена по количеству/размеру entries и публикуется через transactional directory replacement; legacy virtual assets/resources также строятся в staging и заменяются только после полной проверки.
+NeverLauncher 0.16.11 усиливает рабочий совместимость путь на отказах cache/upstream и на локальных границы доверия. Vanilla артефакты теперь продолжают прерванные загрузки через HTTP Диапазон только при корректном `206 Content-Range`, после чего по-прежнему обязаны совпасть с Mojang SHA-1/size; повреждённый готовый кэш переносится в ограниченный карантин. Точная версия `version.json` сохраняется как проверенный снимок и может использоваться при недоступности Mojang вышестоящий проект, но `latest`/снимок псевдонимы никогда не восстанавливаются из потенциально устаревший кэш. Нативный извлечение ограничена по количеству/размеру записи и публикуется через транзакционный каталог замена; устаревший виртуальный assets/resources также строятся в подготовка и заменяются только после полной проверки.
 
-Managed Java cache 0.16.11 привязан не только к vendor archive SHA-256, но и к SHA-256 фактического `bin/java`/`java.exe`; повреждённые runtime archives quarantined, полностью скачанный verified `.nlpart` может быть восстановлен без повторной сети, а Adoptium/Managed JRE requests используют bounded retry с запретом HTTPS downgrade. Existing Actual Client E2E II, cross-platform Vanilla и exact Java 8/16/17/21/25 gates сохраняются.
+Управляемый Java кэш 0.16.11 привязан не только к поставщик архив SHA-256, но и к SHA-256 фактического `bin/java`/`java.exe`; повреждённые среда выполнения архивы карантин, полностью скачанный проверен `.nlpart` может быть восстановлен без повторной сети, а Adoptium/Managed JRE запросы используют ограниченный повторить с запретом HTTPS понижение версии. Существующий Реальный клиент E2E II, кроссплатформенный Vanilla и точный Java 8/16/17/21/25 контроли сохраняются.
 
-## Actual Client E2E II — 0.16.10
+## Реальный клиент E2E II — 0.16.10
 
-NeverLauncher 0.16.10 добавляет обязательный matching-server E2E поверх actual-client certification. Пять representative Vanilla targets — `1.7.10`/Java 8, `1.17.1`/Java 16, `1.20.4`/Java 17, `1.21.10`/Java 21 и `26.3`/Java 25 — материализуют официальный Mojang `server.jar` из той же verified `version.json`, проверяют SHA-1/size, запускают сервер на exact Java и подключают реальный клиент той же Minecraft version. PASS требует доказанный world join по server log; обычный client timeout больше не удовлетворяет этим targets.
+NeverLauncher 0.16.10 добавляет обязательный соответствующий сервер E2E поверх реальный клиент сертификация. Пять репрезентативный Vanilla цели — `1.7.10`/Java 8, `1.17.1`/Java 16, `1.20.4`/Java 17, `1.21.10`/Java 21 и `26.3`/Java 25 — материализуют официальный Mojang `server.jar` из той же проверен `version.json`, проверяют SHA-1/size, запускают сервер на точный Java и подключают реальный клиент той же Minecraft версия. PASS требует доказанный мир подключение по сервер журнал; обычный клиент тайм-аут больше не удовлетворяет этим цели.
 
-Cross-platform Vanilla 0.16.9 сохраняется: 26.3 продолжает сертифицироваться на Windows/Linux/macOS x64/ARM64, natives изолированы по `natives/<os>/<arch>`, а platform evidence привязан к фактическому host runner.
+Кроссплатформенный Vanilla 0.16.9 сохраняется: 26.3 продолжает сертифицироваться на Windows/Linux/macOS x64/ARM64, нативный изолированы по `natives/<os>/<arch>`, а платформа свидетельство привязан к фактическому хост исполнитель.
 
-[![Основной CI](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/ci.yml)
-[![Матрица совместимости](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/compatibility.yml)
-[![Device Trust Matrix](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml/badge.svg?branch=main)](https://github.com/DeepLayerTeam/NeverLauncher/actions/workflows/device-trust.yml)
+[![Основной CI](§§0§§)](§§1§§)
+[![Матрица совместимости](§§0§§)](§§1§§)
+[![Доверие к устройству Матрица](§§0§§)](§§1§§)
 
-NeverLauncher — self-hosted LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Module Guard / 0.18.3**. Release certification связывает широкую Vanilla-базу, Java 8/16/17/21/25, cross-platform targets, matching-server joins и concrete JRE binary attestation одним fail-closed evidence boundary.
+NeverLauncher — self-хост LauncherOps-платформа для Minecraft-проектов. Текущий релиз — **Модуль Защита / 0.18.3**. Сертификация релиза связывает широкую Vanilla-базу, Java 8/16/17/21/25, кроссплатформенный цели, соответствующий сервер подключается и конкретный JRE бинарный файл аттестация одним отказ с блокировкой свидетельство граница.
 
 ## Java 25 Vanilla — 0.16.8
 
-`0.16.8` добавляет исполняемую exact-Java-25 policy для release-линии 26.1.x и 26.3. Vanilla materializer проверяет официальный `javaVersion.majorVersion=25` до скачивания client/assets; NeverRuntime повторяет эту проверку перед запуском. Обязательные actual-client targets — `26.1`, `26.1.1`, `26.1.2`, `26.3`, каждый через verified Mojang materialization, package verification, Managed Java 25 и реальный Minecraft client launch под Xvfb. Release certification fail-closed требует весь набор и policy `vanilla-26.1.x-26.3-java25-exact`.
+`0.16.8` добавляет исполняемую точный-Java-25 политика для release-линии 26.1.x и 26.3. Vanilla материализатор проверяет официальный `javaVersion.majorVersion=25` до скачивания client/assets; NeverRuntime повторяет эту проверку перед запуском. Обязательные реальный клиент цели — `26.1`, `26.1.1`, `26.1.2`, `26.3`, каждый через проверен Mojang материализация, пакет проверка, Управляемый Java 25 и реальный Minecraft клиент запускать под Xvfb. Сертификация релиза отказ с блокировкой требует весь набор и политика `vanilla-26.1.x-26.3-java25-exact`.
 
 ## Java 21 Vanilla — 0.16.7
 
-`0.16.7` добавляет обязательную release-line certification для `1.20.5`, `1.20.6`, `1.21`, `1.21.1`, `1.21.2`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.6`, `1.21.7`, `1.21.8`, `1.21.9`, `1.21.10`. Vanilla materializer и NeverRuntime независимо требуют `javaVersion.majorVersion=21`; missing/mismatched metadata блокируется до запуска, а release certification требует весь набор actual-client evidence. `1.21.1` сохраняет полный integration E2E, остальные targets используют реальный client launch под Xvfb.
+`0.16.7` добавляет обязательную линейка релизов сертификация для `1.20.5`, `1.20.6`, `1.21`, `1.21.1`, `1.21.2`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.6`, `1.21.7`, `1.21.8`, `1.21.9`, `1.21.10`. Vanilla материализатор и NeverRuntime независимо требуют `javaVersion.majorVersion=21`; missing/mismatched метаданные блокируется до запуска, а сертификация релиза требует весь набор реальный клиент свидетельство. `1.21.1` сохраняет полный интеграционный E2E, остальные цели используют реальный клиент запускать под Xvfb.
 
 ## Java 16/17 Vanilla — 0.16.6
 
-`0.16.6` добавляет обязательные actual-client targets `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Vanilla materializer и NeverRuntime независимо требуют официальный Java transition: Java 16 только для 1.17.1 в сертифицируемом диапазоне, Java 17 для 1.18.x–1.20.4. Missing/mismatched `javaVersion.majorVersion` блокируется до запуска; release certification требует весь набор и actual-client evidence.
+`0.16.6` добавляет обязательные реальный клиент цели `1.17.1`, `1.18.2`, `1.19.4`, `1.20.1`, `1.20.2`, `1.20.4`. Vanilla материализатор и NeverRuntime независимо требуют официальный Java переход: Java 16 только для 1.17.1 в сертифицируемом диапазоне, Java 17 для 1.18.x–1.20.4. Missing/mismatched `javaVersion.majorVersion` блокируется до запуска; сертификация релиза требует весь набор и реальный клиент свидетельство.
 
-Maintenance `0.17.0v2` дополняет эту линию версиями `1.17`, `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` с тем же fail-closed exact-Java enforcement. Maintenance `0.17.0v3` закрывает следующие два release gap: `1.21.11` на Java 21 и `26.2` на Java 25, включая client materialization, server install и NeverRuntime exact-major validation.
+Обслуживание `0.17.0v2` дополняет эту линию версиями `1.17`, `1.18`, `1.18.1`, `1.19`, `1.19.1`, `1.19.2`, `1.19.3`, `1.20`, `1.20.3` с тем же отказ с блокировкой точный-Java принудительное применение. Обслуживание `0.17.0v3` закрывает следующие два релиз разрыв: `1.21.11` на Java 21 и `26.2` на Java 25, включая клиент материализация, сервер установка и NeverRuntime точный-крупный валидация.
 
-## Managed Java II — 0.16.5
+## Управляемый Java II — 0.16.5
 
-`neverruntime java ensure --major <8|16|17|21|25>` выполняет полный runtime lifecycle: ищет проверенный cache, разрешает Temurin через Adoptium current GA и historical feature-release GA fallback, скачивает только по HTTPS, сверяет vendor SHA-256/size, безопасно распаковывает archive, запускает фактический `java -version` для exact major и атомарно публикует runtime в Managed Java cache. Для Java 16 historical resolver является рабочей частью install path, а не compatibility declaration.
+`neverruntime java ensure --major <8|16|17|21|25>` выполняет полный среда выполнения жизненный цикл: ищет проверенный кэш, разрешает Temurin через Adoptium текущий GA и исторический возможность-релиз GA резервный вариант, скачивает только по HTTPS, сверяет поставщик SHA-256/size, безопасно распаковывает архив, запускает фактический `java -version` для точный крупный и атомарно публикует среда выполнения в Управляемый Java кэш. Для Java 16 исторический разрешатель является рабочей частью установка путь, а не совместимость declaration.
 
-Официальный release по-прежнему включает six-platform Temurin 21 distribution как bootstrap. Остальные majors разрешаются on-demand по реальной доступности vendor binary для текущих OS/architecture. CI 0.16.5 устанавливает Java 8/16/17/21/25 настоящим NeverRuntime, повторно читает каждую из cache и сохраняет `MANAGED_JAVA_II_EVIDENCE.json`; без этого evidence release certification не проходит.
+Официальный релиз по-прежнему включает six-платформа Temurin 21 дистрибутив как инициализировать. Остальные крупный разрешаются на-demand по реальной доступности поставщик бинарный файл для текущих OS/architecture. CI 0.16.5 устанавливает Java 8/16/17/21/25 настоящим NeverRuntime, повторно читает каждую из кэш и сохраняет `MANAGED_JAVA_II_EVIDENCE.json`; без этого свидетельство сертификация релиза не проходит.
 
-## Legacy Vanilla — 0.16.4
+## Устаревший Vanilla — 0.16.4
 
-`0.16.4` добавляет рабочую pre-1.7 линию `1.0` (`1.0.0` принимается CLI как alias), `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10` на exact Java 8. Materializer строит проверяемые `pre-1.6`/`legacy` virtual assets в `assets/virtual/<asset-index>` и очищает stale generated files, а NeverRuntime формирует legacy session id для `${auth_session}` и разрешает `${game_assets}` и использует фактический virtual-assets path. Java 8 fallback теперь покрывает весь release-диапазон 1.0–1.16.5 без `javaVersion`. Каждый target проходит verified materialization, package verify, Compatibility Engine resolution и фактический запуск Minecraft под Xvfb.
+`0.16.4` добавляет рабочую pre-1.7 линию `1.0` (`1.0.0` принимается CLI как псевдоним), `1.1`, `1.2.5`, `1.3.2`, `1.4.7`, `1.5.2`, `1.6.4`, `1.7.10` на точный Java 8. Материализатор строит проверяемые `pre-1.6`/`legacy` виртуальный ресурсы в `assets/virtual/<asset-index>` и очищает устаревший сгенерированный файлы, а NeverRuntime формирует устаревший сессия ID для `${auth_session}` и разрешает `${game_assets}` и использует фактический виртуальный-ресурсы путь. Java 8 резервный вариант теперь покрывает весь release-диапазон 1.0–1.16.5 без `javaVersion`. Каждый цель проходит проверен материализация, пакет проверять, Совместимость Движок разрешение и фактический запуск Minecraft под Xvfb.
 
-`0.16.3` release-line gate `1.7.10`–`1.16.5` сохранён: classifier-only native libraries старого LWJGL/JInput не превращаются в синтетический classpath JAR, а `${user_properties}`/`${profile_properties}` продолжают поддерживаться.
+`0.16.3` линейка релизов контроль `1.7.10`–`1.16.5` сохранён: только классификатор нативный библиотеки старого LWJGL/JInput не превращаются в синтетический путь классов JAR, а `${user_properties}`/`${profile_properties}` продолжают поддерживаться.
 
-## Vanilla Compatibility Baseline II — 0.16.2
+## Vanilla Совместимость Базовая линия II — 0.16.2
 
-`0.16.2` ввёл многоверсионную certification model: восемь обязательных Vanilla anchors (`1.7.10`, `1.12.2`, `1.16.5`, `1.17.1`, `1.18.2`, `1.20.4`, `1.20.6`, `1.21.1`) привязаны к exact Java major. В 0.16.3 этот baseline дополнен Java 8 release-line gate 1.7.10–1.16.5, а 0.16.4 добавляет pre-1.7 release-line gate.
+`0.16.2` ввёл многоверсионную сертификация модель: восемь обязательных Vanilla якоря (`1.7.10`, `1.12.2`, `1.16.5`, `1.17.1`, `1.18.2`, `1.20.4`, `1.20.6`, `1.21.1`) привязаны к точный Java крупный. В 0.16.3 этот базовая линия дополнен Java 8 линейка релизов контроль 1.7.10–1.16.5, а 0.16.4 добавляет pre-1.7 линейка релизов контроль.
 
-## CI Recovery — 0.16.1
+## CI Восстановление — 0.16.1
 
-`0.16.1` — maintenance-релиз без новой DB migration и без ослабления release/security gates. Он исправляет фактические причины красного `main`: Fabric Loom теперь может регистрировать собственный remapped-mod repository; production Compose CI получает обязательную WebAuthn-конфигурацию; Desktop frontend использует типы, соответствующие реальным ответам Backend API; NeverRuntime исправляет Rust lifetime error `E0716`; Tauri Device Trust включает требуемую `hardware-enclave` encryption feature; Windows hardening gate проверяет актуальный `signtool`/RFC3161/Authenticode pipeline. Rust jobs нормализуют исходники через `cargo fmt` перед строгими `cargo test`/`cargo clippy -D warnings`, поэтому форматирование больше не скрывает реальные compile/test failures.
+`0.16.1` — maintenance-релиз без новой DB миграция и без ослабления release/security контроли. Он исправляет фактические причины красного `main`: Fabric Loom теперь может регистрировать собственный remapped-mod репозиторий; рабочий Compose CI получает обязательную WebAuthn-конфигурацию; Настольное приложение клиентская часть использует типы, соответствующие реальным ответам Серверная часть API; NeverRuntime исправляет Rust срок жизни ошибка `E0716`; Tauri Доверие к устройству включает требуемую `hardware-enclave` encryption возможность; Windows усиление защиты контроль проверяет актуальный `signtool`/RFC3161/Authenticode конвейер. Rust задачи нормализуют исходники через `cargo fmt` перед строгими `cargo test`/`cargo clippy -D warnings`, поэтому форматирование больше не скрывает реальные compile/test ошибка.
 
-Compatibility, Device Trust, NeverGuard и ServerBridge остаются fail-closed: CI Recovery не заменяет E2E декларациями и не переводит обязательные jobs в `continue-on-error`.
+Совместимость, Доверие к устройству, NeverGuard и ServerBridge остаются отказ с блокировкой: CI Восстановление не заменяет E2E декларациями и не переводит обязательные задачи в `continue-on-error`.
 
-## Production Delivery Release — 0.16.0
+## Рабочий Доставка Релиз — 0.16.0
 
-`0.16.0` переводит прошедший 0.15.11 RC-контур в stable GA release. Перед финальным Ed25519 signing создаётся `PRODUCTION_DELIVERY_RELEASE.json`: он связывает exact source commit, `PRODUCTION_RELEASE_CANDIDATE.json`, `DELIVERY_MANIFEST.json`, six-target public matrix, Windows/Linux/macOS production evidence, Managed JRE, current root-signed trust policy, Compatibility/Device Trust/Guard/ServerBridge certifications, SBOM и provenance одним `boundarySha256`.
+`0.16.0` переводит прошедший 0.15.11 RC-контур в стабильный GA релиз. Перед финальным Ed25519 подписание создаётся `PRODUCTION_DELIVERY_RELEASE.json`: он связывает точный исходник фиксация, `PRODUCTION_RELEASE_CANDIDATE.json`, `DELIVERY_MANIFEST.json`, six-цель публичная матрица, Windows/Linux/macOS рабочий свидетельство, Управляемый JRE, текущий подписанный корневым ключом доверие политика, Compatibility/Device Trust/Guard/ServerBridge сертификация, SBOM и происхождение одним `boundarySha256`.
 
-GA допускается только для чистой SemVer без `-prerelease`/`+build` suffix. Public origin обязан быть HTTPS и содержать immutable version segment `0.16.0` или `v0.16.0`; generic `/latest`/`stable` URL не проходит certification. `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` теперь публикует RC certificate для 0.15.11+ и `PRODUCTION_DELIVERY_RELEASE.json` для 0.16.0 как отдельные controls, поэтому post-publish E2E скачивает оба certification слоя вместе с release signatures и повторно проверяет полный bundle.
+GA допускается только для чистой SemVer без `-prerelease`/`+build` suffix. Публичный источник обязан быть HTTPS и содержать неизменяемый версия segment `0.16.0` или `v0.16.0`; общий `/latest`/`stable` URL не проходит сертификация. `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` теперь публикует RC сертификат для 0.15.11+ и `PRODUCTION_DELIVERY_RELEASE.json` для 0.16.0 как отдельные средства управления, поэтому после публикации E2E скачивает оба сертификация слоя вместе с релиз подписи и повторно проверяет полный комплект.
 
 ```bash
 export NEVERLAUNCHER_SOURCE_COMMIT="$(git rev-parse HEAD)"
@@ -329,13 +335,13 @@ nl release publish-check "dist/release-$(cat VERSION)" \
   --trust-state /var/lib/neverlauncher/release-trust-state.json
 ```
 
-`RELEASE_MANIFEST.json` для 0.16.0 имеет `channel=stable`, `releaseStatus=production-delivery-release` и SHA-256 GA certificate. Любое изменение candidate/production evidence/public matrix/trust policy после promotion ломает candidate или GA boundary, а любое изменение после signing дополнительно ломает Release Verification v2 signature.
+`RELEASE_MANIFEST.json` для 0.16.0 имеет `channel=stable`, `releaseStatus=production-delivery-release` и SHA-256 GA сертификат. Любое изменение candidate/production evidence/public matrix/trust политика после promotion ломает кандидат или GA граница, а любое изменение после подписание дополнительно ломает Релиз Проверка v2 подпись.
 
-## Production release candidate — 0.15.11
+## Рабочий кандидат в релиз — 0.15.11
 
-`0.15.11` является строгим production RC поверх delivery-контура 0.15.1–0.15.10. Обычный structurally valid/unsigned candidate больше не подходит: release build требует один exact Git commit для Compatibility, Device Trust и Guard CI certification, production Authenticode/RFC3161 на Windows, Developer ID + Accepted notarization/stapling/Gatekeeper на macOS, six-target Managed JRE/Public Delivery Matrix и все предыдущие updater/trust gates.
+`0.15.11` является строгим рабочий RC поверх delivery-контура 0.15.1–0.15.10. Обычный structurally valid/unsigned кандидат больше не подходит: релиз сборка требует один точный Git фиксация для Совместимость, Доверие к устройству и Защита CI сертификация, рабочий Authenticode/RFC3161 на Windows, Разработчик ID + Принят notarization/stapling/Gatekeeper на macOS, six-цель Управляемый JRE/Публичный Доставка Матрица и все предыдущие updater/trust контроли.
 
-Перед Ed25519 signing создаётся `PRODUCTION_RELEASE_CANDIDATE.json`. Он содержит exact `sourceCommit`, обязательные RC gates и SHA-256/size каждого top-level pre-sign release file; `cohortSha256` вычисляется по отсортированному inventory. После этого RC certificate попадает в `RELEASE_MANIFEST.json`/`SHA256SUMS` и подписывается Release Verification v2. Любая подмена либо добавление файла после certification обнаруживается fail-closed.
+Перед Ed25519 подписание создаётся `PRODUCTION_RELEASE_CANDIDATE.json`. Он содержит точный `sourceCommit`, обязательные RC контроли и SHA-256/size каждого top-уровень до подписания релиз файл; `cohortSha256` вычисляется по отсортированному инвентарь. После этого RC сертификат попадает в `RELEASE_MANIFEST.json`/`SHA256SUMS` и подписывается Релиз Проверка v2. Любая подмена либо добавление файла после сертификация обнаруживается отказ с блокировкой.
 
 ```bash
 export NEVERLAUNCHER_SOURCE_COMMIT="$(git rev-parse HEAD)"
@@ -349,13 +355,13 @@ nl release publish-check "dist/release-$(cat VERSION)" \
   --trust-state /var/lib/neverlauncher/release-trust-state.json
 ```
 
-Production build выполняется только из Git checkout без tracked/staged drift относительно `HEAD`; `NEVERLAUNCHER_SOURCE_COMMIT` обязан совпадать с этим `HEAD`. Post-publish public E2E из 0.15.9 остаётся финальной проверкой уже опубликованных GitHub Release bytes.
+Рабочий сборка выполняется только из Git checkout без tracked/staged расхождение относительно `HEAD`; `NEVERLAUNCHER_SOURCE_COMMIT` обязан совпадать с этим `HEAD`. После публикации публичный E2E из 0.15.9 остаётся финальной проверкой уже опубликованных GitHub Релиз байты.
 
-## Migration + stabilization — 0.15.10
+## Миграция + стабилизация — 0.15.10
 
-`0.15.10` не добавляет DB migration: релиз стабилизирует локальный upgrade path 0.15.9 → 0.15.10. Release Verification v2 теперь сериализует весь verify→trust-state commit через внешний `<trust-state>.lock`, а state schema `2.1` дополнительно фиксирует SHA-256 уже принятого `RELEASE_MANIFEST.json`. Поэтому downgrade по версии/epoch и подмена другого bundle под уже принятую ту же версию блокируются fail-closed.
+`0.15.10` не добавляет DB миграция: релиз стабилизирует локальный обновление путь 0.15.9 → 0.15.10. Релиз Проверка v2 теперь сериализует весь проверять→доверие-состояние фиксация через внешний `<trust-state>.lock`, а состояние схема `2.1` дополнительно фиксирует SHA-256 уже принятого `RELEASE_MANIFEST.json`. Поэтому понижение версии по версии/эпоха и подмена другого комплект под уже принятую ту же версию блокируются отказ с блокировкой.
 
-Updater автоматически переносит legacy macOS component state из `.neverlauncher/updater/component-update-state.json` в единый `.neverlauncher/component-update-state.json`. После durable rollback/commit staging/backup payload удаляются, journal остаётся для диагностики. Явная миграция и проверка доступны командами:
+Обновлятор автоматически переносит устаревший macOS компонент состояние из `.neverlauncher/updater/component-update-state.json` в единый `.neverlauncher/component-update-state.json`. После долговременный rollback/commit staging/backup полезная нагрузка удаляются, журнал остаётся для диагностики. Явная миграция и проверка доступны командами:
 
 ```bash
 nl update migrate-state --root /opt/neverlauncher
@@ -368,13 +374,13 @@ nl release verify dist/release-0.15.10 \
   --trust-state /var/lib/neverlauncher/release-trust-state.json
 ```
 
-Если canonical и legacy component state имеют одну версию, но разные component hashes, migration останавливается и требует ручной проверки; более новый state никогда не заменяется старым. Stale trust-state lock удаляется только если PID владельца уже не существует.
+Если канонический и устаревший компонент состояние имеют одну версию, но разные компонент хеширует, миграция останавливается и требует ручной проверки; более новый состояние никогда не заменяется старым. Устаревший доверие-состояние блокировка удаляется только если PID владельца уже не существует.
 
-## Public Production Delivery Matrix + E2E — 0.15.9
+## Публичный Рабочий Доставка Матрица + E2E — 0.15.9
 
-`0.15.9` добавляет `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`, который публикует фактический six-target inventory для Windows/Linux/macOS x64+ARM64. Каждый target содержит exact CLI, Desktop, NeverGuard, NeverRuntime, production package и Managed JRE; Linux дополнительно содержит Backend API. URL, SHA-256 и size берутся из реального `DELIVERY_MANIFEST.json`, а сама matrix входит в signed release boundary через `RELEASE_MANIFEST.json`/`SHA256SUMS`.
+`0.15.9` добавляет `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json`, который публикует фактический six-цель инвентарь для Windows/Linux/macOS x64+ARM64. Каждый цель содержит точный CLI, Настольное приложение, NeverGuard, NeverRuntime, рабочий пакет и Управляемый JRE; Linux дополнительно содержит Серверная часть API. URL, SHA-256 и размер берутся из реального `DELIVERY_MANIFEST.json`, а сама матрица входит в подписанный релиз граница через `RELEASE_MANIFEST.json`/`SHA256SUMS`.
 
-После публикации GitHub Release workflow `public-production-delivery.yml` запускает настоящий network E2E: скачивает matrix и все публичные assets по HTTPS, повторно проверяет hash/size, скачивает release controls и выполняет Release Verification v2 с внешними offline-root/current trust policy/trust state.
+После публикации GitHub Релиз процесс `public-production-delivery.yml` запускает настоящий сеть E2E: скачивает матрица и все публичные ресурсы по HTTPS, повторно проверяет hash/size, скачивает релиз средства управления и выполняет Релиз Проверка v2 с внешними offline-root/current доверие policy/trust состояние.
 
 ```bash
 VERSION="$(cat VERSION)"
@@ -387,9 +393,9 @@ nl delivery public-e2e \
   --report PUBLIC_DELIVERY_E2E_REPORT.json
 ```
 
-## Проверка релиза v2 и lifecycle доверия/ключей — 0.15.8
+## Проверка релиза v2 и жизненный цикл доверия/ключей — 0.15.8
 
-`0.15.8` отделяет offline root trust anchor от online release-signing keys. `security rotate-key` создаёт новый release key и переводит предыдущий active key в `verify-only`; `security revocation-list --revoke <id>` блокирует скомпрометированный key. `security trust-policy` экспортирует root-signed `RELEASE_TRUST_POLICY.json`, а release verification сохраняет persistent state с максимальными trust epoch и принятой release version.
+`0.15.8` отделяет автономный корень якорь доверия от сетевой release-ключи подписи. `security rotate-key` создаёт новый релиз ключ и переводит предыдущий активный ключ в `verify-only`; `security revocation-list --revoke <id>` блокирует скомпрометированный ключ. `security trust-policy` экспортирует подписанный корневым ключом `RELEASE_TRUST_POLICY.json`, а релиз проверка сохраняет постоянный состояние с максимальными доверие эпоха и принятой релиз версия.
 
 ```bash
 nl security rotate-key --registry-dir /secure/neverlauncher-trust --key release-signing \
@@ -406,26 +412,26 @@ nl release verify "dist/release-${VERSION}" --public-key /etc/neverlauncher/root
   --trust-policy /secure/RELEASE_TRUST_POLICY.json
 ```
 
-`trust-state` должен храниться вне release bundle. После принятия более нового trust epoch или release version проверка старого bundle блокируется как rollback.
+`trust-state` должен храниться вне комплект релиза. После принятия более нового доверие эпоха или релиз версия проверка старого комплект блокируется как откат.
 
 ## Транзакционное обновление Desktop/Guard/Runtime — 0.15.7
 
-`0.15.7` использует 0.15.6 transaction engine для self-update самого NeverLauncher. Desktop принимает production package и pinned SHA-256, останавливает NeverGuard и запускает соседний CLI helper с `update components`; helper ждёт завершения Desktop и только после этого изменяет live installation. Desktop, NeverGuard и NeverRuntime проверяются и переключаются одной транзакцией, поэтому ошибка одного компонента откатывает весь набор.
+`0.15.7` использует 0.15.6 транзакция движок для self-обновление самого NeverLauncher. Настольное приложение принимает рабочий пакет и закреплённый SHA-256, останавливает NeverGuard и запускает соседний CLI вспомогательный модуль с `update components`; вспомогательный модуль ждёт завершения Настольное приложение и только после этого изменяет актуальный установка. Настольное приложение, NeverGuard и NeverRuntime проверяются и переключаются одной транзакцией, поэтому ошибка одного компонента откатывает весь набор.
 
-Windows и Linux используют adjacent-file update с durable journal/backup/post-verify. Windows дополнительно повторно проверяет Authenticode и timestamp identity каждого PE; Linux сверяет ELF architecture и SHA-256. На macOS частичная замена внутренних Mach-O запрещена: staging содержит целый notarized `NeverLauncher.app`, updater atomically меняет app directory, затем повторно выполняет `codesign --verify`, `stapler validate` и Gatekeeper assessment; при любой ошибке старый app bundle восстанавливается.
+Windows и Linux используют adjacent-файл обновление с долговременный journal/backup/post-verify. Windows дополнительно повторно проверяет Authenticode и метка времени идентичность каждого PE; Linux сверяет ELF архитектура и SHA-256. На macOS частичная замена внутренних Mach-O запрещена: подготовка содержит целый нотариально заверенный `NeverLauncher.app`, обновлятор атомарно меняет app каталог, затем повторно выполняет `codesign --verify`, `stapler validate` и Gatekeeper assessment; при любой ошибке старый app комплект восстанавливается.
 
 ```bash
 nl update components --package ./neverlauncher-desktop-0.15.7-linux-x64.tar.gz --expected-sha256 <sha256> --current-desktop ./neverlauncher-desktop --wait-pid <pid> --restart
 nl update component-self-test
 ```
 
-## Unified Transactional Updater Core — 0.15.6
+## Единый Транзакционный Обновлятор Ядро — 0.15.6
 
-`0.15.6` заменяет последовательную замену client-файлов единым transactional updater engine. Перед изменением live tree все новые bytes копируются в staging внутри того же install root, проверяются по SHA-256/size, а затрагиваемые текущие файлы сохраняются в transaction backup. Только после durable `prepared` journal начинается switch; каждая замена выполняется через same-filesystem atomic rename/replace, а удаление obsolete-файлов входит в ту же transaction boundary.
+`0.15.6` заменяет последовательную замену client-файлов единым транзакционный обновлятор движок. Перед изменением актуальный дерево все новые байты копируются в подготовка внутри того же установка корень, проверяются по SHA-256/size, а затрагиваемые текущие файлы сохраняются в транзакция резервное копирование. Только после долговременный `prepared` журнал начинается переключение; каждая замена выполняется через одинаковый-файловая система атомарный rename/replace, а удаление obsolete-файлов входит в ту же транзакция граница.
 
-Journal хранится в `.neverlauncher/updater/transactions/<id>/journal.json` и проходит состояния `staging → prepared → committing → verifying → committed`. Ошибка source hash, atomic switch или post-verify запускает обратное восстановление всех touched paths; незавершённые `prepared/committing/verifying` transaction автоматически восстанавливаются перед следующим update или явно через `nl update recover --root <dir>`. Lock содержит PID и умеет освобождать stale lock после crash; destination/source symlink и path traversal отклоняются fail-closed.
+Журнал хранится в `.neverlauncher/updater/transactions/<id>/journal.json` и проходит состояния `staging → prepared → committing → verifying → committed`. Ошибка исходник хеш, атомарный переключение или post-проверять запускает обратное восстановление всех touched пути; незавершённые `prepared/committing/verifying` транзакция автоматически восстанавливаются перед следующим обновление или явно через `nl update recover --root <dir>`. Блокировка содержит PID и умеет освобождать устаревший блокировка после сбой; destination/source символическая ссылка и обход путей отклоняются отказ с блокировкой.
 
-Рабочий core используется `nl client install`, `nl client update`, `nl client repair`, `nl client rollback` и `nl client package-apply/package-consume`; `client-state.json` записывается внутри той же транзакции. Generic manifest path доступен через `nl update apply --from old.json --to new.json --source-root <dir> --root <install>`, а `nl update status` показывает durable journals. `nl update self-test` реально выполняет commit + obsolete removal + forced verification failure + rollback; CI запускает этот self-test на native Linux x64/ARM64, Windows и macOS runners, а `release publish-check` для `0.15.6+` выполняет его повторно.
+Рабочий ядро используется `nl client install`, `nl client update`, `nl client repair`, `nl client rollback` и `nl client package-apply/package-consume`; `client-state.json` записывается внутри той же транзакции. Общий манифест путь доступен через `nl update apply --from old.json --to new.json --source-root <dir> --root <install>`, а `nl update status` показывает долговременный журнал. `nl update self-test` реально выполняет фиксация + устаревший removal + forced проверка ошибка + откат; CI запускает этот self-тест на нативный Linux x64/ARM64, Windows и macOS исполнители, а `release publish-check` для `0.15.6+` выполняет его повторно.
 
 ```bash
 nl update apply --from old.json --to new.json --source-root ./payload --root ./install
@@ -434,11 +440,11 @@ nl update recover --root ./install
 nl update self-test
 ```
 
-## Managed JRE Distribution — 0.15.5
+## Управляемый JRE Дистрибутив — 0.15.5
 
-`0.15.5` переносит Java 21 runtime из best-effort download в production delivery boundary. `scripts/release/managed-jre-distribution.py` получает шесть точных Eclipse Temurin JRE archive: Windows/Linux/macOS × x64/ARM64, проверяет upstream SHA-256/size и фактическую архитектуру `bin/java`, не перепаковывает vendor bytes и создаёт `MANAGED_JRE_MANIFEST.json` + `MANAGED_JRE_EVIDENCE.json`.
+`0.15.5` переносит Java 21 среда выполнения из best-effort загрузка в рабочий доставка граница. `scripts/release/managed-jre-distribution.py` получает шесть точных Eclipse Temurin JRE архив: Windows/Linux/macOS × x64/ARM64, проверяет вышестоящий проект SHA-256/size и фактическую архитектуру `bin/java`, не перепаковывает поставщик байты и создаёт `MANAGED_JRE_MANIFEST.json` + `MANAGED_JRE_EVIDENCE.json`.
 
-`nl delivery verify-jre` и `nl release publish-check` fail-closed проверяют все шесть target, exact vendor checksums, archive format/content и binding к `DELIVERY_MANIFEST.json`. `NeverRuntime` умеет использовать локальный или HTTPS distribution manifest; для HTTPS обязателен SHA-256 pin manifest. Установка выполняется через hash-addressed download cache, `java -version` verification и atomic runtime directory replacement. Прямой Adoptium API остаётся fallback только когда managed distribution явно не настроена.
+`nl delivery verify-jre` и `nl release publish-check` отказ с блокировкой проверяют все шесть цель, точный поставщик контрольные суммы, архив format/content и привязка к `DELIVERY_MANIFEST.json`. `NeverRuntime` умеет использовать локальный или HTTPS дистрибутив манифест; для HTTPS обязателен SHA-256 закреплять манифест. Установка выполняется через хеш-адрес загрузка кэш, `java -version` проверка и атомарный среда выполнения каталог замена. Прямой Adoptium API остаётся резервный вариант только когда управляемый дистрибутив явно не настроена.
 
 ```bash
 python3 scripts/release/managed-jre-distribution.py --out dist/managed-jre-0.15.5 --version 0.15.5 --major 21
@@ -447,90 +453,90 @@ nl delivery verify-jre --bundle dist/managed-jre-0.15.5 --version 0.15.5
 neverruntime java ensure --major 21 --distribution temurin --manifest ./MANAGED_JRE_MANIFEST.json
 ```
 
-Для release staging задаётся `NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR`; remote runtime distribution задаётся `NEVERLAUNCHER_MANAGED_JRE_MANIFEST` вместе с `NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256`.
+Для релиз подготовка задаётся `NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR`; удалённый среда выполнения дистрибутив задаётся `NEVERLAUNCHER_MANAGED_JRE_MANIFEST` вместе с `NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256`.
 
-## Notarized macOS x64 + ARM64 — 0.15.4
+## Нотариально заверенный macOS x64 + ARM64 — 0.15.4
 
-`0.15.4` переводит macOS delivery с legacy `macos-universal` Guard certification на два канонических thin Mach-O target: `macos-x64` и `macos-arm64`. `scripts/release/build-macos-production.sh` собирает CLI, Desktop, NeverGuard и NeverRuntime отдельно для `x86_64-apple-darwin` и `aarch64-apple-darwin`, проверяет фактический Mach-O `cputype`, подписывает вложенные binaries и `.app` через Developer ID Application с Hardened Runtime и timestamp.
+`0.15.4` переводит macOS доставка с устаревший `macos-universal` Защита сертификация на два канонических облегчённый Mach-O цель: `macos-x64` и `macos-arm64`. `scripts/release/build-macos-production.sh` собирает CLI, Настольное приложение, NeverGuard и NeverRuntime отдельно для `x86_64-apple-darwin` и `aarch64-apple-darwin`, проверяет фактический Mach-O `cputype`, подписывает вложенные бинарные файлы и `.app` через Разработчик ID Приложение с Усиленный Среда выполнения и метка времени.
 
-Production pipeline отправляет каждую architecture-specific `.app` в Apple notary service через `xcrun notarytool submit --wait`, требует `Accepted`, затем выполняет `stapler staple`, `stapler validate`, `spctl --assess` и `codesign --verify --deep --strict`. После stapling создаются финальные `neverlauncher-desktop-0.15.4-macos-{x64,arm64}.zip`; `MACOS_NOTARIZATION_EVIDENCE.json`, per-arch package manifests и `GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json` связывают exact bytes с `DELIVERY_MANIFEST.json`.
+Рабочий конвейер отправляет каждую архитектура-specific `.app` в Apple notary служба через `xcrun notarytool submit --wait`, требует `Accepted`, затем выполняет `stapler staple`, `stapler validate`, `spctl --assess` и `codesign --verify --deep --strict`. После stapling создаются финальные `neverlauncher-desktop-0.15.4-macos-{x64,arm64}.zip`; `MACOS_NOTARIZATION_EVIDENCE.json`, на-архитектура пакет манифесты и `GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json` связывают точный байты с `DELIVERY_MANIFEST.json`.
 
-`nl delivery verify-macos --production` и `nl release publish-check` fail-closed требуют обе архитектуры, `LC_CODE_SIGNATURE`, Developer ID Team ID, Hardened Runtime, Accepted notarization, stapled ticket и Gatekeeper evidence. Обычный CI может создавать только `adhoc-development` candidate для regression tests; он не проходит production publish-check. Legacy `macos-universal` остаётся только Guard CI certification input и исключается из publishable delivery для `0.15.4+`.
+`nl delivery verify-macos --production` и `nl release publish-check` отказ с блокировкой требуют обе архитектуры, `LC_CODE_SIGNATURE`, Разработчик ID Команда ID, Усиленный Среда выполнения, Принят notarization, stapled билет и Gatekeeper свидетельство. Обычный CI может создавать только `adhoc-development` кандидат для регрессионные тесты; он не проходит рабочий публикация-проверка. Устаревший `macos-universal` остаётся только Защита CI сертификация input и исключается из готовый к публикации доставка для `0.15.4+`.
 
-## Linux x64 + ARM64 production packages — 0.15.3
+## Linux x64 + ARM64 рабочий пакеты — 0.15.3
 
-`0.15.3` убирает `linux-amd64` из publishable delivery и вводит канонические `linux-x64`/`linux-arm64` артефакты для CLI, Backend API, Desktop, NeverGuard и NeverRuntime. `scripts/release/build-linux-production.sh` запускается на нативном runner соответствующей архитектуры, а `scripts/release/linux-package.py` проверяет ELF64 `e_machine` (`EM_X86_64`/`EM_AARCH64`) и создаёт детерминированный `neverlauncher-linux-<arch>-<version>.tar.gz` со встроенным `LINUX_PACKAGE_MANIFEST.json`.
+`0.15.3` убирает `linux-amd64` из готовый к публикации доставка и вводит канонические `linux-x64`/`linux-arm64` артефакты для CLI, Серверная часть API, Настольное приложение, NeverGuard и NeverRuntime. `scripts/release/build-linux-production.sh` запускается на нативном исполнитель соответствующей архитектуры, а `scripts/release/linux-package.py` проверяет ELF64 `e_machine` (`EM_X86_64`/`EM_AARCH64`) и создаёт детерминированный `neverlauncher-linux-<arch>-<version>.tar.gz` со встроенным `LINUX_PACKAGE_MANIFEST.json`.
 
-`LINUX_PRODUCTION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json` агрегируют обе архитектуры. `nl delivery verify-linux` и `nl release publish-check` повторно проверяют ELF architecture, SHA-256/size, executable modes, содержимое tar.gz, embedded manifest и привязку каждого файла к `DELIVERY_MANIFEST.json`. Исторический `linux-amd64` остаётся только в Guard CI certification и исключается из publishable delivery inventory для `0.15.3+`.
+`LINUX_PRODUCTION_EVIDENCE.json` и `GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json` агрегируют обе архитектуры. `nl delivery verify-linux` и `nl release publish-check` повторно проверяют ELF архитектура, SHA-256/size, исполняемый режим, содержимое tar.gz, встроенный манифест и привязку каждого файла к `DELIVERY_MANIFEST.json`. Исторический `linux-amd64` остаётся только в Защита CI сертификация и исключается из готовый к публикации доставка инвентарь для `0.15.3+`.
 
-Main CI использует отдельные native jobs на `ubuntu-24.04` и `ubuntu-24.04-arm`; aggregate release принимает их exact outputs через `NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR`, не пересобирая ARM64 на x64 runner.
+Главный CI использует отдельные нативный задачи на `ubuntu-24.04` и `ubuntu-24.04-arm`; агрегат релиз принимает их точный выходные данные через `NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR`, не пересобирая ARM64 на x64 исполнитель.
 
-## Signed Windows x64 + ARM64 — 0.15.2
+## Подписанный Windows x64 + ARM64 — 0.15.2
 
-`0.15.2` переводит Windows delivery из single-architecture candidate в dual-architecture production boundary. `scripts/release/build-windows-desktop.ps1` собирает отдельные `x86_64-pc-windows-msvc` и `aarch64-pc-windows-msvc` Desktop/NeverGuard binaries и отдельные Go CLI `amd64`/`arm64`, проверяет PE Machine до и после подписи и выпускает канонические `windows-x64`/`windows-arm64` artifacts.
+`0.15.2` переводит Windows доставка из единый-архитектура кандидат в dual-архитектура рабочий граница. `scripts/release/build-windows-desktop.ps1` собирает отдельные `x86_64-pc-windows-msvc` и `aarch64-pc-windows-msvc` Desktop/NeverGuard бинарные файлы и отдельные Go CLI `amd64`/`arm64`, проверяет PE Machine до и после подписи и выпускает канонические `windows-x64`/`windows-arm64` артефакты.
 
-Production-подпись выполняется Windows SDK `signtool`: SHA-256 file digest, RFC3161 `/tr` timestamp и SHA-256 timestamp digest. После каждого sign выполняются `signtool verify /pa /all` и `Get-AuthenticodeSignature`; отсутствие валидной подписи, timestamp certificate, требуемой архитектуры или совпадающего signer thumbprint блокирует сборку. PFX можно передать только извне через secret/file; импортированный сертификат удаляется из `CurrentUser\My` в `finally`.
+Production-подпись выполняется Windows SDK `signtool`: SHA-256 файл хеш, RFC3161 `/tr` метка времени и SHA-256 метка времени хеш. После каждого подпись выполняются `signtool verify /pa /all` и `Get-AuthenticodeSignature`; отсутствие валидной подписи, метка времени сертификат, требуемой архитектуры или совпадающего подписант thumbprint блокирует сборку. PFX можно передать только извне через secret/file; импортированный сертификат удаляется из `CurrentUser\My` в `finally`.
 
-`WINDOWS_SIGNING_EVIDENCE.json` связывает signer, timestamp server, x64/ARM64 PE metadata, реальные hashes/sizes и package manifests с `DELIVERY_MANIFEST.json`. `nl delivery verify-windows --production` и `nl release publish-check` для `0.15.2+` fail-closed требуют обе архитектуры и проверяют package ZIP, embedded manifest, signed Desktop/NeverGuard bytes и `GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json`. Обычный CI может создать только `unsigned-development` candidate для тестов, но такой bundle не проходит production publish-check.
+`WINDOWS_SIGNING_EVIDENCE.json` связывает подписант, метка времени сервер, x64/ARM64 PE метаданные, реальные hashes/sizes и пакет манифесты с `DELIVERY_MANIFEST.json`. `nl delivery verify-windows --production` и `nl release publish-check` для `0.15.2+` отказ с блокировкой требуют обе архитектуры и проверяют пакет ZIP, встроенный манифест, подписанный Desktop/NeverGuard байты и `GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json`. Обычный CI может создать только `unsigned-development` кандидат для тестов, но такой комплект не проходит рабочий публикация-проверка.
 
-Отдельный workflow `.github/workflows/windows-production-delivery.yml` предназначен для реальной signing job на Windows runner с `WINDOWS_CODESIGN_PFX_BASE64`/`WINDOWS_CODESIGN_PFX_PASSWORD`. Aggregate release принимает результат через `NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR`; исторические `windows-amd64` aliases остаются только для Guard CI compatibility и не попадают в delivery manifest 0.15.2.
+Отдельный процесс `.github/workflows/windows-production-delivery.yml` предназначен для реальной подписание задача на Windows исполнитель с `WINDOWS_CODESIGN_PFX_BASE64`/`WINDOWS_CODESIGN_PFX_PASSWORD`. Агрегат релиз принимает результат через `NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR`; исторические `windows-amd64` псевдонимы остаются только для Защита CI совместимость и не попадают в доставка манифест 0.15.2.
 
-## Production Delivery — 0.15.1
+## Рабочий Доставка — 0.15.1
 
-`0.15.1` вводит первый рабочий слой Production Delivery. `nl release build` формирует `DELIVERY_MANIFEST.json` по реальным байтам release bundle, нормализует OS/CPU (`windows|linux|macos`, `x64|arm64|universal`) и помещает manifest в общий signed checksum boundary. `nl release verify` заново проверяет каждый перечисленный artifact, поэтому ручная правка manifest, замена файла после сборки или path traversal блокируют публикацию.
+`0.15.1` вводит первый рабочий слой Рабочий Доставка. `nl release build` формирует `DELIVERY_MANIFEST.json` по реальным байтам комплект релиза, нормализует OS/CPU (`windows|linux|macos`, `x64|arm64|universal`) и помещает манифест в общий подписанный контрольная сумма граница. `nl release verify` заново проверяет каждый перечисленный артефакт, поэтому ручная правка манифест, замена файла после сборки или обход путей блокируют публикацию.
 
-Для диагностики и интеграции доступны `nl delivery target`, `nl delivery verify` и `nl delivery resolve`. Resolver принимает aliases вроде `amd64`/`x86_64` и `aarch64`; macOS universal artifact совместим с обеими native архитектурами. Manifest не заявляет отсутствующие ARM64/x64 сборки: `publishedTargets` выводится только из фактически находящихся в bundle platform artifacts.
+Для диагностики и интеграции доступны `nl delivery target`, `nl delivery verify` и `nl delivery resolve`. Разрешатель принимает псевдонимы вроде `amd64`/`x86_64` и `aarch64`; macOS универсальный артефакт совместим с обеими нативный архитектурами. Манифест не заявляет отсутствующие ARM64/x64 сборки: `publishedTargets` выводится только из фактически находящихся в комплект платформа артефакты.
 
-## Historical: ServerBridge 2 Release — 0.15.0
+## Исторический: ServerBridge 2 Релиз — 0.15.0
 
-`0.15.0` закрепляет ServerBridge 2 как production release без новой DB migration поверх `0030`. `scripts/build/bridge-plugins.sh` обязан собрать все 11 platform-matched JAR и завершиться `SERVERBRIDGE2_CERTIFICATION.json`; certification сверяет public matrix, manifest, фактические JAR, SHA256SUMS и exact-version `BRIDGE_RELEASE_ALLOWLIST.json`. Production release bundle и `nl release publish-check` fail-closed требуют эту certification и повторно хэшируют каждый bridge artifact.
+`0.15.0` закрепляет ServerBridge 2 как рабочий релиз без новой DB миграция поверх `0030`. `scripts/build/bridge-plugins.sh` обязан собрать все 11 соответствующий платформе JAR и завершиться `SERVERBRIDGE2_CERTIFICATION.json`; сертификация сверяет публичная матрица, манифест, фактические JAR, SHA256SUMS и точная версия `BRIDGE_RELEASE_ALLOWLIST.json`. Рабочий комплект релиза и `nl release publish-check` отказ с блокировкой требуют эту сертификация и повторно хэшируют каждый мост артефакт.
 
-Главное изменение Minecraft Compatibility Release относительно `0.10.7` — compatibility evidence теперь связано с самим production release: официальный `release publish-check` требует machine-verifiable матрицу для той же версии/commit, проверяет все required targets и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 signature и provenance boundary. Bundle без такого evidence можно собрать как CI candidate, но нельзя подтвердить как Minecraft Compatibility Release.
+Главное изменение Minecraft Совместимость Релиз относительно `0.10.7` — совместимость свидетельство теперь связано с самим рабочий релиз: официальный `release publish-check` требует машинно проверяемый матрицу для той же версии/фиксация, проверяет все обязательный цели и включает matrix/targets/certification в общий `SHA256SUMS`, Ed25519 подпись и происхождение граница. Комплект без такого свидетельство можно собрать как CI кандидат, но нельзя подтвердить как Minecraft Совместимость Релиз.
 
-## Forge + NeoForge Server Bridge — 0.14.7
+## Forge + NeoForge Сервер Мост — 0.14.7
 
-Forge и NeoForge 1.21.1 работают как независимые `kind=forge` и `kind=neoforge` ServerBridge nodes. Оба мода используют штатный pre-world `PlayerNegotiationEvent` как async login gate, общий bounded network runtime и локальную Ed25519 identity. Release `0.14.7+` требует отдельные `forgeSha256` и `neoforgeSha256`; artifacts и identities платформ не взаимозаменяемы.
+Forge и NeoForge 1.21.1 работают как независимые `kind=forge` и `kind=neoforge` ServerBridge узлы. Оба мода используют штатный pre-мир `PlayerNegotiationEvent` как асинхронный вход контроль, общий ограниченный сеть среда выполнения и локальную Ed25519 идентичность. Релиз `0.14.7+` требует отдельные `forgeSha256` и `neoforgeSha256`; артефакты и идентичности платформ не взаимозаменяемы.
 
-## Fabric Server Bridge — 0.14.6
+## Fabric Сервер Мост — 0.14.6
 
-Fabric 1.21.1 работает как отдельный `kind=fabric` ServerBridge node. Мод подключается только на сервере, использует Fabric API login synchronizer для fail-closed асинхронной проверки login, хранит private Ed25519 key локально и передаёт Backend только signed Protocol v2 requests. Release `0.14.6+` требует отдельный `fabricSha256`; Fabric JAR не взаимозаменяем с Bukkit/proxy artifacts.
+Fabric 1.21.1 работает как отдельный `kind=fabric` ServerBridge узел. Мод подключается только на сервере, использует Fabric API вход synchronizer для отказ с блокировкой асинхронной проверки вход, хранит закрытый Ed25519 ключ локально и передаёт Серверная часть только подписанный Протокол v2 запросы. Релиз `0.14.6+` требует отдельный `fabricSha256`; Fabric JAR не взаимозаменяем с Bukkit/proxy артефакты.
 
-## ServerBridge 0.14.5 Proxy family
+## ServerBridge 0.14.5 Прокси семейство
 
-Velocity, BungeeCord и Waterfall используют общий production proxy runtime с Ed25519 node identity, signed Protocol v2 requests, artifact SHA-256 enforcement и one-time join tickets. Для BungeeCord/Waterfall выпускаются отдельные JAR; platform mismatch fail-closed. Production release 0.14.5 требует hashes всех proxy и Bukkit-family artifacts.
+Velocity, BungeeCord и Waterfall используют общий рабочий прокси среда выполнения с Ed25519 узел идентичность, подписанный Протокол v2 запросы, артефакт SHA-256 принудительное применение и одноразовый подключение билеты. Для BungeeCord/Waterfall выпускаются отдельные JAR; платформа несоответствие отказ с блокировкой. Рабочий релиз 0.14.5 требует хеширует всех прокси и Bukkit-семейство артефакты.
 
 
-## Bukkit family — 0.14.4
+## Bukkit семейство — 0.14.4
 
-`0.14.4` переводит Bukkit-совместимые ServerBridge-плагины на один production runtime `bukkit-family-common` и пять platform-matched artifacts: Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia. Общий runtime выполняет Ed25519 node authentication, SHA-256 self-measurement, heartbeat, one-time join validation, fail-closed login enforcement и diagnostics; платформенные JAR содержат только явный runtime discriminator и descriptor. JAR от другой платформы не запускается молча: mismatch приводит к отключению plugin.
+`0.14.4` переводит Bukkit-совместимые ServerBridge-плагины на один рабочий среда выполнения `bukkit-family-common` и пять соответствующий платформе артефакты: Bukkit/CraftBukkit, Spigot, Paper, Purpur и Folia. Общий среда выполнения выполняет Ed25519 узел аутентификация, SHA-256 self-измерение, сигнал состояния, одноразовый подключение валидация, отказ с блокировкой вход принудительное применение и диагностика; платформенные JAR содержат только явный среда выполнения discriminator и дескриптор. JAR от другой платформы не запускается молча: несоответствие приводит к отключению плагин.
 
-Folia не использует Bukkit scheduler для backend I/O: heartbeat/reload выполняются собственным bounded daemon executor, а async pre-login остаётся сетевой границей авторизации. Release policy `0.14.4+` требует отдельный SHA-256 allowlist для `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Migration `0024_bukkit_family_0144` расширяет PostgreSQL kind constraint без изменения существующих node identities/tickets; production E2E запускает реальные Spigot/Paper/Purpur/Folia server artifacts и проверяет allow → replay deny → revoke → deny.
+Folia не использует Bukkit планировщик для серверная часть I/O: heartbeat/reload выполняются собственным ограниченный daemon исполнитель, а асинхронный до входа остаётся сетевой границей авторизации. Релиз политика `0.14.4+` требует отдельный SHA-256 список разрешений для `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Миграция `0024_bukkit_family_0144` расширяет PostgreSQL тип ограничение без изменения существующих узел identities/tickets; рабочий E2E запускает реальные Spigot/Paper/Purpur/Folia сервер артефакты и проверяет разрешать → повторное воспроизведение запрещать → отзыв → запрещать.
 
-## Cryptographic Node Identities — 0.14.2
+## Криптографический Узел Идентичности — 0.14.2
 
-`0.14.2` заменяет ServerBridge shared bearer credentials на Ed25519 node identity. Приватный ключ создаётся и хранится локально bridge-плагином в `node-identity.properties`; Backend получает только raw public key/fingerprint и `identityEpoch`. Каждый privileged request подписывает canonical method/path/body hash вместе с Unix timestamp и 192-bit nonce. PostgreSQL атомарно consume-ит nonce, поэтому повтор корректно подписанного запроса отклоняется.
+`0.14.2` заменяет ServerBridge общий bearer учётные данные на Ed25519 узел идентичность. Приватный ключ создаётся и хранится локально bridge-плагином в `node-identity.properties`; Серверная часть получает только сырой публичный key/fingerprint и `identityEpoch`. Каждый привилегированный запрос подписывает канонический method/path/body хеш вместе с Unix метка времени и 192-бит одноразовое значение. PostgreSQL атомарно consume-ит одноразовое значение, поэтому повтор корректно подписанного запроса отклоняется.
 
-Migration `0022_serverbridge_crypto_node_identities_0142` удаляет legacy token hashes, переводит существующие 0.14.1 nodes в `identity-enrollment-required` и инвалидирует активные join tickets. Для upgrade установите bridge 0.14.2, получите его `publicKey`/fingerprint из startup log и административно вызовите `/api/v1/server-bridge/servers/{serverId}/rotate-identity`; после этого node получает новый `identityEpoch` и становится `active`. Protocol v2, PostgreSQL source of truth и atomic one-time join semantics из 0.14.1 сохраняются.
+Миграция `0022_serverbridge_crypto_node_identities_0142` удаляет устаревший токен хеширует, переводит существующие 0.14.1 узлы в `identity-enrollment-required` и инвалидирует активные подключение билеты. Для обновление установите мост 0.14.2, получите его `publicKey`/отпечаток из запуск журнал и административно вызовите `/api/v1/server-bridge/servers/{serverId}/rotate-identity`; после этого узел получает новый `identityEpoch` и становится `active`. Протокол v2, PostgreSQL источник истины и атомарный одноразовый подключение семантика из 0.14.1 сохраняются.
 
-## NeverGuard Release — 0.14.0
+## NeverGuard Релиз — 0.14.0
 
-`0.14.0` переводит NeverGuard из набора platform implementations в единый production release boundary. Windows, Linux и macOS продолжают использовать authenticated IPC v4; после handshake Desktop обязательно получает authenticated `status` от реально запущенного Guard и сверяет `productVersion`, platform identity и protocol version до дальнейших команд.
+`0.14.0` переводит NeverGuard из набора платформа реализация в единый рабочий релиз граница. Windows, Linux и macOS продолжают использовать аутентифицировать IPC v4; после рукопожатие Настольное приложение обязательно получает аутентифицировать `status` от реально запущенного Защита и сверяет `productVersion`, платформа идентичность и протокол версия до дальнейших команд.
 
-Backend для `0.14+` принимает только `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` schema 2.0. Policy хранит **точные пары** SHA-256 Desktop+NeverGuard отдельно для `windows`, `linux`, `macos`, поэтому hash одного разрешённого Guard больше нельзя комбинировать с Desktop из другой разрешённой сборки. Release identity (`schema/protocol/platform`) также сохраняется в one-time challenge/ticket binding и повторно учитывается live Minecraft/ServerBridge integrity policy.
+Серверная часть для `0.14+` принимает только `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` схема 2.0. Политика хранит **точные пары** SHA-256 Настольное приложение+NeverGuard отдельно для `windows`, `linux`, `macos`, поэтому хеш одного разрешённого Защита больше нельзя комбинировать с Настольное приложение из другой разрешённой сборки. Релиз идентичность (`schema/protocol/platform`) также сохраняется в одноразовый challenge/ticket привязка и повторно учитывается актуальный Minecraft/ServerBridge целостность политика.
 
-Каждый platform builder создаёт собственный v2 fragment. После финальной vendor signing используйте `scripts/release/merge-guard-release-policy.py --windows ... --linux ... --macos ... --output GUARD_RELEASE_POLICY.json`: production merger требует Authenticode Windows, Developer ID + notarization macOS и полный набор трёх платформ. Полученный JSON целиком задаётся в `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`.
+Каждый платформа builder создаёт собственный v2 fragment. После финальной поставщик подписание используйте `scripts/release/merge-guard-release-policy.py --windows... --linux... --macos... --output GUARD_RELEASE_POLICY.json`: рабочий merger требует Authenticode Windows, Разработчик ID + notarization macOS и полный набор трёх платформ. Полученный JSON целиком задаётся в `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`.
 
-## Сертификация Cross-platform Guard release — 0.13.9
+## Сертификация Кроссплатформенный Защита релиз — 0.13.9
 
-`0.13.9` вводит единый certification boundary поверх production NeverGuard реализаций Windows, Linux и macOS. Каждый platform CI job обязан завершить native Guard tests, integration test, clippy/release build, platform production gate и package verification, после чего создаёт `guard-ci-result.json` для exact commit/run с SHA-256 package, Desktop, Guard, package manifest и release allowlist. Aggregate job принимает релиз только при PASS всех трёх обязательных targets.
+`0.13.9` вводит единый сертификация граница поверх рабочий NeverGuard реализаций Windows, Linux и macOS. Каждый платформа CI задача обязан завершить нативный Защита тесты, интеграционный тест, clippy/release сборка, платформа рабочий контроль и пакет проверка, после чего создаёт `guard-ci-result.json` для точный commit/run с SHA-256 пакет, Настольное приложение, Защита, пакет манифест и релиз список разрешений. Агрегат задача принимает релиз только при PASS всех трёх обязательных цели.
 
-Финальный release не пересобирает сертифицированные platform artifacts: `scripts/guard_ci/stage_release.py` переносит именно outputs прошедшего CI и повторно сверяет их хэши. Для `0.13.9+` `nl release publish-check` требует `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json` и заново хэширует каждый сертифицированный Windows/Linux/macOS artifact уже внутри подписанного bundle. CI evidence не заменяет production Authenticode/Developer ID/notarization и явно не утверждает владение vendor signing credentials.
+Финальный релиз не пересобирает сертифицированные платформа артефакты: `scripts/guard_ci/stage_release.py` переносит именно выходные данные прошедшего CI и повторно сверяет их хэши. Для `0.13.9+` `nl release publish-check` требует `GUARD_CI_TARGETS.json`, `GUARD_CI_MATRIX.json`, `GUARD_CI_CERTIFICATION.json` и заново хэширует каждый сертифицированный Windows/Linux/macOS артефакт уже внутри подписанного комплект. CI свидетельство не заменяет рабочий Authenticode/Developer ID/notarization и явно не утверждает владение поставщик подписание учётные данные.
 
-## NeverGuard macOS production — 0.13.8
+## NeverGuard macOS рабочий — 0.13.8
 
-macOS использует отдельный native NeverGuard boundary: authenticated Unix-domain socket protocol v4, kernel peer PID/UID validation, `PT_DENY_ATTACH`, `RLIMIT_CORE=0`, parent-exit kqueue watch и отдельную Minecraft process group. Integrity Evidence/Guard Attestation имеют собственные macOS schemas и включают SHA-256 Mach-O, process boundary, code signature, Hardened Runtime и library validation; Backend проверяет их независимо от Windows/Linux policy.
+macOS использует отдельный нативный NeverGuard граница: аутентифицировать Unix-домен сокет протокол v4, ядро узел PID/UID валидация, `PT_DENY_ATTACH`, `RLIMIT_CORE=0`, родительский-выход kqueue watch и отдельную Minecraft группа процессов. Целостность Evidence/Guard Аттестация имеют собственные macOS схемы и включают SHA-256 Mach-O, процесс граница, код подпись, Усиленный Среда выполнения и библиотека валидация; Серверная часть проверяет их независимо от Windows/Linux политика.
 
-Production package строится `scripts/release/build-macos-desktop.sh`: universal `arm64 + x86_64` `.app`, Developer ID Application signing, Hardened Runtime, notarization/stapling и Gatekeeper assessment. Перед spawn Guard Desktop fail-closed проверяет `MACOS_PACKAGE_MANIFEST.json`, expected signing identifiers/Team ID, подписи и notarization status. `--allow-ad-hoc` предназначен только для CI/development artifact и не является production-runnable package.
+Рабочий пакет строится `scripts/release/build-macos-desktop.sh`: универсальный `arm64 + x86_64` `.app`, Разработчик ID Приложение подписание, Усиленный Среда выполнения, notarization/stapling и Gatekeeper assessment. Перед запуск процесса Защита Настольное приложение отказ с блокировкой проверяет `MACOS_PACKAGE_MANIFEST.json`, ожидаемый подписание identifiers/Team ID, подписи и notarization состояние. `--allow-ad-hoc` предназначен только для CI/development артефакт и не является рабочий-runnable пакет.
 
 ## Рабочий контур
 
@@ -545,26 +551,26 @@ Forge/NeoForge Maven -> installer.jar + SHA-1
                      -> Compatibility Engine -> Managed Java -> JVM
 ```
 
-Сохраняется processor-based Forge/NeoForge pipeline, введённый в `0.10.4`, и стабилизационный hardening `0.10.7`: exclusive materialization lock, bounded upstream retry, symlink-safe client tree, deterministic natives/processors state и строгий CI evidence.
+Сохраняется основанный на обработчиках Forge/NeoForge конвейер, введённый в `0.10.4`, и стабилизационный усиление защиты `0.10.7`: эксклюзивный материализация блокировка, ограниченный вышестоящий проект повторить, символическая ссылка-безопасный клиент дерево, детерминированный natives/processors состояние и строгий CI свидетельство.
 
-## Minecraft Compatibility Release
+## Minecraft Совместимость Релиз
 
-NeverLauncher **0.18.0 Loader Compatibility GA** fail-closed ограничивает production materializers точным сертифицированным support surface: Fabric/Quilt 1.14–26.3 по зафиксированным release IDs, Forge modern 1.13.2–26.3 по сертифицированным IDs плюс реальные legacy 1.7.10/1.12.2, NeoForge 1.20.1–26.2. Для каждой комбинации проверяется exact Java major; версии вне GA surface не запускают loader install.
+NeverLauncher **0.18.0 Загрузчик Совместимость GA** отказ с блокировкой ограничивает рабочий материализатор точным сертифицированным поддержка поверхность: Fabric/Quilt 1.14–26.3 по зафиксированным релиз ID, Forge современный 1.13.2–26.3 по сертифицированным ID плюс реальные устаревший 1.7.10/1.12.2, NeoForge 1.20.1–26.2. Для каждой комбинации проверяется точный Java крупный; версии вне GA поверхность не запускают загрузчик установка.
 
-- exclusive materialization lock на каждый `clientDir` для Vanilla/Fabric/Quilt/Forge/NeoForge;
-- retry transient HTTP `408/425/429/5xx` и bounded `Retry-After`;
-- запрет symlink-компонентов внутри materialized client tree и symlink artifacts при package build;
-- portable atomic replacement повреждённых файлов;
-- очистка и полная пересборка generated natives перед упаковкой;
-- очистка Forge/NeoForge installer scratch data перед processors;
-- Compatibility Engine повторно проверяет отсутствие symlink path components непосредственно перед runtime resolution;
-- CI aggregator требует `exitCode=0`, healthy Paper, полный evidence set и loader identity, а не только поле `status=passed`.
+- эксклюзивный материализация блокировка на каждый `clientDir` для Vanilla/Fabric/Quilt/Forge/NeoForge;
+- повторить временный HTTP `408/425/429/5xx` и ограниченный `Retry-After`;
+- запрет symlink-компонентов внутри материализовать клиент дерево и символическая ссылка артефакты при пакет сборка;
+- переносимый атомарный замена повреждённых файлов;
+- очистка и полная пересборка сгенерированный нативный перед упаковкой;
+- очистка Forge/NeoForge установщик scratch данные перед обработчики;
+- Совместимость Движок повторно проверяет отсутствие символическая ссылка путь компонент непосредственно перед среда выполнения разрешение;
+- CI aggregator требует `exitCode=0`, работоспособный Paper, полный свидетельство задать и загрузчик идентичность, а не только поле `status=passed`.
 
-Эти проверки находятся в исполняемом коде и regression tests; repository policy дополнительно запрещает выпуск при удалении обязательных compatibility primitives.
+Эти проверки находятся в исполняемом коде и регрессионные тесты; репозиторий политика дополнительно запрещает выпуск при удалении обязательных совместимость примитивы.
 
-### Release-bound compatibility certification
+### Релиз-привязанный совместимость сертификация
 
-Официальный publish flow использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml`. Для 0.18.0 GA release bundle содержит четыре обязательных compatibility-файла:
+Официальный публикация поток использует агрегированный `matrix.json` из `.github/workflows/compatibility.yml`. Для 0.18.0 GA комплект релиза содержит четыре обязательных compatibility-файла:
 
 ```text
 COMPATIBILITY_TARGETS.json
@@ -573,9 +579,9 @@ COMPATIBILITY_CERTIFICATION.json
 LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json
 ```
 
-Базовый certification повторно проверяет product version, exact source commit, run ID, полный набор required targets, immutable resolved loader versions, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke evidence и SHA-256 каждого per-target evidence JSON. Loader Compatibility GA строит единый SHA-256 evidence root всех 292 targets, фиксирует family/platform/Java/scopes и обязательные pinning/native-E2E/cross-platform/hardening invariants. Дополнительно сертификат связывает SHA-256 исполняемого GA support policy (163 loader/Minecraft линии, включая Forge legacy 1.7.10/1.12.2). `RELEASE_MANIFEST.json` требует `loaderCompatibilityGA=true` и совпадающий support SHA; все четыре файла входят в `SHA256SUMS` и защищены общей Ed25519 release signature.
+Базовый сертификация повторно проверяет продукт версия, точный исходник фиксация, запуск ID, полный набор обязательный цели, неизменяемый разрешённый загрузчик версии, `exitCode=0`, actual-client/package/signature/sync/Paper/revoke свидетельство и SHA-256 каждого на-цель свидетельство JSON. Загрузчик Совместимость GA строит единый SHA-256 свидетельство корень всех 292 цели, фиксирует family/platform/Java/scopes и обязательные pinning/native-E2E/cross-platform/hardening инварианты. Дополнительно сертификат связывает SHA-256 исполняемого GA поддержка политика (163 loader/Minecraft линии, включая Forge устаревший 1.7.10/1.12.2). `RELEASE_MANIFEST.json` требует `loaderCompatibilityGA=true` и совпадающий поддержка SHA; все четыре файла входят в `SHA256SUMS` и защищены общей Ed25519 релиз подпись.
 
-Сборка сертифицированного bundle:
+Сборка сертифицированного комплект:
 
 ```bash
 export NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE=/path/to/matrix.json
@@ -590,9 +596,9 @@ VERSION="$(cat VERSION)"
 nl release publish-check "dist/release-${VERSION}" --public-key /secure/release-public.pem
 ```
 
-## Managed Java
+## Управляемый Java
 
-NeverRuntime выбирает JVM требуемой major-версии и при необходимости устанавливает проверенный Temurin runtime. Для Java 21 в production используется Managed JRE Distribution 0.15.5; локальный/HTTPS manifest выбирает platform/architecture artifact и проверяется до установки. Поддерживаются Java 8, 17, 21 и 25; без настроенного distribution manifest сохраняется совместимый direct-Adoptium fallback. Forge/NeoForge processor pipeline принимает `--java` или `NEVERLAUNCHER_JAVA`; если путь не задан, используется подходящая системная Java. Версия JVM проверяется до запуска processors.
+NeverRuntime выбирает JVM требуемой major-версии и при необходимости устанавливает проверенный Temurin среда выполнения. Для Java 21 в рабочий используется Управляемый JRE Дистрибутив 0.15.5; локальный/HTTPS манифест выбирает platform/architecture артефакт и проверяется до установки. Поддерживаются Java 8, 17, 21 и 25; без настроенного дистрибутив манифест сохраняется совместимый прямой-Adoptium резервный вариант. Forge/NeoForge обработчик конвейер принимает `--java` или `NEVERLAUNCHER_JAVA`; если путь не задан, используется подходящая системная Java. Версия JVM проверяется до запуска обработчики.
 
 ```bash
 neverruntime java ensure --major 21 --distribution temurin
@@ -600,7 +606,7 @@ neverruntime java ensure --major 21 --distribution temurin
 
 ## Vanilla / Fabric / Quilt
 
-Сохраняется materialization-контур `0.10.2`–`0.10.3`: Mojang client/libraries/assets/natives/logging проверяются по upstream SHA-1/size и затем фиксируются SHA-256 в Never release; Fabric и Quilt получают concrete loader profile через официальные Meta API и materialize Maven dependencies до публикации immutable release.
+Сохраняется materialization-контур `0.10.2`–`0.10.3`: Mojang client/libraries/assets/natives/logging проверяются по вышестоящий проект SHA-1/size и затем фиксируются SHA-256 в Никогда релиз; Fabric и Quilt получают конкретный загрузчик профиль через официальные Мета API и материализовать Maven зависимости до публикации неизменяемый релиз.
 
 ```bash
 nl runtime vanilla-package --minecraft 1.21.1 --client-dir .neverlauncher/vanilla/1.21.1 --output client-package.json
@@ -637,29 +643,29 @@ nl runtime neoforge-package \
   --output client-package.json
 ```
 
-Production pipeline выполняет:
+Рабочий конвейер выполняет:
 
-1. разрешение Minecraft и materialization Vanilla base;
-2. выбор конкретной Forge/NeoForge версии через Maven metadata либо явный `--loader-version`;
-3. загрузку официального `installer.jar` только по HTTPS и проверку upstream `.sha1`;
-4. чтение `install_profile.json` и встроенного `version.json` непосредственно из installer JAR;
-5. безопасное извлечение встроенного `maven/` и installer `data/` без path traversal/symlink;
-6. materialization installer libraries и processor classpath;
-7. выполнение только client processors через Java, с `Main-Class` из JAR manifest, timeout и прямой передачей аргументов без shell;
-8. разрешение Forge/NeoForge installer tokens `{ROOT}`, `{MINECRAFT_JAR}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}`, `{DATA}` и Maven references `[group:artifact:version...]`;
-9. проверку processor outputs по SHA-1/SHA-256 и пропуск уже корректно созданных outputs при повторной установке;
-10. materialization runtime libraries из child `version.json`, включая локально сгенерированные processor artifacts;
-11. запись нормализованного `versions/<id>/<id>.json` и стандартную упаковку в SHA-256 Never package.
+1. разрешение Minecraft и материализация Vanilla основа;
+2. выбор конкретной Forge/NeoForge версии через Maven метаданные либо явный `--loader-version`;
+3. загрузку официального `installer.jar` только по HTTPS и проверку вышестоящий проект `.sha1`;
+4. чтение `install_profile.json` и встроенного `version.json` непосредственно из установщик JAR;
+5. безопасное извлечение встроенного `maven/` и установщик `data/` без путь traversal/symlink;
+6. материализация установщик библиотеки и обработчик путь классов;
+7. выполнение только клиент обработчики через Java, с `Main-Class` из JAR манифест, тайм-аут и прямой передачей аргументов без оболочка;
+8. разрешение Forge/NeoForge установщик токены `{ROOT}`, `{MINECRAFT_JAR}`, `{INSTALLER}`, `{LIBRARY_DIR}`, `{SIDE}`, `{DATA}` и Maven ссылки `[group:artifact:version...]`;
+9. проверку обработчик выходные данные по SHA-1/SHA-256 и пропуск уже корректно созданных выходные данные при повторной установке;
+10. материализация среда выполнения библиотеки из дочерний `version.json`, включая локально сгенерированные обработчик артефакты;
+11. запись нормализованного `versions/<id>/<id>.json` и стандартную упаковку в SHA-256 Никогда пакет.
 
-Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В strict mode отсутствие корректного checksum завершает materialization ошибкой.
+Для тестов/зеркал доступны `--installer-url`, `--installer-sha1` и `--maven-metadata-url`. В строгий режим отсутствие корректного контрольная сумма завершает материализация ошибкой.
 
-Текущий compatibility release поддерживает processor-based Forge installers поколения 1.13+ и NeoForge installer format. Legacy Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей compatibility hardening.
+Текущий совместимость релиз поддерживает основанный на обработчиках Forge установщик поколения 1.13+ и NeoForge установщик формат. Устаревший Forge до 1.13 намеренно не объявляется готовым и остаётся отдельной задачей совместимость усиление защиты.
 
-## Compatibility Engine
+## Совместимость Движок
 
-При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime читает подписанный child `version.json`, разрешает `inheritsFrom`, Mojang rules, ordered classpath, native classifiers, JVM/game arguments и logging config. Forge/NeoForge child profile поэтому запускается тем же runtime path, что Vanilla/Fabric/Quilt, без отдельного launch fallback.
+При `runtime.launch.classpathStrategy = "compatibility"` NeverRuntime читает подписанный дочерний `version.json`, разрешает `inheritsFrom`, Mojang правила, упорядоченный путь классов, нативный классификатор, JVM/игра arguments и logging конфигурация. Forge/NeoForge дочерний профиль поэтому запускается тем же среда выполнения путь, что Vanilla/Fabric/Quilt, без отдельного запускать резервный вариант.
 
-Каждый metadata/classpath/native/logging path, использованный engine, обязан входить в подписанный manifest. Installer JAR и промежуточные installer data хранятся в `.neverlauncher/` и в клиентский package не попадают; только нормализованные runtime artifacts становятся частью immutable release.
+Каждый metadata/classpath/native/logging путь, использованный движок, обязан входить в подписанный манифест. Установщик JAR и промежуточные установщик данные хранятся в `.neverlauncher/` и в клиентский пакет не попадают; только нормализованные среда выполнения артефакты становятся частью неизменяемый релиз.
 
 Прямое разрешение установленного дерева:
 
@@ -669,17 +675,17 @@ neverruntime compatibility --root .neverlauncher/client --version <profile-id>
 
 ## Компоненты
 
-- **Backend API** — единый `/api/v1`, миграции PostgreSQL, подписанные манифесты, авторизация и серверные сессии, Redis rate limiting, доверенные proxy, local/S3-хранилище, резервное копирование, диагностика и ServerBridge.
-- **CLI `nl`** — рабочие сценарии установки, авторизации, администрирования, операций, пакетов, релизов и runtime через `/api/v1`; исторические status-only семейства команд удалены.
-- **NeverRuntime** — Rust runtime/CLI для Ed25519-проверки, потоковой загрузки и SHA-256, восстановления клиента, определения Java, построения плана запуска и запуска процесса.
-- **Desktop** — Tauri-адаптер поверх NeverRuntime с системным защищённым хранилищем учётных данных и контролируемыми JVM-процессами.
-- **Admin** — Vite-приложение в неизменяемом production-образе Nginx с CSP.
-- **ServerBridge** — реальные плагины Velocity и Bukkit-family (Bukkit/Spigot/Paper/Purpur/Folia), собираемые против платформенного API и общего security runtime.
-- **Развёртывание** — PostgreSQL, Redis с паролем, Backend, Admin и Nginx с fail-closed rate limiting и явным списком доверенных proxy CIDR.
+- **Серверная часть API** — единый `/api/v1`, миграции PostgreSQL, подписанные манифесты, авторизация и серверные сессии, Redis ограничение частоты, доверенные прокси, local/S3-хранилище, резервное копирование, диагностика и ServerBridge.
+- **CLI `nl`** — рабочие сценарии установки, авторизации, администрирования, операций, пакетов, релизов и среда выполнения через `/api/v1`; исторические состояние-только семейства команд удалены.
+- **NeverRuntime** — Rust среда выполнения/CLI для Ed25519-проверки, потоковой загрузки и SHA-256, восстановления клиента, определения Java, построения плана запуска и запуска процесса.
+- **Настольное приложение** — Tauri-адаптер поверх NeverRuntime с системным защищённым хранилищем учётных данных и контролируемыми JVM-процессами.
+- **Администратор** — Vite-приложение в неизменяемом production-образе Nginx с CSP.
+- **ServerBridge** — реальные плагины Velocity и Bukkit-семейство (Bukkit/Spigot/Paper/Purpur/Folia), собираемые против платформенного API и общего безопасность среда выполнения.
+- **Развёртывание** — PostgreSQL, Redis с паролем, Серверная часть, Администратор и Nginx с отказ с блокировкой ограничение частоты и явным списком доверенных прокси CIDR.
 
 ## Канонический API
 
-В production регистрируется только `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` отсутствуют намеренно. Канонический контракт хранится в:
+В рабочий регистрируется только `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` отсутствуют намеренно. Канонический контракт хранится в:
 
 ```text
 schemas/openapi.yaml
@@ -700,24 +706,24 @@ python3 scripts/contracts/validate-openapi.py
 ./scripts/release/preflight.sh
 ```
 
-Локальный preflight выполняет доступный контур и явно не объявляет его production-ready при пропусках. Для релиза используйте строгий режим, который требует все обязательные проверки:
+Локальный предварительная проверка выполняет доступный контур и явно не объявляет его рабочий-готовый при пропусках. Для релиза используйте строгий режим, который требует все обязательные проверки:
 
 ```bash
 NEVERLAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh
 ```
 
-Для диагностического локального прогона frontend и Tauri можно включить отдельно:
+Для диагностического локального прогона клиентская часть и Tauri можно включить отдельно:
 
 ```bash
 NEVERLAUNCHER_PREFLIGHT_FRONTEND=1 ./scripts/release/preflight.sh
 NEVERLAUNCHER_PREFLIGHT_TAURI=1 ./scripts/release/preflight.sh
 ```
 
-## Публичная CI Compatibility Matrix
+## Публичная CI Матрица совместимости
 
-Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Workflow `.github/workflows/compatibility.yml` строит dynamic matrix и запускает настоящий клиент для каждого target. Текущая обязательная матрица содержит 292 targets: 109 Vanilla, 53 Fabric, 53 Quilt, 50 Forge и 27 NeoForge. Исторические широкие loader-линии остаются Linux x86_64 regression-базой, а current-loader anchors дополнительно сертифицируются на Windows/Linux/macOS × x64/ARM64; `1.21.1` сохраняет loader-native integration E2E. Mutable loader selector `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая loader version.
+Канонические цели хранятся в `compatibility/targets.json`; в них нет ручных PASS/FAIL. Процесс `.github/workflows/compatibility.yml` строит динамический матрица и запускает настоящий клиент для каждого цель. Текущая обязательная матрица содержит 292 цели: 109 Vanilla, 53 Fabric, 53 Quilt, 50 Forge и 27 NeoForge. Исторические широкие loader-линии остаются Linux x86_64 regression-базой, а текущий-загрузчик якоря дополнительно сертифицируются на Windows/Linux/macOS × x64/ARM64; `1.21.1` сохраняет нативный для загрузчика интеграционный E2E. Изменяемый загрузчик селектор `latest-stable` разрешается в конкретную версию до публикации и не может попасть в PASS-результат как итоговая загрузчик версия.
 
-Каждый case генерирует `compatibility-result.json` только после прохождения обязательных evidence-checks: локальная проверка package, Ed25519-подпись immutable manifest, clean sync, запуск настоящего клиента, вход на Paper и fail-closed deny после revoke. Агрегатор `scripts/compatibility/matrix.py` проверяет exact target, commit, Actions run ID, concrete loader version и completeness evidence; missing/duplicate/invalid result делает матрицу failed. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и как artifact.
+Каждый случай генерирует `compatibility-result.json` только после прохождения обязательных свидетельство-проверяет: локальная проверка пакет, Ed25519-подпись неизменяемый манифест, чистый синхронизация, запуск настоящего клиента, вход на Paper и отказ с блокировкой запрещать после отзыв. Агрегатор `scripts/compatibility/matrix.py` проверяет точный цель, фиксация, Действия запуск ID, конкретный загрузчик версия и completeness свидетельство; missing/duplicate/invalid результат делает матрицу ошибка. Итоговые `matrix.json` и `matrix.md` публикуются в Действия Summary и как артефакт.
 
 Локальная проверка definition/aggregator:
 
@@ -728,9 +734,9 @@ python3 scripts/compatibility/test_matrix.py
 
 Подробности: `compatibility/README.md`.
 
-## Настоящий Minecraft Client E2E
+## Настоящий Minecraft Клиент E2E
 
-Блокирующий production release gate по умолчанию проверяет Vanilla, а compatibility workflow использует тот же production-путь для всех пяти loader families. Java fixture не используется как доказательство совместимости клиента:
+Блокирующий рабочий контроль выпуска по умолчанию проверяет Vanilla, а совместимость процесс использует тот же production-путь для всех пяти загрузчик семейство. Java фикстура не используется как доказательство совместимости клиента:
 
 ```text
 официальный Mojang version manifest
@@ -749,112 +755,112 @@ python3 scripts/compatibility/test_matrix.py
  -> revoke session -> subsequent join denied
 ```
 
-Для CI добавлен безопасный `--max-runtime-seconds`: NeverRuntime сам завершает долговременно работающий game process после сбора E2E evidence и отражает это как `timedOut`, не оставляя Java-процесс после job.
+Для CI добавлен безопасный `--max-runtime-seconds`: NeverRuntime сам завершает долговременно работающий игра процесс после сбора E2E свидетельство и отражает это как `timedOut`, не оставляя Java-процесс после задача.
 
-Velocity/Purpur продолжают проходить быстрый protocol-level allow/revoke/deny тест, но такой probe больше не считается доказательством Minecraft Client compatibility.
+Velocity/Purpur продолжают проходить быстрый протокол-уровень allow/revoke/deny тест, но такой probe больше не считается доказательством Minecraft Клиент совместимость.
 
-Запуск в окружении с Docker, Gradle, JDK 21, Rust/Cargo, Go, PostgreSQL client, `curl`, `jq`, Python 3, Xvfb и OpenGL/X11 runtime:
+Запуск в окружении с Docker, Gradle, JDK 21, Rust/Cargo, Go, PostgreSQL клиент, `curl`, `jq`, Python 3, Xvfb и OpenGL/X11 среда выполнения:
 
 ```bash
 bash e2e/scripts/run-minecraft-e2e.sh
 ```
 
-## Auth Federation 0.12
+## Аутентификация Федерация 0.12
 
-`0.12.0` — стабильный Auth Federation release. Local/SQL/HTTP/OIDC/Microsoft проходят один Connector SDK/Federation Core и разрешаются в canonical Never user до выпуска Never session; passkeys/TOTP/recovery являются auth methods/MFA, а Minecraft session создаётся только поверх canonical Never session. Generic browser providers можно явно связать через `/api/v1/auth/providers/{providerId}/link/begin|complete` без auto-link по email.
+`0.12.0` — стабильный Аутентификация Федерация релиз. Локальный/SQL/HTTP/OIDC/Microsoft проходят один Коннектор SDK/Федерация Ядро и разрешаются в канонический Никогда пользователь до выпуска Никогда сессия; ключи доступа/TOTP/восстановление являются аутентификация методы/MFA, а Minecraft сессия создаётся только поверх канонический Никогда сессия. Общий browser провайдеры можно явно связать через `/api/v1/auth/providers/{providerId}/link/begin|complete` без автоматический-связь по электронная почта.
 
-Для production upgrade примените `nl db migrate apply`, затем `nl db migrate verify`. Migration `0011_auth_federation_release_0120` гарантирует canonical local identity для каждого password-capable user и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить runtime federation через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый auth provider.
+Для рабочий обновление примените `nl db migrate apply`, затем `nl db migrate verify`. Миграция `0011_auth_federation_release_0120` гарантирует канонический локальный идентичность для каждого поддерживающий пароль пользователь и блокирует повреждение этой связи на уровне PostgreSQL. Администратор может проверить среда выполнения федерация через `GET /api/v1/admin/auth/federation/status`; `/ready` требует хотя бы один здоровый аутентификация провайдер.
 
-## NeverGuard migration, compatibility & stabilization — 0.13.10
+## NeverGuard миграция, совместимость и стабилизация — 0.13.10
 
-`0.13.10` завершает стабилизацию 0.13.x после cross-platform Guard certification. Новая PostgreSQL migration `0020_guard_migration_compatibility_stabilization_01310` проверяет persisted `minecraft_sessions` Guard snapshot и fail-closed останавливает upgrade на частичных/противоречивых security rows; после этого DB сама гарантирует atomic snapshot и freshness window, совпадающее с runtime ticket policy.
+`0.13.10` завершает стабилизацию 0.13.x после кроссплатформенный Защита сертификация. Новая PostgreSQL миграция `0020_guard_migration_compatibility_stabilization_01310` проверяет сохранённый `minecraft_sessions` Защита снимок и отказ с блокировкой останавливает обновление на частичных/противоречивых безопасность строки; после этого DB сама гарантирует атомарный снимок и актуальность окно, совпадающее с среда выполнения билет политика.
 
-Исправлена cross-platform совместимость gameplay enforcement: macOS trusted device теперь проходит ту же обязательную live reevaluation Guard integrity в Minecraft/ServerBridge, что Windows/Linux. Guard CI target result дополнительно содержит `repository`, а aggregate/release certification отклоняет перенос PASS-evidence между fork/repository даже при совпавших commit/run strings. Для реального upgrade rehearsal используется `e2e/scripts/run-guard-migration-e2e.sh`.
+Исправлена кроссплатформенный совместимость игровой принудительное применение: macOS доверенный устройство теперь проходит ту же обязательную актуальный reevaluation Защита целостность в Minecraft/ServerBridge, что Windows/Linux. Защита CI цель результат дополнительно содержит `repository`, а aggregate/release сертификация отклоняет перенос PASS-свидетельство между fork/repository даже при совпавших commit/run strings. Для реального обновление репетиция используется `e2e/scripts/run-guard-migration-e2e.sh`.
 
-## Windows production hardening — 0.13.6
+## Windows рабочий усиление защиты — 0.13.6
 
-`0.13.6` усиливает уже рабочий NeverGuard boundary без hooks/injection. Desktop и `neverguard.exe` до основной runtime-инициализации fail-closed включают heap termination-on-corruption и ограничивают default DLL search каталогом приложения и `System32`. NeverGuard IPC поднят до protocol v4: Named Pipe остаётся local-only, но теперь создаётся с protected current-user/System ACL; hardening version/state и наличие secure ACL входят в authenticated `ready` proof.
+`0.13.6` усиливает уже рабочий NeverGuard граница без hooks/injection. Настольное приложение и `neverguard.exe` до основной runtime-инициализации отказ с блокировкой включают куча termination-на-повреждение и ограничивают по умолчанию DLL search каталогом приложения и `System32`. NeverGuard IPC поднят до протокол v4: Именованный Pipe остаётся локальный-только, но теперь создаётся с защищать current-user/System ACL; усиление защиты version/state и наличие защищённый ACL входят в аутентифицировать `ready` доказательство.
 
-Desktop удерживает отдельный NeverGuard Job Object с `KILL_ON_JOB_CLOSE`, поэтому аварийное завершение launcher закрывает OS-level lifetime boundary Guard. Release build создаёт `WINDOWS_PACKAGE_MANIFEST.json` после финальной сборки, а release Desktop до spawn `neverguard.exe` требует соседний regular/non-symlink artifact и сверяет size + SHA-256 обоих executable с manifest. Для production-signing `build-windows-desktop.ps1 -CodeSigningCertificateThumbprint <thumbprint>` подписывает оба PE через Authenticode **до** вычисления hashes, повторно проверяет подписи и выставляет `authenticodeRequired/requireAuthenticode=true`; runtime затем выполняет локальный WinVerifyTrust до запуска Guard.
+Настольное приложение удерживает отдельный NeverGuard Задача Объект с `KILL_ON_JOB_CLOSE`, поэтому аварийное завершение лаунчер закрывает OS-уровень срок жизни граница Защита. Релиз сборка создаёт `WINDOWS_PACKAGE_MANIFEST.json` после финальной сборки, а релиз Настольное приложение до запуск процесса `neverguard.exe` требует соседний regular/non-symlink артефакт и сверяет размер + SHA-256 обоих исполняемый с манифест. Для рабочий-подписание `build-windows-desktop.ps1 -CodeSigningCertificateThumbprint <thumbprint>` подписывает оба PE через Authenticode **до** вычисления хеширует, повторно проверяет подписи и выставляет `authenticodeRequired/requireAuthenticode=true`; среда выполнения затем выполняет локальный WinVerifyTrust до запуска Защита.
 
-Unsigned development package намеренно не проходит release-runtime Authenticode gate и предназначен только для CI/build validation.
+Неподписанный разработка пакет намеренно не проходит релиз-среда выполнения Authenticode контроль и предназначен только для CI/build валидация.
 
-Это user-mode production hardening: он уменьшает поверхность DLL hijacking, локального IPC и orphan Guard process и делает release corruption/replacement fail-closed в штатной модели. Он не является защитой от администратора/kernel attacker и не заменяет server-side Guard Attestation/allowlist из 0.13.4–0.13.5.
+Это пользовательский режим рабочий усиление защиты: он уменьшает поверхность DLL hijacking, локального IPC и orphan Защита процесс и делает релиз corruption/replacement отказ с блокировкой в штатной модели. Он не является защитой от администратора/ядро злоумышленник и не заменяет на стороне сервера Защита Attestation/allowlist из 0.13.4–0.13.5.
 
-## Minecraft/ServerBridge integrity enforcement — 0.13.5
+## Minecraft/ServerBridge целостность принудительное применение — 0.13.5
 
-`0.13.5` закрывает gameplay bypass между Guard Attestation и ServerBridge. Guard-verified metadata теперь сохраняется в самой Minecraft session и live-проверяется при validate/join/hasJoined. Для Windows Guard-enforced device Desktop передаёт новый Minecraft access token в `/api/v1/session/join`; Backend сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный join, не связанный с тем credential, который получил одноразовый Guard launch ticket.
+`0.13.5` закрывает игровой обход между Защита Аттестация и ServerBridge. Защита-проверен метаданные теперь сохраняется в самой Minecraft сессия и live-проверяется при validate/join/hasJoined. Для Windows Защита-применять устройство Настольное приложение передаёт новый Minecraft токен доступа в `/api/v1/session/join`; Серверная часть сохраняет `minecraftSessionId`, поэтому ServerBridge не может принять отдельный подключение, не связанный с тем учётные данные, который получил одноразовый Защита запускать билет.
 
-Velocity и Bukkit/Spigot/Paper/Purpur/Folia дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в heartbeat и `validate-join`. Backend принимает только hashes из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую policy на каждом join и сбрасывает measurement после rotation node identity. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; production Backend без этой policy не проходит конфигурационную проверку.
+Velocity и Bukkit/Spigot/Paper/Purpur/Folia дополнительно хэшируют собственный запущенный JAR (`SHA-256`) и отправляют `pluginVersion + pluginSha256` в сигнал состояния и `validate-join`. Серверная часть принимает только хеширует из `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, повторно проверяет текущую политика на каждом подключение и сбрасывает измерение после ротация узел идентичность. `scripts/build/bridge-plugins.sh` генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из фактически собранных JAR; рабочий Серверная часть без этой политика не проходит конфигурационную проверку.
 
-Удаление Guard/Desktop или ServerBridge hash из соответствующего allowlist действует как live revoke: уже созданная Minecraft/ServerBridge session перестаёт проходить Backend validation. ServerBridge JAR self-hash является application-level release enforcement и не выдаётся за TPM/kernel attestation удалённого Minecraft host.
+Удаление Guard/Desktop или ServerBridge хеш из соответствующего список разрешений действует как актуальный отзыв: уже созданная Minecraft/ServerBridge сессия перестаёт проходить Серверная часть валидация. ServerBridge JAR self-хеш является уровень приложения релиз принудительное применение и не выдаётся за TPM/ядро аттестация удалённого Minecraft хост.
 
-## NeverGuard: Guard Attestation и Backend verification — 0.13.4
+## NeverGuard: Защита Аттестация и Серверная часть проверка — 0.13.4
 
-`0.13.4` делает NeverGuard evidence серверно проверяемым в launch flow. Backend выдаёт одноразовый challenge, Desktop передаёт его в отдельный `neverguard.exe` через authenticated IPC v3, а Guard формирует свежую attestation поверх Integrity Evidence v1 и реально применённого Windows process policy. Hardware P-256 device key подписывает каноническую привязку attestation к текущим user/device/session/binding epoch и версии launcher; приватный ключ не передаётся Backend или frontend.
+`0.13.4` делает NeverGuard свидетельство серверно проверяемым в запускать поток. Серверная часть выдаёт одноразовый запрос, Настольное приложение передаёт его в отдельный `neverguard.exe` через аутентифицировать IPC v3, а Защита формирует свежую аттестация поверх Целостность Свидетельство v1 и реально применённого Windows процесс политика. Оборудование P-256 устройство ключ подписывает каноническую привязку аттестация к текущим user/device/session/binding эпоха и версии лаунчер; приватный ключ не передаётся Серверная часть или клиентская часть.
 
-Backend endpoints `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` проверяют одноразовость/freshness challenge, P-256 signature, evidence/attestation digests, PID boundary, process-policy flags и точные SHA-256 `neverguard.exe`/Desktop по `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`. После успешной проверки Backend выдаёт короткоживущий single-use Guard launch ticket. Для Windows trusted device в production `/api/v1/minecraft/session` не выдаёт игровую session без валидного ticket; повторное использование ticket отклоняется.
+Серверная часть эндпоинты `POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` проверяют одноразовость/актуальность запрос, P-256 подпись, evidence/attestation хеши, PID граница, процесс-политика флаги и точные SHA-256 `neverguard.exe`/Настольное приложение по `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`. После успешной проверки Серверная часть выдаёт короткоживущий одноразовый Защита запускать билет. Для Windows доверенный устройство в рабочий `/api/v1/minecraft/session` не выдаёт игровую сессия без валидного билет; повторное использование билет отклоняется.
 
-Windows package build создаёт `GUARD_RELEASE_ALLOWLIST.json` рядом с `WINDOWS_PACKAGE_MANIFEST.json`; его значения должны быть перенесены в production configuration после финальной сборки/подписи binaries. `requireAuthenticode` можно включить только для release pipeline, где конечные файлы действительно подписаны до вычисления allowlist hashes. Эта схема является application-level Guard Attestation, а не TPM quote/Measured Boot или kernel anti-cheat.
+Windows пакет сборка создаёт `GUARD_RELEASE_ALLOWLIST.json` рядом с `WINDOWS_PACKAGE_MANIFEST.json`; его значения должны быть перенесены в рабочий конфигурация после финальной сборки/подписи бинарные файлы. `requireAuthenticode` можно включить только для релиз конвейер, где конечные файлы действительно подписаны до вычисления список разрешений хеширует. Эта схема является уровень приложения Защита Аттестация, а не TPM quote/Measured Boot или ядро античит.
 
-## NeverGuard Windows: применение runtime/process policy — 0.13.3
+## NeverGuard Windows: применение runtime/process политика — 0.13.3
 
-`0.13.3` делает Windows policy исполняемой, а не декларативной. `neverguard.exe` до запуска Tokio применяет и заново проверяет process mitigations (`DynamicCode`, `ExtensionPointDisable`, `StrictHandleCheck`, `ImageLoad`, `ChildProcess`). Applied state возвращается только по authenticated IPC `process-policy`; handshake protocol v2 также привязывает policy version/enforced bit к `ready` proof.
+`0.13.3` делает Windows политика исполняемой, а не декларативной. `neverguard.exe` до запуска Tokio применяет и заново проверяет процесс меры защиты (`DynamicCode`, `ExtensionPointDisable`, `StrictHandleCheck`, `ImageLoad`, `ChildProcess`). Применённый состояние возвращается только по аутентифицировать IPC `process-policy`; рукопожатие протокол v2 также привязывает политика version/enforced бит к `ready` доказательство.
 
-Java/Minecraft на Windows создаётся с `CREATE_SUSPENDED`, назначается в отдельный non-breakaway Job Object с `KILL_ON_JOB_CLOSE` и `DIE_ON_UNHANDLED_EXCEPTION`, после чего NeverRuntime проверяет membership/limits и только затем выполняет `ResumeThread`. Если любой шаг enforcement не подтверждён, launch прекращается fail-closed. Job handle удерживается supervisor-ом на всём времени жизни runtime, поэтому закрытие boundary завершает связанное process tree. `ProcessStatus.windowsProcessPolicy` показывает фактически применённую policy.
+Java/Minecraft на Windows создаётся с `CREATE_SUSPENDED`, назначается в отдельный без отделения Задача Объект с `KILL_ON_JOB_CLOSE` и `DIE_ON_UNHANDLED_EXCEPTION`, после чего NeverRuntime проверяет membership/limits и только затем выполняет `ResumeThread`. Если любой шаг принудительное применение не подтверждён, запускать прекращается отказ с блокировкой. Задача дескриптор удерживается supervisor-ом на всём времени жизни среда выполнения, поэтому закрытие граница завершает связанное дерево процессов. `ProcessStatus.windowsProcessPolicy` показывает фактически применённую политика.
 
-Java не получает `ProhibitDynamicCode`: HotSpot JIT требует динамически сгенерированный executable code. Строгие dynamic-code/image/child-process mitigations применяются к небольшому NeverGuard process, а Minecraft runtime изолируется process-tree policy без hooks/injection.
+Java не получает `ProhibitDynamicCode`: HotSpot JIT требует динамически сгенерированный исполняемый код. Строгие dynamic-code/image/child-process меры защиты применяются к небольшому NeverGuard процесс, а Minecraft среда выполнения изолируется дерево процессов политика без hooks/injection.
 
-## NeverGuard Windows Integrity Evidence v1 — 0.13.2
+## NeverGuard Windows Целостность Свидетельство v1 — 0.13.2
 
-`0.13.2` расширяет authenticated process boundary реальным Windows Integrity Evidence v1. Evidence собирается внутри отдельного `neverguard.exe` после успешного IPC handshake и теперь является обязательным fail-closed шагом перед Windows Minecraft launch. Guard независимо проверяет фактический parent PID, хэширует собственный executable и launcher process image, фиксирует размер/mtime/process creation time, выполняет локальную Authenticode-проверку через `WinVerifyTrust`, считывает process mitigation flags через `GetProcessMitigationPolicy` и строит fingerprint загруженного module set через Toolhelp snapshot.
+`0.13.2` расширяет аутентифицировать процесс граница реальным Windows Целостность Свидетельство v1. Свидетельство собирается внутри отдельного `neverguard.exe` после успешного IPC рукопожатие и теперь является обязательным отказ с блокировкой шагом перед Windows Minecraft запускать. Защита независимо проверяет фактический родительский PID, хэширует собственный исполняемый и лаунчер процесс образ, фиксирует размер/mtime/process создание время, выполняет локальную Authenticode-проверку через `WinVerifyTrust`, считывает процесс мера защиты флаги через `GetProcessMitigationPolicy` и строит отпечаток загруженного модуль задать через Toolhelp снимок.
 
-Payload использует schema `neverguard/windows-integrity-evidence/v1`. Canonical core получает `evidenceSha256`, а затем guard привязывает digest к текущему authenticated IPC session key через HMAC `sessionProof`. Desktop повторно проверяет schema/version, PID boundary, SHA-256 и session proof перед использованием. Команда `neverguard_integrity_evidence` возвращает уже проверенный local payload; ошибка сбора или проверки блокирует `launch_minecraft`.
+Полезная нагрузка использует схема `neverguard/windows-integrity-evidence/v1`. Канонический ядро получает `evidenceSha256`, а затем защита привязывает хеш к текущему аутентифицировать IPC сессия ключ через HMAC `sessionProof`. Настольное приложение повторно проверяет schema/version, PID граница, SHA-256 и сессия доказательство перед использованием. Команда `neverguard_integrity_evidence` возвращает уже проверенный локальный полезная нагрузка; ошибка сбора или проверки блокирует `launch_minecraft`.
 
-Это **local evidence**, а не server-verifiable attestation: Desktop участвует в локальной IPC session и текущая версия не использует TPM quote, отдельный device-bound attestation key, kernel measurement или remote verifier. Следующий server-verifiable этап должен добавлять собственную challenge/freshness/signature boundary и не выводить удалённое доверие только из `WinVerifyTrust` или process mitigations.
+Это **локальный свидетельство**, а не проверяемый сервером аттестация: Настольное приложение участвует в локальной IPC сессия и текущая версия не использует TPM кавычки, отдельный привязанный к устройству аттестация ключ, ядро измерение или удалённый проверяющий модуль. Следующий проверяемый сервером этап должен добавлять собственную challenge/freshness/signature граница и не выводить удалённое доверие только из `WinVerifyTrust` или процесс меры защиты.
 
 ## NeverGuard Windows 0.13.1
 
-`0.13.1` добавляет первый рабочий NeverGuard boundary для Windows. Guard — отдельный `neverguard.exe`; Desktop перед каждым Minecraft launch поднимает его и fail-closed требует успешный authenticated IPC handshake. Bootstrap secret генерируется на каждый запуск и передаётся guard как 32 raw bytes через унаследованный stdin, а не через argv/environment/файл.
+`0.13.1` добавляет первый рабочий NeverGuard граница для Windows. Защита — отдельный `neverguard.exe`; Настольное приложение перед каждым Minecraft запускать поднимает его и отказ с блокировкой требует успешный аутентифицировать IPC рукопожатие. Инициализировать секрет генерируется на каждый запуск и передаётся защита как 32 сырой байты через унаследованный стандартный ввод, а не через argv/environment/файл.
 
-IPC работает через local-only Windows Named Pipe со случайным endpoint. Взаимная HMAC-SHA-256 аутентификация использует client/server nonces и отдельный session key; каждый последующий request/response подписан MAC и защищён монотонным sequence от replay/out-of-order. В `0.13.1` доступны operational commands `ping`, `status`, `shutdown`; integrity evidence и server-verifiable guard attestation относятся к следующим этапам NeverGuard и здесь намеренно не заявляются.
+IPC работает через локальный-только Windows Именованный Pipe со случайным эндпоинт. Взаимная HMAC-SHA-256 аутентификация использует client/server одноразовые значения и отдельный сессия ключ; каждый последующий request/response подписан MAC и защищён монотонным последовательность от replay/out-of-order. В `0.13.1` доступны эксплуатационный команды `ping`, `status`, `shutdown`; целостность свидетельство и проверяемый сервером защита аттестация относятся к следующим этапам NeverGuard и здесь намеренно не заявляются.
 
-Windows package собирается командой:
+Windows пакет собирается командой:
 
 ```powershell
 ./scripts/release/build-windows-desktop.ps1
 ```
 
-ZIP содержит Desktop executable и обязательный соседний `neverguard.exe`; CI на `windows-2022` запускает реальный process-boundary integration test перед созданием release candidate.
+ZIP содержит Настольное приложение исполняемый и обязательный соседний `neverguard.exe`; CI на `windows-2022` запускает реальный процесс-граница интеграционный тест перед созданием кандидат в релиз.
 
-## Device Trust Release 0.13.0
+## Доверие к устройству Релиз 0.13.0
 
-`0.13.0` завершает roadmap Device Trust и делает trust evidence частью официального подписанного release bundle. Схема не получает пустую migration: production baseline остаётся `0018_device_trust_stabilization_01210`, а Backend `/ready` и Device Trust E2E обязаны подтвердить её перед PASS.
+`0.13.0` завершает roadmap Доверие к устройству и делает доверие свидетельство частью официального подписанного комплект релиза. Схема не получает пустую миграция: рабочий базовая линия остаётся `0018_device_trust_stabilization_01210`, а Серверная часть `/ready` и Доверие к устройству E2E обязаны подтвердить её перед PASS.
 
-Public matrix требует PostgreSQL lifecycle E2E и native Linux/Windows/macOS key-policy tests. Для официальной публикации `nl release publish-check` проверяет не только Minecraft Compatibility certification, но и `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json`, привязанные к той же версии и source commit. `build-release.sh` принимает public matrix через `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE`; без certification bundle остаётся release candidate.
+Публичная матрица требует PostgreSQL жизненный цикл E2E и нативный Linux/Windows/macOS ключ-политика тесты. Для официальной публикации `nl release publish-check` проверяет не только Minecraft Совместимость сертификация, но и `DEVICE_TRUST_TARGETS.json`, `DEVICE_TRUST_MATRIX.json`, `DEVICE_TRUST_CERTIFICATION.json`, привязанные к той же версии и исходник фиксация. `build-release.sh` принимает публичная матрица через `NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE`; без сертификация комплект остаётся кандидат в релиз.
 
-Backend публикует machine-readable `deviceTrustRelease` contract в `/api/v1/auth/capabilities`: server-authoritative binding epoch, device-bound refresh, risk actions, Minecraft/ServerBridge enforcement, permanent revocation, dual-proof rotation и phishing-resistant recovery. P-256 protocol proof не выдаётся за vendor TPM/Secure Enclave provenance.
+Серверная часть публикует machine-readable `deviceTrustRelease` контракт в `/api/v1/auth/capabilities`: определяемый сервером привязка эпоха, привязанный к устройству обновление, риск действия, Minecraft/ServerBridge принудительное применение, постоянный отзыв, dual-доказательство ротация и устойчивый к фишингу восстановление. P-256 протокол доказательство не выдаётся за поставщик TPM/Защищённый Анклав происхождение.
 
-## Migration + stabilization 0.12.10
+## Миграция + стабилизация 0.12.10
 
-`0.12.10` является stabilization-релизом Device Trust schema и production-upgrade path. Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL challenge-purpose constraint для реально используемых `key-rotate`/`key-recover`, переводит optional device references с empty-string sentinel на SQL `NULL`, нормализует безопасные legacy revoked/challenge states и затем устанавливает ownership/lifecycle constraints между trusted devices, auth sessions и Minecraft sessions.
+`0.12.10` является stabilization-релизом Доверие к устройству схема и рабочий-обновление путь. Миграция `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL запрос-назначение ограничение для реально используемых `key-rotate`/`key-recover`, переводит необязательный устройство ссылки с пустой-string sentinel на SQL `NULL`, нормализует безопасные устаревший revoked/challenge состояния и затем устанавливает ownership/lifecycle ограничения между доверенный устройства, аутентификация сессии и Minecraft сессии.
 
-Upgrade выполняется fail-closed: cross-user или структурно противоречивые связи не маскируются автоматическим repair, а останавливают migration до установки новых constraints. Отдельный `e2e/scripts/run-device-trust-migration-e2e.sh` воспроизводит exact `0.12.9` schema (`0001..0017`), применяет shipping CLI migration/verify и проверяет post-upgrade PostgreSQL enforcement. Public Device Trust matrix `0.12.10` принимает protocol PASS только вместе с evidence этого upgrade.
+Обновление выполняется отказ с блокировкой: межпользовательский или структурно противоречивые связи не маскируются автоматическим repair, а останавливают миграция до установки новых ограничения. Отдельный `e2e/scripts/run-device-trust-migration-e2e.sh` воспроизводит точный `0.12.9` схема (`0001..0017`), применяет поставка CLI migration/verify и проверяет post-обновление PostgreSQL принудительное применение. Публичный Доверие к устройству матрица `0.12.10` принимает протокол PASS только вместе с свидетельство этого обновление.
 
-Для strict локальной проверки при наличии Docker/PostgreSQL client:
+Для строгий локальной проверки при наличии Docker/PostgreSQL клиент:
 
 ```bash
 bash e2e/scripts/run-device-trust-migration-e2e.sh
 bash e2e/scripts/run-device-trust-e2e.sh
 ```
 
-## Device Trust E2E и публичная trust matrix 0.12.9
+## Доверие к устройству E2E и публичная доверие матрица 0.12.9
 
-`0.12.9` добавляет отдельный production E2E для всей Device Trust цепочки и публичную CI-матрицу. `e2e/scripts/run-device-trust-e2e.sh` запускается против production-configured PostgreSQL/Redis Backend и реальными Ed25519/P-256 ключами проверяет registration/replay deny, binding epoch, signed refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge invalidation, risk step-up, hardware-key challenge-response protocol, recovery prerequisite и revoke cascade.
+`0.12.9` добавляет отдельный рабочий E2E для всей Доверие к устройству цепочки и публичную CI-матрицу. `e2e/scripts/run-device-trust-e2e.sh` запускается против рабочий-настраивать PostgreSQL/Redis Серверная часть и реальными Ed25519/P-256 ключами проверяет registration/replay запрещать, привязка эпоха, подписанный обновление, dual-доказательство ротация, постоянный отпечаток метка удаления, ServerBridge инвалидация, риск step-up, оборудование-ключ запрос-ответ протокол, восстановление prerequisite и отзыв каскад.
 
-Публичные цели находятся в `device-trust/targets.json` и не содержат ручного поля PASS/FAIL. Workflow `.github/workflows/device-trust.yml` запускает PostgreSQL protocol target и native Tauri/key-policy tests на Linux/Windows/macOS, после чего `scripts/device_trust/matrix.py` принимает только evidence той же версии, exact commit и Actions run ID. Итоговые `matrix.json` и `matrix.md` публикуются в Actions Summary и artifact. Aggregator дополнительно сверяет SHA-256 каждого заявленного evidence-файла; отсутствующий, изменённый, неполный или чужой result делает matrix failed.
+Публичные цели находятся в `device-trust/targets.json` и не содержат ручного поля PASS/FAIL. Процесс `.github/workflows/device-trust.yml` запускает PostgreSQL протокол цель и нативный Tauri/key-policy тесты на Linux/Windows/macOS, после чего `scripts/device_trust/matrix.py` принимает только свидетельство той же версии, точный фиксация и Действия запуск ID. Итоговые `matrix.json` и `matrix.md` публикуются в Действия Summary и артефакт. Aggregator дополнительно сверяет SHA-256 каждого заявленного evidence-файла; отсутствующий, изменённый, неполный или чужой результат делает матрица ошибка.
 
-Матрица не завышает assurance: CI P-256 case доказывает server-side challenge-response владение зарегистрированным ключом, но не vendor TPM/Secure Enclave provenance. Native platform targets доказывают compile/test path; headless runner не считается доказательством фактического OS secure-storage/HSM runtime конкретного устройства.
+Матрица не завышает уверенность: CI P-256 случай доказывает на стороне сервера запрос-ответ владение зарегистрированным ключом, но не поставщик TPM/Защищённый Анклав происхождение. Нативный платформа цели доказывают compile/test путь; headless исполнитель не считается доказательством фактического OS защищённый-хранилище/HSM среда выполнения конкретного устройства.
 
 Локальная проверка definition/aggregator:
 
@@ -863,7 +869,7 @@ python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.j
 python3 scripts/device_trust/test_matrix.py
 ```
 
-Production protocol E2E при наличии Docker/PostgreSQL client:
+Рабочий протокол E2E при наличии Docker/PostgreSQL клиент:
 
 ```bash
 bash e2e/scripts/run-device-trust-e2e.sh
@@ -873,55 +879,55 @@ bash e2e/scripts/run-device-trust-e2e.sh
 
 ## Кроссплатформенное усиление ключей 0.12.8
 
-`0.12.8` добавляет production lifecycle для плановой ротации и восстановления потерянного device key. Rotation требует proof старым и новым ключом; recovery требует свежий phishing-resistant WebAuthn/passkey step-up и proof staged-новым ключом. Backend всегда создаёт новую device identity, увеличивает `binding_epoch`, оставляет старый fingerprint permanent tombstone и отзывает связанные старой identity sessions/refresh/Minecraft credentials.
+`0.12.8` добавляет рабочий жизненный цикл для плановой ротации и восстановления потерянного устройство ключ. Ротация требует доказательство старым и новым ключом; восстановление требует свежий устойчивый к фишингу WebAuthn/passkey step-up и доказательство staged-новым ключом. Серверная часть всегда создаёт новую устройство идентичность, увеличивает `binding_epoch`, оставляет старый отпечаток постоянный метка удаления и отзывает связанные старой идентичность sessions/refresh/Minecraft учётные данные.
 
-Desktop/Tauri выполняет замену двухфазно (`stage → server ceremony → commit`) и умеет reconcile interrupted commit. Hardware P-256 ключи используют generation-specific labels, поэтому reset/rotation на TPM/Secure Enclave не переиспользует прежний ключ. При server-side revoke/missing device локальный key не уничтожается автоматически: используется recovery flow. API: `/api/v1/auth/devices/key-rotation/begin`, `/{deviceId}/key-rotation/complete`, `/key-recovery/begin`, `/{deviceId}/key-recovery/complete`.
+Desktop/Tauri выполняет замену двухфазно (`stage → server ceremony → commit`) и умеет согласовывать прерванный фиксация. Оборудование P-256 ключи используют генерация-specific метки, поэтому reset/rotation на TPM/Защищённый Анклав не переиспользует прежний ключ. При на стороне сервера revoke/missing устройство локальный ключ не уничтожается автоматически: используется восстановление поток. API: `/api/v1/auth/devices/key-rotation/begin`, `/{deviceId}/key-rotation/complete`, `/key-recovery/begin`, `/{deviceId}/key-recovery/complete`.
 
-## Minecraft / ServerBridge trust enforcement 0.12.7
+## Minecraft / ServerBridge доверие принудительное применение 0.12.7
 
-`0.12.7` применяет Device Trust к самому игровому входу. Официальный `/api/v1/minecraft/session` требует active Never session, привязанную к verified trusted device, и допустимое risk decision. Minecraft credential сохраняет snapshot `trusted_device_id + binding_epoch`; ServerBridge join сохраняет тот же snapshot вместе с `project/profile/channel`.
+`0.12.7` применяет Доверие к устройству к самому игровому входу. Официальный `/api/v1/minecraft/session` требует активный Никогда сессия, привязанную к проверен доверенный устройство, и допустимое риск решение. Minecraft учётные данные сохраняет снимок `trusted_device_id + binding_epoch`; ServerBridge подключение сохраняет тот же снимок вместе с `project/profile/channel`.
 
-При `validate`, Minecraft `join/hasJoined` и ServerBridge `validate-join/has-joined` Backend заново сверяет текущую parent session, device state, binding epoch и risk action. Re-bind или permanent revoke инвалидирует старый credential; `reattest` и `step-up` временно блокируют игровой вход до восстановления trust. Server-side plugin requests не изменяют IP/User-Agent risk игрока — они только применяют уже рассчитанное состояние. Legacy Yggdrasil authenticate остаётся совместимым, но фактический Minecraft `/join` без trusted device fail-closed, поэтому старый auth path не является bypass.
+При `validate`, Minecraft `join/hasJoined` и ServerBridge `validate-join/has-joined` Серверная часть заново сверяет текущую родительский сессия, устройство состояние, привязка эпоха и риск действие. Re-привязывать или постоянный отзыв инвалидирует старый учётные данные; `reattest` и `step-up` временно блокируют игровой вход до восстановления доверие. На стороне сервера плагин запросы не изменяют IP/User-Agent риск игрока — они только применяют уже рассчитанное состояние. Устаревший Yggdrasil аутентифицировать остаётся совместимым, но фактический Minecraft `/join` без доверенный устройство отказ с блокировкой, поэтому старый аутентификация путь не является обход.
 
-Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет persisted trust snapshot для `minecraft_sessions`. ServerBridge дополнительно проверяет `channel` наряду с project/profile. Velocity и Bukkit/Spigot/Paper/Purpur/Folia показывают конкретную причину trust deny и не имеют локального флага, отключающего Backend policy.
+Миграция `0016_minecraft_serverbridge_trust_0127.sql` добавляет сохранённый доверие снимок для `minecraft_sessions`. ServerBridge дополнительно проверяет `channel` наряду с project/profile. Velocity и Bukkit/Spigot/Paper/Purpur/Folia показывают конкретную причину доверие запрещать и не имеют локального флага, отключающего Серверная часть политика.
 
 ## Привязка сессии к устройству и интеграция риска 0.12.6
 
-`0.12.6` связывает access/refresh lifecycle с реальным server-side состоянием trusted device. Persistent `binding_epoch` увеличивается при device bind/re-bind и входит в access JWT; Backend сверяет epoch, `device_id` и `device_trust` с текущей session, поэтому старый pre-bind token отклоняется сразу после смены binding.
+`0.12.6` связывает access/refresh жизненный цикл с реальным на стороне сервера состоянием доверенный устройство. Постоянный `binding_epoch` увеличивается при устройство bind/re-bind и входит в доступ JWT; Серверная часть сверяет эпоха, `device_id` и `device_trust` с текущей сессия, поэтому старый pre-привязывать токен отклоняется сразу после смены привязка.
 
-Для bound-session `/api/v1/auth/refresh` теперь требует подпись текущим device key. Desktop выполняет её native-командой `sign_session_refresh`; signed payload содержит session/device/epoch и только SHA-256 refresh token. Risk engine хранит score/action (`allow|step-up|reattest|revoke`): network drift требует step-up на sensitive operations, stale hardware attestation — повторной attestation, а missing/revoked device или reuse refresh token приводит к revoke. PostgreSQL schema обновляется migration `0015_session_device_risk_0126.sql`.
+Для привязанный-сессия `/api/v1/auth/refresh` теперь требует подпись текущим устройство ключ. Настольное приложение выполняет её native-командой `sign_session_refresh`; подписанная нагрузка содержит session/device/epoch и только SHA-256 токен обновления. Риск движок хранит score/action (`allow|step-up|reattest|revoke`): сеть расхождение требует step-up на критичный эксплуатация, устаревший оборудование аттестация — повторной аттестация, а missing/revoked устройство или повторное использование токен обновления приводит к отзыв. PostgreSQL схема обновляется миграция `0015_session_device_risk_0126.sql`.
 
-## Device Management 0.12.5 — управление и необратимый revoke
+## Устройство Управление 0.12.5 — управление и необратимый отзыв
 
-`0.12.5` добавляет рабочий lifecycle trusted devices поверх Device Trust 0.12.1–0.12.4. `GET /api/v1/auth/devices?status=active|revoked` возвращает registry с признаком текущего устройства; `POST /api/v1/auth/devices/{deviceId}/revoke` необратимо отзывает конкретное устройство, а `POST /api/v1/auth/devices/revoke-others` сохраняет текущее verified device и отзывает остальные. Старый fingerprint после revoke остаётся tombstone и не может быть повторно зарегистрирован.
+`0.12.5` добавляет рабочий жизненный цикл доверенный устройства поверх Доверие к устройству 0.12.1–0.12.4. `GET /api/v1/auth/devices?status=active|revoked` возвращает реестр с признаком текущего устройства; `POST /api/v1/auth/devices/{deviceId}/revoke` необратимо отзывает конкретное устройство, а `POST /api/v1/auth/devices/revoke-others` сохраняет текущее проверен устройство и отзывает остальные. Старый отпечаток после отзыв остаётся метка удаления и не может быть повторно зарегистрирован.
 
-В PostgreSQL revoke выполняется транзакционно и каскадирует на Never sessions, refresh families/tokens, Minecraft sessions и незавершённые device challenges; связанные ServerBridge joins инвалидируются сразу после commit. Desktop показывает registry, умеет rename/revoke/revoke-others и при self-revoke удаляет local device key + auth session из OS secure storage. Admin registry/revoke доступен через `/api/v1/admin/auth/devices*`; admin revoke требует fresh phishing-resistant step-up. Новая migration не нужна — 0.12.5 использует уже существующую persistent schema и усиливает runtime semantics.
+В PostgreSQL отзыв выполняется транзакционно и каскадирует на Никогда сессии, обновление families/tokens, Minecraft сессии и незавершённые устройство запросы; связанные ServerBridge подключается инвалидируются сразу после фиксация. Настольное приложение показывает реестр, умеет rename/revoke/revoke-others и при self-отзыв удаляет локальный устройство ключ + аутентификация сессия из OS защищённый хранилище. Администратор registry/revoke доступен через `/api/v1/admin/auth/devices*`; администратор отзыв требует актуальный устойчивый к фишингу step-up. Новая миграция не нужна — 0.12.5 использует уже существующую постоянный схема и усиливает среда выполнения семантика.
 
-## Device Trust 0.12.4 — проверка challenge-response
+## Доверие к устройству 0.12.4 — проверка запрос-ответ
 
-`0.12.4` добавляет свежую проверяемую ceremony поверх hardware-bound P-256 identity из `0.12.3`. После обычного registration/session-bind Backend выдаёт уже привязанной сессии отдельный short-lived single-use attestation challenge. Tauri подписывает canonical `NeverLauncher Device Attestation v1` payload тем же non-exportable hardware key; software Ed25519 key в этот flow не допускается.
+`0.12.4` добавляет свежую проверяемую процедура поверх привязанный к оборудованию P-256 идентичность из `0.12.3`. После обычного registration/session-bind Серверная часть выдаёт уже привязанной сессии отдельный краткоживущий одноразовый аттестация запрос. Tauri подписывает канонический `NeverLauncher Device Attestation v1` полезная нагрузка тем же неэкспортируемый аппаратный ключ; программное обеспечение Ed25519 ключ в этот поток не допускается.
 
-Успешная проверка сохраняет `attestationState=verified`, `attestationMethod=challenge-response-v1` и 12-часовое freshness window. Пока окно действительно, device assurance отражается как `challenge-response-attested`; после expiry API/JWT эффективно возвращают `proof-of-possession` до новой ceremony. Migration `0014_challenge_response_attestation_0124.sql` добавляет persistent state и purpose `attest` в существующий challenge registry.
+Успешная проверка сохраняет `attestationState=verified`, `attestationMethod=challenge-response-v1` и 12-часовое актуальность окно. Пока окно действительно, устройство уверенность отражается как `challenge-response-attested`; после истечение API/JWT эффективно возвращают `proof-of-possession` до новой процедура. Миграция `0014_challenge_response_attestation_0124.sql` добавляет постоянный состояние и назначение `attest` в существующий запрос реестр.
 
-Это подтверждает свежое владение зарегистрированным hardware key, но не подменяет vendor remote attestation: текущий signer API не даёт NeverLauncher TPM quote/Secure Enclave attestation certificate, поэтому `hardwareProvider` остаётся описательной metadata, а ответы явно содержат `hardwareProvenance=not-remotely-verified`. Device attestation не повышает RBAC/MFA/auth strength и не заменяет WebAuthn.
+Это подтверждает свежое владение зарегистрированным аппаратный ключ, но не подменяет поставщик удалённый аттестация: текущий подписант API не даёт NeverLauncher TPM quote/Secure Анклав аттестация сертификат, поэтому `hardwareProvider` остаётся описательной метаданные, а ответы явно содержат `hardwareProvenance=not-remotely-verified`. Устройство аттестация не повышает RBAC/MFA/аутентификация сила и не заменяет WebAuthn.
 
-`0.12.3` остаётся базовым hardware identity layer: platform Secure Enclave/TPM → P-256 public key + ECDSA proof, с явным Ed25519/software fallback при отсутствии настоящего hardware backend.
+`0.12.3` остаётся базовым оборудование идентичность слой: платформа Защищённый Анклав/TPM → P-256 открытый ключ + ECDSA доказательство, с явным Ed25519/software резервный вариант при отсутствии настоящего оборудование серверная часть.
 
-## Device Trust 0.12.2
+## Доверие к устройству 0.12.2
 
-`0.12.1` добавил persistent registry и Ed25519 proof-of-possession; `0.12.2` доводит device key до официального Desktop-клиента. Tauri создаёт отдельный Ed25519 key для пары `Backend + canonical user`, хранит private seed только в native OS secure storage и подписывает server challenge внутри Rust boundary. React получает только public key/fingerprint/signature; private key не попадает в Backend, конфиг или `localStorage`.
+`0.12.1` добавил постоянный реестр и Ed25519 доказательство владения; `0.12.2` доводит устройство ключ до официального Desktop-клиента. Tauri создаёт отдельный Ed25519 ключ для пары `Backend + canonical user`, хранит закрытый начальное значение только в нативный OS защищённый хранилище и подписывает сервер запрос внутри Rust граница. React получает только публичный key/fingerprint/signature; закрытый ключ не попадает в Серверная часть, конфиг или `localStorage`.
 
-После login Desktop автоматически выполняет регистрацию нового trusted device либо `verify/begin|complete` уже известного device id и сохраняет обновлённый access token с device claims в OS credential store. Revoke устройства по-прежнему отзывает связанные Never sessions/refresh families. Эта версия подтверждает software key possession + OS secure storage, но **не** заявляет hardware-bound identity/attestation — TPM/Secure Enclave/Windows Hello относятся к следующим этапам.
+После вход Настольное приложение автоматически выполняет регистрацию нового доверенный устройство либо `verify/begin|complete` уже известного устройство ID и сохраняет обновлённый токен доступа с устройство захватывает в OS учётные данные хранилище. Отзыв устройства по-прежнему отзывает связанные Никогда sessions/refresh семейство. Эта версия подтверждает программное обеспечение владение ключом + OS защищённый хранилище, но **не** заявляет привязанный к оборудованию identity/attestation — TPM/Защищённый Enclave/Windows Hello относятся к следующим этапам.
 
-Production upgrade: `nl db migrate apply && nl db migrate verify`. Migration `0012_device_trust_core_0121` создаёт `trusted_devices`, single-use `device_challenges` и отдельную связь trusted device с `auth_sessions`.
+Рабочий обновление: `nl db migrate apply && nl db migrate verify`. Миграция `0012_device_trust_core_0121` создаёт `trusted_devices`, одноразовый `device_challenges` и отдельную связь доверенный устройство с `auth_sessions`.
 
-## Minecraft Auth Compatibility 2.0
+## Minecraft Аутентификация Совместимость 2.0
 
-С `0.11.10` federation/migration stability является исполняемым release gate. `python3 scripts/test/federation-e2e.py` прогоняет Local/SQL/HTTP/OIDC/Microsoft/passkey через canonical session и Minecraft compatibility flow, а `bash e2e/scripts/run-federation-postgres-e2e.sh` проверяет restart и multi-instance refresh/revoke/replay на PostgreSQL. Перед production upgrade используйте `nl db migrate apply`, затем `nl db migrate verify`; verify fail-closed отклоняет unknown/future migrations, незапечатанные checksum и checksum drift.
+С `0.11.10` federation/migration stability является исполняемым контроль выпуска. `python3 scripts/test/federation-e2e.py` прогоняет Локальный/SQL/HTTP/OIDC/Microsoft/passkey через канонический сессия и Minecraft совместимость поток, а `bash e2e/scripts/run-federation-postgres-e2e.sh` проверяет перезапуск и multi-экземпляр refresh/revoke/replay на PostgreSQL. Перед рабочий обновление используйте `nl db migrate apply`, затем `nl db migrate verify`; проверять отказ с блокировкой отклоняет unknown/future миграция, незапечатанные контрольная сумма и контрольная сумма расхождение.
 
-С `0.11.9` login identity и Minecraft identity разделены. Local/SQL/HTTP/OIDC/Microsoft/passkey приводят к одному canonical Never user; из действующей Never session Desktop получает отдельную Minecraft session через `/api/v1/minecraft/session`. Игровой access token opaque и server-side хранится только в виде hash, а стабильный Minecraft UUID строится из immutable Never user ID, а не email.
+С `0.11.9` вход идентичность и Minecraft идентичность разделены. Локальный/SQL/HTTP/OIDC/Microsoft/passkey приводят к одному канонический Никогда пользователь; из действующей Никогда сессия Настольное приложение получает отдельную Minecraft сессия через `/api/v1/minecraft/session`. Игровой токен доступа непрозрачный и на стороне сервера хранится только в виде хеш, а стабильный Minecraft UUID строится из неизменяемый Никогда пользователь ID, а не электронная почта.
 
-NeverRuntime передаёт полученные UUID/token в реальный Minecraft launch. Если подписанный release manifest содержит `authlib-injector*.jar`, runtime подключает его как `-javaagent` к Backend, где доступны Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*`. Начиная с 0.12.7 Minecraft token дополнительно привязан к trusted device и `binding_epoch`: re-bind/revoke/risk enforcement делает его непригодным для validate/join/hasJoined. ServerBridge применяет ту же live trust policy и pin project/profile/channel для защищённых серверов.
+NeverRuntime передаёт полученные UUID/токен в реальный Minecraft запускать. Если подписанный релиз манифест содержит `authlib-injector*.jar`, среда выполнения подключает его как `-javaagent` к Серверная часть, где доступны Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*`. Начиная с 0.12.7 Minecraft токен дополнительно привязан к доверенный устройство и `binding_epoch`: re-bind/revoke/risk принудительное применение делает его непригодным для validate/join/hasJoined. ServerBridge применяет ту же актуальный доверие политика и закреплять project/profile/channel для защищённых серверов.
 
 ## Production-развёртывание
 
@@ -936,4 +942,4 @@ deploy/production/README.md
 
 ## CI
 
-`.github/workflows/ci.yml` — обязательный CI candidate-контур: policy/contracts, Go, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеры, release candidate bundle и PostgreSQL + Redis + actual Minecraft E2E. `.github/workflows/compatibility.yml` отдельно запускает все пять loader targets и публикует machine-verifiable matrix. Официальная публикация Minecraft Compatibility Release и новее выполняется только после передачи этой matrix в release build и успешного `release publish-check`; обычный candidate bundle сам по себе не считается Minecraft Compatibility Release.
+`.github/workflows/ci.yml` — обязательный CI candidate-контур: policy/contracts, Go, Admin/Desktop, NeverRuntime/Tauri, ServerBridge, production-контейнеры, кандидат в релиз комплект и PostgreSQL + Redis + фактический Minecraft E2E. `.github/workflows/compatibility.yml` отдельно запускает все пять загрузчик цели и публикует машинно проверяемый матрица. Официальная публикация Minecraft Совместимость Релиз и новее выполняется только после передачи этой матрица в релиз сборка и успешного `release publish-check`; обычный кандидат комплект сам по себе не считается Minecraft Совместимость Релиз.

@@ -231,21 +231,21 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     if baseline.protect != current.protect {
                         state.healthy = false;
                         return Err(format!(
-                            "NeverGuard Memory Integrity executable image protection drift at 0x{:X}: 0x{:X} -> 0x{:X}",
+                            "NeverGuard Память Целостность исполняемый образ защита расхождение в 0x{:X}: 0x{:X} -> 0x{:X}",
                             current.base, baseline.protect, current.protect
                         ));
                     }
                     if baseline.digest != current.digest {
                         state.healthy = false;
                         return Err(format!(
-                            "NeverGuard Memory Integrity code-page drift at 0x{:X} ({} bytes)",
+                            "NeverGuard Память Целостность кодовая страница расхождение в 0x{:X} ({} байты)",
                             current.base, current.size
                         ));
                     }
                 } else {
-                    // Newly loaded images are admitted only after the loader has mapped
-                    // them. Module Guard independently authenticates the backing DLL;
-                    // from this point onward the executable bytes are immutable.
+                    // Вновь загружен образ являются admitted только после загрузчик имеет сопоставленный
+                    // их. Модуль Защита независимо аутентифицировать backing DLL;
+                    // из этот точка onward исполняемый байты являются неизменяемый.
                     state.image_code.insert(key, current);
                 }
             }
@@ -253,7 +253,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                 if !range_allowed(region, &state.allowed_dynamic) {
                     state.healthy = false;
                     return Err(format!(
-                        "NeverGuard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
+                        "NeverGuard Память Целостность обнаруживать исполняемый закрытый память без наблюдаемый VirtualAlloc/VirtualProtect происхождение в 0x{:X} ({} байты)",
                         region.base, region.size
                     ));
                 }
@@ -262,7 +262,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                 if !range_allowed(region, &state.allowed_mapped) {
                     state.healthy = false;
                     return Err(format!(
-                        "NeverGuard Memory Integrity detected new executable mapped memory at 0x{:X} ({} bytes)",
+                        "NeverGuard Память Целостность обнаруживать новый исполняемый сопоставленный память в 0x{:X} ({} байты)",
                         region.base, region.size
                     ));
                 }
@@ -283,9 +283,9 @@ pub fn shutdown() {
     }
 }
 
-/// Called from the IAT wrapper after a successful VirtualAlloc. This path is
-/// allocation-free and lock-free so it is safe even if the caller is a JVM
-/// allocator/compiler thread.
+/// Вызов из IAT обёртка после успешный VirtualAlloc. Этот путь является
+/// выделение-free и блокировка-free так это является безопасный даже если вызывающая сторона является JVM
+/// allocator/compiler поток.
 pub fn record_virtual_alloc(address: *mut c_void, size: usize, protect: u32) {
     if address.is_null() || size == 0 {
         return;
@@ -298,7 +298,7 @@ pub fn record_virtual_alloc(address: *mut c_void, size: usize, protect: u32) {
     });
 }
 
-/// Called from the IAT wrapper after a successful VirtualProtect.
+/// Вызов из IAT обёртка после успешный VirtualProtect.
 pub fn record_virtual_protect(address: *mut c_void, size: usize, protect: u32) {
     if address.is_null() || size == 0 {
         return;
@@ -366,7 +366,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
 fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, String> {
     if region.size > MAX_HASHABLE_IMAGE_REGION {
         return Err(format!(
-            "NeverGuard Memory Integrity executable image region exceeds hash limit at 0x{:X}: {} bytes",
+            "NeverGuard Память Целостность исполняемый образ region exceeds хеш ограничение в 0x{:X}: {} байты",
             region.base, region.size
         ));
     }
@@ -394,7 +394,7 @@ fn pin_image(address: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Memory Integrity cannot retain executable image at 0x{address:X}: {}",
+            "NeverGuard Память Целостность не может сохранять исполняемый образ в 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -406,7 +406,7 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
     if dropped != 0 {
         state.healthy = false;
         return Err(format!(
-            "NeverGuard Memory Integrity transition ring overflow: dropped {dropped} events"
+            "NeverGuard Память Целостность переход кольцо overflow: dropped {dropped} события"
         ));
     }
     loop {

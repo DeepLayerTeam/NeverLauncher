@@ -74,4 +74,4 @@ openapi_generator = read("scripts/contracts/generate_openapi.py")
 for token in ("/api/v1/admin/extension-registry/extensions", "ExtensionRegistryPublisherWrite", "ExtensionRegistryInstallWrite", '"multipart/form-data"'):
     require(token in openapi_generator, f"OpenAPI generator missing registry token {token}")
 
-print("NeverExtensions Registry 0.20.3 production gate: OK")
+print("NeverExtensions Реестр 0.20.3 рабочий контроль: OK")

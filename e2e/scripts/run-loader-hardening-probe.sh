@@ -20,10 +20,10 @@ case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] un
 [[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
 [[ -f "$LOCK" ]] || { echo "[loader-hardening] resolution lock unavailable: $LOCK" >&2; exit 1; }
 
-# Forge/NeoForge must prove two recovery paths, not just a warm installer file:
-# remove the installer and mark one completed processor as interrupted. The
-# cache-only replay must restore the exact pinned installer and adopt only an
-# output whose installer-declared digest still verifies.
+# Forge/NeoForge должен prove два восстановление пути, не just warm установщик файл:
+# удалять установщик и mark один завершённый обработчик как прерванный. 
+# только кэш повторное воспроизведение должен восстановление точный закреплённый установщик и adopt только 
+# вывод чей установщик-объявлять хеш по-прежнему проверяет.
 if [[ "$LOADER" == "forge" || "$LOADER" == "neoforge" ]]; then
   find "$CLIENT_DIR/.neverlauncher/installers/$LOADER" -type f -name installer.jar -delete 2>/dev/null || true
   python3 - "$CLIENT_DIR" "$LOADER" <<'PY'
@@ -128,4 +128,4 @@ Path(out_p).write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + '\n'
 print(json.dumps(evidence, ensure_ascii=False))
 PY
 
-echo "[loader-hardening] PASS $LOADER $MINECRAFT_VERSION content-addressed cache/upstream/installers/processors recovery"
+echo "[загрузчик-усиление защиты] PASS $LOADER $MINECRAFT_VERSION адресуемый по содержимому cache/upstream/installers/processors восстановление"

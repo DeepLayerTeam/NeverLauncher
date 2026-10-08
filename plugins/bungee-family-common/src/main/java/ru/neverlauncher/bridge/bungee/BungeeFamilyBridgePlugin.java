@@ -28,7 +28,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-/** Shared Bungee API adapter used by the BungeeCord and Waterfall artifacts. */
+/** Общий Bungee API адаптер используется через BungeeCord и Waterfall артефакты. */
 public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listener {
     private final BungeeFamilyPlatform expectedPlatform;
     private final ConcurrentHashMap<String, Long> preparedHandoffs = new ConcurrentHashMap<>();
@@ -117,7 +117,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
             Object value = config.getClass().getMethod("getPlayerLimit").invoke(config);
             if (value instanceof Number number) max = Math.max(online, number.intValue());
         } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Player limit is optional on custom Bungee-family implementations.
+            // Игрок ограничение является необязательный на custom Bungee-семейство реализация.
         }
         current.recordPlatformTelemetry(BridgePlatformTelemetry.proxy(
             online, Math.max(0, max),

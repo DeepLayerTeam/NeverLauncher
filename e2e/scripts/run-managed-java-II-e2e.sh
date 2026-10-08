@@ -8,7 +8,7 @@ RUNTIME_ROOT="${WORK_DIR}/runtimes"
 EVIDENCE="${WORK_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
 
 if [[ ! -x "${RUNTIME_BIN}" ]]; then
-  echo "neverruntime binary not executable: ${RUNTIME_BIN}" >&2
+  echo "neverruntime бинарный файл не исполняемый: ${RUNTIME_BIN}" >&2
   exit 1
 fi
 
@@ -91,4 +91,4 @@ data["status"]="passed"
 open(p,"w",encoding="utf-8").write(json.dumps(data, indent=2)+"\n")
 PY
 
-echo "Managed Java II E2E: Java 8/16/17/21/25 install + cache verification passed"
+echo "Управляемый Java II E2E: Java 8/16/17/21/25 установка + кэш проверка пройден"

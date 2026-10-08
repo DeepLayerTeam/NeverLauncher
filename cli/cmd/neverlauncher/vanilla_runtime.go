@@ -31,10 +31,10 @@ const (
 	defaultMojangLibraryBase     = "https://libraries.minecraft.net"
 )
 
-// 0.17.0v1 expands the actual-client Legacy Vanilla grid rather than treating
-// the old line as a handful of representative anchors. These IDs are consumed
-// by the materializer/runtime/release gates, so removing one silently is not a
-// supported configuration.
+// 0.17.0v1 expands реальный клиент Устаревший Vanilla сетка вместо чем treating
+// старый строка как handful репрезентативный якоря. Эти ID являются использованный
+// через materializer/runtime/release контроли, так удалять один без уведомления является не 
+// поддерживаемый конфигурация.
 var legacyVanilla0170v1Releases = []string{
 	"1.2.1", "1.2.2", "1.2.3", "1.2.4",
 	"1.3.1",
@@ -61,10 +61,10 @@ var legacyVanilla0170v1ReleaseSet = func() map[string]struct{} {
 	return out
 }()
 
-// 0.17.0v2 completes the Java-transition Vanilla grid with every requested
-// release that was not already certified by 0.16.6. The map is also a runtime
-// policy: materialization/server installation rejects missing or conflicting
-// Mojang javaVersion metadata before any client/server artifact is downloaded.
+// 0.17.0v2 полный Java-переход Vanilla сетка с каждый запрошенный
+// релиз тот был не уже сертифицированный через 0.16.6. сопоставление является также среда выполнения
+// политика: materialization/server установка отклоняет отсутствующий или конфликтующий
+// Mojang javaVersion метаданные до любой client/server артефакт является загрузка.
 var java16_17Vanilla0170v2Releases = map[string]int{
 	"1.17":   16,
 	"1.18":   17,
@@ -77,10 +77,10 @@ var java16_17Vanilla0170v2Releases = map[string]int{
 	"1.20.3": 17,
 }
 
-// 0.17.0v3 closes the two release gaps in the modern Vanilla line. These
-// releases use the same production Mojang materializer/server installer as the
-// rest of the matrix, but are pinned here so missing/tampered javaVersion
-// metadata fails before game artifacts are downloaded.
+// 0.17.0v3 закрывает два релиз gaps в современный Vanilla строка. Эти
+// релизы использовать одинаковый рабочий Mojang materializer/server установщик как 
+// rest матрица, но являются закреплённый здесь так missing/tampered javaVersion
+// метаданные завершается ошибкой до игра артефакты являются загрузка.
 var java21_25Vanilla0170v3Releases = map[string]int{
 	"1.21.11": 21,
 	"26.2":    25,
@@ -199,7 +199,7 @@ func handleRuntimeVanillaInstall(args []string) error {
 	defer lock.Close()
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
-		return errors.New("--workers должен быть числом от 1 до 64")
+		return errors.New("--обработчики должен быть числом от 1 до 64")
 	}
 	targets, err := parseVanillaTargets(flagValue(args, "--target", currentVanillaTarget().OS+"/"+currentVanillaTarget().Arch))
 	if err != nil {
@@ -237,7 +237,7 @@ func handleRuntimeVanillaPackage(args []string) error {
 	}
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
-		return errors.New("--workers должен быть числом от 1 до 64")
+		return errors.New("--обработчики должен быть числом от 1 до 64")
 	}
 	result, err := installVanilla(context.Background(), vanillaInstallOptions{
 		MinecraftVersion: minecraftVersion,
@@ -288,7 +288,7 @@ func handleRuntimeVanillaServer(args []string) error {
 
 func installVanillaServer(ctx context.Context, requestedVersion, serverDir, versionManifest string, client *http.Client) (vanillaServerInstallResult, error) {
 	if strings.TrimSpace(serverDir) == "" {
-		return vanillaServerInstallResult{}, errors.New("Vanilla server install требует serverDir")
+		return vanillaServerInstallResult{}, errors.New("Vanilla сервер установка требует serverDir")
 	}
 	if strings.TrimSpace(versionManifest) == "" {
 		versionManifest = defaultMojangVersionManifest
@@ -309,13 +309,13 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 	versionBytes := resolved.Bytes
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(versionBytes, &metadata); err != nil {
-		return vanillaServerInstallResult{}, fmt.Errorf("version.json %s повреждён: %w", selectedID, err)
+		return vanillaServerInstallResult{}, fmt.Errorf("версия.JSON %s повреждён: %w", selectedID, err)
 	}
 	if metadata.ID == "" {
 		metadata.ID = selectedID
 	}
 	if metadata.ID != selectedID {
-		return vanillaServerInstallResult{}, fmt.Errorf("version.json id mismatch: ожидался %s, получен %s", selectedID, metadata.ID)
+		return vanillaServerInstallResult{}, fmt.Errorf("версия.JSON ID несоответствие: ожидался %s, получен %s", selectedID, metadata.ID)
 	}
 	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
 	if err != nil {
@@ -323,7 +323,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 	}
 	serverDownload, ok := metadata.Downloads["server"]
 	if !ok || strings.TrimSpace(serverDownload.URL) == "" || strings.TrimSpace(serverDownload.SHA1) == "" || serverDownload.Size <= 0 {
-		return vanillaServerInstallResult{}, fmt.Errorf("Minecraft %s version.json не содержит проверяемый downloads.server", selectedID)
+		return vanillaServerInstallResult{}, fmt.Errorf("Minecraft %s версия.JSON не содержит проверяемый загрузка.сервер", selectedID)
 	}
 
 	metadataPath, err := secureClientDestination(serverDir, "version.json")
@@ -339,7 +339,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 	}
 	serverBytes, cached, _, err := fetchVerifiedBytesWithLocalCache(ctx, client, serverDir, "server.jar", serverDownload.URL, serverDownload.SHA1, serverDownload.Size, 512<<20)
 	if err != nil {
-		return vanillaServerInstallResult{}, fmt.Errorf("server.jar %s: %w", selectedID, err)
+		return vanillaServerInstallResult{}, fmt.Errorf("сервер.JAR %s: %w", selectedID, err)
 	}
 	h256 := sha256.Sum256(serverBytes)
 	return vanillaServerInstallResult{
@@ -352,7 +352,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 
 func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaInstallResult, error) {
 	if strings.TrimSpace(opts.ClientDir) == "" {
-		return vanillaInstallResult{}, errors.New("Vanilla install требует clientDir")
+		return vanillaInstallResult{}, errors.New("Vanilla установка требует clientDir")
 	}
 	if opts.VersionManifest == "" {
 		opts.VersionManifest = defaultMojangVersionManifest
@@ -386,16 +386,16 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	versionBytes := resolved.Bytes
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(versionBytes, &metadata); err != nil {
-		return vanillaInstallResult{}, fmt.Errorf("version.json %s повреждён: %w", selectedID, err)
+		return vanillaInstallResult{}, fmt.Errorf("версия.JSON %s повреждён: %w", selectedID, err)
 	}
 	if metadata.ID == "" {
 		metadata.ID = selectedID
 	}
 	if metadata.ID != selectedID {
-		return vanillaInstallResult{}, fmt.Errorf("version.json id mismatch: ожидался %s, получен %s", selectedID, metadata.ID)
+		return vanillaInstallResult{}, fmt.Errorf("версия.JSON ID несоответствие: ожидался %s, получен %s", selectedID, metadata.ID)
 	}
 	if metadata.MainClass == "" {
-		return vanillaInstallResult{}, errors.New("version.json не содержит mainClass")
+		return vanillaInstallResult{}, errors.New("версия.JSON не содержит mainClass")
 	}
 	javaMajor, err := javaMajorFromVersion(selectedID, metadata.MojangVersionFile)
 	if err != nil {
@@ -406,7 +406,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	clientDownload, ok := metadata.Downloads["client"]
 	if !ok || clientDownload.URL == "" || clientDownload.SHA1 == "" || clientDownload.Size <= 0 {
-		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый downloads.client")
+		return vanillaInstallResult{}, errors.New("версия.JSON не содержит проверяемый загрузка.клиент")
 	}
 
 	versionRel := filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json"))
@@ -428,11 +428,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return fmt.Errorf("%s: отсутствует URL", task.Path)
 		}
 		if opts.StrictUpstream && task.SHA1 == "" {
-			return fmt.Errorf("%s: upstream metadata не содержит SHA-1; отключение strict возможно только явно", task.Path)
+			return fmt.Errorf("%s: вышестоящий проект метаданные не содержит SHA-1; отключение строгий возможно только явно", task.Path)
 		}
 		if prev, exists := tasks[task.Path]; exists {
 			if prev.URL != task.URL || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) {
-				return fmt.Errorf("конфликт upstream artifact %s", task.Path)
+				return fmt.Errorf("конфликт вышестоящий проект артефакт %s", task.Path)
 			}
 			prev.TargetOS = unionStrings(prev.TargetOS, task.TargetOS)
 			tasks[task.Path] = prev
@@ -474,13 +474,13 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		artifact := lib.Downloads.Artifact
 		hasArtifact := hasMojangDownloadDescriptor(artifact)
-		// Mojang legacy metadata contains classifier-only entries such as
-		// lwjgl-platform/jinput-platform. They are native containers, not
-		// classpath JARs. Synthesizing an artifact from the Maven coordinate
-		// creates a file that does not exist upstream and breaks 1.7.x/1.8.x.
+		// Mojang устаревший метаданные содержит только классификатор записи такой как
+		// lwjgl-platform/jinput-platform. Они являются нативный containers, не
+		// путь классов JARs. Synthesizing артефакт из Maven coordinate
+		// создаёт файл тот делает не exist вышестоящий проект и breaks 1.7.x/1.8.x.
 		if !hasArtifact && len(lib.Downloads.Classifiers) == 0 {
 			if opts.StrictUpstream {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: Mojang metadata не содержит проверяемый artifact", lib.Name)
+				return vanillaInstallResult{}, fmt.Errorf("библиотека %s: Mojang метаданные не содержит проверяемый артефакт", lib.Name)
 			}
 			artifact.Path = strings.TrimPrefix(localMavenPath(lib.Name), "/")
 			hasArtifact = true
@@ -499,7 +499,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(artifactPath, "/")
 			}
 			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "library", TargetOS: uniqueStrings(applicableTargets)}); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: %w", lib.Name, err)
+				return vanillaInstallResult{}, fmt.Errorf("библиотека %s: %w", lib.Name, err)
 			}
 		}
 		for _, target := range opts.Targets {
@@ -513,7 +513,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			classifier := strings.ReplaceAll(classifierTemplate, "${arch}", nativeArchForTarget(target.Arch))
 			native, ok := lib.Downloads.Classifiers[classifier]
 			if !ok {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: отсутствует classifier %s", lib.Name, classifier)
+				return vanillaInstallResult{}, fmt.Errorf("библиотека %s: отсутствует классификатор %s", lib.Name, classifier)
 			}
 			nativePath := strings.TrimSpace(native.Path)
 			if nativePath == "" {
@@ -529,7 +529,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			}
 			t := target
 			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(nativePath), "libraries/"), URL: nativeURL, SHA1: native.SHA1, Size: native.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTarget: &t}); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("native %s: %w", lib.Name, err)
+				return vanillaInstallResult{}, fmt.Errorf("нативный %s: %w", lib.Name, err)
 			}
 		}
 	}
@@ -539,23 +539,23 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		assetIndexID = strings.TrimSpace(metadata.Assets)
 	}
 	if assetIndexID == "" || metadata.AssetIndex.URL == "" || metadata.AssetIndex.SHA1 == "" {
-		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый assetIndex")
+		return vanillaInstallResult{}, errors.New("версия.JSON не содержит проверяемый assetIndex")
 	}
 	assetIndexPath := filepath.ToSlash(filepath.Join("assets", "indexes", assetIndexID+".json"))
 	assetBytes, assetIndexCached, assetIndexQuarantined, err := fetchVerifiedBytesWithLocalCache(ctx, client, opts.ClientDir, assetIndexPath, metadata.AssetIndex.URL, metadata.AssetIndex.SHA1, metadata.AssetIndex.Size, 64<<20)
 	if err != nil {
-		return vanillaInstallResult{}, fmt.Errorf("asset index: %w", err)
+		return vanillaInstallResult{}, fmt.Errorf("ресурс индекс: %w", err)
 	}
 	var assets vanillaAssetIndex
 	if err := json.Unmarshal(assetBytes, &assets); err != nil {
-		return vanillaInstallResult{}, fmt.Errorf("asset index повреждён: %w", err)
+		return vanillaInstallResult{}, fmt.Errorf("ресурс индекс повреждён: %w", err)
 	}
 	for name, object := range assets.Objects {
 		if err := validateAssetLogicalPath(name); err != nil {
 			return vanillaInstallResult{}, err
 		}
 		if err := validateSHA1Hex(object.Hash); err != nil || object.Size < 0 {
-			return vanillaInstallResult{}, fmt.Errorf("asset %q содержит некорректный hash/size", name)
+			return vanillaInstallResult{}, fmt.Errorf("ресурс %q содержит некорректный hash/size", name)
 		}
 		objectURL := strings.TrimRight(opts.AssetBaseURL, "/") + "/" + object.Hash[:2] + "/" + object.Hash
 		objectPath := filepath.ToSlash(filepath.Join("assets", "objects", object.Hash[:2], object.Hash))
@@ -567,7 +567,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	if metadata.Logging.Client != nil && metadata.Logging.Client.File.ID != "" {
 		logging := metadata.Logging.Client.File
 		if logging.URL == "" || logging.SHA1 == "" {
-			return vanillaInstallResult{}, errors.New("logging.client.file не содержит проверяемый URL/SHA1")
+			return vanillaInstallResult{}, errors.New("logging.клиент.файл не содержит проверяемый URL/SHA1")
 		}
 		if err := addTask(vanillaDownloadTask{Path: filepath.ToSlash(filepath.Join("assets", "log_configs", logging.ID)), URL: logging.URL, SHA1: logging.SHA1, Size: logging.Size, Kind: "logging"}); err != nil {
 			return vanillaInstallResult{}, err
@@ -584,7 +584,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, err
 	}
 
-	// Metadata files are local trust inputs too; include their final SHA-256 in the report.
+	// Метаданные файлы являются локальный доверие inputs слишком; включать их итоговый SHA-256 в отчёт.
 	metadataHash := sha256.Sum256(versionBytes)
 	downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json")), Kind: "version-metadata", Size: int64(len(versionBytes)), SHA1: selected.SHA1, SHA256: hex.EncodeToString(metadataHash[:]), Cached: resolved.Recovered, Resumed: resolved.Recovered})
 	assetHash := sha256.Sum256(assetBytes)
@@ -601,9 +601,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		key := task.NativeTarget.OS + "/" + task.NativeTarget.Arch
 		nativeByTarget[key] = append(nativeByTarget[key], task)
 	}
-	// Generated natives are published transactionally per OS/arch. A failed
-	// extraction therefore leaves the previously verified directory intact
-	// instead of exposing a half-written native tree to the next launch.
+	// Сгенерированный нативный являются опубликованный transactionally на OS/arch. ошибка
+	// извлечение поэтому leaves ранее проверен каталог intact
+	// вместо этого предоставлять half-записан нативный дерево к следующий запускать.
 	for _, target := range opts.Targets {
 		key := target.OS + "/" + target.Arch
 		finalRel := filepath.ToSlash(filepath.Join("natives", target.OS, target.Arch))
@@ -617,7 +617,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return vanillaInstallResult{}, err
 		}
 		if err := os.MkdirAll(stagingDir, 0o755); err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("native staging %s: %w", key, err)
+			return vanillaInstallResult{}, fmt.Errorf("нативный подготовка %s: %w", key, err)
 		}
 		publishFiles := make([]vanillaDownloadedFile, 0)
 		failed := false
@@ -626,7 +626,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			extracted, err := extractNativeJar(archivePath, stagingDir, task.NativeExclude)
 			if err != nil {
 				_ = os.RemoveAll(stagingDir)
-				return vanillaInstallResult{}, fmt.Errorf("native extraction %s: %w", task.Path, err)
+				return vanillaInstallResult{}, fmt.Errorf("нативный извлечение %s: %w", task.Path, err)
 			}
 			for _, rel := range extracted {
 				full := filepath.Join(stagingDir, filepath.FromSlash(rel))
@@ -643,7 +643,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		if failed {
 			_ = os.RemoveAll(stagingDir)
-			return vanillaInstallResult{}, fmt.Errorf("native staging %s hash verification failed", key)
+			return vanillaInstallResult{}, fmt.Errorf("нативный подготовка %s хеш проверка ошибка", key)
 		}
 		if err := os.MkdirAll(filepath.Dir(finalDir), 0o755); err != nil {
 			_ = os.RemoveAll(stagingDir)
@@ -651,7 +651,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		if err := replaceDirectoryAtomicPortable(stagingDir, finalDir); err != nil {
 			_ = os.RemoveAll(stagingDir)
-			return vanillaInstallResult{}, fmt.Errorf("native publish %s: %w", key, err)
+			return vanillaInstallResult{}, fmt.Errorf("нативный публикация %s: %w", key, err)
 		}
 		downloadedFiles = append(downloadedFiles, publishFiles...)
 	}
@@ -696,14 +696,14 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 
 		virtualTree, err := prepareTree(virtualAssets, filepath.Join("assets", "virtual", virtualIndexID), "virtual-asset")
 		if err != nil {
-			return vanillaInstallResult{}, fmt.Errorf("virtual assets staging %s: %w", virtualIndexID, err)
+			return vanillaInstallResult{}, fmt.Errorf("виртуальный ресурсы подготовка %s: %w", virtualIndexID, err)
 		}
 		resourcesTree, err := prepareTree(assets.MapToResources, "resources", "resource-asset")
 		if err != nil {
 			if virtualTree.staging != "" {
 				_ = os.RemoveAll(virtualTree.staging)
 			}
-			return vanillaInstallResult{}, fmt.Errorf("resources staging: %w", err)
+			return vanillaInstallResult{}, fmt.Errorf("ресурсы подготовка: %w", err)
 		}
 		defer func() {
 			if virtualTree.staging != "" {
@@ -736,7 +736,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				sum, size, err := hashFile(dest)
 				if err != nil {
-					return vanillaInstallResult{}, fmt.Errorf("%s %s hash: %w", tree.kind, name, err)
+					return vanillaInstallResult{}, fmt.Errorf("%s %s хеш: %w", tree.kind, name, err)
 				}
 				generatedFiles = append(generatedFiles, vanillaDownloadedFile{
 					Path:   filepath.ToSlash(filepath.Join(tree.finalRel, filepath.FromSlash(name))),
@@ -752,7 +752,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				continue
 			}
 			if err := replaceDirectoryAtomicPortable(tree.staging, tree.finalDir); err != nil {
-				return vanillaInstallResult{}, fmt.Errorf("%s publish: %w", tree.kind, err)
+				return vanillaInstallResult{}, fmt.Errorf("%s публикация: %w", tree.kind, err)
 			}
 			tree.staging = ""
 		}
@@ -859,7 +859,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		return vanillaDownloadedFile{}, err
 	}
 	if task.Size > maxCompatibilityArtifact {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact size %d превышает лимит %d", task.Path, task.Size, maxCompatibilityArtifact)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: артефакт размер %d превышает лимит %d", task.Path, task.Size, maxCompatibilityArtifact)
 	}
 	if task.SHA1 != "" {
 		if err := validateSHA1Hex(task.SHA1); err != nil {
@@ -872,7 +872,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	quarantined := false
 	if _, statErr := os.Lstat(dest); statErr == nil {
 		if task.SHA1 == "" {
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: существующий artifact нельзя безопасно переиспользовать без SHA-1", task.Path)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: существующий артефакт нельзя безопасно переиспользовать без SHA-1", task.Path)
 		}
 		quarantined, err = quarantineCompatibilityArtifact(root, task.Path, "cached artifact failed Mojang SHA-1/size verification")
 		if err != nil {
@@ -891,13 +891,13 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	tmp := dest + ".nlpart"
 	resumeOffset, completedPartial, err := inspectVanillaPartial(tmp, task)
 	if err != nil {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: partial recovery: %w", task.Path, err)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: частичный восстановление: %w", task.Path, err)
 	}
 	if completedPartial {
 		ok, sha256sum, size := existingFileMatchesSHA1(tmp, task.SHA1, task.Size)
 		if !ok {
 			if err := os.Remove(tmp); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return vanillaDownloadedFile{}, fmt.Errorf("%s: удалить повреждённый completed partial: %w", task.Path, err)
+				return vanillaDownloadedFile{}, fmt.Errorf("%s: удалить повреждённый завершённый частичный: %w", task.Path, err)
 			}
 			resumeOffset = 0
 		} else {
@@ -913,7 +913,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 
 	resp, resumed, err := fetchVanillaArtifactResponse(ctx, client, task, resumeOffset)
 	if err != nil {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: download: %w", task.Path, err)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: загрузка: %w", task.Path, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -926,7 +926,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		}
 		if resp.ContentLength > 0 && task.Size > 0 && resp.ContentLength != task.Size-resumeOffset {
 			_ = os.Remove(tmp)
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: resumed Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size-resumeOffset)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: возобновление Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size-resumeOffset)
 		}
 	} else if task.Size > 0 && resp.ContentLength > 0 && resp.ContentLength != task.Size {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size)
@@ -943,7 +943,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		hashed, hashErr := io.Copy(io.MultiWriter(h1, h256), prefix)
 		closeErr := prefix.Close()
 		if hashErr != nil || closeErr != nil || hashed != resumeOffset {
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: partial prefix hash failed", task.Path)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: частичный prefix хеш ошибка", task.Path)
 		}
 		out, err = os.OpenFile(tmp, os.O_WRONLY|os.O_APPEND, 0o644)
 	} else {
@@ -959,24 +959,24 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	closeErr := out.Close()
 	totalWritten := resumeOffset + written
 	if copyErr != nil || syncErr != nil || closeErr != nil {
-		// Keep a regular partial file. A later invocation can safely resume it from
-		// the exact byte offset because the final Mojang SHA-1 remains mandatory.
+		// Сохранять regular частичный файл. позже invocation может безопасно возобновление это из
+		// точный byte offset потому что итоговый Mojang SHA-1 остаётся обязательный.
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %v %v %v", task.Path, copyErr, syncErr, closeErr)
 	}
 	gotSHA1 := hex.EncodeToString(h1.Sum(nil))
 	gotSHA256 := hex.EncodeToString(h256.Sum(nil))
 	if totalWritten > maxCompatibilityArtifact {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact превышает лимит %d", task.Path, maxCompatibilityArtifact)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: артефакт превышает лимит %d", task.Path, maxCompatibilityArtifact)
 	}
 	if task.Size > 0 && totalWritten != task.Size {
-		// A clean early EOF is also resumable; preserve the verified-size-bounded
-		// partial instead of throwing away progress.
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: неполная загрузка %d/%d bytes сохранена для recovery", task.Path, totalWritten, task.Size)
+		// чистый early EOF является также resumable; preserve проверен-размер-ограниченный
+		// частичный вместо этого throwing away progress.
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: неполная загрузка %d/%d байты сохранена для восстановление", task.Path, totalWritten, task.Size)
 	}
 	if task.SHA1 != "" && !strings.EqualFold(gotSHA1, task.SHA1) {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: SHA-1 mismatch", task.Path)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: SHA-1 несоответствие", task.Path)
 	}
 	if _, err := secureClientDestination(root, task.Path); err != nil {
 		_ = os.Remove(tmp)
@@ -1022,8 +1022,8 @@ func fetchVanillaArtifactResponse(ctx context.Context, client *http.Client, task
 		if resp.StatusCode == http.StatusPartialContent {
 			return resp, true, nil
 		}
-		// Servers are allowed to ignore Range and return a full 200 response. In
-		// that case restart from zero; never append a full body to a partial file.
+		// Серверы являются разрешён к ignore Диапазон и возвращать полный 200 ответ. В
+		// тот случай перезапуск из zero; никогда append полный тело к частичный файл.
 		if resp.StatusCode == http.StatusOK {
 			return resp, false, nil
 		}
@@ -1037,10 +1037,10 @@ func validateContentRange(value string, expectedStart, expectedTotal int64) erro
 	value = strings.TrimSpace(value)
 	var start, end, total int64
 	if _, err := fmt.Sscanf(value, "bytes %d-%d/%d", &start, &end, &total); err != nil {
-		return fmt.Errorf("некорректный Content-Range %q", value)
+		return fmt.Errorf("некорректный Content-Диапазон %q", value)
 	}
 	if start != expectedStart || end < start || (expectedTotal > 0 && total != expectedTotal) || (expectedTotal > 0 && end >= expectedTotal) {
-		return fmt.Errorf("Content-Range mismatch: %q", value)
+		return fmt.Errorf("Content-Диапазон несоответствие: %q", value)
 	}
 	return nil
 }
@@ -1073,7 +1073,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 	}
 	defer reader.Close()
 	if len(reader.File) > maxCompatibilityNativeEntries {
-		return nil, fmt.Errorf("native archive содержит слишком много entries: %d", len(reader.File))
+		return nil, fmt.Errorf("нативный архив содержит слишком много записи: %d", len(reader.File))
 	}
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return nil, err
@@ -1090,20 +1090,20 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		clean := path.Clean(name)
 		if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") || clean != name {
-			return nil, fmt.Errorf("archive traversal entry: %s", entry.Name)
+			return nil, fmt.Errorf("архив обход запись: %s", entry.Name)
 		}
 		mode := entry.Mode()
 		if mode&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("native archive содержит symlink: %s", entry.Name)
+			return nil, fmt.Errorf("нативный архив содержит символическая ссылка: %s", entry.Name)
 		}
 		if !mode.IsRegular() {
-			return nil, fmt.Errorf("native archive содержит неподдерживаемый entry type: %s", entry.Name)
+			return nil, fmt.Errorf("нативный архив содержит неподдерживаемый запись type: %s", entry.Name)
 		}
 		if entry.UncompressedSize64 > uint64(maxCompatibilityNativeEntry) {
-			return nil, fmt.Errorf("native archive entry %s имеет небезопасный размер %d", entry.Name, entry.UncompressedSize64)
+			return nil, fmt.Errorf("нативный запись архива %s имеет небезопасный размер %d", entry.Name, entry.UncompressedSize64)
 		}
 		if totalExtracted > maxCompatibilityNativeExtract-int64(entry.UncompressedSize64) {
-			return nil, fmt.Errorf("native archive распаковывается более чем в %d bytes", maxCompatibilityNativeExtract)
+			return nil, fmt.Errorf("нативный архив распаковывается более чем в %d байты", maxCompatibilityNativeExtract)
 		}
 		dst, err := secureClientDestination(targetDir, clean)
 		if err != nil {
@@ -1111,7 +1111,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		rel, err := filepath.Rel(targetDir, dst)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
-			return nil, fmt.Errorf("native archive path escape: %s", entry.Name)
+			return nil, fmt.Errorf("нативный путь в архиве escape: %s", entry.Name)
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return nil, err
@@ -1123,7 +1123,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		tmp := dst + ".nlpart"
 		if info, err := os.Lstat(tmp); err == nil && (info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular()) {
 			src.Close()
-			return nil, fmt.Errorf("native temp path имеет небезопасный тип: %s", tmp)
+			return nil, fmt.Errorf("нативный temp путь имеет небезопасный тип: %s", tmp)
 		}
 		out, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 		if err != nil {
@@ -1136,11 +1136,11 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		src.Close()
 		if copyErr != nil || syncErr != nil || closeErr != nil {
 			_ = os.Remove(tmp)
-			return nil, fmt.Errorf("native %s extraction failed", entry.Name)
+			return nil, fmt.Errorf("нативный %s извлечение ошибка", entry.Name)
 		}
 		if copied != int64(entry.UncompressedSize64) || copied > maxCompatibilityNativeEntry {
 			_ = os.Remove(tmp)
-			return nil, fmt.Errorf("native %s uncompressed size mismatch: got %d expected %d", entry.Name, copied, entry.UncompressedSize64)
+			return nil, fmt.Errorf("нативный %s uncompressed размер несоответствие: получил %d ожидаемый %d", entry.Name, copied, entry.UncompressedSize64)
 		}
 		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
 			_ = os.Remove(tmp)
@@ -1156,7 +1156,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) error {
 	ok, _, _ := existingFileMatchesSHA1(src, expectedSHA1, expectedSize)
 	if !ok {
-		return errors.New("source asset не прошёл SHA-1/size verification")
+		return errors.New("исходник ресурс не прошёл SHA-1/size проверка")
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
@@ -1198,7 +1198,7 @@ func fetchJSONBytes(ctx context.Context, client *http.Client, source string, max
 
 func fetchBytesVerified(ctx context.Context, client *http.Client, source, expectedSHA1 string, expectedSize, max int64, requireHash bool) ([]byte, error) {
 	if requireHash && expectedSHA1 == "" {
-		return nil, errors.New("upstream checksum обязателен")
+		return nil, errors.New("вышестоящий проект контрольная сумма обязателен")
 	}
 	if err := validateRemoteURL(source); err != nil {
 		return nil, err
@@ -1222,7 +1222,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+		return nil, fmt.Errorf("ответ превышает лимит %d байты", max)
 	}
 	if expectedSize > 0 && int64(len(data)) != expectedSize {
 		return nil, fmt.Errorf("размер %d, ожидался %d", len(data), expectedSize)
@@ -1230,7 +1230,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 	if expectedSHA1 != "" {
 		sum := sha1.Sum(data)
 		if !strings.EqualFold(hex.EncodeToString(sum[:]), expectedSHA1) {
-			return nil, errors.New("SHA-1 mismatch")
+			return nil, errors.New("SHA-1 несоответствие")
 		}
 	}
 	return data, nil
@@ -1261,18 +1261,18 @@ func secureHTTPClient() *http.Client {
 func validateRemoteURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Hostname() == "" || parsed.Opaque != "" {
-		return fmt.Errorf("некорректный remote URL: %q", raw)
+		return fmt.Errorf("некорректный удалённый URL: %q", raw)
 	}
 	if parsed.User != nil || parsed.Fragment != "" || strings.ContainsAny(raw, "\r\n\x00") {
-		return fmt.Errorf("remote URL содержит credentials/fragment/control characters: %q", raw)
+		return fmt.Errorf("удалённый URL содержит credentials/fragment/control characters: %q", raw)
 	}
 	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
 	if strings.Contains(host, "%") {
-		return fmt.Errorf("remote URL содержит IPv6 zone identifier: %q", raw)
+		return fmt.Errorf("удалённый URL содержит IPv6 zone identifier: %q", raw)
 	}
 	if parsed.Scheme == "https" {
 		if ip := net.ParseIP(host); ip != nil && isPrivateCompatibilityIP(ip) && !allowPrivateCompatibilityUpstream() {
-			return fmt.Errorf("private/link-local HTTPS upstream требует NEVERLAUNCHER_ALLOW_PRIVATE_UPSTREAM=1: %s", raw)
+			return fmt.Errorf("private/link-local HTTPS вышестоящий проект требует NEVERLAUNCHER_ALLOW_PRIVATE_UPSTREAM=1: %s", raw)
 		}
 		return nil
 	}
@@ -1281,7 +1281,7 @@ func validateRemoteURL(raw string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("remote URL должен использовать HTTPS: %s", raw)
+	return fmt.Errorf("удалённый URL должен использовать HTTPS: %s", raw)
 }
 
 func allowPrivateCompatibilityUpstream() bool {
@@ -1305,8 +1305,8 @@ func resolveRequestedMinecraftVersion(manifest MojangVersionManifest, requested 
 	case "latest-snapshot", "snapshot":
 		return manifest.Latest["snapshot"]
 	case "1.0.0":
-		// Mojang's canonical first release id is "1.0". Accept the common
-		// semantic-version spelling without fabricating a non-existent version.
+		// Mojang's канонический первый релиз ID является "1.0". Принимать common
+		// semantic-версия spelling без fabricating non-existent версия.
 		return "1.0"
 	default:
 		return normalized
@@ -1325,7 +1325,7 @@ func isLegacyVirtualAssetIndex(id string) bool {
 func validateLegacyAssetIndexID(id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" || strings.ContainsAny(id, `/\`) || id == "." || id == ".." || strings.ContainsRune(id, '\x00') {
-		return fmt.Errorf("небезопасный legacy asset index id: %q", id)
+		return fmt.Errorf("небезопасный устаревший ресурс индекс ID: %q", id)
 	}
 	return nil
 }
@@ -1340,7 +1340,7 @@ func parseVanillaTargets(raw string) ([]vanillaTarget, error) {
 	for _, part := range parts {
 		fields := strings.Split(strings.TrimSpace(part), "/")
 		if len(fields) != 2 {
-			return nil, fmt.Errorf("некорректный --target %q, ожидается os/arch", part)
+			return nil, fmt.Errorf("некорректный --цель %q, ожидается os/arch", part)
 		}
 		target, err := normalizeVanillaTarget(vanillaTarget{OS: fields[0], Arch: fields[1]})
 		if err != nil {
@@ -1372,13 +1372,13 @@ func normalizeVanillaTarget(target vanillaTarget) (vanillaTarget, error) {
 	case "darwin", "mac", "macos", "osx":
 		osName = "osx"
 	default:
-		return vanillaTarget{}, fmt.Errorf("неподдерживаемая target OS: %s", target.OS)
+		return vanillaTarget{}, fmt.Errorf("неподдерживаемая цель OS: %s", target.OS)
 	}
 	arch := normalizeVanillaArch(target.Arch)
 	switch arch {
 	case "x86", "x86_64", "aarch64", "arm":
 	default:
-		return vanillaTarget{}, fmt.Errorf("неподдерживаемая target arch: %s", target.Arch)
+		return vanillaTarget{}, fmt.Errorf("неподдерживаемая цель архитектура: %s", target.Arch)
 	}
 	return vanillaTarget{OS: osName, Arch: arch}, nil
 }
@@ -1443,8 +1443,8 @@ func rulesAllowTarget(rules []map[string]any, target vanillaTarget) bool {
 				}
 			}
 		}
-		// build-side materialization has no dynamic launcher feature state; feature-gated entries are
-		// retained only if they don't require a true feature. Runtime evaluates them again at launch.
+		// сборка-побочный материализация имеет нет динамический лаунчер возможность состояние; возможность-gated записи являются
+		// сохранённый только если они don't требовать true возможность. Среда выполнения evaluates их снова в запускать.
 		if features, ok := rule["features"].(map[string]any); ok {
 			for _, expected := range features {
 				if value, ok := expected.(bool); ok && value {
@@ -1550,7 +1550,7 @@ func isExcludedNative(name string, excludes []string) bool {
 
 func validateVanillaLaunchMetadata(v vanillaVersionMetadata) error {
 	if len(v.Arguments.Game) == 0 && strings.TrimSpace(v.MinecraftArgs) == "" {
-		return fmt.Errorf("Minecraft %s version.json не содержит исполняемые arguments.game или minecraftArguments", strings.TrimSpace(v.ID))
+		return fmt.Errorf("Minecraft %s версия.JSON не содержит исполняемые arguments.игра или minecraftArguments", strings.TrimSpace(v.ID))
 	}
 	return nil
 }
@@ -1581,61 +1581,61 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if isLegacyVanillaJava8Release(minecraftVersion) {
 		if metadataMajor != 0 && metadataMajor != 8 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: Legacy Vanilla требует Java 8, got %d", minecraftVersion, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: Устаревший Vanilla требует Java 8, получил %d", minecraftVersion, metadataMajor)
 		}
 		return 8, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0170v2(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v2 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные не содержит javaVersion.majorVersion; 0.17.0v2 требует точный Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: 0.17.0v2 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: 0.17.0v2 ожидаемый %d, получил %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0170v3(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v3 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные не содержит javaVersion.majorVersion; 0.17.0v3 требует точный Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: 0.17.0v3 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: 0.17.0v3 ожидаемый %d, получил %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные не содержит javaVersion.majorVersion; 0.16.6 требует точный Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: ожидаемый %d, получил %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0167(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.7 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные не содержит javaVersion.majorVersion; 0.16.7 требует точный Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: ожидаемый %d, получил %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0168(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.8 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные не содержит javaVersion.majorVersion; 0.16.8 требует точный Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: Mojang метаданные Java несоответствие: ожидаемый %d, получил %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
 	if metadataMajor > 0 {
 		return metadataMajor, nil
 	}
-	// Unknown historical metadata outside the certified Legacy Vanilla release
-	// range keeps the old compatibility fallback, but certified 1.x releases are
-	// handled above by the exact Java 8 policy.
+	// Неизвестный исторический метаданные вне сертифицированный Устаревший Vanilla релиз
+	// диапазон сохраняет старый совместимость резервный вариант, но сертифицированный 1.x релизы являются
+	// дескриптор выше через точный Java 8 политика.
 	return 8, nil
 }
 
@@ -1693,7 +1693,7 @@ func expectedJavaMajorForVanilla0168(version string) (int, bool) {
 	if !ok || major != 26 {
 		return 0, false
 	}
-	// 26.1.x and the 26.3 release require Java 25.
+	// 26.1.x и 26.3 релиз требовать Java 25.
 	if minor == 1 || (minor == 3 && patch == 0) {
 		return 25, true
 	}
@@ -1726,7 +1726,7 @@ func validateVanillaRelativePath(rel string) error {
 	rel = strings.ReplaceAll(rel, "\\", "/")
 	clean := path.Clean(rel)
 	if rel == "" || clean == "." || clean == ".." || clean != rel || strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "../") || strings.ContainsRune(rel, '\x00') {
-		return fmt.Errorf("небезопасный Vanilla path: %q", rel)
+		return fmt.Errorf("небезопасный Vanilla путь: %q", rel)
 	}
 	return nil
 }

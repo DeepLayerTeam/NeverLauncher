@@ -149,7 +149,7 @@ func (s Server) restoreExtensionHostAfterLifecycleFailure0205(before model.Exten
 		return
 	}
 	if err := s.ExtensionHost.StartInstallation(context.Background(), before); err != nil && !errors.Is(err, extensionhost.ErrNoBackendTarget) {
-		log.Printf("extension host compensation restart failed %s/%s/%s: %v", before.Scope, before.ScopeID, before.ExtensionID, err)
+		log.Printf("хост расширений compensation перезапуск ошибка %s/%s/%s: %v", before.Scope, before.ScopeID, before.ExtensionID, err)
 	}
 }
 

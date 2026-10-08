@@ -3,23 +3,23 @@ main: ru.neverlauncher.bridge.paper.NeverLauncherPaperBridge
 version: ${version}
 api-version: '1.21'
 author: SkiF4er
-description: NeverLauncher ServerBridge/AuthBridge integration for Paper servers.
+description: NeverLauncher ServerBridge/AuthBridge интеграционный для Paper серверы.
 
 commands:
   nlbridge:
-    description: NeverLauncher bridge diagnostics and control command
+    description: NeverLauncher мост диагностика и команда управления
     usage: /nlbridge <status|test|reload|diagnostics>
     permission: neverlauncher.bridge.status
 permissions:
   neverlauncher.bridge.admin:
-    description: Trigger NeverLauncher bridge network diagnostics
+    description: Trigger NeverLauncher мост сеть диагностика
     default: op
   neverlauncher.bridge.status:
-    description: Read NeverLauncher bridge status
+    description: Чтение NeverLauncher мост состояние
     default: op
   neverlauncher.bridge.reload:
-    description: Reload NeverLauncher bridge configuration
+    description: Перезагрузка NeverLauncher мост конфигурация
     default: op
   neverlauncher.bridge.diagnostics:
-    description: Read NeverLauncher bridge diagnostics
+    description: Чтение NeverLauncher мост диагностика
     default: op

@@ -22,10 +22,10 @@ func normalizeIntegrityResult0212(in model.IntegrityCheckResult) (model.Integrit
 	in.ArtifactDigest = strings.ToLower(strings.TrimSpace(in.ArtifactDigest))
 	in.Result = strings.ToLower(strings.TrimSpace(in.Result))
 	if in.ID == "" || in.PackageID == "" || in.ProjectID == "" || len(in.ManifestDigest) != 64 || len(in.ArtifactDigest) != 64 {
-		return model.IntegrityCheckResult{}, errors.New("integrity result identity/digests are incomplete")
+		return model.IntegrityCheckResult{}, errors.New("целостность результат identity/digests являются неполный")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.IntegrityCheckResult{}, errors.New("integrity result must be passed or failed")
+		return model.IntegrityCheckResult{}, errors.New("целостность результат должен быть пройден или ошибка")
 	}
 	if in.CheckedAt.IsZero() {
 		in.CheckedAt = time.Now().UTC()
@@ -45,16 +45,16 @@ func normalizeRuntimeValidation0212(in model.RuntimeValidationResult) (model.Run
 	in.EvidenceDigest = strings.ToLower(strings.TrimSpace(in.EvidenceDigest))
 	in.Result = strings.ToLower(strings.TrimSpace(in.Result))
 	if in.ID == "" || in.PackageID == "" || in.ProjectID == "" || len(in.ManifestDigest) != 64 || len(in.EvidenceDigest) != 64 || in.TargetID == "" || in.RunID == "" || in.SignerKeyID == "" || len(in.SignerKeyFingerprint) != 64 {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation identity/digests are incomplete")
+		return model.RuntimeValidationResult{}, errors.New("проверка реального запуска identity/digests являются неполный")
 	}
 	if in.Result != "passed" && in.Result != "failed" {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation result must be passed or failed")
+		return model.RuntimeValidationResult{}, errors.New("проверка реального запуска результат должен быть пройден или ошибка")
 	}
 	if in.Result == "passed" && (!in.ActualClient || in.ExitCode != 0) {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation pass requires actual client evidence with exit code 0")
+		return model.RuntimeValidationResult{}, errors.New("проверка реального запуска успешно требует реальный клиент свидетельство с выход код 0")
 	}
 	if in.FinishedAt.IsZero() || in.StartedAt.IsZero() || in.FinishedAt.Before(in.StartedAt) {
-		return model.RuntimeValidationResult{}, errors.New("runtime validation timestamps are invalid")
+		return model.RuntimeValidationResult{}, errors.New("проверка реального запуска метки времени являются недопустимый")
 	}
 	if in.CreatedAt.IsZero() {
 		in.CreatedAt = time.Now().UTC()
@@ -250,13 +250,13 @@ func normalizeProjectValidationPolicy0212(in model.ProjectValidationPolicy) (mod
 	in.ProjectID = strings.TrimSpace(in.ProjectID)
 	in.RequiredLevel = strings.ToLower(strings.TrimSpace(in.RequiredLevel))
 	if in.ProjectID == "" {
-		return model.ProjectValidationPolicy{}, errors.New("project validation policy requires projectId")
+		return model.ProjectValidationPolicy{}, errors.New("проект валидация политика требует projectId")
 	}
 	if in.RequiredLevel == "" {
 		in.RequiredLevel = "integrity"
 	}
 	if in.RequiredLevel != "integrity" && in.RequiredLevel != "runtime" {
-		return model.ProjectValidationPolicy{}, errors.New("required validation level must be integrity or runtime")
+		return model.ProjectValidationPolicy{}, errors.New("обязательный валидация уровень должен быть целостность или среда выполнения")
 	}
 	if in.UpdatedAt.IsZero() {
 		in.UpdatedAt = time.Now().UTC()

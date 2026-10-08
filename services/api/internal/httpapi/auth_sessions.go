@@ -90,8 +90,8 @@ type authSessionStore struct {
 }
 
 var (
-	errRefreshTokenInvalid       = errors.New("refresh token недействителен")
-	errRefreshTokenReuseDetected = errors.New("обнаружено повторное использование refresh token")
+	errRefreshTokenInvalid       = errors.New("токен обновления недействителен")
+	errRefreshTokenReuseDetected = errors.New("обнаружено повторное использование токен обновления")
 )
 
 func newAuthSessionStore111() *authSessionStore {
@@ -182,7 +182,7 @@ func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (auth
 	hash := hashRefreshToken(refreshToken)
 	token, ok := s.tokens[hash]
 	if !ok {
-		// Upgrade compatibility for an in-memory/snapshot session created before 0.11.1.
+		// Обновление совместимость для in-memory/snapshot сессия создан до 0.11.1.
 		for _, record := range s.sessions {
 			if record.RefreshHash == hash {
 				token = refreshTokenRecord111{Hash: hash, FamilyID: record.RefreshFamily, SessionID: record.ID, Status: "current", CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt}

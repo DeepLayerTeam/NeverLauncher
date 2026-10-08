@@ -1,6 +1,6 @@
-//! NeverExtensions Desktop Rust SDK.
-//! This crate contains protocol types/helpers for native companion code. It does
-//! not expose Tauri internals; sandboxed UI still goes through the permissioned bridge.
+//! NeverExtensions Настольное приложение Rust SDK.
+//! Этот crate содержит протокол types/helpers для нативный companion код. Это делает
+//! не предоставлять Tauri внутренний; песочница UI по-прежнему goes через разрешение мост.
 
 mod generated;
 pub use generated::*;

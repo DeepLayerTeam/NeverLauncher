@@ -22,7 +22,7 @@ const (
 func hashPasswordArgon2id(password string) (string, error) {
 	salt := make([]byte, argon2idSaltLength)
 	if _, err := rand.Read(salt); err != nil {
-		return "", fmt.Errorf("не удалось создать salt для Argon2id: %w", err)
+		return "", fmt.Errorf("не удалось создать salt для Argon2ID: %w", err)
 	}
 	digest := argon2.IDKey(
 		[]byte(password),

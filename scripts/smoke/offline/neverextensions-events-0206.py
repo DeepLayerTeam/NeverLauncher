@@ -100,4 +100,4 @@ for envfile in ("deploy/production/env.production.example", "cli/cmd/neverlaunch
     ):
         require(key in env, f"{envfile} missing {key}")
 
-print("NeverExtensions Events & Hooks 0.20.6 production gate: OK")
+print("NeverExtensions События и Хуки 0.20.6 рабочий контроль: OK")

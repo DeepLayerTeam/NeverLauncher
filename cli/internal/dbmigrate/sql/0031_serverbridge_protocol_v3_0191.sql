@@ -1,7 +1,7 @@
--- NeverLauncher 0.19.1 — ServerBridge 3 Protocol v3 rolling-upgrade support.
--- Existing Protocol v2 nodes/tickets stay valid while 0.19.1 nodes negotiate v3.
--- Table names remain *_v2 intentionally: they are durable storage-generation names,
--- not a statement that only wire Protocol v2 is accepted.
+-- NeverLauncher 0.19.1 — ServerBridge 3 Протокол v3 поэтапный-обновление поддержка.
+-- Существующий Протокол v2 nodes/tickets оставаться действительный пока 0.19.1 узлы согласовывать v3.
+-- Таблица имена оставаться *_v2 намеренно: они являются долговременный хранилище-генерация имена,
+-- не statement тот только сетевой Протокол v2 является принят.
 
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_protocol_check;

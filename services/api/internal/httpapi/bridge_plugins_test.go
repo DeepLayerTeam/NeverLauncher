@@ -31,7 +31,7 @@ func TestCanonicalBridgePluginFlow(t *testing.T) {
 		t.Fatalf("register => %d %s", res.Code, res.Body.String())
 	}
 
-	// Protocol v2 is negotiated on the wire, not only advertised by metadata.
+	// Протокол v2 является согласовывать на сетевой, не только advertised через метаданные.
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/server-bridge/servers/velocity-940/heartbeat", strings.NewReader(`{"serverType":"velocity","pluginVersion":"0.11.0"}`))
 	req.Header.Set("Content-Type", "application/json")
 	signBridgeNodeRequest0142(t, req, "velocity-940", identity)

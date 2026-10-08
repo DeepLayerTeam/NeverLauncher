@@ -68,32 +68,32 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_required")
 	}
 	if raw.Sequence <= 0 {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_sequence_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_последовательность_недопустимый")
 	}
 	if raw.SampledAtUnixMillis <= 0 || raw.WindowMillis < 0 || raw.WindowMillis > int64((10*time.Minute)/time.Millisecond) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_time_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_время_недопустимый")
 	}
 	sampledAt := time.UnixMilli(raw.SampledAtUnixMillis).UTC()
 	if sampledAt.Before(now.Add(-serverBridgeTelemetryMaxClockPast0193)) || sampledAt.After(now.Add(serverBridgeTelemetryMaxClockFuture0193)) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_clock_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_clock_недопустимый")
 	}
 	if !isSHA256Hex0134(strings.ToLower(strings.TrimSpace(raw.RuntimeID))) || !strings.EqualFold(strings.TrimSpace(raw.RuntimeID), runtime.RuntimeID) || runtimeEpoch < 1 {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_runtime_mismatch")
 	}
 	if raw.TPS != nil && (!finiteBetween0193(*raw.TPS, 0, 1000)) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_tps_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_tps_недопустимый")
 	}
 	if raw.MSPT != nil && (!finiteBetween0193(*raw.MSPT, 0, 600000)) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_mspt_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_mspt_недопустимый")
 	}
 	health := strings.ToLower(strings.TrimSpace(raw.TickHealth))
 	switch health {
 	case "unavailable", "healthy", "degraded", "overloaded":
 	default:
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_tick_health_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_tick_работоспособность_недопустимый")
 	}
 	if raw.PlayersOnline < 0 || raw.PlayersOnline > 1_000_000 || raw.PlayersMax < 0 || raw.PlayersMax > 1_000_000 || (raw.PlayersMax > 0 && raw.PlayersOnline > raw.PlayersMax) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_players_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_игроки_недопустимый")
 	}
 	if !nonNegativeBounded0193(raw.HeapUsedBytes, 1<<62) ||
 		!nonNegativeBounded0193(raw.HeapCommittedBytes, 1<<62) ||
@@ -104,18 +104,18 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		!nonNegativeBounded0193(raw.GCCollectionTimeMillis, 1<<62) ||
 		!nonNegativeBounded0193(raw.GCCollectionsDelta, 1<<62) ||
 		!nonNegativeBounded0193(raw.GCCollectionTimeDeltaMillis, 1<<62) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_jvm_counter_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_JVM_счётчик_недопустимый")
 	}
 	if raw.ThreadCount < 0 || raw.ThreadCount > 1_000_000 || raw.DaemonThreadCount < 0 || raw.DaemonThreadCount > raw.ThreadCount || raw.PeakThreadCount < raw.ThreadCount || raw.PeakThreadCount > 1_000_000 {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_threads_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_потоки_недопустимый")
 	}
 	if !validOptionalInt0193(raw.LoadedWorlds, 100_000) || !validOptionalInt0193(raw.LoadedDimensions, 100_000) || !validOptionalInt640193(raw.LoadedChunks, 10_000_000_000) || !validOptionalInt640193(raw.EntityCount, 10_000_000_000) {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_game_counter_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_игра_счётчик_недопустимый")
 	}
 
 	metrics := normalizeTelemetryMetrics0193(raw.Metrics)
 	if len(metrics) == 0 || len(metrics) > 64 {
-		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_metrics_invalid")
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_телеметрия_метрики_недопустимый")
 	}
 	return model.ServerBridgeTelemetry{
 		Sequence: raw.Sequence, SampledAtUnixMillis: raw.SampledAtUnixMillis, WindowMillis: raw.WindowMillis,
@@ -186,13 +186,13 @@ func (b *serverBridgeStore) saveTelemetry0193(serverID string, runtimeEpoch int6
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return fmt.Errorf("server bridge node not found")
+		return fmt.Errorf("сервер мост узел не found")
 	}
 	if server.Status != "active" || server.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(server.RuntimeID, telemetry.RuntimeID) {
-		return fmt.Errorf("%w: telemetry runtime is not active", repository.ErrConflict)
+		return fmt.Errorf("%w: телеметрия среда выполнения является не активный", repository.ErrConflict)
 	}
 	if server.Telemetry != nil && server.Telemetry.RuntimeEpoch == runtimeEpoch && telemetry.SampledAtUnixMillis <= server.Telemetry.SampledAtUnixMillis {
-		return fmt.Errorf("%w: duplicate or stale telemetry sample", repository.ErrConflict)
+		return fmt.Errorf("%w: дубликат или устаревший телеметрия sample", repository.ErrConflict)
 	}
 	copyValue := telemetry
 	copyValue.Metrics = append([]string(nil), telemetry.Metrics...)

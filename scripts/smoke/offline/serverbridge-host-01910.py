@@ -9,12 +9,12 @@ def read(rel):
 def require(text, needles, label):
     for needle in needles:
         if needle not in text:
-            raise SystemExit(f"{label}: missing {needle!r}")
+            raise SystemExit(f"{label}: отсутствующий {needle!r}")
 
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 10):
-    raise SystemExit(f"ServerBridge Host gate requires VERSION>=0.19.10, got {version}")
+    raise SystemExit(f"ServerBridge Хост контроль требует VERSION>=0.19.10, получил {version}")
 
 provision = read("cli/cmd/neverlauncher/serverbridge_provisioning_0199.go")
 host = read("cli/cmd/neverlauncher/serverbridge_host_01910.go")
@@ -46,11 +46,11 @@ require(tests, [
 ], "ServerBridge Host tests")
 for forbidden in ['authlib-injector', 'patchAuthlib', 'rewriteCoreJar', 'server.properties =']:
     if forbidden in host:
-        raise SystemExit(f"ServerBridge Host contains forbidden authlib/core patch behavior: {forbidden}")
+        raise SystemExit(f"ServerBridge Хост содержит forbidden authlib/core patch поведение: {forbidden}")
 for text, needle, label in [
     (preflight, 'serverbridge-host-01910.py', 'preflight'),
     (ci, 'serverbridge-host-01910.py', 'CI'),
 ]:
     if needle not in text:
-        raise SystemExit(f"{label}: missing {needle!r}")
-print("ServerBridge Host 0.19.10+ production gate: OK")
+        raise SystemExit(f"{label}: отсутствующий {needle!r}")
+print("ServerBridge Хост 0.19.10+ рабочий контроль: OK")

@@ -32,15 +32,15 @@ func handleProject(args []string) error {
 		return nil
 	}
 	if len(args) < 1 || args[0] != "validate" {
-		return errors.New("использование: neverlauncher project validate --target 1.0 project.json | neverlauncher project publish --project demo --channel stable")
+		return errors.New("использование: neverlauncher проект проверять --цель 1.0 проект.JSON | neverlauncher проект публикация --проект demo --канал стабильный")
 	}
 	if len(args) < 2 {
-		return errors.New("project validate требует путь к project.json")
+		return errors.New("проект проверять требует путь к проект.JSON")
 	}
 	target := flagValue(args, "--target", "1.0")
 	path := args[len(args)-1]
 	if strings.HasPrefix(path, "--") {
-		return errors.New("project validate требует путь к project.json")
+		return errors.New("проект проверять требует путь к проект.JSON")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -99,7 +99,7 @@ func canonicalOpenAPIErrors(data []byte) []string {
 
 func handleAPI(args []string) error {
 	if len(args) < 1 || args[0] != "compatibility-check" {
-		return errors.New("использование: neverlauncher api compatibility-check --openapi schemas/openapi.yaml --target 1.0.0")
+		return errors.New("использование: neverlauncher API совместимость-проверка --openapi schemas/openapi.yaml --цель 1.0.0")
 	}
 	openapiPath := flagValue(args, "--openapi", "schemas/openapi.yaml")
 	target := flagValue(args, "--target", "1.0.0")
@@ -111,14 +111,14 @@ func handleAPI(args []string) error {
 	report := compatibilityReport("api", target, openapiPath, nil, errs)
 	printJSON(report)
 	if len(errs) > 0 {
-		return errors.New("API-контракт не прошёл canonical compatibility-check")
+		return errors.New("API-контракт не прошёл канонический совместимость-проверка")
 	}
 	return nil
 }
 
 func handleTenant(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные tenant-подкоманды: template, validate, plan")
+		return errors.New("доступные tenant-подкоманды: template, проверять, plan")
 	}
 	switch args[0] {
 	case "template":
@@ -131,7 +131,7 @@ func handleTenant(args []string) error {
 		return writeJSONFile(out, profile)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("tenant validate требует путь к tenant.json")
+			return errors.New("tenant проверять требует путь к tenant.JSON")
 		}
 		profile, err := readTenantProfile(args[1])
 		if err != nil {
@@ -222,7 +222,7 @@ func validateTenantProfile(profile TenantProfile) []string {
 
 func handleBranding(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные branding-подкоманды: template, validate, preview")
+		return errors.New("доступные branding-подкоманды: template, проверять, preview")
 	}
 	switch args[0] {
 	case "template":
@@ -235,7 +235,7 @@ func handleBranding(args []string) error {
 		return writeJSONFile(out, profile)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("branding validate требует путь к branding.json")
+			return errors.New("бренд проверять требует путь к бренд.JSON")
 		}
 		profile, err := readBrandingProfile(args[1])
 		if err != nil {
@@ -250,7 +250,7 @@ func handleBranding(args []string) error {
 		return nil
 	case "preview":
 		if len(args) < 2 {
-			return errors.New("branding preview требует путь к branding.json")
+			return errors.New("бренд preview требует путь к бренд.JSON")
 		}
 		profile, err := readBrandingProfile(args[1])
 		if err != nil {
@@ -341,7 +341,7 @@ func isHexColor(value string) bool {
 
 func handleSDK(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные sdk-подкоманды: list, init, validate (legacy aliases; prefer nl extension init/test)")
+		return errors.New("доступные sdk-подкоманды: список, init, проверять (устаревший псевдонимы; prefer nl расширение init/test)")
 	}
 	sdks := []map[string]string{
 		{"target": "backend", "language": "go", "path": "sdk/backend/go", "purpose": "серверные расширения Backend API"},
@@ -354,11 +354,11 @@ func handleSDK(args []string) error {
 		printJSON(map[string]any{"version": version, "sdkVersion": neverExtensionsSDKVersion02010, "api": neverExtensionsAPIVersion0210, "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "generatedTypes": "sdk/api/extension-host-protocol.json + canonical OpenAPI", "sdks": sdks})
 		return nil
 	case "init":
-		// sdk init is a compatibility alias to the GA extension initializer.
+		// SDK init является совместимость псевдоним к GA расширение initializer.
 		return handleExtensionSDK02010("init", args[1:])
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("sdk validate требует путь к каталогу расширения или neverlauncher-extension.json")
+			return errors.New("SDK проверять требует путь к каталогу расширения или neverlauncher-расширение.JSON")
 		}
 		manifest, path, digest, err := loadCanonicalExtension0201(args[1])
 		if err != nil {
@@ -407,7 +407,7 @@ func sdkTemplate(target string) string {
 
 func handlePlugin(args []string) error {
 	if len(args) < 1 {
-		return errors.New("plugin — legacy compatibility alias; используйте extension template|validate|import-legacy")
+		return errors.New("плагин — устаревший совместимость псевдоним; используйте расширение template|проверять|импорт-устаревший")
 	}
 	switch args[0] {
 	case "list":
@@ -423,7 +423,7 @@ func handlePlugin(args []string) error {
 		return handleExtension0201(append([]string{"template"}, args[1:]...))
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("plugin validate требует путь к manifest")
+			return errors.New("плагин проверять требует путь к манифест")
 		}
 		if filepath.Base(canonicalExtensionManifestPath0201(args[1])) == canonicalExtensionManifestName0201 {
 			return handleExtension0201([]string{"validate", args[1]})
@@ -454,7 +454,7 @@ func handlePlugin(args []string) error {
 		}
 		if len(errs) > 0 {
 			printJSON(map[string]any{"valid": false, "legacy": true, "errors": errs})
-			return errors.New("legacy plugin manifest не прошёл проверку")
+			return errors.New("устаревший плагин манифест не прошёл проверку")
 		}
 		printJSON(map[string]any{"valid": true, "legacy": true, "deprecated": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "migration": "nl extension import-legacy <neverlauncher-plugin.json> --publisher <publisher>"})
 		return nil

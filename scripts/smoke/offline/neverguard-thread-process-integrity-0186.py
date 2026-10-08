@@ -13,14 +13,14 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: {label} missing {missing}"
+            f"[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: {label} отсутствующий {missing}"
         )
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 6):
-        raise SystemExit(f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: VERSION is {version}")
+        raise SystemExit(f"[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: VERSION является {version}")
 
     thread_sensor = read("runtime/neverguard-sensor/src/thread_integrity.rs")
     sensor = read("runtime/neverguard-sensor/src/lib.rs")
@@ -54,7 +54,7 @@ def main() -> int:
     for forbidden in ("CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx", "NtWriteVirtualMemory"):
         if forbidden in thread_sensor:
             raise SystemExit(
-                f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: forbidden cross-process primitive {forbidden}"
+                f"[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: forbidden cross-процесс primitive {forbidden}"
             )
 
     require(
@@ -170,7 +170,7 @@ def main() -> int:
         "Windows integration/adversarial/clippy CI",
     )
     if "neverguard-thread-process-integrity-0186.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Thread & Process Integrity 0.18.6 gate: preflight wiring missing")
+        raise SystemExit("[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: предварительная проверка wiring отсутствующий")
 
     for path, body in [
         ("runtime/neverguard-sensor/src/thread_integrity.rs", thread_sensor),
@@ -181,10 +181,10 @@ def main() -> int:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: placeholder {forbidden!r} in {path}"
+                    f"[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: placeholder {forbidden!r} в {path}"
                 )
 
-    print("[NeverLauncher] Thread & Process Integrity 0.18.6 gate: OK")
+    print("[NeverLauncher] Поток и Процесс Целостность 0.18.6 контроль: OK")
     return 0
 
 

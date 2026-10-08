@@ -49,8 +49,8 @@ def parse_major(version: str) -> int | None:
 def executable_path(value: str) -> Path:
     raw = value.strip()
     if os.name == "nt":
-        # GitHub Actions uses Git Bash for the compatibility script; `command -v`
-        # may therefore return /c/... while this verifier runs under native Python.
+        # GitHub Действия использует Git Bash для совместимость скрипт; `command -v`
+        # может поэтому возвращать /c/... пока этот проверяющий модуль запускает под нативный Python.
         match = re.fullmatch(r"/([A-Za-z])/(.+)", raw)
         if match:
             raw = f"{match.group(1)}:/{match.group(2)}"
@@ -148,7 +148,7 @@ def certify(java: str, expected_major: int, expected_os: str, expected_arch: str
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Certify the exact JRE binary used by a NeverLauncher compatibility target")
+    parser = argparse.ArgumentParser(description="Certify точный JRE бинарный файл используется через NeverLauncher совместимость цель")
     parser.add_argument("--java", required=True)
     parser.add_argument("--major", required=True, type=int)
     parser.add_argument("--os", required=True, dest="expected_os")
@@ -158,13 +158,13 @@ def main() -> int:
     try:
         payload = certify(args.java, args.major, args.expected_os, args.expected_arch)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        print(f"jre-certification: {exc}", file=sys.stderr)
+        print(f"JRE-сертификация: {exc}", file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not payload["certified"]:
         print(
-            "jre-certification: mismatch "
+            "JRE-сертификация: несоответствие "
             f"major={payload['detectedMajor']}/{payload['expectedMajor']} "
             f"os={payload['detectedOS']}/{payload['expectedOS']} "
             f"arch={payload['detectedArch']}/{payload['expectedArch']}",

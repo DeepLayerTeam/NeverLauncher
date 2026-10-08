@@ -40,7 +40,7 @@ if (-not [string]::IsNullOrWhiteSpace($TimestampFromEnv)) {
 function Invoke-Checked([scriptblock]$Command, [string]$Label) {
     & $Command
     if ($LASTEXITCODE -ne 0) {
-        throw "$Label failed with exit code $LASTEXITCODE"
+        throw "$Метка ошибка с выход код $LASTEXITCODE"
     }
 }
 
@@ -59,7 +59,7 @@ function Get-SignToolPath {
             Sort-Object FullName -Descending)
         if ($Candidates.Count -gt 0) { return $Candidates[0].FullName }
     }
-    throw "signtool.exe was not found. Install Windows 10/11 SDK signing tools."
+    throw "signtool.EXE был не found. Установка Windows 10/11 SDK подписание tools."
 }
 
 function Find-CodeSigningCertificate([string]$Thumbprint) {
@@ -76,7 +76,7 @@ function Find-CodeSigningCertificate([string]$Thumbprint) {
             return [pscustomobject]@{ Certificate = $Candidate; StoreScope = $Entry.Scope; Imported = $false }
         }
     }
-    throw "Code-signing certificate not found for thumbprint $Thumbprint"
+    throw "Код-подписание сертификат не found для thumbprint $Thumbprint"
 }
 
 function Import-CodeSigningCertificate([string]$Path, [string]$Password) {
@@ -100,7 +100,7 @@ function Resolve-CodeSigningCertificate {
         $Resolved = Import-CodeSigningCertificate $CodeSigningCertificatePath $CodeSigningCertificatePassword
         if (-not [string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint) -and
             $Resolved.Certificate.Thumbprint.Replace(" ", "").ToUpperInvariant() -ne $CodeSigningCertificateThumbprint.Replace(" ", "").ToUpperInvariant()) {
-            throw "Imported PFX thumbprint does not match requested certificate thumbprint"
+            throw "Импорт PFX thumbprint делает не соответствовать запрошенный сертификат thumbprint"
         }
     } elseif (-not [string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint)) {
         $Resolved = Find-CodeSigningCertificate $CodeSigningCertificateThumbprint
@@ -134,7 +134,7 @@ function Get-PEMachine([string]$Path) {
 function Assert-PEArchitecture([string]$Path, [int]$ExpectedMachine, [string]$Architecture) {
     $Actual = Get-PEMachine $Path
     if ($Actual -ne $ExpectedMachine) {
-        throw "${Path} PE machine mismatch for ${Architecture}: expected 0x$('{0:X4}' -f $ExpectedMachine), got 0x$('{0:X4}' -f $Actual)"
+        throw "${Path} PE machine несоответствие для ${Architecture}: ожидаемый 0x$('{0:X4}' -f $ExpectedMachine), получил 0x$('{0:X4}' -f $Фактический)"
     }
 }
 
@@ -153,13 +153,13 @@ function Sign-And-VerifyAuthenticode([string]$Path, $SigningContext, [string]$Si
 
     $Signature = Get-AuthenticodeSignature -FilePath $Path
     if ($Signature.Status -ne "Valid") {
-        throw "Authenticode verification failed for ${Path}: $($Signature.Status) $($Signature.StatusMessage)"
+        throw "Authenticode проверка ошибка для ${Path}: $($Подпись.Состояние) $($Подпись.StatusMessage)"
     }
     if ($null -eq $Signature.SignerCertificate -or $Signature.SignerCertificate.Thumbprint -ne $SigningContext.Certificate.Thumbprint) {
-        throw "Authenticode signer mismatch for $Path"
+        throw "Authenticode подписант несоответствие для $Путь"
     }
     if ($null -eq $Signature.TimeStamperCertificate) {
-        throw "RFC3161 timestamp is missing for $Path"
+        throw "RFC3161 метка времени является отсутствующий для $Путь"
     }
     return $Signature
 }
@@ -198,7 +198,7 @@ try {
     $SignedProduction = $null -ne $SigningContext
     $SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)
     if ($SigningRequired -and -not $SignedProduction) {
-        throw "Production Windows x64+ARM64 delivery requires Authenticode credentials. Pass -CodeSigningCertificateThumbprint or -CodeSigningCertificatePath. Use -AllowUnsignedDevelopmentPackage only for CI/development candidates."
+        throw "Рабочий Windows x64+ARM64 доставка требует Authenticode учётные данные. Успешно -CodeSigningCertificateThumbprint или -CodeSigningCertificatePath. Использовать -AllowUnsignedDevelopmentPackage только для CI/development кандидат."
     }
     if ($SignedProduction) {
         if ([string]::IsNullOrWhiteSpace($TimestampServer)) { throw "Production Authenticode signing requires an RFC3161 timestamp server" }
@@ -405,9 +405,9 @@ try {
     Write-JsonNoBom (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS.json") $GuardReleaseAllowlist
     Write-JsonNoBom (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json") $GuardReleaseAllowlist
 
-    # Backward-compatible x64 Guard CI package. This is a distinct certification
-    # artifact using the historical schema/platform contract; it is deliberately
-    # excluded from DELIVERY_MANIFEST.json for 0.15.2+.
+    # Backward-compatible x64 Защита CI пакет. Этот является отдельный сертификация
+    # артефакт используя исторический schema/platform контракт; это является намеренно
+    # excluded из DELIVERY_MANIFEST.JSON для 0.15.2+.
     $LegacyDesktopRoot = Join-Path $OutDir "neverlauncher-desktop-windows-amd64.exe"
     $LegacyGuardRoot = Join-Path $OutDir "neverguard-windows-amd64.exe"
     $LegacyCliRoot = Join-Path $OutDir "neverlauncher-cli-windows-amd64.exe"
@@ -478,7 +478,7 @@ try {
     if ($null -ne $SignerEvidence) { $Evidence["signer"] = $SignerEvidence }
     Write-JsonNoBom (Join-Path $OutDir "WINDOWS_SIGNING_EVIDENCE.json") $Evidence
 
-    Write-Host "NeverLauncher $Version Windows x64+ARM64 packages prepared (signingMode=$($Evidence.signingMode))"
+    Write-Host "NeverLauncher $Версия Windows x64+ARM64 пакеты prepared (signingMode=$($Свидетельство.signingMode))"
 } finally {
     if ($null -ne $SigningContext -and $SigningContext.Imported) {
         $ImportedPath = "Cert:\CurrentUser\My\$($SigningContext.Certificate.Thumbprint)"

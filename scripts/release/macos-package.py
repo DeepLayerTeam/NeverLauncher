@@ -81,8 +81,8 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         source = app / bundle_path
         if not source.is_file():
             raise RuntimeError(f"missing signed macOS bundle executable: {source}")
-        # The app main executable is signed by the final APP_ROOT codesign step,
-        # after Resources have been generated. Helpers must already be signed.
+        # app главный исполняемый является подписанный через итоговый APP_ROOT codesign step,
+        # после Ресурсы имеют был сгенерированный. Вспомогательный модуль должен уже быть подписанный.
         inspect_macho(source, arch, require_signature=(component != "desktop-launcher"))
         canonical_name = canonical_pattern.format(arch=arch)
         canonical = out / canonical_name
@@ -281,7 +281,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher macOS x64/ARM64 production package helper")
+    parser = argparse.ArgumentParser(description="NeverLauncher macOS x64/ARM64 рабочий пакет вспомогательный модуль")
     sub = parser.add_subparsers(dest="command", required=True)
     manifest = sub.add_parser("manifest")
     manifest.add_argument("--version", required=True)
@@ -311,7 +311,7 @@ def main() -> int:
             return finalize_cmd(args)
         return evidence_cmd(args)
     except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError) as exc:
-        print(f"macos-package: {exc}", file=sys.stderr)
+        print(f"macOS-пакет: {exc}", file=sys.stderr)
         return 1
 
 

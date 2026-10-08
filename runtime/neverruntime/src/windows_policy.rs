@@ -121,7 +121,7 @@ pub fn validate_windows_guard_policy_report(
     ] {
         if actual & required != required {
             return Err(format!(
-                "NeverGuard Windows {name} policy does not satisfy profile {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
+                "NeverGuard Windows {name} политика делает не satisfy профиль {expected_profile}: обязательный=0x{required:08x}, фактический=0x{actual:08x}"
             ));
         }
     }
@@ -147,7 +147,7 @@ pub fn validate_windows_guard_policy_report(
             || !capability.satisfied
         {
             return Err(format!(
-                "NeverGuard Windows capability {name} does not satisfy profile {expected_profile}"
+                "NeverGuard Windows возможность {name} делает не satisfy профиль {expected_profile}"
             ));
         }
     }
@@ -249,7 +249,7 @@ mod windows_impl {
         pub fn verify_process_tree(&self, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
             if root_pid != self.report.pid {
                 return Err(format!(
-                    "NeverGuard process-tree root mismatch: policy={}, requested={root_pid}",
+                    "NeverGuard дерево процессов корень несоответствие: политика={}, запрошенный={root_pid}",
                     self.report.pid
                 ));
             }
@@ -281,7 +281,7 @@ mod windows_impl {
             .ok_or_else(|| "NeverGuard Windows policy is missing Protection Core details".to_string())?;
         if actual_profile != profile {
             return Err(format!(
-                "NeverGuard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
+                "NeverGuard Windows Защита Ядро уже initialized с профиль {actual_profile}, запрошенный {profile}"
             ));
         }
         Ok(report)
@@ -311,9 +311,9 @@ mod windows_impl {
     pub fn ensure_windows_protection_core_with_profile(
         profile: WindowsProtectionProfile,
     ) -> Result<WindowsProtectionCoreReport, String> {
-        // Apply process-global heap/DLL hardening before profile mitigations and before
-        // the Tokio runtime is constructed by neverguard.exe. This preserves the
-        // original production ordering while making mitigation requirements profile-aware.
+        // Применить процесс-глобальный куча/DLL усиление защиты до профиль меры защиты и до
+        // Tokio среда выполнения является constructed через neverguard.EXE. Этот сохраняет 
+        // исходный рабочий ordering пока making мера защиты требования профиль-учитывающий.
         let hardening = ensure_windows_production_hardening()?;
         let process_policy = ensure_guard_process_policy_with_profile(profile)?;
         Ok(build_core_report(profile, process_policy, hardening))
@@ -345,7 +345,7 @@ mod windows_impl {
         };
         if heap_ok == 0 {
             return Err(format!(
-                "Windows heap terminate-on-corruption hardening failed: {}",
+                "Windows куча terminate-на-повреждение усиление защиты ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -354,7 +354,7 @@ mod windows_impl {
         let dll_dir_ok = unsafe { SetDllDirectoryW(empty.as_ptr()) };
         if dll_dir_ok == 0 {
             return Err(format!(
-                "Windows DLL search hardening failed to remove current directory: {}",
+                "Windows DLL search усиление защиты ошибка к удалять текущий каталог: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -363,7 +363,7 @@ mod windows_impl {
         let default_dirs_ok = unsafe { SetDefaultDllDirectories(search_flags) };
         if default_dirs_ok == 0 {
             return Err(format!(
-                "Windows DLL search hardening failed to restrict default directories: {}",
+                "Windows DLL search усиление защиты ошибка к restrict по умолчанию каталоги: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -393,7 +393,7 @@ mod windows_impl {
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "NeverGuard lifetime Job Object creation failed: {}",
+                "NeverGuard срок жизни Задача Объект создание ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -410,14 +410,14 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "NeverGuard lifetime Job Object policy setup failed: {}",
+                "NeverGuard срок жизни Задача Объект политика setup ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "NeverGuard process cannot be assigned to launcher lifetime Job Object: {}",
+                "NeverGuard процесс не может быть assigned к лаунчер срок жизни Задача Объект: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -425,7 +425,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "NeverGuard launcher lifetime Job Object verification failed: {}",
+                "NeverGuard лаунчер срок жизни Задача Объект проверка ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -489,7 +489,7 @@ mod windows_impl {
 
         if !capabilities.requirements_satisfied() {
             return Err(format!(
-                "NeverGuard Windows protection profile {profile} cannot be enforced by this host capability set"
+                "NeverGuard Windows защита профиль {profile} не может быть применять через этот хост возможность задать"
             ));
         }
 
@@ -553,7 +553,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to enforce Windows {name} process policy: {}",
+                "NeverGuard ошибка к применять Windows {name} процесс политика: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -585,7 +585,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to query Windows {name} process policy: {}",
+                "NeverGuard ошибка к query Windows {name} процесс политика: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -603,7 +603,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to query current Windows Job Object membership: {}",
+                "NeverGuard ошибка к query текущий Windows Задача Объект участие: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -626,7 +626,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard cannot enumerate runtime Job Object members: {}",
+                "NeverGuard не может enumerate среда выполнения Задача Объект members: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -634,7 +634,7 @@ mod windows_impl {
         let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("fixed header")) as usize;
         if assigned > listed || listed > MAX_JOB_PROCESS_IDS {
             return Err(format!(
-                "NeverGuard Job Object process list is incomplete: assigned={assigned}, listed={listed}"
+                "NeverGuard Задача Объект процесс список является неполный: assigned={assigned}, список={listed}"
             ));
         }
         let required = 8usize
@@ -650,9 +650,9 @@ mod windows_impl {
                 std::ptr::read_unaligned(buffer.as_ptr().add(offset) as *const usize)
             };
             let pid = u32::try_from(raw)
-                .map_err(|_| format!("NeverGuard Job Object PID does not fit u32: {raw}"))?;
+                .map_err(|_| format!("NeverGuard Задача Объект PID делает не fit u32: {raw}"))?;
             if pid == 0 || !result.insert(pid) {
-                return Err(format!("NeverGuard Job Object process list contains invalid/duplicate PID {pid}"));
+                return Err(format!("NeverGuard Задача Объект процесс список содержит invalid/duplicate PID {pid}"));
             }
         }
         Ok(result)
@@ -662,7 +662,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard process-tree snapshot failed: {}",
+                "NeverGuard дерево процессов снимок ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -686,12 +686,12 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.0, &mut entry) } != 0;
         }
         if !parent_by_pid.contains_key(&root_pid) {
-            return Err(format!("NeverGuard runtime root PID {root_pid} disappeared from process snapshot"));
+            return Err(format!("NeverGuard среда выполнения корень PID {root_pid} disappeared из процесс снимок"));
         }
         let job_members = job_process_ids(job)?;
         if !job_members.contains(&root_pid) {
             return Err(format!(
-                "NeverGuard process-tree integrity violation: runtime root PID {root_pid} is missing from Job Object"
+                "NeverGuard дерево процессов целостность нарушение: среда выполнения корень PID {root_pid} является отсутствующий из Задача Объект"
             ));
         }
 
@@ -708,7 +708,7 @@ mod windows_impl {
         for pid in &descendants {
             if !job_members.contains(pid) {
                 return Err(format!(
-                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                    "NeverGuard дерево процессов целостность нарушение: descendant PID {pid} escaped среда выполнения Задача Объект"
                 ));
             }
         }
@@ -718,12 +718,12 @@ mod windows_impl {
             if process.is_null() {
                 if pid == root_pid {
                     return Err(format!(
-                        "NeverGuard cannot open runtime root PID {pid} for Job Object verification: {}",
+                        "NeverGuard не может открытый среда выполнения корень PID {pid} для Задача Объект проверка: {}",
                         std::io::Error::last_os_error()
                     ));
                 }
-                // A short-lived child can exit after the process snapshot. It is no
-                // longer part of the live tree and cannot violate the current boundary.
+                // краткоживущий дочерний может выход после процесс снимок. Это является нет
+                // дольше part актуальный дерево и не может violate текущий граница.
                 continue;
             }
             let mut in_job = 0i32;
@@ -731,13 +731,13 @@ mod windows_impl {
             unsafe { let _ = CloseHandle(process); }
             if ok == 0 {
                 return Err(format!(
-                    "NeverGuard Job Object membership query failed for PID {pid}: {}",
+                    "NeverGuard Задача Объект участие query ошибка для PID {pid}: {}",
                     std::io::Error::last_os_error()
                 ));
             }
             if in_job == 0 {
                 return Err(format!(
-                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                    "NeverGuard дерево процессов целостность нарушение: descendant PID {pid} escaped среда выполнения Задача Объект"
                 ));
             }
         }
@@ -792,7 +792,7 @@ mod windows_impl {
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "Windows runtime Job Object creation failed: {}",
+                "Windows среда выполнения Задача Объект создание ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -810,7 +810,7 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "Windows runtime Job Object policy setup failed: {}",
+                "Windows среда выполнения Задача Объект политика setup ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -818,7 +818,7 @@ mod windows_impl {
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "Windows runtime process cannot be assigned to NeverGuard Job Object: {}",
+                "Windows среда выполнения процесс не может быть assigned к NeverGuard Задача Объект: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -827,7 +827,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "Windows runtime Job Object membership verification failed: {}",
+                "Windows среда выполнения Задача Объект участие проверка ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -844,14 +844,14 @@ mod windows_impl {
         };
         if query_ok == 0 {
             return Err(format!(
-                "Windows runtime Job Object policy verification failed: {}",
+                "Windows среда выполнения Задача Объект политика проверка ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
         let actual_limits = observed.BasicLimitInformation.LimitFlags;
         if actual_limits & JOB_LIMITS_REQUIRED != JOB_LIMITS_REQUIRED {
             return Err(format!(
-                "Windows runtime Job Object limits are incomplete: required=0x{JOB_LIMITS_REQUIRED:08x}, actual=0x{actual_limits:08x}"
+                "Windows среда выполнения Задача Объект ограничения являются неполный: обязательный=0x{JOB_LIMITS_REQUIRED:08x}, фактический=0x{actual_limits:08x}"
             ));
         }
         if actual_limits
@@ -886,7 +886,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "Windows runtime thread snapshot failed for PID {pid}: {}",
+                "Windows среда выполнения поток снимок ошибка для PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -916,13 +916,13 @@ mod windows_impl {
                     }
                     if previous_suspend_count == u32::MAX {
                         return Err(format!(
-                            "Windows runtime primary thread resume failed for PID {pid}: {}",
+                            "Windows среда выполнения primary поток возобновление ошибка для PID {pid}: {}",
                             std::io::Error::last_os_error()
                         ));
                     }
                     if previous_suspend_count == 0 {
                         return Err(format!(
-                            "Windows runtime process {pid} was not suspended during policy assignment"
+                            "Windows среда выполнения процесс {pid} был не suspended во время политика assignment"
                         ));
                     }
                     return Ok(());
@@ -931,7 +931,7 @@ mod windows_impl {
             has_entry = unsafe { Thread32Next(snapshot.0, &mut entry) } != 0;
         }
         Err(format!(
-            "Windows runtime primary thread not found while process {pid} is suspended"
+            "Windows среда выполнения primary поток не found пока процесс {pid} является suspended"
         ))
     }
 }

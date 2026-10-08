@@ -27,10 +27,10 @@ func authMethodStrength117(methods []string) string {
 	return strength
 }
 
-// evaluateLoginMFA117 preserves the pre-0.11.7 rule that an enabled local TOTP
-// method is mandatory, while allowing a registered passkey to satisfy that
-// second factor. A per-user MFA policy can additionally require any MFA or a
-// phishing-resistant passkey.
+// evaluateLoginMFA117 сохраняет pre-0.11.7 правило тот включённый локальный TOTP
+// метод является обязательный, пока разрешать регистрировать ключ доступа к satisfy тот
+// второй factor. на-пользователь MFA политика может additionally требовать любой MFA или 
+// устойчивый к фишингу ключ доступа.
 func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp, recovery string) (loginMFAResult117, error) {
 	methods := mergeAuthMethods117(baseMethods)
 	strength := authMethodStrength117(methods)
@@ -39,11 +39,11 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	totpEnabled := s.State.Security.totpEnabled(user.ID)
 	suppliedSecondFactor := strings.TrimSpace(totp) != "" || strings.TrimSpace(recovery) != ""
 
-	// PHISHING_RESISTANT is intentionally local-policy controlled. An upstream
-	// IdP saying "mfa" does not prove that the NeverLauncher RP saw a passkey.
+	// PHISHING_RESISTANT является намеренно локальный-политика controlled. вышестоящий проект
+	// IdP saying "MFA" делает не prove тот NeverLauncher RP saw ключ доступа.
 	if policy == mfaPhishingResistant117 {
 		if passkeys == 0 {
-			return loginMFAResult117{}, errors.New("phishing-resistant MFA is required but no passkey is registered")
+			return loginMFAResult117{}, errors.New("устойчивый к фишингу MFA является обязательный но нет ключ доступа является регистрировать")
 		}
 		return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 	}
@@ -52,7 +52,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		if suppliedSecondFactor {
 			ok, reason := s.State.Security.verifySecondFactor(user.ID, totp, recovery)
 			if !ok {
-				return loginMFAResult117{}, errors.New("invalid local second factor")
+				return loginMFAResult117{}, errors.New("недопустимый локальный второй factor")
 			}
 			switch reason {
 			case "totp-ok":
@@ -60,13 +60,13 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 			case "recovery-ok":
 				methods = mergeAuthMethods117(methods, "recovery-code")
 			default:
-				return loginMFAResult117{}, errors.New("invalid local second factor state")
+				return loginMFAResult117{}, errors.New("недопустимый локальный второй factor состояние")
 			}
 			strength = "mfa"
 		} else if passkeys > 0 {
 			return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 		} else {
-			return loginMFAResult117{}, errors.New("local second factor is required")
+			return loginMFAResult117{}, errors.New("локальный второй factor является обязательный")
 		}
 	}
 
@@ -74,7 +74,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 		if passkeys > 0 {
 			return loginMFAResult117{Methods: methods, Strength: strength, NeedPasskey: true}, nil
 		}
-		return loginMFAResult117{}, errors.New("MFA is required but no usable method is configured")
+		return loginMFAResult117{}, errors.New("MFA является обязательный но нет usable метод является настраивать")
 	}
 	return loginMFAResult117{Methods: methods, Strength: strength}, nil
 }

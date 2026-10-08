@@ -1,8 +1,8 @@
 package ru.neverlauncher.bridge.common;
 
 /**
- * Fixed-memory tick sampler. It records at most 1,200 server ticks (about one
- * minute at 20 TPS) and therefore cannot grow with server uptime.
+ * Фиксированный-память tick sampler. Это записывает в большинство 1,200 сервер ticks (about один
+ * minute в 20 TPS) и поэтому не может grow с сервер uptime.
  */
 public final class BridgeTickSampler {
     private static final int CAPACITY = 1200;

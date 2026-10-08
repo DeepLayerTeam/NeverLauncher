@@ -1,6 +1,6 @@
--- NeverLauncher 0.11.2 — Federation Core identity metadata.
--- auth_identities already exists since 0.11.1; this migration upgrades it from a
--- simple link table into the canonical provider identity record used by Federation Core.
+-- NeverLauncher 0.11.2 — Федерация Ядро идентичность метаданные.
+-- аутентификация_идентичности уже существует since 0.11.1; этот миграция обновление это из 
+-- simple связь таблица в канонический провайдер идентичность запись используется через Федерация Ядро.
 
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS username TEXT NOT NULL DEFAULT '';

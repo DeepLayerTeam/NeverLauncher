@@ -1,14 +1,14 @@
--- NeverLauncher 0.16.1 — Guard Attestation challenge-purpose schema completion.
+-- NeverLauncher 0.16.1 — Защита Аттестация запрос-назначение схема завершение.
 --
--- Guard Attestation 0.13.4 introduced two one-shot challenge purposes backed by
--- device_challenges: guard-attest-v1 for the challenge/response proof and
--- guard-launch-v1 for the short-lived launch ticket consumed by Minecraft auth.
--- The HTTP/repository paths have shipped since 0.13.4, but the PostgreSQL CHECK
--- constraint was last rebuilt by 0.12.10 and therefore rejected both values.
+-- Защита Аттестация 0.13.4 добавленный два одноразовый запрос назначение основанный через
+-- устройство_запросы: защита-attest-v1 для challenge/response доказательство и
+-- защита-запускать-v1 для краткоживущий запускать билет использованный через Minecraft аутентификация.
+-- HTTP/репозиторий пути имеют поставляемый since 0.13.4, но PostgreSQL CHECK
+-- ограничение был последний пересобран через 0.12.10 и поэтому отклонён оба значения.
 --
--- This migration only widens the enumerated purpose set. It does not weaken
--- challenge expiry, ownership, single-use consumption, signature verification,
--- release allowlisting, or any other Guard/Device Trust security invariant.
+-- Этот миграция только widens enumerated назначение задать. Это делает не weaken
+-- запрос истечение, владение, одноразовый consumption, подпись проверка,
+-- релиз список разрешений, или любой другой Guard/Device Доверие безопасность инвариант.
 
 ALTER TABLE device_challenges
     DROP CONSTRAINT IF EXISTS device_challenges_purpose_check;

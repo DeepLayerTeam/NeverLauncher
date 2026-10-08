@@ -20,7 +20,7 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 		return nil, err
 	}
 	if strings.TrimSpace(sourceRoot) == "" || strings.TrimSpace(targetRoot) == "" {
-		return nil, errors.New("update apply требует --source-root и --root")
+		return nil, errors.New("обновление применить требует --исходник-корень и --корень")
 	}
 	files := make([]updaterFileSpec0156, 0, len(newManifest.Files))
 	wanted := map[string]bool{}
@@ -62,7 +62,7 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 		}
 		for _, rel := range remove {
 			if _, err := os.Lstat(filepath.Join(targetRoot, filepath.FromSlash(rel))); err == nil {
-				return fmt.Errorf("obsolete file still exists after update: %s", rel)
+				return fmt.Errorf("устаревший файл по-прежнему существует после обновление: %s", rel)
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
@@ -146,13 +146,13 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 		Remove: []string{"obsolete.bin"},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("commit self-test: %w", err)
+		return nil, fmt.Errorf("фиксация self-тест: %w", err)
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
-		return nil, errors.New("commit self-test: launcher bytes mismatch")
+		return nil, errors.New("фиксация self-тест: лаунчер байты несоответствие")
 	}
 	if _, err := os.Stat(obsoletePath); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("commit self-test: obsolete file was not removed")
+		return nil, errors.New("фиксация self-тест: устаревший файл был не удалён")
 	}
 
 	rollbackSource := filepath.Join(source, "rollback.bin")
@@ -166,13 +166,13 @@ func runUpdaterSelfTest0156() (map[string]any, error) {
 	_, rollbackErr := updater.apply(updaterRequest0156{
 		Root: live, Namespace: "self-test-rollback", FromVersion: "new", ToVersion: "broken",
 		Files:  []updaterFileSpec0156{rollbackSpec},
-		Verify: func() error { return errors.New("intentional self-test rollback") },
+		Verify: func() error { return errors.New("intentional self-тест откат") },
 	})
 	if rollbackErr == nil {
-		return nil, errors.New("rollback self-test unexpectedly committed")
+		return nil, errors.New("откат self-тест unexpectedly committed")
 	}
 	if raw, _ := os.ReadFile(oldPath); string(raw) != "new-launcher" {
-		return nil, errors.New("rollback self-test did not restore committed bytes")
+		return nil, errors.New("откат self-тест сделал не восстановление committed байты")
 	}
 	status, err := updater.status()
 	if err != nil {

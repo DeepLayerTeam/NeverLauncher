@@ -106,20 +106,20 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension is not enabled")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("расширение является не включённый")
 	}
 	ver, err := s.Repo.GetExtensionVersion(r.Context(), id, install.CurrentVersion)
 	if err != nil {
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if ver.Manifest.Desktop == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension does not declare desktop contributions")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("расширение делает не объявлять настольное приложение contributions")
 	}
 	if _, ok := desktopTarget0209(ver.Manifest); !ok {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension does not declare desktop target")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("расширение делает не объявлять настольное приложение цель")
 	}
 	if s.ExtensionSecurity == nil {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("extension security unavailable")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("расширение безопасность недоступный")
 	}
 	projectID := ""
 	if install.Scope == "project" {
@@ -130,7 +130,7 @@ func (s Server) desktopInstallManifest0209(r *http.Request, id, scope, scopeID s
 		return model.ExtensionInstall{}, model.ExtensionManifest{}, err
 	}
 	if !allowed {
-		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("desktop:contribute is not granted")
+		return model.ExtensionInstall{}, model.ExtensionManifest{}, errors.New("настольное приложение:contribute является не granted")
 	}
 	return install, ver.Manifest, nil
 }
@@ -272,10 +272,10 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 	allow := func(permission, projectID string) error {
 		ok, e := s.ExtensionSecurity.Allowed(r.Context(), install.ExtensionID, install.CurrentVersion, install.Scope, install.ScopeID, permission, projectID)
 		if e != nil {
-			return fmt.Errorf("policy unavailable: %w", e)
+			return fmt.Errorf("политика недоступный: %w", e)
 		}
 		if !ok {
-			return fmt.Errorf("extension capability %s denied", permission)
+			return fmt.Errorf("расширение возможность %s запрещён", permission)
 		}
 		return nil
 	}
@@ -293,7 +293,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || !projectAllowed(strings.TrimSpace(p.ProjectID)) {
-			respond(nil, errors.New("project access denied"))
+			respond(nil, errors.New("проект доступ запрещён"))
 			return
 		}
 		if e := allow("project:read", p.ProjectID); e != nil {
@@ -310,7 +310,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 			ProjectID string `json:"projectId"`
 		}
 		if json.Unmarshal(req.Params, &p) != nil || !projectAllowed(strings.TrimSpace(p.ProjectID)) {
-			respond(nil, errors.New("project access denied"))
+			respond(nil, errors.New("проект доступ запрещён"))
 			return
 		}
 		if e := allow("release:read", p.ProjectID); e != nil {
@@ -323,7 +323,7 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		}
 		respond(items, e)
 	default:
-		respond(nil, errors.New("unsupported Desktop RPC method"))
+		respond(nil, errors.New("неподдерживаемый Настольное приложение RPC метод"))
 	}
 }
 

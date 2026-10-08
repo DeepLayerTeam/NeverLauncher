@@ -12,19 +12,19 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+        raise SystemExit(f"{label} отсутствующий: {', '.join(missing)}")
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
     if not match:
-        raise SystemExit(f"invalid VERSION: {value}")
+        raise SystemExit(f"недопустимый VERSION: {value}")
     return tuple(int(part) for part in match.groups())
 
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 3):
-    raise SystemExit(f"NeverGuard process policy gate requires >=0.13.3, got {version}")
+    raise SystemExit(f"NeverGuard процесс политика контроль требует >=0.13.3, получил {version}")
 
 cargo = read("runtime/neverruntime/Cargo.toml")
 require(cargo, [
@@ -62,7 +62,7 @@ require(policy, [
 
 neverguard = read("runtime/neverruntime/src/bin/neverguard.rs")
 if neverguard.find("ensure_guard_process_policy()") > neverguard.find("tokio::runtime::Builder"):
-    raise SystemExit("NeverGuard self policy must be enforced before Tokio runtime initialization")
+    raise SystemExit("NeverGuard self политика должен быть применять до Tokio среда выполнения initialization")
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
 require(guard, [
@@ -112,9 +112,9 @@ require(integration, [
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if "neverguard-process-policy-0133.py" not in ci:
-    raise SystemExit("NeverGuard 0.13.3 process policy gate is not wired into CI")
+    raise SystemExit("NeverGuard 0.13.3 процесс политика контроль является не wired в CI")
 if "neverguard-process-policy-0133.py" not in preflight:
-    raise SystemExit("NeverGuard 0.13.3 process policy gate is not wired into release preflight")
+    raise SystemExit("NeverGuard 0.13.3 процесс политика контроль является не wired в релиз предварительная проверка")
 require(ci, [
     'cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests',
     'cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows',
@@ -130,4 +130,4 @@ require(security, [
     "JIT",
 ], "NeverGuard 0.13.3 security boundary")
 
-print(f"[NeverLauncher] NeverGuard Windows runtime/process policy 0.13.3 gate OK: {version}")
+print(f"[NeverLauncher] NeverGuard Windows runtime/process политика 0.13.3 контроль OK: {version}")

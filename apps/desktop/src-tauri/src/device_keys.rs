@@ -146,13 +146,13 @@ fn storage_backend_name() -> &'static str {
 fn keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
     let username = device_key_username(backend_url, user_id)?;
     keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
-        .map_err(|e| format!("OS secure storage для device key недоступен: {e}"))
+        .map_err(|e| format!("OS защищённый хранилище для устройство ключ недоступен: {e}"))
 }
 
 fn staged_keyring_entry(backend_url: &str, user_id: &str) -> Result<keyring::v1::Entry, String> {
     let username = staged_device_key_username(backend_url, user_id)?;
     keyring::v1::Entry::new(DEVICE_KEY_SERVICE, &username)
-        .map_err(|e| format!("OS secure storage для staged device key недоступен: {e}"))
+        .map_err(|e| format!("OS защищённый хранилище для подготовленный устройство ключ недоступен: {e}"))
 }
 
 fn record_to_info(record: &SecureDeviceKeyRecord) -> DeviceKeyInfo {
@@ -197,9 +197,9 @@ fn validate_software_record(record: &mut SecureDeviceKeyRecord) -> Result<Signin
 
 fn is_hardware_backend_kind(provider: &str) -> bool {
     let p = provider.to_ascii_lowercase();
-    // Fail closed: only known Secure Enclave / TPM / WSL TPM bridge names are
-    // accepted. A future/unknown backend must be reviewed before it can be
-    // advertised as hardware-bound.
+    // Отказ с блокировкой: только known Защищённый Анклав / TPM / WSL TPM мост имена являются
+    // принят. future/unknown серверная часть должен быть reviewed до это может быть
+    // advertised как привязанный к оборудованию.
     (p.contains("tpm")
         || p.contains("secureenclave")
         || p.contains("secure_enclave")
@@ -212,13 +212,13 @@ fn is_hardware_backend_kind(provider: &str) -> bool {
 
 fn hardware_signer(label: &str) -> Result<(SignerHandle, String), String> {
     let config = EnclaveConfig::new(DEVICE_HARDWARE_APP, label);
-    let signer = create_signer(&config).map_err(|e| format!("hardware signer недоступен: {e}"))?;
+    let signer = create_signer(&config).map_err(|e| format!("оборудование подписант недоступен: {e}"))?;
     let provider = format!("{:?}", signer.backend_kind());
-    // Linux keyring and any explicit software/test backend are deliberately not
-    // promoted to hardware-bound identity. They remain eligible only for the
-    // existing Ed25519 + OS secure storage fallback.
+    // Linux хранилище ключей и любой явный software/test серверная часть являются намеренно не
+    // продвигать к привязанный к оборудованию идентичность. Они оставаться eligible только для 
+    // существующий Ed25519 + OS защищённый хранилище резервный вариант.
     if !is_hardware_backend_kind(&provider) {
-        return Err(format!("platform signer backend {provider} не является hardware-isolated"));
+        return Err(format!("платформа подписант серверная часть {provider} не является оборудование-изолированный"));
     }
     Ok((signer, provider))
 }
@@ -232,10 +232,10 @@ fn validate_hardware_record(record: &SecureDeviceKeyRecord) -> Result<(SignerHan
     }
     let (signer, provider) = hardware_signer(&record.hardware_label)?;
     if !record.hardware_provider.is_empty() && provider != record.hardware_provider {
-        return Err(format!("hardware provider изменился: saved={} current={provider}", record.hardware_provider));
+        return Err(format!("оборудование провайдер изменился: сохранён={} текущий={provider}", record.hardware_provider));
     }
     let public = signer.public_key(&record.hardware_label)
-        .map_err(|e| format!("не удалось получить hardware public key: {e}"))?;
+        .map_err(|e| format!("не удалось получить оборудование открытый ключ: {e}"))?;
     if public.len() != 65 || public[0] != 0x04 {
         return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
     }
@@ -270,22 +270,22 @@ fn load_record(backend_url: &str, user_id: &str) -> Result<Option<SecureDeviceKe
     match entry.get_password() {
         Ok(mut secret) => {
             let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
-                .map_err(|e| format!("device key record в OS secure storage повреждён: {e}"));
+                .map_err(|e| format!("устройство ключ запись в OS защищённый хранилище повреждён: {e}"));
             secret.zeroize();
             parsed.map(Some)
         }
         Err(keyring::v1::Error::NoEntry) => Ok(None),
-        Err(e) => Err(format!("не удалось прочитать device key из OS secure storage: {e}")),
+        Err(e) => Err(format!("не удалось прочитать устройство ключ из OS защищённый хранилище: {e}")),
     }
 }
 
 fn save_record(backend_url: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
     let entry = keyring_entry(backend_url, user_id)?;
     let mut secret = serde_json::to_string(record)
-        .map_err(|e| format!("не удалось сериализовать device key record: {e}"))?;
+        .map_err(|e| format!("не удалось сериализовать устройство ключ запись: {e}"))?;
     let result = entry
         .set_password(&secret)
-        .map_err(|e| format!("не удалось сохранить device key metadata в OS secure storage: {e}"));
+        .map_err(|e| format!("не удалось сохранить устройство ключ метаданные в OS защищённый хранилище: {e}"));
     secret.zeroize();
     result
 }
@@ -295,19 +295,19 @@ fn load_staged_record(backend_url: &str, user_id: &str) -> Result<Option<SecureD
     match entry.get_password() {
         Ok(mut secret) => {
             let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
-                .map_err(|e| format!("staged device key record повреждён: {e}"));
+                .map_err(|e| format!("подготовленный устройство ключ запись повреждён: {e}"));
             secret.zeroize();
             parsed.map(Some)
         }
         Err(keyring::v1::Error::NoEntry) => Ok(None),
-        Err(e) => Err(format!("не удалось прочитать staged device key: {e}")),
+        Err(e) => Err(format!("не удалось прочитать подготовленный устройство ключ: {e}")),
     }
 }
 
 fn save_staged_record(backend_url: &str, user_id: &str, record: &SecureDeviceKeyRecord) -> Result<(), String> {
     let entry = staged_keyring_entry(backend_url, user_id)?;
-    let mut secret = serde_json::to_string(record).map_err(|e| format!("не удалось сериализовать staged device key: {e}"))?;
-    let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить staged device key: {e}"));
+    let mut secret = serde_json::to_string(record).map_err(|e| format!("не удалось сериализовать подготовленный устройство ключ: {e}"))?;
+    let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить подготовленный устройство ключ: {e}"));
     secret.zeroize();
     result
 }
@@ -346,11 +346,11 @@ fn now_unix() -> u64 {
 fn try_new_hardware_record_with_generation(backend_url: &str, user_id: &str, generation: &str) -> Result<SecureDeviceKeyRecord, String> {
     let label = hardware_key_label_generation(backend_url, user_id, generation)?;
     let (signer, provider) = hardware_signer(&label)?;
-    if signer.key_exists(&label).map_err(|e| format!("hardware key lookup failed: {e}"))? {
+    if signer.key_exists(&label).map_err(|e| format!("аппаратный ключ поиск ошибка: {e}"))? {
         return Err("generation-specific hardware label уже существует".into());
     }
-    signer.generate_key(&label, AccessPolicy::None).map_err(|e| format!("hardware key generation failed: {e}"))?;
-    let public = signer.public_key(&label).map_err(|e| format!("hardware public key read failed: {e}"))?;
+    signer.generate_key(&label, AccessPolicy::None).map_err(|e| format!("аппаратный ключ генерация ошибка: {e}"))?;
+    let public = signer.public_key(&label).map_err(|e| format!("оборудование открытый ключ чтение ошибка: {e}"))?;
     if public.len() != 65 || public[0] != 0x04 {
         let _ = signer.delete_key(&label);
         return Err("hardware signer вернул некорректный SEC1 P-256 public key".into());
@@ -540,7 +540,7 @@ pub fn sign_guard_attestation(request: GuardAttestationSignRequest) -> Result<De
     let payload = guard_attestation_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware Guard Attestation signing failed: {e}"))?;
+        .map_err(|e| format!("оборудование Защита Аттестация подписание ошибка: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -632,7 +632,7 @@ pub fn sign_guard_attestation_v2(request: GuardAttestationV2SignRequest) -> Resu
     let payload = guard_attestation_v2_device_payload(&user, &record, &request)?;
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware Guard Attestation v2 signing failed: {e}"))?;
+        .map_err(|e| format!("оборудование Защита Аттестация v2 подписание ошибка: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -662,7 +662,7 @@ pub fn sign_device_payload(backend_url: &str, user_id: &str, payload: &str) -> R
     let signature = if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(&record)?;
         let der = signer.sign(&record.hardware_label, payload.as_bytes())
-            .map_err(|e| format!("hardware device signing failed: {e}"))?;
+            .map_err(|e| format!("оборудование устройство подписание ошибка: {e}"))?;
         URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
     } else {
         let signing = validate_software_record(&mut record)?;
@@ -693,7 +693,7 @@ fn session_refresh_payload(user_id: &str, session_id: &str, device_id: &str, bin
     }
     let digest = hex::encode(Sha256::digest(refresh_token.as_bytes()));
     Ok(format!(
-        "NeverLauncher Session Device Binding v1\npurpose=refresh\nuser={}\nsession={}\ndevice={}\nbinding-epoch={}\nrefresh-token-sha256={}\n",
+        "NeverLauncher Сессия Привязка устройства v1\npurpose=обновление\nuser={}\nsession={}\ndevice={}\nbinding-эпоха={}\nrefresh-токен-sha256={}\n",
         user_id, session_id, device_id, binding_epoch, digest
     ))
 }
@@ -718,7 +718,7 @@ pub fn sign_session_refresh(
     let signature = if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(&record)?;
         let der = signer.sign(&record.hardware_label, payload.as_bytes())
-            .map_err(|e| format!("hardware session refresh signing failed: {e}"))?;
+            .map_err(|e| format!("оборудование сессия обновление подписание ошибка: {e}"))?;
         URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?)
     } else {
         let signing = validate_software_record(&mut record)?;
@@ -742,12 +742,12 @@ pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) ->
     validate_record(&mut record)?;
     validate_device_attestation_payload(payload, &user, &record)?;
 
-    // Attestation intentionally has no software fallback. It is a separate IPC
-    // boundary from generic proof-of-possession and can only use the persisted
-    // non-exportable hardware key that was previously registered by the server.
+    // Аттестация намеренно имеет нет программное обеспечение резервный вариант. Это является отдельный IPC
+    // граница из общий доказательство владения и может только использовать сохранённый
+    // неэкспортируемый аппаратный ключ тот был ранее регистрировать через сервер.
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
-        .map_err(|e| format!("hardware device attestation signing failed: {e}"))?;
+        .map_err(|e| format!("оборудование устройство аттестация подписание ошибка: {e}"))?;
     let signature = URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?);
     Ok(DeviceSignatureResult {
         fingerprint: record.fingerprint.clone(),
@@ -785,7 +785,7 @@ fn validate_device_replacement_payload(payload: &str, user_id: &str) -> Result<V
 fn sign_with_record(record: &mut SecureDeviceKeyRecord, payload: &str) -> Result<String, String> {
     if record.key_binding == "hardware" {
         let (signer, _) = validate_hardware_record(record)?;
-        let der = signer.sign(&record.hardware_label, payload.as_bytes()).map_err(|e| format!("hardware device signing failed: {e}"))?;
+        let der = signer.sign(&record.hardware_label, payload.as_bytes()).map_err(|e| format!("оборудование устройство подписание ошибка: {e}"))?;
         Ok(URL_SAFE_NO_PAD.encode(der_ecdsa_to_p1363(&der)?))
     } else {
         let signing = validate_software_record(record)?;
@@ -853,7 +853,7 @@ pub fn commit_staged_device_key(backend_url: &str, user_id: &str, device_id: &st
     staged.device_id = Some(device_id.to_string());
     save_record(backend_url, &user, &staged)?;
     let entry = staged_keyring_entry(backend_url, &user)?;
-    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => {}, Err(e) => return Err(format!("replacement committed, но staged metadata cleanup failed: {e}")) }
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => {}, Err(e) => return Err(format!("замена committed, но подготовленный метаданные очистка ошибка: {e}")) }
     if let Some(old_record) = old {
         if old_record.key_binding == "hardware" && !old_record.hardware_label.is_empty() && old_record.hardware_label != staged.hardware_label {
             if let Ok((signer, _)) = hardware_signer(&old_record.hardware_label) {
@@ -875,7 +875,7 @@ pub fn abort_staged_device_key(backend_url: &str, user_id: &str) -> Result<(), S
         record.private_seed_hex.zeroize();
     }
     let entry = staged_keyring_entry(backend_url, &user)?;
-    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()), Err(e) => Err(format!("не удалось удалить staged device key metadata: {e}")) }
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()), Err(e) => Err(format!("не удалось удалить подготовленный устройство ключ метаданные: {e}")) }
 }
 
 pub fn bind_device_key(backend_url: &str, user_id: &str, device_id: &str) -> Result<DeviceKeyInfo, String> {
@@ -910,7 +910,7 @@ pub fn delete_device_key(backend_url: &str, user_id: &str) -> Result<(), String>
             if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
                 if signer.key_exists(&record.hardware_label).unwrap_or(false) {
                     signer.delete_key(&record.hardware_label)
-                        .map_err(|e| format!("не удалось удалить hardware device key: {e}"))?;
+                        .map_err(|e| format!("не удалось удалить оборудование устройство ключ: {e}"))?;
                 }
             }
         }
@@ -919,7 +919,7 @@ pub fn delete_device_key(backend_url: &str, user_id: &str) -> Result<(), String>
     let entry = keyring_entry(backend_url, user_id)?;
     match entry.delete_credential() {
         Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
-        Err(e) => Err(format!("не удалось удалить device key metadata из OS secure storage: {e}")),
+        Err(e) => Err(format!("не удалось удалить устройство ключ метаданные из OS защищённый хранилище: {e}")),
     }
 }
 

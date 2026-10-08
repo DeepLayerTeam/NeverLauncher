@@ -8,7 +8,7 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** One immutable Protocol-v3 Ed25519-signed ServerBridge event. */
+/** Один неизменяемый Protocol-v3 Ed25519-подписанный ServerBridge событие. */
 public record BridgeEventRecord(
     long sequence,
     String eventId,

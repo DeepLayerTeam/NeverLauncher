@@ -177,7 +177,7 @@ func handleRuntimeLoaderPackage(loader string, args []string) error {
 func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterializeOptions, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMaterializeOptions{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMaterializeOptions{}, fmt.Errorf("мета загрузчик %s не поддерживается", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
 	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
@@ -188,7 +188,7 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", loader, minecraftVersion))
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
-		return loaderMaterializeOptions{}, errors.New("--workers должен быть числом от 1 до 64")
+		return loaderMaterializeOptions{}, errors.New("--обработчики должен быть числом от 1 до 64")
 	}
 	targets, err := parseVanillaTargets(flagValue(args, "--target", currentVanillaTarget().OS+"/"+currentVanillaTarget().Arch))
 	if err != nil {
@@ -225,7 +225,7 @@ func defaultMetaBaseForLoader(loader string) string {
 
 func validateMetaBaseURL(raw string) error {
 	if strings.TrimSpace(raw) == "" {
-		return errors.New("Meta API base URL пуст")
+		return errors.New("Мета API основа URL пуст")
 	}
 	return validateRemoteURL(strings.TrimRight(raw, "/") + "/versions/loader/probe")
 }
@@ -257,7 +257,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		HTTPClient:       opts.HTTPClient,
 	})
 	if err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s base Vanilla: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("%s основа Vanilla: %w", loader, err)
 	}
 	if opts.EnforceGASupport && compatibilityLoaderGA0180Required(version) {
 		if _, err := enforceLoaderGASupport0180(loader, vanilla.MinecraftVersion, vanilla.JavaMajorVersion); err != nil {
@@ -291,7 +291,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), vanilla.MinecraftVersion, selectedLoader)
 	profileBytes, payloadCacheHit, upstreamRecoveryUsed, err := fetchLoaderProfileWithCache(ctx, opts.HTTPClient, opts.ClientDir, loader, vanilla.MinecraftVersion, profileURL, pinned, opts.LoaderCacheOnly, 16<<20)
 	if err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль: %w", loader, err)
 	}
 	if err := assertPinnedPayload(pinned, profileURL, profileBytes); err != nil {
 		return loaderMaterializeResult{}, err
@@ -299,7 +299,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	upstreamProfileSHA256 := sha256HexBytes(profileBytes)
 	var profile loaderVersionProfile
 	if err := json.Unmarshal(profileBytes, &profile); err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile JSON повреждён: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль JSON повреждён: %w", loader, err)
 	}
 	if profile.ID == "" {
 		profile.ID = fmt.Sprintf("%s-loader-%s-%s", loader, selectedLoader, vanilla.MinecraftVersion)
@@ -311,19 +311,19 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		profile.InheritsFrom = vanilla.MinecraftVersion
 	}
 	if profile.InheritsFrom != vanilla.MinecraftVersion {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile inheritsFrom=%s, ожидался %s", loader, profile.InheritsFrom, vanilla.MinecraftVersion)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль inheritsFrom=%s, ожидался %s", loader, profile.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if profile.MainClass == "" {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит mainClass", loader)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль не содержит mainClass", loader)
 	}
 	if len(profile.Libraries) == 0 {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит libraries", loader)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль не содержит библиотеки", loader)
 	}
 	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит выбранный loader artifact %s", loader, selectedEntry.Loader.Maven)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль не содержит выбранный загрузчик артефакт %s", loader, selectedEntry.Loader.Maven)
 	}
 	if selectedEntry.Intermediary.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Intermediary.Maven) {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит intermediary artifact %s", loader, selectedEntry.Intermediary.Maven)
+		return loaderMaterializeResult{}, fmt.Errorf("%s профиль не содержит intermediary артефакт %s", loader, selectedEntry.Intermediary.Maven)
 	}
 	if profile.Type == "" {
 		profile.Type = "release"
@@ -449,19 +449,19 @@ func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, 
 func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, string, string, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("мета загрузчик %s не поддерживается", loader)
 	}
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), minecraftVersion)
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s загрузчик версия метаданные: %w", loader, err)
 	}
 	var entries []loaderMetaEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata повреждены: %w", loader, err)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("%s загрузчик версия метаданные повреждены: %w", loader, err)
 	}
 	if len(entries) == 0 {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s загрузчик версии", minecraftVersion, loader)
 	}
 	requested = strings.TrimSpace(requested)
 	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
@@ -482,20 +482,20 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 				}
 			}
 		}
-		return loaderMetaEntry{}, "", "", fmt.Errorf("Meta API не вернул стабильную %s loader version для Minecraft %s", loader, minecraftVersion)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Мета API не вернул стабильную %s загрузчик версия для Minecraft %s", loader, minecraftVersion)
 	}
 	for _, entry := range entries {
 		if entry.Loader.Version == requested {
 			return entry, url, sha256HexBytes(data), nil
 		}
 	}
-	return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
+	return loaderMetaEntry{}, "", "", fmt.Errorf("%s загрузчик %s несовместим с Minecraft %s по Мета API", loader, requested, minecraftVersion)
 }
 
-// Quilt Meta v3 does not guarantee the Fabric-style `stable` boolean on loader rows.
-// Stable Quilt Loader releases use a plain numeric SemVer core; prereleases carry a
-// suffix such as -beta/-rc. This keeps `latest-stable` fail-closed instead of silently
-// selecting the first prerelease returned by Meta.
+// Quilt Мета v3 делает не guarantee Fabric-style `stable` boolean на загрузчик строки.
+// Стабильный Quilt Загрузчик релизы использовать plain numeric SemVer ядро; предварительный релиз carry 
+// suffix такой как -beta/-rc. Этот сохраняет `latest-stable` отказ с блокировкой вместо этого без уведомления
+// selecting первый предварительный релиз возвращён через Мета.
 func isStableQuiltLoaderVersion(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -533,7 +533,7 @@ func profileHasLibrary(libraries []MojangLibrary, coordinate string) bool {
 func validateLoaderProfileID(id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, `/\\`) {
-		return fmt.Errorf("loader profile id некорректен: %q", id)
+		return fmt.Errorf("загрузчик профиль ID некорректен: %q", id)
 	}
 	return nil
 }
@@ -547,7 +547,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 	for index := range profile.Libraries {
 		lib := &profile.Libraries[index]
 		if strings.TrimSpace(lib.Name) == "" {
-			return nil, fmt.Errorf("loader profile library[%d] не содержит name", index)
+			return nil, fmt.Errorf("загрузчик профиль библиотека[%d] не содержит имя", index)
 		}
 		artifact := lib.Downloads.Artifact
 		rel := strings.TrimSpace(artifact.Path)
@@ -555,23 +555,23 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 			var err error
 			rel, err = strictMavenPath(lib.Name)
 			if err != nil {
-				return nil, fmt.Errorf("library %s: %w", lib.Name, err)
+				return nil, fmt.Errorf("библиотека %s: %w", lib.Name, err)
 			}
 		}
 		rel = strings.TrimPrefix(filepath.ToSlash(rel), "libraries/")
 		if err := validateVanillaRelativePath(rel); err != nil {
-			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
+			return nil, fmt.Errorf("библиотека %s путь: %w", lib.Name, err)
 		}
 		artifactURL := strings.TrimSpace(artifact.URL)
 		if artifactURL == "" {
 			base := strings.TrimSpace(lib.URL)
 			if base == "" {
-				return nil, fmt.Errorf("loader library %s не содержит Maven repository URL", lib.Name)
+				return nil, fmt.Errorf("загрузчик библиотека %s не содержит Maven репозиторий URL", lib.Name)
 			}
 			artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(rel, "/")
 		}
 		if err := validateRemoteURL(artifactURL); err != nil {
-			return nil, fmt.Errorf("loader library %s URL: %w", lib.Name, err)
+			return nil, fmt.Errorf("загрузчик библиотека %s URL: %w", lib.Name, err)
 		}
 		expectedSHA1 := strings.ToLower(strings.TrimSpace(artifact.SHA1))
 		if expectedSHA1 == "" {
@@ -579,22 +579,22 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 			shaBytes, err := fetchLimitedBytes(ctx, client, shaURL, 64<<10)
 			if err != nil {
 				if strict {
-					return nil, fmt.Errorf("loader library %s: не удалось получить SHA-1: %w", lib.Name, err)
+					return nil, fmt.Errorf("загрузчик библиотека %s: не удалось получить SHA-1: %w", lib.Name, err)
 				}
 			} else {
 				expectedSHA1 = parseSHA1Sidecar(string(shaBytes))
 			}
 		}
 		if strict && !validSHA1Hex(expectedSHA1) {
-			return nil, fmt.Errorf("loader library %s: Maven repository не предоставил корректный SHA-1", lib.Name)
+			return nil, fmt.Errorf("загрузчик библиотека %s: Maven репозиторий не предоставил корректный SHA-1", lib.Name)
 		}
 		if expectedSHA1 != "" && !validSHA1Hex(expectedSHA1) {
-			return nil, fmt.Errorf("loader library %s: некорректный SHA-1", lib.Name)
+			return nil, fmt.Errorf("загрузчик библиотека %s: некорректный SHA-1", lib.Name)
 		}
 		path := "libraries/" + rel
 		if previous, ok := seen[path]; ok {
 			if previous != expectedSHA1 {
-				return nil, fmt.Errorf("loader profile содержит конфликтующие artifacts для %s", path)
+				return nil, fmt.Errorf("загрузчик профиль содержит конфликтующие артефакты для %s", path)
 			}
 		} else {
 			seen[path] = expectedSHA1
@@ -617,7 +617,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		path := "libraries/" + rel
 		file, ok := byPath[path]
 		if !ok {
-			return nil, fmt.Errorf("loader library %s не материализована", lib.Name)
+			return nil, fmt.Errorf("загрузчик библиотека %s не материализована", lib.Name)
 		}
 		artifact := lib.Downloads.Artifact
 		artifact.Size = file.Size
@@ -632,7 +632,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 func strictMavenPath(name string) (string, error) {
 	parts := strings.Split(strings.TrimSpace(name), ":")
 	if len(parts) < 3 || len(parts) > 4 {
-		return "", fmt.Errorf("Maven coordinate %q должен иметь group:artifact:version[:classifier]", name)
+		return "", fmt.Errorf("Maven coordinate %q должен иметь group:артефакт:версия[:классификатор]", name)
 	}
 	for _, part := range parts[:3] {
 		if strings.TrimSpace(part) == "" || strings.ContainsAny(part, `/\\`) {
@@ -644,7 +644,7 @@ func strictMavenPath(name string) (string, error) {
 	classifier := ""
 	if len(parts) == 4 {
 		if strings.TrimSpace(parts[3]) == "" || strings.ContainsAny(parts[3], `/\\`) {
-			return "", fmt.Errorf("Maven coordinate %q содержит недопустимый classifier", name)
+			return "", fmt.Errorf("Maven coordinate %q содержит недопустимый классификатор", name)
 		}
 		classifier = "-" + parts[3]
 	}
@@ -669,7 +669,7 @@ func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, 
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+		return nil, fmt.Errorf("ответ превышает лимит %d байты", max)
 	}
 	return data, nil
 }

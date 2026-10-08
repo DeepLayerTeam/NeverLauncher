@@ -4,7 +4,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
 if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 6):
-    raise SystemExit("VERSION is older than 0.14.6")
+    raise SystemExit("VERSION является старый чем 0.14.6")
 
 
 def read(path: str) -> str:
@@ -14,12 +14,12 @@ def read(path: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 api_migration = read("services/api/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql")
 cli_migration = read("cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql")
 if api_migration != cli_migration:
-    raise SystemExit("0.14.6 API/CLI Fabric migrations differ")
+    raise SystemExit("0.14.6 API/CLI Fabric миграция differ")
 require(api_migration, [
     "server_bridge_nodes_v2_kind_check",
     "'fabric'",
@@ -107,7 +107,7 @@ require(build, [
     'neverlauncher.get("clientModRequired") is not False',
 ], "Fabric release build/integrity")
 if 'unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q' in build:
-    raise SystemExit("Fabric release validation still uses pipefail-sensitive text grep")
+    raise SystemExit("Fabric релиз валидация по-прежнему использует pipefail-чувствительный text grep")
 certifier = read("serverbridge/certify_release.py")
 require(certifier, [
     "custom = data.get('custom')",
@@ -115,7 +115,7 @@ require(certifier, [
     "neverlauncher.get('clientModRequired') is not False",
 ], "Fabric release certifier metadata path")
 if "data.get('clientModRequired') is not False" in certifier:
-    raise SystemExit("Fabric release certifier still reads clientModRequired from the descriptor root")
+    raise SystemExit("Fabric релиз сертификатор по-прежнему читает clientModRequired из дескриптор корень")
 
 release = read("scripts/release/build-release.sh")
 release_cli = read("cli/cmd/neverlauncher/release_commands.go")
@@ -164,4 +164,4 @@ ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(text, ["serverbridge-fabric-0146.py", "run-fabric-server-bridge-migration-e2e.sh"], f"0.14.6 {label} wiring")
 
-print(f"NeverLauncher 0.14.6 Fabric Server Bridge gate: OK ({version})")
+print(f"NeverLauncher 0.14.6 Fabric Сервер Мост контроль: OK ({version})")

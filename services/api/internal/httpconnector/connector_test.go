@@ -204,7 +204,7 @@ func newFixtureConnector(t *testing.T, server *httptest.Server) *Connector {
 	if err := os.WriteFile(caPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	// Verify the fixture really is a certificate before passing it to connector TLS roots.
+	// Проверять фикстура really является сертификат до успешно это к коннектор TLS корни.
 	if _, err := x509.ParseCertificate(cert.Raw); err != nil {
 		t.Fatal(err)
 	}

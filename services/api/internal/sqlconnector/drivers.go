@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//Go:сборка!neverlauncher_nopgx
 
 package sqlconnector
 
@@ -37,7 +37,7 @@ func openDatabase(cfg RuntimeConfig) (*sql.DB, error) {
 		mysqlCfg.ParseTime = true
 		return sql.Open("mysql", mysqlCfg.FormatDSN())
 	default:
-		return nil, fmt.Errorf("unsupported SQL driver %q", cfg.Driver)
+		return nil, fmt.Errorf("неподдерживаемый SQL драйвер %q", cfg.Driver)
 	}
 }
 

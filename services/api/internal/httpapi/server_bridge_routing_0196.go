@@ -70,7 +70,7 @@ func validateAndVerifyBridgeRouting0196(server bridgeServerRecord, raw *bridgeRo
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_runtime_mismatch")
 	}
 	if r.ObservedAtUnixMillis <= 0 {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_observed_at_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_наблюдаемый_в_недопустимый")
 	}
 	observed := time.UnixMilli(r.ObservedAtUnixMillis).UTC()
 	if observed.Before(now.Add(-serverBridgeRoutingMaxClockSkew0196)) || observed.After(now.Add(serverBridgeRoutingMaxClockSkew0196)) {
@@ -79,34 +79,34 @@ func validateAndVerifyBridgeRouting0196(server bridgeServerRecord, raw *bridgeRo
 	switch r.State {
 	case "ready", "maintenance", "draining":
 	default:
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_state_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_состояние_недопустимый")
 	}
 	switch r.Health {
 	case "healthy", "degraded", "unhealthy":
 	default:
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_health_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_работоспособность_недопустимый")
 	}
 	if r.PlayersOnline < 0 || r.PlayersOnline > 1_000_000 || r.CapacityMax < 0 || r.CapacityMax > 1_000_000 || (r.CapacityMax > 0 && r.PlayersOnline > r.CapacityMax) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_capacity_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_ёмкость_недопустимый")
 	}
-	// The wire flags must be internally consistent. Maintenance/drain never accept
-	// new routes, unhealthy nodes never accept routes, and full finite-capacity
-	// targets never advertise acceptance.
+	// сетевой флаги должен быть internally consistent. Maintenance/drain никогда принимать
+	// новый маршруты, unhealthy узлы никогда принимать маршруты, и полный finite-ёмкость
+	// цели никогда advertise acceptance.
 	expectedAccepting := r.State == "ready" && r.Health != "unhealthy" && (r.CapacityMax == 0 || r.PlayersOnline < r.CapacityMax)
 	if r.AcceptingConnections != expectedAccepting {
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_accepting_inconsistent")
 	}
 	publicKey, err := base64.RawURLEncoding.DecodeString(server.PublicKey)
 	if err != nil || len(publicKey) != ed25519.PublicKeySize {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_public_key_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_публичный_ключ_недопустимый")
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(r.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_signature_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_подпись_недопустимый")
 	}
 	canonical := bridgeRoutingCanonical0196(server.ID, r)
 	if !ed25519.Verify(ed25519.PublicKey(publicKey), []byte(canonical), signature) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_signature_invalid")
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_маршрутизация_подпись_недопустимый")
 	}
 	sum := sha256.Sum256([]byte(canonical))
 	return model.ServerBridgeRoutingSnapshot{

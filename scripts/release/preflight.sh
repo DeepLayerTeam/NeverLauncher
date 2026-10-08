@@ -28,11 +28,11 @@ if is_true "${STRICT}"; then
   RUN_DEVICE_TRUST_E2E=1
 fi
 
-echo "[NeverLauncher] Preflight ${VERSION}: build, test & release gate (strict=${STRICT}, mode=${MODE})"
+echo "[NeverLauncher] Предварительная проверка ${VERSION}: сборка, тест и контроль выпуска (строгий=${STRICT}, режим=${MODE})"
 
 run_step() {
   local id="$1"; shift
-  echo "[NeverLauncher][gate:${id}] $*"
+  echo "[NeverLauncher][контроль:${id}] $*"
   "$@"
 }
 
@@ -143,17 +143,17 @@ elif [[ "${RUN_FRONTEND}" == "auto" ]]; then
     run_step admin-build bash "${ROOT_DIR}/scripts/smoke/frontend/admin-build.sh"
     run_step desktop-web-build bash "${ROOT_DIR}/scripts/smoke/frontend/desktop-web-build.sh"
   else
-    echo "[NeverLauncher] frontend build пропущен в auto-режиме; такой прогон не является production-ready"
+    echo "[NeverLauncher] клиентская часть сборка пропущен в auto-режиме; такой прогон не является рабочий-готовый"
   fi
 fi
 
 if is_true "${RUN_TAURI}"; then
   if ! command -v cargo >/dev/null 2>&1; then
     if is_true "${STRICT}"; then
-      echo "[NeverLauncher] strict preflight: cargo обязателен" >&2
+      echo "[NeverLauncher] строгий предварительная проверка: cargo обязателен" >&2
       exit 1
     fi
-    echo "[NeverLauncher] Tauri check пропущен: cargo отсутствует"
+    echo "[NeverLauncher] Tauri проверка пропущен: cargo отсутствует"
   else
     run_step tauri-check bash "${ROOT_DIR}/scripts/smoke/frontend/tauri-check.sh"
   fi
@@ -186,14 +186,14 @@ fi
 if [[ -d "${RELEASE_DIR}" ]]; then
   run_step release-bundle bash "${ROOT_DIR}/scripts/smoke/release-required/release-bundle.sh" "${RELEASE_DIR}"
 elif is_true "${STRICT}"; then
-  echo "[NeverLauncher] strict preflight: release bundle ${RELEASE_DIR} обязателен" >&2
+  echo "[NeverLauncher] строгий предварительная проверка: комплект релиза ${RELEASE_DIR} обязателен" >&2
   exit 1
 else
-  echo "[NeverLauncher] Release bundle ${RELEASE_DIR} не найден: проверка пропущена; такой прогон не является production-ready"
+  echo "[NeverLauncher] Комплект релиза ${RELEASE_DIR} не найден: проверка пропущена; такой прогон не является рабочий-готовый"
 fi
 
 if is_true "${STRICT}"; then
-  echo "[NeverLauncher] Strict production preflight ${VERSION} завершён успешно"
+  echo "[NeverLauncher] Строгий рабочий предварительная проверка ${VERSION} завершён успешно"
 else
-  echo "[NeverLauncher] Preflight ${VERSION} завершён успешно для доступного локального контура; production-ready требует NEVERLAUNCHER_PREFLIGHT_STRICT=1"
+  echo "[NeverLauncher] Предварительная проверка ${VERSION} завершён успешно для доступного локального контура; рабочий-готовый требует NEVERLAUNCHER_PREFLIGHT_STRICT=1"
 fi

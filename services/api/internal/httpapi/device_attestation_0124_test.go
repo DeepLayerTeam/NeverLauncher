@@ -67,8 +67,8 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	deviceID, trustedAccess := registerHardwareDevice0124(t, h, access, priv)
 
-	// A different login session has not proven/bound the device yet and cannot
-	// ask the server to attest on behalf of the bound session.
+	// другой вход сессия имеет не proven/bound устройство yet и не может
+	// ask сервер к attest на behalf привязанный сессия.
 	unboundAccess, _ := deviceTrustLogin0121(t, h, "attestation-unbound")
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", unboundAccess, map[string]any{})
 	if code != http.StatusConflict {
@@ -107,8 +107,8 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 		t.Fatalf("attestation overstated authorization/vendor semantics: %#v", complete)
 	}
 
-	// A challenge is consumed before signature verification, so both a normal
-	// replay and an attacker retry after a bad proof fail closed.
+	// запрос является использованный до подпись проверка, так оба обычный
+	// повторное воспроизведение и злоумышленник повторить после bad доказательство отказ с блокировкой.
 	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", attestedAccess, completeBody)
 	if code != http.StatusUnauthorized {
 		t.Fatalf("attestation replay accepted: status=%d body=%#v", code, replayOut)
@@ -163,7 +163,7 @@ func TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124(t *t
 	validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))
 	beginPayload := deviceAttestationPayload0124("challenge", challenge, device, "session-test", validUntil)
 
-	// Simulate the exact PostgreSQL timestamptz precision observed after round-trip.
+	// Simulate точный PostgreSQL timestamptz precision наблюдаемый после round-trip.
 	fromPostgres := challenge
 	fromPostgres.CreatedAt = challenge.CreatedAt.Truncate(time.Microsecond)
 	fromPostgres.ExpiresAt = challenge.ExpiresAt.Truncate(time.Microsecond)

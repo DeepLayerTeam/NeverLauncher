@@ -205,7 +205,7 @@ func TestPasswordAlgorithms(t *testing.T) {
 
 func rawBase64(input []byte) string {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-	// Small local encoder keeps this test independent from implementation helpers.
+	// Small локальный encoder сохраняет этот тест независимый из реализация вспомогательный модуль.
 	out := make([]byte, 0, (len(input)*8+5)/6)
 	var buffer uint32
 	bits := 0

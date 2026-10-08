@@ -11,16 +11,16 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
-var errSessionRiskDenied0126 = errors.New("session risk policy denied request")
+var errSessionRiskDenied0126 = errors.New("сессия риск политика запрещён запрос")
 
 func sessionBindingClaimsMatch0126(claims authClaims, session authSessionRecord) bool {
 	epoch := session.BindingEpoch
 	if epoch < 1 {
 		epoch = 1
 	}
-	// Compatibility for an access token minted by 0.12.5 immediately before
-	// an in-place Backend upgrade. A subsequent bind/re-bind increments epoch,
-	// so pre-binding/stale tokens cannot use this compatibility path.
+	// Совместимость для токен доступа minted через 0.12.5 немедленно до
+	// в-place Серверная часть обновление. subsequent bind/re-bind increments эпоха,
+	// так pre-binding/stale токены не может использовать этот совместимость путь.
 	if claims.BindingEpoch != 0 && claims.BindingEpoch != epoch {
 		return false
 	}
@@ -77,7 +77,7 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 			score = 100
 			compromise = true
 		default:
-			// Unknown persisted security reasons are not silently downgraded.
+			// Неизвестный сохранённый безопасность reasons являются не без уведомления понижение версии.
 			score += 25
 			network = true
 		}
@@ -89,8 +89,8 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 	case compromise || score >= 100:
 		return "compromised", 100, "revoke"
 	case reattest:
-		// Device-key freshness cannot be satisfied by account MFA alone.
-		// Prefer re-attestation over network step-up when both signals exist.
+		// Ключ устройства актуальность не может быть satisfied через учётная запись MFA alone.
+		// Prefer re-аттестация над сеть step-up когда оба signals exist.
 		return "elevated", score, "reattest"
 	case network:
 		return "elevated", score, "step-up"
@@ -114,9 +114,9 @@ func recomputeSessionRisk0126(rec *authSessionRecord, now time.Time) {
 	if state == "normal" {
 		rec.RiskUpdatedAt = time.Time{}
 	} else if rec.RiskUpdatedAt.IsZero() || state != previousState || score != previousScore || action != previousAction {
-		// RiskUpdatedAt is the time the decision changed, not merely the last
-		// evaluation. Otherwise every sensitive request would move the event
-		// timestamp forward and make a successful step-up immediately stale.
+		// RiskUpdatedAt является время решение изменён, не всего лишь последний
+		// evaluation. Иначе каждый критичный запрос будет переносить событие
+		// метка времени forward и создавать успешный step-up немедленно устаревший.
 		rec.RiskUpdatedAt = now.UTC()
 	}
 }
@@ -196,8 +196,8 @@ func (s Server) writeRiskRequirement0126(w http.ResponseWriter, claims authClaim
 		}})
 		return true
 	case "step-up":
-		// A sensitive operation may proceed only after phishing-resistant auth
-		// performed after the risk event that triggered this decision.
+		// критичный операция может proceed только после устойчивый к фишингу аутентификация
+		// performed после риск событие тот triggered этот решение.
 		if claims.RiskUpdatedAt == 0 || claims.AuthTime < claims.RiskUpdatedAt || authStrengthLevel117(claims.AuthStrength) < authStrengthLevel117("phishing-resistant") {
 			writeStepUpRequired117(w, "phishing-resistant")
 			return true
@@ -221,18 +221,18 @@ func (s Server) verifyRefreshDeviceProof0126(r *http.Request, refreshToken, devi
 		return nil
 	}
 	if session.DeviceTrustState != "verified" || strings.TrimSpace(deviceID) != session.TrustedDeviceID || strings.TrimSpace(signature) == "" {
-		return errors.New("device proof required")
+		return errors.New("устройство доказательство обязательный")
 	}
 	device, err := s.Repo.GetTrustedDevice(session.UserID, session.TrustedDeviceID)
 	if err != nil || device.Status != "active" || device.TrustState != "verified" {
-		return errors.New("trusted device unavailable")
+		return errors.New("доверенный устройство недоступный")
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		return errors.New("trusted device key invalid")
+		return errors.New("доверенный устройство ключ недопустимый")
 	}
 	if err := verifyDeviceSignature0123(pub, sessionRefreshProofPayload0126(refreshToken, session), signature); err != nil {
-		return errors.New("device refresh proof invalid")
+		return errors.New("устройство обновление доказательство недопустимый")
 	}
 	_, err = s.Repo.TouchTrustedDevice(r.Context(), session.UserID, session.TrustedDeviceID, clientIP(r), r.UserAgent())
 	return err

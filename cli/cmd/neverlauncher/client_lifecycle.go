@@ -49,7 +49,7 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 	}
 	snapshotID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось создать rollback snapshot: %w", err)
+		return nil, fmt.Errorf("не удалось создать откат снимок: %w", err)
 	}
 	apply, err := clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
 	if err != nil {
@@ -60,7 +60,7 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 		return nil, err
 	}
 	if !verify.Valid {
-		return nil, fmt.Errorf("%s завершён, но post-verify failed: missing=%v corrupted=%v", mode, verify.Missing, verify.Corrupted)
+		return nil, fmt.Errorf("%s завершён, но post-проверять ошибка: отсутствующий=%v повреждённый=%v", mode, verify.Missing, verify.Corrupted)
 	}
 	return map[string]any{
 		"schemaVersion":    cliSchemaVersion,
@@ -207,7 +207,7 @@ func repairClientInstallation(packagePath, storageDir, clientDir string, include
 				return err
 			}
 			if !after.Valid {
-				return fmt.Errorf("repair post-verify failed: missing=%v corrupted=%v", after.Missing, after.Corrupted)
+				return fmt.Errorf("repair post-проверять ошибка: отсутствующий=%v повреждённый=%v", after.Missing, after.Corrupted)
 			}
 			return nil
 		},
@@ -269,7 +269,7 @@ func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, e
 	moved := []string{}
 	for _, rel := range verify.Orphans {
 		if !isManagedClientPath(rel) {
-			return nil, fmt.Errorf("cleanup отказался трогать unmanaged path: %s", rel)
+			return nil, fmt.Errorf("очистка отказался трогать unmanaged путь: %s", rel)
 		}
 		src := filepath.Join(clientDir, filepath.FromSlash(rel))
 		dst := filepath.Join(quarantine, filepath.FromSlash(rel))
@@ -296,7 +296,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 	}
 	safetyID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("safety snapshot: %w", err)
+		return nil, fmt.Errorf("безопасность снимок: %w", err)
 	}
 
 	filesRoot := filepath.Join(targetDir, "files")
@@ -304,19 +304,19 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 	wanted := make(map[string]bool, len(snap.Files)+1)
 	for _, rel := range snap.Files {
 		if err := validateUpdaterPath0156(rel); err != nil {
-			return nil, fmt.Errorf("snapshot %s contains invalid path %s: %w", snap.ID, rel, err)
+			return nil, fmt.Errorf("снимок %s содержит недопустимый путь %s: %w", snap.ID, rel, err)
 		}
 		src := filepath.Join(filesRoot, filepath.FromSlash(rel))
 		sum, size, err := hashFile(src)
 		if err != nil {
-			return nil, fmt.Errorf("snapshot file %s: %w", rel, err)
+			return nil, fmt.Errorf("снимок файл %s: %w", rel, err)
 		}
 		info, err := os.Lstat(src)
 		if err != nil {
 			return nil, err
 		}
 		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("snapshot file must be regular: %s", rel)
+			return nil, fmt.Errorf("снимок файл должен быть regular: %s", rel)
 		}
 		files = append(files, updaterFileSpec0156{Path: rel, Source: src, Size: size, SHA256: sum, Executable: info.Mode().Perm()&0o111 != 0})
 		wanted[rel] = true
@@ -327,7 +327,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 		stateSrc := filepath.Join(targetDir, "client-state.json")
 		sum, size, err := hashFile(stateSrc)
 		if err != nil {
-			return nil, fmt.Errorf("snapshot state: %w", err)
+			return nil, fmt.Errorf("снимок состояние: %w", err)
 		}
 		files = append(files, updaterFileSpec0156{Path: stateRel, Source: stateSrc, Size: size, SHA256: sum})
 		wanted[stateRel] = true
@@ -404,7 +404,7 @@ func collectClientRollbackPaths0156(clientDir string) ([]string, error) {
 				return nil
 			}
 			if d.Type()&os.ModeSymlink != 0 {
-				return fmt.Errorf("rollback refuses managed symlink: %s", path)
+				return fmt.Errorf("откат refuses управляемый символическая ссылка: %s", path)
 			}
 			rel, err := filepath.Rel(clientDir, path)
 			if err != nil {
@@ -517,7 +517,7 @@ func loadClientSnapshot(root, target string) (string, clientLifecycleSnapshot, e
 	}
 	sort.Strings(ids)
 	if len(ids) == 0 {
-		return "", clientLifecycleSnapshot{}, errors.New("rollback snapshot отсутствует")
+		return "", clientLifecycleSnapshot{}, errors.New("откат снимок отсутствует")
 	}
 	id := target
 	if id == "" || id == "previous" || id == "latest" {
@@ -533,7 +533,7 @@ func loadClientSnapshot(root, target string) (string, clientLifecycleSnapshot, e
 		return "", clientLifecycleSnapshot{}, err
 	}
 	if snap.ID != id {
-		return "", clientLifecycleSnapshot{}, errors.New("snapshot id mismatch")
+		return "", clientLifecycleSnapshot{}, errors.New("снимок ID несоответствие")
 	}
 	return dir, snap, nil
 }
@@ -597,22 +597,22 @@ func clientPackageSourcePath(packagePath, storageDir string, manifest ClientPack
 func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	sum, size, err := hashFile(src)
 	if err != nil {
-		return fmt.Errorf("%s: source unavailable: %w", file.Path, err)
+		return fmt.Errorf("%s: исходник недоступный: %w", file.Path, err)
 	}
 	if size != file.Size || !strings.EqualFold(sum, file.SHA256) {
-		return fmt.Errorf("%s: source checksum/size mismatch", file.Path)
+		return fmt.Errorf("%s: исходник checksum/size несоответствие", file.Path)
 	}
 	if err := copyFileAtomic(src, dst); err != nil {
 		return err
 	}
 	if file.Executable {
 		if err := os.Chmod(dst, 0o755); err != nil {
-			return fmt.Errorf("%s: не удалось выставить executable bit: %w", file.Path, err)
+			return fmt.Errorf("%s: не удалось выставить исполняемый бит: %w", file.Path, err)
 		}
 	}
 	sum, size, err = hashFile(dst)
 	if err != nil || size != file.Size || !strings.EqualFold(sum, file.SHA256) {
-		return fmt.Errorf("%s: destination verification failed", file.Path)
+		return fmt.Errorf("%s: назначение проверка ошибка", file.Path)
 	}
 	return nil
 }

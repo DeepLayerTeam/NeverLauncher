@@ -187,7 +187,7 @@ func validateBridgeEvent0194(serverID, runtimeID, keyFingerprint string, raw bri
 	raw.PayloadSHA256 = strings.ToLower(strings.TrimSpace(raw.PayloadSHA256))
 	raw.Signature = strings.TrimSpace(raw.Signature)
 	if raw.Sequence < 1 || !serverBridgeEventID0194.MatchString(raw.EventID) {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_identity_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_идентичность_недопустимый")
 	}
 	if !strings.EqualFold(raw.RuntimeID, runtimeID) {
 		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_runtime_mismatch")
@@ -196,34 +196,34 @@ func validateBridgeEvent0194(serverID, runtimeID, keyFingerprint string, raw bri
 		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_type_unsupported")
 	}
 	if raw.OccurredAtUnixMillis <= 0 {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_timestamp_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_метка времени_недопустимый")
 	}
 	occurred := time.UnixMilli(raw.OccurredAtUnixMillis).UTC()
 	if occurred.After(now.Add(2*time.Minute)) || occurred.Before(now.Add(-30*24*time.Hour)) {
 		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_timestamp_out_of_window")
 	}
 	if len(raw.Payload) > 32 {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_payload_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_полезная нагрузка_недопустимый")
 	}
 	for key, value := range raw.Payload {
 		key = strings.TrimSpace(key)
 		value = strings.TrimSpace(value)
 		if key == "" || len(key) > 64 || len(value) > 1024 || strings.ContainsAny(key, "\r\n\x00") || strings.ContainsRune(value, '\x00') {
-			return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_payload_invalid")
+			return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_полезная нагрузка_недопустимый")
 		}
 	}
 	payloadBytes, err := canonicalBridgeEventPayload0194(raw.Payload)
 	if err != nil || len(payloadBytes) > serverBridgeEventPayloadMax0194 {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_payload_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_полезная нагрузка_недопустимый")
 	}
 	digest := sha256.Sum256(payloadBytes)
 	digestHex := hex.EncodeToString(digest[:])
 	if len(raw.PayloadSHA256) != 64 || subtle.ConstantTimeCompare([]byte(raw.PayloadSHA256), []byte(digestHex)) != 1 {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_payload_digest_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_полезная нагрузка_хеш_недопустимый")
 	}
 	signature, err := base64.RawURLEncoding.DecodeString(raw.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_signature_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_подпись_недопустимый")
 	}
 	canonical := ""
 	if securityV3 {
@@ -233,20 +233,20 @@ func validateBridgeEvent0194(serverID, runtimeID, keyFingerprint string, raw bri
 		if raw.SecurityProfile != serverBridgeSecurityProfile01912 ||
 			subtle.ConstantTimeCompare([]byte(raw.CapabilityDigest), []byte(serverBridgeExpectedSecurityCapabilityDigest01912())) != 1 ||
 			subtle.ConstantTimeCompare([]byte(raw.NodeKeyFingerprint), []byte(strings.ToLower(strings.TrimSpace(keyFingerprint)))) != 1 {
-			return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_security_binding_invalid")
+			return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_безопасность_привязка_недопустимый")
 		}
 		canonical = serverBridgeEventCanonical01912(serverID, raw.EventID, runtimeID, raw.NodeKeyFingerprint, raw.CapabilityDigest, raw.Sequence, raw.Type, raw.OccurredAtUnixMillis, digestHex)
 	} else {
 		canonical = bridgeEventCanonical0194(serverID, raw.EventID, runtimeID, raw.Sequence, raw.Type, raw.OccurredAtUnixMillis, digestHex)
 	}
 	if !ed25519.Verify(publicKey, []byte(canonical), signature) {
-		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_event_signature_invalid")
+		return model.ServerBridgeEvent{}, fmt.Errorf("serverbridge_событие_подпись_недопустимый")
 	}
 	return model.ServerBridgeEvent{Sequence: raw.Sequence, EventID: raw.EventID, RuntimeID: runtimeID, Type: raw.Type, OccurredAtUnixMillis: raw.OccurredAtUnixMillis, Payload: raw.Payload, PayloadSHA256: digestHex, Signature: raw.Signature}, nil
 }
 
 func canonicalBridgeEventPayload0194(payload map[string]string) ([]byte, error) {
-	// encoding/json sorts string map keys, matching BridgeEventRecord's TreeMap encoding.
+	// encoding/json sorts string сопоставление ключи, соответствовать BridgeEventRecord's TreeMap encoding.
 	if payload == nil {
 		payload = map[string]string{}
 	}
@@ -276,7 +276,7 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 	defer b.mu.Unlock()
 	current, ok := b.servers[server.ID]
 	if !ok || current.Status != "active" || current.RuntimeEpoch != server.RuntimeEpoch || !strings.EqualFold(current.RuntimeID, server.RuntimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event runtime not active", repository.ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие среда выполнения не активный", repository.ErrConflict)
 	}
 	if b.eventAck == nil {
 		b.eventAck = map[string]int64{}
@@ -295,12 +295,12 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 		fingerprint := strings.ToLower(event.PayloadSHA256) + "|" + event.Type + "|" + event.Signature
 		if event.Sequence <= ack {
 			if b.eventDigests[rowKey] != fingerprint || b.eventIDs[rowKey] != event.EventID {
-				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: conflicting event replay", repository.ErrConflict)
+				return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: конфликтующий событие повторное воспроизведение", repository.ErrConflict)
 			}
 			continue
 		}
 		if event.Sequence != ack+1 {
-			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: event sequence gap", repository.ErrConflict)
+			return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: событие последовательность разрыв", repository.ErrConflict)
 		}
 		b.eventDigests[rowKey] = fingerprint
 		b.eventIDs[rowKey] = event.EventID
@@ -311,7 +311,7 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 	return model.ServerBridgeEventAppendResult{AckSequence: ack, Inserted: inserted}, nil
 }
 
-// deterministic helper used by tests/certification to keep the declared event types stable.
+// детерминированный вспомогательный модуль используется через tests/certification к сохранять объявлять типы событий стабильный.
 func serverBridgeEventTypesSorted0194() []string {
 	out := make([]string, 0, len(serverBridgeEventTypes0194))
 	for eventType := range serverBridgeEventTypes0194 {

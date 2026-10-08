@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[serverbridge-v2-migration] materialize exact 0.14.0 database (0001..0020)\n'
+printf '[serverbridge-v2-миграция] материализовать точный 0.14.0 база данных (0001..0020)\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -68,7 +68,7 @@ done
 latest_before="$(psql "$DB_DSN" -Atqc 'SELECT max(version) FROM schema_migrations')"
 [[ "$latest_before" == "0020_guard_migration_compatibility_stabilization_01310" ]]
 
-printf '[serverbridge-v2-migration] seed recoverable 0.14.0 snapshot state\n'
+printf '[serverbridge-v2-миграция] начальное значение recoverable 0.14.0 снимок состояние\n'
 psql "$DB_DSN" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 INSERT INTO projects(id,name,default_channel) VALUES ('legacy-project','Legacy Project','stable');
 INSERT INTO neverlauncher_persistence_snapshots_950(kind,schema_version,payload,created_at)
@@ -112,4 +112,4 @@ join_count="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_join_tick
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},legacyNode:{status:"identity-enrollment-required",protocolVersion:2,bearerCredentialRetired:true,identityEnrollmentRequired:true},legacyTexturesImported:true,legacyActiveJoinsImported:false}' \
   > "$RESULT_DIR/serverbridge-v2-migration.json"
-printf '[serverbridge-v2-migration] PASS 0.14.0 -> 0.14.3 snapshot + cryptographic identity + one-time ticket migration semantics\n'
+printf '[serverbridge-v2-миграция] PASS 0.14.0 -> 0.14.3 снимок + криптографический идентичность + одноразовый билет миграция семантика\n'

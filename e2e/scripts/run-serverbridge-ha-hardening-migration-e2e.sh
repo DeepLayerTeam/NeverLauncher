@@ -67,4 +67,4 @@ for index in idx_server_bridge_nodes_active_heartbeat_0149 idx_server_bridge_top
 done
 ( cd "$ROOT/services/api" && NEVERLAUNCHER_SERVERBRIDGE_HA_DSN="$DB_DSN" go test ./internal/repository -run '^TestServerBridgeHA0149$' -count=1 ) > "$RUNTIME_DIR/ha-repository-test.log"
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingNodesPreserved:true,topologyPreserved:true,haIndexes:true,multiInstanceNonceReplay:true,advisoryMaintenance:true}' > "$RESULT_DIR/serverbridge-ha-hardening-migration.json"
-printf '[serverbridge-ha-migration] PASS 0.14.8 -> 0.14.9 public matrix + HA hardening schema semantics\n'
+printf '[serverbridge-ha-миграция] PASS 0.14.8 -> 0.14.9 публичная матрица + HA усиление защиты схема семантика\n'

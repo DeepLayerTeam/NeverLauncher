@@ -16,13 +16,13 @@ def triple(v: str) -> tuple[int, int, int]:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 
 if triple(VERSION) < (0, 16, 0):
-    raise SystemExit(f"Production Delivery Release gate requires VERSION>=0.16.0, got {VERSION}")
+    raise SystemExit(f"Рабочий Доставка Контроль выпуска требует VERSION>=0.16.0, получил {VERSION}")
 if "-" in VERSION or "+" in VERSION:
-    raise SystemExit(f"Production Delivery Release requires GA SemVer, got {VERSION}")
+    raise SystemExit(f"Рабочий Доставка Релиз требует GA SemVer, получил {VERSION}")
 
 impl = (ROOT / "cli/cmd/neverlauncher/production_delivery_release_0160.go").read_text(encoding="utf-8")
 tests = (ROOT / "cli/cmd/neverlauncher/production_delivery_release_0160_test.go").read_text(encoding="utf-8")
@@ -71,4 +71,4 @@ subprocess.run(
     cwd=ROOT / "cli",
     check=True,
 )
-print(f"NeverLauncher {VERSION} Production Delivery Release 0.16.0 gate: OK")
+print(f"NeverLauncher {VERSION} Рабочий Доставка Релиз 0.16.0 контроль: OK")

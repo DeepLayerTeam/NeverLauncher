@@ -77,13 +77,13 @@ fn is_sha256_hex(value: &str) -> bool {
 fn now_unix_ms() -> Result<u64, String> {
     Ok(SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|err| format!("system clock before UNIX epoch: {err}"))?
+        .map_err(|err| format!("system clock до UNIX эпоха: {err}"))?
         .as_millis() as u64)
 }
 
 fn require_hash(label: &str, value: &str) -> Result<(), String> {
     if !is_sha256_hex(value) {
-        return Err(format!("NeverGuard Attestation v2 {label} malformed"));
+        return Err(format!("NeverGuard Аттестация v2 {label} повреждённый"));
     }
     Ok(())
 }

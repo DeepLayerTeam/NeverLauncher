@@ -8,7 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: missing {rel}")
+        raise SystemExit(f"[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: отсутствующий {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -16,12 +16,12 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: {rel} missing {missing}"
+            f"[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: {rel} отсутствующий {missing}"
         )
 
 
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 8):
-    raise SystemExit(f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: VERSION is {VERSION}")
+    raise SystemExit(f"[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: VERSION является {VERSION}")
 
 sensor = read("runtime/neverguard-sensor/src/jvm_awareness.rs")
 stream = read("runtime/neverguard-sensor/src/lib.rs")
@@ -108,7 +108,7 @@ require(adversarial_ci, "scripts/guard_ci/windows_adversarial.py", [
     "neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
 ])
 if "neverguard-jvm-aware-protection-0188.py" not in preflight:
-    raise SystemExit("[NeverLauncher] JVM-Aware Protection 0.18.8 gate: preflight wiring missing")
+    raise SystemExit("[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: предварительная проверка wiring отсутствующий")
 
 for rel, text in [
     ("runtime/neverguard-sensor/src/jvm_awareness.rs", sensor),
@@ -119,7 +119,7 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: placeholder {placeholder!r} in {rel}"
+                f"[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: placeholder {placeholder!r} в {rel}"
             )
 
-print("[NeverLauncher] JVM-Aware Protection 0.18.8 gate: OK")
+print("[NeverLauncher] JVM-Учитывающий Защита 0.18.8 контроль: OK")

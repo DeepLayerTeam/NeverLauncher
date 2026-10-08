@@ -1,6 +1,6 @@
 backend:
   url: "https://launcher.example.invalid"
-  # Ordered HA endpoints. The single url above is used only when urls is empty.
+  # Упорядоченный HA эндпоинты. единый URL выше является используется только когда URL является пустой.
   urls: "https://launcher-a.example.com,https://launcher-b.example.com"
   failoverCooldownMs: 5000
   timeoutMs: 5000

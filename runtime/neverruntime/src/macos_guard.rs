@@ -118,7 +118,7 @@ impl NeverGuardSupervisor {
     pub async fn ensure_started(&self)->Result<NeverGuardStatus,String>{
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
-            if handle.child.try_wait().map_err(|e|format!("NeverGuard process check failed: {e}"))?.is_none(){
+            if handle.child.try_wait().map_err(|e|format!("NeverGuard процесс проверка ошибка: {e}"))?.is_none(){
                 if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
@@ -131,10 +131,10 @@ impl NeverGuardSupervisor {
         let mut command=Command::new(&executable);
         command.arg("--socket").arg(&endpoint).arg("--parent-pid").arg(parent_pid.to_string()).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
         prepare_guard_command(&mut command);
-        let mut child=command.spawn().map_err(|e|format!("failed to spawn NeverGuard {}: {e}",executable.display()))?;
+        let mut child=command.spawn().map_err(|e|format!("ошибка к запуск процесса NeverGuard {}: {e}",executable.display()))?;
         let guard_pid=child.id().ok_or_else(||"NeverGuard PID unavailable".to_string())?;
         let mut stdin=child.stdin.take().ok_or_else(||"NeverGuard bootstrap stdin unavailable".to_string())?;
-        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("NeverGuard bootstrap write failed: {e}")); }
+        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("NeverGuard инициализировать запись ошибка: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
@@ -142,7 +142,7 @@ impl NeverGuardSupervisor {
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
-        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("NeverGuard release identity query failed: {e}"))?;
+        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("NeverGuard релиз идентичность query ошибка: {e}"))?;
         let mut status=parse_status(status_value)?; status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
         *state=Some(handle); Ok(status)
     }
@@ -163,10 +163,10 @@ fn current_uid()->u32{unsafe{libc::geteuid()}}
 fn runtime_dir()->Result<PathBuf,String>{
     let uid=current_uid();
     let base=std::env::temp_dir();
-    let meta=std::fs::metadata(&base).map_err(|e|format!("stat macOS temp directory {} failed: {e}",base.display()))?;
+    let meta=std::fs::metadata(&base).map_err(|e|format!("stat macOS temp каталог {} ошибка: {e}",base.display()))?;
     if !meta.is_dir()||meta.uid()!=uid||(meta.mode()&0o077)!=0{return Err("macOS temp runtime directory must be private and owned by current uid".into())}
     let dir=base.join(format!("neverlauncher-{uid}"));
-    std::fs::create_dir_all(&dir).map_err(|e|format!("create macOS runtime dir failed: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e|format!("создавать macOS среда выполнения dir ошибка: {e}"))?;
     std::fs::set_permissions(&dir,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?;
     let dm=std::fs::metadata(&dir).map_err(|e|e.to_string())?;
     if dm.uid()!=uid||(dm.mode()&0o077)!=0{return Err("macOS NeverLauncher runtime directory permissions are unsafe".into())}
@@ -187,21 +187,21 @@ fn validate_endpoint(path:&Path)->Result<(),String>{
     Ok(())
 }
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{
-    let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} failed: {e}",path.display()))?;
-    if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} must be a regular non-symlink file",path.display()))}
-    let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} must be owned by the current uid or root",path.display()))}
-    if sm.mode()&0o022!=0{return Err(format!("{} must not be group/world writable",path.display()))}
-    if executable&&sm.mode()&0o111==0{return Err(format!("{} is not executable",path.display()))}
+    let sm=std::fs::symlink_metadata(path).map_err(|e|format!("stat {} ошибка: {e}",path.display()))?;
+    if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть regular non-символическая ссылка файл",path.display()))}
+    let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("{} должен быть принадлежащий через текущий UID или корень",path.display()))}
+    if sm.mode()&0o022!=0{return Err(format!("{} должен не быть group/world writable",path.display()))}
+    if executable&&sm.mode()&0o111==0{return Err(format!("{} является не исполняемый",path.display()))}
     Ok(())
 }
 
 fn sha256_file(path: &Path) -> Result<String, String> {
-    let file = File::open(path).map_err(|err| format!("open {} failed: {err}", path.display()))?;
+    let file = File::open(path).map_err(|err| format!("открытый {} ошибка: {err}", path.display()))?;
     let mut reader = BufReader::with_capacity(128 * 1024, file);
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 128 * 1024];
     loop {
-        let count = reader.read(&mut buffer).map_err(|err| format!("read {} failed: {err}", path.display()))?;
+        let count = reader.read(&mut buffer).map_err(|err| format!("чтение {} ошибка: {err}", path.display()))?;
         if count == 0 { break; }
         hasher.update(&buffer[..count]);
     }
@@ -222,13 +222,13 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let app=bundle_root(&desktop)?;
     let manifest_path=app.join("Contents/Resources").join(PACKAGE_MANIFEST);
     validate_secure_file(&manifest_path,false)?;
-    let manifest:MacOSPackageManifest=serde_json::from_slice(&std::fs::read(&manifest_path).map_err(|e|e.to_string())?).map_err(|e|format!("macOS package manifest JSON invalid: {e}"))?;
+    let manifest:MacOSPackageManifest=serde_json::from_slice(&std::fs::read(&manifest_path).map_err(|e|e.to_string())?).map_err(|e|format!("macOS пакет манифест JSON недопустимый: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
     let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==NEVERGUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
     let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
     if canonical {
-        let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("resolve app Helpers directory failed: {e}"))?;
+        let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("разрешать app Вспомогательный модуль каталог ошибка: {e}"))?;
         if guard_dir!=helpers{return Err("NeverGuard must run from the signed .app/Contents/Helpers directory".into())}
     } else if desktop_dir!=guard_dir {
         return Err("legacy Desktop and NeverGuard must be in the same app bundle MacOS directory".into())
@@ -236,7 +236,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let external_hash_binding = match manifest.hash_binding_mode.as_str() {
         "" => false,
         "codesign+external-release-policy" => true,
-        other => return Err(format!("unsupported macOS package hash binding mode: {other}")),
+        other => return Err(format!("неподдерживаемый macOS пакет хеш привязка режим: {other}")),
     };
     let mut signing_team=manifest.signing_team_id.clone();
     if canonical {
@@ -244,33 +244,33 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
             ("desktop-launcher",desktop.as_path(),"NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"),
             ("guard",guard,"NeverLauncher.app/Contents/Helpers/neverguard"),
         ] {
-            let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
-            if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
+            let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS пакет артефакт отсутствующий: {component}"))?;
+            if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS пакет комплект путь несоответствие для {component}"))}
             if !external_hash_binding {
-                let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
-                if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("macOS package artifact verification failed: {component}"))}
+                let metadata=std::fs::metadata(path).map_err(|e|format!("метаданные {} ошибка: {e}",path.display()))?;
+                if metadata.len()!=artifact.size||!sha256_file(path)?.eq_ignore_ascii_case(&artifact.sha256){return Err(format!("macOS пакет артефакт проверка ошибка: {component}"))}
             }
             if signing_team.is_empty(){signing_team=artifact.team_id.clone()} else if !artifact.team_id.is_empty()&&!artifact.team_id.eq_ignore_ascii_case(&signing_team){return Err("macOS package signing team is inconsistent".into())}
         }
     } else if !external_hash_binding {
         for (path, expected_size, expected_sha256) in [(desktop.as_path(), manifest.desktop_size, manifest.desktop_sha256.as_str()), (guard, manifest.guard_size, manifest.guard_sha256.as_str())] {
-            let metadata=std::fs::metadata(path).map_err(|e|format!("metadata {} failed: {e}",path.display()))?;
-            if metadata.len()!=expected_size{return Err(format!("macOS package size mismatch for {}",path.display()))}
+            let metadata=std::fs::metadata(path).map_err(|e|format!("метаданные {} ошибка: {e}",path.display()))?;
+            if metadata.len()!=expected_size{return Err(format!("macOS пакет размер несоответствие для {}",path.display()))}
             let actual=sha256_file(path)?;
-            if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS package SHA-256 mismatch for {}",path.display()))}
+            if !actual.eq_ignore_ascii_case(expected_sha256){return Err(format!("macOS пакет SHA-256 несоответствие для {}",path.display()))}
         }
     }
     if signing_team.is_empty(){return Err("macOS package signing Team ID is missing".into())}
     for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.neverlauncher"), (guard, "ru.skif4er.neverlauncher.guard")] {
         let sig=verify_macos_code_signature(path)?;
-        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Hardened Runtime verification failed: {}",path.display()))}
-        if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("macOS signing team mismatch: {}",path.display()))}
-        if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("macOS code-signing identifier mismatch for {}: expected {expected_identifier}, got {:?}",path.display(),sig.identifier))}
+        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Усиленный Среда выполнения проверка ошибка: {}",path.display()))}
+        if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("macOS подписание команда несоответствие: {}",path.display()))}
+        if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("macOS код-подписание identifier несоответствие для {}: ожидаемый {expected_identifier}, получил {:?}",path.display(),sig.identifier))}
     }
-    let app_verify=std::process::Command::new("/usr/bin/codesign").args(["--verify","--deep","--strict","--verbose=2"]).arg(&app).output().map_err(|e|format!("codesign app verify failed: {e}"))?;
-    if !app_verify.status.success(){return Err(format!("macOS app bundle signature invalid: {}",String::from_utf8_lossy(&app_verify.stderr).trim()))}
-    let gatekeeper=std::process::Command::new("/usr/sbin/spctl").args(["--assess","--type","execute","--verbose=2"]).arg(&app).output().map_err(|e|format!("spctl assessment failed: {e}"))?;
-    if !gatekeeper.status.success(){return Err(format!("macOS Gatekeeper/notarization assessment failed: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
+    let app_verify=std::process::Command::new("/usr/bin/codesign").args(["--verify","--deep","--strict","--verbose=2"]).arg(&app).output().map_err(|e|format!("codesign app проверять ошибка: {e}"))?;
+    if !app_verify.status.success(){return Err(format!("macOS app комплект подпись недопустимый: {}",String::from_utf8_lossy(&app_verify.stderr).trim()))}
+    let gatekeeper=std::process::Command::new("/usr/sbin/spctl").args(["--assess","--type","execute","--verbose=2"]).arg(&app).output().map_err(|e|format!("spctl assessment ошибка: {e}"))?;
+    if !gatekeeper.status.success(){return Err(format!("macOS Gatekeeper/notarization assessment ошибка: {}",String::from_utf8_lossy(&gatekeeper.stderr).trim()))}
     Ok(())
 }
 fn resolve_guard_executable()->Result<PathBuf,String>{
@@ -279,19 +279,19 @@ fn resolve_guard_executable()->Result<PathBuf,String>{
     let contents=macos.parent().ok_or("desktop Contents directory missing")?;
     let helper=contents.join("Helpers").join("neverguard");
     if helper.is_file(){return Ok(helper)}
-    // Backward-compatible development fallback for pre-0.16.1 layouts only;
-    // canonical package verification above requires Contents/Helpers.
+    // Backward-compatible разработка резервный вариант для pre-0.16.1 структура только;
+    // канонический пакет проверка выше требует Contents/Helpers.
     Ok(macos.join("neverguard"))
 }
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
-    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
+    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix сокет подключение ошибка: {e}"))}sleep(Duration::from_millis(40)).await}}
     }
 }
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
-    let cred=stream.peer_cred().map_err(|e|format!("macOS Unix peer credential query failed: {e}"))?;
+    let cred=stream.peer_cred().map_err(|e|format!("macOS Unix узел учётные данные query ошибка: {e}"))?;
     let pid=cred.pid().ok_or_else(||"macOS Unix peer PID unavailable".to_string())?;
-    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("NeverGuard peer credential mismatch pid={pid} uid={}",cred.uid()))}
+    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("NeverGuard узел учётные данные несоответствие PID={pid} UID={}",cred.uid()))}
     Ok(())
 }
 
@@ -310,19 +310,19 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     let seq=h.next_sequence; let id=random_id(); let mac=request_mac(&h.session_key,seq,&id,command,payload); let req=RequestEnvelope{protocol_version:NEVERGUARD_PROTOCOL_VERSION,sequence:seq,request_id:id.clone(),command:command.into(),payload:payload.into(),mac:hex::encode(mac)};
     timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"NeverGuard IPC write timeout".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
-    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("NeverGuard IPC read timeout for {command}"))??;
-    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("NeverGuard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("NeverGuard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("NeverGuard response JSON invalid: {e}"))
+    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("NeverGuard IPC чтение тайм-аут для {command}"))??;
+    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("NeverGuard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("NeverGuard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("NeverGuard ответ JSON недопустимый: {e}"))
 }
-fn parse_status(v:Value)->Result<NeverGuardStatus,String>{let s:NeverGuardStatus=serde_json::from_value(v).map_err(|e|format!("NeverGuard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&NeverGuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("NeverGuard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("NeverGuard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("NeverGuard protocol mismatch: Desktop={} Guard={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
+fn parse_status(v:Value)->Result<NeverGuardStatus,String>{let s:NeverGuardStatus=serde_json::from_value(v).map_err(|e|format!("NeverGuard состояние недопустимый: {e}"))?;validate_release_identity(&s)?;Ok(s)}
+fn validate_release_identity(s:&NeverGuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("NeverGuard релиз версия несоответствие: Настольное приложение={} Защита={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("NeverGuard платформа несоответствие: ожидаемый macOS-универсальный, получил {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("NeverGuard протокол несоответствие: Настольное приложение={} Защита={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("NeverGuard macOS process policy rejected".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&NeverGuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&NeverGuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("macOS Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
 
 pub async fn run_macos_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
-    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("NeverGuard macOS parent mismatch expected={parent_pid} observed={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
-    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("bootstrap secret read failed: {e}"))?; }
-    if endpoint.exists(){return Err("NeverGuard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
+    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("NeverGuard macOS родительский несоответствие ожидаемый={parent_pid} наблюдаемый={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
+    let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("инициализировать секрет чтение ошибка: {e}"))?; }
+    if endpoint.exists(){return Err("NeverGuard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("привязывать {} ошибка: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
     let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("NeverGuard Unix socket ACL verification failed".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
     loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("NeverGuard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"NeverGuard accept timeout".to_string())?.map_err(|e|e.to_string())?;
@@ -340,7 +340,7 @@ async fn build_integrity_evidence(
 ) -> Result<NeverGuardIntegrityEvidence, String> {
     let mut evidence = tokio::task::spawn_blocking(move || collect_macos_integrity_evidence(parent_pid))
         .await
-        .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
+        .map_err(|err| format!("NeverGuard целостность обработчик ошибка: {err}"))??;
     let digest = recompute_evidence_sha256(&evidence)?;
     evidence.session_proof = hex::encode(integrity_proof(key, &digest));
     validate_evidence_shape(&evidence)?;
@@ -354,7 +354,7 @@ async fn build_guard_attestation(
     payload: &str,
 ) -> Result<NeverGuardRemoteAttestation, String> {
     let request: GuardAttestationRequest = serde_json::from_str(payload)
-        .map_err(|err| format!("attestation request invalid: {err}"))?;
+        .map_err(|err| format!("аттестация запрос недопустимый: {err}"))?;
     let evidence = build_integrity_evidence(parent_pid, key).await?;
     let mut attestation = NeverGuardRemoteAttestation {
         schema: NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA.into(),
@@ -427,34 +427,34 @@ async fn serve_commands(
                     started_at_unix: started,
                     message: "NeverGuard macOS production boundary ready".into(),
                 })
-                .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                .map_err(|err| format!("NeverGuard состояние serialization ошибка: {err}"))?,
                 false,
             ),
             "process-policy" => (
                 true,
                 serde_json::to_string(&policy)
-                    .map_err(|err| format!("NeverGuard process policy serialization failed: {err}"))?,
+                    .map_err(|err| format!("NeverGuard процесс политика serialization ошибка: {err}"))?,
                 false,
             ),
             "integrity-evidence" => match build_integrity_evidence(parent_pid, &key).await {
                 Ok(evidence) => (
                     true,
                     serde_json::to_string(&evidence)
-                        .map_err(|err| format!("NeverGuard integrity serialization failed: {err}"))?,
+                        .map_err(|err| format!("NeverGuard целостность serialization ошибка: {err}"))?,
                     false,
                 ),
-                Err(err) => (false, format!("NeverGuard integrity evidence failed: {err}"), false),
+                Err(err) => (false, format!("NeverGuard целостность свидетельство ошибка: {err}"), false),
             },
             "guard-attestation" => {
                 match build_guard_attestation(parent_pid, &key, &policy, &request.payload).await {
                     Ok(attestation) => (
                         true,
                         serde_json::to_string(&attestation).map_err(|err| {
-                            format!("NeverGuard attestation serialization failed: {err}")
+                            format!("NeverGuard аттестация serialization ошибка: {err}")
                         })?,
                         false,
                     ),
-                    Err(err) => (false, format!("NeverGuard attestation failed: {err}"), false),
+                    Err(err) => (false, format!("NeverGuard аттестация ошибка: {err}"), false),
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
@@ -483,7 +483,7 @@ async fn serve_commands(
 
 async fn write_frame<W:AsyncWrite+Unpin,T:Serialize>(w:&mut W,v:&T)->Result<(),String>{let mut b=serde_json::to_vec(v).map_err(|e|e.to_string())?;if b.len()>MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(b'\n');w.write_all(&b).await.map_err(|e|e.to_string())?;w.flush().await.map_err(|e|e.to_string())}
 async fn read_frame<R:AsyncRead+Unpin,T:DeserializeOwned>(r:&mut R)->Result<T,String>{let mut b=Vec::new();let mut one=[0u8;1];loop{let n=r.read(&mut one).await.map_err(|e|e.to_string())?;if n==0{return Err("IPC peer closed".into())}if one[0]==b'\n'{break}if b.len()>=MAX_FRAME_BYTES{return Err("IPC frame too large".into())}b.push(one[0]);}if b.is_empty(){return Err("empty IPC frame".into())}serde_json::from_slice(&b).map_err(|e|e.to_string())}
-fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} invalid hex"))?;if b.len()!=32{return Err(format!("{n} invalid length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
+fn random32()->[u8;32]{let mut b=[0u8;32];OsRng.fill_bytes(&mut b);b}fn random_id()->String{let mut b=[0u8;16];OsRng.fill_bytes(&mut b);hex::encode(b)}fn decode32(v:&str,n:&str)->Result<[u8;32],String>{let b=hex::decode(v).map_err(|_|format!("{n} недопустимый hex"))?;if b.len()!=32{return Err(format!("{n} недопустимый length"))}let mut o=[0u8;32];o.copy_from_slice(&b);Ok(o)}
 #[derive(Clone, Copy)]
 struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,started:u64,client_nonce:&'a [u8;32],server_nonce:&'a [u8;32]}
 #[derive(Clone, Copy)]

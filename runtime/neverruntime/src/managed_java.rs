@@ -137,15 +137,15 @@ pub async fn ensure_managed_java(
     };
     fs::create_dir_all(&runtime_root)
         .await
-        .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
+        .map_err(|err| format!("не удалось создать среда выполнения корень {}: {err}", runtime_root.display()))?;
 
     if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
         return Ok(cached);
     }
 
-    // The release bundle still carries the six-platform Temurin 21 bootstrap JRE.
-    // Managed Java II resolves every other certified major from verified Adoptium GA
-    // archives instead of incorrectly rejecting it against the Java 21-only bundle manifest.
+    // комплект релиза по-прежнему содержит six-платформа Temurin 21 инициализировать JRE.
+    // Управляемый Java II разрешает каждый другой сертифицированный крупный из проверен Adoptium GA
+    // архивы вместо этого incorrectly отклонять это против Java 21-только комплект манифест.
     if required_major == 21 {
         if let Some((manifest_location, manifest_sha256)) = configured_distribution_manifest()? {
             return ensure_managed_java_from_distribution(
@@ -176,7 +176,7 @@ pub async fn ensure_managed_java(
     let checksum = normalize_sha256(&asset.binary.package.checksum)?;
     validate_https_url(&asset.binary.package.link)?;
     if asset.binary.package.size == 0 || asset.binary.package.size > MAX_RUNTIME_ARCHIVE_SIZE {
-        return Err(format!("некорректный размер Java runtime archive: {}", asset.binary.package.size));
+        return Err(format!("некорректный размер Java среда выполнения архив: {}", asset.binary.package.size));
     }
 
     install_managed_java_archive(
@@ -216,7 +216,7 @@ pub async fn ensure_managed_java_from_distribution(
     };
     fs::create_dir_all(&runtime_root)
         .await
-        .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
+        .map_err(|err| format!("не удалось создать среда выполнения корень {}: {err}", runtime_root.display()))?;
     if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
         return Ok(cached);
     }
@@ -226,14 +226,14 @@ pub async fn ensure_managed_java_from_distribution(
         let expected = normalize_sha256(expected)?;
         let actual = hex::encode(Sha256::digest(&manifest_bytes));
         if actual != expected {
-            return Err(format!("Managed JRE manifest SHA-256 mismatch: got {actual}, expected {expected}"));
+            return Err(format!("Управляемый JRE манифест SHA-256 несоответствие: получил {actual}, ожидаемый {expected}"));
         }
     } else if archive_base.is_remote() {
         return Err("remote Managed JRE manifest требует NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256/--manifest-sha256".to_string());
     }
 
     let manifest: ManagedJREDistributionManifest = serde_json::from_slice(&manifest_bytes)
-        .map_err(|err| format!("Managed JRE manifest JSON: {err}"))?;
+        .map_err(|err| format!("Управляемый JRE манифест JSON: {err}"))?;
     if manifest.schema_version != "1.0"
         || manifest.product != "NeverLauncher"
         || manifest.distribution != "temurin"
@@ -251,9 +251,9 @@ pub async fn ensure_managed_java_from_distribution(
         .filter(|target| target.platform == platform && target.architecture == arch);
     let target = matching_targets
         .next()
-        .ok_or_else(|| format!("Managed JRE manifest не содержит target {platform}/{arch}"))?;
+        .ok_or_else(|| format!("Управляемый JRE манифест не содержит цель {platform}/{arch}"))?;
     if matching_targets.next().is_some() {
-        return Err(format!("Managed JRE manifest содержит duplicate target {platform}/{arch}"));
+        return Err(format!("Управляемый JRE манифест содержит дубликат цель {platform}/{arch}"));
     }
     if target.distribution != distribution || target.major_version != required_major {
         return Err("Managed JRE target distribution/major mismatch".to_string());
@@ -297,14 +297,14 @@ impl DistributionArchiveBase {
         validate_distribution_archive_name(archive)?;
         match self {
             Self::Remote(base) => {
-                let url = base.join(archive).map_err(|err| format!("Managed JRE archive URL: {err}"))?;
+                let url = base.join(archive).map_err(|err| format!("Управляемый JRE архив URL: {err}"))?;
                 validate_https_url(url.as_str())?;
                 Ok((url.to_string(), None))
             }
             Self::Local(base) => {
                 let path = base.join(archive);
-                let canonical_base = std::fs::canonicalize(base).map_err(|err| format!("Managed JRE base canonicalize: {err}"))?;
-                let canonical_path = std::fs::canonicalize(&path).map_err(|err| format!("Managed JRE archive {}: {err}", path.display()))?;
+                let canonical_base = std::fs::canonicalize(base).map_err(|err| format!("Управляемый JRE основа canonicalize: {err}"))?;
+                let canonical_path = std::fs::canonicalize(&path).map_err(|err| format!("Управляемый JRE архив {}: {err}", path.display()))?;
                 if !canonical_path.starts_with(&canonical_base) {
                     return Err("Managed JRE archive path escaped manifest directory".to_string());
                 }
@@ -320,7 +320,7 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Err("Managed JRE manifest location is empty".to_string());
     }
     if location.to_ascii_lowercase().starts_with("https://") {
-        let url = Url::parse(location).map_err(|err| format!("Managed JRE manifest URL: {err}"))?;
+        let url = Url::parse(location).map_err(|err| format!("Управляемый JRE манифест URL: {err}"))?;
         validate_https_url(location)?;
         let client = managed_java_http_client()?;
         let response = managed_java_send_with_retry(
@@ -329,14 +329,14 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
             &format!("NeverLauncher/{} ManagedJRE", env!("CARGO_PKG_VERSION")),
         )
         .await
-        .map_err(|err| format!("Managed JRE manifest download: {err}"))?;
+        .map_err(|err| format!("Управляемый JRE манифест загрузка: {err}"))?;
         if !response.status().is_success() {
-            return Err(format!("Managed JRE manifest HTTP {}", response.status()));
+            return Err(format!("Управляемый JRE манифест HTTP {}", response.status()));
         }
         if response.content_length().unwrap_or_default() > 8 * 1024 * 1024 {
             return Err("Managed JRE manifest exceeds 8 MiB".to_string());
         }
-        let bytes = response.bytes().await.map_err(|err| format!("Managed JRE manifest body: {err}"))?;
+        let bytes = response.bytes().await.map_err(|err| format!("Управляемый JRE манифест тело: {err}"))?;
         if bytes.len() > 8 * 1024 * 1024 {
             return Err("Managed JRE manifest exceeds 8 MiB".to_string());
         }
@@ -355,16 +355,16 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Err("Managed JRE manifest поддерживает только HTTPS URL или локальный path".to_string());
     }
     let path = PathBuf::from(location);
-    let original_metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Managed JRE manifest metadata {}: {err}", path.display()))?;
+    let original_metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Управляемый JRE манифест метаданные {}: {err}", path.display()))?;
     if original_metadata.file_type().is_symlink() {
         return Err("Managed JRE manifest local file must not be a symlink".to_string());
     }
-    let canonical = std::fs::canonicalize(&path).map_err(|err| format!("Managed JRE manifest {}: {err}", path.display()))?;
-    let metadata = std::fs::symlink_metadata(&canonical).map_err(|err| format!("Managed JRE manifest metadata: {err}"))?;
+    let canonical = std::fs::canonicalize(&path).map_err(|err| format!("Управляемый JRE манифест {}: {err}", path.display()))?;
+    let metadata = std::fs::symlink_metadata(&canonical).map_err(|err| format!("Управляемый JRE манифест метаданные: {err}"))?;
     if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > 8 * 1024 * 1024 {
         return Err("Managed JRE manifest local file is invalid".to_string());
     }
-    let bytes = fs::read(&canonical).await.map_err(|err| format!("Managed JRE manifest read: {err}"))?;
+    let bytes = fs::read(&canonical).await.map_err(|err| format!("Управляемый JRE манифест чтение: {err}"))?;
     let base = canonical.parent().ok_or_else(|| "Managed JRE manifest has no parent directory".to_string())?.to_path_buf();
     Ok((bytes, DistributionArchiveBase::Local(base)))
 }
@@ -389,7 +389,7 @@ fn validate_distribution_target(target: &ManagedJREDistributionTarget, platform:
             Err("Windows Managed JRE target must use zip".to_string())
         }
         "linux" | "macos" if target.format != "tar.gz" || !target.archive.to_ascii_lowercase().ends_with(".tar.gz") => {
-            Err(format!("{platform} Managed JRE target must use tar.gz"))
+            Err(format!("{platform} Управляемый JRE цель должен использовать tar.gz"))
         }
         _ => Ok(()),
     }
@@ -421,12 +421,12 @@ fn distribution_platform() -> Result<(String, String), String> {
         "windows" => "windows",
         "linux" => "linux",
         "macos" => "macos",
-        other => return Err(format!("Managed JRE Distribution не поддерживает OS {other}")),
+        other => return Err(format!("Управляемый JRE Дистрибутив не поддерживает OS {other}")),
     };
     let arch = match std::env::consts::ARCH {
         "x86_64" => "x64",
         "aarch64" => "arm64",
-        other => return Err(format!("Managed JRE Distribution не поддерживает architecture {other}")),
+        other => return Err(format!("Управляемый JRE Дистрибутив не поддерживает архитектура {other}")),
     };
     Ok((platform.to_string(), arch.to_string()))
 }
@@ -486,7 +486,7 @@ async fn install_managed_java_archive(
     } = request;
     let checksum = normalize_sha256(checksum)?;
     if archive_size == 0 || archive_size > MAX_RUNTIME_ARCHIVE_SIZE {
-        return Err(format!("некорректный размер Java runtime archive: {archive_size}"));
+        return Err(format!("некорректный размер Java среда выполнения архив: {archive_size}"));
     }
     let platform_dir = runtime_root
         .join(distribution)
@@ -494,7 +494,7 @@ async fn install_managed_java_archive(
         .join(format!("{platform_os}-{platform_arch}"));
     fs::create_dir_all(&platform_dir)
         .await
-        .map_err(|err| format!("не удалось создать platform runtime dir: {err}"))?;
+        .map_err(|err| format!("не удалось создать платформа среда выполнения dir: {err}"))?;
 
     let release_component = safe_release_component(release_name);
     let final_dir = platform_dir.join(&release_component);
@@ -514,7 +514,7 @@ async fn install_managed_java_archive(
     }
 
     let downloads = runtime_root.join(".downloads");
-    fs::create_dir_all(&downloads).await.map_err(|err| format!("runtime downloads: {err}"))?;
+    fs::create_dir_all(&downloads).await.map_err(|err| format!("среда выполнения загрузка: {err}"))?;
     let extension = archive_extension(archive_name, platform_os)?;
     let archive_path = downloads.join(format!("{checksum}{extension}"));
     if let Some(source) = local_archive {
@@ -527,9 +527,9 @@ async fn install_managed_java_archive(
     let stamp = now_unix()?;
     let staging = platform_dir.join(format!(".staging-{}-{stamp}", std::process::id()));
     if fs::metadata(&staging).await.is_ok() {
-        fs::remove_dir_all(&staging).await.map_err(|err| format!("staging cleanup: {err}"))?;
+        fs::remove_dir_all(&staging).await.map_err(|err| format!("подготовка очистка: {err}"))?;
     }
-    fs::create_dir_all(&staging).await.map_err(|err| format!("staging create: {err}"))?;
+    fs::create_dir_all(&staging).await.map_err(|err| format!("подготовка создавать: {err}"))?;
     let extraction_result = if platform_os == "windows" {
         extract_windows_zip(&archive_path, &staging).await
     } else {
@@ -549,13 +549,13 @@ async fn install_managed_java_archive(
     if let Some(expected) = expected_java_entry {
         if java_relative != expected {
             let _ = fs::remove_dir_all(&staging).await;
-            return Err(format!("Managed JRE javaEntry mismatch: extracted={java_relative}, manifest={expected}"));
+            return Err(format!("Управляемый JRE javaEntry несоответствие: extracted={java_relative}, манифест={expected}"));
         }
     }
     let java_info = super::check_java(Some(java.to_string_lossy().to_string()), Some(required_major)).await?;
     if !java_info.found || java_info.detected_major_version != Some(required_major) {
         let _ = fs::remove_dir_all(&staging).await;
-        return Err(format!("установленный runtime не прошёл java -version: {}", java_info.message));
+        return Err(format!("установленный среда выполнения не прошёл Java -версия: {}", java_info.message));
     }
     let (java_sha256, _) = sha256_file(&java).await?;
     let record = ManagedJavaRecord {
@@ -576,13 +576,13 @@ async fn install_managed_java_archive(
     };
     fs::write(
         staging.join(".neverruntime.json"),
-        serde_json::to_vec_pretty(&record).map_err(|err| format!("runtime record serialize: {err}"))?,
+        serde_json::to_vec_pretty(&record).map_err(|err| format!("среда выполнения запись serialize: {err}"))?,
     )
     .await
-    .map_err(|err| format!("runtime record write: {err}"))?;
+    .map_err(|err| format!("среда выполнения запись запись: {err}"))?;
     fs::rename(&staging, &final_dir)
         .await
-        .map_err(|err| format!("atomic Java runtime install {}: {err}", final_dir.display()))?;
+        .map_err(|err| format!("атомарный Java среда выполнения установка {}: {err}", final_dir.display()))?;
     validate_installed_runtime(&final_dir, required_major, distribution, false)
         .await?
         .ok_or_else(|| "Java runtime post-install verification failed".to_string())
@@ -594,7 +594,7 @@ fn managed_java_http_client() -> Result<Client, String> {
         .timeout(Duration::from_secs(15 * 60))
         .redirect(reqwest::redirect::Policy::limited(5))
         .build()
-        .map_err(|err| format!("не удалось создать Managed Java HTTP client: {err}"))
+        .map_err(|err| format!("не удалось создать Управляемый Java HTTP клиент: {err}"))
 }
 
 async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &str) -> Result<reqwest::Response, String> {
@@ -623,7 +623,7 @@ async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &s
         sleep(Duration::from_millis(delay_ms.min(4_000))).await;
     }
     Err(format!(
-        "Managed Java upstream failed after {MANAGED_JAVA_HTTP_ATTEMPTS} attempts: {last_error}"
+        "Управляемый Java вышестоящий проект ошибка после {MANAGED_JAVA_HTTP_ATTEMPTS} попытка: {last_error}"
     ))
 }
 
@@ -639,12 +639,12 @@ async fn ensure_local_archive(source: &Path, destination: &Path, checksum: &str,
     }
     let part = destination.with_extension(format!("{}nlpart", destination.extension().and_then(|v| v.to_str()).unwrap_or("")));
     let _ = fs::remove_file(&part).await;
-    fs::copy(source, &part).await.map_err(|err| format!("Managed JRE local archive copy: {err}"))?;
+    fs::copy(source, &part).await.map_err(|err| format!("Управляемый JRE локальный архив копировать: {err}"))?;
     if !verify_file_sha256(&part, checksum, size).await? {
         let _ = fs::remove_file(&part).await;
         return Err("Managed JRE copied archive verification failed".to_string());
     }
-    fs::rename(&part, destination).await.map_err(|err| format!("Managed JRE local archive atomic rename: {err}"))?;
+    fs::rename(&part, destination).await.map_err(|err| format!("Управляемый JRE локальный архив атомарный переименование: {err}"))?;
     Ok(())
 }
 
@@ -696,15 +696,15 @@ async fn resolve_adoptium_asset(major: u32, os: &str, arch: &str) -> Result<Adop
         "aarch64" => "aarch64",
         "x86" => "x86",
         "arm" => "arm",
-        other => return Err(format!("Adoptium не поддержан для architecture {other}")),
+        other => return Err(format!("Adoptium не поддержан для архитектура {other}")),
     };
     let client = managed_java_http_client()?;
 
-    // Prefer compact JRE images. Java 16 is EOL and no longer appears in the
-    // current releases UI, so Managed Java II also resolves historical GA
-    // feature releases. A JDK is accepted only when Adoptium has no JRE for
-    // the requested certified major/platform; java -version is still verified
-    // after extraction before the runtime becomes usable.
+    // Prefer compact JRE образ. Java 16 является EOL и нет дольше appears в 
+    // текущий релизы UI, так Управляемый Java II также разрешает исторический GA
+    // возможность релизы. JDK является принят только когда Adoptium имеет нет JRE для
+    // запрошенный сертифицированный major/platform; Java -версия является по-прежнему проверен
+    // после извлечение до среда выполнения становится usable.
     for image_type in ["jre", "jdk"] {
         if let Some(asset) = resolve_adoptium_latest_asset(&client, major, api_os, api_arch, image_type).await? {
             return Ok(asset);
@@ -734,17 +734,17 @@ async fn resolve_adoptium_latest_asset(
         &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
-    .map_err(|err| format!("Adoptium latest API request: {err}"))?;
+    .map_err(|err| format!("Adoptium последний API запрос: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("Adoptium latest API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
+        return Err(format!("Adoptium последний API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
     }
     let assets = response
         .json::<Vec<AdoptiumAsset>>()
         .await
-        .map_err(|err| format!("Adoptium latest API JSON: {err}"))?;
+        .map_err(|err| format!("Adoptium последний API JSON: {err}"))?;
     Ok(assets.into_iter().find(|asset| {
         asset.version.major == major
             && asset.binary.image_type == image_type
@@ -770,17 +770,17 @@ async fn resolve_adoptium_feature_release_asset(
         &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
-    .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
+    .map_err(|err| format!("Adoptium возможность релиз API запрос: {err}"))?;
     if response.status().as_u16() == 404 {
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("Adoptium feature release API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
+        return Err(format!("Adoptium возможность релиз API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
     }
     let releases = response
         .json::<Vec<AdoptiumFeatureRelease>>()
         .await
-        .map_err(|err| format!("Adoptium feature release API JSON: {err}"))?;
+        .map_err(|err| format!("Adoptium возможность релиз API JSON: {err}"))?;
     for release in releases {
         if release.version_data.major != major {
             continue;
@@ -810,7 +810,7 @@ fn validate_managed_java_major(major: u32) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!(
-            "Managed Java {} поддерживает Java 8/16/17/21/25; запрошена Java {major}",
+            "Управляемый Java {} поддерживает Java 8/16/17/21/25; запрошена Java {major}",
             env!("CARGO_PKG_VERSION")
         ))
     }
@@ -829,7 +829,7 @@ async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str,
     }
     validate_https_url(url)?;
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await.map_err(|err| format!("archive parent: {err}"))?;
+        fs::create_dir_all(parent).await.map_err(|err| format!("архив родительский: {err}"))?;
     }
     let part = path.with_extension(format!("{}nlpart", path.extension().and_then(|v| v.to_str()).unwrap_or("")));
     if std::fs::symlink_metadata(&part).map(|meta| meta.file_type().is_symlink()).unwrap_or(false) {
@@ -839,7 +839,7 @@ async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str,
         if verify_file_sha256(&part, checksum, size).await? {
             fs::rename(&part, path)
                 .await
-                .map_err(|err| format!("recovered archive atomic rename: {err}"))?;
+                .map_err(|err| format!("восстанавливать архив атомарный переименование: {err}"))?;
             return Ok(());
         }
         let _ = fs::remove_file(&part).await;
@@ -850,36 +850,36 @@ async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str,
         &format!("NeverLauncher/{} ManagedJava", env!("CARGO_PKG_VERSION")),
     )
     .await
-    .map_err(|err| format!("Java runtime download: {err}"))?;
+    .map_err(|err| format!("Java среда выполнения загрузка: {err}"))?;
     if !response.status().is_success() {
-        return Err(format!("Java runtime download HTTP {}", response.status()));
+        return Err(format!("Java среда выполнения загрузка HTTP {}", response.status()));
     }
     if let Some(content_length) = response.content_length() {
         if content_length != size {
-            return Err(format!("Java runtime Content-Length {content_length}, ожидалось {size}"));
+            return Err(format!("Java среда выполнения Content-Length {content_length}, ожидалось {size}"));
         }
     }
-    let mut file = fs::File::create(&part).await.map_err(|err| format!("archive temp create: {err}"))?;
+    let mut file = fs::File::create(&part).await.map_err(|err| format!("архив temp создавать: {err}"))?;
     let mut hasher = Sha256::new();
     let mut written = 0u64;
-    while let Some(chunk) = response.chunk().await.map_err(|err| format!("Java runtime stream: {err}"))? {
+    while let Some(chunk) = response.chunk().await.map_err(|err| format!("Java среда выполнения поток: {err}"))? {
         written = written.saturating_add(chunk.len() as u64);
         if written > MAX_RUNTIME_ARCHIVE_SIZE || written > size {
             let _ = fs::remove_file(&part).await;
             return Err("Java runtime archive превышает ожидаемый размер".to_string());
         }
         hasher.update(&chunk);
-        file.write_all(&chunk).await.map_err(|err| format!("archive temp write: {err}"))?;
+        file.write_all(&chunk).await.map_err(|err| format!("архив temp запись: {err}"))?;
     }
-    file.flush().await.map_err(|err| format!("archive temp flush: {err}"))?;
-    file.sync_all().await.map_err(|err| format!("archive temp fsync: {err}"))?;
+    file.flush().await.map_err(|err| format!("архив temp flush: {err}"))?;
+    file.sync_all().await.map_err(|err| format!("архив temp fsync: {err}"))?;
     drop(file);
     let got = hex::encode(hasher.finalize());
     if written != size || !got.eq_ignore_ascii_case(checksum) {
         let _ = fs::remove_file(&part).await;
-        return Err(format!("Java runtime SHA-256/size mismatch: got {got}/{written}"));
+        return Err(format!("Java среда выполнения SHA-256/size несоответствие: получил {got}/{written}"));
     }
-    fs::rename(&part, path).await.map_err(|err| format!("archive atomic rename: {err}"))?;
+    fs::rename(&part, path).await.map_err(|err| format!("архив атомарный переименование: {err}"))?;
     Ok(())
 }
 
@@ -889,7 +889,7 @@ async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
     let quarantine = path.with_file_name(format!(".broken-{name}-{stamp}"));
     fs::rename(path, &quarantine)
         .await
-        .map_err(|err| format!("Managed Java corrupt archive quarantine: {err}"))
+        .map_err(|err| format!("Управляемый Java corrupt архив карантин: {err}"))
 }
 
 async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> Result<bool, String> {
@@ -900,12 +900,12 @@ async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> 
     if metadata.len() != expected_size {
         return Ok(false);
     }
-    let mut file = fs::File::open(path).await.map_err(|err| format!("runtime archive open: {err}"))?;
+    let mut file = fs::File::open(path).await.map_err(|err| format!("среда выполнения архив открытый: {err}"))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1024 * 1024];
     loop {
         use tokio::io::AsyncReadExt;
-        let n = file.read(&mut buffer).await.map_err(|err| format!("runtime archive read: {err}"))?;
+        let n = file.read(&mut buffer).await.map_err(|err| format!("среда выполнения архив чтение: {err}"))?;
         if n == 0 {
             break;
         }
@@ -918,20 +918,20 @@ async fn sha256_file(path: &Path) -> Result<(String, u64), String> {
     use tokio::io::AsyncReadExt;
     let metadata = fs::metadata(path)
         .await
-        .map_err(|err| format!("runtime file metadata {}: {err}", path.display()))?;
+        .map_err(|err| format!("среда выполнения метаданные файла {}: {err}", path.display()))?;
     if !metadata.is_file() {
-        return Err(format!("runtime file is not regular: {}", path.display()));
+        return Err(format!("среда выполнения файл является не regular: {}", path.display()));
     }
     let mut file = fs::File::open(path)
         .await
-        .map_err(|err| format!("runtime file open {}: {err}", path.display()))?;
+        .map_err(|err| format!("среда выполнения файл открытый {}: {err}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; 1024 * 1024];
     loop {
         let n = file
             .read(&mut buffer)
             .await
-            .map_err(|err| format!("runtime file read {}: {err}", path.display()))?;
+            .map_err(|err| format!("среда выполнения файл чтение {}: {err}", path.display()))?;
         if n == 0 {
             break;
         }
@@ -948,9 +948,9 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .stderr(Stdio::piped())
         .output()
         .await
-        .map_err(|err| format!("tar недоступен для Managed Java: {err}"))?;
+        .map_err(|err| format!("tar недоступен для Управляемый Java: {err}"))?;
     if !list.status.success() {
-        return Err(format!("tar -tzf failed: {}", String::from_utf8_lossy(&list.stderr)));
+        return Err(format!("tar -tzf ошибка: {}", String::from_utf8_lossy(&list.stderr)));
     }
     for line in String::from_utf8_lossy(&list.stdout).lines() {
         validate_archive_entry(line)?;
@@ -962,9 +962,9 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .arg(destination)
         .output()
         .await
-        .map_err(|err| format!("tar extraction: {err}"))?;
+        .map_err(|err| format!("tar извлечение: {err}"))?;
     if !output.status.success() {
-        return Err(format!("tar extraction failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(format!("tar извлечение ошибка: {}", String::from_utf8_lossy(&output.stderr)));
     }
     Ok(())
 }
@@ -994,7 +994,7 @@ try {
   }
 } finally { $zip.Dispose() }
 "#;
-    fs::write(&script, script_body).await.map_err(|err| format!("PowerShell extractor script: {err}"))?;
+    fs::write(&script, script_body).await.map_err(|err| format!("PowerShell extractor скрипт: {err}"))?;
     let output = Command::new("powershell.exe")
         .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(&script)
@@ -1004,10 +1004,10 @@ try {
         .arg(destination)
         .output()
         .await
-        .map_err(|err| format!("PowerShell extraction: {err}"))?;
+        .map_err(|err| format!("PowerShell извлечение: {err}"))?;
     let _ = fs::remove_file(&script).await;
     if !output.status.success() {
-        return Err(format!("PowerShell extraction failed: {}", String::from_utf8_lossy(&output.stderr)));
+        return Err(format!("PowerShell извлечение ошибка: {}", String::from_utf8_lossy(&output.stderr)));
     }
     Ok(())
 }
@@ -1019,28 +1019,28 @@ fn validate_archive_entry(entry: &str) -> Result<(), String> {
     }
     let path = Path::new(normalized.trim_end_matches('/'));
     if path.is_absolute() {
-        return Err(format!("runtime archive absolute path: {entry}"));
+        return Err(format!("среда выполнения архив absolute путь: {entry}"));
     }
     for component in path.components() {
         if !matches!(component, Component::Normal(_)) {
-            return Err(format!("runtime archive traversal path: {entry}"));
+            return Err(format!("среда выполнения архив обход путь: {entry}"));
         }
     }
     Ok(())
 }
 
 fn validate_extracted_symlinks(root: &Path) -> Result<(), String> {
-    let canonical_root = std::fs::canonicalize(root).map_err(|err| format!("runtime staging canonicalize: {err}"))?;
+    let canonical_root = std::fs::canonicalize(root).map_err(|err| format!("среда выполнения подготовка canonicalize: {err}"))?;
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(&dir).map_err(|err| format!("runtime staging scan: {err}"))? {
-            let entry = entry.map_err(|err| format!("runtime staging entry: {err}"))?;
+        for entry in std::fs::read_dir(&dir).map_err(|err| format!("среда выполнения подготовка scan: {err}"))? {
+            let entry = entry.map_err(|err| format!("среда выполнения подготовка запись: {err}"))?;
             let path = entry.path();
-            let metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("runtime staging metadata: {err}"))?;
+            let metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("среда выполнения подготовка метаданные: {err}"))?;
             if metadata.file_type().is_symlink() {
-                let resolved = std::fs::canonicalize(&path).map_err(|err| format!("runtime symlink {}: {err}", path.display()))?;
+                let resolved = std::fs::canonicalize(&path).map_err(|err| format!("среда выполнения символическая ссылка {}: {err}", path.display()))?;
                 if !resolved.starts_with(&canonical_root) {
-                    return Err(format!("runtime archive содержит внешний symlink: {}", path.display()));
+                    return Err(format!("среда выполнения архив содержит внешний символическая ссылка: {}", path.display()));
                 }
             } else if metadata.is_dir() {
                 stack.push(path);
@@ -1058,7 +1058,7 @@ async fn find_cached_runtime(root: &Path, major: u32, distribution: &str) -> Res
         Err(_) => return Ok(None),
     };
     let mut candidates = Vec::new();
-    while let Some(entry) = entries.next_entry().await.map_err(|err| format!("runtime cache scan: {err}"))? {
+    while let Some(entry) = entries.next_entry().await.map_err(|err| format!("среда выполнения кэш scan: {err}"))? {
         let name = entry.file_name().to_string_lossy().to_string();
         if name.starts_with('.') {
             continue;
@@ -1145,9 +1145,9 @@ fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let candidate = root.join(rel);
     if candidate.exists() {
         let canonical_root = std::fs::canonicalize(root)
-            .map_err(|err| format!("runtime root canonicalize: {err}"))?;
+            .map_err(|err| format!("среда выполнения корень canonicalize: {err}"))?;
         let canonical_candidate = std::fs::canonicalize(&candidate)
-            .map_err(|err| format!("runtime java canonicalize: {err}"))?;
+            .map_err(|err| format!("среда выполнения Java canonicalize: {err}"))?;
         if !canonical_candidate.starts_with(&canonical_root) {
             return Err("runtime record java path вышел за Managed Java root через symlink".to_string());
         }
@@ -1209,14 +1209,14 @@ fn adoptium_platform() -> Result<(String, String), String> {
         "windows" => "windows",
         "linux" => "linux",
         "macos" => "osx",
-        other => return Err(format!("Managed Java не поддерживает OS {other}")),
+        other => return Err(format!("Управляемый Java не поддерживает OS {other}")),
     };
     let arch = match std::env::consts::ARCH {
         "x86_64" => "x86_64",
         "aarch64" => "aarch64",
         "x86" => "x86",
         "arm" => "arm",
-        other => return Err(format!("Managed Java не поддерживает arch {other}")),
+        other => return Err(format!("Управляемый Java не поддерживает архитектура {other}")),
     };
     Ok((os.to_string(), arch.to_string()))
 }
@@ -1241,7 +1241,7 @@ fn normalize_distribution(value: &str) -> Result<String, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "" | "any" | "managed" | "adoptium" | "temurin" => Ok("temurin".to_string()),
         "system" => Err("distribution=system не является Managed Java runtime".to_string()),
-        other => Err(format!("Managed Java distribution {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
+        other => Err(format!("Управляемый Java дистрибутив {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
     }
 }
 
@@ -1254,7 +1254,7 @@ fn normalize_sha256(value: &str) -> Result<String, String> {
 }
 
 fn validate_https_url(value: &str) -> Result<(), String> {
-    let url = Url::parse(value).map_err(|err| format!("некорректный runtime URL: {err}"))?;
+    let url = Url::parse(value).map_err(|err| format!("некорректный среда выполнения URL: {err}"))?;
     if url.scheme() != "https"
         || url.host_str().is_none()
         || !url.username().is_empty()
@@ -1274,7 +1274,7 @@ fn archive_extension(name: &str, os: &str) -> Result<&'static str, String> {
     if os != "windows" && (lower.ends_with(".tar.gz") || lower.ends_with(".tgz")) {
         return Ok(".tar.gz");
     }
-    Err(format!("неподдерживаемый формат Java runtime archive: {name}"))
+    Err(format!("неподдерживаемый формат Java среда выполнения архив: {name}"))
 }
 
 fn safe_release_component(value: &str) -> String {
@@ -1293,7 +1293,7 @@ async fn quarantine_broken_runtime(path: &Path) -> Result<(), String> {
     let stamp = now_unix()?;
     let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("runtime");
     let target = path.with_file_name(format!(".broken-{name}-{stamp}"));
-    fs::rename(path, &target).await.map_err(|err| format!("не удалось quarantine повреждённую Java: {err}"))
+    fs::rename(path, &target).await.map_err(|err| format!("не удалось карантин повреждённую Java: {err}"))
 }
 
 struct InstallLock {
@@ -1325,7 +1325,7 @@ async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
                 }
                 sleep(Duration::from_millis(500)).await;
             }
-            Err(err) => return Err(format!("Managed Java install lock: {err}")),
+            Err(err) => return Err(format!("Управляемый Java установка блокировка: {err}")),
         }
     }
     Err("Managed Java installation занята другим процессом".to_string())

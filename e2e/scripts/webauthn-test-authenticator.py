@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Minimal deterministic-shape WebAuthn test authenticator for NeverLauncher E2E.
+"""Minimal детерминированный-форма WebAuthn тест authenticator для NeverLauncher E2E.
 
-This is test-only code. It generates a P-256 credential, emits a standards-shaped
-none-attestation registration response, and signs assertion ceremonies with the
-private key kept under the E2E runtime directory.
+Этот является тест-только код. Это генерирует P-256 учётные данные, emits standards-форма
+none-аттестация регистрация ответ, и подписывает утверждение процедура с 
+закрытый ключ сохранён под E2E среда выполнения каталог.
 """
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def json_bytes(value: object) -> bytes:
 def run(*args: str, input_bytes: bytes | None = None) -> bytes:
     proc = subprocess.run(args, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if proc.returncode != 0:
-        raise SystemExit(f"command failed ({proc.returncode}): {' '.join(args)}\n{proc.stderr.decode(errors='replace')}")
+        raise SystemExit(f"команда ошибка ({proc.returncode}): {' '.join(args)}\n{proc.stderr.decode(errors='replace')}")
     return proc.stdout
 
 
@@ -80,7 +80,7 @@ def generate_p256_key(path: Path) -> None:
 
 def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
     der = run("openssl", "pkey", "-in", str(key_path), "-pubout", "-outform", "DER")
-    # SubjectPublicKeyInfo for an uncompressed P-256 key ends with 0x04 || X || Y.
+    # SubjectPublicKeyInfo для uncompressed P-256 ключ ends с 0x04 || X || Y.
     if len(der) < 65 or der[-65] != 0x04:
         raise SystemExit("unexpected P-256 SubjectPublicKeyInfo encoding")
     point = der[-65:]
@@ -88,7 +88,7 @@ def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
 
 
 def client_data(kind: str, challenge: str, origin: str) -> bytes:
-    # The challenge is already base64url as supplied by WebAuthn options.
+    # запрос является уже основа64URL как supplied через WebAuthn options.
     b64u_decode(challenge)  # strict-enough validation for malformed input.
     return json_bytes({"type": kind, "challenge": challenge, "origin": origin, "crossOrigin": False})
 
@@ -115,7 +115,7 @@ def registration_auth_data(rp_id: str, credential_id: bytes, key_path: Path) -> 
 
 def assertion_auth_data(rp_id: str, sign_count: int) -> bytes:
     if sign_count < 0 or sign_count > 0xFFFFFFFF:
-        raise SystemExit("sign count must fit uint32")
+        raise SystemExit("подпись счётчик должен fit uint32")
     return hashlib.sha256(rp_id.encode("utf-8")).digest() + bytes([0x05]) + struct.pack(">I", sign_count)
 
 
@@ -123,7 +123,7 @@ def command_register(args: argparse.Namespace) -> None:
     state_path = Path(args.state)
     key_path = Path(args.key)
     if state_path.exists() or key_path.exists():
-        raise SystemExit("refusing to overwrite existing WebAuthn test credential")
+        raise SystemExit("refusing к overwrite существующий WebAuthn тест учётные данные")
     generate_p256_key(key_path)
     credential_id = os.urandom(32)
     user_handle = b64u_decode(args.user_handle)
@@ -166,7 +166,7 @@ def command_assert(args: argparse.Namespace) -> None:
     state = json.loads(Path(args.state).read_text(encoding="utf-8"))
     key_path = Path(state["keyPath"])
     if not key_path.is_file():
-        raise SystemExit("WebAuthn private key is unavailable")
+        raise SystemExit("WebAuthn закрытый ключ является недоступный")
     client = client_data("webauthn.get", args.challenge, state["origin"])
     auth_data = assertion_auth_data(state["rpId"], args.sign_count)
     signed = auth_data + hashlib.sha256(client).digest()

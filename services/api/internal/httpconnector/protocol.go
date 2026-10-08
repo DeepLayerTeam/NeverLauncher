@@ -279,7 +279,7 @@ func strictDecode(data []byte, output any) error {
 	}
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return errors.New("multiple JSON values are not allowed")
+		return errors.New("несколько JSON значения являются не разрешён")
 	}
 	return nil
 }

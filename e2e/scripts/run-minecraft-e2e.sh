@@ -115,7 +115,7 @@ wait_http() {
     if curl -fsS "$url" >/dev/null 2>&1; then return 0; fi
     sleep 2
   done
-  echo "[e2e] timeout waiting for $url" >&2
+  echo "[e2e] тайм-аут waiting для $URL" >&2
   compose logs neverlauncher-api >&2 || true
   return 1
 }
@@ -130,7 +130,7 @@ wait_healthy() {
     [[ "$state" == "exited" || "$state" == "dead" ]] && break
     sleep 3
   done
-  echo "[e2e] $service did not become healthy" >&2
+  echo "[e2e] $служба сделал не становиться работоспособный" >&2
   docker inspect --format '[e2e] state={{.State.Status}} exitCode={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} error={{printf "%q" .State.Error}}' "$id" >&2 || true
   compose logs --no-color "$service" >&2 || true
   return 1
@@ -153,7 +153,7 @@ wait_paper_healthy_with_bootstrap_recovery() {
       return 1
     fi
     compose logs --no-color paper > "$RUNTIME_DIR/paper-bootstrap-hash-failure-attempt-${attempt}.log" 2>&1 || true
-    echo "[e2e] Paper/Mojang bootstrap hash mismatch; cleaning only bootstrap JARs and retrying (${attempt}/3)" >&2
+    echo "[e2e] Paper/Mojang инициализировать хеш несоответствие; чистый только инициализировать JARs и повторить (${attempt}/3)" >&2
     reset_paper_bootstrap_jars
   done
   return 1
@@ -166,7 +166,7 @@ wait_bridge_heartbeat() {
     fi
     sleep 2
   done
-  echo "[e2e] $service NeverLauncher bridge did not report successful heartbeat" >&2
+  echo "[e2e] $служба NeverLauncher мост сделал не отчёт успешный сигнал состояния" >&2
   compose logs "$service" >&2 || true
   return 1
 }
@@ -177,7 +177,7 @@ capture_health_evidence() {
   out="$RUNTIME_DIR/health-$service.json"
   docker inspect --format '{{json .State.Health}}' "$id" > "$out"
   jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "$out" >/dev/null || {
-    echo "[e2e] $service health evidence is not healthy" >&2
+    echo "[e2e] $служба работоспособность свидетельство является не работоспособный" >&2
     cat "$out" >&2
     return 1
   }
@@ -188,7 +188,7 @@ wait_log() {
     if compose logs --no-color "$service" 2>&1 | grep -Fq "$pattern"; then return 0; fi
     sleep 1
   done
-  echo "[e2e] $service log marker missing: $pattern" >&2
+  echo "[e2e] $служба журнал маркер отсутствующий: $pattern" >&2
   compose logs "$service" >&2 || true
   return 1
 }
@@ -198,8 +198,8 @@ json_post() {
 }
 sign_payload() {
   local algorithm="$1" key="$2" payload="$3" file="$RUNTIME_DIR/device-proof-$RANDOM-$RANDOM.txt"
-  # Device/Guard proof contracts are newline-terminated; command substitution
-  # strips trailing LF, so restore exactly one protocol-significant newline.
+  # Device/Guard доказательство контракты являются newline-terminated; команда substitution
+  # strips след LF, так восстановление точно один протокол-significant newline.
   printf '%s\n' "$payload" > "$file"
   python3 "$DEVICE_CRYPTO" sign --algorithm "$algorithm" --key "$key" --payload "$file"
   rm -f "$file"
@@ -209,7 +209,7 @@ materialize_pinned_bytesocks_dependency() {
   local source_dir="$RUNTIME_DIR/bytesocks-source" maven_repo="$RUNTIME_DIR/spark-build-maven"
   local resolved_commit build_jar installed_jar artifact_sha maven_dir
 
-  printf '[e2e] materialize pinned compatible bytesocks %s from %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
+  printf '[e2e] материализовать закреплённый compatible bytesocks %s из %s\n' "$BYTESOCKS_MAVEN_VERSION" "$BYTESOCKS_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$BYTESOCKS_SOURCE_REPOSITORY"
@@ -219,16 +219,16 @@ materialize_pinned_bytesocks_dependency() {
   [[ "$resolved_commit" == "$BYTESOCKS_SOURCE_COMMIT" ]] || { echo "[e2e] bytesocks source commit mismatch: $resolved_commit" >&2; return 1; }
 
   grep -Fq 'static BytesocksClient create(' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
-    echo "[e2e] pinned bytesocks source is missing BytesocksClient.create API" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks исходник является отсутствующий BytesocksClient.создавать API" >&2; return 1;
   }
   grep -Fq 'String channelId();' "$source_dir/src/main/java/me/lucko/bytesocks/client/BytesocksClient.java" || {
-    echo "[e2e] pinned bytesocks source is missing channelId API" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks исходник является отсутствующий channelId API" >&2; return 1;
   }
   grep -Fq '<artifactId>Java-WebSocket</artifactId>' "$source_dir/pom.xml" || {
-    echo "[e2e] pinned bytesocks source is missing Java-WebSocket dependency" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks исходник является отсутствующий Java-WebSocket зависимость" >&2; return 1;
   }
   grep -Fq '<version>1.5.4</version>' "$source_dir/pom.xml" || {
-    echo "[e2e] pinned bytesocks source has unexpected Java-WebSocket version" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks исходник имеет unexpected Java-WebSocket версия" >&2; return 1;
   }
 
   (
@@ -241,17 +241,17 @@ materialize_pinned_bytesocks_dependency() {
   local jar_contents="$RUNTIME_DIR/bytesocks-jar-contents.txt"
   jar tf "$build_jar" > "$jar_contents"
   grep -Fxq 'me/lucko/bytesocks/client/BytesocksClient.class' "$jar_contents" || {
-    echo "[e2e] pinned bytesocks artifact is missing BytesocksClient.class" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks артефакт является отсутствующий BytesocksClient.класс" >&2; return 1;
   }
   grep -Fxq 'me/lucko/bytesocks/client/BytesocksClientImpl.class' "$jar_contents" || {
-    echo "[e2e] pinned bytesocks artifact is missing BytesocksClientImpl.class" >&2; return 1;
+    echo "[e2e] закреплённый bytesocks артефакт является отсутствующий BytesocksClientImpl.класс" >&2; return 1;
   }
   rm -f "$jar_contents"
 
-  # Gradle resolves a timestamped Maven snapshot through the base SNAPSHOT
-  # directory while requesting the timestamped POM/JAR names. Reconstruct only
-  # that isolated build dependency; do not publish it or claim it is the
-  # cryptographically verified historical artifact.
+  # Gradle разрешает метка времени Maven снимок через основа SNAPSHOT
+  # каталог пока запрос метка времени POM/JAR имена. Reconstruct только
+  # тот изолированный сборка зависимость; делать не публикация это или захватывать это является 
+  # cryptographically проверен исторический артефакт.
   maven_dir="$maven_repo/me/lucko/bytesocks-java-client/$BYTESOCKS_BASE_VERSION"
   mkdir -p "$maven_dir"
   installed_jar="$maven_dir/bytesocks-java-client-${BYTESOCKS_MAVEN_VERSION}.jar"
@@ -315,12 +315,12 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] materialize pinned spark-paper %s from %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
+  printf '[e2e] материализовать закреплённый spark-Paper %s из %s\n' "$SPARK_MAVEN_VERSION" "$SPARK_SOURCE_COMMIT"
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$SPARK_SOURCE_REPOSITORY"
-  # Fetch full ancestry for the exact commit so spark's own git-describe based
-  # versioning can deterministically reproduce patch version 105.
+  # Fetch полный ancestry для точный фиксация так spark's собственный git-описывать based
+  # версия может deterministically reproduce patch версия 105.
   git -C "$source_dir" fetch --quiet --no-tags origin "$SPARK_SOURCE_COMMIT"
   git -C "$source_dir" fetch --quiet origin "refs/tags/$SPARK_SOURCE_TAG:refs/tags/$SPARK_SOURCE_TAG"
   git -C "$source_dir" checkout --quiet --detach "$SPARK_SOURCE_COMMIT"
@@ -331,7 +331,7 @@ GRADLE
   [[ "$patch_count" == "$SPARK_PATCH_VERSION" ]] || { echo "[e2e] spark patch version mismatch: $patch_count" >&2; return 1; }
 
   grep -Fq "me.lucko:bytesocks-java-client:$BYTESOCKS_MAVEN_VERSION" "$source_dir/spark-common/build.gradle" || {
-    echo "[e2e] pinned spark source no longer requires expected bytesocks snapshot" >&2; return 1;
+    echo "[e2e] закреплённый spark исходник нет дольше требует ожидаемый bytesocks снимок" >&2; return 1;
   }
 
   (
@@ -401,7 +401,7 @@ gradle.beforeProject { project ->
 }
 GRADLE
 
-  printf '[e2e] materialize pinned Folia %s runtime from %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
+  printf '[e2e] материализовать закреплённый Folia %s среда выполнения из %s\n' "$FOLIA_MINECRAFT_VERSION" "$FOLIA_SOURCE_COMMIT"
   rm -rf "$source_dir"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$FOLIA_SOURCE_REPOSITORY"
@@ -414,9 +414,9 @@ GRADLE
   [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] Folia source targets Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
 
   (
-    # paperweight creates nested Git repositories while applying Paper/Folia patches.
-    # Export identity through the process environment so every nested git process
-    # inherits it without mutating the runner's global Git configuration.
+    # paperweight создаёт вложенный Git репозиторий пока применить Paper/Folia patches.
+    # Экспорт идентичность через процесс окружение так каждый вложенный git процесс
+    # inherits это без изменяющий runner's глобальный Git конфигурация.
     export GIT_AUTHOR_NAME="NeverLauncher E2E"
     export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"
     export GIT_COMMITTER_NAME="NeverLauncher E2E"
@@ -427,13 +427,13 @@ GRADLE
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" createMojmapPaperclipJar
   )
 
-  # createMojmapPaperclipJar is a root-project paperweight task. Its outputZip
-  # is rooted at the Folia checkout's build/libs directory, not Folia-Server/build/libs.
-  # Keep discovery strict so a stale/unrelated JAR cannot make the runtime gate pass.
+  # createMojmapPaperclipJar является корень-проект paperweight task. Его outputZip
+  # является корень в Folia checkout's build/libs каталог, не Folia-Server/build/libs.
+  # Сохранять обнаружение строгий так stale/unrelated JAR не может создавать среда выполнения контроль успешно.
   mapfile -t candidates < <(find "$source_dir/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
   if (( ${#candidates[@]} != 1 )); then
-    echo "[e2e] expected exactly one Folia paperclip JAR, found ${#candidates[@]}" >&2
-    printf '[e2e] Folia build candidate: %s\n' "${candidates[@]:-<none>}" >&2
+    echo "[e2e] ожидаемый точно один Folia paperclip JAR, found ${#candidates[@]}" >&2
+    printf '[e2e] Folia сборка кандидат: %s\n' "${candidates[@]:-<none>}" >&2
     return 1
   fi
   build_jar="${candidates[0]}"
@@ -453,7 +453,7 @@ GRADLE
   rm -rf "$source_dir" "$build_maven_repo" "$init_script"
 }
 
-printf '[e2e] build real ServerBridge artifacts\n'
+printf '[e2e] сборка реальный ServerBridge артефакты\n'
 bash "$ROOT/scripts/build/bridge-plugins.sh"
 BRIDGE_ALLOWLIST_JSON="$(tr -d '\r\n' < "$ROOT/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json")"
 write_env_file
@@ -471,7 +471,7 @@ if [[ "$MODE" == "full" ]]; then
   materialize_pinned_folia_runtime
 fi
 
-printf '[e2e] start PostgreSQL and apply production migrations explicitly\n'
+printf '[e2e] запуск PostgreSQL и применить рабочий миграция явно\n'
 compose up -d postgres
 wait_healthy postgres
 (
@@ -480,18 +480,18 @@ wait_healthy postgres
 )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN"
 
-printf '[e2e] start production-configured API with auto-migrate disabled\n'
+printf '[e2e] запуск рабочий-настраивать API с автоматический-мигрировать отключённый\n'
 compose up -d --build neverlauncher-api
 wait_http "$API/health"
 
-printf '[e2e] one-time bootstrap and canonical /api/v1 login\n'
+printf '[e2e] одноразовый инициализировать и канонический /api/v1 вход\n'
 curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"E2E Owner\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"github-actions\"}" \
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
 LOGIN="$(curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
 ACCESS_TOKEN="$(jq -er '.token' <<<"$LOGIN")"
 
-printf '[e2e] bind canonical launcher session to a real Ed25519 trusted-device key for 0.12.7 gameplay trust\n'
+printf '[e2e] привязывать канонический лаунчер сессия к реальный Ed25519 доверенное устройство ключ для 0.12.7 игровой доверие\n'
 DEVICE_KEY="$RUNTIME_DIR/device-trust-ed25519.pem"
 DEVICE_MESSAGE="$RUNTIME_DIR/device-trust-message.bin"
 DEVICE_SIGNATURE="$RUNTIME_DIR/device-trust-signature.bin"
@@ -510,7 +510,7 @@ DEVICE_COMPLETE="$(jq -cn \
   '{challengeId:$challengeId,deviceId:$deviceId,challenge:$challenge,publicKey:$publicKey,signature:$signature}')"
 ACCESS_TOKEN="$(json_post "$API/api/v1/auth/devices/register/complete" "$ACCESS_TOKEN" "$DEVICE_COMPLETE" | jq -er '.data.accessToken')"
 
-printf '[e2e] register real WebAuthn P-256 passkey for fresh release-publish step-up\n'
+printf '[e2e] регистрировать реальный WebAuthn P-256 ключ доступа для актуальный релиз-публикация step-up\n'
 PASSKEY_STATE="$RUNTIME_DIR/publish-passkey-state.json"
 PASSKEY_KEY="$RUNTIME_DIR/publish-passkey-p256.pem"
 PASSKEY_BEGIN="$(json_post "$API/api/v1/auth/passkeys/register/begin" "$ACCESS_TOKEN" '{}')"
@@ -591,11 +591,11 @@ if [[ "$MODE" == "full" ]]; then
 fi
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] start core Paper + Velocity runtimes; auxiliary bridge runtimes are certified sequentially to keep CI memory bounded\n'
+  printf '[e2e] запуск ядро Paper + Velocity среда выполнения; auxiliary мост среда выполнения являются сертифицированный sequentially к сохранять CI память ограниченный\n'
   compose up -d velocity paper
   SERVICES=(velocity paper)
 else
-  printf '[e2e] compatibility mode: start real Paper 1.21.1 only\n'
+  printf '[e2e] совместимость режим: запуск реальный Paper 1.21.1 только\n'
   compose up -d paper
   SERVICES=(paper)
 fi
@@ -610,7 +610,7 @@ for service in "${SERVICES[@]}"; do
 done
 
 CLIENT_PACKAGE="$RUNTIME_DIR/client-package.json"
-printf '[e2e] materialize real Minecraft %s / %s client\n' "$MINECRAFT_VERSION" "$LOADER"
+printf '[e2e] материализовать реальный Minecraft %s / %s клиент\n' "$MINECRAFT_VERSION" "$LOADER"
 PACKAGE_ARGS=(
   --minecraft "$MINECRAFT_VERSION"
   --client-dir "$RUNTIME_DIR/materialized-client"
@@ -684,16 +684,16 @@ else
   [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] loader version was not resolved" >&2; exit 1; }
   case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] mutable loader selector leaked into release" >&2; exit 1 ;; esac
 
-  # 0.17.8: certification is no longer client-only. Start a clean dedicated
-  # server with the exact immutable loader version resolved above and require
-  # the already materialized loader client to complete a real network join.
+  # 0.17.8: сертификация является нет дольше клиент-только. Запуск чистый выделенный
+  # сервер с точный неизменяемый загрузчик версия разрешённый выше и требовать
+  # уже материализовать загрузчик клиент к полный реальный сеть подключение.
   LOADER_NATIVE_CLIENT_PROFILE_ID="$(jq -er --arg loader "$LOADER" '.[ $loader ].profileId' "$CLIENT_PACKAGE")"
   export NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION="$RESOLVED_LOADER_VERSION"
   export NEVERLAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID="$LOADER_NATIVE_CLIENT_PROFILE_ID"
   bash "$ROOT/e2e/scripts/run-loader-native-e2e.sh"
 fi
 
-printf '[e2e] upload the full real Minecraft package through canonical /api/v1 and publish signed immutable release\n'
+printf '[e2e] загрузка полный реальный Minecraft пакет через канонический /api/v1 и публикация подписанный неизменяемый релиз\n'
 python3 "$ROOT/e2e/scripts/publish-client-package.py" \
   --api "$API" \
   --token "$ACCESS_TOKEN" \
@@ -710,7 +710,7 @@ jq -e --arg key "$PINNED_PUBLIC_KEY" --arg version "$RELEASE_VERSION" --arg mc "
   '.version == $version and .minecraft.version == $mc and .minecraft.loader == $loader and ((($loader == "vanilla") and ((.minecraft.loaderVersion // "") == "")) or (($loader != "vanilla") and .minecraft.loaderVersion == $resolved)) and .runtime.launch.classpathStrategy == "compatibility" and .signature.algorithm == "Ed25519" and .signature.publicKey == $key and (.signature.signature|length == 128)' \
   "$RUNTIME_DIR/manifest.json" >/dev/null
 
-printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> actual Minecraft client launch\n'
+printf '[e2e] NeverRuntime закреплённый Ed25519 проверять -> чистый синхронизация из Серверная часть -> фактический Minecraft клиент запускать\n'
 (
   cd "$ROOT"
   cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- verify \
@@ -722,10 +722,10 @@ printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> a
 )
 jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/runtime-verify.json" >/dev/null
 jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 and ([.files[] | select(.status != "ok")] | length) == 0' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
-# A pristine Mojang client opens first-run accessibility and multiplayer warning
-# screens before Quick Play is allowed to connect. This is user-state, not a
-# product/security bypass: seed only the two acknowledged first-run choices so
-# the real client can exercise --quickPlayMultiplayer unattended under Xvfb.
+# pristine Mojang клиент открывает первый запуск accessibility и multiplayer предупреждение
+# screens до Quick Play является разрешён к подключение. Этот является пользователь-состояние, не 
+# product/security обход: начальное значение только два подтверждённый первый запуск choices так
+# реальный клиент может exercise --quickPlayMultiplayer unattended под Xvfb.
 cat > "$RUNTIME_DIR/client/options.txt" <<'OPTIONS'
 onboardAccessibility:false
 skipMultiplayerWarning:true
@@ -733,7 +733,7 @@ joinedFirstServer:true
 pauseOnLostFocus:false
 OPTIONS
 
-printf '[e2e] establish hardware-attested Guard-bound Minecraft session for integrity-enforced joins\n'
+printf '[e2e] establish оборудование-attested Защита-привязанный Minecraft сессия для целостность-применять подключается\n'
 HW_LOGIN="$(json_post "$API/api/v1/auth/login" '' "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email:$email,password:$password,deviceId:"minecraft-compat-guard"}')")"
 HW_ACCESS_PRE="$(jq -er '.data.tokens.accessToken' <<<"$HW_LOGIN")"
 HW_USER_ID="$(jq -er '.data.session.userId' <<<"$HW_LOGIN")"
@@ -781,15 +781,15 @@ MC_SESSION="$(json_post "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$
 MINECRAFT_ACCESS_TOKEN="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
 PLAYER_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
 jq -e --arg v "$VERSION" --arg gh "$GUARD_SHA" --arg lh "$LAUNCHER_SHA" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
-# All subsequent joins/invalidation/topology calls must use the same hardware-
-# attested NeverLauncher session that owns the integrity-bound Minecraft token.
+# Все subsequent joins/invalidation/topology вызов должен использовать одинаковый hardware-
+# attested NeverLauncher сессия тот владеет целостность-привязанный Minecraft токен.
 ACCESS_TOKEN="$HW_ACCESS_ATTESTED"
 build_join_body() {
   local server_id="$1"
   jq -cn --arg username "$PLAYER_USERNAME" --arg server "$server_id" --arg profile "$PROFILE_ID" --arg token "$MINECRAFT_ACCESS_TOKEN" '{username:$username,serverId:$server,projectId:"e2e-project",profileId:$profile,channel:"stable",minecraftAccessToken:$token}'
 }
 
-printf '[e2e] create real launcher session and connect the actual Minecraft client to Paper 1.21.1\n'
+printf '[e2e] создавать реальный лаунчер сессия и подключение фактический Minecraft клиент к Paper 1.21.1\n'
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_")) and .data.join.issuedIdentityEpoch >= 1 and (.data.join.issuedKeyFingerprint | length) == 64' "$RUNTIME_DIR/join-paper-real-client.json" >/dev/null
 validate_join() {
@@ -811,8 +811,8 @@ consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_
 redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
 IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
 [[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
-# The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
-# the actual Minecraft connection; the server plugin must be the only consumer.
+# протокол probe выше использованный его одноразовый билет. Выдача актуальный билет для
+# фактический Minecraft соединение; сервер плагин должен быть только consumer.
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_"))' "$RUNTIME_DIR/join-paper-real-client-fresh.json" >/dev/null
 
@@ -835,14 +835,14 @@ jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minec
 wait_log paper "neverlauncher.join.allowed username=$PLAYER_USERNAME"
 wait_log paper "$PLAYER_USERNAME joined the game"
 
-printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
+printf '[e2e] отзыв лаунчер сессия и проверять subsequent подключается являются запрещён\n'
 json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
 wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
 
 if [[ "$MODE" == "full" ]]; then
-  printf '[e2e] verify zero-patch proxy -> backend one-time handoff and runtime-learned topology\n'
+  printf '[e2e] проверять без патчей прокси -> серверная часть одноразовый передача и среда выполнения-learned топология\n'
   json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body velocity-e2e-p3)" > "$RUNTIME_DIR/join-velocity-handoff-source.json"
   validate_join velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" allow
   handoff_body="$(jq -cn --arg username "$PLAYER_USERNAME" --arg target "paper-e2e-p3" '{protocolVersion:2,username:$username,targetServer:$target}')"
@@ -858,14 +858,14 @@ if [[ "$MODE" == "full" ]]; then
   curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/topology" > "$RUNTIME_DIR/serverbridge-topology.json"
   jq -e '.data.sourceOfTruth == "postgresql" and .data.mode == "runtime-learned-zero-patch" and ([.data.items[] | select(.sourceNodeId == "velocity-e2e-p3" and .targetNodeId == "paper-e2e-p3")] | length) == 1' "$RUNTIME_DIR/serverbridge-topology.json" >/dev/null
 
-  printf '[e2e] retain protocol-level allow/revoke coverage for Velocity and all server bridges\n'
+  printf '[e2e] сохранять протокол-уровень allow/revoke покрытие для Velocity и все сервер мост\n'
   flow_for_server() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5" join_body revoke_body
     local -a allow_probe_mode=() deny_probe_mode=()
     case "$service" in
       forge)
-        # Forge enforces NeverLauncher in CONFIGURATION. Complete LOGIN
-        # through Login Acknowledged for both allow and deny certification.
+        # Forge применяет NeverLauncher в CONFIGURATION. Полный LOGIN
+        # через Вход Подтверждённый для оба разрешать и запрещать сертификация.
         allow_probe_mode=(
           --enter-configuration
           --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
@@ -873,13 +873,13 @@ if [[ "$MODE" == "full" ]]; then
         deny_probe_mode=("${allow_probe_mode[@]}")
         ;;
       neoforge)
-        # NeoForge 1.21.1 posts NeverLauncher through RegisterConfigurationTasksEvent.
-        # After Login Acknowledged its vanilla-client prelude waits for Pong(0),
-        # then SynchronizeRegistriesTask waits for Select Known Packs. Drive both
-        # protocol-native responses so the server-only NeverLauncher task becomes
-        # current without requiring a NeoForge client mod. The revoked path may
-        # disconnect at any earlier fail-closed stage; the mandatory deny marker
-        # below remains the authoritative assertion.
+        # NeoForge 1.21.1 posts NeverLauncher через RegisterConfigurationTasksEvent.
+        # После Вход Подтверждённый его Vanilla-клиент prelude waits для Pong(0),
+        # затем SynchronizeRegistriesTask waits для Select Known Packs. Drive оба
+        # протокол-нативный ответы так сервер-только NeverLauncher task становится
+        # текущий без требовать NeoForge клиент mod. отозванный путь может
+        # отключаться в любой earlier отказ с блокировкой подготавливать; обязательный запрещать маркер
+        # ниже остаётся авторитетный утверждение.
         allow_probe_mode=(
           --enter-configuration
           --drive-neoforge-configuration
@@ -903,16 +903,16 @@ if [[ "$MODE" == "full" ]]; then
     validate_join "$id" "$key" "$plugin_sha" deny
     case "$service" in
       velocity|bungeecord|waterfall)
-        # Proxy runtimes enforce an IP-level reconnect throttle before their
-        # PreLogin hooks. Keep that protection enabled and wait out the
-        # production default window so the deny probe reaches NeverLauncher.
+        # Прокси среда выполнения применять IP-уровень переподключение throttle до их
+        # PreLogin хуки. Сохранять тот защита включённый и wait из 
+        # рабочий по умолчанию окно так запрещать probe reaches NeverLauncher.
         sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
       spigot|paper|purpur|folia)
-        # Bukkit/Paper-family runtimes apply their own connection-throttle
-        # before AsyncPlayerPreLoginEvent. Preserve that protection and wait
-        # out the production default window so the revoked-session probe
-        # reaches the NeverLauncher deny handler instead of Bukkit's throttle.
+        # Bukkit/Paper-family среда выполнения применить их собственный соединение-throttle
+        # до AsyncPlayerPreLoginEvent. Preserve тот защита и wait
+        # из рабочий по умолчанию окно так отозванный-сессия probe
+        # reaches NeverLauncher запрещать handler вместо этого Bukkit's throttle.
         sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
@@ -923,7 +923,7 @@ if [[ "$MODE" == "full" ]]; then
 
   certify_aux_bridge() {
     local id="$1" key="$2" plugin_sha="$3" service="$4" port="$5"
-    printf '[e2e] certify %s runtime in bounded-memory isolation\n' "$service"
+    printf '[e2e] certify %s среда выполнения в ограниченный-память изоляция\n' "$service"
     compose up -d "$service"
     if [[ "$service" == "paper" ]]; then
       wait_paper_healthy_with_bootstrap_recovery

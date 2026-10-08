@@ -25,12 +25,12 @@ func normalizeUpdateScope02011(scope, scopeID string) (string, string, error) {
 		scope = "global"
 	}
 	if scope != "global" && scope != "project" {
-		return "", "", errors.New("scope must be global or project")
+		return "", "", errors.New("область должен быть глобальный или проект")
 	}
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("project scope requires scopeId")
+		return "", "", errors.New("область проекта требует scopeId")
 	}
 	return scope, scopeID, nil
 }
@@ -62,10 +62,10 @@ func (r *MemoryRepository) SetExtensionUpdatePin(ctx context.Context, p model.Ex
 	p.ExtensionID = strings.ToLower(strings.TrimSpace(p.ExtensionID))
 	p.Version = strings.TrimSpace(p.Version)
 	if !extensionID0201.MatchString(p.ExtensionID) || !extensionSemver0201.MatchString(p.Version) {
-		return model.ExtensionUpdatePin{}, errors.New("invalid extension update pin")
+		return model.ExtensionUpdatePin{}, errors.New("недопустимый расширение обновление закреплять")
 	}
 	if _, err := r.GetExtensionRegistryVersion(context.Background(), p.ExtensionID, p.Version); err != nil {
-		return model.ExtensionUpdatePin{}, fmt.Errorf("pin target must be a published registry version: %w", err)
+		return model.ExtensionUpdatePin{}, fmt.Errorf("закреплять цель должен быть опубликованный реестр версия: %w", err)
 	}
 	now := time.Now().UTC()
 	r.extensionMu.Lock()
@@ -107,7 +107,7 @@ func (r *MemoryRepository) AcquireExtensionUpdateLease(ctx context.Context, scop
 	_ = ctx
 	owner = strings.TrimSpace(owner)
 	if owner == "" || ttl <= 0 {
-		return false, errors.New("owner and positive ttl are required")
+		return false, errors.New("владелец и positive ttl являются обязательный")
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -139,7 +139,7 @@ func (r *MemoryRepository) ReleaseExtensionUpdateLease(ctx context.Context, scop
 func (r *MemoryRepository) SaveExtensionUpdateTransaction(ctx context.Context, tx model.ExtensionUpdateTransaction) (model.ExtensionUpdateTransaction, error) {
 	_ = ctx
 	if strings.TrimSpace(tx.ID) == "" {
-		return tx, errors.New("transaction id required")
+		return tx, errors.New("транзакция ID обязательный")
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -217,11 +217,11 @@ func (r *SQLRepository) SetExtensionUpdatePin(ctx context.Context, p model.Exten
 	p.ExtensionID = strings.ToLower(strings.TrimSpace(p.ExtensionID))
 	p.Version = strings.TrimSpace(p.Version)
 	if !extensionID0201.MatchString(p.ExtensionID) || !extensionSemver0201.MatchString(p.Version) {
-		return p, errors.New("invalid extension update pin")
+		return p, errors.New("недопустимый расширение обновление закреплять")
 	}
 	err = r.db.QueryRowContext(ctx, `INSERT INTO extension_update_pins(extension_id,scope,scope_id,version) SELECT $1,$2,$3,$4 WHERE EXISTS(SELECT 1 FROM extension_registry_versions WHERE extension_id=$1 AND version=$4 AND yanked_at IS NULL) ON CONFLICT(extension_id,scope,scope_id) DO UPDATE SET version=EXCLUDED.version,updated_at=now() RETURNING created_at,updated_at`, p.ExtensionID, p.Scope, p.ScopeID, p.Version).Scan(&p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return p, fmt.Errorf("%w: pin target registry version unavailable", ErrNotFound)
+		return p, fmt.Errorf("%w: закреплять цель реестр версия недоступный", ErrNotFound)
 	}
 	return p, err
 }
@@ -253,7 +253,7 @@ func (r *SQLRepository) AcquireExtensionUpdateLease(ctx context.Context, scope, 
 	}
 	owner = strings.TrimSpace(owner)
 	if owner == "" || ttl <= 0 {
-		return false, errors.New("owner and positive ttl required")
+		return false, errors.New("владелец и positive ttl обязательный")
 	}
 	var got bool
 	err = r.db.QueryRowContext(ctx, `INSERT INTO extension_update_leases(scope,scope_id,owner,expires_at) VALUES($1,$2,$3,now()+$4::interval) ON CONFLICT(scope,scope_id) DO UPDATE SET owner=EXCLUDED.owner,expires_at=EXCLUDED.expires_at WHERE extension_update_leases.expires_at<=now() OR extension_update_leases.owner=EXCLUDED.owner RETURNING true`, scope, scopeID, owner, fmt.Sprintf("%f seconds", ttl.Seconds())).Scan(&got)

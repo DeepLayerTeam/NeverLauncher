@@ -19,10 +19,10 @@ const (
 	OutboxStatusDead      = "dead"
 )
 
-// DurableJob is the persisted unit of work used for operations whose security
-// or correctness must survive process restart. The actor/action/resource tuple
-// is intentionally stored so authorization can be re-evaluated at execution
-// time rather than inherited from the request that created the job.
+// DurableJob является сохранённый модульный работа используется для эксплуатация чей безопасность
+// или корректность должен переживать процесс перезапуск. actor/action/resource tuple
+// является намеренно сохранённый так авторизация может быть re-оцениваются в выполнение
+// время вместо чем inherited из запрос тот создан задача.
 type DurableJob struct {
 	ID             string          `json:"id"`
 	Kind           string          `json:"kind"`
@@ -62,9 +62,9 @@ type DurableJobAttempt struct {
 	Error      string    `json:"error,omitempty"`
 }
 
-// DurableScopeLease is a database-backed distributed lease. FencingToken is
-// monotonically increased for every successful acquisition and is verified by
-// irreversible operations before commit.
+// DurableScopeLease является база данных-основанный распределённый аренда. FencingToken является
+// монотонно increased для каждый успешный acquisition и является проверен через
+// необратимый эксплуатация до фиксация.
 type DurableScopeLease struct {
 	ScopeKey     string    `json:"scopeKey"`
 	Owner        string    `json:"owner"`
@@ -74,8 +74,8 @@ type DurableScopeLease struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-// DurableOutboxEvent is written in the same transaction as the state change it
-// describes. Delivery is retried independently and is idempotent.
+// DurableOutboxEvent является записан в одинаковый транзакция как состояние изменять это
+// описывает. Доставка является retried независимо и является идемпотентный.
 type DurableOutboxEvent struct {
 	ID             string          `json:"id"`
 	EventType      string          `json:"eventType"`

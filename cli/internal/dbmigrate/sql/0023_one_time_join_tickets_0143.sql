@@ -1,12 +1,12 @@
--- NeverLauncher 0.14.3 — One-Time Join Tickets.
+-- NeverLauncher 0.14.3 — Одноразовый Подключение Билеты.
 --
--- ServerBridge tickets are now bound to the exact cryptographic node identity
--- epoch that existed at issue time. Redemption stores the already-authenticated
--- Ed25519 request nonce proof and succeeds through a single conditional UPDATE.
--- Standard Yggdrasil /join -> /hasJoined authorizations become consume-once too.
+-- ServerBridge билеты являются теперь привязанный к точный криптографический узел идентичность
+-- эпоха тот existed в выдача время. Использование хранит уже-аутентифицировать
+-- Ed25519 запрос одноразовое значение доказательство и succeeds через единый conditional UPDATE.
+-- Standard Yggdrasil /подключение -> /hasJoined авторизация становиться одноразовое использование слишком.
 
--- 0.14.2 tickets did not persist an issuance identity binding. They are short
--- lived, so fail closed across the upgrade instead of guessing the old binding.
+-- 0.14.2 билеты сделал не сохранять выдача идентичность привязка. Они являются short
+-- lived, так отказ с блокировкой через обновление вместо этого guessing старый привязка.
 UPDATE server_bridge_join_tickets_v2
 SET status='invalidated', invalidated_at=now()
 WHERE status='active';
@@ -58,9 +58,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_join_v2_redemption_nonce_0143
     ON server_bridge_join_tickets_v2(server_id,redeemed_nonce_hash)
     WHERE ticket_version=2 AND status='consumed';
 
--- minecraft_joins is an ephemeral 120-second compatibility authorization table.
--- Existing rows cannot be proven one-time because older /hasJoined only read
--- them, therefore discard them at this security boundary and start clean.
+-- Minecraft_подключается является временный 120-второй совместимость авторизация таблица.
+-- Существующий строки не может быть proven одноразовый потому что старый /hasJoined только чтение
+-- их, поэтому discard их в этот граница безопасности и запуск чистый.
 DELETE FROM minecraft_joins;
 
 ALTER TABLE minecraft_joins

@@ -1,6 +1,6 @@
--- NeverLauncher 0.14.1 — ServerBridge Protocol v2 + PostgreSQL source of truth.
--- ServerBridge state is normalized and durable. Join authorizations are one-time
--- tickets: exactly one validator may atomically consume an active, unexpired row.
+-- NeverLauncher 0.14.1 — ServerBridge Протокол v2 + PostgreSQL источник истины.
+-- ServerBridge состояние является нормализован и долговременный. Подключение авторизация являются одноразовый
+-- билеты: точно один validator может атомарно использовать активный, unexpired строка.
 
 CREATE TABLE IF NOT EXISTS server_bridge_nodes_v2 (
     id TEXT PRIMARY KEY,
@@ -79,11 +79,11 @@ CREATE TABLE IF NOT EXISTS server_bridge_textures_v2 (
     CONSTRAINT server_bridge_textures_v2_model_check CHECK (model IN ('classic','slim'))
 );
 
--- Snapshot ServerBridge credentials before 0.14.1 were intentionally excluded
--- from JSON serialization, so they cannot be reconstructed safely. If legacy
--- metadata exists, migrate node identity only and force an administrator token
--- rotation before the node can authenticate. Active legacy joins are not carried
--- across the upgrade because their bearer hash was likewise not persisted.
+-- Снимок ServerBridge учётные данные до 0.14.1 были намеренно excluded
+-- из JSON serialization, так они не может быть reconstructed безопасно. Если устаревший
+-- метаданные существует, мигрировать узел идентичность только и force администратор токен
+-- ротация до узел может аутентифицировать. Активный устаревший подключается являются не carried
+-- через обновление потому что их bearer хеш был likewise не сохранённый.
 DO $$
 BEGIN
     IF to_regclass('neverlauncher_persistence_snapshots_950') IS NOT NULL THEN

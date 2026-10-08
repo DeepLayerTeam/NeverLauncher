@@ -207,8 +207,8 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Maintenance is opportunistic and never makes an otherwise valid heartbeat fail.
-	// PostgreSQL serializes the actual cleanup across active/active API replicas.
+	// Обслуживание является opportunistic и никогда создаёт иначе действительный сигнал состояния завершаться ошибкой.
+	// PostgreSQL serializes фактический очистка через active/active API реплики.
 	s.State.ServerBridge.maybeMaintain0149()
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -301,9 +301,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "serverbridge_session_correlation_missing", req, join))
 		return
 	}
-	// A direct launcher join must not steal capacity already reserved by proxy
-	// handoffs. A handoff redemption owns its reservation and is revalidated by
-	// ConsumeServerBridgeHandoff against the same target runtime and live route.
+	// прямой лаунчер подключение должен не steal ёмкость уже reserved через прокси
+	// передачи. передача использование владеет его reservation и является revalidated через
+	// ConsumeServerBridgeHandoff против одинаковый цель среда выполнения и актуальный маршрут.
 	if !fromHandoff && req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeatureRoutingV2) && !bridgeProxyKind0148(server.Kind) {
 		if err := s.State.ServerBridge.ensureRoutable0196(server); err != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-routing-denied"), Actor: server.ID, Action: "serverbridge:validate-join:routing-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -327,9 +327,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
 			if fromHandoff {
-				// The proxy already owns an active correlated lifecycle. A permanent
-				// Device Trust failure invalidates that lifecycle across the topology,
-				// not merely this one pending backend handoff.
+				// прокси уже владеет активный correlated жизненный цикл. постоянный
+				// Доверие к устройству ошибка инвалидирует тот жизненный цикл через топология,
+				// не всего лишь этот один ожидающий серверная часть передача.
 				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
@@ -347,8 +347,8 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !minecraftIntegrity.Allowed {
 		if minecraftIntegrityPermanentFailure0135(minecraftIntegrity.Reason) || minecraftIntegrity.Reason == "minecraft_integrity_session_required" || minecraftIntegrity.Reason == "minecraft_integrity_binding_mismatch" {
 			if fromHandoff {
-				// Guard/binding failure on transfer revokes the whole correlated
-				// gameplay lifecycle and fans disconnect to proxy + current backend.
+				// Guard/binding ошибка на переход отзывает whole correlated
+				// игровой жизненный цикл и fans отключаться к прокси + текущий серверная часть.
 				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
@@ -556,10 +556,10 @@ func (b *serverBridgeStore) markHeartbeat940(serverID, serverType, pluginVersion
 	defer b.mu.Unlock()
 	server, ok := b.servers[serverID]
 	if !ok {
-		return fmt.Errorf("server bridge node not found")
+		return fmt.Errorf("сервер мост узел не found")
 	}
 	if server.Status != "active" || strings.ToLower(strings.TrimSpace(serverType)) != strings.ToLower(strings.TrimSpace(server.Kind)) {
-		return fmt.Errorf("server bridge node identity/type is not active")
+		return fmt.Errorf("сервер мост узел identity/type является не активный")
 	}
 	server.ProtocolVersion = protocolVersion
 	server.LastHeartbeatAt = time.Now().UTC()

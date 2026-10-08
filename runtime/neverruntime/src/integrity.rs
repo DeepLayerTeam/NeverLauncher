@@ -124,7 +124,7 @@ fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String>
         guard: &evidence.guard,
         launcher: &evidence.launcher,
     })
-    .map_err(|err| format!("NeverGuard integrity evidence serialization failed: {err}"))
+    .map_err(|err| format!("NeverGuard целостность свидетельство serialization ошибка: {err}"))
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
@@ -165,7 +165,7 @@ pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) ->
         ),
     ] {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("NeverGuard integrity evidence {label} malformed"));
+            return Err(format!("NeverGuard целостность свидетельство {label} повреждённый"));
         }
     }
     if evidence.guard.pid == 0 || evidence.launcher.pid == 0 {
@@ -256,7 +256,7 @@ mod windows_impl {
             };
             if handle.is_null() {
                 return Err(format!(
-                    "NeverGuard cannot open process {pid}: {}",
+                    "NeverGuard не может открытый процесс {pid}: {}",
                     std::io::Error::last_os_error()
                 ));
             }
@@ -282,7 +282,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard process snapshot failed: {}",
+                "NeverGuard процесс снимок ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -299,7 +299,7 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.raw(), &mut entry) } != 0;
         }
         Err(format!(
-            "NeverGuard process {process_id} not found in process snapshot"
+            "NeverGuard процесс {process_id} не found в процесс снимок"
         ))
     }
 
@@ -310,7 +310,7 @@ mod windows_impl {
         let observed_parent_pid = observed_parent_pid(guard_pid)?;
         if observed_parent_pid != expected_parent_pid {
             return Err(format!(
-                "NeverGuard actual parent PID mismatch: expected {expected_parent_pid}, observed {observed_parent_pid}"
+                "NeverGuard фактический родительский PID несоответствие: ожидаемый {expected_parent_pid}, наблюдаемый {observed_parent_pid}"
             ));
         }
 
@@ -344,7 +344,7 @@ mod windows_impl {
         let image_path = process_image_path(process.raw())?;
         let metadata = std::fs::metadata(&image_path).map_err(|err| {
             format!(
-                "NeverGuard cannot stat process image {}: {err}",
+                "NeverGuard не может stat процесс образ {}: {err}",
                 image_path.display()
             )
         })?;
@@ -378,7 +378,7 @@ mod windows_impl {
         };
         if ok == 0 || size == 0 {
             return Err(format!(
-                "NeverGuard QueryFullProcessImageNameW failed: {}",
+                "NeverGuard QueryFullProcessImageNameW ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -396,7 +396,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard GetProcessTimes failed: {}",
+                "NeverGuard GetProcessTimes ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -495,7 +495,7 @@ mod windows_impl {
         };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard module snapshot failed for PID {pid}: {}",
+                "NeverGuard модуль снимок ошибка для PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -507,7 +507,7 @@ mod windows_impl {
         let mut has_entry = unsafe { Module32FirstW(snapshot.raw(), &mut entry) } != 0;
         if !has_entry {
             return Err(format!(
-                "NeverGuard module enumeration failed for PID {pid}: {}",
+                "NeverGuard модуль enumeration ошибка для PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -522,7 +522,7 @@ mod windows_impl {
                 let normalized = normalize_path(&path);
                 let metadata = std::fs::metadata(&path).map_err(|err| {
                     format!(
-                        "NeverGuard cannot stat loaded module {} for PID {pid}: {err}",
+                        "NeverGuard не может stat загружен модуль {} для PID {pid}: {err}",
                         path.display()
                     )
                 })?;
@@ -582,14 +582,14 @@ mod windows_impl {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("NeverGuard cannot open {} for hashing: {err}", path.display()))?;
+            .map_err(|err| format!("NeverGuard не может открытый {} для хеш: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("NeverGuard cannot hash {}: {err}", path.display()))?;
+                .map_err(|err| format!("NeverGuard не может хеш {}: {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -651,7 +651,7 @@ mod windows_impl {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_secs())
-            .map_err(|err| format!("system clock error: {err}"))
+            .map_err(|err| format!("system clock ошибка: {err}"))
     }
 }
 
@@ -662,7 +662,7 @@ pub fn verify_windows_authenticode_trust(path: &std::path::Path) -> Result<(), S
         Ok(())
     } else {
         Err(format!(
-            "Authenticode trust verification failed for {}: {}",
+            "Authenticode доверие проверка ошибка для {}: {}",
             path.display(),
             result.status
         ))
@@ -773,21 +773,21 @@ mod linux_impl {
     const MAX_REPORTED_NON_SYSTEM_MODULES: usize = 64;
 
     fn sha256_file(path: &Path) -> Result<String, String> {
-        let file = File::open(path).map_err(|e| format!("open {} failed: {e}", path.display()))?;
+        let file = File::open(path).map_err(|e| format!("открытый {} ошибка: {e}", path.display()))?;
         let mut reader = BufReader::new(file); let mut hasher = Sha256::new(); let mut buf=[0u8;64*1024];
-        loop { let n=reader.read(&mut buf).map_err(|e| format!("read {} failed: {e}", path.display()))?; if n==0 { break; } hasher.update(&buf[..n]); }
+        loop { let n=reader.read(&mut buf).map_err(|e| format!("чтение {} ошибка: {e}", path.display()))?; if n==0 { break; } hasher.update(&buf[..n]); }
         Ok(hex::encode(hasher.finalize()))
     }
 
     fn proc_status(pid: u32) -> Result<String, String> {
-        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("read /proc/{pid}/status failed: {e}"))
+        std::fs::read_to_string(format!("/proc/{pid}/status")).map_err(|e| format!("чтение /proc/{pid}/состояние ошибка: {e}"))
     }
     fn status_u32(status: &str, key: &str) -> Option<u32> {
         status.lines().find_map(|l| l.strip_prefix(key)).and_then(|v| v.split_whitespace().next()).and_then(|v| v.parse().ok())
     }
     fn observed_parent_pid(pid: u32) -> Result<u32, String> { status_u32(&proc_status(pid)?, "PPid:").ok_or_else(|| "PPid missing in /proc status".into()) }
     fn process_start_ticks(pid: u32) -> Result<u64, String> {
-        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("read /proc/{pid}/stat failed: {e}"))?;
+        let stat=std::fs::read_to_string(format!("/proc/{pid}/stat")).map_err(|e| format!("чтение /proc/{pid}/stat ошибка: {e}"))?;
         let end=stat.rfind(')').ok_or_else(|| "malformed /proc stat".to_string())?;
         let rest=stat.get(end+2..).ok_or_else(|| "malformed /proc stat".to_string())?;
         rest.split_whitespace().nth(19).ok_or_else(|| "starttime missing".to_string())?.parse().map_err(|_| "invalid process starttime".to_string())
@@ -816,7 +816,7 @@ mod linux_impl {
         })
     }
     fn modules(pid: u32, primary: &Path) -> Result<ModuleSetEvidence,String> {
-        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("read maps failed: {e}"))?;
+        let maps=std::fs::read_to_string(format!("/proc/{pid}/maps")).map_err(|e| format!("чтение сопоставляет ошибка: {e}"))?;
         let mut files=BTreeMap::<String,String>::new();
         for line in maps.lines() {
             let Some(raw)=line.split_whitespace().last() else { continue; };
@@ -833,13 +833,13 @@ mod linux_impl {
         Ok(ModuleSetEvidence { module_count: files.len() as u32, module_set_sha256: hex::encode(h.finalize()), non_system_module_names: non_system })
     }
     fn process(pid:u32)->Result<ProcessIntegrityEvidence,String>{
-        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("read exe link failed: {e}"))?;
-        let meta=std::fs::metadata(&image).map_err(|e|format!("metadata {} failed: {e}",image.display()))?;
+        let image=std::fs::read_link(format!("/proc/{pid}/exe")).map_err(|e|format!("чтение EXE связь ошибка: {e}"))?;
+        let meta=std::fs::metadata(&image).map_err(|e|format!("метаданные {} ошибка: {e}",image.display()))?;
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
         Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
     }
     pub fn collect(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{
-        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux NeverGuard родительский несоответствие: ожидаемый {expected_parent_pid}, наблюдаемый {observed}")); }
         let mut id=[0u8;16]; OsRng.fill_bytes(&mut id);
         let collected=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?.as_secs();
         let mut evidence=NeverGuardIntegrityEvidence{ schema:NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
@@ -908,7 +908,7 @@ mod macos_impl {
         let size = std::mem::size_of::<ProcBsdInfo>();
         let read = unsafe { proc_pidinfo(pid as libc::c_int, PROC_PIDTBSDINFO, 0, &mut info as *mut _ as *mut c_void, size as libc::c_int) };
         if read < size as libc::c_int {
-            return Err(format!("macOS proc_pidinfo({pid}) failed: {}", std::io::Error::last_os_error()));
+            return Err(format!("macOS proc_pidinfo({pid}) ошибка: {}", std::io::Error::last_os_error()));
         }
         Ok(info)
     }
@@ -916,7 +916,7 @@ mod macos_impl {
     fn image_path(pid: u32) -> Result<PathBuf, String> {
         let mut buffer = vec![0u8; PROC_PIDPATHINFO_MAXSIZE];
         let len = unsafe { proc_pidpath(pid as libc::c_int, buffer.as_mut_ptr() as *mut c_void, buffer.len() as u32) };
-        if len <= 0 { return Err(format!("macOS proc_pidpath({pid}) failed: {}", std::io::Error::last_os_error())); }
+        if len <= 0 { return Err(format!("macOS proc_pidpath({pid}) ошибка: {}", std::io::Error::last_os_error())); }
         let len = len as usize;
         buffer.truncate(len);
         if buffer.last() == Some(&0) { buffer.pop(); }
@@ -925,12 +925,12 @@ mod macos_impl {
     }
 
     fn sha256_file(path: &Path) -> Result<String, String> {
-        let file = File::open(path).map_err(|err| format!("open {} failed: {err}", path.display()))?;
+        let file = File::open(path).map_err(|err| format!("открытый {} ошибка: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut hasher = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
-            let count = reader.read(&mut buffer).map_err(|err| format!("read {} failed: {err}", path.display()))?;
+            let count = reader.read(&mut buffer).map_err(|err| format!("чтение {} ошибка: {err}", path.display()))?;
             if count == 0 { break; }
             hasher.update(&buffer[..count]);
         }
@@ -950,8 +950,8 @@ mod macos_impl {
     fn process(pid: u32) -> Result<ProcessIntegrityEvidence, String> {
         let info = bsd_info(pid)?;
         let path = image_path(pid)?;
-        let metadata = std::fs::metadata(&path).map_err(|err| format!("metadata {} failed: {err}", path.display()))?;
-        if !metadata.is_file() { return Err(format!("macOS process image {} is not a regular file", path.display())); }
+        let metadata = std::fs::metadata(&path).map_err(|err| format!("метаданные {} ошибка: {err}", path.display()))?;
+        if !metadata.is_file() { return Err(format!("macOS процесс образ {} является не regular файл", path.display())); }
         let image_sha256 = sha256_file(&path)?;
         let modified = metadata.modified().ok().and_then(|value| value.duration_since(UNIX_EPOCH).ok()).map(|value| value.as_millis() as u64).unwrap_or(0);
         let signature = verify_macos_code_signature(&path)?;
@@ -980,7 +980,7 @@ mod macos_impl {
     pub fn collect(expected_parent_pid: u32) -> Result<NeverGuardIntegrityEvidence, String> {
         let guard_pid = std::process::id();
         let observed = bsd_info(guard_pid)?.pbi_ppid;
-        if observed != expected_parent_pid { return Err(format!("macOS NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        if observed != expected_parent_pid { return Err(format!("macOS NeverGuard родительский несоответствие: ожидаемый {expected_parent_pid}, наблюдаемый {observed}")); }
         let mut evidence_id = [0u8; 16];
         OsRng.fill_bytes(&mut evidence_id);
         let collected_at_unix = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|err| err.to_string())?.as_secs();

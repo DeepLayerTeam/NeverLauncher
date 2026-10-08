@@ -55,7 +55,7 @@ func decodeDeviceJSON0121(w http.ResponseWriter, r *http.Request, dst any, limit
 	}
 	var extra any
 	if err := dec.Decode(&extra); err == nil {
-		return errors.New("multiple JSON values")
+		return errors.New("несколько JSON значения")
 	}
 	return nil
 }
@@ -63,11 +63,11 @@ func decodeDeviceJSON0121(w http.ResponseWriter, r *http.Request, dst any, limit
 func normalizeDeviceName0121(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	if v == "" || len(v) > 96 || !utf8.ValidString(v) {
-		return "", errors.New("device name must contain 1-96 UTF-8 characters")
+		return "", errors.New("устройство имя должен contain 1-96 UTF-8 characters")
 	}
 	for _, r := range v {
 		if r < 0x20 || r == 0x7f {
-			return "", errors.New("device name contains control characters")
+			return "", errors.New("устройство имя содержит управление characters")
 		}
 	}
 	return v, nil
@@ -77,7 +77,7 @@ func normalizeDeviceMetadata0121(platform, clientVersion string) (string, string
 	platform = strings.TrimSpace(platform)
 	clientVersion = strings.TrimSpace(clientVersion)
 	if len(platform) > 48 || len(clientVersion) > 96 || !utf8.ValidString(platform) || !utf8.ValidString(clientVersion) {
-		return "", "", errors.New("device platform/clientVersion is too long or invalid UTF-8")
+		return "", "", errors.New("устройство platform/clientVersion является слишком long или недопустимый UTF-8")
 	}
 	return platform, clientVersion, nil
 }
@@ -105,21 +105,21 @@ func normalizeDeviceKeyProperties0123(algorithm, binding, provider string) (stri
 		binding = "software"
 	}
 	if algorithm != "ed25519" && algorithm != "p256" {
-		return "", "", "", errors.New("keyAlgorithm must be ed25519 or p256")
+		return "", "", "", errors.New("keyAlgorithm должен быть ed25519 или p256")
 	}
 	if binding != "software" && binding != "hardware" {
-		return "", "", "", errors.New("keyBinding must be software or hardware")
+		return "", "", "", errors.New("keyBinding должен быть программное обеспечение или оборудование")
 	}
 	if binding == "hardware" {
 		if algorithm != "p256" {
-			return "", "", "", errors.New("hardware-bound identity requires p256")
+			return "", "", "", errors.New("привязанный к оборудованию идентичность требует p256")
 		}
 		if !validHardwareProvider0123(provider) {
-			return "", "", "", errors.New("hardwareProvider is required for hardware-bound identity")
+			return "", "", "", errors.New("hardwareProvider является обязательный для привязанный к оборудованию идентичность")
 		}
 	} else {
 		if algorithm != "ed25519" {
-			return "", "", "", errors.New("software device identity requires ed25519")
+			return "", "", "", errors.New("программное обеспечение устройство идентичность требует ed25519")
 		}
 		provider = ""
 	}
@@ -137,23 +137,23 @@ type decodedDevicePublicKey0123 struct {
 func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey0123, error) {
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
 	if err != nil {
-		return decodedDevicePublicKey0123{}, errors.New("publicKey must be base64url")
+		return decodedDevicePublicKey0123{}, errors.New("publicKey должен быть основа64URL")
 	}
 	out := decodedDevicePublicKey0123{algorithm: algorithm, raw: append([]byte(nil), b...)}
 	switch algorithm {
 	case "ed25519":
 		if len(b) != ed25519.PublicKeySize {
-			return decodedDevicePublicKey0123{}, errors.New("publicKey must be a raw Ed25519 public key")
+			return decodedDevicePublicKey0123{}, errors.New("publicKey должен быть сырой Ed25519 открытый ключ")
 		}
 		out.ed25519Key = ed25519.PublicKey(b)
 	case "p256":
 		x, y := elliptic.Unmarshal(elliptic.P256(), b)
 		if x == nil || y == nil || len(b) != 65 || b[0] != 0x04 {
-			return decodedDevicePublicKey0123{}, errors.New("publicKey must be an uncompressed SEC1 P-256 public key")
+			return decodedDevicePublicKey0123{}, errors.New("publicKey должен быть uncompressed SEC1 P-256 открытый ключ")
 		}
 		out.p256Key = &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
 	default:
-		return decodedDevicePublicKey0123{}, errors.New("unsupported device key algorithm")
+		return decodedDevicePublicKey0123{}, errors.New("неподдерживаемый устройство ключ algorithm")
 	}
 	sum := sha256.Sum256(b)
 	out.fingerprint = hex.EncodeToString(sum[:])
@@ -163,25 +163,25 @@ func decodeDevicePublicKey0123(raw, algorithm string) (decodedDevicePublicKey012
 func verifyDeviceSignature0123(key decodedDevicePublicKey0123, payload, rawSignature string) error {
 	b, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(rawSignature))
 	if err != nil {
-		return errors.New("signature must be base64url")
+		return errors.New("подпись должен быть основа64URL")
 	}
 	switch key.algorithm {
 	case "ed25519":
 		if len(b) != ed25519.SignatureSize || !ed25519.Verify(key.ed25519Key, []byte(payload), b) {
-			return errors.New("device proof signature is invalid")
+			return errors.New("устройство доказательство подпись является недопустимый")
 		}
 	case "p256":
 		if len(b) != 64 {
-			return errors.New("P-256 signature must be raw IEEE P1363 r||s")
+			return errors.New("P-256 подпись должен быть сырой IEEE P1363 r||s")
 		}
 		h := sha256.Sum256([]byte(payload))
 		r := new(big.Int).SetBytes(b[:32])
 		s := new(big.Int).SetBytes(b[32:])
 		if r.Sign() <= 0 || s.Sign() <= 0 || !ecdsa.Verify(key.p256Key, h[:], r, s) {
-			return errors.New("device proof signature is invalid")
+			return errors.New("устройство доказательство подпись является недопустимый")
 		}
 	default:
-		return errors.New("unsupported device key algorithm")
+		return errors.New("неподдерживаемый устройство ключ algorithm")
 	}
 	return nil
 }
@@ -251,9 +251,9 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	// 0.12.8 hardening: a session already bound to a verified device may not
-	// silently enroll a second key. Key continuity must go through rotation
-	// (old-key proof) or recovery (fresh phishing-resistant account proof).
+	// 0.12.8 усиление защиты: сессия уже привязанный к проверен устройство может не
+	// без уведомления регистрировать второй ключ. Ключ continuity должен Go через ротация
+	// (старый-ключ доказательство) или восстановление (актуальный устойчивый к фишингу учётная запись доказательство).
 	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); ok && session.TrustedDeviceID != "" && session.DeviceTrustState == "verified" {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "сессия уже привязана к trusted device; используйте key rotation или key recovery", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
 		return
@@ -315,7 +315,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	// The key algorithm/binding is fixed by the server-side registration challenge.
+	// ключ algorithm/binding является фиксированный через на стороне сервера регистрация запрос.
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, req.DeviceID, "register", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {

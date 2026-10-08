@@ -37,7 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[proxy-family-migration] materialize exact 0.14.4 database through migration 0024\n'
+printf '[прокси-семейство-миграция] материализовать точный 0.14.4 база данных через миграция 0024\n'
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -88,7 +88,7 @@ shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 
 target_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0025_proxy_family_0145'")"
 [[ "$target_sealed" == "true" ]] || { echo "proxy family migration is not sealed: 0025_proxy_family_0145" >&2; exit 1; }
 
-printf '[proxy-family-migration] verify existing Velocity node and all proxy-family kinds\n'
+printf '[прокси-семейство-миграция] проверять существующий Velocity узел и все прокси-семейство тип\n'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT kind FROM server_bridge_nodes_v2 WHERE id='velocity-before-0145'")" == "velocity" ]]
 for kind in velocity bungeecord waterfall; do
   fingerprint="$(printf '%s-0145' "$kind" | sha256sum | awk '{print $1}')"
@@ -113,7 +113,7 @@ INSERT INTO server_bridge_nodes_v2(
 );
 SQL
 then
-  echo '[proxy-family-migration] invalid proxy kind bypassed PostgreSQL constraint' >&2
+  echo '[прокси-семейство-миграция] недопустимый прокси тип обход PostgreSQL ограничение' >&2
   exit 1
 fi
 
@@ -123,4 +123,4 @@ proxy_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_nodes_v2
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" --argjson count "$proxy_count" \
   '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingVelocityPreserved:true,proxyFamilyKindsAccepted:true,invalidKindRejected:true,proxyNodeCount:$count}' \
   > "$RESULT_DIR/proxy-family-migration.json"
-printf '[proxy-family-migration] PASS 0.14.4 -> 0.14.5 Proxy family schema semantics\n'
+printf '[прокси-семейство-миграция] PASS 0.14.4 -> 0.14.5 Прокси семейство схема семантика\n'

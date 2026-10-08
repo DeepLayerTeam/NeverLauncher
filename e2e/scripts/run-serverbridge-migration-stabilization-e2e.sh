@@ -68,4 +68,4 @@ for index in idx_server_bridge_join_consumed_source_01410 idx_server_bridge_node
   [[ "$(psql "$DB_DSN" -Atqc "SELECT to_regclass('public.$index') IS NOT NULL")" == t ]]
 done
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},nodeIdentityPreserved:true,expiredNonceRemoved:true,staleTopologySealed:true,retentionIndexes:true}' > "$RESULT_DIR/serverbridge-migration-stabilization.json"
-printf '[serverbridge-stabilization] PASS 0.14.9 baseline -> current sealed catalog with 0.14.10 stabilization\n'
+printf '[serverbridge-стабилизация] PASS 0.14.9 базовая линия -> текущий запечатанный каталог с 0.14.10 стабилизация\n'

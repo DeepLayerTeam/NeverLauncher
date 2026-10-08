@@ -21,32 +21,32 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 		return verifyArgon2idSystem(secret, encoded), nil
 	case "bcrypt":
 		if !strings.HasPrefix(encoded, "$2a$") && !strings.HasPrefix(encoded, "$2b$") && !strings.HasPrefix(encoded, "$2y$") {
-			return false, errors.New("invalid bcrypt hash prefix")
+			return false, errors.New("недопустимый bcrypt хеш prefix")
 		}
 		cost, err := bcryptCost(encoded)
 		if err != nil {
 			return false, err
 		}
 		if cost < 4 || cost > 16 {
-			return false, fmt.Errorf("bcrypt cost %d is outside NeverLauncher safety range 4..16", cost)
+			return false, fmt.Errorf("bcrypt cost %d является вне NeverLauncher безопасность диапазон 4..16", cost)
 		}
 		return verifyBcryptSystem(secret, encoded), nil
 	case "pbkdf2-sha256":
 		return verifyPBKDF2SHA256(secret, encoded, cfg.PBKDF2MinIterations)
 	case "legacy-sha256":
 		if !cfg.AllowLegacySHA256 {
-			return false, errors.New("legacy SHA-256 verification is disabled")
+			return false, errors.New("устаревший SHA-256 проверка является отключённый")
 		}
 		return verifyLegacySHA256(secret, encoded), nil
 	default:
-		return false, fmt.Errorf("unsupported password algorithm %q", cfg.Algorithm)
+		return false, fmt.Errorf("неподдерживаемый пароль algorithm %q", cfg.Algorithm)
 	}
 }
 
 func consumePasswordWork(secret string, cfg PasswordConfig) {
-	// Unknown identifiers deliberately perform algorithm-appropriate work so a remote
-	// caller cannot trivially distinguish "user missing" from "password wrong" by
-	// comparing password-hash latency. Errors/results are intentionally discarded.
+	// Неизвестный identifiers намеренно perform algorithm-appropriate работа так удалённый
+	// вызывающая сторона не может trivially distinguish "пользователь отсутствующий" из "пароль неверный" через
+	// сравнивать пароль-хеш latency. Errors/results являются намеренно discarded.
 	var encoded string
 	switch cfg.Algorithm {
 	case "argon2id":
@@ -73,10 +73,10 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 func validateArgon2idPHC(encoded string) error {
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
-		return errors.New("invalid argon2id PHC string")
+		return errors.New("недопустимый argon2ID PHC string")
 	}
 	if parts[2] != "v=19" {
-		return fmt.Errorf("unsupported argon2 version %q", parts[2])
+		return fmt.Errorf("неподдерживаемый argon2 версия %q", parts[2])
 	}
 	var memory uint64
 	var iterations uint64
@@ -84,11 +84,11 @@ func validateArgon2idPHC(encoded string) error {
 	for _, parameter := range strings.Split(parts[3], ",") {
 		pair := strings.SplitN(parameter, "=", 2)
 		if len(pair) != 2 {
-			return errors.New("invalid argon2id parameters")
+			return errors.New("недопустимый argon2ID parameters")
 		}
 		value, err := strconv.ParseUint(pair[1], 10, 32)
 		if err != nil || value == 0 {
-			return errors.New("invalid argon2id parameter value")
+			return errors.New("недопустимый argon2ID parameter value")
 		}
 		switch pair[0] {
 		case "m":
@@ -100,18 +100,18 @@ func validateArgon2idPHC(encoded string) error {
 		}
 	}
 	if memory == 0 || iterations == 0 || parallelism == 0 {
-		return errors.New("argon2id parameters m/t/p are required")
+		return errors.New("argon2ID parameters m/t/p являются обязательный")
 	}
 	if memory > 1024*1024 || iterations > 20 || parallelism > 32 {
-		return errors.New("argon2id parameters exceed NeverLauncher safety limits")
+		return errors.New("argon2ID parameters exceed NeverLauncher безопасность ограничения")
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil || len(salt) < 8 {
-		return errors.New("invalid argon2id salt")
+		return errors.New("недопустимый argon2ID salt")
 	}
 	digest, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil || len(digest) < 16 || len(digest) > 128 {
-		return errors.New("invalid argon2id digest")
+		return errors.New("недопустимый argon2ID хеш")
 	}
 	return nil
 }
@@ -119,11 +119,11 @@ func validateArgon2idPHC(encoded string) error {
 func bcryptCost(encoded string) (int, error) {
 	parts := strings.Split(encoded, "$")
 	if len(parts) < 4 {
-		return 0, errors.New("invalid bcrypt hash")
+		return 0, errors.New("недопустимый bcrypt хеш")
 	}
 	cost, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return 0, errors.New("invalid bcrypt cost")
+		return 0, errors.New("недопустимый bcrypt cost")
 	}
 	return cost, nil
 }
@@ -136,47 +136,47 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 	if strings.HasPrefix(encoded, "$pbkdf2-sha256$") {
 		parts := strings.Split(encoded, "$")
 		if len(parts) != 5 {
-			return false, errors.New("invalid pbkdf2-sha256 hash")
+			return false, errors.New("недопустимый pbkdf2-sha256 хеш")
 		}
 		parsed, err := strconv.Atoi(parts[2])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 iteration count")
+			return false, errors.New("недопустимый pbkdf2 iteration счётчик")
 		}
 		iterations = parsed
 		salt, err = decodeBase64Flexible(parts[3])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 salt")
+			return false, errors.New("недопустимый pbkdf2 salt")
 		}
 		expected, err = decodeBase64Flexible(parts[4])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 digest")
+			return false, errors.New("недопустимый pbkdf2 хеш")
 		}
 	} else if strings.HasPrefix(encoded, "pbkdf2_sha256$") {
 		parts := strings.Split(encoded, "$")
 		if len(parts) != 4 {
-			return false, errors.New("invalid Django pbkdf2_sha256 hash")
+			return false, errors.New("недопустимый Django pbkdf2_sha256 хеш")
 		}
 		parsed, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 iteration count")
+			return false, errors.New("недопустимый pbkdf2 iteration счётчик")
 		}
 		iterations = parsed
 		salt = []byte(parts[2])
 		expected, err = decodeBase64Flexible(parts[3])
 		if err != nil {
-			return false, errors.New("invalid pbkdf2 digest")
+			return false, errors.New("недопустимый pbkdf2 хеш")
 		}
 	} else {
-		return false, errors.New("unsupported pbkdf2-sha256 hash format")
+		return false, errors.New("неподдерживаемый pbkdf2-sha256 хеш формат")
 	}
 	if iterations < minIterations {
-		return false, fmt.Errorf("pbkdf2 iteration count %d is below configured minimum %d", iterations, minIterations)
+		return false, fmt.Errorf("pbkdf2 iteration счётчик %d является ниже настраивать minimum %d", iterations, minIterations)
 	}
 	if iterations > 10_000_000 {
-		return false, errors.New("pbkdf2 iteration count exceeds NeverLauncher safety limit")
+		return false, errors.New("pbkdf2 iteration счётчик exceeds NeverLauncher безопасность ограничение")
 	}
 	if len(salt) < 8 || len(expected) < 16 || len(expected) > 128 {
-		return false, errors.New("invalid pbkdf2 salt/digest length")
+		return false, errors.New("недопустимый pbkdf2 salt/digest length")
 	}
 	actual := pbkdf2SHA256([]byte(secret), salt, iterations, len(expected))
 	return subtle.ConstantTimeCompare(actual, expected) == 1, nil

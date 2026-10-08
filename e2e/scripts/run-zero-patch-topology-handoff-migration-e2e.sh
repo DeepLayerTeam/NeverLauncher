@@ -66,4 +66,4 @@ VALUES('proxy-main','survival','survival','topology-project','vanilla','active',
 SQL
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_topology_edges_v2 WHERE source_node_id='proxy-main' AND target_node_id='survival' AND status='active'")" == 1 ]]
 jq -n --arg version "$VERSION" --arg before "$latest_before" --arg after "$latest_after" '{schemaVersion:"1",status:"passed",version:$version,upgrade:{fromMigration:$before,toMigration:$after},existingNodesPreserved:true,topologyTable:true,handoffTable:true}' > "$RESULT_DIR/zero-patch-topology-handoff-migration.json"
-printf '[topology-handoff-migration] PASS 0.14.7 -> 0.14.8 topology/handoff schema semantics\n'
+printf '[топология-передача-миграция] PASS 0.14.7 -> 0.14.8 topology/handoff схема семантика\n'

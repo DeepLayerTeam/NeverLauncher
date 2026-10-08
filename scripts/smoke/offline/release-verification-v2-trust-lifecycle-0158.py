@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 8):
-    raise SystemExit(f"Release Verification v2 gate requires VERSION>=0.15.8, got {VERSION}")
+    raise SystemExit(f"Релиз Проверка v2 контроль требует VERSION>=0.15.8, получил {VERSION}")
 
 
 def read(rel: str) -> str:
@@ -19,7 +19,7 @@ def read(rel: str) -> str:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 v2 = read("cli/cmd/neverlauncher/release_verification_v2.go")
 require(v2, [
@@ -59,4 +59,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Release Verification v2 + trust/key lifecycle gate: OK")
+print(f"NeverLauncher {VERSION} Релиз Проверка v2 + trust/key жизненный цикл контроль: OK")

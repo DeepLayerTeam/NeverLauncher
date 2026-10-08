@@ -147,7 +147,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusConflict, "passkey уже зарегистрирован")
 		return
 	}
-	// Registration itself is a fresh UV ceremony, so the current session is stepped up.
+	// Регистрация сам является актуальный UV процедура, так текущий сессия является stepped up.
 	session, err := s.State.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", time.Now().UTC())
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "сессия больше не активна")
@@ -444,7 +444,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 
 func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string) (map[string]any, error) {
 	if s.State.Passkeys.countByUser(user.ID) == 0 {
-		return nil, errors.New("MFA policy requires passkey but no passkey is registered")
+		return nil, errors.New("MFA политика требует ключ доступа но нет ключ доступа является регистрировать")
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {
@@ -467,10 +467,10 @@ func (s Server) verifyPasskeyAssertion117(input webauthnAssertionJSON117, challe
 		return passkeyCredential117{}, wa.AssertionResult{}, err
 	}
 	if expectedUser != "" && credential.UserID != expectedUser {
-		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("passkey user mismatch")
+		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("ключ доступа пользователь несоответствие")
 	}
 	if len(userHandle) > 0 && !hmac.Equal(userHandle, s.webauthnUserHandle117(credential.UserID)) {
-		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("userHandle mismatch")
+		return passkeyCredential117{}, wa.AssertionResult{}, errors.New("userHandle несоответствие")
 	}
 	result, err := wa.VerifyAssertion(s.webauthnVerifyConfig117(challenge), client, authData, sig, credential.PublicKeyCOSE, credential.SignCount, credential.BackupEligible)
 	return credential, result, err
@@ -509,25 +509,25 @@ func (s Server) passkeyAssertionOptions117(challenge []byte, userID string) map[
 
 func decodeRegistrationCredential117(c webauthnRegistrationJSON117) ([]byte, []byte, []byte, error) {
 	if c.Type != "public-key" {
-		return nil, nil, nil, errors.New("credential.type должен быть public-key")
+		return nil, nil, nil, errors.New("учётные данные.type должен быть публичный-ключ")
 	}
 	raw, err := decodeWebAuthnB64117(firstNonEmpty(c.RawID, c.ID), 2048)
 	if err != nil {
-		return nil, nil, nil, errors.New("rawId invalid")
+		return nil, nil, nil, errors.New("rawId недопустимый")
 	}
 	client, err := decodeWebAuthnB64117(c.Response.ClientDataJSON, 64*1024)
 	if err != nil {
-		return nil, nil, nil, errors.New("clientDataJSON invalid")
+		return nil, nil, nil, errors.New("clientDataJSON недопустимый")
 	}
 	att, err := decodeWebAuthnB64117(c.Response.AttestationObject, 256*1024)
 	if err != nil {
-		return nil, nil, nil, errors.New("attestationObject invalid")
+		return nil, nil, nil, errors.New("attestationObject недопустимый")
 	}
 	return raw, client, att, nil
 }
 func decodeAssertionCredential117(c webauthnAssertionJSON117) ([]byte, []byte, []byte, []byte, []byte, error) {
 	if c.Type != "public-key" {
-		return nil, nil, nil, nil, nil, errors.New("credential.type должен быть public-key")
+		return nil, nil, nil, nil, nil, errors.New("учётные данные.type должен быть публичный-ключ")
 	}
 	raw, err := decodeWebAuthnB64117(firstNonEmpty(c.RawID, c.ID), 2048)
 	if err != nil {
@@ -557,14 +557,14 @@ func decodeAssertionCredential117(c webauthnAssertionJSON117) ([]byte, []byte, [
 func decodeWebAuthnB64117(v string, max int) ([]byte, error) {
 	v = strings.TrimSpace(v)
 	if v == "" {
-		return nil, errors.New("empty base64url")
+		return nil, errors.New("пустой основа64URL")
 	}
 	b, err := base64.RawURLEncoding.DecodeString(v)
 	if err != nil {
 		return nil, err
 	}
 	if len(b) == 0 || len(b) > max {
-		return nil, errors.New("decoded value size invalid")
+		return nil, errors.New("decoded value размер недопустимый")
 	}
 	return b, nil
 }
@@ -577,7 +577,7 @@ func decodeJSONLimited117(r *http.Request, dst any) error {
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
 		if err == nil {
-			return errors.New("multiple JSON values are not allowed")
+			return errors.New("несколько JSON значения являются не разрешён")
 		}
 		return err
 	}

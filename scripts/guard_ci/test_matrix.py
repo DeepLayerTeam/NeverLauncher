@@ -32,7 +32,7 @@ def run(*args: str, ok: bool = True) -> subprocess.CompletedProcess[str]:
     if ok and proc.returncode != 0:
         raise SystemExit(proc.stdout + proc.stderr)
     if not ok and proc.returncode == 0:
-        raise SystemExit("expected command failure")
+        raise SystemExit("ожидаемый команда ошибка")
     return proc
 
 
@@ -100,7 +100,7 @@ def main() -> int:
         run("aggregate", "--targets", str(TARGETS), "--results-root", str(root), "--output-dir", str(out), "--commit", COMMIT, "--run-id", RUN_ID, "--repository", REPOSITORY)
         matrix = json.loads((out / "matrix.json").read_text())
         if matrix.get("status") != "passed" or len(matrix.get("targets", [])) != 3:
-            raise SystemExit("valid cross-platform Guard matrix did not pass")
+            raise SystemExit("действительный кроссплатформенный Защита матрица сделал не успешно")
 
         staged = root / "staged"
         stage_proc = subprocess.run(
@@ -111,7 +111,7 @@ def main() -> int:
             raise SystemExit(stage_proc.stdout + stage_proc.stderr)
         staged_files = [path for path in staged.iterdir() if path.is_file()]
         if len(staged_files) != 15:
-            raise SystemExit(f"expected 15 staged Guard artifacts, got {len(staged_files)}")
+            raise SystemExit(f"ожидаемый 15 подготовленный Защита артефакты, получил {len(staged_files)}")
 
         linux_package = root / "guard-linux-amd64" / f"neverlauncher-desktop-{VERSION}-linux-amd64.zip"
         linux_package.write_bytes(linux_package.read_bytes() + b"tamper")
@@ -120,9 +120,9 @@ def main() -> int:
             cwd=ROOT, text=True, capture_output=True,
         )
         if tampered_stage.returncode == 0:
-            raise SystemExit("tampered certified artifact unexpectedly staged")
+            raise SystemExit("подменённый сертифицированный артефакт unexpectedly подготовленный")
 
-        # Restore the package before exercising metadata tampering.
+        # Восстановление пакет до exercising метаданные подмена.
         write(linux_package, b"package-guard-linux-amd64\n")
         bad_matrix = json.loads((out / "matrix.json").read_text(encoding="utf-8"))
         bad_matrix["targets"][0]["artifacts"]["launcher"]["name"] = "neverlauncher-cli-linux-amd64"
@@ -133,7 +133,7 @@ def main() -> int:
             cwd=ROOT, text=True, capture_output=True,
         )
         if unsafe_stage.returncode == 0:
-            raise SystemExit("non-canonical certified artifact name unexpectedly staged")
+            raise SystemExit("non-канонический сертифицированный артефакт имя unexpectedly подготовленный")
 
         bad = root / "guard-windows-amd64" / "guard-ci-result.json"
         payload = json.loads(bad.read_text())
@@ -145,7 +145,7 @@ def main() -> int:
         payload["checks"]["guardIntegrationTest"] = False
         bad.write_text(json.dumps(payload), encoding="utf-8")
         run("aggregate", "--targets", str(TARGETS), "--results-root", str(root), "--output-dir", str(root / "aggregate-bad"), "--commit", COMMIT, "--run-id", RUN_ID, "--repository", REPOSITORY, ok=False)
-    print("Guard CI matrix tests: OK")
+    print("Защита CI матрица тесты: OK")
     return 0
 
 

@@ -1,18 +1,18 @@
-# NeverLauncher Backend API
+# NeverLauncher Серверная часть API
 
-## ServerBridge HA Control Plane — 0.19.11
+## ServerBridge HA Плоскость управления — 0.19.11
 
-Операции управления надёжно хранятся в PostgreSQL и защищены двумя уровнями fencing: транзакционной row lease (`delivery_sequence`, `lease_owner`, `lease_token`) и краткоживущим ключом владения в Redis. При `NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true` Redis обязателен: при недоступности coordinator запуск и control-запросы завершаются fail-closed. Все API-реплики используют общие PostgreSQL и Redis и уникальный `NEVERLAUNCHER_REPLICA_ID`; ACK/resume state хранится вне процесса API, поэтому Bridge может переподключиться к любой реплике.
+Операции управления надёжно хранятся в PostgreSQL и защищены двумя уровнями ограждение: транзакционной строка аренда (`delivery_sequence`, `lease_owner`, `lease_token`) и краткоживущим ключом владения в Redis. При `NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true` Redis обязателен: при недоступности coordinator запуск и control-запросы завершаются отказ с блокировкой. Все API-реплики используют общие PostgreSQL и Redis и уникальный `NEVERLAUNCHER_REPLICA_ID`; ACK/возобновление состояние хранится вне процесса API, поэтому Мост может переподключиться к любой реплике.
 
-Backend предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
+Серверная часть предоставляет один production-контракт: `/api/v1`. Исторические маршрутизаторы `/api/v2`–`/api/v5` не регистрируются.
 
-### Upgrade 0.14.5 → 0.14.6
+### Обновление 0.14.5 → 0.14.6
 
-Остановите 0.14.5 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0026_fabric_server_bridge_0146`. Обновите release allowlist отдельным `fabricSha256`, зарегистрируйте Fabric node с `kind=fabric`, установите server-only Fabric bridge и Fabric API, затем enroll public Ed25519 key и дождитесь signed heartbeat. Private key не передаётся Backend.
+Остановите 0.14.5 API экземпляры, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что текущий миграция — `0026_fabric_server_bridge_0146`. Обновите релиз список разрешений отдельным `fabricSha256`, зарегистрируйте Fabric узел с `kind=fabric`, установите сервер-только Fabric мост и Fabric API, затем регистрировать публичный Ed25519 ключ и дождитесь подписанный сигнал состояния. Закрытый ключ не передаётся Серверная часть.
 
-### Upgrade 0.14.4 → 0.14.5
+### Обновление 0.14.4 → 0.14.5
 
-Остановите 0.14.4 API instances, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что current migration — `0025_proxy_family_0145`. Обновите release allowlist точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите platform-matched proxy JAR и дождитесь signed heartbeat каждого node. BungeeCord/Waterfall используют отдельные node identities; private Ed25519 keys остаются только на соответствующем proxy.
+Остановите 0.14.4 API экземпляры, примените `nl db migrate apply` и убедитесь через `nl db migrate verify`, что текущий миграция — `0025_proxy_family_0145`. Обновите релиз список разрешений точными SHA-256 `velocity/bungeecord/waterfall/bukkit/spigot/paper/purpur/folia`, установите соответствующий платформе прокси JAR и дождитесь подписанный сигнал состояния каждого узел. BungeeCord/Waterfall используют отдельные узел идентичности; закрытый Ed25519 ключи остаются только на соответствующем прокси.
 
 
 ## Публичные маршруты и установка
@@ -31,33 +31,33 @@ POST /api/v1/install/bootstrap-admin
 POST /api/v1/install/first-project
 ```
 
-## Bukkit family ServerBridge — 0.14.4
+## Bukkit семейство ServerBridge — 0.14.4
 
-Backend 0.14.4 принимает Protocol v2 nodes типов `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Для каждого типа release allowlist хранится отдельно, поэтому SHA-256 JAR одной платформы нельзя использовать как integrity measurement другой. Начиная с policy version `0.14.4`, production startup fail-closed требует все шесть непустых allowlist-массивов.
+Серверная часть 0.14.4 принимает Протокол v2 узлы типов `velocity`, `bukkit`, `spigot`, `paper`, `purpur` и `folia`. Для каждого типа релиз список разрешений хранится отдельно, поэтому SHA-256 JAR одной платформы нельзя использовать как целостность измерение другой. Начиная с политика версия `0.14.4`, рабочий запуск отказ с блокировкой требует все шесть непустых allowlist-массивов.
 
-Migration `0024_bukkit_family_0144` атомарно расширяет PostgreSQL `server_bridge_nodes_v2.kind` constraint и сохраняет существующие node identities, nonces и one-time tickets. `/api/v1/server-bridge/plugins` публикует отдельные artifacts/configs для всей Bukkit family и указывает Folia-safe runtime. Runtime platform mismatch блокируется самим plugin до heartbeat; Backend по-прежнему повторно проверяет Ed25519 identity, artifact measurement и ticket binding при каждом join.
+Миграция `0024_bukkit_family_0144` атомарно расширяет PostgreSQL `server_bridge_nodes_v2.kind` ограничение и сохраняет существующие узел идентичности, одноразовые значения и одноразовый билеты. `/api/v1/server-bridge/plugins` публикует отдельные artifacts/configs для всей Bukkit семейство и указывает Folia-безопасный среда выполнения. Среда выполнения платформа несоответствие блокируется самим плагин до сигнал состояния; Серверная часть по-прежнему повторно проверяет Ed25519 идентичность, артефакт измерение и билет привязка при каждом подключение.
 
-## One-Time Join Tickets — 0.14.3
+## Одноразовый Подключение Билеты — 0.14.3
 
-ServerBridge join authorization в 0.14.3 является реальным одноразовым credential, а не только короткоживущей session row. Backend генерирует 192-bit CSPRNG `jt_...` ticket, в PostgreSQL привязывает его к текущим `identity_epoch` и Ed25519 key fingerprint node и при первом успешном signed validate/has-joined атомарно переводит row из `active` в `consumed`. В consumed state сохраняются identity epoch/fingerprint, SHA-256 уже проверенного single-use node nonce и IP redemption; повторный или параллельный redemption не может пройти тот же conditional `UPDATE`. Rotation node identity также делает старый ticket непригодным.
+ServerBridge подключение авторизация в 0.14.3 является реальным одноразовым учётные данные, а не только короткоживущей сессия строка. Серверная часть генерирует 192-бит CSPRNG `jt_...` билет, в PostgreSQL привязывает его к текущим `identity_epoch` и Ed25519 отпечаток ключа узел и при первом успешном подписанный validate/has-joined атомарно переводит строка из `active` в `consumed`. В использованный состояние сохраняются идентичность epoch/fingerprint, SHA-256 уже проверенного одноразовый узел одноразовое значение и IP использование; повторный или параллельный использование не может пройти тот же conditional `UPDATE`. Ротация узел идентичность также делает старый билет непригодным.
 
-Yggdrasil-compatible `/sessionserver/session/minecraft/join` → `/hasJoined` теперь имеет ту же consume-once семантику: IP/trust/integrity проверки выполняются до consumption, а первый валидный `/hasJoined` атомарно погашает authorization. Migration `0023_one_time_join_tickets_0143` fail-closed инвалидирует старые active ServerBridge tickets и удаляет ephemeral `minecraft_joins` 0.14.2, потому что для них нельзя доказать, что `/hasJoined` ранее не воспроизводился.
+Yggdrasil-compatible `/sessionserver/session/minecraft/join` → `/hasJoined` теперь имеет ту же одноразовое использование семантику: IP/trust/integrity проверки выполняются до consumption, а первый валидный `/hasJoined` атомарно погашает авторизация. Миграция `0023_one_time_join_tickets_0143` отказ с блокировкой инвалидирует старые активный ServerBridge билеты и удаляет временный `minecraft_joins` 0.14.2, потому что для них нельзя доказать, что `/hasJoined` ранее не воспроизводился.
 
-## ServerBridge Cryptographic Node Identities — 0.14.2
+## ServerBridge Криптографический Узел Идентичности — 0.14.2
 
-ServerBridge Protocol v2 использует PostgreSQL source of truth из 0.14.1, но node authentication в 0.14.2 полностью переведён с shared bearer secret на Ed25519. При регистрации/enrollment Backend принимает только raw public key, вычисляет SHA-256 fingerprint и хранит его вместе с `identity_epoch`; private key остаётся в локальном `node-identity.properties` Velocity или Bukkit/Spigot/Paper/Purpur/Folia bridge.
+ServerBridge Протокол v2 использует PostgreSQL источник истины из 0.14.1, но узел аутентификация в 0.14.2 полностью переведён с общий bearer секрет на Ed25519. При регистрации/регистрация Серверная часть принимает только сырой открытый ключ, вычисляет SHA-256 отпечаток и хранит его вместе с `identity_epoch`; закрытый ключ остаётся в локальном `node-identity.properties` Velocity или Bukkit/Spigot/Paper/Purpur/Folia мост.
 
-Heartbeat, validate-join, has-joined и plugin audit подписываются canonical payload `NeverLauncher-ServerBridge-Node-v1` с method, escaped path/query, exact body SHA-256, timestamp и random nonce. Backend проверяет bounded clock skew, Ed25519 signature/fingerprint и атомарно consume-ит nonce в `server_bridge_node_nonces_v2`; replay возвращает `409`. Migration `0022_serverbridge_crypto_node_identities_0142` retire-ит legacy token hashes и требует explicit `rotate-identity` enrollment для существующих 0.14.1 nodes.
+Сигнал состояния, проверять-подключение, имеет-подключение и плагин аудит подписываются канонический полезная нагрузка `NeverLauncher-ServerBridge-Node-v1` с метод, escaped path/query, точный тело SHA-256, метка времени и random одноразовое значение. Серверная часть проверяет ограниченный clock skew, Ed25519 signature/fingerprint и атомарно consume-ит одноразовое значение в `server_bridge_node_nonces_v2`; повторное воспроизведение возвращает `409`. Миграция `0022_serverbridge_crypto_node_identities_0142` retire-ит устаревший токен хеширует и требует явный `rotate-identity` регистрация для существующих 0.14.1 узлы.
 
 ## Авторизация и администрирование
 
-Канонический API реализует login/refresh/logout, отзыв сессий, роли, password/TOTP/recovery-сценарии, CRUD проектов/профилей/каналов, пользователей, аудит, проверку хранилища, публикацию версий и операции с пакетами в `/api/v1/auth/*` и `/api/v1/admin/*`.
+Канонический API реализует login/refresh/logout, отзыв сессий, роли, пароль/TOTP/recovery-сценарии, CRUD проектов/профилей/каналов, пользователей, аудит, проверку хранилища, публикацию версий и операции с пакетами в `/api/v1/auth/*` и `/api/v1/admin/*`.
 
-Начиная с `0.11.1`, при PostgreSQL repository auth state больше не хранится в process-local registry: `auth_sessions`, refresh-token families/tokens, TOTP methods и recovery codes используют PostgreSQL как source of truth. Rotation сохраняет consumed refresh tokens; replay уже использованного token компрометирует всю family и отзывает session. TOTP secrets хранятся зашифрованными в `mfa_methods`, recovery codes — отдельно как hashes. Memory auth backend оставлен только для dev/test режима.
+Начиная с `0.11.1`, при PostgreSQL репозиторий аутентификация состояние больше не хранится в локальный для процесса реестр: `auth_sessions`, токен обновления families/tokens, TOTP методы и восстановление код используют PostgreSQL как источник истины. Ротация сохраняет использованный обновление токены; повторное воспроизведение уже использованного токен компрометирует всю семейство и отзывает сессия. TOTP секреты хранятся зашифрованными в `mfa_methods`, восстановление код — отдельно как хеширует. Память аутентификация серверная часть оставлен только для dev/test режима.
 
-Начиная с `0.11.2`, login проходит через Federation Core: connector подтверждает credentials и возвращает provider identity, затем `(provider, subject)` разрешается через `auth_identities` в канонического Never user, и только после этого создаётся Never session. Встроенный `local` provider реализован через публичный `pkg/authconnector`; `/api/v1/auth/providers` отдаёт runtime registry, а `/api/v1/auth/identities` — связи текущего пользователя. Внешние provider tokens не принимаются как Never access tokens.
+Начиная с `0.11.2`, вход проходит через Федерация Ядро: коннектор подтверждает учётные данные и возвращает провайдер идентичность, затем `(provider, subject)` разрешается через `auth_identities` в канонического Никогда пользователь, и только после этого создаётся Никогда сессия. Встроенный `local` провайдер реализован через публичный `pkg/authconnector`; `/api/v1/auth/providers` отдаёт среда выполнения реестр, а `/api/v1/auth/identities` — связи текущего пользователя. Внешние провайдер токены не принимаются как Никогда доступ токены.
 
-Начиная с `0.11.3`, Federation Core умеет регистрировать реальные SQL providers из `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE`. SQL Connector поддерживает PostgreSQL, MySQL и MariaDB, выполняет только построенные NeverLauncher prepared/bound read-only запросы по валидированному mapping, имеет отдельные connect/query timeout и pool limits, проверяет TLS policy и поддерживает Argon2id, bcrypt, PBKDF2-SHA256 и явно разрешённый legacy SHA-256. При `provisioning.mode=jit` первый успешный вход атомарно создаёт canonical Never user + `auth_identity`; совпадение email с существующим Never user считается конфликтом и не приводит к неявному account linking.
+Начиная с `0.11.3`, Федерация Ядро умеет регистрировать реальные SQL провайдеры из `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE`. SQL Коннектор поддерживает PostgreSQL, MySQL и MariaDB, выполняет только построенные NeverLauncher prepared/bound только для чтения запросы по валидированному сопоставление, имеет отдельные connect/query тайм-аут и pool ограничения, проверяет TLS политика и поддерживает Argon2ID, bcrypt, PBKDF2-SHA256 и явно разрешённый устаревший SHA-256. При `provisioning.mode=jit` первый успешный вход атомарно создаёт канонический Никогда пользователь + `auth_identity`; совпадение электронная почта с существующим Никогда пользователь считается конфликтом и не приводит к неявному учётная запись связывание.
 
 Пример provider-конфигурации:
 
@@ -92,13 +92,13 @@ Heartbeat, validate-join, has-joined и plugin audit подписываются 
 ]
 ```
 
-По умолчанию SQL provider требует TLS с проверкой сертификата. `allowInsecureTls: true` разрешает только зашифрованное соединение без строгой проверки сертификата (`sslmode=require`/эквивалент) и предназначено для контролируемых development/staging окружений; plaintext требует отдельного `requireTls: false`. В production рекомендуется read-only DB account и `dsnEnv`, а не DSN с паролем внутри JSON. `legacy-sha256` принимается только вместе с `password.allowLegacySha256=true`.
+По умолчанию SQL провайдер требует TLS с проверкой сертификата. `allowInsecureTls: true` разрешает только зашифрованное соединение без строгой проверки сертификата (`sslmode=require`/эквивалент) и предназначено для контролируемых development/staging окружений; открытый текст требует отдельного `requireTls: false`. В рабочий рекомендуется только для чтения DB учётная запись и `dsnEnv`, а не DSN с паролем внутри JSON. `legacy-sha256` принимается только вместе с `password.allowLegacySha256=true`.
 
-Начиная с `0.11.4`, Federation Core также регистрирует production HTTP providers из `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE`. Это не webhook и не generic proxy: Connector вызывает только заранее заданные HTTPS endpoints `/authenticate`, `/refresh`, `/resolve`, `/logout`, `/health`, подписывает каждый request HMAC-SHA256 и принимает только подписанные JSON responses с ожидаемыми `issuer`, protocol version, nonce и timestamp. Redirects отключены, response body ограничен по размеру, JSON декодируется strict schema decoder.
+Начиная с `0.11.4`, Федерация Ядро также регистрирует рабочий HTTP провайдеры из `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE`. Это не webhook и не общий прокси: Коннектор вызывает только заранее заданные HTTPS эндпоинты `/authenticate`, `/refresh`, `/resolve`, `/logout`, `/health`, подписывает каждый запрос HMAC-SHA256 и принимает только подписанные JSON ответы с ожидаемыми `issuer`, протокол версия, одноразовое значение и метка времени. Перенаправления отключены, тело ответа ограничен по размеру, JSON декодируется строгий схема decoder.
 
-HTTP Connector использует собственный transport без environment proxy, проверяет `hostAllowlist`, сам разрешает DNS, валидирует каждый IP до dial и блокирует private/loopback/link-local/shared/reserved сети. Контролируемый private endpoint разрешается только явным `allowedCidrs`. Дополнительный CA и optional mTLS client certificate поддерживаются через `mtls.caFile/certFile/keyFile`. `providerToken` остаётся credential внешнего provider и не используется как Never access/refresh token. Полный protocol и canonical HMAC strings описаны в `internal/httpconnector/README.md`.
+HTTP Коннектор использует собственный транспорт без окружение прокси, проверяет `hostAllowlist`, сам разрешает DNS, валидирует каждый IP до dial и блокирует private/loopback/link-local/shared/reserved сети. Контролируемый закрытый эндпоинт разрешается только явным `allowedCidrs`. Дополнительный CA и необязательный mTLS клиентский сертификат поддерживаются через `mtls.caFile/certFile/keyFile`. `providerToken` остаётся учётные данные внешнего провайдер и не используется как Никогда access/refresh токен. Полный протокол и канонический HMAC strings описаны в `internal/httpconnector/README.md`.
 
-Пример HTTP provider:
+Пример HTTP провайдер:
 
 ```json
 [
@@ -121,11 +121,11 @@ HTTP Connector использует собственный transport без envi
 ]
 ```
 
-Начиная с `0.11.5`, Federation Core также регистрирует production OIDC providers из `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE`. Connector использует OpenID Provider Discovery, Authorization Code Flow + PKCE `S256`, обязательные `state`/`nonce`, JWKS и полную проверку ID Token (`iss`, `aud`, `azp`, `exp`, `nbf`, `iat`, signature, `nonce`). `none` и HMAC ID Token algorithms не принимаются. Discovery/JWKS/token/UserInfo вызываются hardened transport без environment proxy, с host allowlist, DNS/IP validation, TLS 1.2+ и явным `allowedCidrs` для контролируемых private IdP.
+Начиная с `0.11.5`, Федерация Ядро также регистрирует рабочий OIDC провайдеры из `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON` или `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE`. Коннектор использует OpenID Провайдер Обнаружение, Авторизация Код Поток + PKCE `S256`, обязательные `state`/`nonce`, JWKS и полную проверку ID Токен (`iss`, `aud`, `azp`, `exp`, `nbf`, `iat`, подпись, `nonce`). `none` и HMAC ID Токен algorithms не принимаются. Обнаружение/JWKS/token/UserInfo вызываются усиленный транспорт без окружение прокси, с список разрешённых хостов, DNS/IP валидация, TLS 1.2+ и явным `allowedCidrs` для контролируемых закрытый IdP.
 
-Для desktop/web API доступны `POST /api/v1/auth/oidc/{providerId}/begin` и `POST /api/v1/auth/oidc/{providerId}/complete`. PKCE verifier/nonce находятся внутри короткоживущего AEAD transaction token, поэтому flow не зависит от process-local state и работает между несколькими Backend instances. Для обычного браузера есть `GET .../start` + `GET .../callback`; transaction хранится в HttpOnly SameSite=Lax cookie.
+Для desktop/web API доступны `POST /api/v1/auth/oidc/{providerId}/begin` и `POST /api/v1/auth/oidc/{providerId}/complete`. PKCE verifier/nonce находятся внутри короткоживущего AEAD транзакция токен, поэтому поток не зависит от локальный для процесса состояние и работает между несколькими Серверная часть экземпляры. Для обычного браузера есть `GET.../start` + `GET.../callback`; транзакция хранится в HttpOnly SameSite=Lax cookie.
 
-Пример OIDC provider:
+Пример OIDC провайдер:
 
 ```json
 [
@@ -149,11 +149,11 @@ HTTP Connector использует собственный transport без envi
 ]
 ```
 
-`provisioning.mode=explicit-only` остаётся безопасным default: совпадение email не связывает внешний аккаунт с существующим Never user. `jit` создаёт новый canonical user только после успешной криптографической проверки OIDC identity. External groups/roles сохраняются как identity claims, но не могут самостоятельно повысить глобальную Never role: JIT role задаётся локальной `defaultRole`.
+`provisioning.mode=explicit-only` остаётся безопасным по умолчанию: совпадение электронная почта не связывает внешний аккаунт с существующим Никогда пользователь. `jit` создаёт новый канонический пользователь только после успешной криптографической проверки OIDC идентичность. Внешний groups/roles сохраняются как идентичность захватывает, но не могут самостоятельно повысить глобальную Никогда роль: JIT роль задаётся локальной `defaultRole`.
 
-Начиная с `0.11.6`, Microsoft identity platform подключается отдельным `microsoftconnector`, который использует тот же OIDC engine, но добавляет Microsoft-specific trust rules. Конфигурация задаётся через `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` / `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Поддерживаются `common`, `organizations`, `consumers` и tenant GUID, а также global/US Gov/China clouds. Для multitenant metadata проверяются `tid`, tenant-specific `iss` и `issuer` signing key из JWKS. Canonical subject формируется как `tid:oid`; email/UPN не используются как identity key.
+Начиная с `0.11.6`, Microsoft идентичность платформа подключается отдельным `microsoftconnector`, который использует тот же OIDC движок, но добавляет Microsoft-specific доверие правила. Конфигурация задаётся через `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` / `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Поддерживаются `common`, `organizations`, `consumers` и tenant GUID, а также global/US Gov/China clouds. Для multitenant метаданные проверяются `tid`, tenant-specific `iss` и `issuer` ключ подписи из JWKS. Канонический субъект формируется как `tid:oid`; электронная почта/UPN не используются как идентичность ключ.
 
-Пример Microsoft provider:
+Пример Microsoft провайдер:
 
 ```json
 [
@@ -171,45 +171,45 @@ HTTP Connector использует собственный transport без envi
 ]
 ```
 
-`offline_access` включается Connector автоматически. Полученный Microsoft refresh token не возвращается клиенту: Backend шифрует его AES-GCM и сохраняет в `provider_credentials`. Для существующего Never user используется authenticated linking flow `POST /api/v1/auth/microsoft/{providerId}/link/begin` и `/link/complete`; provider credential можно ротировать через `POST /api/v1/auth/providers/{providerId}/credential/refresh`. Microsoft front-channel logout URL выдаётся отдельно через `/api/v1/auth/microsoft/{providerId}/logout-url` и не заменяет Never logout. Microsoft sign-in сам по себе **не означает владение Minecraft**; entitlement/profile verification остаётся отдельным слоем.
+`offline_access` включается Коннектор автоматически. Полученный Microsoft токен обновления не возвращается клиенту: Серверная часть шифрует его AES-GCM и сохраняет в `provider_credentials`. Для существующего Никогда пользователь используется аутентифицировать связывание поток `POST /api/v1/auth/microsoft/{providerId}/link/begin` и `/link/complete`; провайдер учётные данные можно ротировать через `POST /api/v1/auth/providers/{providerId}/credential/refresh`. Microsoft front-канал выход URL выдаётся отдельно через `/api/v1/auth/microsoft/{providerId}/logout-url` и не заменяет Никогда выход. Microsoft подпись-в сам по себе **не означает владение Minecraft**; entitlement/profile проверка остаётся отдельным слоем.
 
-## Passkeys / WebAuthn + MFA 2.0
+## Ключи доступа / WebAuthn + MFA 2.0
 
-Начиная с `0.11.7`, Backend поддерживает discoverable passkeys/WebAuthn с обязательным user verification. RP настраивается через `NEVERLAUNCHER_WEBAUTHN_RP_ID`, `NEVERLAUNCHER_WEBAUTHN_RP_NAME` и `NEVERLAUNCHER_WEBAUTHN_ORIGINS`. Registration/login/step-up challenges одноразовые и в production хранятся в PostgreSQL. Доступны passwordless passkey login, MFA continuation после password/OIDC/Microsoft auth, управление credentials и policy `optional|required|phishing-resistant`.
+Начиная с `0.11.7`, Серверная часть поддерживает discoverable passkeys/WebAuthn с обязательным пользователь проверка. RP настраивается через `NEVERLAUNCHER_WEBAUTHN_RP_ID`, `NEVERLAUNCHER_WEBAUTHN_RP_NAME` и `NEVERLAUNCHER_WEBAUTHN_ORIGINS`. Registration/login/step-up запросы одноразовые и в рабочий хранятся в PostgreSQL. Доступны passwordless ключ доступа вход, MFA continuation после пароль/OIDC/Microsoft аутентификация, управление учётные данные и политика `optional|required|phishing-resistant`.
 
-Сессия фиксирует `authMethods`, `authStrength` и `authTime`. Step-up не изменяет уже выданный access token: после успешного TOTP/recovery/passkey Backend выпускает новый access token для той же server session. Критические publish/restore/sign/role/token-rotation operations проверяют freshness и требуемую силу authentication перед выполнением.
+Сессия фиксирует `authMethods`, `authStrength` и `authTime`. Step-up не изменяет уже выданный токен доступа: после успешного TOTP/recovery/passkey Серверная часть выпускает новый токен доступа для той же сервер сессия. Критические publish/restore/sign/role/token-rotation эксплуатация проверяют актуальность и требуемую силу аутентификация перед выполнением.
 
-## Session Management 2.0
+## Сессия Управление 2.0
 
-Начиная с `0.11.8`, Never access token — compact JWS/JWT с `kid`, issuer/audience validation и session/authentication claims. Key rotation настраивается через `NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON` + `NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID`; старый key можно оставить только для verification до истечения ранее выпущенных access tokens.
+Начиная с `0.11.8`, Никогда токен доступа — compact JWS/JWT с `kid`, issuer/audience валидация и session/authentication захватывает. Ротация ключей настраивается через `NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON` + `NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID`; старый ключ можно оставить только для проверка до истечения ранее выпущенных доступ токены.
 
-`GET /api/v1/auth/sessions` возвращает persistent device/provider/auth/risk metadata и отмечает текущую session. `PATCH /api/v1/auth/sessions/{sessionId}` переименовывает устройство, `DELETE` отзывает одну session, `POST /api/v1/auth/sessions/revoke-others` отзывает остальные. Admin session API поддерживает фильтры `userId`, `providerId`, `status`, `riskState` и массовый revoke; provider-wide revoke требует fresh phishing-resistant step-up. IP/User-Agent drift повышает risk до `elevated`, refresh replay — до `compromised` с family revoke.
+`GET /api/v1/auth/sessions` возвращает постоянный device/provider/auth/risk метаданные и отмечает текущую сессия. `PATCH /api/v1/auth/sessions/{sessionId}` переименовывает устройство, `DELETE` отзывает одну сессия, `POST /api/v1/auth/sessions/revoke-others` отзывает остальные. Администратор сессия API поддерживает фильтры `userId`, `providerId`, `status`, `riskState` и массовый отзыв; провайдер-wide отзыв требует актуальный устойчивый к фишингу step-up. IP/User-Agent расхождение повышает риск до `elevated`, обновление повторное воспроизведение — до `compromised` с семейство отзыв.
 
-`POST /api/v1/auth/providers/{providerId}/logout` выполняет только provider-side revoke сохранённого provider credential, если connector поддерживает revoke. Эта операция намеренно не отзывает Never session; для неё используется отдельный Never logout/session revoke.
+`POST /api/v1/auth/providers/{providerId}/logout` выполняет только провайдер-побочный отзыв сохранённого провайдер учётные данные, если коннектор поддерживает отзыв. Эта операция намеренно не отзывает Никогда сессия; для неё используется отдельный Никогда logout/session отзыв.
 
-## Minecraft Auth Compatibility 2.0
+## Minecraft Аутентификация Совместимость 2.0
 
-Начиная с `0.11.10`, migration compatibility проверяется до production startup/upgrade как отдельный release concern. Backend `dbmigrate.StatusOf` различает pending upgrade и несовместимое состояние (`unknown`, `unverified`, checksum drift), а migration `0010_federation_stabilization_01110` fail-closed проверяет существующие refresh-family/session/provider-credential связи до добавления constraints. CLI-команды `nl db migrate apply` и `nl db migrate verify` используют тот же embedded migration catalog и checksum, что Backend.
+Начиная с `0.11.10`, миграция совместимость проверяется до рабочий startup/upgrade как отдельный релиз concern. Серверная часть `dbmigrate.StatusOf` различает ожидающий обновление и несовместимое состояние (`unknown`, `unverified`, контрольная сумма расхождение), а миграция `0010_federation_stabilization_01110` отказ с блокировкой проверяет существующие refresh-family/session/provider-credential связи до добавления ограничения. CLI-команды `nl db migrate apply` и `nl db migrate verify` используют тот же встроенный миграция каталог и контрольная сумма, что Серверная часть.
 
-Federation release gate запускается через `python3 scripts/test/federation-e2e.py`; реальный restart/multi-instance PostgreSQL сценарий — через `bash e2e/scripts/run-federation-postgres-e2e.sh`. Последний выполняет login/refresh/replay/revoke через Backend A/B/C и проверяет schema `verify` до и после сценария.
+Федерация контроль выпуска запускается через `python3 scripts/test/federation-e2e.py`; реальный restart/multi-instance PostgreSQL сценарий — через `bash e2e/scripts/run-federation-postgres-e2e.sh`. Последний выполняет login/refresh/replay/revoke через Серверная часть A/B/C и проверяет схема `verify` до и после сценария.
 
-Начиная с `0.11.9`, Minecraft profile/session отделены от Never session и от конкретного способа аутентификации. `POST /api/v1/minecraft/session` с permission `profile:launch` обменивает действующую Never session на opaque `nlmc_*` access token и persistent Minecraft profile. В PostgreSQL хранится только SHA-256 token hash; Minecraft session ссылается на parent `auth_sessions`, поэтому logout/revoke Never session сразу делает игровой token недействительным.
+Начиная с `0.11.9`, Minecraft profile/session отделены от Никогда сессия и от конкретного способа аутентификации. `POST /api/v1/minecraft/session` с разрешение `profile:launch` обменивает действующую Никогда сессия на непрозрачный `nlmc_*` токен доступа и постоянный Профиль Minecraft. В PostgreSQL хранится только SHA-256 токен хеш; Minecraft сессия ссылается на родительский `auth_sessions`, поэтому logout/revoke Никогда сессия сразу делает игровой токен недействительным.
 
-Minecraft UUID стабильно выводится из canonical Never user ID и не зависит от email/provider subject. Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*` используют тот же persistent adapter. Password providers идут через Federation Core; OIDC/Microsoft/passkey не требуют повторного локального password login и используют session exchange. `join/hasJoined` хранится в PostgreSQL, повторно проверяет parent Never session и поддерживает optional IP binding.
+Minecraft UUID стабильно выводится из канонический Никогда пользователь ID и не зависит от email/provider субъект. Yggdrasil-compatible `/authserver/*` и `/sessionserver/session/minecraft/*` используют тот же постоянный адаптер. Пароль провайдеры идут через Федерация Ядро; OIDC/Microsoft/passkey не требуют повторного локального пароль вход и используют сессия обмен. `join/hasJoined` хранится в PostgreSQL, повторно проверяет родительский Никогда сессия и поддерживает необязательный IP привязка.
 
-Root `/` отдаёт authlib-injector metadata. Для стандартного Minecraft authlib NeverRuntime может подключить только `authlib-injector*.jar`, присутствующий в подписанном release manifest; Desktop передаёт runtime выданные Backend UUID/access token, а command preview редактирует credential.
+Корень `/` отдаёт authlib-injector метаданные. Для стандартного Minecraft authlib NeverRuntime может подключить только `authlib-injector*.jar`, присутствующий в подписанном релиз манифест; Настольное приложение передаёт среда выполнения выданные Серверная часть UUID/токен доступа, а команда preview редактирует учётные данные.
 
 ## Пакеты и манифесты
 
-Создание пакета, загрузка файлов, валидация, подпись, staging, smoke-test, публикация и rollback канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому public key.
+Создание пакета, загрузка файлов, валидация, подпись, подготовка, быстрая проверка, публикация и откат канала доступны через `/api/v1/packages/*` и `/api/v1/channels/*`. Опубликованные манифесты подписываются Ed25519 и проверяются NeverRuntime по закреплённому открытый ключ.
 
 ## ServerBridge
 
-Velocity и Bukkit/Spigot/Paper/Purpur/Folia используют `/api/v1/server-bridge/*`, `/api/v1/session/*` и `/api/v1/textures/*` для регистрации, heartbeat, проверки входа, инвалидирования сессий и получения текстур.
+Velocity и Bukkit/Spigot/Paper/Purpur/Folia используют `/api/v1/server-bridge/*`, `/api/v1/session/*` и `/api/v1/textures/*` для регистрации, сигнал состояния, проверки входа, инвалидирования сессий и получения текстур.
 
 ## Операции
 
-Диагностика, реальный PostgreSQL/storage backup, проверочный restore dry-run, подтверждаемый restore, audit export, diagnostic bundle и compliance доступны через `/api/v1/operations/*`. `/ready` работает fail-closed при несовместимых миграциях PostgreSQL и при недоступном Redis rate limiter в production fail-closed режиме.
+Диагностика, реальный PostgreSQL/storage резервное копирование, проверочный восстановление пробный запуск, подтверждаемый восстановление, аудит экспорт, diagnostic комплект и compliance доступны через `/api/v1/operations/*`. `/ready` работает отказ с блокировкой при несовместимых миграциях PostgreSQL и при недоступном Redis rate ограничитель в рабочий отказ с блокировкой режиме.
 
 ## Контракт
 
@@ -228,7 +228,7 @@ python3 scripts/contracts/validate-openapi.py
 
 ## Тесты
 
-Канонические HTTP integration tests находятся в `services/api/internal/httpapi/*_test.go` и напрямую проверяют `/api/v1`, включая auth, CRUD, публикацию пакетов, security hardening, backup и ServerBridge. Исторические `/api/v2`–`/api/v5` проверяются как отсутствующие.
+Канонические HTTP интеграционные тесты находятся в `services/api/internal/httpapi/*_test.go` и напрямую проверяют `/api/v1`, включая аутентификация, CRUD, публикацию пакетов, безопасность усиление защиты, резервное копирование и ServerBridge. Исторические `/api/v2`–`/api/v5` проверяются как отсутствующие.
 
 ```bash
 go test ./...
@@ -237,83 +237,83 @@ go vet ./...
 go build -trimpath ./cmd/neverlauncher-api
 ```
 
-Для offline-окружения без production SQL drivers (`pgx`/MySQL) в локальном module cache:
+Для offline-окружения без рабочий SQL драйвер (`pgx`/MySQL) в локальном модуль кэш:
 
 ```bash
 go test -tags neverlauncher_nopgx ./...
 go vet -tags neverlauncher_nopgx ./...
 ```
 
-Production CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является fallback для production-релиза.
+Рабочий CI всегда собирает обычный pgx-бинарник; `neverlauncher_nopgx` не является резервный вариант для production-релиза.
 
-### Guard migration / compatibility stabilization 0.13.10
+### Защита миграция / совместимость стабилизация 0.13.10
 
-Migration `0020_guard_migration_compatibility_stabilization_01310.sql` закрепляет persisted Minecraft Guard snapshot как atomic DB state. Перед добавлением constraints она fail-closed проверяет существующие 0.13.9 rows: verified session должна иметь trusted device, четыре canonical SHA-256, launcher version и допустимый attestation timestamp; non-verified session не может содержать частичный Guard snapshot. После migration те же инварианты enforced PostgreSQL-ом, а `/ready`/migration tooling требуют sealed `0020`.
+Миграция `0020_guard_migration_compatibility_stabilization_01310.sql` закрепляет сохранённый Minecraft Защита снимок как атомарный DB состояние. Перед добавлением ограничения она отказ с блокировкой проверяет существующие 0.13.9 строки: проверен сессия должна иметь доверенный устройство, четыре канонический SHA-256, лаунчер версия и допустимый аттестация метка времени; non-проверен сессия не может содержать частичный Защита снимок. После миграция те же инварианты применять PostgreSQL-ом, а `/ready`/миграция инструментарий требуют запечатанный `0020`.
 
-Runtime compatibility fix включает macOS в `guardAttestationRequiredForDevice` для последующей Minecraft/ServerBridge reevaluation; это устраняет расхождение с уже существующим macOS `guard-attest` issuance path.
+Среда выполнения совместимость fix включает macOS в `guardAttestationRequiredForDevice` для последующей Minecraft/ServerBridge reevaluation; это устраняет расхождение с уже существующим macOS `guard-attest` выдача путь.
 
-### Migration stabilization 0.12.10
+### Миграция стабилизация 0.12.10
 
-Migration `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL constraint для replacement challenge purposes (`key-rotate`, `key-recover`), переводит optional replacement/Minecraft device references на SQL `NULL` и закрепляет ownership между trusted device, auth session, replacement chain, Minecraft session и profile через composite foreign keys. Перед установкой constraints migration fail-closed проверяет существующие данные и нормализует только однозначно безопасные legacy revoked/challenge states.
+Миграция `0018_device_trust_stabilization_01210.sql` исправляет PostgreSQL ограничение для замена запрос назначение (`key-rotate`, `key-recover`), переводит необязательный replacement/Minecraft устройство ссылки на SQL `NULL` и закрепляет владение между доверенный устройство, аутентификация сессия, замена цепочка, Minecraft сессия и профиль через составной внешний ключи. Перед установкой ограничения миграция отказ с блокировкой проверяет существующие данные и нормализует только однозначно безопасные устаревший revoked/challenge состояния.
 
-Repository paths для `replaced_by_device_id` и `minecraft_sessions.trusted_device_id` используют `sql.NullString`/NULL writer semantics. Exact-upgrade E2E создаёт schema `0.12.9` из `0001..0017` и применяет `0018` shipping CLI, поэтому migration path проверяется отдельно от fresh-install tests.
+Репозиторий пути для `replaced_by_device_id` и `minecraft_sessions.trusted_device_id` используют `sql.NullString`/NULL writer семантика. Точный-обновление E2E создаёт схема `0.12.9` из `0001..0017` и применяет `0018` поставка CLI, поэтому миграция путь проверяется отдельно от актуальный-установка тесты.
 
 ### Кроссплатформенная ротация и восстановление ключей 0.12.8
 
-Backend реализует два server-authoritative replacement flow. `key-rotation` проверяет подписи старого и нового ключа по одному canonical challenge; `key-recovery` требует fresh phishing-resistant step-up и proof staged-новым ключом. SQL repository выполняет replacement одной транзакцией и сохраняет permanent replacement chain через migration `0017_device_key_recovery_rotation_0128.sql`. Текущая session перепривязывается к новой identity с увеличенным `binding_epoch`, остальные credentials старой identity отзываются.
+Серверная часть реализует два определяемый сервером замена поток. `key-rotation` проверяет подписи старого и нового ключа по одному канонический запрос; `key-recovery` требует актуальный устойчивый к фишингу step-up и доказательство staged-новым ключом. SQL репозиторий выполняет замена одной транзакцией и сохраняет постоянный замена цепочка через миграция `0017_device_key_recovery_rotation_0128.sql`. Текущая сессия перепривязывается к новой идентичность с увеличенным `binding_epoch`, остальные учётные данные старой идентичность отзываются.
 
-Desktop/Tauri хранит staged key отдельно от active key и commit-ит его только после Backend success. Hardware generations получают разные labels; interrupted local commit восстанавливается через fingerprint reconciliation. Ordinary registration из уже bound session не используется как обход replacement.
+Desktop/Tauri хранит подготовленный ключ отдельно от активный ключ и commit-ит его только после Серверная часть успех. Оборудование генерация получают разные метки; прерванный локальный фиксация восстанавливается через отпечаток согласование. Ordinary регистрация из уже привязанный сессия не используется как обход замена.
 
-### Minecraft / ServerBridge trust enforcement 0.12.7
+### Minecraft / ServerBridge доверие принудительное применение 0.12.7
 
-Backend 0.12.7 pin-ит каждый новый Minecraft session к `trusted_device_id + binding_epoch` parent Never session. Официальный `POST /api/v1/minecraft/session` требует bound verified device; legacy Yggdrasil authenticate может сохранить protocol compatibility, но `/sessionserver/session/minecraft/join` всё равно fail-closed применяет gameplay trust policy.
+Серверная часть 0.12.7 pin-ит каждый новый Minecraft сессия к `trusted_device_id + binding_epoch` родительский Никогда сессия. Официальный `POST /api/v1/minecraft/session` требует привязанный проверен устройство; устаревший Yggdrasil аутентифицировать может сохранить протокол совместимость, но `/sessionserver/session/minecraft/join` всё равно отказ с блокировкой применяет игровой доверие политика.
 
-`validateMinecraftToken119`, Yggdrasil `hasJoined`, `/api/v1/session/has-joined` и `/api/v1/server-bridge/validate-join` выполняют live `session-device-risk-v1` evaluation. Permanent mismatch/revoke инвалидирует stale credential, а `reattest/step-up` возвращает recoverable deny. Server-side checks не вызывают player network observation, поэтому IP/UA bridge server не создаёт ложный risk drift. ServerBridge join фиксирует device epoch и `project/profile/channel`; plugin validation дополнительно проверяет channel equality.
+`validateMinecraftToken119`, Yggdrasil `hasJoined`, `/api/v1/session/has-joined` и `/api/v1/server-bridge/validate-join` выполняют актуальный `session-device-risk-v1` evaluation. Постоянный mismatch/revoke инвалидирует устаревший учётные данные, а `reattest/step-up` возвращает recoverable запрещать. На стороне сервера проверяет не вызывают игрок сеть observation, поэтому IP/UA мост сервер не создаёт ложный риск расхождение. ServerBridge подключение фиксирует устройство эпоха и `project/profile/channel`; плагин валидация дополнительно проверяет канал equality.
 
-Migration `0016_minecraft_serverbridge_trust_0127.sql` добавляет `trusted_device_id` и `binding_epoch` в `minecraft_sessions` и backfill-ит существующие записи из `auth_sessions`. HTTP regression tests и gate `minecraft-serverbridge-trust-0127.py` проверяют unbound deny, re-bind invalidation, live risk deny и channel pinning.
+Миграция `0016_minecraft_serverbridge_trust_0127.sql` добавляет `trusted_device_id` и `binding_epoch` в `minecraft_sessions` и backfill-ит существующие записи из `auth_sessions`. HTTP регрессионные тесты и контроль `minecraft-serverbridge-trust-0127.py` проверяют unbound запрещать, re-привязывать инвалидация, актуальный риск запрещать и канал закрепление.
 
 ### Привязка сессии к устройству и интеграция риска 0.12.6
 
-Backend 0.12.6 хранит `binding_epoch` в `auth_sessions` и включает его в JWT. `verifyAdminToken` и request observation сверяют JWT binding с server-side session, а registration/re-bind увеличивает epoch. Старый JWT после изменения binding больше не принимается.
+Серверная часть 0.12.6 хранит `binding_epoch` в `auth_sessions` и включает его в JWT. `verifyAdminToken` и запрос observation сверяют JWT привязка с на стороне сервера сессия, а registration/re-bind увеличивает эпоха. Старый JWT после изменения привязка больше не принимается.
 
-Для session с `trusted_device_id` refresh требует `deviceId + deviceSignature`. Подпись проверяется до rotation по canonical `NeverLauncher Session Device Binding v1` payload (`user/session/device/binding_epoch/refresh-token-sha256`). Wrong proof не расходует refresh token; consumed-token replay сохраняет family-wide compromise semantics. Risk evaluation объединяет IP/User-Agent drift, trusted-device state, hardware-attestation freshness и refresh reuse в `risk_score` + `risk_action`; sensitive endpoints выполняют `step-up/reattest/revoke` policy. Migration: `0015_session_device_risk_0126.sql`.
+Для сессия с `trusted_device_id` обновление требует `deviceId + deviceSignature`. Подпись проверяется до ротация по канонический `NeverLauncher Session Device Binding v1` полезная нагрузка (`user/session/device/binding_epoch/refresh-token-sha256`). Неверный доказательство не расходует токен обновления; использованный-токен повторное воспроизведение сохраняет семейство-wide компрометация семантика. Риск evaluation объединяет IP/User-Agent расхождение, доверенное устройство состояние, оборудование-аттестация актуальность и обновление повторное использование в `risk_score` + `risk_action`; критичный эндпоинты выполняют `step-up/reattest/revoke` политика. Миграция: `0015_session_device_risk_0126.sql`.
 
-### Device Management + Revocation 0.12.5
+### Устройство Управление + Отзыв 0.12.5
 
-Backend 0.12.5 делает device revocation единым security lifecycle. Пользовательские management endpoints: `GET /api/v1/auth/devices?status=active|revoked`, `PATCH /api/v1/auth/devices/{deviceId}`, `POST /api/v1/auth/devices/{deviceId}/revoke`, `POST /api/v1/auth/devices/revoke-others`; совместимый `DELETE` также выполняет permanent revoke. `revoke-others` требует, чтобы текущая session была привязана к active verified trusted device, которое и сохраняется.
+Серверная часть 0.12.5 делает устройство отзыв единым безопасность жизненный цикл. Пользовательские управление эндпоинты: `GET /api/v1/auth/devices?status=active|revoked`, `PATCH /api/v1/auth/devices/{deviceId}`, `POST /api/v1/auth/devices/{deviceId}/revoke`, `POST /api/v1/auth/devices/revoke-others`; совместимый `DELETE` также выполняет постоянный отзыв. `revoke-others` требует, чтобы текущая сессия была привязана к активный проверен доверенный устройство, которое и сохраняется.
 
-Для PostgreSQL trusted-device tombstone, consumption открытых device challenges, revoke связанных auth sessions, refresh families/tokens и Minecraft sessions выполняются в одной транзакции с row locks. После commit ServerBridge joins затронутых Never sessions инвалидируются. API возвращает реальные cascade counters. Отозванный key fingerprint повторно зарегистрировать нельзя; reconnect требует нового key. Admin list/revoke находится под `/api/v1/admin/auth/devices*`, а revoke защищён fresh phishing-resistant step-up. Новая migration для 0.12.5 не требуется.
+Для PostgreSQL доверенное устройство метка удаления, consumption открытых устройство запросы, отзыв связанных аутентификация сессии, обновление families/tokens и Minecraft сессии выполняются в одной транзакции с блокировки строк. После фиксация ServerBridge подключается затронутых Никогда сессии инвалидируются. API возвращает реальные каскад счётчики. Отозванный отпечаток ключа повторно зарегистрировать нельзя; переподключение требует нового ключ. Администратор list/revoke находится под `/api/v1/admin/auth/devices*`, а отзыв защищён актуальный устойчивый к фишингу step-up. Новая миграция для 0.12.5 не требуется.
 
-### Challenge-response attestation 0.12.4
+### Запрос-ответ аттестация 0.12.4
 
-Backend добавляет отдельные `POST /api/v1/auth/devices/{deviceId}/attest/begin|complete`. Они доступны только active session, которая уже связана с тем же verified trusted device. Persistent `attest` challenge привязан к session и сохранённым key properties, имеет TTL 2 минуты и single-use semantics; signature проверяется зарегистрированным P-256 public key.
+Серверная часть добавляет отдельные `POST /api/v1/auth/devices/{deviceId}/attest/begin|complete`. Они доступны только активный сессия, которая уже связана с тем же проверен доверенный устройство. Постоянный `attest` запрос привязан к сессия и сохранённым ключ properties, имеет TTL 2 минуты и одноразовый семантика; подпись проверяется зарегистрированным P-256 открытый ключ.
 
-Успех сохраняет `attestation_state=verified`, `attestation_method=challenge-response-v1` и 12-часовой freshness window через migration `0014_challenge_response_attestation_0124.sql`. Fresh state отражается в JWT и `/api/v1/auth/device-trust` как `challenge-response-attested`; после expiry effective assurance снова `proof-of-possession`. Attestation не повышает RBAC/MFA/auth strength.
+Успех сохраняет `attestation_state=verified`, `attestation_method=challenge-response-v1` и 12-часовой актуальность окно через миграция `0014_challenge_response_attestation_0124.sql`. Актуальный состояние отражается в JWT и `/api/v1/auth/device-trust` как `challenge-response-attested`; после истечение действующий уверенность снова `proof-of-possession`. Аттестация не повышает RBAC/MFA/аутентификация сила.
 
-Эта ceremony доказывает свежое владение уже зарегистрированным hardware-bound key, но не vendor TPM/Secure Enclave provenance: platform signer не предоставляет Backend проверяемый quote/certificate, поэтому `hardwareProvider` остаётся metadata и API явно возвращает `hardwareProvenance=not-remotely-verified`.
+Эта процедура доказывает свежое владение уже зарегистрированным привязанный к оборудованию ключ, но не поставщик TPM/Защищённый Анклав происхождение: платформа подписант не предоставляет Серверная часть проверяемый quote/certificate, поэтому `hardwareProvider` остаётся метаданные и API явно возвращает `hardwareProvenance=not-remotely-verified`.
 
-Базовый `0.12.3` device proof продолжает принимать `ed25519/software` и `p256/hardware`; hardware binding сам по себе attestation не создаёт.
+Базовый `0.12.3` устройство доказательство продолжает принимать `ed25519/software` и `p256/hardware`; оборудование привязка сам по себе аттестация не создаёт.
 
-### Device Trust 0.12.2
+### Доверие к устройству 0.12.2
 
-Backend хранит trusted devices отдельно от legacy session `deviceId`. Registration/verification использует persistent single-use challenge и Ed25519 signature; успешный proof связывает текущую Never session с `trusted_device_id` и обновляет JWT device claims. Пользовательские endpoints находятся под `/api/v1/auth/devices*`, административный registry — `/api/v1/admin/auth/devices`. Revoke device отзывает связанные session/refresh families.
+Серверная часть хранит доверенный устройства отдельно от устаревший сессия `deviceId`. Registration/verification использует постоянный одноразовый запрос и Ed25519 подпись; успешный доказательство связывает текущую Никогда сессия с `trusted_device_id` и обновляет JWT устройство захватывает. Пользовательские эндпоинты находятся под `/api/v1/auth/devices*`, административный реестр — `/api/v1/admin/auth/devices`. Отзыв устройство отзывает связанные session/refresh семейство.
 
-Начиная с `0.12.2` официальный Desktop автоматически создаёт device key в native OS secure storage и выполняет эти ceremonies после login/restore. Backend по-прежнему получает только public key и signatures и не повышает assurance выше `proof-of-possession`: факт использования secure storage не является hardware attestation. Migration `0012_device_trust_core_0121` остаётся достаточной для server-side persistent schema; `0.12.2` не требует новой DB migration.
+Начиная с `0.12.2` официальный Настольное приложение автоматически создаёт устройство ключ в нативный OS защищённый хранилище и выполняет эти процедура после login/restore. Серверная часть по-прежнему получает только открытый ключ и подписи и не повышает уверенность выше `proof-of-possession`: факт использования защищённый хранилище не является оборудование аттестация. Миграция `0012_device_trust_core_0121` остаётся достаточной для на стороне сервера постоянный схема; `0.12.2` не требует новой DB миграция.
 
-### Auth Federation 0.12
+### Аутентификация Федерация 0.12
 
-Stable registry создаётся через `httpapi.NewFederationCore(...)`; Local/SQL/HTTP/OIDC/Microsoft проходят Connector SDK conformance до приёма трафика. Generic browser identity linking доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает runtime health и provisioning policy providers. Migration `0011_auth_federation_release_0120` закрепляет canonical local identity для password-capable users.
+Стабильный реестр создаётся через `httpapi.NewFederationCore(...)`; Локальный/SQL/HTTP/OIDC/Microsoft проходят Коннектор SDK соответствие до приёма трафика. Общий browser идентичность связывание доступен через `/api/v1/auth/providers/{providerId}/link/begin|complete`, а `/api/v1/admin/auth/federation/status` показывает среда выполнения работоспособность и предоставление учётной записи политика провайдеры. Миграция `0011_auth_federation_release_0120` закрепляет канонический локальный идентичность для поддерживающий пароль пользователи.
 
-### Minecraft / ServerBridge integrity enforcement (0.13.5)
+### Minecraft / ServerBridge целостность принудительное применение (0.13.5)
 
-Minecraft session теперь сохраняет verified Guard snapshot (`attestation/evidence/guard/launcher SHA-256`, release version и verification time). `/api/v1/session/join` связывает ServerBridge join с конкретным `minecraftAccessToken`; для Windows Guard-enforced device отсутствие такой связи возвращает `412`. Minecraft/Yggdrasil/ServerBridge validation заново проверяет snapshot по текущему Guard release allowlist, поэтому удаление hash отзывает уже активные игровые credentials.
+Minecraft сессия теперь сохраняет проверен Защита снимок (`attestation/evidence/guard/launcher SHA-256`, релиз версия и проверка время). `/api/v1/session/join` связывает ServerBridge подключение с конкретным `minecraftAccessToken`; для Windows Защита-применять устройство отсутствие такой связи возвращает `412`. Minecraft/Yggdrasil/ServerBridge валидация заново проверяет снимок по текущему Защита релиз список разрешений, поэтому удаление хеш отзывает уже активные игровые учётные данные.
 
-ServerBridge heartbeat и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного plugin JAR. Backend хранит только measurement, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом join. Production configuration без Bridge allowlist отклоняется. Release pipeline генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/BungeeCord/Waterfall/Bukkit/Spigot/Paper/Purpur/Folia/Fabric JAR.
+ServerBridge сигнал состояния и `POST /api/v1/server-bridge/validate-join` передают SHA-256 реально загруженного плагин JAR. Серверная часть хранит только измерение, подтверждённый `NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON`, и live-перепроверяет его при каждом подключение. Рабочий конфигурация без Мост список разрешений отклоняется. Релиз конвейер генерирует `BRIDGE_RELEASE_ALLOWLIST.json` из финальных Velocity/BungeeCord/Waterfall/Bukkit/Spigot/Paper/Purpur/Folia/Fabric JAR.
 
-### Guard Attestation backend gate (0.13.4)
+### Защита Аттестация серверная часть контроль (0.13.4)
 
-`POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` реализуют challenge-response verification Windows NeverGuard. Backend хранит challenge и launch ticket в том же persistent DeviceChallenge repository с atomic consume semantics. Complete требует свежую hardware P-256 device attestation, проверяет device signature, evidence/attestation digests, process boundary/policy и release SHA-256 allowlist. При включённой Guard policy `POST /api/v1/minecraft/session` требует одноразовый `guardAttestationTicket` для Windows trusted device; Linux/macOS не притворяются поддерживающими Windows Guard. В production `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен.
+`POST /api/v1/auth/devices/{deviceId}/guard-attest/begin|complete` реализуют запрос-ответ проверка Windows NeverGuard. Серверная часть хранит запрос и запускать билет в том же постоянный DeviceChallenge репозиторий с атомарный использовать семантика. Полный требует свежую оборудование P-256 устройство аттестация, проверяет устройство подпись, evidence/attestation хеши, процесс boundary/policy и релиз SHA-256 список разрешений. При включённой Защита политика `POST /api/v1/minecraft/session` требует одноразовый `guardAttestationTicket` для Windows доверенный устройство; Linux/macOS не притворяются поддерживающими Windows Защита. В рабочий `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON` обязателен.
 
-### NeverGuard release policy 0.14.0
+### NeverGuard релиз политика 0.14.0
 
-Backend `0.14+` принимает Guard policy только в `schemaVersion=2.0`: `releases.<version>.protocolVersion=4`, platform namespaces `windows|linux|macos`, `signingMode` и exact `artifacts[]` pairs (`guardSha256` + `launcherSha256`). Production Windows требует `authenticode`/`requireAuthenticode=true`, macOS — `developer-id-notarized`, Linux — `integrity-only`. Legacy independent hash lists остаются только для запуска 0.13.x Backend и не принимаются 0.14+.
+Серверная часть `0.14+` принимает Защита политика только в `schemaVersion=2.0`: `releases.<version>.protocolVersion=4`, платформа пространство имён `windows|linux|macos`, `signingMode` и точный `artifacts[]` пары (`guardSha256` + `launcherSha256`). Рабочий Windows требует `authenticode`/`requireAuthenticode=true`, macOS — `developer-id-notarized`, Linux — `integrity-only`. Устаревший независимый хеш список остаются только для запуска 0.13.x Серверная часть и не принимаются 0.14+.

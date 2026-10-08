@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed NeverExtensions 0.21.0 GA compatibility/certificate builder."""
+"""Отказ с блокировкой NeverExtensions 0.21.0 GA compatibility/certificate builder."""
 from __future__ import annotations
 import argparse, hashlib, json
 from datetime import datetime, timezone

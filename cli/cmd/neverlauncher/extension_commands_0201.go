@@ -124,7 +124,7 @@ type CanonicalExtensionManifest0201 struct {
 
 func handleExtension0201(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension-подкоманды: init, dev, test, build, template, validate, import-legacy, pack, sign, verify, inspect, registry, updates, trust, quarantine, emergency, recovery, ga, upgrade-source, installed, status, install, enable, disable, uninstall, update, rollback, host, capabilities, permissions, permission-grant, permission-revoke, secrets, secret-set, secret-delete, cli")
+		return errors.New("доступные extension-подкоманды: init, dev, тест, сборка, template, проверять, импорт-устаревший, pack, подпись, проверять, inspect, реестр, обновляет, доверие, карантин, аварийный, восстановление, ga, обновление-исходник, установленный, состояние, установка, enable, отключить, uninstall, обновление, откат, хост, возможности, разрешения, разрешение-grant, разрешение-отзыв, секреты, секрет-задать, секрет-удалять, CLI")
 	}
 	switch args[0] {
 	case "ga":
@@ -136,7 +136,7 @@ func handleExtension0201(args []string) error {
 	case "template":
 		target := strings.ToLower(flagValue(args, "--target", "backend"))
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, target) {
-			return errors.New("--target должен быть одним из: backend, admin, desktop, cli")
+			return errors.New("--цель должен быть одним из: серверная часть, администратор, настольное приложение, CLI")
 		}
 		out := flagValue(args, "--output", canonicalExtensionManifestName0201)
 		manifest := CanonicalExtensionManifest0201{
@@ -176,7 +176,7 @@ func handleExtension0201(args []string) error {
 		return writeJSONFile(out, manifest)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("extension validate требует путь к neverlauncher-extension.json или каталогу")
+			return errors.New("расширение проверять требует путь к neverlauncher-расширение.JSON или каталогу")
 		}
 		manifest, path, digest, err := loadCanonicalExtension0201(args[1])
 		if err != nil {
@@ -208,7 +208,7 @@ func handleExtension0201(args []string) error {
 		return handleExtensionLifecycle0204(args[0], args[1:])
 	case "import-legacy":
 		if len(args) < 2 {
-			return errors.New("extension import-legacy требует путь к neverlauncher-plugin.json или каталогу")
+			return errors.New("расширение импорт-устаревший требует путь к neverlauncher-плагин.JSON или каталогу")
 		}
 		publisher := strings.TrimSpace(flagValue(args, "--publisher", ""))
 		out := flagValue(args, "--output", canonicalExtensionManifestName0201)
@@ -225,7 +225,7 @@ func handleExtension0201(args []string) error {
 		}
 		_, _, digest, err := loadCanonicalExtension0201(out)
 		if err != nil {
-			return fmt.Errorf("verify imported canonical manifest: %w", err)
+			return fmt.Errorf("проверять импорт канонический манифест: %w", err)
 		}
 		printJSON(map[string]any{"imported": true, "source": source, "output": out, "id": manifest.ID, "version": manifest.Version, "sha256": digest})
 		return nil
@@ -256,9 +256,9 @@ func loadCanonicalExtension0201(path string) (CanonicalExtensionManifest0201, st
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			err = errors.New("trailing JSON value")
+			err = errors.New("след JSON value")
 		}
-		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("%s contains trailing JSON data: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, "", fmt.Errorf("%s содержит след JSON данные: %w", path, err)
 	}
 	manifest, digest, err := normalizeCanonicalExtension0201(manifest)
 	if err != nil {
@@ -284,25 +284,25 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("schemaVersion должен быть 2.0")
 	}
 	if !canonicalExtensionID0201.MatchString(m.ID) {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный extension id %q", m.ID)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный расширение ID %q", m.ID)
 	}
 	if m.Name == "" || len(m.Name) > 160 {
-		return CanonicalExtensionManifest0201{}, "", errors.New("name обязателен и не должен превышать 160 символов")
+		return CanonicalExtensionManifest0201{}, "", errors.New("имя обязателен и не должен превышать 160 символов")
 	}
 	if m.Publisher == "" || len(m.Publisher) > 160 {
-		return CanonicalExtensionManifest0201{}, "", errors.New("publisher обязателен и не должен превышать 160 символов")
+		return CanonicalExtensionManifest0201{}, "", errors.New("издатель обязателен и не должен превышать 160 символов")
 	}
 	if !canonicalExtensionSemver0201.MatchString(m.Version) {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("version %q должен быть semver", m.Version)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("версия %q должен быть SemVer", m.Version)
 	}
 	if m.API == "" || len(m.API) > 64 {
-		return CanonicalExtensionManifest0201{}, "", errors.New("api обязателен")
+		return CanonicalExtensionManifest0201{}, "", errors.New("API обязателен")
 	}
 	if !supportedExtensionAPI0210(m.API) {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("unsupported extension api %q; expected 1.0 (legacy 3.7 is accepted only for 0.20 compatibility)", m.API)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("неподдерживаемый API расширений %q; ожидаемый 1.0 (устаревший 3.7 является принят только для 0.20 совместимость)", m.API)
 	}
 	if len(m.Targets) == 0 {
-		return CanonicalExtensionManifest0201{}, "", errors.New("targets должен содержать хотя бы одну цель")
+		return CanonicalExtensionManifest0201{}, "", errors.New("цели должен содержать хотя бы одну цель")
 	}
 	seenTargets := map[string]struct{}{}
 	for i := range m.Targets {
@@ -310,18 +310,18 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		t.Kind = strings.ToLower(strings.TrimSpace(t.Kind))
 		t.Entrypoint = strings.TrimSpace(t.Entrypoint)
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, t.Kind) {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный target %q", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный цель %q", t.Kind)
 		}
 		if _, ok := seenTargets[t.Kind]; ok {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %q указан повторно", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("цель %q указан повторно", t.Kind)
 		}
 		seenTargets[t.Kind] = struct{}{}
 		if t.Entrypoint == "" || filepath.IsAbs(t.Entrypoint) || strings.Contains(t.Entrypoint, "\\") {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %s содержит некорректный entrypoint", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("цель %s содержит некорректный entrypoint", t.Kind)
 		}
 		clean := filepath.ToSlash(filepath.Clean(t.Entrypoint))
 		if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %s entrypoint должен быть относительным путём внутри extension", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("цель %s entrypoint должен быть относительным путём внутри расширение", t.Kind)
 		}
 		t.Entrypoint = clean
 	}
@@ -362,13 +362,13 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		d.ID = strings.ToLower(strings.TrimSpace(d.ID))
 		d.Version = strings.TrimSpace(d.Version)
 		if !canonicalExtensionID0201.MatchString(d.ID) || d.ID == m.ID {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректная dependency %q", d.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректная зависимость %q", d.ID)
 		}
 		if d.Version == "" || len(d.Version) > 128 {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("dependency %s требует version constraint", d.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("зависимость %s требует версия ограничение", d.ID)
 		}
 		if _, ok := seenDeps[d.ID]; ok {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("dependency %q указана повторно", d.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("зависимость %q указана повторно", d.ID)
 		}
 		seenDeps[d.ID] = struct{}{}
 	}
@@ -379,28 +379,28 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		c.ID = strings.ToLower(strings.TrimSpace(c.ID))
 		c.Version = strings.TrimSpace(c.Version)
 		if !canonicalExtensionID0201.MatchString(c.ID) || c.ID == m.ID {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный conflict %q", c.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный конфликт %q", c.ID)
 		}
 		if c.Version == "" || len(c.Version) > 128 {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %s требует version constraint", c.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("конфликт %s требует версия ограничение", c.ID)
 		}
 		if _, ok := seenConflicts[c.ID]; ok {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %q указан повторно", c.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("конфликт %q указан повторно", c.ID)
 		}
 		seenConflicts[c.ID] = struct{}{}
 	}
 	sort.Slice(m.Conflicts, func(i, j int) bool { return m.Conflicts[i].ID < m.Conflicts[j].ID })
 	if m.Admin != nil {
 		if _, ok := seenTargets["admin"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require an admin target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("администратор contributions требовать администратор цель")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "admin" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require a standalone .html entrypoint")
+				return CanonicalExtensionManifest0201{}, "", errors.New("администратор contributions требовать автономный.HTML entrypoint")
 			}
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["ui:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("admin contributions require ui:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("администратор contributions требовать интерфейс:contribute разрешение")
 		}
 		if err := normalizeAdminContributions0208(m.Admin); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err
@@ -408,15 +408,15 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	if m.Desktop != nil {
 		if _, ok := seenTargets["desktop"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a desktop target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("настольное приложение contributions требовать настольное приложение цель")
 		}
 		for _, target := range m.Targets {
 			if target.Kind == "desktop" && !strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html") {
-				return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require a standalone .html entrypoint")
+				return CanonicalExtensionManifest0201{}, "", errors.New("настольное приложение contributions требовать автономный.HTML entrypoint")
 			}
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["desktop:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("desktop contributions require desktop:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("настольное приложение contributions требовать настольное приложение:contribute разрешение")
 		}
 		if err := normalizeDesktopContributions0209(m.Desktop); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err
@@ -424,10 +424,10 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 	}
 	if m.CLI != nil {
 		if _, ok := seenTargets["cli"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require a cli target")
+			return CanonicalExtensionManifest0201{}, "", errors.New("CLI contributions требовать CLI цель")
 		}
 		if _, ok := setOfStrings0208(m.Permissions)["cli:contribute"]; !ok {
-			return CanonicalExtensionManifest0201{}, "", errors.New("cli contributions require cli:contribute permission")
+			return CanonicalExtensionManifest0201{}, "", errors.New("CLI contributions требовать CLI:contribute разрешение")
 		}
 		if err := normalizeCLIContributions0209(m.CLI); err != nil {
 			return CanonicalExtensionManifest0201{}, "", err
@@ -449,7 +449,7 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		return nil
 	}
 	if len(d.Pages) == 0 || len(d.Pages) > 64 || len(d.Navigation) > 64 || len(d.Actions) > 64 {
-		return errors.New("desktop contributions contain invalid item count")
+		return errors.New("настольное приложение contributions contain недопустимый item счётчик")
 	}
 	pages := map[string]struct{}{}
 	for i := range d.Pages {
@@ -458,10 +458,10 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminContributionID0208CLI(p.ID) || p.Title == "" || len(p.Title) > 120 || len(p.Description) > 500 {
-			return fmt.Errorf("invalid desktop page %q", p.ID)
+			return fmt.Errorf("недопустимый настольное приложение страница %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("duplicate desktop page %q", p.ID)
+			return fmt.Errorf("дубликат настольное приложение страница %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -472,13 +472,13 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminContributionID0208CLI(n.ID) || n.Label == "" || len(n.Label) > 80 || n.Order < -10000 || n.Order > 10000 {
-			return fmt.Errorf("invalid desktop navigation %q", n.ID)
+			return fmt.Errorf("недопустимый настольное приложение navigation %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("desktop navigation %s references unknown page %s", n.ID, n.PageID)
+			return fmt.Errorf("настольное приложение navigation %s ссылки неизвестный страница %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("duplicate desktop navigation %q", n.ID)
+			return fmt.Errorf("дубликат настольное приложение navigation %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -493,13 +493,13 @@ func normalizeDesktopContributions0209(d *CanonicalExtensionDesktopContributions
 			a.Placement = "toolbar"
 		}
 		if !validAdminContributionID0208CLI(a.ID) || a.Label == "" || len(a.Label) > 80 || (a.Placement != "toolbar" && a.Placement != "page") {
-			return fmt.Errorf("invalid desktop action %q", a.ID)
+			return fmt.Errorf("недопустимый настольное приложение действие %q", a.ID)
 		}
 		if _, ok := pages[a.PageID]; !ok {
-			return fmt.Errorf("desktop action %s references unknown page %s", a.ID, a.PageID)
+			return fmt.Errorf("настольное приложение действие %s ссылки неизвестный страница %s", a.ID, a.PageID)
 		}
 		if _, ok := seen[a.ID]; ok {
-			return fmt.Errorf("duplicate desktop action %q", a.ID)
+			return fmt.Errorf("дубликат настольное приложение действие %q", a.ID)
 		}
 		seen[a.ID] = struct{}{}
 	}
@@ -533,10 +533,10 @@ func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) er
 	}
 	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
 	if !validAdminContributionID0208CLI(c.Namespace) {
-		return errors.New("cli namespace must match [a-z0-9][a-z0-9._-]{1,63}")
+		return errors.New("CLI пространство имён должен соответствовать [a-z0-9][a-z0-9._-]{1,63}")
 	}
 	if len(c.Commands) == 0 || len(c.Commands) > 64 {
-		return errors.New("cli contributions require 1..64 commands")
+		return errors.New("CLI contributions требовать 1..64 команды")
 	}
 	seen := map[string]struct{}{}
 	for i := range c.Commands {
@@ -545,10 +545,10 @@ func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) er
 		cmd.Description = strings.TrimSpace(cmd.Description)
 		cmd.Usage = strings.TrimSpace(cmd.Usage)
 		if !validAdminContributionID0208CLI(cmd.Name) || len(cmd.Description) > 240 || len(cmd.Usage) > 240 {
-			return fmt.Errorf("invalid cli command %q", cmd.Name)
+			return fmt.Errorf("недопустимый CLI команда %q", cmd.Name)
 		}
 		if _, ok := seen[cmd.Name]; ok {
-			return fmt.Errorf("duplicate cli command %q", cmd.Name)
+			return fmt.Errorf("дубликат CLI команда %q", cmd.Name)
 		}
 		seen[cmd.Name] = struct{}{}
 	}
@@ -568,21 +568,21 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 	dec.DisallowUnknownFields()
 	var legacy PluginManifest
 	if err := dec.Decode(&legacy); err != nil {
-		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("decode legacy manifest %s: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("decode устаревший манифест %s: %w", path, err)
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); err != io.EOF {
 		if err == nil {
-			err = errors.New("trailing JSON value")
+			err = errors.New("след JSON value")
 		}
-		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("legacy manifest %s contains trailing JSON data: %w", path, err)
+		return CanonicalExtensionManifest0201{}, path, fmt.Errorf("устаревший манифест %s содержит след JSON данные: %w", path, err)
 	}
 	publisher = strings.TrimSpace(publisher)
 	if publisher == "" && legacy.Metadata != nil {
 		publisher = strings.TrimSpace(legacy.Metadata["publisher"])
 	}
 	if publisher == "" {
-		return CanonicalExtensionManifest0201{}, path, errors.New("legacy manifest не содержит publisher; укажите --publisher")
+		return CanonicalExtensionManifest0201{}, path, errors.New("устаревший манифест не содержит издатель; укажите --издатель")
 	}
 	manifest := CanonicalExtensionManifest0201{
 		SchemaVersion: "2.0",
@@ -634,7 +634,7 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		return nil
 	}
 	if len(a.Pages) > 64 || len(a.Navigation) > 64 || len(a.DashboardWidgets) > 32 || len(a.Actions) > 64 {
-		return errors.New("admin contributions exceed limits")
+		return errors.New("администратор contributions exceed ограничения")
 	}
 	pages := map[string]struct{}{}
 	for i := range a.Pages {
@@ -643,10 +643,10 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		p.Title = strings.TrimSpace(p.Title)
 		p.Description = strings.TrimSpace(p.Description)
 		if !validAdminID0208(p.ID) || p.Title == "" || len(p.Title) > 120 {
-			return fmt.Errorf("invalid admin page %q", p.ID)
+			return fmt.Errorf("недопустимый администратор страница %q", p.ID)
 		}
 		if _, ok := pages[p.ID]; ok {
-			return fmt.Errorf("duplicate admin page %q", p.ID)
+			return fmt.Errorf("дубликат администратор страница %q", p.ID)
 		}
 		pages[p.ID] = struct{}{}
 	}
@@ -657,13 +657,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 		n.Label = strings.TrimSpace(n.Label)
 		n.PageID = strings.ToLower(strings.TrimSpace(n.PageID))
 		if !validAdminID0208(n.ID) || n.Label == "" || len(n.Label) > 80 {
-			return fmt.Errorf("invalid admin navigation %q", n.ID)
+			return fmt.Errorf("недопустимый администратор navigation %q", n.ID)
 		}
 		if _, ok := pages[n.PageID]; !ok {
-			return fmt.Errorf("admin navigation %s references unknown page %s", n.ID, n.PageID)
+			return fmt.Errorf("администратор navigation %s ссылки неизвестный страница %s", n.ID, n.PageID)
 		}
 		if _, ok := seen[n.ID]; ok {
-			return fmt.Errorf("duplicate admin navigation %q", n.ID)
+			return fmt.Errorf("дубликат администратор navigation %q", n.ID)
 		}
 		seen[n.ID] = struct{}{}
 	}
@@ -677,13 +677,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 			w.Height = 280
 		}
 		if !validAdminID0208(w.ID) || w.Title == "" || len(w.Title) > 120 || w.Height < 160 || w.Height > 1200 {
-			return fmt.Errorf("invalid admin widget %q", w.ID)
+			return fmt.Errorf("недопустимый администратор widget %q", w.ID)
 		}
 		if _, ok := pages[w.PageID]; !ok {
-			return fmt.Errorf("admin widget %s references unknown page %s", w.ID, w.PageID)
+			return fmt.Errorf("администратор widget %s ссылки неизвестный страница %s", w.ID, w.PageID)
 		}
 		if _, ok := seen[w.ID]; ok {
-			return fmt.Errorf("duplicate admin widget %q", w.ID)
+			return fmt.Errorf("дубликат администратор widget %q", w.ID)
 		}
 		seen[w.ID] = struct{}{}
 	}
@@ -698,13 +698,13 @@ func normalizeAdminContributions0208(a *CanonicalExtensionAdminContributions0208
 			x.Placement = "toolbar"
 		}
 		if !validAdminID0208(x.ID) || x.Label == "" || len(x.Label) > 80 || (x.Placement != "toolbar" && x.Placement != "dashboard") {
-			return fmt.Errorf("invalid admin action %q", x.ID)
+			return fmt.Errorf("недопустимый администратор действие %q", x.ID)
 		}
 		if _, ok := pages[x.PageID]; !ok {
-			return fmt.Errorf("admin action %s references unknown page %s", x.ID, x.PageID)
+			return fmt.Errorf("администратор действие %s ссылки неизвестный страница %s", x.ID, x.PageID)
 		}
 		if _, ok := seen[x.ID]; ok {
-			return fmt.Errorf("duplicate admin action %q", x.ID)
+			return fmt.Errorf("дубликат администратор действие %q", x.ID)
 		}
 		seen[x.ID] = struct{}{}
 	}

@@ -192,11 +192,11 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	certFile := serverBridgeCertificationReleaseFile(ver)
 	raw, err := os.ReadFile(filepath.Join(dir, certFile))
 	if err != nil {
-		return fmt.Errorf("read %s: %w", certFile, err)
+		return fmt.Errorf("чтение %s: %w", certFile, err)
 	}
 	var cert serverBridge2Certification0150
 	if err := json.Unmarshal(raw, &cert); err != nil {
-		return fmt.Errorf("invalid %s: %w", certFile, err)
+		return fmt.Errorf("недопустимый %s: %w", certFile, err)
 	}
 	expectedRelease := "ServerBridge 2"
 	expectedProtocol := 2
@@ -209,43 +209,43 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		expectedSchema = "1.1"
 	}
 	if cert.SchemaVersion != expectedSchema || cert.Release != expectedRelease || cert.Version != ver || cert.ProtocolVersion != expectedProtocol || cert.Status != "certified" || !cert.ZeroPatch || cert.NodeIdentity != "Ed25519" || !cert.OneTimeJoin {
-		return fmt.Errorf("%s certification metadata mismatch", expectedRelease)
+		return fmt.Errorf("%s сертификация метаданные несоответствие", expectedRelease)
 	}
 	if serverBridgeGARequired0200(ver) && (!cert.GA || !cert.ProtocolV3Frozen || !strings.EqualFold(cert.ProtocolV3FeatureDigest, "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc") || cert.ProtocolV2Mode != "compatibility-deprecated" || !cert.InstallerUpgradePath || cert.UnifiedOperatorAPI != "/api/v1/server-bridge/overview" || !cert.PublicCompatibilityMatrix) {
-		return errors.New("ServerBridge 3 GA certification metadata mismatch")
+		return errors.New("ServerBridge 3 GA сертификация метаданные несоответствие")
 	}
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
-			return errors.New("ServerBridge 3 security certification metadata mismatch")
+			return errors.New("ServerBridge 3 безопасность сертификация метаданные несоответствие")
 		}
 	}
 	targets := serverBridgeReleaseTargetsForVersion0150(ver)
 	if cert.TargetCount != len(targets) || len(cert.Artifacts) != len(targets) {
-		return fmt.Errorf("%s certification must contain %d artifacts", expectedRelease, len(targets))
+		return fmt.Errorf("%s сертификация должен contain %d артефакты", expectedRelease, len(targets))
 	}
 
 	allowRaw, err := os.ReadFile(filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json"))
 	if err != nil {
-		return fmt.Errorf("read BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+		return fmt.Errorf("чтение BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 	}
 	var allow map[string]map[string][]string
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		var document serverBridgeReleaseAllowlist01912
 		if err := json.Unmarshal(allowRaw, &document); err != nil {
-			return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+			return fmt.Errorf("недопустимый BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 		}
 		if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-			return errors.New("ServerBridge 3 release allowlist security metadata mismatch")
+			return errors.New("ServerBridge 3 релиз список разрешений безопасность метаданные несоответствие")
 		}
 		if serverBridgeGARequired0200(ver) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {
-			return errors.New("ServerBridge 3 GA release allowlist metadata mismatch")
+			return errors.New("ServerBridge 3 GA релиз список разрешений метаданные несоответствие")
 		}
 		allow = document.Releases
 	} else if err := json.Unmarshal(allowRaw, &allow); err != nil {
-		return fmt.Errorf("invalid BRIDGE_RELEASE_ALLOWLIST.json: %w", err)
+		return fmt.Errorf("недопустимый BRIDGE_RELEASE_ALLOWLIST.JSON: %w", err)
 	}
 	if len(allow) != 1 || allow[ver] == nil {
-		return errors.New("ServerBridge release allowlist must contain only exact bundle version")
+		return errors.New("ServerBridge релиз список разрешений должен contain только точный комплект версия")
 	}
 	policy := allow[ver]
 
@@ -253,27 +253,27 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 	for i, expectedID := range targets {
 		item := cert.Artifacts[i]
 		if item.ID != expectedID {
-			return fmt.Errorf("%s artifact #%d must be %s, got %s", expectedRelease, i+1, expectedID, item.ID)
+			return fmt.Errorf("%s артефакт #%d должен быть %s, получил %s", expectedRelease, i+1, expectedID, item.ID)
 		}
 		expectedFile := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {
-			return fmt.Errorf("%s: invalid certified artifact metadata", expectedID)
+			return fmt.Errorf("%s: недопустимый сертифицированный артефакт метаданные", expectedID)
 		}
 		actual, size, err := hashFile(filepath.Join(dir, item.File))
 		if err != nil {
-			return fmt.Errorf("%s: hash release artifact: %w", expectedID, err)
+			return fmt.Errorf("%s: хеш артефакт релиза: %w", expectedID, err)
 		}
 		if !strings.EqualFold(actual, item.SHA256) || size != item.Bytes {
-			return fmt.Errorf("%s: certification hash/size mismatch", expectedID)
+			return fmt.Errorf("%s: сертификация hash/size несоответствие", expectedID)
 		}
 		normalized := strings.ToLower(strings.TrimSpace(item.SHA256))
 		if _, ok := seen[normalized]; ok {
-			return fmt.Errorf("%s: duplicate platform artifact SHA-256", expectedID)
+			return fmt.Errorf("%s: дубликат платформа артефакт SHA-256", expectedID)
 		}
 		seen[normalized] = struct{}{}
 		values := policy[serverBridge2AllowlistFields0150[expectedID]]
 		if len(values) != 1 || !strings.EqualFold(strings.TrimSpace(values[0]), item.SHA256) {
-			return fmt.Errorf("%s: release allowlist does not match certified artifact", expectedID)
+			return fmt.Errorf("%s: релиз список разрешений делает не соответствовать сертифицированный артефакт", expectedID)
 		}
 	}
 	return nil

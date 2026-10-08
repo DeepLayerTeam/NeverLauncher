@@ -40,7 +40,7 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	}
 	db, err := openDatabase(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("SQL connector %q open database: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL коннектор %q открытый база данных: %w", cfg.ID, err)
 	}
 	connector, err := newWithDB(ctx, cfg, db)
 	if err != nil {
@@ -51,14 +51,14 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	defer cancel()
 	if err := connector.Health(pingCtx); err != nil {
 		_ = connector.Close()
-		return nil, fmt.Errorf("SQL connector %q health check: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL коннектор %q проверка работоспособности: %w", cfg.ID, err)
 	}
 	return connector, nil
 }
 
 func newWithDB(ctx context.Context, cfg RuntimeConfig, db *sql.DB) (*Connector, error) {
 	if db == nil {
-		return nil, errors.New("SQL database handle is nil")
+		return nil, errors.New("SQL база данных дескриптор является nil")
 	}
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
@@ -71,12 +71,12 @@ func newWithDB(ctx context.Context, cfg RuntimeConfig, db *sql.DB) (*Connector, 
 	defer cancel()
 	stmtByID, err := db.PrepareContext(prepareCtx, queryByID)
 	if err != nil {
-		return nil, fmt.Errorf("SQL connector %q prepare identifier lookup: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL коннектор %q prepare identifier поиск: %w", cfg.ID, err)
 	}
 	stmtBySub, err := db.PrepareContext(prepareCtx, queryBySub)
 	if err != nil {
 		_ = stmtByID.Close()
-		return nil, fmt.Errorf("SQL connector %q prepare subject lookup: %w", cfg.ID, err)
+		return nil, fmt.Errorf("SQL коннектор %q prepare субъект поиск: %w", cfg.ID, err)
 	}
 	return &Connector{cfg: cfg, db: db, stmtByID: stmtByID, stmtBySub: stmtBySub, identifierArgs: identifierArgs}, nil
 }
@@ -103,7 +103,7 @@ func (c *Connector) Metadata() authconnector.Metadata {
 
 func (c *Connector) Health(ctx context.Context) error {
 	if c == nil || c.db == nil {
-		return errors.New("SQL connector database is unavailable")
+		return errors.New("SQL коннектор база данных является недоступный")
 	}
 	healthCtx, cancel := context.WithTimeout(ctx, c.cfg.ConnectTimeoutDuration)
 	defer cancel()
@@ -238,7 +238,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider query failed", err)
 	}
 	if len(found) == 0 {
-		// Deliberately use the same public error as a wrong password to avoid account enumeration.
+		// Намеренно использовать одинаковый публичный ошибка как неверный пароль к avoid учётная запись enumeration.
 		return rowIdentity{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
 	}
 	if strings.TrimSpace(found[0].subject) == "" || strings.TrimSpace(found[0].passwordHash) == "" {
@@ -253,11 +253,11 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 func (c *Connector) mapIdentity(row rowIdentity) (authconnector.Identity, error) {
 	groups, err := parseStringList(row.groupsRaw)
 	if err != nil {
-		return authconnector.Identity{}, fmt.Errorf("groups: %w", err)
+		return authconnector.Identity{}, fmt.Errorf("группы: %w", err)
 	}
 	roles, err := parseStringList(row.rolesRaw)
 	if err != nil {
-		return authconnector.Identity{}, fmt.Errorf("roles: %w", err)
+		return authconnector.Identity{}, fmt.Errorf("роли: %w", err)
 	}
 	claims := map[string]any{"sqlDriver": c.cfg.Driver}
 	if row.minecraftUUID != "" {
@@ -336,7 +336,7 @@ func buildQueries(cfg RuntimeConfig) (string, string, int, error) {
 		loginConditions = append(loginConditions, "LOWER("+literal(cfg.Columns.Email)+") = LOWER("+placeholder+")")
 	}
 	if len(loginConditions) == 0 {
-		return "", "", 0, errors.New("SQL connector has no login identifier columns")
+		return "", "", 0, errors.New("SQL коннектор имеет нет вход identifier столбцы")
 	}
 	byIdentifier := "SELECT " + selectList + " FROM " + quote(cfg.Table) + " WHERE (" + strings.Join(loginConditions, " OR ") + ") LIMIT 2"
 	bySubject := "SELECT " + selectList + " FROM " + quote(cfg.Table) + " WHERE " + literal(cfg.Columns.ID) + " = " + placeholder + " LIMIT 2"
@@ -369,12 +369,12 @@ func parseStringList(raw string) ([]string, error) {
 	return normalizeList(strings.Split(raw, ",")), nil
 }
 
-// parsePostgresArray handles the one-dimensional text-array representation returned
-// by CAST(text[] AS TEXT). It deliberately rejects nested arrays and malformed quoted
-// elements instead of silently producing wrong role/group names.
+// parsePostgresArray дескриптор один-dimensional text-array representation возвращён
+// через CAST(text[] как TEXT). Это намеренно отклоняет вложенный arrays и повреждённый кавычки
+// elements вместо этого без уведомления создавая неверный role/group имена.
 func parsePostgresArray(raw string) ([]string, error) {
 	if len(raw) < 2 || raw[0] != '{' || raw[len(raw)-1] != '}' {
-		return nil, errors.New("invalid PostgreSQL array")
+		return nil, errors.New("недопустимый PostgreSQL array")
 	}
 	body := raw[1 : len(raw)-1]
 	if body == "" {
@@ -415,12 +415,12 @@ func parsePostgresArray(raw string) ([]string, error) {
 			continue
 		}
 		if (ch == '{' || ch == '}') && !inQuotes {
-			return nil, errors.New("nested PostgreSQL arrays are not supported")
+			return nil, errors.New("вложенный PostgreSQL arrays являются не поддерживаемый")
 		}
 		current.WriteByte(ch)
 	}
 	if escaped || inQuotes {
-		return nil, errors.New("malformed PostgreSQL array quoting")
+		return nil, errors.New("повреждённый PostgreSQL array кавычки")
 	}
 	flush()
 	return values, nil

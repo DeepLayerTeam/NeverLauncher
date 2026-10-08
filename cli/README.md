@@ -1,38 +1,38 @@
 
-## ServerBridge Zero-Patch Provisioning (0.19.9)
+## ServerBridge Без патчей Предоставление учётной записи (0.19.9)
 
-- `nl server-bridge detect --server-root <dir>` — определить certified platform без изменения файлов.
-- `nl server-bridge install --server-root <dir> --artifact-dir <release>` — выбрать/проверить platform artifact, установить bridge, создать config, Ed25519 node identity и public-only enrollment request.
-- `nl server-bridge enroll --server-root <dir> --backend <url> --token <admin-token>` — зарегистрировать node identity; `--rotate` использует существующий rotate-identity API.
-- `nl server-bridge status --server-root <dir> [--backend <url> --token <token>]` — проверить локальный artifact/hash/identity и, при наличии credentials, Backend node.
-- `nl server-bridge upgrade ...` — транзакционно заменить bridge artifact без ротации node identity.
-- `nl server-bridge rollback --server-root <dir> [--transaction <id>]` — восстановить предыдущие managed files. Все mutating команды поддерживают `--dry-run` там, где применимо.
+- `nl server-bridge detect --server-root <dir>` — определить сертифицированный платформа без изменения файлов.
+- `nl server-bridge install --server-root <dir> --artifact-dir <release>` — выбрать/проверить платформа артефакт, установить мост, создать конфигурация, Ed25519 узел идентичность и публичный-только регистрация запрос.
+- `nl server-bridge enroll --server-root <dir> --backend <url> --token <admin-token>` — зарегистрировать узел идентичность; `--rotate` использует существующий ротировать-идентичность API.
+- `nl server-bridge status --server-root <dir> [--backend <url> --token <token>]` — проверить локальный artifact/hash/identity и, при наличии учётные данные, Серверная часть узел.
+- `nl server-bridge upgrade...` — транзакционно заменить мост артефакт без ротации узел идентичность.
+- `nl server-bridge rollback --server-root <dir> [--transaction <id>]` — восстановить предыдущие управляемый файлы. Все изменяющий команды поддерживают `--dry-run` там, где применимо.
 
-Production provisioning требует sibling `SERVERBRIDGE3_CERTIFICATION.json` или exact-version `BRIDGE_RELEASE_ALLOWLIST.json`; `--allow-unverified-artifact` предназначен только для development. Universal provisioning не патчит authlib/core и fail-closed отклоняет Mohist/Arclight/Magma/CatServer/Banner/Cardboard без отдельной certification matrix.
+Рабочий предоставление учётной записи требует sibling `SERVERBRIDGE3_CERTIFICATION.json` или точная версия `BRIDGE_RELEASE_ALLOWLIST.json`; `--allow-unverified-artifact` предназначен только для разработка. Универсальный предоставление учётной записи не патчит authlib/core и отказ с блокировкой отклоняет Mohist/Arclight/Magma/CatServer/Banner/Cardboard без отдельной сертификация матрица.
 
 # NeverLauncher CLI
 
-## Loader Resolution & Pinning — 0.17.7
+## Загрузчик Разрешение и Закрепление — 0.17.7
 
-Все production loader materializers поддерживают `--resolution-lock <path>`. Первый запуск разрешает mutable selector в concrete loader version и атомарно пишет lock с resolution-source SHA-256, payload/profile SHA-256, runtime-profile/materialized-files SHA-256 и общей `reproducibilitySha256`. Повторный запуск читает lock до mutable resolution, повторно скачивает только pinned concrete payload и fail-closed сравнивает его и итоговый runtime profile с lock.
+Все рабочий загрузчик материализатор поддерживают `--resolution-lock <path>`. Первый запуск разрешает изменяемый селектор в конкретный загрузчик версия и атомарно пишет блокировка с разрешение-исходник SHA-256, payload/profile SHA-256, runtime-profile/materialized-files SHA-256 и общей `reproducibilitySha256`. Повторный запуск читает блокировка до изменяемый разрешение, повторно скачивает только закреплённый конкретный полезная нагрузка и отказ с блокировкой сравнивает его и итоговый среда выполнения профиль с блокировка.
 
-Пример: `nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --resolution-lock .neverlauncher/fabric.lock.json ...`. Тот же механизм работает для Quilt, Forge и NeoForge; CI выполняет replay и публикует raw lock как release evidence.
+Пример: `nl runtime fabric-package --minecraft 1.21.1 --loader-version latest-stable --resolution-lock.neverlauncher/fabric.lock.json...`. Тот же механизм работает для Quilt, Forge и NeoForge; CI выполняет повторное воспроизведение и публикует сырой блокировка как релиз свидетельство.
 
-## NeoForge Compatibility II — 0.17.6
+## NeoForge Совместимость II — 0.17.6
 
-`nl runtime neoforge-install` / `neoforge-package` исполняют production NeoForge processor installer для stable-линии Minecraft 1.20.1–26.2. Resolver отдельно поддерживает официальный 1.20.1 artifact `net.neoforged:forge` и современный `net.neoforged:neoforge`, проверяет соответствие loader↔Minecraft, выполняет client processors на target Java и возвращает только concrete immutable loader version.
+`nl runtime neoforge-install` / `neoforge-package` исполняют рабочий NeoForge обработчик установщик для stable-линии Minecraft 1.20.1–26.2. Разрешатель отдельно поддерживает официальный 1.20.1 артефакт `net.neoforged:forge` и современный `net.neoforged:neoforge`, проверяет соответствие загрузчик↔Minecraft, выполняет клиент обработчики на цель Java и возвращает только конкретный неизменяемый загрузчик версия.
 
-## Forge Legacy 1.7.10 — 0.17.5
+## Forge Устаревший 1.7.10 — 0.17.5
 
-`nl runtime forge-install` / `forge-package` теперь исполняют Forge 1.7.10 V1 universal installer как отдельный LaunchWrapper/FML path. Materializer требует Java 8, `net.minecraft.launchwrapper.Launch` и `cpw.mods.fml.common.launcher.FMLTweaker`, нормализует legacy profile к Vanilla 1.7.10 при отсутствии `inheritsFrom`, проверяет universal JAR и фиксирует `legacyTweaker`, `legacyBaseVersion`, `legacyProfileNormalized` и immutable Forge version в install evidence.
+`nl runtime forge-install` / `forge-package` теперь исполняют Forge 1.7.10 V1 универсальный установщик как отдельный LaunchWrapper/FML путь. Материализатор требует Java 8, `net.minecraft.launchwrapper.Launch` и `cpw.mods.fml.common.launcher.FMLTweaker`, нормализует устаревший профиль к Vanilla 1.7.10 при отсутствии `inheritsFrom`, проверяет универсальный JAR и фиксирует `legacyTweaker`, `legacyBaseVersion`, `legacyProfileNormalized` и неизменяемый Forge версия в установка свидетельство.
 
-## Forge Legacy 1.12.2 — 0.17.4
+## Forge Устаревший 1.12.2 — 0.17.4
 
-`nl runtime forge-install` / `forge-package` теперь исполняют реальный Forge 1.12.2 legacy installer. V1 installer извлекает universal JAR из `install.filePath`, проверяет SHA-1, сохраняет nested `versionInfo` и материализует только client-required libraries; repacked 1.12.2 installer с пустыми processors использует embedded Maven universal artifact. Результат фиксирует `installMode`, universal SHA-1/SHA-256 и concrete Forge version для release certification.
+`nl runtime forge-install` / `forge-package` теперь исполняют реальный Forge 1.12.2 устаревший установщик. V1 установщик извлекает универсальный JAR из `install.filePath`, проверяет SHA-1, сохраняет вложенный `versionInfo` и материализует только клиент-обязательный библиотеки; repacked 1.12.2 установщик с пустыми обработчики использует встроенный Maven универсальный артефакт. Результат фиксирует `installMode`, универсальный SHA-1/SHA-256 и конкретный Forge версия для сертификация релиза.
 
-`nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta status-only семейства команд удалены.
+`nl` — операционный CLI для канонического NeverLauncher API `/api/v1`. Исторические RC/stable/platform/product/extension/beta состояние-только семейства команд удалены.
 
-Все общие отчёты CLI, ранее помеченные историческими `schemaVersion` 4.x–8.x, используют единую версию схемы `1.0`. Специализированные форматы, например manifest/runtime schema, сохраняют собственные версии формата.
+Все общие отчёты CLI, ранее помеченные историческими `schemaVersion` 4.x–8.x, используют единую версию схемы `1.0`. Специализированные форматы, например manifest/runtime схема, сохраняют собственные версии формата.
 
 ## Основные команды
 
@@ -46,7 +46,7 @@ nl project ...
 nl diagnostics ...
 ```
 
-## Minecraft runtime materialization
+## Minecraft среда выполнения материализация
 
 Рабочие materializer-команды:
 
@@ -58,9 +58,9 @@ nl runtime forge-package --minecraft 1.20.1 --loader-version latest-stable --cli
 nl runtime neoforge-package --minecraft 1.21.1 --loader-version latest-stable --client-dir .neverlauncher/neoforge/1.21.1 --output client-package.json
 ```
 
-Fabric использует официальный Meta API v2, Quilt — Meta API v3. Forge и NeoForge загружают проверенный official Maven installer JAR, выполняют client processors из `install_profile.json`, проверяют outputs и нормализуют дочерний `version.json`. До упаковки mutable alias `latest-stable` разрешается в concrete loader version и фиксируется resolution lock. Replay обязан воспроизвести source/payload/runtime-profile/materialized-files SHA-256; обычный package SHA-256 + signed manifest lifecycle NeverLauncher остаётся отдельным уровнем integrity.
+Fabric использует официальный Мета API v2, Quilt — Мета API v3. Forge и NeoForge загружают проверенный официальный Maven установщик JAR, выполняют клиент обработчики из `install_profile.json`, проверяют выходные данные и нормализуют дочерний `version.json`. До упаковки изменяемый псевдоним `latest-stable` разрешается в конкретный загрузчик версия и фиксируется разрешение блокировка. Повторное воспроизведение обязан воспроизвести source/payload/runtime-profile/materialized-files SHA-256; обычный пакет SHA-256 + подписанный манифест жизненный цикл NeverLauncher остаётся отдельным уровнем целостность.
 
-## Операции Backend
+## Операции Серверная часть
 
 ```bash
 nl auth login --backend https://launcher.example
@@ -81,7 +81,7 @@ nl install bootstrap-admin \
   --password '...'
 ```
 
-## Unified Transactional Updater Core
+## Единый Транзакционный Обновлятор Ядро
 
 ```bash
 nl update plan --from old.json --to new.json
@@ -91,9 +91,9 @@ nl update recover --root ./install
 nl update self-test
 ```
 
-Для `0.15.7+` Desktop self-update использует внешний `nl update components` helper: production package обязан иметь pinned SHA-256 и platform component manifest, NeverGuard останавливается до switch, а Desktop/Guard/Runtime применяются одной rollback-boundary; macOS обновляет целый notarized `.app`.
+Для `0.15.7+` Настольное приложение self-обновление использует внешний `nl update components` вспомогательный модуль: рабочий пакет обязан иметь закреплённый SHA-256 и платформа компонент манифест, NeverGuard останавливается до переключение, а Desktop/Guard/Runtime применяются одной откат-граница; macOS обновляет целый нотариально заверенный `.app`.
 
-Для `0.15.6+` `client install/update/repair/rollback/package-apply` используют один transactional engine: verified staging на том же filesystem, durable journal, backup только touched paths, atomic replace, post-verify и automatic crash rollback. Control state находится в `.neverlauncher/updater`; payload не может изменять этот каталог, проходить через symlink или выходить за install root.
+Для `0.15.6+` `client install/update/repair/rollback/package-apply` используют один транзакционный движок: проверен подготовка на том же файловая система, долговременный журнал, резервное копирование только touched пути, атомарный заменять, post-проверять и автоматический сбой откат. Управление состояние находится в `.neverlauncher/updater`; полезная нагрузка не может изменять этот каталог, проходить через символическая ссылка или выходить за установка корень.
 
 ## Релизы и пакеты
 
@@ -124,15 +124,15 @@ nl packaging verify
 ```
 
 
-Для `0.15.2+` Windows publication дополнительно требует две канонические архитектуры (`windows-x64`, `windows-arm64`) и production `WINDOWS_SIGNING_EVIDENCE.json`. `release publish-check` повторно связывает подписанные PE/ZIP/package manifests с `DELIVERY_MANIFEST.json`; unsigned CI candidate публикацией не считается.
+Для `0.15.2+` Windows публикация дополнительно требует две канонические архитектуры (`windows-x64`, `windows-arm64`) и рабочий `WINDOWS_SIGNING_EVIDENCE.json`. `release publish-check` повторно связывает подписанные PE/ZIP/пакет манифесты с `DELIVERY_MANIFEST.json`; неподписанный CI кандидат публикацией не считается.
 
-Для `0.13.9+` publishable bundle требует exact-commit Guard CI evidence для Linux/Windows/macOS. `scripts/release/build-release.sh` получает пути через `NEVERLAUNCHER_GUARD_CI_MATRIX_FILE`, `NEVERLAUNCHER_GUARD_CI_TARGETS_FILE` и `NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR`; CLI повторно проверяет exact platform artifact hashes при `release build` и `release publish-check`.
+Для `0.13.9+` готовый к публикации комплект требует точный-фиксация Защита CI свидетельство для Linux/Windows/macOS. `scripts/release/build-release.sh` получает пути через `NEVERLAUNCHER_GUARD_CI_MATRIX_FILE`, `NEVERLAUNCHER_GUARD_CI_TARGETS_FILE` и `NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR`; CLI повторно проверяет точный платформа артефакт хеширует при `release build` и `release publish-check`.
 
-В `0.13.10` каждый Guard target result также обязан совпадать по `repository`; evidence из другого fork отклоняется даже при совпавших commit/run. Перед production rollout с 0.13.9 выполните `nl db migrate apply` и `nl db migrate verify`: latest migration должна быть `0020_guard_migration_compatibility_stabilization_01310`. Для 0.14.2 latest migration — `0022_serverbridge_crypto_node_identities_0142`: shared ServerBridge bearer credentials удалены, public Ed25519 node identities и replay nonces стали PostgreSQL state; существующие 0.14.1 nodes требуют `rotate-identity` enrollment. Для 0.14.3 latest migration — `0023_one_time_join_tickets_0143`: активные legacy join authorizations сбрасываются на security boundary, новые ServerBridge tickets привязываются к exact node identity epoch/fingerprint и атомарно consume-ятся с redemption proof; Yggdrasil `/hasJoined` также consume-once.
+В `0.13.10` каждый Защита цель результат также обязан совпадать по `repository`; свидетельство из другого ответвление отклоняется даже при совпавших commit/run. Перед рабочий развёртывание с 0.13.9 выполните `nl db migrate apply` и `nl db migrate verify`: последний миграция должна быть `0020_guard_migration_compatibility_stabilization_01310`. Для 0.14.2 последний миграция — `0022_serverbridge_crypto_node_identities_0142`: общий ServerBridge bearer учётные данные удалены, публичный Ed25519 узел идентичности и повторное воспроизведение одноразовые значения стали PostgreSQL состояние; существующие 0.14.1 узлы требуют `rotate-identity` регистрация. Для 0.14.3 последний миграция — `0023_one_time_join_tickets_0143`: активные устаревший подключение авторизация сбрасываются на граница безопасности, новые ServerBridge билеты привязываются к точный узел идентичность epoch/fingerprint и атомарно consume-ятся с использование доказательство; Yggdrasil `/hasJoined` также одноразовое использование.
 
-Для обращений к Backend используйте `--backend`, а для защищённых маршрутов `/api/v1` — `--token` или `NEVERLAUNCHER_TOKEN`.
+Для обращений к Серверная часть используйте `--backend`, а для защищённых маршрутов `/api/v1` — `--token` или `NEVERLAUNCHER_TOKEN`.
 
-## Production-операции без status-only заглушек
+## Production-операции без состояние-только заглушек
 
 ```bash
 nl pipeline stage --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN" --package-id <id>
@@ -146,13 +146,13 @@ nl install storage-check --backend https://launcher.example --token "$NEVERLAUNC
 nl install verify --backend https://launcher.example --token "$NEVERLAUNCHER_TOKEN"
 ```
 
-`0.15.8+` `release verify` и `security verify-signature` требуют внешний offline-root Ed25519 public key и persistent trust state. Root key из bundle не принимается; release-signing key принимается только через root-signed `RELEASE_TRUST_POLICY.json`.
+`0.15.8+` `release verify` и `security verify-signature` требуют внешний автономный-корень Ed25519 открытый ключ и постоянный доверие состояние. Корень ключ из комплект не принимается; release-ключ подписи принимается только через подписанный корневым ключом `RELEASE_TRUST_POLICY.json`.
 
-`0.15.9+` `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` обязан покрывать Windows/Linux/macOS x64+ARM64 и exact package/JRE/component bytes. `delivery public-e2e` предназначен для post-publish проверки реальных публичных URL и повторно запускает Release Verification v2 над скачанным bundle.
+`0.15.9+` `PUBLIC_PRODUCTION_DELIVERY_MATRIX.json` обязан покрывать Windows/Linux/macOS x64+ARM64 и конкретный пакет/JRE/компонент байты. `delivery public-e2e` предназначен для после публикации проверки реальных публичных URL и повторно запускает Релиз Проверка v2 над скачанным комплект.
 
-## P3.2v4: реальный client/desktop/key lifecycle
+## P3.2v4: реальный client/desktop/key жизненный цикл
 
-Client lifecycle использует уже собранный `client-package.json` и storage с тем же layout:
+Клиент жизненный цикл использует уже собранный `client-package.json` и хранилище с тем же структура:
 
 ```bash
 nl client install --package dist/client-package.json --storage-dir ./storage --client-dir ./minecraft
@@ -162,9 +162,9 @@ nl client cleanup --package dist/client-package.json --client-dir ./minecraft
 nl client rollback --client-dir ./minecraft --target previous
 ```
 
-`cleanup` не удаляет неизвестные файлы безвозвратно: управляемые orphan-файлы перемещаются в `.neverlauncher/quarantine`. Перед install/update/repair создаётся rollback snapshot.
+`cleanup` не удаляет неизвестные файлы безвозвратно: управляемые orphan-файлы перемещаются в `.neverlauncher/quarantine`. Перед install/update/repair создаётся откат снимок.
 
-Standalone first-run не зависит от исходного checkout и требует immutable image references:
+Автономный первый запуск не зависит от исходного checkout и требует неизменяемый образ ссылки:
 
 ```bash
 nl install first-run --output-dir ./neverlauncher-production \
@@ -172,14 +172,14 @@ nl install first-run --output-dir ./neverlauncher-production \
   --admin-image registry.example/neverlauncher-admin@sha256:<digest>
 ```
 
-Desktop package/verify работает только с реально собранными artifacts:
+Настольное приложение package/verify работает только с реально собранными артефакты:
 
 ```bash
 nl desktop package --artifact-dir dist/release-${VERSION} --out dist/desktop-package --platform linux
 nl desktop verify dist/desktop-package
 ```
 
-Key lifecycle и supply-chain:
+Ключ жизненный цикл и supply-цепочка:
 
 ```bash
 nl security rotate-key --registry-dir /secure/neverlauncher-keys --key release-signing

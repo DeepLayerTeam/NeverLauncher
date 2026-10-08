@@ -30,7 +30,7 @@ func (e *ExitError) Error() string { return e.Message }
 func Environment() (HostEnvironment, error) {
 	env := HostEnvironment{ExtensionId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_ID")), ExtensionApiVersion: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_API_VERSION")), Version: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_VERSION")), Scope: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE")), ScopeId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_SCOPE_ID")), Target: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_TARGET")), HostUrl: strings.TrimRight(strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_URL")), "/"), HostToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN")), CallbackToken: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN")), InstanceId: strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID"))}
 	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
-		return HostEnvironment{}, errors.New("NeverLauncher Extension Host environment is incomplete")
+		return HostEnvironment{}, errors.New("NeverLauncher Хост расширений окружение является неполный")
 	}
 	if env.Scope == "" {
 		env.Scope = "global"
@@ -69,7 +69,7 @@ func (c *Client) call(ctx context.Context, path string, input, output any) error
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("NeverLauncher Host %s: HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
+		return fmt.Errorf("NeverLauncher Хост %s: HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 	if output != nil && len(bytes.TrimSpace(data)) > 0 {
 		return json.Unmarshal(data, output)
@@ -83,7 +83,7 @@ func (c *Client) Hello(ctx context.Context) (HelloResponse, error) {
 		return HelloResponse{}, err
 	}
 	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
-		return HelloResponse{}, errors.New("NeverLauncher Host hello identity/protocol mismatch")
+		return HelloResponse{}, errors.New("NeverLauncher Хост hello identity/protocol несоответствие")
 	}
 	c.hello = out
 	return out, nil
@@ -94,7 +94,7 @@ func (c *Client) Log(ctx context.Context, level, message string, fields map[stri
 func (c *Client) Capability(ctx context.Context, name string, request, response any) error {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" || strings.Contains(name, "/") {
-		return errors.New("invalid capability name")
+		return errors.New("недопустимый возможность имя")
 	}
 	return c.call(ctx, "/v1/capabilities/"+name, request, response)
 }

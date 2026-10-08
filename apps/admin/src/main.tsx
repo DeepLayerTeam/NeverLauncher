@@ -44,8 +44,8 @@ const fallbackSections: Section[] = [
   { id: 'devices', title: 'Устройства' },
   { id: 'audit', title: 'Аудит' },
   { id: 'storage', title: 'Хранилище' },
-  { id: 'extension-registry', title: 'NeverExtensions Registry' },
-  { id: 'extensions-manager', title: 'Admin Extensions' },
+  { id: 'extension-registry', title: 'Реестр NeverExtensions' },
+  { id: 'extensions-manager', title: 'Расширения панели администратора' },
   { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'diagnostics', title: 'Диагностика' },
   { id: 'backup-restore', title: 'Резервное копирование' },
@@ -161,7 +161,7 @@ function DataTable({ payload }: { payload: Record<string, unknown> | null }) {
 }
 
 function ServerBridgeOverview({ payload }: { payload: Record<string, unknown> | null }) {
-  if (!payload) return <p className="muted">ServerBridge overview ещё не загружен.</p>;
+  if (!payload) return <p className="muted">ServerBridge обзор ещё не загружен.</p>;
   const data = payload as ServerBridgeOverviewData;
   const protocol = data.protocol ?? {};
   const metrics = data.metrics ?? {};
@@ -170,12 +170,12 @@ function ServerBridgeOverview({ payload }: { payload: Record<string, unknown> | 
   const controls = data.control ?? [];
   const audit = data.audit ?? [];
   return <div className="bridgeOverview">
-    <div className="bridgeHero"><div><h2>{data.release ?? 'ServerBridge 3'}</h2><p className="muted">Protocol v{protocol.version ?? '—'} · {protocol.status ?? 'unknown'} · v2: {protocol.v2Mode ?? 'unknown'}</p></div><span className={`badge ${protocol.frozen ? 'ok' : 'warn'}`}>{protocol.frozen ? 'v3 frozen' : 'v3 mutable'}</span></div>
+    <div className="bridgeHero"><div><h2>{data.release ?? 'ServerBridge 3'}</h2><p className="muted">Protocol v{protocol.version ?? '—'} · {protocol.status ?? 'unknown'} · v2: {protocol.v2Mode ?? 'unknown'}</p></div><span className={`badge ${protocol.frozen ? 'ok' : 'warn'}`}>{protocol.frozen ? 'v3 зафиксирован' : 'v3 изменяем'}</span></div>
     <div className="bridgeMetricGrid"><MetricCard label="Узлы" value={metrics.nodesTotal ?? 0} /><MetricCard label="Свежие" value={metrics.nodesFresh ?? 0} /><MetricCard label="Миграция v2→v3" value={metrics.protocolMigrationsRequired ?? 0} /><MetricCard label="Нужно обновить" value={metrics.upgradesRecommended ?? 0} /><MetricCard label="Topology edges" value={metrics.topologyEdges ?? 0} /><MetricCard label="Control history" value={metrics.recentControlCommands ?? 0} /></div>
     <p className="bridgeDigest muted">Frozen feature digest: <code>{protocol.featureDigest ?? '—'}</code>{data.generatedAt ? ` · ${new Date(data.generatedAt).toLocaleString()}` : ''}</p>
-    <section className="bridgeSection"><h3>Серверы и runtime telemetry</h3>{nodes.length === 0 ? <p className="muted">ServerBridge nodes не зарегистрированы.</p> : <div className="bridgeNodeGrid">{nodes.map((node) => <article className="subcard bridgeNode" key={node.id ?? node.name}><div className="bridgeNodeTitle"><strong>{node.name ?? node.id ?? 'node'}</strong><span className={`badge ${node.fresh && node.status === 'active' ? 'ok' : 'warn'}`}>{node.status ?? 'unknown'}</span></div><p className="muted">{node.kind ?? 'server'} · Protocol v{node.protocolVersion ?? '—'} / {node.protocolMode ?? 'unknown'} · bridge {node.pluginVersion ?? '—'}</p><p>{node.serverBrand ?? node.loaderName ?? 'Minecraft'} {node.minecraftVersion ?? ''} · Java {node.javaVersion ?? '—'} · {node.hostname ?? 'host n/a'}</p><p className="muted">runtime <code>{node.runtimeId ?? '—'}</code> · integrity {node.integrityStatus ?? 'unknown'}</p>{(node.protocolMigrationRequired || node.upgradeRecommended) && <p className="bridgeAttention">{node.protocolMigrationRequired ? 'Требуется production migration v2→v3. ' : ''}{node.upgradeRecommended ? 'Рекомендуется upgrade bridge.' : ''}</p>}{node.telemetry && <details><summary>Telemetry</summary><pre>{JSON.stringify(node.telemetry, null, 2)}</pre></details>}</article>)}</div>}</section>
-    <div className="bridgeColumns"><section className="bridgeSection"><h3>Topology</h3><pre>{JSON.stringify(topology, null, 2)}</pre></section><section className="bridgeSection"><h3>Control</h3><pre>{JSON.stringify(controls, null, 2)}</pre></section></div>
-    <section className="bridgeSection"><h3>Audit</h3><pre>{JSON.stringify(audit, null, 2)}</pre></section>
+    <section className="bridgeSection"><h3>Серверы и среда выполнения телеметрия</h3>{nodes.length === 0 ? <p className="muted">ServerBridge узлы не зарегистрированы.</p> : <div className="bridgeNodeGrid">{nodes.map((node) => <article className="subcard bridgeNode" key={node.id ?? node.name}><div className="bridgeNodeTitle"><strong>{node.name ?? node.id ?? 'node'}</strong><span className={`badge ${node.fresh && node.status === 'active' ? 'ok' : 'warn'}`}>{node.status ?? 'unknown'}</span></div><p className="muted">{node.kind ?? 'server'} · Protocol v{node.protocolVersion ?? '—'} / {node.protocolMode ?? 'unknown'} · bridge {node.pluginVersion ?? '—'}</p><p>{node.serverBrand ?? node.loaderName ?? 'Minecraft'} {node.minecraftVersion ?? ''} · Java {node.javaVersion ?? '—'} · {node.hostname ?? 'host n/a'}</p><p className="muted">runtime <code>{node.runtimeId ?? '—'}</code> · integrity {node.integrityStatus ?? 'unknown'}</p>{(node.protocolMigrationRequired || node.upgradeRecommended) && <p className="bridgeAttention">{node.protocolMigrationRequired ? 'Требуется production migration v2→v3. ' : ''}{node.upgradeRecommended ? 'Рекомендуется upgrade bridge.' : ''}</p>}{node.telemetry && <details><summary>Телеметрия</summary><pre>{JSON.stringify(node.telemetry, null, 2)}</pre></details>}</article>)}</div>}</section>
+    <div className="bridgeColumns"><section className="bridgeSection"><h3>Топология</h3><pre>{JSON.stringify(topology, null, 2)}</pre></section><section className="bridgeSection"><h3>Управление</h3><pre>{JSON.stringify(controls, null, 2)}</pre></section></div>
+    <section className="bridgeSection"><h3>Аудит</h3><pre>{JSON.stringify(audit, null, 2)}</pre></section>
   </div>;
 }
 
@@ -203,9 +203,9 @@ function App() {
   const [sessions, setSessions] = useState<SessionView[]>([]);
   const [devices, setDevices] = useState<TrustedDeviceView[]>([]);
 
-  const [projectForm, setProjectForm] = useState<ProjectForm>({ id: 'neverlauncher-project', name: 'Проект NeverLauncher', description: 'Production-проект Minecraft', homepage: '', repository: '', defaultChannel: 'stable' });
-  const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: 'neverlauncher-project', id: 'vanilla-java21', name: 'Vanilla Java 21', description: 'Production-профиль клиента', loader: 'vanilla', preset: 'recommended', isDefault: true });
-  const [channelForm, setChannelForm] = useState<ChannelForm>({ projectId: 'neverlauncher-project', id: 'stable', name: 'stable', description: 'Стабильный production-канал', protected: true });
+  const [projectForm, setProjectForm] = useState<ProjectForm>({ id: 'neverlauncher-project', name: 'Проект NeverLauncher', description: 'Рабочий проект Minecraft', homepage: '', repository: '', defaultChannel: 'stable' });
+  const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: 'neverlauncher-project', id: 'vanilla-java21', name: 'Vanilla Java 21', description: 'Рабочий профиль клиента', loader: 'vanilla', preset: 'recommended', isDefault: true });
+  const [channelForm, setChannelForm] = useState<ChannelForm>({ projectId: 'neverlauncher-project', id: 'stable', name: 'stable', description: 'Стабильный рабочий канал', protected: true });
   const [userForm, setUserForm] = useState<UserForm>({ id: '', email: 'operator@neverlauncher.local', displayName: 'Оператор', roleId: 'viewer', password: 'Смените-этот-пароль' });
   const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: 'neverlauncher-project', profileId: 'vanilla-java21', channel: 'stable', version: `${TOOL_VERSION}-client`, packageId: '', path: 'mods/example.jar', sha256: '' });
   const [packageFile, setPackageFile] = useState<File | null>(null);
@@ -244,7 +244,7 @@ function App() {
 
   function applyPasskeySession(data: PasskeySessionResponse, preserveRefresh = false) {
     const nextToken = data.tokens?.accessToken ?? data.accessToken;
-    if (!nextToken) throw new Error('Backend не вернул Never access token.');
+    if (!nextToken) throw new Error('Серверная часть не вернула токен доступа NeverLauncher.');
     setToken(nextToken);
     if (data.tokens?.refreshToken !== undefined) setRefreshToken(data.tokens.refreshToken);
     else if (!preserveRefresh) setRefreshToken('');
@@ -253,11 +253,11 @@ function App() {
   }
 
   async function finishPasskeyMFA(data: LoginResponse) {
-    if (!data.transactionToken || !data.publicKey) throw new Error('Backend запросил passkey MFA без WebAuthn transaction.');
+    if (!data.transactionToken || !data.publicKey) throw new Error('Серверная часть запросила MFA с ключом доступа без транзакции WebAuthn.');
     const credential = await getPasskeyAssertion(data.publicKey);
     const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/mfa/complete', undefined, { method: 'POST', body: JSON.stringify({ transactionToken: data.transactionToken, deviceId: 'admin-browser', credential }) });
     applyPasskeySession(completed);
-    setMessage('Вход завершён passkey MFA. Сессия имеет phishing-resistant authentication strength.');
+    setMessage('Вход завершён с MFA по ключу доступа. Сессия имеет устойчивый к фишингу уровень аутентификации.');
   }
 
   async function login() {
@@ -267,7 +267,7 @@ function App() {
       await finishPasskeyMFA(data);
       return;
     }
-    if (!data.token) throw new Error('Backend не вернул access token.');
+    if (!data.token) throw new Error('Серверная часть не вернула токен доступа.');
     setToken(data.token);
     setRefreshToken(data.refreshToken ?? '');
     setSessionId(data.sessionId ?? '');
@@ -281,16 +281,16 @@ function App() {
     const credential = await getPasskeyAssertion(begin.publicKey as PublicKeyCredentialRequestOptionsJSON);
     const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/login/complete', undefined, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, deviceId: 'admin-browser', credential }) });
     applyPasskeySession(completed);
-    setMessage('Выполнен passwordless вход по passkey.');
+    setMessage('Выполнен беспарольный вход по ключу доступа.');
   }
 
   async function registerPasskey() {
     if (!token) throw new Error('Сначала войдите в NeverLauncher.');
     const begin = await requestJSON<PasskeyBegin>(backendUrl, '/api/v1/auth/passkeys/register/begin', token, { method: 'POST' });
     const credential = await createPasskeyCredential(begin.publicKey as PublicKeyCredentialCreationOptionsJSON);
-    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/register/complete', token, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, friendlyName: 'Admin browser passkey', credential }) });
+    const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/register/complete', token, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, friendlyName: 'Ключ доступа браузера администратора', credential }) });
     applyPasskeySession(completed, true);
-    setMessage('Passkey зарегистрирован и текущая сессия повышена до phishing-resistant.');
+    setMessage('Ключ доступа зарегистрирован; текущая сессия получила устойчивый к фишингу уровень защиты.');
   }
 
   async function stepUpPasskey() {
@@ -299,23 +299,23 @@ function App() {
     const credential = await getPasskeyAssertion(begin.publicKey as PublicKeyCredentialRequestOptionsJSON);
     const completed = await requestJSON<PasskeySessionResponse>(backendUrl, '/api/v1/auth/passkeys/step-up/complete', token, { method: 'POST', body: JSON.stringify({ transactionToken: begin.transactionToken, deviceId: 'admin-browser', credential }) });
     applyPasskeySession(completed, true);
-    setMessage('Passkey step-up выполнен. Критические операции разблокированы на ограниченное время.');
+    setMessage('Дополнительная проверка ключом доступа выполнена. Критические операции разблокированы на ограниченное время.');
   }
 
   async function saveMfaPolicy() {
     if (!token) throw new Error('Сначала войдите в NeverLauncher.');
     const data = await requestJSON<{ requirement?: string }>(backendUrl, '/api/v1/auth/mfa/policy', token, { method: 'PUT', body: JSON.stringify({ requirement: mfaPolicy }) });
     setMfaPolicy((data.requirement as typeof mfaPolicy) ?? mfaPolicy);
-    setMessage(`MFA policy сохранена: ${data.requirement ?? mfaPolicy}.`);
+    setMessage(`Политика MFA сохранена: ${data.requirement ?? mfaPolicy}.`);
   }
 
   async function refreshSession() {
-    if (!refreshToken) throw new Error('refreshToken отсутствует: выполните вход заново');
+    if (!refreshToken) throw new Error('Токен обновления отсутствует: выполните вход заново');
     const data = await requestJSON<any>(backendUrl, '/api/v1/auth/refresh', undefined, { method: 'POST', body: JSON.stringify({ refreshToken }) });
     setToken(data.tokens.accessToken);
     setRefreshToken(data.tokens.refreshToken);
     setSessionId(data.session.id);
-    setMessage('Сессия обновлена, refresh token ротирован сервером.');
+    setMessage('Сессия обновлена, токен обновления ротирован сервером.');
   }
 
   async function logout() {
@@ -364,10 +364,10 @@ function App() {
     if (item.status === 'revoked') return;
     const reason = window.prompt('Причина необратимого отзыва устройства', 'admin-device-revoke');
     if (reason === null) return;
-    if (!window.confirm(`Отозвать устройство ${item.name || item.id}? Старый device key больше нельзя будет зарегистрировать повторно.`)) return;
+    if (!window.confirm(`Отозвать устройство ${item.name || item.id}? Старый ключ устройства больше нельзя будет зарегистрировать повторно.`)) return;
     const data = await requestJSON<{ revokedSessions?: number; revokedMinecraftSessions?: number; invalidatedChallenges?: number }>(backendUrl, `/api/v1/admin/auth/devices/${encodeURIComponent(item.id)}/revoke`, token, { method: 'POST', body: JSON.stringify({ reason }) });
     await loadTrustedDevices();
-    setMessage(`Устройство отозвано: sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}. Если Backend требует fresh phishing-resistant step-up, сначала нажмите «Подтвердить passkey».`);
+    setMessage(`Устройство отозвано: sessions=${data.revokedSessions ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}. Если Серверная часть требует fresh phishing-resistant step-up, сначала нажмите «Подтвердить passkey».`);
   }
 
   async function loadDashboard(currentToken = token) {
@@ -486,7 +486,7 @@ function App() {
   }
 
   async function addRegistryPublisherKey() {
-    if (!registryPublisherId.trim() || !registryPublicKey.trim()) throw new Error('Укажите publisher ID и raw Ed25519 public key в Base64.');
+    if (!registryPublisherId.trim() || !registryPublicKey.trim()) throw new Error('Укажите publisher ID и необработанный открытый ключ Ed25519 в Base64.');
     return requestJSON(backendUrl, `/api/v1/admin/extension-registry/publishers/${encodeURIComponent(registryPublisherId.trim())}/keys`, token, { method: 'POST', body: JSON.stringify({ publicKeyBase64: registryPublicKey.trim(), active: true }) });
   }
 
@@ -507,7 +507,7 @@ function App() {
   }
 
   function lifecycleScopePayload() {
-    if (extensionScope === 'project' && !extensionScopeId.trim()) throw new Error('Для project scope укажите Project ID.');
+    if (extensionScope === 'project' && !extensionScopeId.trim()) throw new Error('Для область проекта укажите ID проекта.');
     return { scope: extensionScope, scopeId: extensionScope === 'project' ? extensionScopeId.trim() : '' };
   }
 
@@ -520,7 +520,7 @@ function App() {
   }
 
   async function updateInstalledExtension(item: ExtensionInstallView) {
-    const version = window.prompt(`Новая версия ${item.extensionId} (оставьте пустым для stable channel)`, '');
+    const version = window.prompt(`Новая версия ${item.extensionId} (оставьте пустым для стабильного канала)`, '');
     const body = version?.trim() ? { scope: item.scope, scopeId: item.scopeId ?? '', version: version.trim() } : { scope: item.scope, scopeId: item.scopeId ?? '', channel: 'stable' };
     return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/update`, token, { method: 'POST', body: JSON.stringify(body) });
   }
@@ -559,37 +559,37 @@ function App() {
 
   const registryItems = ((payload as unknown as RegistrySearchData | null)?.items ?? []);
   const registryPanel = token && active === 'extension-registry' ? <section className="card wide registryPanel">
-    <div className="registryHeading"><div><h2>NeverExtensions Registry {TOOL_VERSION}</h2><p className="muted">Private/local registry подписанных immutable .nlext. Publish принимает только artifact с доверенным Ed25519 publisher key; install повторно проверяет bytes и signature из storage.</p></div><span className="badge ok">verified-only install</span></div>
+    <div className="registryHeading"><div><h2>Реестр NeverExtensions {TOOL_VERSION}</h2><p className="muted">Private/local реестр подписанных неизменяемый.nlext. Публикация принимает только артефакт с доверенным Ed25519 издатель ключ; установка повторно проверяет байты и подпись из хранилище.</p></div><span className="badge ok">проверен-только установка</span></div>
     <div className="registryToolbar">
-      <select aria-label="Extension scope" value={extensionScope} onChange={(event) => setExtensionScope(event.target.value as 'global' | 'project')}><option value="global">global</option><option value="project">project</option></select>
-      {extensionScope === 'project' && <input aria-label="Extension project scope" value={extensionScopeId} onChange={(event) => setExtensionScopeId(event.target.value)} placeholder="Project ID" />}
+      <select aria-label="Расширение область" value={extensionScope} onChange={(event) => setExtensionScope(event.target.value as 'global' | 'project')}><option value="global">глобальный</option><option value="project">проект</option></select>
+      {extensionScope === 'project' && <input aria-label="Расширение область проекта" value={extensionScopeId} onChange={(event) => setExtensionScopeId(event.target.value)} placeholder="Проект ID" />}
       <button onClick={() => Promise.all([loadExtensionInstalls(), loadExtensionHosts()]).catch((err: Error) => setError(err.message))}>Обновить installs/hosts</button>
     </div>
     <div className="registryToolbar">
-      <input aria-label="Registry search" value={registryQuery} onChange={(event) => setRegistryQuery(event.target.value)} placeholder="Поиск extension/publisher" />
-      <input aria-label="Registry channel" value={registryChannel} onChange={(event) => setRegistryChannel(event.target.value)} placeholder="канал: stable" />
-      <input aria-label="Registry launcher version" value={registryLauncherVersion} onChange={(event) => setRegistryLauncherVersion(event.target.value)} placeholder="NeverLauncher version" />
-      <input aria-label="Registry OS" value={registryOS} onChange={(event) => setRegistryOS(event.target.value)} placeholder="OS: linux" />
-      <input aria-label="Registry architecture" value={registryArch} onChange={(event) => setRegistryArch(event.target.value)} placeholder="arch: amd64" />
+      <input aria-label="Поиск в реестре" value={registryQuery} onChange={(event) => setRegistryQuery(event.target.value)} placeholder="Поиск расширения/издателя" />
+      <input aria-label="Реестр канал" value={registryChannel} onChange={(event) => setRegistryChannel(event.target.value)} placeholder="канал: стабильный" />
+      <input aria-label="Версия лаунчера в реестре" value={registryLauncherVersion} onChange={(event) => setRegistryLauncherVersion(event.target.value)} placeholder="Версия NeverLauncher" />
+      <input aria-label="ОС в реестре" value={registryOS} onChange={(event) => setRegistryOS(event.target.value)} placeholder="ОС: Linux" />
+      <input aria-label="Реестр архитектура" value={registryArch} onChange={(event) => setRegistryArch(event.target.value)} placeholder="архитектура: amd64" />
       <button onClick={() => loadRegistry().catch((err: Error) => setError(err.message))}>Найти</button>
     </div>
     <div className="formGrid">
       <article className="subcard">
-        <h3>Publisher trust</h3>
-        <TextInput label="Publisher ID" value={registryPublisherId} onChange={setRegistryPublisherId} />
+        <h3>Издатель доверие</h3>
+        <TextInput label="ID издателя" value={registryPublisherId} onChange={setRegistryPublisherId} />
         <TextInput label="Название" value={registryPublisherName} onChange={setRegistryPublisherName} />
-        <label className="field"><span>Ed25519 raw public key, Base64</span><textarea value={registryPublicKey} onChange={(event) => setRegistryPublicKey(event.target.value)} rows={4} /></label>
-        <div className="buttonRow"><button onClick={() => runRegistryAction('Registry publisher', createRegistryPublisher).catch((err) => setError(err.message))}>Создать/обновить publisher</button><button onClick={() => runRegistryAction('Publisher key', addRegistryPublisherKey).catch((err) => setError(err.message))}>Добавить trusted key</button></div>
+        <label className="field"><span>Ed25519 сырой открытый ключ, Основа64</span><textarea value={registryPublicKey} onChange={(event) => setRegistryPublicKey(event.target.value)} rows={4} /></label>
+        <div className="buttonRow"><button onClick={() => runRegistryAction('Издатель реестра', createRegistryPublisher).catch((err) => setError(err.message))}>Создать/обновить publisher</button><button onClick={() => runRegistryAction('Ключ издателя', addRegistryPublisherKey).catch((err) => setError(err.message))}>Добавить trusted key</button></div>
       </article>
       <article className="subcard">
-        <h3>Publish signed .nlext</h3>
-        <label className="field"><span>Artifact</span><input accept=".nlext,application/octet-stream" type="file" onChange={(event) => setRegistryPackageFile(event.target.files?.[0] ?? null)} /></label>
+        <h3>Публикация подписанный.nlext</h3>
+        <label className="field"><span>Артефакт</span><input accept=".nlext,application/octet-stream" type="file" onChange={(event) => setRegistryPackageFile(event.target.files?.[0] ?? null)} /></label>
         <TextInput label="Каналы" value={registryPublishChannels} onChange={setRegistryPublishChannels} />
-        <TextInput label="Min NeverLauncher" value={registryMinLauncher} onChange={setRegistryMinLauncher} />
-        <TextInput label="Max NeverLauncher" value={registryMaxLauncher} onChange={setRegistryMaxLauncher} />
+        <TextInput label="Минимальная версия NeverLauncher" value={registryMinLauncher} onChange={setRegistryMinLauncher} />
+        <TextInput label="Максимальная версия NeverLauncher" value={registryMaxLauncher} onChange={setRegistryMaxLauncher} />
         <TextInput label="OS (через запятую)" value={registryPublishOS} onChange={setRegistryPublishOS} />
-        <TextInput label="Architecture (через запятую)" value={registryPublishArch} onChange={setRegistryPublishArch} />
-        <div className="buttonRow"><button disabled={!registryPackageFile} onClick={() => runRegistryAction('Registry publish', publishRegistryArtifact).catch((err) => setError(err.message))}>Проверить подпись и опубликовать</button></div>
+        <TextInput label="Архитектура (через запятую)" value={registryPublishArch} onChange={setRegistryPublishArch} />
+        <div className="buttonRow"><button disabled={!registryPackageFile} onClick={() => runRegistryAction('Опубликовать в реестре', publishRegistryArtifact).catch((err) => setError(err.message))}>Проверить подпись и опубликовать</button></div>
       </article>
     </div>
     <section className="registryResults">
@@ -600,17 +600,17 @@ function App() {
         <p className="muted">NeverLauncher {item.compatibility?.minNeverLauncher || 'any'} → {item.compatibility?.maxNeverLauncher || 'any'} · OS {(item.compatibility?.supportedOs ?? []).join(', ') || 'any'} · arch {(item.compatibility?.supportedArchitectures ?? []).join(', ') || 'any'}</p>
         <p className="registryIdentity"><code>{item.artifact.packageIdentity}</code></p>
         {item.yankReason && <p className="error">Yank: {item.yankReason}</p>}
-        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact (staged)</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
+        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Установить из реестра', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact (staged)</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Канал реестра', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runAction('Скачать из реестра', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Отозвать из реестра', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
       </article>)}
     </section>
     <section className="registryResults">
-      <div className="registryHeading"><h3>Install Lifecycle</h3><span className="muted">{extensionInstalls.length} installs</span></div>
-      {extensionInstalls.length === 0 ? <p className="muted">Для выбранного scope установок нет. Нажмите «Обновить installs».</p> : extensionInstalls.map((item) => <article className="subcard registryItem" key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`}>
+      <div className="registryHeading"><h3>Установка Жизненный цикл</h3><span className="muted">{extensionInstalls.length} installs</span></div>
+      {extensionInstalls.length === 0 ? <p className="muted">Для выбранного область установок нет. Нажмите «Обновить устанавливает».</p> : extensionInstalls.map((item) => <article className="subcard registryItem" key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`}>
         <div className="registryHeading"><div><strong>{item.extensionId}</strong><p className="muted"><code>{item.currentVersion || 'absent'}</code> · desired <code>{item.desiredVersion}</code> · generation {item.generation}</p></div><div className="registryBadges"><span className={`badge ${item.currentState === 'enabled' ? 'ok' : item.currentState === 'absent' ? 'warn' : ''}`}>{item.currentState}</span><span className="badge">{item.scope}{item.scopeId ? `:${item.scopeId}` : ''}</span></div></div>
-        <p className="registryIdentity"><code>{item.currentPackageIdentity || item.packageIdentity || 'no package identity'}</code></p>
+        <p className="registryIdentity"><code>{item.currentPackageIdentity || item.packageIdentity || 'идентичность пакета отсутствует'}</code></p>
         {item.lastError && <p className="error">{item.lastError}</p>}
-        {(() => { const host = hostForInstall(item); return host ? <><p className="muted">Host: <strong>{host.state}</strong> · trust <strong>{host.executionTrust ?? 'trusted-process'}</strong> · OS sandbox {host.osSandbox ?? 'none'} · healthy {host.healthy ? 'yes' : 'no'} · PID {host.pid ?? '—'} · restarts {host.restarts} · RSS {host.memoryBytes ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB` : '—'} · processes {host.processCount ?? '—'}</p>{host.lastError && <p className="error">Host: {host.lastError}</p>}<div className="buttonRow"><button disabled={item.currentState !== 'enabled' || host.state === 'running'} onClick={() => runRegistryAction('Host start', () => hostAction(item, 'start')).catch((err) => setError(err.message))}>Host Start</button><button disabled={!['running','starting','stopping'].includes(host.state)} onClick={() => runRegistryAction('Host stop', () => hostAction(item, 'stop')).catch((err) => setError(err.message))}>Host Stop</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Host restart', () => hostAction(item, 'restart')).catch((err) => setError(err.message))}>Host Restart</button></div></> : item.currentState === 'enabled' ? <p className="muted">Host: backend target не запущен или отсутствует; обновите hosts для актуального состояния.</p> : null; })()}
-        <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Extension enable', () => lifecycleAction(item, 'enable')).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Extension disable', () => lifecycleAction(item, 'disable')).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Extension update', () => updateInstalledExtension(item)).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Extension rollback', () => lifecycleAction(item, 'rollback')).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Extension uninstall', () => lifecycleAction(item, 'uninstall')).catch((err) => setError(err.message))}>Uninstall</button></div>
+        {(() => { const host = hostForInstall(item); return host ? <><p className="muted">Host: <strong>{host.state}</strong> · trust <strong>{host.executionTrust ?? 'trusted-process'}</strong> · OS sandbox {host.osSandbox ?? 'none'} · healthy {host.healthy ? 'yes' : 'no'} · PID {host.pid ?? '—'} · restarts {host.restarts} · RSS {host.memoryBytes ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB` : '—'} · processes {host.processCount ?? '—'}</p>{host.lastError && <p className="error">Host: {host.lastError}</p>}<div className="buttonRow"><button disabled={item.currentState !== 'enabled' || host.state === 'running'} onClick={() => runRegistryAction('Запустить хост', () => hostAction(item, 'start')).catch((err) => setError(err.message))}>Host Start</button><button disabled={!['running','starting','stopping'].includes(host.state)} onClick={() => runRegistryAction('Остановить хост', () => hostAction(item, 'stop')).catch((err) => setError(err.message))}>Host Stop</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Перезапустить хост', () => hostAction(item, 'restart')).catch((err) => setError(err.message))}>Host Restart</button></div></> : item.currentState === 'enabled' ? <p className="muted">Хост: серверная часть цель не запущен или отсутствует; обновите хосты для актуального состояния.</p> : null; })()}
+        <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Включить расширение', () => lifecycleAction(item, 'enable')).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Отключить расширение', () => lifecycleAction(item, 'disable')).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Обновить расширение', () => updateInstalledExtension(item)).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Откатить расширение', () => lifecycleAction(item, 'rollback')).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Удалить расширение', () => lifecycleAction(item, 'uninstall')).catch((err) => setError(err.message))}>Uninstall</button></div>
       </article>)}
     </section>
   </section> : null;
@@ -626,7 +626,7 @@ function App() {
         <TextInput label="Канал" value={packageForm.channel} onChange={(channel) => setPackageForm({ ...packageForm, channel })} />
         <TextInput label="Версия" value={packageForm.version} onChange={(version) => setPackageForm({ ...packageForm, version })} />
         <TextInput label="ID пакета" value={packageForm.packageId} onChange={(packageId) => setPackageForm({ ...packageForm, packageId })} />
-        <div className="buttonRow"><button onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!packageForm.packageId} onClick={() => runAction('Проверка пакета', () => requestJSON(backendUrl, `/api/v1/projects/${encodeURIComponent(packageForm.projectId)}/versions`, token)).catch((err) => setError(err.message))}>Проверить</button><button disabled={!packageForm.packageId} onClick={() => runAction('Integrity check пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!packageForm.packageId} onClick={() => runAction('Публикация пакета', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(packageForm.projectId)}/versions/${encodeURIComponent(packageForm.packageId)}/publish`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Опубликовать</button></div>
+        <div className="buttonRow"><button onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!packageForm.packageId} onClick={() => runAction('Проверка пакета', () => requestJSON(backendUrl, `/api/v1/projects/${encodeURIComponent(packageForm.projectId)}/versions`, token)).catch((err) => setError(err.message))}>Проверить</button><button disabled={!packageForm.packageId} onClick={() => runAction('Проверка целостности пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!packageForm.packageId} onClick={() => runAction('Публикация пакета', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(packageForm.projectId)}/versions/${encodeURIComponent(packageForm.packageId)}/publish`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Опубликовать</button></div>
       </article>
       <article className="subcard">
         <h3>Файл</h3>
@@ -686,7 +686,7 @@ function App() {
 
   return <main className="layout">
     <aside className="sidebar">
-      <div className="brand">NeverLauncher Admin</div>
+      <div className="brand">NeverLauncher Администратор</div>
       <div className="version">Версия {productionUI.toolVersion ?? TOOL_VERSION} · API v1 · токены в sessionStorage · подписанный релизный поток</div>
       <nav className="nav" aria-label="Разделы панели управления">
         {sections.map((section) => <button className={active === section.id ? 'active' : ''} key={section.id} onClick={() => setActive(section.id)}>{section.title}</button>)}
@@ -694,19 +694,19 @@ function App() {
     </aside>
     <section className="main">
       <header className="header">
-        <div><h1>NeverLauncher Admin · API v1</h1><p>{`Рабочая панель NeverLauncher ${TOOL_VERSION}: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.`}</p></div>
+        <div><h1>NeverLauncher Администратор · API v1</h1><p>{`Рабочая панель NeverLauncher ${TOOL_VERSION}: проекты, профили, каналы, пользователи, подписанный релизный поток, multipart-загрузка, ServerBridge, диагностика и резервное копирование через единый /api/v1.`}</p></div>
         <span className={`badge ${status === 'online' ? 'ok' : 'warn'}`}>Backend: {status === 'online' ? 'доступен' : 'недоступен'}</span>
       </header>
       <section className="card wide">
-        <label className="field"><span>URL Backend</span><input value={backendUrl} onChange={(event) => setBackendUrl(event.target.value)} /></label>
+        <label className="field"><span>URL Серверная часть</span><input value={backendUrl} onChange={(event) => setBackendUrl(event.target.value)} /></label>
         <p className="muted"><code>{activeEndpoint}</code></p>
         <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button>{token && <button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button>}{token && <button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button>}</div>
-        {token && <div className="passkeyRow"><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div>}
+        {token && <div className="passkeyRow"><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA политика" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA необязательный</option><option value="required">MFA обязательный</option><option value="phishing-resistant">Устойчивый к фишингу</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div>}
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
         {token && <div className="passkeyRow"><button onClick={() => loadSessions().catch((err: Error) => setError(err.message))}>Сессии</button><button onClick={() => revokeOtherSessions().catch((err: Error) => setError(err.message))}>Выйти на других устройствах</button></div>}
         {token && sessions.length > 0 && <div className="sessionList">{sessions.map((item) => <article className="subcard" key={item.id}><strong>{item.device || item.deviceId || 'Устройство'}{item.current ? ' · текущая' : ''}</strong><p className="muted">{item.provider ?? 'local'} · risk: {item.riskState ?? 'normal'} · {item.lastIp ?? 'IP неизвестен'}</p><div className="buttonRow"><button onClick={() => renameSession(item).catch((err: Error) => setError(err.message))}>Переименовать</button><button onClick={() => revokeSession(item).catch((err: Error) => setError(err.message))}>{item.current ? 'Завершить' : 'Отозвать'}</button></div></article>)}</div>}
-        {token && <div className="passkeyRow"><button onClick={() => loadTrustedDevices().catch((err: Error) => setError(err.message))}>Trusted devices</button><span className="muted">Admin revoke необратим и требует fresh phishing-resistant step-up.</span></div>}
-        {token && devices.length > 0 && <div className="sessionList">{devices.map((item) => <article className="subcard" key={item.id}><strong>{item.name || item.id}</strong><p className="muted">{item.status} · {item.keyAlgorithm ?? 'key n/a'}/{item.keyBinding ?? 'binding n/a'}{item.hardwareProvider ? ` · ${item.hardwareProvider}` : ''} · trust: {item.trustState ?? 'n/a'} · attestation: {item.attestationState ?? 'unattested'}</p><p className="muted"><code>{item.id}</code> · user <code>{item.userId}</code>{item.revokedAt ? ` · revoked ${new Date(item.revokedAt).toLocaleString()}` : ''}{item.revokedReason ? ` · ${item.revokedReason}` : ''}</p>{item.status === 'active' && <div className="buttonRow"><button onClick={() => revokeTrustedDevice(item).catch((err: Error) => setError(err.message))}>Необратимо отозвать</button></div>}</article>)}</div>}
+        {token && <div className="passkeyRow"><button onClick={() => loadTrustedDevices().catch((err: Error) => setError(err.message))}>Trusted devices</button><span className="muted">Администратор отзыв необратим и требует актуальный устойчивый к фишингу step-up.</span></div>}
+        {token && devices.length > 0 && <div className="sessionList">{devices.map((item) => <article className="subcard" key={item.id}><strong>{item.name || item.id}</strong><p className="muted">{item.status} · {item.keyAlgorithm ?? 'ключ: нет данных'}/{item.keyBinding ?? 'привязка: нет данных'}{item.hardwareProvider ? ` · ${item.hardwareProvider}` : ''} · trust: {item.trustState ?? 'n/a'} · аттестация: {item.attestationState ?? 'unattested'}</p><p className="muted"><code>{item.id}</code> · user <code>{item.userId}</code>{item.revokedAt ? ` · revoked ${new Date(item.revokedAt).toLocaleString()}` : ''}{item.revokedReason ? ` · ${item.revokedReason}` : ''}</p>{item.status === 'active' && <div className="buttonRow"><button onClick={() => revokeTrustedDevice(item).catch((err: Error) => setError(err.message))}>Необратимо отозвать</button></div>}</article>)}</div>}
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
       </section>
@@ -716,7 +716,7 @@ function App() {
       {registryPanel}
       {crudPanel}
       {packagePanel}
-      {active !== 'extensions-manager' && <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'extension-registry' ? <p className="muted">Registry управляется рабочей панелью выше; raw API payload доступен через CLI/OpenAPI.</p> : <DataTable payload={payload} />}</section>}
+      {active !== 'extensions-manager' && <section className="card wide"><h2>{sections.find((section) => section.id === active)?.title ?? active}</h2>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'extension-registry' ? <p className="muted">Реестр управляется рабочей панелью выше; сырой API полезная нагрузка доступен через CLI/OpenAPI.</p> : <DataTable payload={payload} />}</section>}
       <section className="card wide"><h2>Основной сценарий</h2><div className="workflow">{(productionUI.primaryFlow ?? ['вход', 'создание проекта', 'изменение проекта', 'создание профиля', 'изменение профиля', 'создание канала', 'изменение канала', 'создание пользователя', 'публикация stable', 'проверка аудита']).map((step) => <span key={step}>{step}</span>)}</div></section>
     </section>
   </main>;

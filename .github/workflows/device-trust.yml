@@ -1,4 +1,4 @@
-name: NeverLauncher Device Trust Matrix
+name: NeverLauncher Доверие к устройству Матрица
 
 on:
   push:
@@ -19,7 +19,7 @@ env:
 
 jobs:
   matrix-plan:
-    name: Validate Device Trust targets
+    name: Проверять Доверие к устройству цели
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: '3.12'
       - id: plan
-        name: Validate target policy and generate immutable plan
+        name: Проверять цель политика и генерировать неизменяемый plan
         shell: bash
         run: |
           set -euo pipefail
@@ -60,13 +60,13 @@ jobs:
             cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
         if: matrix.kind == 'native-tests'
-      - name: Install PostgreSQL protocol E2E dependencies
+      - name: Установка PostgreSQL протокол E2E зависимости
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends jq postgresql-client openssl
-      - name: Install Linux native Device Trust dependencies
+      - name: Установка Linux нативный Доверие к устройству зависимости
         if: matrix.kind == 'native-tests' && matrix.os == 'linux'
         shell: bash
         run: |
@@ -74,11 +74,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
-      - name: Run Device Trust 0.12.9 to 0.12.10 migration E2E
+      - name: Запуск Доверие к устройству 0.12.9 к 0.12.10 миграция E2E
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
-      - name: Run PostgreSQL Device Trust protocol E2E
+      - name: Запуск PostgreSQL Доверие к устройству протокол E2E
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         env:
@@ -86,7 +86,7 @@ jobs:
           NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
           NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
-      - name: Compile Tauri key lifecycle and run native policy tests
+      - name: Compile Tauri ключ жизненный цикл и запуск нативный политика тесты
         if: matrix.kind == 'native-tests'
         shell: bash
         run: |
@@ -101,11 +101,11 @@ jobs:
             --run-id '${{ github.run_id }}' \
             --log e2e/device-trust-result/native-cargo-test.txt \
             --output e2e/device-trust-result/device-trust-result.json
-      - name: Upload machine-verifiable Device Trust evidence
+      - name: Загрузка машинно проверяемый Доверие к устройству свидетельство
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: device-trust-${{ matrix.id }}
+          name: устройство-доверие-${{ matrix.id }}
           path: |
             e2e/device-trust-result/
             e2e/device-trust-migration-result/
@@ -113,7 +113,7 @@ jobs:
           retention-days: 14
 
   publish-matrix:
-    name: Publish public Device Trust matrix
+    name: Публикация публичный Доверие к устройству матрица
     if: always() && needs.matrix-plan.result == 'success'
     needs: [matrix-plan, trust-evidence]
     runs-on: ubuntu-24.04
@@ -122,13 +122,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Download Device Trust evidence
+      - name: Загрузка Доверие к устройству свидетельство
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: device-trust-*
           path: device-trust-results
-      - name: Aggregate exact-commit trust matrix
+      - name: Агрегат точный-фиксация доверие матрица
         shell: bash
         run: |
           set +e
@@ -149,11 +149,11 @@ jobs:
           fi
           cat device-trust-public/aggregate.log
           exit "$rc"
-      - name: Upload public trust matrix JSON and Markdown
+      - name: Загрузка публичный доверие матрица JSON и Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-device-trust-matrix-${{ github.run_id }}
+          name: neverlauncher-устройство-доверие-матрица-${{ github.run_id }}
           path: |
             device-trust-public/matrix.json
             device-trust-public/matrix.md

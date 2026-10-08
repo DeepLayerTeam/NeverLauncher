@@ -84,7 +84,7 @@ func normalizeDeliveryPlatform(value string) (string, error) {
 	case "any", "all", "*":
 		return "any", nil
 	default:
-		return "", fmt.Errorf("unsupported delivery platform %q", value)
+		return "", fmt.Errorf("неподдерживаемый доставка платформа %q", value)
 	}
 }
 
@@ -99,7 +99,7 @@ func normalizeDeliveryArchitecture(value string) (string, error) {
 	case "any", "all", "*":
 		return "any", nil
 	default:
-		return "", fmt.Errorf("unsupported delivery architecture %q", value)
+		return "", fmt.Errorf("неподдерживаемый доставка архитектура %q", value)
 	}
 }
 
@@ -125,10 +125,10 @@ func canonicalDeliveryTarget(platform, arch string) (DeliveryTarget, error) {
 		return DeliveryTarget{}, err
 	}
 	if p == "any" && a != "any" {
-		return DeliveryTarget{}, errors.New("platform=any requires architecture=any")
+		return DeliveryTarget{}, errors.New("платформа=любой требует архитектура=любой")
 	}
 	if a == "universal" && p != "macos" {
-		return DeliveryTarget{}, errors.New("architecture=universal is valid only for macos")
+		return DeliveryTarget{}, errors.New("архитектура=универсальный является действительный только для macOS")
 	}
 	return DeliveryTarget{Platform: p, Architecture: a}, nil
 }
@@ -240,7 +240,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	if manifest.Version == "" {
-		return DeliveryManifest{}, errors.New("delivery manifest version is empty")
+		return DeliveryManifest{}, errors.New("доставка манифест версия является пустой")
 	}
 	targets := map[string]DeliveryTarget{}
 	for _, item := range items {
@@ -249,18 +249,18 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		}
 		name := item.Name()
 		if windowsSigningRequired0152(ver) && strings.Contains(strings.ToLower(name), "windows-amd64") {
-			// 0.15.2 keeps pre-signing x64 Guard CI aliases in the bundle for certification evidence,
-			// but they are not publishable delivery artifacts. Canonical signed delivery uses windows-x64.
+			// 0.15.2 сохраняет до подписания x64 Защита CI псевдонимы в комплект для сертификация свидетельство,
+			// но они являются не готовый к публикации доставка артефакты. Канонический подписанный доставка использует windows-x64.
 			continue
 		}
 		if linuxProductionRequired0153(ver) && strings.Contains(strings.ToLower(name), "linux-amd64") {
-			// 0.15.3 keeps the historical x64 Guard CI alias only as certification evidence.
-			// Publishable Linux delivery uses canonical linux-x64/linux-arm64 names.
+			// 0.15.3 сохраняет исторический x64 Защита CI псевдоним только как сертификация свидетельство.
+			// Готовый к публикации Linux доставка использует канонический linux-x64/linux-arm64 имена.
 			continue
 		}
 		if macOSProductionRequired0154(ver) && strings.Contains(strings.ToLower(name), "macos-universal") {
-			// 0.15.4 keeps the historical universal Guard CI package only as certification evidence.
-			// Publishable macOS delivery uses separately notarized macos-x64/macos-arm64 packages.
+			// 0.15.4 сохраняет исторический универсальный Защита CI пакет только как сертификация свидетельство.
+			// Готовый к публикации macOS доставка использует отдельно нотариально заверенный macos-x64/macos-arm64 пакеты.
 			continue
 		}
 		switch name {
@@ -273,7 +273,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 			return DeliveryManifest{}, err
 		}
 		if size <= 0 {
-			return DeliveryManifest{}, fmt.Errorf("delivery artifact %s is empty", name)
+			return DeliveryManifest{}, fmt.Errorf("доставка артефакт %s является пустой", name)
 		}
 		target := deliveryArtifactTarget(name)
 		component := deliveryArtifactComponent(name)
@@ -294,7 +294,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		}
 	}
 	if len(manifest.Artifacts) == 0 {
-		return DeliveryManifest{}, errors.New("delivery bundle contains no artifacts")
+		return DeliveryManifest{}, errors.New("доставка комплект содержит нет артефакты")
 	}
 	for _, target := range targets {
 		manifest.PublishedTargets = append(manifest.PublishedTargets, target)
@@ -323,7 +323,7 @@ func readDeliveryManifest0151(dir string) (DeliveryManifest, error) {
 	}
 	var manifest DeliveryManifest
 	if err := json.Unmarshal(raw, &manifest); err != nil {
-		return DeliveryManifest{}, fmt.Errorf("invalid %s: %w", deliveryManifestFile0151, err)
+		return DeliveryManifest{}, fmt.Errorf("недопустимый %s: %w", deliveryManifestFile0151, err)
 	}
 	return manifest, nil
 }
@@ -335,11 +335,11 @@ func validDeliverySHA256(value string) bool {
 
 func safeDeliveryArtifactPath(dir, name string) (string, error) {
 	if strings.TrimSpace(name) == "" || filepath.IsAbs(name) {
-		return "", fmt.Errorf("invalid delivery artifact path %q", name)
+		return "", fmt.Errorf("недопустимый доставка артефакт путь %q", name)
 	}
 	clean := filepath.Clean(name)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("delivery artifact escapes bundle: %s", name)
+		return "", fmt.Errorf("доставка артефакт escapes комплект: %s", name)
 	}
 	return filepath.Join(dir, clean), nil
 }
@@ -350,31 +350,31 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 		return err
 	}
 	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || strings.TrimSpace(manifest.Version) == "" {
-		return errors.New("delivery manifest header is invalid")
+		return errors.New("доставка манифест header является недопустимый")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && manifest.Version != strings.TrimSpace(expectedVersion) {
-		return fmt.Errorf("delivery manifest version mismatch: manifest=%s expected=%s", manifest.Version, expectedVersion)
+		return fmt.Errorf("доставка манифест версия несоответствие: манифест=%s ожидаемый=%s", manifest.Version, expectedVersion)
 	}
 	if len(manifest.Artifacts) == 0 {
-		return errors.New("delivery manifest has no artifacts")
+		return errors.New("доставка манифест имеет нет артефакты")
 	}
 
 	seenNames := map[string]struct{}{}
 	actualTargets := map[string]DeliveryTarget{}
 	for _, artifact := range manifest.Artifacts {
 		if artifact.Name == deliveryManifestFile0151 || artifact.Name == publicProductionDeliveryMatrixFile0159 || artifact.Name == "RELEASE_MANIFEST.json" || artifact.Name == "SHA256SUMS" || artifact.Name == "SHA256SUMS.sig" || artifact.Name == "PROVENANCE.json.sig" {
-			return fmt.Errorf("delivery manifest contains circular/control artifact %s", artifact.Name)
+			return fmt.Errorf("доставка манифест содержит circular/control артефакт %s", artifact.Name)
 		}
 		if _, exists := seenNames[artifact.Name]; exists {
-			return fmt.Errorf("duplicate delivery artifact %s", artifact.Name)
+			return fmt.Errorf("дубликат доставка артефакт %s", artifact.Name)
 		}
 		seenNames[artifact.Name] = struct{}{}
 		if strings.TrimSpace(artifact.Component) == "" || strings.TrimSpace(artifact.Format) == "" || artifact.Size <= 0 || !validDeliverySHA256(artifact.SHA256) {
-			return fmt.Errorf("delivery artifact metadata invalid: %s", artifact.Name)
+			return fmt.Errorf("доставка артефакт метаданные недопустимый: %s", artifact.Name)
 		}
 		target, err := canonicalDeliveryTarget(artifact.Platform, artifact.Architecture)
 		if err != nil || target.Platform != artifact.Platform || target.Architecture != artifact.Architecture {
-			return fmt.Errorf("delivery artifact target is not canonical for %s: %s/%s", artifact.Name, artifact.Platform, artifact.Architecture)
+			return fmt.Errorf("доставка артефакт цель является не канонический для %s: %s/%s", artifact.Name, artifact.Platform, artifact.Architecture)
 		}
 		path, err := safeDeliveryArtifactPath(dir, artifact.Name)
 		if err != nil {
@@ -382,10 +382,10 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 		}
 		actual, size, err := hashFile(path)
 		if err != nil {
-			return fmt.Errorf("delivery artifact %s unavailable: %w", artifact.Name, err)
+			return fmt.Errorf("доставка артефакт %s недоступный: %w", artifact.Name, err)
 		}
 		if size != artifact.Size || !strings.EqualFold(actual, artifact.SHA256) {
-			return fmt.Errorf("delivery artifact %s checksum/size mismatch", artifact.Name)
+			return fmt.Errorf("доставка артефакт %s checksum/size несоответствие", artifact.Name)
 		}
 		if target.Platform != "any" {
 			actualTargets[target.Platform+"/"+target.Architecture] = target
@@ -396,20 +396,20 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 	for _, target := range manifest.PublishedTargets {
 		canonical, err := canonicalDeliveryTarget(target.Platform, target.Architecture)
 		if err != nil || canonical.Platform == "any" || canonical.Platform != target.Platform || canonical.Architecture != target.Architecture {
-			return fmt.Errorf("published delivery target is invalid: %s/%s", target.Platform, target.Architecture)
+			return fmt.Errorf("опубликованный доставка цель является недопустимый: %s/%s", target.Platform, target.Architecture)
 		}
 		key := target.Platform + "/" + target.Architecture
 		if _, duplicate := publishedTargets[key]; duplicate {
-			return fmt.Errorf("duplicate published delivery target %s", key)
+			return fmt.Errorf("дубликат опубликованный доставка цель %s", key)
 		}
 		publishedTargets[key] = struct{}{}
 	}
 	if len(publishedTargets) != len(actualTargets) {
-		return errors.New("publishedTargets does not match concrete delivery artifacts")
+		return errors.New("publishedTargets делает не соответствовать конкретный доставка артефакты")
 	}
 	for key := range actualTargets {
 		if _, ok := publishedTargets[key]; !ok {
-			return fmt.Errorf("publishedTargets is missing %s", key)
+			return fmt.Errorf("publishedTargets является отсутствующий %s", key)
 		}
 	}
 	return nil
@@ -448,7 +448,7 @@ func resolveDeliveryArtifacts0151(manifest DeliveryManifest, target DeliveryTarg
 
 func handleDelivery(args []string) error {
 	if len(args) == 0 {
-		return errors.New("available delivery subcommands: target, manifest, verify, verify-windows, prepare-linux, verify-linux, verify-macos, verify-jre, public-matrix, verify-public-matrix, public-e2e, resolve")
+		return errors.New("доступный доставка subcommands: цель, манифест, проверять, проверять-Windows, prepare-Linux, проверять-Linux, проверять-macOS, проверять-JRE, публичный-матрица, проверять-публичный-матрица, public-e2e, разрешать")
 	}
 	switch args[0] {
 	case "target":
@@ -460,7 +460,7 @@ func handleDelivery(args []string) error {
 			target, err = currentDeliveryTarget()
 		} else {
 			if platform == "" || arch == "" {
-				return errors.New("delivery target requires both --platform and --arch")
+				return errors.New("доставка цель требует оба --платформа и --архитектура")
 			}
 			target, err = canonicalDeliveryTarget(platform, arch)
 		}
@@ -475,7 +475,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery manifest requires --bundle <dir>")
+			return errors.New("доставка манифест требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		if err := writeDeliveryManifest0151(dir, ver); err != nil {
@@ -488,7 +488,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify requires --bundle <dir>")
+			return errors.New("доставка проверять требует --комплект <dir>")
 		}
 		return verifyDeliveryManifest0151(dir, flagValue(args, "--version", ""))
 	case "verify-windows":
@@ -497,7 +497,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify-windows requires --bundle <dir>")
+			return errors.New("доставка проверять-Windows требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
@@ -510,7 +510,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery prepare-linux requires --bundle <dir>")
+			return errors.New("доставка prepare-Linux требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		return writeLinuxProductionEvidence0153(dir, ver)
@@ -520,7 +520,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify-linux requires --bundle <dir>")
+			return errors.New("доставка проверять-Linux требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
@@ -533,7 +533,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify-macos requires --bundle <dir>")
+			return errors.New("доставка проверять-macOS требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
@@ -546,7 +546,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify-jre requires --bundle <dir>")
+			return errors.New("доставка проверять-JRE требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		if err := verifyDeliveryManifest0151(dir, ver); err != nil {
@@ -559,7 +559,7 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery public-matrix requires --bundle <dir>")
+			return errors.New("доставка публичный-матрица требует --комплект <dir>")
 		}
 		ver := flagValue(args, "--version", version)
 		baseURL := flagValue(args, "--base-url", strings.TrimSpace(os.Getenv("NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL")))
@@ -580,13 +580,13 @@ func handleDelivery(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("delivery verify-public-matrix requires --bundle <dir>")
+			return errors.New("доставка проверять-публичный-матрица требует --комплект <dir>")
 		}
 		return verifyPublicProductionDeliveryMatrix0159(dir, flagValue(args, "--version", version))
 	case "public-e2e":
 		matrixURL := flagValue(args, "--matrix-url", "")
 		if matrixURL == "" {
-			return errors.New("delivery public-e2e requires --matrix-url <https-url>")
+			return errors.New("доставка public-e2e требует --матрица-URL <HTTPS-URL>")
 		}
 		downloadDir := flagValue(args, "--download-dir", "")
 		cleanup := false
@@ -619,7 +619,7 @@ func handleDelivery(args []string) error {
 	case "resolve":
 		dir := flagValue(args, "--bundle", "")
 		if dir == "" {
-			return errors.New("delivery resolve requires --bundle <dir>")
+			return errors.New("доставка разрешать требует --комплект <dir>")
 		}
 		if err := verifyDeliveryManifest0151(dir, flagValue(args, "--version", "")); err != nil {
 			return err
@@ -634,7 +634,7 @@ func handleDelivery(args []string) error {
 		if platform == "" && arch == "" {
 			target, err = currentDeliveryTarget()
 		} else if platform == "" || arch == "" {
-			return errors.New("delivery resolve requires both --platform and --arch when overriding host target")
+			return errors.New("доставка разрешать требует оба --платформа и --архитектура когда overriding хост цель")
 		} else {
 			target, err = canonicalDeliveryTarget(platform, arch)
 		}
@@ -643,11 +643,11 @@ func handleDelivery(args []string) error {
 		}
 		matches := resolveDeliveryArtifacts0151(manifest, target, flagValue(args, "--component", ""), flagValue(args, "--format", ""))
 		if len(matches) == 0 {
-			return fmt.Errorf("no delivery artifacts for %s/%s", target.Platform, target.Architecture)
+			return fmt.Errorf("нет доставка артефакты для %s/%s", target.Platform, target.Architecture)
 		}
 		printJSON(map[string]any{"schemaVersion": "1.0", "version": manifest.Version, "target": target, "artifacts": matches})
 		return nil
 	default:
-		return fmt.Errorf("unknown delivery subcommand: %s", args[0])
+		return fmt.Errorf("неизвестный доставка subcommand: %s", args[0])
 	}
 }

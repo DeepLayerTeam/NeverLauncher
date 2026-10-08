@@ -1,4 +1,4 @@
-name: Windows production delivery
+name: Windows рабочий доставка
 
 on:
   workflow_call:
@@ -31,7 +31,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
-      - name: Materialize code-signing certificate
+      - name: Материализовать код-подписание сертификат
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
@@ -39,7 +39,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\neverlauncher-codesign.pfx", $bytes)
-      - name: Build and Authenticode-sign both architectures
+      - name: Сборка и Authenticode-подпись оба архитектура
         shell: pwsh
         env:
           NEVERLAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
@@ -48,7 +48,7 @@ jobs:
           ./scripts/release/build-windows-desktop.ps1 `
             -RequireCodeSigning `
             -CodeSigningCertificatePath "$env:RUNNER_TEMP\neverlauncher-codesign.pfx"
-      - name: Generate delivery manifest and verify production signing evidence
+      - name: Генерировать доставка манифест и проверять рабочий подписание свидетельство
         shell: pwsh
         run: |
           $Version = (Get-Content VERSION -Raw).Trim()
@@ -61,14 +61,14 @@ jobs:
           }
           & "$env:RUNNER_TEMP\nl.exe" delivery manifest --bundle $Dir --version $Version
           & "$env:RUNNER_TEMP\nl.exe" delivery verify-windows --bundle $Dir --version $Version --production
-      - name: Remove signing credential file
+      - name: Удалять подписание учётные данные файл
         if: always()
         shell: pwsh
         run: Remove-Item "$env:RUNNER_TEMP\neverlauncher-codesign.pfx" -Force -ErrorAction SilentlyContinue
-      - name: Upload signed Windows delivery artifacts
+      - name: Загрузка подписанный Windows доставка артефакты
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-windows-production-${{ github.sha }}
+          name: neverlauncher-Windows-рабочий-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-cli-windows-x64.exe
             dist/release-*/neverlauncher-cli-windows-arm64.exe

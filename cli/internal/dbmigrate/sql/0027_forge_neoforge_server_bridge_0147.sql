@@ -1,5 +1,5 @@
--- NeverLauncher 0.14.7: Forge + NeoForge Server Bridge.
--- Extends the sealed ServerBridge node-kind domain while preserving existing node identities/tickets.
+-- NeverLauncher 0.14.7: Forge + NeoForge Сервер Мост.
+-- Extends запечатанный ServerBridge узел-тип домен пока сохраняя существующий узел identities/tickets.
 
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_kind_check;

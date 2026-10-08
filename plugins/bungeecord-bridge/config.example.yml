@@ -1,6 +1,6 @@
 backend:
   url: "https://launcher.example.com"
-  # Ordered HA endpoints; url remains the single-endpoint fallback.
+  # Упорядоченный HA эндпоинты; URL остаётся единый эндпоинт резервный вариант.
   urls: "https://launcher-a.example.com,https://launcher-b.example.com"
   failoverCooldownMs: 5000
   timeoutMs: 5000

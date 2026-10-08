@@ -1,5 +1,5 @@
--- NeverLauncher 0.10.1 Compatibility Engine: platform-aware release file metadata.
--- Existing rows remain platform-neutral and non-executable.
+-- NeverLauncher 0.10.1 Совместимость Движок: платформа-учитывающий релиз метаданные файла.
+-- Существующий строки оставаться платформа-neutral и non-исполняемый.
 ALTER TABLE files ADD COLUMN IF NOT EXISTS executable BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE files ADD COLUMN IF NOT EXISTS target_os JSONB NOT NULL DEFAULT '[]'::jsonb;
 

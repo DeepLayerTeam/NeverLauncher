@@ -66,12 +66,12 @@ func loadRuntimePrivateKey0212(path string) (ed25519.PrivateKey, error) {
 	if len(decoded) == ed25519.PrivateKeySize {
 		return ed25519.PrivateKey(decoded), nil
 	}
-	return nil, errors.New("runtime signing key must contain Ed25519 seed/private key as hex/base64")
+	return nil, errors.New("среда выполнения ключ подписи должен contain Ed25519 seed/private ключ как hex/base64")
 }
 
 func handlePipeline(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные pipeline-подкоманды: plan, channels, status, stage, integrity-check, smoke-test, validations, runtime-sign, runtime-submit, policy-get, policy-set, publish, rollback, audit")
+		return errors.New("доступные pipeline-подкоманды: plan, каналы, состояние, подготавливать, целостность-проверка, быстрая проверка, валидация, среда выполнения-подпись, среда выполнения-отправить, политика-получить, политика-задать, публикация, откат, аудит")
 	}
 	out := flagValue(args, "--output", "")
 	project := flagValue(args, "--project", "")
@@ -84,7 +84,7 @@ func handlePipeline(args []string) error {
 
 	if args[0] == "plan" {
 		if backend == "" {
-			return errors.New("pipeline plan требует --backend: план строится только относительно реального Backend API")
+			return errors.New("конвейер plan требует --серверная часть: план строится только относительно реального Серверная часть API")
 		}
 		payload := map[string]any{
 			"schemaVersion": cliSchemaVersion,
@@ -109,16 +109,16 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	}
 	if backend == "" && args[0] != "runtime-sign" {
-		return errors.New("pipeline operation требует --backend")
+		return errors.New("конвейер операция требует --серверная часть")
 	}
 	if token == "" && args[0] != "channels" && args[0] != "runtime-sign" {
-		return errors.New("pipeline operation требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("конвейер операция требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 
 	switch args[0] {
 	case "channels":
 		if project == "" {
-			return errors.New("pipeline channels требует --project")
+			return errors.New("конвейер каналы требует --проект")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/projects/"+url.PathEscape(project)+"/channels", nil, token)
 		if err != nil {
@@ -127,7 +127,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "status":
 		if packageID == "" {
-			return errors.New("pipeline status требует --package-id")
+			return errors.New("конвейер состояние требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/packages/"+url.PathEscape(packageID), nil, token)
 		if err != nil {
@@ -136,24 +136,24 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "stage":
 		if packageID == "" {
-			return errors.New("pipeline stage требует --package-id")
+			return errors.New("конвейер подготавливать требует --пакет-ID")
 		}
 		validate, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/validate", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("package validation failed: %w", err)
+			return fmt.Errorf("пакет валидация ошибка: %w", err)
 		}
 		sign, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/sign", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("package signing failed: %w", err)
+			return fmt.Errorf("пакет подписание ошибка: %w", err)
 		}
 		staged, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/stage", map[string]any{}, token)
 		if err != nil {
-			return fmt.Errorf("package stage failed: %w", err)
+			return fmt.Errorf("пакет подготавливать ошибка: %w", err)
 		}
 		return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "validate": validate, "sign": sign, "stage": staged})
 	case "integrity-check":
 		if packageID == "" {
-			return errors.New("pipeline integrity-check требует --package-id")
+			return errors.New("конвейер целостность-проверка требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/integrity-check", map[string]any{}, token)
 		if err != nil {
@@ -162,7 +162,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "smoke-test":
 		if packageID == "" {
-			return errors.New("pipeline smoke-test требует --package-id")
+			return errors.New("конвейер быстрая проверка требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/smoke-test", map[string]any{}, token)
 		if err != nil {
@@ -171,7 +171,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, map[string]any{"legacyCommand": "smoke-test", "validationKind": "integrity", "runtimeExecuted": false, "warning": "legacy smoke-test performs integrity validation only; no Minecraft runtime was executed", "response": payload})
 	case "validations":
 		if packageID == "" {
-			return errors.New("pipeline validations требует --package-id")
+			return errors.New("конвейер валидация требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/validations", nil, token)
 		if err != nil {
@@ -183,7 +183,7 @@ func handlePipeline(args []string) error {
 		keyPath := flagValue(args, "--private-key", "")
 		keyID := flagValue(args, "--key-id", "")
 		if inputPath == "" || keyPath == "" || keyID == "" {
-			return errors.New("pipeline runtime-sign требует --input <evidence.json> --private-key <file> --key-id <id>")
+			return errors.New("конвейер среда выполнения-подпись требует --input <свидетельство.JSON> --закрытый-ключ <файл> --ключ-ID <ID>")
 		}
 		raw, err := os.ReadFile(inputPath)
 		if err != nil {
@@ -191,10 +191,10 @@ func handlePipeline(args []string) error {
 		}
 		var evidence runtimeEvidenceCLI0212
 		if err := json.Unmarshal(raw, &evidence); err != nil {
-			return fmt.Errorf("runtime evidence JSON: %w", err)
+			return fmt.Errorf("свидетельство реального запуска JSON: %w", err)
 		}
 		if evidence.SchemaVersion != "neverlauncher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
-			return errors.New("runtime evidence missing canonical schema/package/manifest/target")
+			return errors.New("свидетельство реального запуска отсутствующий канонический schema/package/manifest/target")
 		}
 		privateKey, err := loadRuntimePrivateKey0212(keyPath)
 		if err != nil {
@@ -208,11 +208,11 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, signed)
 	case "runtime-submit":
 		if packageID == "" {
-			return errors.New("pipeline runtime-submit требует --package-id")
+			return errors.New("конвейер среда выполнения-отправить требует --пакет-ID")
 		}
 		evidencePath := flagValue(args, "--evidence", "")
 		if evidencePath == "" {
-			return errors.New("pipeline runtime-submit требует --evidence <signed-json>")
+			return errors.New("конвейер среда выполнения-отправить требует --свидетельство <подписанный-JSON>")
 		}
 		raw, err := os.ReadFile(evidencePath)
 		if err != nil {
@@ -220,7 +220,7 @@ func handlePipeline(args []string) error {
 		}
 		var body map[string]any
 		if err := json.Unmarshal(raw, &body); err != nil {
-			return fmt.Errorf("runtime evidence JSON: %w", err)
+			return fmt.Errorf("свидетельство реального запуска JSON: %w", err)
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/runtime-validations/evidence", body, token)
 		if err != nil {
@@ -229,7 +229,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "policy-get":
 		if project == "" {
-			return errors.New("pipeline policy-get требует --project")
+			return errors.New("конвейер политика-получить требует --проект")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/projects/"+url.PathEscape(project)+"/validation-policy", nil, token)
 		if err != nil {
@@ -238,11 +238,11 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "policy-set":
 		if project == "" {
-			return errors.New("pipeline policy-set требует --project")
+			return errors.New("конвейер политика-задать требует --проект")
 		}
 		level := strings.ToLower(flagValue(args, "--level", "integrity"))
 		if level != "integrity" && level != "runtime" {
-			return errors.New("--level должен быть integrity или runtime")
+			return errors.New("--уровень должен быть целостность или среда выполнения")
 		}
 		body := map[string]any{"requiredLevel": level, "requireServerJoin": flagValue(args, "--require-server-join", "false") == "true"}
 		payload, err := httpJSONWithAuth("PUT", backend+"/api/v1/projects/"+url.PathEscape(project)+"/validation-policy", body, token)
@@ -252,7 +252,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "publish":
 		if packageID == "" {
-			return errors.New("pipeline publish требует --package-id")
+			return errors.New("конвейер публикация требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/publish", map[string]any{}, token)
 		if err != nil {
@@ -261,11 +261,11 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "rollback":
 		if project == "" {
-			return errors.New("pipeline rollback требует --project")
+			return errors.New("конвейер откат требует --проект")
 		}
 		toVersion := flagValue(args, "--to", "")
 		if toVersion == "" || toVersion == "previous" {
-			return errors.New("pipeline rollback требует явный --to <version>; неявный previous запрещён")
+			return errors.New("конвейер откат требует явный --к <версия>; неявный предыдущий запрещён")
 		}
 		body := map[string]any{"projectId": project, "profileId": profile, "toVersion": toVersion}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/channels/"+url.PathEscape(channel)+"/rollback", body, token)
@@ -275,7 +275,7 @@ func handlePipeline(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "audit":
 		if packageID == "" {
-			return errors.New("pipeline audit требует --package-id")
+			return errors.New("конвейер аудит требует --пакет-ID")
 		}
 		payload, err := httpJSONWithAuth("GET", backend+"/api/v1/admin/audit", nil, token)
 		if err != nil {
@@ -298,7 +298,7 @@ func handlePipeline(args []string) error {
 
 func handleClient(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные client-подкоманды: install, update, verify, repair, cleanup, rollback, package-build, package-verify, upload-plan, package-upload, publish-channel, package-publish, package-release, package-status, channel-status, consume-plan, package-consume, package-apply, local-state, rollback-snapshot, package-pipeline, package-stage, package-smoke-test, package-promote")
+		return errors.New("доступные client-подкоманды: установка, обновление, проверять, repair, очистка, откат, пакет-сборка, пакет-проверять, загрузка-plan, пакет-загрузка, публикация-канал, пакет-публикация, пакет-релиз, пакет-состояние, канал-состояние, использовать-plan, пакет-использовать, пакет-применить, локальный-состояние, откат-снимок, пакет-конвейер, пакет-подготавливать, package-быстрая проверка, пакет-продвигать")
 	}
 	profile := flagValue(args, "--profile", "vanilla")
 	channel := flagValue(args, "--channel", "stable")
@@ -322,7 +322,7 @@ func handleClient(args []string) error {
 		}
 		payload = map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": map[bool]string{true: "valid", false: "invalid"}[report.Valid], "verify": report}
 		if !report.Valid {
-			return fmt.Errorf("client verify failed: missing=%v corrupted=%v", report.Missing, report.Corrupted)
+			return fmt.Errorf("клиент проверять ошибка: отсутствующий=%v повреждённый=%v", report.Missing, report.Corrupted)
 		}
 	case "repair":
 		pkgPath := flagValue(args, "--package", manifestPath)
@@ -485,7 +485,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 			return err
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("client package запрещает symlink: %s", path)
+			return fmt.Errorf("клиент пакет запрещает символическая ссылка: %s", path)
 		}
 		if d.IsDir() {
 			name := d.Name()
@@ -500,7 +500,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		}
 		rel = filepath.ToSlash(rel)
 		if strings.HasPrefix(rel, "../") || strings.HasPrefix(rel, "/") || rel == "." {
-			return fmt.Errorf("небезопасный путь client package: %s", rel)
+			return fmt.Errorf("небезопасный путь клиент пакет: %s", rel)
 		}
 		sum, size, err := hashFile(path)
 		if err != nil {
@@ -641,7 +641,7 @@ func readClientPackageManifest(path string) (ClientPackageManifest, error) {
 		return ClientPackageManifest{}, err
 	}
 	if manifest.PackageID == "" {
-		return ClientPackageManifest{}, errors.New("client package manifest не содержит packageId")
+		return ClientPackageManifest{}, errors.New("клиент пакет манифест не содержит packageId")
 	}
 	return manifest, nil
 }
@@ -667,7 +667,7 @@ func clientPackageUpload(packagePath, clientDir, storageDir, prefix string) (map
 			return nil, fmt.Errorf("%s: %w", file.Path, err)
 		}
 		if sum != file.SHA256 || size != file.Size {
-			return nil, fmt.Errorf("%s: checksum/size mismatch before upload", file.Path)
+			return nil, fmt.Errorf("%s: checksum/size несоответствие до загрузка", file.Path)
 		}
 		dst := filepath.Join(storageDir, filepath.FromSlash(prefix), filepath.FromSlash(file.Path))
 		if err := copyFileAtomic(src, dst); err != nil {
@@ -678,7 +678,7 @@ func clientPackageUpload(packagePath, clientDir, storageDir, prefix string) (map
 			return nil, err
 		}
 		if remoteSum != file.SHA256 || remoteSize != file.Size {
-			return nil, fmt.Errorf("%s: remote checksum/size mismatch", file.Path)
+			return nil, fmt.Errorf("%s: удалённый checksum/size несоответствие", file.Path)
 		}
 		uploadedBytes += size
 		uploaded = append(uploaded, map[string]any{"path": file.Path, "sha256": file.SHA256, "size": size, "objectKey": filepath.ToSlash(filepath.Join(prefix, file.Path)), "status": "uploaded"})
@@ -703,7 +703,7 @@ func clientPackagePublish(packagePath, channel, registryDir, uploadReportPath st
 		channel = manifest.Channel
 	}
 	if channel != manifest.Channel {
-		return nil, fmt.Errorf("channel mismatch: package=%s requested=%s", manifest.Channel, channel)
+		return nil, fmt.Errorf("канал несоответствие: пакет=%s запрошенный=%s", manifest.Channel, channel)
 	}
 	publication := map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "packageId": manifest.PackageID, "projectId": manifest.ProjectID, "profileId": manifest.ProfileID, "channel": channel, "version": manifest.Version, "publishedAt": time.Now().UTC().Format(time.RFC3339), "manifest": packagePath, "status": "published", "auditEvent": map[string]any{"type": "client-package.published", "actor": "nl", "packageId": manifest.PackageID}}
 	if uploadReportPath != "" {
@@ -847,7 +847,7 @@ func clientConsumePlan(packagePath, clientDir string) (map[string]any, error) {
 func clientPackageConsume(packagePath, storageDir, clientDir string) (map[string]any, error) {
 	snapshotID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось создать transactional rollback snapshot: %w", err)
+		return nil, fmt.Errorf("не удалось создать транзакционный откат снимок: %w", err)
 	}
 	return clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
 }
@@ -912,7 +912,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 			return err
 		}
 		if !verify.Valid {
-			return fmt.Errorf("client post-verify failed: missing=%v corrupted=%v", verify.Missing, verify.Corrupted)
+			return fmt.Errorf("клиент post-проверять ошибка: отсутствующий=%v повреждённый=%v", verify.Missing, verify.Corrupted)
 		}
 		return nil
 	}
@@ -988,12 +988,12 @@ func clientLocalState(clientDir, profile, channel string) (map[string]any, error
 
 func validateClientPackagePath(path string) error {
 	if path == "" || strings.HasPrefix(path, "/") || strings.Contains(path, "..") || strings.Contains(path, "\\") {
-		return fmt.Errorf("небезопасный путь client package: %s", path)
+		return fmt.Errorf("небезопасный путь клиент пакет: %s", path)
 	}
 	lower := strings.ToLower(path)
 	for _, forbidden := range []string{".env", "id_rsa", "id_ed25519", ".pem", ".key"} {
 		if strings.Contains(lower, forbidden) {
-			return fmt.Errorf("запрещённый файл client package: %s", path)
+			return fmt.Errorf("запрещённый файл клиент пакет: %s", path)
 		}
 	}
 	return nil

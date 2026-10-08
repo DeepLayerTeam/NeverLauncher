@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// Capability declares a concrete connector feature. Capabilities are executable
-// promises: conformance validation rejects a connector that advertises a feature
-// without implementing the corresponding interface.
+// Возможность объявлять конкретный коннектор возможность. Возможности являются исполняемый
+// promises: соответствие валидация отклоняет коннектор тот advertises возможность
+// без implementing corresponding interface.
 type Capability string
 
 const (
@@ -99,7 +99,7 @@ type RevokeRequest struct {
 	ProviderToken string
 }
 
-// Connector is the mandatory base interface for every authentication connector.
+// Коннектор является обязательный основа interface для каждый аутентификация коннектор.
 type Connector interface {
 	Metadata() Metadata
 	Health(context.Context) error
@@ -200,29 +200,29 @@ func HasCapability(meta Metadata, capability Capability) bool {
 func ValidateMetadata(meta Metadata) error {
 	meta.ID = strings.TrimSpace(meta.ID)
 	if meta.ID == "" {
-		return fmt.Errorf("connector id is required")
+		return fmt.Errorf("коннектор ID является обязательный")
 	}
 	if strings.ToLower(meta.ID) != meta.ID {
-		return fmt.Errorf("connector id %q must be lowercase", meta.ID)
+		return fmt.Errorf("коннектор ID %q должен быть lowercase", meta.ID)
 	}
 	for _, r := range meta.ID {
 		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.') {
-			return fmt.Errorf("connector id %q contains unsupported character %q", meta.ID, r)
+			return fmt.Errorf("коннектор ID %q содержит неподдерживаемый character %q", meta.ID, r)
 		}
 	}
 	if strings.TrimSpace(meta.DisplayName) == "" {
-		return fmt.Errorf("connector %q displayName is required", meta.ID)
+		return fmt.Errorf("коннектор %q displayName является обязательный", meta.ID)
 	}
 	if strings.TrimSpace(meta.Version) == "" {
-		return fmt.Errorf("connector %q version is required", meta.ID)
+		return fmt.Errorf("коннектор %q версия является обязательный", meta.ID)
 	}
 	seen := make(map[Capability]struct{}, len(meta.Capabilities))
 	for _, capability := range meta.Capabilities {
 		if strings.TrimSpace(string(capability)) == "" {
-			return fmt.Errorf("connector %q contains empty capability", meta.ID)
+			return fmt.Errorf("коннектор %q содержит пустой возможность", meta.ID)
 		}
 		if _, ok := seen[capability]; ok {
-			return fmt.Errorf("connector %q contains duplicate capability %q", meta.ID, capability)
+			return fmt.Errorf("коннектор %q содержит дубликат возможность %q", meta.ID, capability)
 		}
 		seen[capability] = struct{}{}
 	}

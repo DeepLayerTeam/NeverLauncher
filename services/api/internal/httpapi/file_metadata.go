@@ -20,7 +20,7 @@ func releaseFileMetadata(r *http.Request) (bool, []string, error) {
 	if raw := strings.TrimSpace(rawExecutable); raw != "" {
 		value, err := strconv.ParseBool(raw)
 		if err != nil {
-			return false, nil, fmt.Errorf("executable должен быть true или false")
+			return false, nil, fmt.Errorf("исполняемый должен быть true или false")
 		}
 		executable = value
 	}

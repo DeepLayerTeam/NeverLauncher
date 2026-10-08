@@ -17,11 +17,11 @@ def triple(v: str) -> tuple[int, int, int]:
 def require(text: str, needles: list[str], label: str) -> None:
     missing = [x for x in needles if x not in text]
     if missing:
-        raise SystemExit(f"{label}: missing {missing}")
+        raise SystemExit(f"{label}: отсутствующий {missing}")
 
 
 if triple(VERSION) < (0, 15, 11):
-    raise SystemExit(f"Production Release Candidate gate requires VERSION>=0.15.11, got {VERSION}")
+    raise SystemExit(f"Рабочий Кандидат в релиз контроль требует VERSION>=0.15.11, получил {VERSION}")
 
 impl = (ROOT / "cli/cmd/neverlauncher/production_release_candidate_01511.go").read_text(encoding="utf-8")
 release = (ROOT / "cli/cmd/neverlauncher/release_commands.go").read_text(encoding="utf-8")
@@ -63,7 +63,7 @@ require(tests, [
 
 layout_resolver = ROOT / "scripts/release/resolve-artifact-payload.sh"
 if not layout_resolver.is_file():
-    raise SystemExit("production candidate artifact layout resolver is missing")
+    raise SystemExit("рабочий кандидат артефакт структура разрешатель является отсутствующий")
 require(build, [
     "resolve-artifact-payload.sh",
     '"neverlauncher-cli-windows-x64.exe" "Windows x64/ARM64 delivery"',
@@ -79,9 +79,9 @@ def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
         capture_output=True,
     )
     if expect_ok and proc.returncode != 0:
-        raise SystemExit(f"artifact layout resolver unexpectedly failed: {proc.stderr.strip()}")
+        raise SystemExit(f"артефакт структура разрешатель unexpectedly ошибка: {proc.stderr.strip()}")
     if not expect_ok and proc.returncode == 0:
-        raise SystemExit(f"artifact layout resolver unexpectedly accepted unsafe layout: {root}")
+        raise SystemExit(f"артефакт структура разрешатель unexpectedly принят unsafe структура: {root}")
     return proc.stdout.strip()
 
 
@@ -91,14 +91,14 @@ with tempfile.TemporaryDirectory(prefix="nl-release-layout-") as td:
     flat.mkdir()
     (flat / "marker").write_bytes(b"ok")
     if resolve_layout(flat, "marker", expect_ok=True) != str(flat):
-        raise SystemExit("flat artifact payload resolved to unexpected directory")
+        raise SystemExit("flat артефакт полезная нагрузка разрешённый к unexpected каталог")
 
     nested = base / "nested"
     expected = nested / f"release-{VERSION}"
     expected.mkdir(parents=True)
     (expected / "marker").write_bytes(b"ok")
     if resolve_layout(nested, "marker", expect_ok=True) != str(expected):
-        raise SystemExit("versioned artifact payload resolved to unexpected directory")
+        raise SystemExit("версия артефакт полезная нагрузка разрешённый к unexpected каталог")
 
     wrong = base / "wrong"
     (wrong / "release-0.0.0").mkdir(parents=True)
@@ -134,4 +134,4 @@ subprocess.run(
     cwd=ROOT / "cli",
     check=True,
 )
-print(f"NeverLauncher {VERSION} Production release candidate 0.15.11 gate: OK")
+print(f"NeverLauncher {VERSION} Рабочий кандидат в релиз 0.15.11 контроль: OK")

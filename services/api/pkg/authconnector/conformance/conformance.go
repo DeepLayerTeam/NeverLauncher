@@ -20,9 +20,9 @@ type Report struct {
 	Checks      []Check `json:"checks"`
 }
 
-// Run performs executable SDK conformance checks. It intentionally does not invoke
-// authentication with synthetic credentials; connector-specific integration tests
-// remain responsible for credential fixtures.
+// Запуск выполняет исполняемый SDK соответствие проверяет. Это намеренно делает не invoke
+// аутентификация с synthetic учётные данные; коннектор-specific интеграционные тесты
+// оставаться responsible для учётные данные фикстура.
 func Run(ctx context.Context, connector authconnector.Connector) Report {
 	report := Report{Passed: true}
 	if connector == nil {
@@ -42,42 +42,42 @@ func Run(ctx context.Context, connector authconnector.Connector) Report {
 
 	if authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) {
 		if _, ok := connector.(authconnector.PasswordAuthenticator); !ok {
-			appendCheck("capability:password-auth", fmt.Errorf("advertised password-auth but PasswordAuthenticator is not implemented"))
+			appendCheck("capability:password-auth", fmt.Errorf("advertised пароль-аутентификация но PasswordAuthenticator является не implemented"))
 		} else {
 			appendCheck("capability:password-auth", nil)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
 		if _, ok := connector.(authconnector.BrowserAuthenticator); !ok {
-			appendCheck("capability:browser-auth", fmt.Errorf("advertised browser-auth but BrowserAuthenticator is not implemented"))
+			appendCheck("capability:browser-auth", fmt.Errorf("advertised browser-аутентификация но BrowserAuthenticator является не implemented"))
 		} else {
 			appendCheck("capability:browser-auth", nil)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityProfile) {
 		if _, ok := connector.(authconnector.ProfileResolver); !ok {
-			appendCheck("capability:profile", fmt.Errorf("advertised profile but ProfileResolver is not implemented"))
+			appendCheck("capability:profile", fmt.Errorf("advertised профиль но ProfileResolver является не implemented"))
 		} else {
 			appendCheck("capability:profile", nil)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
 		if _, ok := connector.(authconnector.TokenRefresher); !ok {
-			appendCheck("capability:token-refresh", fmt.Errorf("advertised token-refresh but TokenRefresher is not implemented"))
+			appendCheck("capability:token-refresh", fmt.Errorf("advertised токен-обновление но TokenRefresher является не implemented"))
 		} else {
 			appendCheck("capability:token-refresh", nil)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
 		if _, ok := connector.(authconnector.Revoker); !ok {
-			appendCheck("capability:token-revoke", fmt.Errorf("advertised token-revoke but Revoker is not implemented"))
+			appendCheck("capability:token-revoke", fmt.Errorf("advertised токен-отзыв но Revoker является не implemented"))
 		} else {
 			appendCheck("capability:token-revoke", nil)
 		}
 	}
 	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
 		if _, ok := connector.(authconnector.IdentityResolver); !ok {
-			appendCheck("capability:user-lookup", fmt.Errorf("advertised user-lookup but IdentityResolver is not implemented"))
+			appendCheck("capability:user-lookup", fmt.Errorf("advertised пользователь-поиск но IdentityResolver является не implemented"))
 		} else {
 			appendCheck("capability:user-lookup", nil)
 		}

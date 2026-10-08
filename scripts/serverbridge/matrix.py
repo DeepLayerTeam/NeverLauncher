@@ -19,43 +19,43 @@ ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 def load(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("schemaVersion") != "1.0":
-        raise SystemExit("ServerBridge targets schemaVersion must be 1.0")
+        raise SystemExit("ServerBridge цели schemaVersion должен быть 1.0")
     if str(data.get("productVersion", "")) != VERSION:
-        raise SystemExit(f"ServerBridge targets productVersion must equal VERSION={VERSION}")
+        raise SystemExit(f"ServerBridge цели productVersion должен equal VERSION={VERSION}")
     if data.get("protocolVersion") != 3:
-        raise SystemExit("ServerBridge targets protocolVersion must be 3")
+        raise SystemExit("ServerBridge цели protocolVersion должен быть 3")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
-        raise SystemExit("ServerBridge targets must be a non-empty array")
+        raise SystemExit("ServerBridge цели должен быть non-пустой array")
     allowed = {"id","family","role","minecraft","coverage","required"}
     ids: list[str] = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
-            raise SystemExit(f"target #{i} must be an object")
+            raise SystemExit(f"цель #{i} должен быть объект")
         unknown = set(row) - allowed
         if unknown:
-            raise SystemExit(f"target #{i} has unknown fields: {sorted(unknown)}")
+            raise SystemExit(f"цель #{i} имеет неизвестный fields: {sorted(unknown)}")
         tid = str(row.get("id", "")).strip()
         if not ID_RE.fullmatch(tid):
-            raise SystemExit(f"target #{i}: invalid id {tid!r}")
+            raise SystemExit(f"цель #{i}: недопустимый ID {tid!r}")
         if tid in ids:
-            raise SystemExit(f"duplicate target {tid}")
+            raise SystemExit(f"дубликат цель {tid}")
         ids.append(tid)
         if row.get("family") not in ALLOWED_FAMILIES or row.get("role") not in ALLOWED_ROLES:
-            raise SystemExit(f"{tid}: invalid family/role")
+            raise SystemExit(f"{tid}: недопустимый family/role")
         if row.get("coverage") not in ALLOWED_COVERAGE:
-            raise SystemExit(f"{tid}: invalid coverage")
+            raise SystemExit(f"{tid}: недопустимый покрытие")
         if str(row.get("minecraft", "")) != "1.21.1":
-            raise SystemExit(f"{tid}: this release matrix is pinned to Minecraft 1.21.1")
+            raise SystemExit(f"{tid}: этот релиз матрица является закреплённый к Minecraft 1.21.1")
         if row.get("required") is not True:
-            raise SystemExit(f"{tid}: required must be true")
+            raise SystemExit(f"{tid}: обязательный должен быть true")
         if (row.get("role") == "proxy") != (row.get("family") == "proxy"):
-            raise SystemExit(f"{tid}: proxy family/role mismatch")
+            raise SystemExit(f"{tid}: прокси family/role несоответствие")
         expected_coverage = {"bukkit":"build-compatibility", "quilt":"build-compatibility", "sponge":"build-compatibility", "vanilla":"sidecar-rcon-e2e"}.get(tid, "runtime-e2e")
         if row.get("coverage") != expected_coverage:
-            raise SystemExit(f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}")
+            raise SystemExit(f"{tid}: ожидаемый покрытие {expected_coverage}, получил {row.get('coverage')}")
     if ids != EXPECTED:
-        raise SystemExit(f"ServerBridge target ordering/set mismatch: {ids!r}")
+        raise SystemExit(f"ServerBridge цель ordering/set несоответствие: {ids!r}")
     return data
 
 
@@ -86,7 +86,7 @@ def main() -> int:
         args.out.write_text(markdown(data), encoding="utf-8")
         print(args.out)
     else:
-        print(f"ServerBridge public matrix OK: {len(data['targets'])} targets for {VERSION}")
+        print(f"ServerBridge публичная матрица OK: {len(data['targets'])} цели для {VERSION}")
     return 0
 
 if __name__ == "__main__":

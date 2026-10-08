@@ -36,9 +36,9 @@ const (
 )
 
 func canonicalGuardAttestationTime0134(value time.Time) time.Time {
-	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
-	// persistence and response/signing so challenge bindings remain byte-identical
-	// after the challenge is read back from PostgreSQL.
+	// PostgreSQL TIMESTAMPTZ сохраняет microseconds. Canonicalize до оба
+	// хранение и response/signing так запрос привязка оставаться побайтово идентичный
+	// после запрос является чтение back из PostgreSQL.
 	return value.UTC().Truncate(time.Microsecond)
 }
 
@@ -64,7 +64,7 @@ type guardReleasePolicyDocument0140 struct {
 }
 
 type guardReleasePolicy0134 struct {
-	// Legacy 0.13.x shape. Kept only for controlled rollback/upgrade compatibility.
+	// Устаревший 0.13.x форма. Сохранён только для controlled rollback/upgrade совместимость.
 	GuardSHA256         []string `json:"guardSha256,omitempty"`
 	LauncherSHA256      []string `json:"launcherSha256,omitempty"`
 	RequireAuthenticode bool     `json:"requireAuthenticode,omitempty"`
@@ -236,7 +236,7 @@ func normalizeHashList0134(values []string) ([]string, error) {
 	for _, raw := range values {
 		value := strings.ToLower(strings.TrimSpace(raw))
 		if !isSHA256Hex0134(value) {
-			return nil, fmt.Errorf("invalid SHA-256 %q", raw)
+			return nil, fmt.Errorf("недопустимый SHA-256 %q", raw)
 		}
 		if _, ok := seen[value]; ok {
 			continue
@@ -245,7 +245,7 @@ func normalizeHashList0134(values []string) ([]string, error) {
 		out = append(out, value)
 	}
 	if len(out) == 0 {
-		return nil, errors.New("hash allowlist is empty")
+		return nil, errors.New("хеш список разрешений является пустой")
 	}
 	return out, nil
 }
@@ -318,17 +318,17 @@ func guardPlatformKind0140(platform string) (string, error) {
 	if isMacOSDevicePlatform0138(platform) {
 		return "macos", nil
 	}
-	return "", errors.New("unsupported NeverGuard platform")
+	return "", errors.New("неподдерживаемый NeverGuard платформа")
 }
 
 func normalizeGuardReleaseArtifactPair0140(pair guardReleaseArtifactPair0140, platform string) (guardReleaseArtifactPair0140, error) {
 	pair.GuardSHA256 = strings.ToLower(strings.TrimSpace(pair.GuardSHA256))
 	pair.LauncherSHA256 = strings.ToLower(strings.TrimSpace(pair.LauncherSHA256))
 	if !isSHA256Hex0134(pair.GuardSHA256) || !isSHA256Hex0134(pair.LauncherSHA256) {
-		return guardReleaseArtifactPair0140{}, errors.New("artifact pair contains malformed SHA-256")
+		return guardReleaseArtifactPair0140{}, errors.New("артефакт пара содержит повреждённый SHA-256")
 	}
 	if platform != "windows" && pair.RequireAuthenticode {
-		return guardReleaseArtifactPair0140{}, fmt.Errorf("requireAuthenticode is only valid for windows, got %s", platform)
+		return guardReleaseArtifactPair0140{}, fmt.Errorf("requireAuthenticode является только действительный для Windows, получил %s", platform)
 	}
 	return pair, nil
 }
@@ -341,7 +341,7 @@ func normalizeGuardReleaseSigningMode0140(platform, signingMode string) (string,
 		"macos":   {"developer-id-notarized": true, "adhoc-development": true},
 	}
 	if !allowed[platform][signingMode] {
-		return "", fmt.Errorf("unsupported %s signingMode %q", platform, signingMode)
+		return "", fmt.Errorf("неподдерживаемый %s signingMode %q", platform, signingMode)
 	}
 	return signingMode, nil
 }
@@ -354,12 +354,12 @@ func (p guardReleasePolicy0134) metadataForPlatform0140(platform string) (string
 	if p.PolicySchema == guardReleasePolicySchema0140 {
 		artifacts := p.PlatformArtifacts[kind]
 		if len(artifacts) == 0 {
-			return "", 0, false, fmt.Errorf("NeverGuard release policy has no %s artifact set", kind)
+			return "", 0, false, fmt.Errorf("NeverGuard релиз политика имеет нет %s артефакт задать", kind)
 		}
 		requireAuthenticode := artifacts[0].RequireAuthenticode
 		for _, artifact := range artifacts[1:] {
 			if artifact.RequireAuthenticode != requireAuthenticode {
-				return "", 0, false, fmt.Errorf("NeverGuard %s release policy mixes Authenticode requirements", kind)
+				return "", 0, false, fmt.Errorf("NeverGuard %s релиз политика mixes Authenticode требования", kind)
 			}
 		}
 		return p.PolicySchema, p.ProtocolVersion, requireAuthenticode, nil
@@ -377,7 +377,7 @@ func (p guardReleasePolicy0134) allowsArtifactPair0140(platform, guardSHA256, la
 	if p.PolicySchema == guardReleasePolicySchema0140 {
 		artifacts := p.PlatformArtifacts[kind]
 		if len(artifacts) == 0 {
-			return false, false, fmt.Errorf("NeverGuard release policy has no %s artifact set", kind)
+			return false, false, fmt.Errorf("NeverGuard релиз политика имеет нет %s артефакт задать", kind)
 		}
 		for _, artifact := range artifacts {
 			if hmac.Equal([]byte(artifact.GuardSHA256), []byte(guardSHA256)) &&
@@ -393,69 +393,69 @@ func (p guardReleasePolicy0134) allowsArtifactPair0140(platform, guardSHA256, la
 func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, error) {
 	raw := strings.TrimSpace(s.Config.GuardReleaseAllowlistJSON)
 	if raw == "" {
-		return nil, errors.New("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON is not configured")
+		return nil, errors.New("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON является не настраивать")
 	}
 
 	var document guardReleasePolicyDocument0140
 	if err := json.Unmarshal([]byte(raw), &document); err == nil && (document.SchemaVersion != "" || document.Releases != nil) {
 		if document.SchemaVersion != guardReleasePolicySchema0140 {
-			return nil, fmt.Errorf("NeverGuard release policy schemaVersion must be %s", guardReleasePolicySchema0140)
+			return nil, fmt.Errorf("NeverGuard релиз политика schemaVersion должен быть %s", guardReleasePolicySchema0140)
 		}
 		if len(document.Releases) == 0 {
-			return nil, errors.New("NeverGuard release policy releases is empty")
+			return nil, errors.New("NeverGuard релиз политика релизы является пустой")
 		}
 		out := make(map[string]guardReleasePolicy0134, len(document.Releases))
 		for version, release := range document.Releases {
 			version = strings.TrimSpace(version)
 			if version == "" || len(version) > 64 {
-				return nil, errors.New("NeverGuard release policy contains invalid version")
+				return nil, errors.New("NeverGuard релиз политика содержит недопустимый версия")
 			}
 			if release.ProtocolVersion != guardProtocolVersion0140 {
-				return nil, fmt.Errorf("NeverGuard release %s protocolVersion must be %d", version, guardProtocolVersion0140)
+				return nil, fmt.Errorf("NeverGuard релиз %s protocolVersion должен быть %d", version, guardProtocolVersion0140)
 			}
 			if len(release.Platforms) == 0 {
-				return nil, fmt.Errorf("NeverGuard release %s platforms is empty", version)
+				return nil, fmt.Errorf("NeverGuard релиз %s платформы является пустой", version)
 			}
 			normalizedPlatforms := map[string][]guardReleaseArtifactPair0140{}
 			normalizedSigningModes := map[string]string{}
 			for rawPlatform, platformPolicy := range release.Platforms {
 				platform := strings.ToLower(strings.TrimSpace(rawPlatform))
 				if platform != "windows" && platform != "linux" && platform != "macos" {
-					return nil, fmt.Errorf("NeverGuard release %s contains unsupported platform %q", version, rawPlatform)
+					return nil, fmt.Errorf("NeverGuard релиз %s содержит неподдерживаемый платформа %q", version, rawPlatform)
 				}
 				signingMode, err := normalizeGuardReleaseSigningMode0140(platform, platformPolicy.SigningMode)
 				if err != nil {
-					return nil, fmt.Errorf("NeverGuard release %s platform %s: %w", version, platform, err)
+					return nil, fmt.Errorf("NeverGuard релиз %s платформа %s: %w", version, platform, err)
 				}
 				if config.IsProductionEnvironment(s.Config.Environment) {
 					if platform == "windows" && signingMode != "authenticode" {
-						return nil, fmt.Errorf("NeverGuard release %s windows production policy requires Authenticode", version)
+						return nil, fmt.Errorf("NeverGuard релиз %s Windows рабочий политика требует Authenticode", version)
 					}
 					if platform == "macos" && signingMode != "developer-id-notarized" {
-						return nil, fmt.Errorf("NeverGuard release %s macOS production policy requires Developer ID + notarization", version)
+						return nil, fmt.Errorf("NeverGuard релиз %s macOS рабочий политика требует Разработчик ID + notarization", version)
 					}
 				}
 				if len(platformPolicy.Artifacts) == 0 || len(platformPolicy.Artifacts) > 32 {
-					return nil, fmt.Errorf("NeverGuard release %s platform %s must contain 1..32 artifact pairs", version, platform)
+					return nil, fmt.Errorf("NeverGuard релиз %s платформа %s должен contain 1..32 артефакт пары", version, platform)
 				}
 				seen := map[string]struct{}{}
 				artifacts := make([]guardReleaseArtifactPair0140, 0, len(platformPolicy.Artifacts))
 				for _, rawPair := range platformPolicy.Artifacts {
 					pair, err := normalizeGuardReleaseArtifactPair0140(rawPair, platform)
 					if err != nil {
-						return nil, fmt.Errorf("NeverGuard release %s platform %s: %w", version, platform, err)
+						return nil, fmt.Errorf("NeverGuard релиз %s платформа %s: %w", version, platform, err)
 					}
 					if platform == "windows" {
 						if signingMode == "authenticode" && !pair.RequireAuthenticode {
-							return nil, fmt.Errorf("NeverGuard release %s Windows Authenticode policy contains artifact pair without requireAuthenticode", version)
+							return nil, fmt.Errorf("NeverGuard релиз %s Windows Authenticode политика содержит артефакт пара без requireAuthenticode", version)
 						}
 						if signingMode == "unsigned-development" && pair.RequireAuthenticode {
-							return nil, fmt.Errorf("NeverGuard release %s unsigned Windows policy cannot require Authenticode", version)
+							return nil, fmt.Errorf("NeverGuard релиз %s неподписанный Windows политика не может требовать Authenticode", version)
 						}
 					}
 					key := pair.GuardSHA256 + ":" + pair.LauncherSHA256
 					if _, exists := seen[key]; exists {
-						return nil, fmt.Errorf("NeverGuard release %s platform %s contains duplicate artifact pair", version, platform)
+						return nil, fmt.Errorf("NeverGuard релиз %s платформа %s содержит дубликат артефакт пара", version, platform)
 					}
 					seen[key] = struct{}{}
 					artifacts = append(artifacts, pair)
@@ -466,7 +466,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 			if config.IsProductionEnvironment(s.Config.Environment) && version == strings.TrimSpace(s.Version) {
 				for _, requiredPlatform := range []string{"windows", "linux", "macos"} {
 					if len(normalizedPlatforms[requiredPlatform]) == 0 {
-						return nil, fmt.Errorf("NeverGuard current production release %s is missing %s artifact policy", version, requiredPlatform)
+						return nil, fmt.Errorf("NeverGuard текущий рабочий релиз %s является отсутствующий %s артефакт политика", version, requiredPlatform)
 					}
 				}
 			}
@@ -478,43 +478,43 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 			}
 			for platform := range normalizedPlatforms {
 				if _, _, _, err := policy.metadataForPlatform0140(platform); err != nil {
-					return nil, fmt.Errorf("NeverGuard release %s: %w", version, err)
+					return nil, fmt.Errorf("NeverGuard релиз %s: %w", version, err)
 				}
 			}
 			out[version] = policy
 		}
 		if guardReleasePolicyV2Required0140(s.Version) {
 			if _, ok := out[strings.TrimSpace(s.Version)]; !ok {
-				return nil, fmt.Errorf("NeverGuard release policy does not contain running Backend version %s", strings.TrimSpace(s.Version))
+				return nil, fmt.Errorf("NeverGuard релиз политика делает не contain работающий Серверная часть версия %s", strings.TrimSpace(s.Version))
 			}
 		}
 		return out, nil
 	}
 
 	if guardReleasePolicyV2Required0140(s.Version) {
-		return nil, errors.New("NeverGuard 0.14+ requires schemaVersion=2.0 release policy with platform-bound artifact pairs")
+		return nil, errors.New("NeverGuard 0.14+ требует schemaVersion=2.0 релиз политика с платформа-привязанный артефакт пары")
 	}
 
 	policies := map[string]guardReleasePolicy0134{}
 	if err := json.Unmarshal([]byte(raw), &policies); err != nil {
-		return nil, fmt.Errorf("invalid guard release allowlist: %w", err)
+		return nil, fmt.Errorf("недопустимый защита релиз список разрешений: %w", err)
 	}
 	if len(policies) == 0 {
-		return nil, errors.New("guard release allowlist is empty")
+		return nil, errors.New("защита релиз список разрешений является пустой")
 	}
 	normalized := make(map[string]guardReleasePolicy0134, len(policies))
 	for version, policy := range policies {
 		version = strings.TrimSpace(version)
 		if version == "" || len(version) > 64 {
-			return nil, errors.New("guard release allowlist contains invalid version")
+			return nil, errors.New("защита релиз список разрешений содержит недопустимый версия")
 		}
 		guard, err := normalizeHashList0134(policy.GuardSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("guard release %s: %w", version, err)
+			return nil, fmt.Errorf("защита релиз %s: %w", version, err)
 		}
 		launcher, err := normalizeHashList0134(policy.LauncherSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("launcher release %s: %w", version, err)
+			return nil, fmt.Errorf("лаунчер релиз %s: %w", version, err)
 		}
 		policy.GuardSHA256 = guard
 		policy.LauncherSHA256 = launcher
@@ -538,7 +538,7 @@ func containsHash0134(items []string, value string) bool {
 func recomputeGuardEvidenceSHA2560134(e guardIntegrityEvidence0134) (string, error) {
 	if e.Guard.Mitigations.QueryFailures == nil || e.Launcher.Mitigations.QueryFailures == nil ||
 		e.Guard.Modules.NonSystemModuleNames == nil || e.Launcher.Modules.NonSystemModuleNames == nil {
-		return "", errors.New("integrity evidence contains null vector fields")
+		return "", errors.New("целостность свидетельство содержит null vector fields")
 	}
 	raw, err := json.Marshal(guardIntegrityCore0134{
 		Schema: e.Schema, EvidenceVersion: e.EvidenceVersion, EvidenceID: e.EvidenceID,
@@ -642,35 +642,35 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 	linux := platformKind == "linux"
 	macos := platformKind == "macos"
 	if a.Schema != expectedAttestationSchema || a.AttestationVersion != 1 || a.ChallengeID != strings.TrimSpace(challengeID) {
-		return errors.New("Guard Attestation schema/version/challengeId mismatch")
+		return errors.New("Защита Аттестация schema/version/challengeId несоответствие")
 	}
 	expectedChallenge := deviceChallengeHash0121(challenge)
 	if !hmac.Equal([]byte(expectedChallenge), []byte(strings.ToLower(strings.TrimSpace(a.ChallengeSHA256)))) {
-		return errors.New("Guard Attestation challenge hash mismatch")
+		return errors.New("Защита Аттестация запрос хеш несоответствие")
 	}
 	if !isSHA256Hex0134(a.AttestationSHA256) || !isSHA256Hex0134(a.SessionProof) ||
 		!isSHA256Hex0134(a.Evidence.EvidenceSHA256) || !isSHA256Hex0134(a.Evidence.SessionProof) {
-		return errors.New("Guard Attestation digest/proof malformed")
+		return errors.New("Защита Аттестация digest/proof повреждённый")
 	}
 	if a.Evidence.Schema != expectedEvidenceSchema || a.Evidence.EvidenceVersion != 1 ||
 		len(a.Evidence.EvidenceID) != 32 || a.Evidence.EvidenceID != strings.ToLower(a.Evidence.EvidenceID) {
-		return errors.New("Integrity Evidence schema/version/id mismatch")
+		return errors.New("Целостность Свидетельство schema/version/id несоответствие")
 	}
 	if _, err := hex.DecodeString(a.Evidence.EvidenceID); err != nil {
-		return errors.New("Integrity Evidence id malformed")
+		return errors.New("Целостность Свидетельство ID повреждённый")
 	}
 	if a.CollectedAtUnix != a.Evidence.CollectedAtUnix {
-		return errors.New("Guard Attestation collection timestamp mismatch")
+		return errors.New("Защита Аттестация коллекция метка времени несоответствие")
 	}
 	collected := time.Unix(int64(a.CollectedAtUnix), 0).UTC()
 	if collected.Before(challengeCreatedAt.Add(-guardAttestationClockSkew0134)) || collected.After(now.Add(guardAttestationClockSkew0134)) {
-		return errors.New("Guard Attestation collection timestamp outside challenge freshness window")
+		return errors.New("Защита Аттестация коллекция метка времени вне запрос актуальность окно")
 	}
 	if !a.Evidence.Boundary.ParentMatches || a.Evidence.Boundary.ExpectedParentPID == 0 ||
 		a.Evidence.Boundary.ExpectedParentPID != a.Evidence.Boundary.ObservedParentPID ||
 		a.Evidence.Launcher.PID != a.Evidence.Boundary.ExpectedParentPID || a.Evidence.Guard.PID == 0 ||
 		a.Evidence.Guard.PID == a.Evidence.Launcher.PID {
-		return errors.New("Guard Attestation process boundary mismatch")
+		return errors.New("Защита Аттестация процесс граница несоответствие")
 	}
 	for label, value := range map[string]string{
 		"guard image":      a.Evidence.Guard.ImageSHA256,
@@ -679,56 +679,56 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 		"launcher modules": a.Evidence.Launcher.Modules.ModuleSetSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
-			return fmt.Errorf("%s SHA-256 malformed", label)
+			return fmt.Errorf("%s SHA-256 повреждённый", label)
 		}
 	}
 	if a.Evidence.Guard.Modules.ModuleCount == 0 || a.Evidence.Launcher.Modules.ModuleCount == 0 {
-		return errors.New("Guard Attestation module evidence is empty")
+		return errors.New("Защита Аттестация модуль свидетельство является пустой")
 	}
 	evidenceDigest, err := recomputeGuardEvidenceSHA2560134(a.Evidence)
 	if err != nil || !hmac.Equal([]byte(evidenceDigest), []byte(a.Evidence.EvidenceSHA256)) {
-		return errors.New("Integrity Evidence digest verification failed")
+		return errors.New("Целостность Свидетельство хеш проверка ошибка")
 	}
 	if !hmac.Equal([]byte(recomputeGuardAttestationSHA2560134(a)), []byte(a.AttestationSHA256)) {
-		return errors.New("Guard Attestation digest verification failed")
+		return errors.New("Защита Аттестация хеш проверка ошибка")
 	}
 	p := a.ProcessPolicy
 	if p.Schema != expectedPolicySchema || p.PolicyVersion != 1 || p.PID != a.Evidence.Guard.PID || !p.Enforced {
-		return errors.New("NeverGuard process policy verification failed")
+		return errors.New("NeverGuard процесс политика проверка ошибка")
 	}
 	if linux {
 		if p.Linux == nil || !p.Linux.NoNewPrivs || !p.Linux.DumpableDisabled || !p.Linux.CoreDumpsDisabled ||
 			!p.Linux.PtraceRestricted || !p.Linux.ParentDeathSignal || !p.Linux.PrivateUmask {
-			return errors.New("NeverGuard Linux process policy verification failed")
+			return errors.New("NeverGuard Linux процесс политика проверка ошибка")
 		}
 		if a.Evidence.Guard.Linux == nil || a.Evidence.Launcher.Linux == nil ||
 			!a.Evidence.Guard.Linux.NoNewPrivs || !a.Evidence.Guard.Linux.DumpableDisabled || !a.Evidence.Guard.Linux.ParentDeathSignal ||
 			!a.Evidence.Launcher.Linux.NoNewPrivs || !a.Evidence.Launcher.Linux.DumpableDisabled ||
 			a.Evidence.Guard.Linux.UID != a.Evidence.Launcher.Linux.UID || a.Evidence.Guard.Linux.GID != a.Evidence.Launcher.Linux.GID {
-			return errors.New("NeverGuard Linux integrity process state verification failed")
+			return errors.New("NeverGuard Linux целостность процесс состояние проверка ошибка")
 		}
 	} else if macos {
 		if p.MacOS == nil || !p.MacOS.CoreDumpsDisabled || !p.MacOS.DebuggerAttachDenied || !p.MacOS.CodeSignatureValid ||
 			!p.MacOS.HardenedRuntime || !p.MacOS.LibraryValidation || !p.MacOS.DyldEnvironmentSanitized || !p.MacOS.ParentExitWatch || !p.MacOS.PrivateUmask {
-			return errors.New("NeverGuard macOS process policy verification failed")
+			return errors.New("NeverGuard macOS процесс политика проверка ошибка")
 		}
 		if a.Evidence.Guard.MacOS == nil || a.Evidence.Launcher.MacOS == nil ||
 			!a.Evidence.Guard.MacOS.CodeSignatureValid || !a.Evidence.Guard.MacOS.HardenedRuntime || !a.Evidence.Guard.MacOS.LibraryValidation ||
 			!a.Evidence.Launcher.MacOS.CodeSignatureValid || !a.Evidence.Launcher.MacOS.HardenedRuntime || !a.Evidence.Launcher.MacOS.LibraryValidation ||
 			a.Evidence.Guard.MacOS.UID != a.Evidence.Launcher.MacOS.UID || a.Evidence.Guard.MacOS.GID != a.Evidence.Launcher.MacOS.GID ||
 			a.Evidence.Guard.MacOS.ProcessGroupID == 0 || a.Evidence.Launcher.MacOS.ProcessGroupID == 0 {
-			return errors.New("NeverGuard macOS integrity process state verification failed")
+			return errors.New("NeverGuard macOS целостность процесс состояние проверка ошибка")
 		}
 	} else if !p.DynamicCodeProhibited || !p.ExtensionPointsDisabled || !p.StrictHandleChecks ||
 		!p.RemoteImagesBlocked || !p.LowMandatoryLabelImagesBlocked || !p.PreferSystem32Images || !p.ChildProcessCreationBlocked {
-		return errors.New("NeverGuard Windows process policy verification failed")
+		return errors.New("NeverGuard Windows процесс политика проверка ошибка")
 	}
 	allowedPair, requireAuthenticode, err := policy.allowsArtifactPair0140(platform, a.Evidence.Guard.ImageSHA256, a.Evidence.Launcher.ImageSHA256)
 	if err != nil || !allowedPair {
-		return errors.New("NeverGuard/Desktop release hash is not allowlisted: exact artifact pair is not allowlisted for device platform")
+		return errors.New("NeverGuard/Desktop релиз хеш является не список разрешений: точный артефакт пара является не список разрешений для устройство платформа")
 	}
 	if platformKind == "windows" && requireAuthenticode && (!a.Evidence.Guard.Authenticode.Trusted || !a.Evidence.Launcher.Authenticode.Trusted) {
-		return errors.New("release policy requires trusted Authenticode for NeverGuard and Desktop")
+		return errors.New("релиз политика требует доверенный Authenticode для NeverGuard и Настольное приложение")
 	}
 	return nil
 }
@@ -988,43 +988,43 @@ func (s Server) consumeGuardLaunchTicket0134(r *http.Request, claims authClaims,
 	raw = strings.TrimSpace(raw)
 	parts := strings.Split(raw, ".")
 	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" || len(raw) > 512 {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket malformed")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет повреждённый")
 	}
 	if strings.TrimSpace(claims.TrustedDeviceID) == "" {
-		return model.DeviceChallenge{}, errors.New("current session is not bound to trusted device")
+		return model.DeviceChallenge{}, errors.New("текущий сессия является не привязанный к доверенный устройство")
 	}
 	now := time.Now().UTC()
 	ticket, err := s.Repo.ConsumeDeviceChallenge(r.Context(), parts[0], claims.Sub, claims.TrustedDeviceID, guardLaunchTicketPurpose0134, deviceChallengeHash0121(parts[1]), now)
 	if err != nil {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket invalid, expired or already used")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет недопустимый, истёкший или уже используется")
 	}
 	if metadataString0121(ticket.Metadata, "sessionId") != claims.SessionID ||
 		metadataString0121(ticket.Metadata, "bindingEpoch") != strconv.FormatInt(claims.BindingEpoch, 10) {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket session/device binding mismatch")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет session/device привязка несоответствие")
 	}
 	version := metadataString0121(ticket.Metadata, "launcherVersion")
 	policies, err := s.guardReleasePolicies0134()
 	if err != nil {
-		return model.DeviceChallenge{}, errors.New("Guard release policy unavailable")
+		return model.DeviceChallenge{}, errors.New("Защита релиз политика недоступный")
 	}
 	policy, ok := policies[version]
 	if !ok {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket release policy no longer allows this build")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет релиз политика нет дольше разрешает этот сборка")
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, claims.TrustedDeviceID)
 	if err != nil {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket trusted device is unavailable")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет доверенный устройство является недоступный")
 	}
 	allowed, _, err := policy.allowsArtifactPair0140(device.Platform, metadataString0121(ticket.Metadata, "guardSha256"), metadataString0121(ticket.Metadata, "launcherSha256"))
 	if err != nil || !allowed {
-		return model.DeviceChallenge{}, errors.New("Guard launch ticket release policy no longer allows this platform build pair")
+		return model.DeviceChallenge{}, errors.New("Защита запускать билет релиз политика нет дольше разрешает этот платформа сборка пара")
 	}
 	if policy.PolicySchema == guardReleasePolicySchema0140 {
 		platformKind, err := guardPlatformKind0140(device.Platform)
 		if err != nil || metadataString0121(ticket.Metadata, "guardReleasePolicySchema") != policy.PolicySchema ||
 			metadataString0121(ticket.Metadata, "guardProtocolVersion") != strconv.FormatUint(uint64(policy.ProtocolVersion), 10) ||
 			metadataString0121(ticket.Metadata, "guardPlatform") != platformKind {
-			return model.DeviceChallenge{}, errors.New("Guard launch ticket release identity binding mismatch")
+			return model.DeviceChallenge{}, errors.New("Защита запускать билет релиз идентичность привязка несоответствие")
 		}
 	}
 	return ticket, nil

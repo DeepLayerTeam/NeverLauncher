@@ -17,7 +17,7 @@ const serverBridgeHandoffTTL0148 = 30 * time.Second
 func newServerBridgeHandoffID0148() (string, error) {
 	buf := make([]byte, 24)
 	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("secure handoff entropy unavailable: %w", err)
+		return "", fmt.Errorf("защищённый передача entropy недоступный: %w", err)
 	}
 	return "ho_" + base64.RawURLEncoding.EncodeToString(buf), nil
 }
@@ -159,7 +159,7 @@ func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request)
 func (b *serverBridgeStore) createHandoff0148(h model.ServerBridgeHandoff) (model.ServerBridgeHandoff, error) {
 	backend := b.backendV2()
 	if backend == nil {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("PostgreSQL ServerBridge source of truth is required for handoff")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("PostgreSQL ServerBridge источник истины является обязательный для передача")
 	}
 	ctx, cancel := bridgeContextV2()
 	defer cancel()
@@ -202,7 +202,7 @@ func (b *serverBridgeStore) invalidateHandoff0148(id string) bool {
 func (b *serverBridgeStore) topology0148() ([]model.ServerBridgeTopologyEdge, error) {
 	backend := b.backendV2()
 	if backend == nil {
-		return nil, fmt.Errorf("PostgreSQL ServerBridge source of truth is required for topology")
+		return nil, fmt.Errorf("PostgreSQL ServerBridge источник истины является обязательный для топология")
 	}
 	ctx, cancel := bridgeContextV2()
 	defer cancel()

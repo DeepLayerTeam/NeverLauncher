@@ -15,15 +15,15 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-// NewFederationCore builds the stable 0.12+ production provider registry. Every configured
-// provider is opened, health-checked, SDK-conformance checked and registered before
-// the API accepts traffic. A broken SQL/HTTP/OIDC provider therefore fails startup
-// instead of silently degrading authentication to another provider.
+// NewFederationCore собирает стабильный 0.12+ рабочий провайдер реестр. Каждый настраивать
+// провайдер является открытый, работоспособность-проверен, SDK-соответствие проверен и регистрировать до
+// API принимает трафик. broken SQL/HTTP/OIDC провайдер поэтому завершается ошибкой запуск
+// вместо этого без уведомления degrading аутентификация к другой провайдер.
 func NewFederationCore(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	core := federation.New(repo)
 	local := localAuthConnector112{repo: repo}
 	if report := conformance.Run(ctx, local); !report.Passed {
-		return nil, fmt.Errorf("local connector failed SDK conformance: %+v", report.Checks)
+		return nil, fmt.Errorf("локальный коннектор ошибка SDK соответствие: %+v", report.Checks)
 	}
 	if err := core.Register(local); err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, normalized.Provisioning.Mode, normalized.Provisioning.DefaultRole); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("SQL connector registration: %w", err)
+			return nil, fmt.Errorf("SQL коннектор регистрация: %w", err)
 		}
 	}
 
@@ -66,7 +66,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("HTTP connector registration: %w", err)
+			return nil, fmt.Errorf("HTTP коннектор регистрация: %w", err)
 		}
 	}
 
@@ -84,7 +84,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("OIDC connector registration: %w", err)
+			return nil, fmt.Errorf("OIDC коннектор регистрация: %w", err)
 		}
 	}
 
@@ -102,7 +102,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
 			_ = connector.Close()
 			_ = core.Close()
-			return nil, fmt.Errorf("Microsoft connector registration: %w", err)
+			return nil, fmt.Errorf("Microsoft коннектор регистрация: %w", err)
 		}
 	}
 	return core, nil
@@ -114,7 +114,7 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 }, provisioningMode, defaultRole string) error {
 	report := conformance.Run(ctx, connector)
 	if !report.Passed {
-		return fmt.Errorf("connector %q failed SDK conformance: %+v", report.ConnectorID, report.Checks)
+		return fmt.Errorf("коннектор %q ошибка SDK соответствие: %+v", report.ConnectorID, report.Checks)
 	}
 	policy := federation.ProviderPolicy{AutoProvision: provisioningMode == "jit", DefaultRole: defaultRole}
 	if mapper, ok := connector.(interface{ RoleMappings() map[string]string }); ok {
@@ -123,19 +123,19 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 	return core.RegisterWithPolicy(connector, policy)
 }
 
-// NewFederationCore116 remains source-compatible for 0.11.6+ embedders.
+// NewFederationCore116 остаётся исходник-compatible для 0.11.6+ embedders.
 func NewFederationCore116(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }
 
-// NewFederationCore115 remains source-compatible for 0.11.5 embedders.
+// NewFederationCore115 остаётся исходник-compatible для 0.11.5 embedders.
 func NewFederationCore115(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }
 
-// NewFederationCore113 remains source-compatible for embedders/tests compiled against
-// 0.11.3. It now delegates to the current registry and therefore also loads HTTP
-// providers when they are configured.
+// NewFederationCore113 остаётся исходник-compatible для embedders/tests compiled против
+// 0.11.3. Это теперь delegates к текущий реестр и поэтому также загружает HTTP
+// провайдеры когда они являются настраивать.
 func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }

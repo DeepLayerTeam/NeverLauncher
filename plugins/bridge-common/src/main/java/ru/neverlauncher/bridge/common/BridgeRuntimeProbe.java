@@ -4,7 +4,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.Locale;
 
-/** Reflection-only probes that keep bridge-common independent from Minecraft/loader APIs. */
+/** Reflection-только probes тот сохранять мост-common независимый из Minecraft/loader APIs. */
 public final class BridgeRuntimeProbe {
     private BridgeRuntimeProbe() {}
 

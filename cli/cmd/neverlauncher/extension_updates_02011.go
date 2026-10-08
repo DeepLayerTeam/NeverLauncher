@@ -10,15 +10,15 @@ import (
 
 func handleExtensionUpdates02011(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension updates-подкоманды: plan, apply, pins, pin, unpin, transaction")
+		return errors.New("доступные расширение updates-подкоманды: plan, применить, закрепляет, закреплять, unpin, транзакция")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("extension updates требует --backend <url>")
+		return errors.New("расширение обновляет требует --серверная часть <URL>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension updates требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("расширение обновляет требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	scope := strings.TrimSpace(flagValue(args, "--scope", "global"))
@@ -28,7 +28,7 @@ func handleExtensionUpdates02011(args []string) error {
 		roots := []map[string]any{}
 		channel := strings.ToLower(strings.TrimSpace(flagValue(args, "--channel", "stable")))
 		if channel != "stable" && channel != "beta" && channel != "dev" {
-			return errors.New("--channel должен быть stable, beta или dev")
+			return errors.New("--канал должен быть стабильный, beta или dev")
 		}
 		for _, raw := range args[1:] {
 			if strings.HasPrefix(raw, "--") {
@@ -61,11 +61,11 @@ func handleExtensionUpdates02011(args []string) error {
 		return writeOrPrintJSON(out, resp)
 	case "pin":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("updates pin требует id@version")
+			return errors.New("обновляет закреплять требует ID@версия")
 		}
 		id, v, ok := parseRegistryCoordinate0203(args[1])
 		if !ok {
-			return errors.New("updates pin требует id@version")
+			return errors.New("обновляет закреплять требует ID@версия")
 		}
 		resp, err := httpJSONWithAuth(http.MethodPut, backend+"/api/v1/admin/extension-updates/pins/"+url.PathEscape(id), map[string]any{"scope": scope, "scopeId": scopeID, "version": v}, token)
 		if err != nil {
@@ -74,7 +74,7 @@ func handleExtensionUpdates02011(args []string) error {
 		return writeOrPrintJSON(out, resp)
 	case "unpin":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("updates unpin требует extension id")
+			return errors.New("обновляет unpin требует расширение ID")
 		}
 		q := url.Values{}
 		q.Set("scope", scope)
@@ -88,7 +88,7 @@ func handleExtensionUpdates02011(args []string) error {
 		return writeOrPrintJSON(out, resp)
 	case "transaction":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("updates transaction требует transaction id")
+			return errors.New("обновляет транзакция требует транзакция ID")
 		}
 		resp, err := httpJSONWithAuth(http.MethodGet, backend+"/api/v1/admin/extension-updates/transactions/"+url.PathEscape(args[1]), nil, token)
 		if err != nil {
@@ -96,6 +96,6 @@ func handleExtensionUpdates02011(args []string) error {
 		}
 		return writeOrPrintJSON(out, resp)
 	default:
-		return fmt.Errorf("неизвестная extension updates-подкоманда: %s", args[0])
+		return fmt.Errorf("неизвестная расширение updates-подкоманда: %s", args[0])
 	}
 }

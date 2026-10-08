@@ -45,7 +45,7 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 			verifier := r.Form.Get("code_verifier")
 			sum := sha256.Sum256([]byte(verifier))
 			if base64.RawURLEncoding.EncodeToString(sum[:]) != expectedChallenge {
-				http.Error(w, "pkce mismatch", 400)
+				http.Error(w, "pkce несоответствие", 400)
 				return
 			}
 			accessHash := sha256.Sum256([]byte("access-1"))

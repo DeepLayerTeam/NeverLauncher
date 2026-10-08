@@ -12,13 +12,13 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 gate: {label} missing {missing}")
+        raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: {label} отсутствующий {missing}")
 
 
 def main() -> int:
     version = read("VERSION").strip()
     if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 2):
-        raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 gate: VERSION is {version}")
+        raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: VERSION является {version}")
 
     sensor = read("runtime/neverguard-sensor/src/lib.rs")
     sensor_manifest = read("runtime/neverguard-sensor/Cargo.toml")
@@ -70,9 +70,9 @@ def main() -> int:
         ("supervised runtime launch path", supervisor, 1),
     ]:
         if body.count("prepare_sensor_command(&mut command)") < count:
-            raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 gate: {label} does not prepare sensor")
+            raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: {label} делает не prepare sensor")
         if body.count("authenticate_sensor_or_kill(sensor_bootstrap, &mut child)") < count:
-            raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 gate: {label} does not authenticate sensor fail-closed")
+            raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: {label} делает не аутентифицировать sensor отказ с блокировкой")
     require(supervisor, ["pub windows_sensor: Option<crate::WindowsSensorReport>"], "runtime status evidence")
     require(
         ipc,
@@ -133,7 +133,7 @@ def main() -> int:
         "Windows compile/integration/clippy CI",
     )
     if "neverguard-sensor-0182.py" not in preflight:
-        raise SystemExit("[NeverLauncher] NeverGuard Sensor 0.18.2 gate: preflight wiring missing")
+        raise SystemExit("[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: предварительная проверка wiring отсутствующий")
 
     for path, body in [
         ("runtime/neverguard-sensor/src/lib.rs", sensor),
@@ -142,9 +142,9 @@ def main() -> int:
     ]:
         for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
             if forbidden in body:
-                raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 gate: placeholder {forbidden!r} in {path}")
+                raise SystemExit(f"[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: placeholder {forbidden!r} в {path}")
 
-    print("[NeverLauncher] NeverGuard Sensor 0.18.2 gate: OK")
+    print("[NeverLauncher] NeverGuard Sensor 0.18.2 контроль: OK")
     return 0
 
 

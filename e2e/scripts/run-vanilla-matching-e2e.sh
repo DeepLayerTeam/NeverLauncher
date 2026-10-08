@@ -40,7 +40,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[matching-e2e] build CLI and NeverRuntime\n'
+printf '[matching-e2e] сборка CLI и NeverRuntime\n'
 (
   cd "$ROOT/cli"
   go build -o "$NL_BIN" ./cmd/neverlauncher
@@ -48,7 +48,7 @@ printf '[matching-e2e] build CLI and NeverRuntime\n'
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
 [[ -x "$NEVERRUNTIME_BIN" ]] || { echo "[matching-e2e] NeverRuntime binary is missing" >&2; exit 1; }
 
-printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] материализовать фактический Mojang клиент %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-package \
   --minecraft "$MINECRAFT_VERSION" \
   --client-dir "$CLIENT_DIR" \
@@ -64,7 +64,7 @@ printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSIO
   --output "$RUNTIME_DIR/materialized-client-verify.json"
 cp "$CLIENT_DIR/.neverlauncher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
 
-printf '[matching-e2e] materialize verified Mojang server.jar for the exact same version %s\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] материализовать проверен Mojang сервер.JAR для точный одинаковый версия %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-server \
   --minecraft "$MINECRAFT_VERSION" \
   --server-dir "$SERVER_DIR" \
@@ -112,7 +112,7 @@ enable-query=false
 motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
 
-printf '[matching-e2e] start Mojang server %s on 127.0.0.1:%s with Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
+printf '[matching-e2e] запуск Mojang сервер %s на 127.0.0.1:%s с Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
 (
   cd "$SERVER_DIR"
   exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
@@ -144,7 +144,7 @@ except OSError: pass
 raise SystemExit('matching server did not become ready\n'+last)
 PY
 
-# Modern clients otherwise stop on first-run UI before automatic multiplayer connection.
+# Современный клиенты иначе остановка на первый запуск UI до автоматический multiplayer соединение.
 cat > "$CLIENT_DIR/options.txt" <<'OPTIONS'
 onboardAccessibility:false
 skipMultiplayerWarning:true
@@ -152,7 +152,7 @@ joinedFirstServer:true
 pauseOnLostFocus:false
 OPTIONS
 
-printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
+printf '[matching-e2e] запускать фактический Mojang клиент %s и подключение к точный соответствовать сервер\n' "$MINECRAFT_VERSION"
 export LIBGL_ALWAYS_SOFTWARE=1
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
@@ -206,4 +206,4 @@ payload={
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[matching-e2e] PASS client=%s server=%s Java=%s\n' "$MINECRAFT_VERSION" "$MINECRAFT_VERSION" "$JAVA_MAJOR"
+printf '[matching-e2e] PASS клиент=%s сервер=%s Java=%s\n' "$MINECRAFT_VERSION" "$MINECRAFT_VERSION" "$JAVA_MAJOR"

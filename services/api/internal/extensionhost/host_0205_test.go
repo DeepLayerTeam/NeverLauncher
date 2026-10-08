@@ -132,7 +132,7 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://example.test")
 	store := storage.NewLocalStorage(filepath.Join(t.TempDir(), "storage"))
 	install := hostFixtureInstall0205(t, repo, root, "example.crashhost", true)
-	// Auto-restart re-reads persistent state, so persist an enabled lifecycle state.
+	// Автоматический-перезапуск re-читает постоянный состояние, так сохранять включённый жизненный цикл состояние.
 	_, err := repo.TransitionExtensionInstall(context.Background(), model.ExtensionLifecycleTransition{ExtensionID: install.ExtensionID, Scope: "global", DesiredVersion: "1.0.0", CurrentVersion: "1.0.0", DesiredState: model.ExtensionInstallStateEnabled, CurrentState: model.ExtensionInstallStateEnabled, Enabled: true, Operation: "enable", Source: "test", ExpectedGeneration: 0})
 	if err != nil {
 		t.Fatal(err)

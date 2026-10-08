@@ -31,7 +31,7 @@ if [[ "${MODE}" == "production" ]]; then
   command -v xcrun >/dev/null || { echo "xcrun is required for production notarization" >&2; exit 1; }
   [[ -x /usr/sbin/spctl ]] || { echo "spctl is required for production Gatekeeper validation" >&2; exit 1; }
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS delivery requires NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID and NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2
+    echo "рабочий macOS доставка требует NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID и NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2
     exit 2
   }
   [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "signing identity must be Developer ID Application" >&2; exit 2; }
@@ -49,7 +49,7 @@ WORK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/neverlauncher-macos-production.XXXXXX")"
 cleanup() { rm -rf -- "${WORK_ROOT}"; }
 trap cleanup EXIT
 
-# Tauri's Rust build embeds assets produced by the desktop web build.
+# Tauri's Rust сборка embeds ресурсы созданный через настольное приложение web сборка.
 (
   cd "${ROOT_DIR}/apps/desktop"
   npm ci
@@ -104,10 +104,10 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
-  # Sign nested helper tools first. Never sign Contents/MacOS/neverlauncher-desktop
-  # directly while it lives inside the .app: codesign treats the bundle main
-  # executable as the bundle itself and requires every nested helper to already
-  # be signed. The final APP_ROOT signature signs/seals the main executable.
+  # Подпись вложенный вспомогательный модуль tools первый. Никогда подпись Contents/MacOS/neverlauncher-desktop
+  # напрямую пока это актуальный внутри.app: codesign treats комплект главный
+  # исполняемый как комплект сам и требует каждый вложенный вспомогательный модуль к уже
+  # быть подписанный. итоговый APP_ROOT подпись signs/seals главный исполняемый.
   for binary in neverguard neverruntime neverlauncher-cli; do
     case "${binary}" in
       neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
@@ -127,16 +127,16 @@ EOF_PLIST
     fi
   done
 
-  # Generate the Resources that must be sealed by the outer application
-  # signature. The main executable is intentionally still unsigned here.
+  # Генерировать Ресурсы тот должен быть запечатанный через outer приложение
+  # подпись. главный исполняемый является намеренно по-прежнему неподписанный здесь.
   python3 "${ROOT_DIR}/scripts/release/macos-package.py" manifest \
     --version "${VERSION}" --arch "${arch}" --team-id "${TEAM_ID}" \
     --trust-mode "${UPDATE_TRUST_MODE}" \
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
   chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
-  # Complete inside-out signing by signing the application bundle exactly once.
-  # This signs the main executable and seals already-signed Helpers + Resources.
+  # Полный внутри-из подписание через подписание приложение комплект точно один раз.
+  # Этот подписывает главный исполняемый и запечатывает уже-подписанный Вспомогательный модуль + Ресурсы.
   codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
   codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
   for binary in neverguard neverruntime neverlauncher-cli; do
@@ -221,7 +221,7 @@ for arch in x64 arm64; do
 done
 [[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "missing final macOS notarization evidence" >&2; exit 1; }
 [[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "missing final macOS Guard allowlist evidence" >&2; exit 1; }
-printf 'Final macOS delivery inventory (%s):\n' "${OUT_DIR}"
+printf 'Итоговый macOS доставка инвентарь (%s):\n' "${OUT_DIR}"
 find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 
-echo "NeverLauncher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"
+echo "NeverLauncher ${VERSION} macOS x64+ARM64 пакеты prepared (signingMode=${SIGNING_MODE})"

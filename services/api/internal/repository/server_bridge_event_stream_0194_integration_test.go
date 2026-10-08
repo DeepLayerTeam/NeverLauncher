@@ -10,7 +10,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// Enabled in PostgreSQL CI with the same DSN as the ServerBridge HA suite.
+// Включённый в PostgreSQL CI с одинаковый DSN как ServerBridge HA suite.
 func TestServerBridgeEventStream0194Postgres(t *testing.T) {
 	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {

@@ -14,11 +14,11 @@ import (
 func handleExtensionSecurity0207(command string, args []string) error {
 	backend := adminBackendURL(args)
 	if backend == "" {
-		return errors.New("extension security требует --backend <url>")
+		return errors.New("расширение безопасность требует --серверная часть <URL>")
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension security требует --token или NEVERLAUNCHER_TOKEN")
+		return errors.New("расширение безопасность требует --токен или NEVERLAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	if command == "capabilities" {
@@ -29,7 +29,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 		return writeOrPrintJSON(out, p)
 	}
 	if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-		return fmt.Errorf("extension %s требует extension id", command)
+		return fmt.Errorf("расширение %s требует расширение ID", command)
 	}
 	id := args[0]
 	scope := flagValue(args, "--scope", "global")
@@ -55,7 +55,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 	case "permission-grant":
 		permission := strings.TrimSpace(flagValue(args, "--permission", ""))
 		if permission == "" {
-			return errors.New("permission-grant требует --permission")
+			return errors.New("разрешение-grant требует --разрешение")
 		}
 		body := map[string]any{"scope": scope, "scopeId": scopeID, "permission": permission, "reason": flagValue(args, "--reason", "")}
 		if v := flagValue(args, "--version", ""); v != "" {
@@ -69,7 +69,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 	case "permission-revoke":
 		permission := strings.TrimSpace(flagValue(args, "--permission", ""))
 		if permission == "" {
-			return errors.New("permission-revoke требует --permission")
+			return errors.New("разрешение-отзыв требует --разрешение")
 		}
 		_, err := httpJSONWithAuth(http.MethodDelete, backend+"/api/v1/admin/extensions/"+url.PathEscape(id)+"/permissions/"+url.PathEscape(permission)+"?"+q.Encode(), nil, token)
 		return err
@@ -82,7 +82,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 	case "secret-set":
 		name := strings.TrimSpace(flagValue(args, "--name", ""))
 		if name == "" {
-			return errors.New("secret-set требует --name")
+			return errors.New("секрет-задать требует --имя")
 		}
 		var value []byte
 		var err error
@@ -93,13 +93,13 @@ func handleExtensionSecurity0207(command string, args []string) error {
 		} else if v := os.Getenv("NEVERLAUNCHER_EXTENSION_SECRET_VALUE"); v != "" {
 			value = []byte(v)
 		} else {
-			return errors.New("secret-set требует --value-file, --stdin или NEVERLAUNCHER_EXTENSION_SECRET_VALUE")
+			return errors.New("секрет-задать требует --value-файл, --стандартный ввод или NEVERLAUNCHER_EXTENSION_SECRET_VALUE")
 		}
 		if err != nil {
 			return err
 		}
 		if len(value) > 1<<20 {
-			return errors.New("secret value exceeds 1 MiB")
+			return errors.New("секрет value exceeds 1 MiB")
 		}
 		body := map[string]any{"scope": scope, "scopeId": scopeID, "valueBase64": base64.StdEncoding.EncodeToString(value)}
 		for i := range value {
@@ -113,12 +113,12 @@ func handleExtensionSecurity0207(command string, args []string) error {
 	case "secret-delete":
 		name := strings.TrimSpace(flagValue(args, "--name", ""))
 		if name == "" {
-			return errors.New("secret-delete требует --name")
+			return errors.New("секрет-удалять требует --имя")
 		}
 		_, err := httpJSONWithAuth(http.MethodDelete, backend+"/api/v1/admin/extensions/"+url.PathEscape(id)+"/secrets/"+url.PathEscape(name)+"?"+q.Encode(), nil, token)
 		return err
 	default:
-		return fmt.Errorf("неизвестная extension security-подкоманда: %s", command)
+		return fmt.Errorf("неизвестная расширение security-подкоманда: %s", command)
 	}
 }
 func hasFlag0207(args []string, name string) bool {

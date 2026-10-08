@@ -132,74 +132,74 @@ fn auth_keyring_username(backend_url: &str) -> Result<String, String> {
 #[tauri::command]
 async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> Result<(), String> {
     let username = auth_keyring_username(&backend_url)?;
-    let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать auth session: {e}"))?;
+    let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать аутентификация сессия: {e}"))?;
     tokio::task::spawn_blocking(move || {
         let mut secret = secret;
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
-        let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить auth session в OS credential store: {e}"));
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("защищённый учётные данные хранилище недоступен: {e}"))?;
+        let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить аутентификация сессия в OS учётные данные хранилище: {e}"));
         secret.zeroize();
         result
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("защищённый учётные данные task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn load_auth_session(backend_url: String) -> Result<Option<SecureAuthSession>, String> {
     let username = auth_keyring_username(&backend_url)?;
     tokio::task::spawn_blocking(move || {
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("защищённый учётные данные хранилище недоступен: {e}"))?;
         match entry.get_password() {
             Ok(mut secret) => {
-                let parsed = serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("auth session в OS credential store повреждена: {e}"));
+                let parsed = serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("аутентификация сессия в OS учётные данные хранилище повреждена: {e}"));
                 secret.zeroize();
                 parsed
             },
             Err(keyring::v1::Error::NoEntry) => Ok(None),
-            Err(e) => Err(format!("не удалось прочитать auth session из OS credential store: {e}")),
+            Err(e) => Err(format!("не удалось прочитать аутентификация сессия из OS учётные данные хранилище: {e}")),
         }
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("защищённый учётные данные task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn delete_auth_session(backend_url: String) -> Result<(), String> {
     let username = auth_keyring_username(&backend_url)?;
     tokio::task::spawn_blocking(move || {
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("защищённый учётные данные хранилище недоступен: {e}"))?;
         match entry.delete_credential() {
             Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
-            Err(e) => Err(format!("не удалось удалить auth session из OS credential store: {e}")),
+            Err(e) => Err(format!("не удалось удалить аутентификация сессия из OS учётные данные хранилище: {e}")),
         }
-    }).await.map_err(|e| format!("secure credential task завершилась ошибкой: {e}"))?
+    }).await.map_err(|e| format!("защищённый учётные данные task завершилась ошибкой: {e}"))?
 }
 
 
 #[tauri::command]
 async fn ensure_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::ensure_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
     tokio::task::spawn_blocking(move || device_keys::device_key_status(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_device_payload(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_device_payload(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("device key signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ подписание task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn attest_device_payload(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::attest_device_payload(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("device attestation signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство аттестация подписание task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_session_refresh(backend_url: String, user_id: String, session_id: String, device_id: String, binding_epoch: i64, refresh_token: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_session_refresh(&backend_url, &user_id, &session_id, &device_id, binding_epoch, &refresh_token))
-        .await.map_err(|e| format!("session refresh device signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("сессия обновление устройство подписание task завершилась ошибкой: {e}"))?
 }
 
 
@@ -207,55 +207,55 @@ async fn sign_session_refresh(backend_url: String, user_id: String, session_id: 
 #[tauri::command]
 async fn stage_device_key_replacement(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::stage_device_key_replacement(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key staging task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ подготовка task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn staged_device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
     tokio::task::spawn_blocking(move || device_keys::staged_device_key_status(&backend_url, &user_id))
-        .await.map_err(|e| format!("staged device key status task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("подготовленный устройство ключ состояние task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_staged_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_staged_device_replacement(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("staged device key signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("подготовленный устройство ключ подписание task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_current_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_current_device_replacement(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("current device rotation signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("текущий устройство ротация подписание task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn commit_staged_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::commit_staged_device_key(&backend_url, &user_id, &device_id))
-        .await.map_err(|e| format!("device key commit task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ фиксация task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn abort_staged_device_key(backend_url: String, user_id: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || device_keys::abort_staged_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key rollback task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ откат task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn bind_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::bind_device_key(&backend_url, &user_id, &device_id))
-        .await.map_err(|e| format!("device key bind task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ привязывать task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn reset_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::reset_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key reset task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ reset task завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn delete_device_key(backend_url: String, user_id: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || device_keys::delete_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key delete task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("устройство ключ удалять task завершилась ошибкой: {e}"))?
 }
 
 #[derive(Debug, Serialize)]
@@ -322,7 +322,7 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
 #[tauri::command]
 async fn load_desktop_config() -> Result<DesktopConfig, String> {
     let path = desktop_config_path()?;
-    let mut cfg = if fs::metadata(&path).await.is_ok() { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("desktop config повреждён: {e}"))? } else { default_desktop_config() };
+    let mut cfg = if fs::metadata(&path).await.is_ok() { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("настольное приложение конфигурация повреждён: {e}"))? } else { default_desktop_config() };
     cfg = normalize_desktop_config(cfg); cfg.config_path = path.to_string_lossy().to_string(); Ok(cfg)
 }
 #[tauri::command]
@@ -391,7 +391,7 @@ async fn launch_minecraft(
         let process_policy = neverguard
             .process_policy()
             .await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Windows process policy verification failed: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard Windows процесс политика проверка ошибка: {err}"))?;
         if !process_policy.enforced
             || process_policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
@@ -400,7 +400,7 @@ async fn launch_minecraft(
         neverguard
             .integrity_evidence()
             .await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Windows Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard Windows Целостность Свидетельство v1 недоступен: {err}"))?;
     }
     #[cfg(target_os = "linux")]
     {
@@ -419,12 +419,12 @@ async fn launch_minecraft(
         }
         neverguard.ping().await?;
         let policy = neverguard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Linux process policy verification failed: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard Linux процесс политика проверка ошибка: {err}"))?;
         if !policy.enforced || policy.policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
             return Err("launch заблокирован: NeverGuard Linux process policy report rejected".to_string());
         }
         neverguard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Linux Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard Linux Целостность Свидетельство v1 недоступен: {err}"))?;
     }
     #[cfg(target_os = "macos")]
     {
@@ -443,12 +443,12 @@ async fn launch_minecraft(
         }
         neverguard.ping().await?;
         let policy = neverguard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard macOS process policy verification failed: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard macOS процесс политика проверка ошибка: {err}"))?;
         if !policy.enforced || policy.policy_version != NEVERGUARD_MACOS_PROCESS_POLICY_VERSION || policy.macos.is_none() {
             return Err("launch заблокирован: NeverGuard macOS process policy report rejected".to_string());
         }
         neverguard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard macOS Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("запускать заблокирован: NeverGuard macOS Целостность Свидетельство v1 недоступен: {err}"))?;
     }
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     let _ = &neverguard;
@@ -500,7 +500,7 @@ async fn neverguard_guard_attestation(
             })
         })
         .await
-        .map_err(|e| format!("Guard Attestation device signing task завершилась ошибкой: {e}"))??;
+        .map_err(|e| format!("Защита Аттестация устройство подписание task завершилась ошибкой: {e}"))??;
         if signing.key_algorithm != "p256" || signing.key_binding != "hardware" || !signing.hardware_bound {
             return Err("Guard Attestation signer не является hardware-bound P-256 identity".to_string());
         }
@@ -536,7 +536,7 @@ async fn neverguard_guard_attestation_v2(
             challenge_id, challenge, challenge_expires_at, process_id,
         } = request;
         let process_status = supervisor.status(&process_id).await
-            .map_err(|err| format!("Guard Attestation v2 runtime status недоступен: {err}"))?;
+            .map_err(|err| format!("Защита Аттестация v2 среда выполнения состояние недоступен: {err}"))?;
         let continuous_evidence = neverruntime::collect_windows_continuous_evidence_v2(&process_id, &process_status)?;
         let base_attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
         let attestation = neverruntime::build_windows_attestation_v2(
@@ -568,7 +568,7 @@ async fn neverguard_guard_attestation_v2(
             })
         })
         .await
-        .map_err(|e| format!("Guard Attestation v2 device signing task завершилась ошибкой: {e}"))??;
+        .map_err(|e| format!("Защита Аттестация v2 устройство подписание task завершилась ошибкой: {e}"))??;
         Ok(GuardAttestationV2Submission {
             launcher_version: submission_launcher_version,
             attestation,
@@ -614,14 +614,14 @@ async fn install_launcher_update(
     let expected_sha256 = validate_update_sha256(&expected_sha256)?;
     let package = fs::canonicalize(PathBuf::from(package_path.trim()))
         .await
-        .map_err(|e| format!("update package недоступен: {e}"))?;
+        .map_err(|e| format!("обновление пакет недоступен: {e}"))?;
     let package_meta = fs::symlink_metadata(&package).await.map_err(|e| e.to_string())?;
     if !package_meta.file_type().is_file() || package_meta.file_type().is_symlink() || package_meta.len() == 0 {
         return Err("update package должен быть непустым обычным файлом, не symlink".into());
     }
 
-    let current_exe = std::env::current_exe().map_err(|e| format!("не удалось определить Desktop executable: {e}"))?;
-    let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("не удалось canonicalize Desktop executable: {e}"))?;
+    let current_exe = std::env::current_exe().map_err(|e| format!("не удалось определить Настольное приложение исполняемый: {e}"))?;
+    let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("не удалось canonicalize Настольное приложение исполняемый: {e}"))?;
     let bin_dir = current_exe.parent().ok_or_else(|| "Desktop executable не имеет родительского каталога".to_string())?;
     let helper = if cfg!(target_os = "macos") {
         let contents = bin_dir.parent().ok_or_else(|| "macOS Desktop executable не находится внутри Contents/MacOS".to_string())?;
@@ -630,13 +630,13 @@ async fn install_launcher_update(
     } else {
         bin_dir.join(launcher_update_helper_name())
     };
-    let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("transactional updater helper отсутствует {}: {e}", helper.display()))?;
+    let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("транзакционный обновлятор вспомогательный модуль отсутствует {}: {e}", helper.display()))?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() || helper_meta.len() == 0 {
-        return Err(format!("transactional updater helper небезопасен: {}", helper.display()));
+        return Err(format!("транзакционный обновлятор вспомогательный модуль небезопасен: {}", helper.display()));
     }
 
-    // Guard owns handles/IPC that may keep its executable busy on Windows. Stop it
-    // before the external helper waits for Desktop and enters the transaction.
+    // Защита владеет дескриптор/IPC тот может сохранять его исполняемый busy на Windows. Остановка это
+    // до внешний вспомогательный модуль waits для Настольное приложение и enters транзакция.
     neverguard.shutdown().await.map_err(|e| format!("не удалось остановить NeverGuard перед обновлением: {e}"))?;
 
     let parent_pid = std::process::id().to_string();
@@ -656,12 +656,12 @@ async fn install_launcher_update(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    let child = command.spawn().map_err(|e| format!("не удалось запустить transactional updater helper: {e}"))?;
+    let child = command.spawn().map_err(|e| format!("не удалось запустить транзакционный обновлятор вспомогательный модуль: {e}"))?;
     let updater_pid = child.id().ok_or_else(|| "updater helper запущен без process id".to_string())?;
     drop(child);
 
-    // Return the schedule result to the UI, then leave this process so the helper can
-    // atomically replace the Desktop binary/app bundle on every supported OS.
+    // Возвращать schedule результат к UI, затем leave этот процесс так вспомогательный модуль может
+    // атомарно заменять Настольное приложение binary/app комплект на каждый поддерживаемый OS.
     let exit_handle = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(150));
@@ -716,7 +716,7 @@ async fn export_diagnostics_bundle(root: String, launcher_version: String, backe
     let safe_logs = logs.into_iter().map(|v| { let l=v.to_lowercase(); if l.contains("token")||l.contains("password")||l.contains("secret")||l.contains("authorization") { "[redacted]".into() } else { v } }).collect::<Vec<String>>();
     let payload = serde_json::json!({"schemaVersion":"1.0","launcherVersion":launcher_version,"backendUrl":backend_url.split('?').next().unwrap_or(&backend_url),"stage":stage,"runtime":"NeverRuntime","os":std::env::consts::OS,"arch":std::env::consts::ARCH,"logs":safe_logs});
     fs::write(&path, serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?).await.map_err(|e| e.to_string())?;
-    Ok(DiagnosticsExportResult { path: path.to_string_lossy().to_string(), message: format!("diagnostic bundle сохранён: {}", path.display()) })
+    Ok(DiagnosticsExportResult { path: path.to_string_lossy().to_string(), message: format!("diagnostic комплект сохранён: {}", path.display()) })
 }
 
 #[tauri::command]
@@ -729,26 +729,26 @@ async fn open_game_directory(root: String) -> Result<String, String> {
 fn main() {
     #[cfg(windows)]
     if let Err(err) = neverruntime::ensure_windows_production_hardening() {
-        eprintln!("NeverLauncher Desktop Windows production hardening failed: {err}");
+        eprintln!("NeverLauncher Настольное приложение Windows рабочий усиление защиты ошибка: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "linux")]
     if let Err(err) = neverruntime::linux_policy::ensure_linux_production_hardening() {
-        eprintln!("NeverLauncher Desktop Linux production hardening failed: {err}");
+        eprintln!("NeverLauncher Настольное приложение Linux рабочий усиление защиты ошибка: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "macos")]
     if let Err(err) = neverruntime::macos_policy::ensure_macos_production_hardening() {
-        eprintln!("NeverLauncher Desktop macOS production hardening failed: {err}");
+        eprintln!("NeverLauncher Настольное приложение macOS рабочий усиление защиты ошибка: {err}");
         std::process::exit(70);
     }
 
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
-        .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
+        .setup(|app| { println!("NeverLauncher Настольное приложение {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
         .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

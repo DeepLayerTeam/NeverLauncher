@@ -142,7 +142,7 @@ fn pin_module(base: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Hook Engine cannot retain module at 0x{base:X}: {}",
+            "NeverGuard Хук Движок не может сохранять модуль в 0x{base:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -275,7 +275,7 @@ fn resolve_canonical_targets() -> Result<(), String> {
     for spec in hook_specs() {
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
         if address.is_null() {
-            return Err(format!("NeverGuard Hook Engine cannot resolve {}", spec.name));
+            return Err(format!("NeverGuard Хук Движок не может разрешать {}", spec.name));
         }
         spec.canonical.store(address, Ordering::Release);
     }
@@ -293,9 +293,9 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
             continue;
         }
         let Ok(_module_pin) = pin_module(module.base) else {
-            // A normal unload can race the module snapshot. Module Guard owns
-            // lifecycle enforcement; a still-loaded module is retried on the
-            // next reconciliation heartbeat.
+            // обычный выгрузка может гонка модуль снимок. Модуль Защита владеет
+            // жизненный цикл принудительное применение; по-прежнему-загружен модуль является retried на 
+            // следующий согласование сигнал состояния.
             continue;
         };
         let records = collect_hook_candidates(&module)?;
@@ -307,15 +307,15 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
                     restore_records(&mut applied);
                     state.healthy = false;
                     return Err(format!(
-                        "NeverGuard Hook Engine detected pre-existing IAT target drift for {} in {}",
+                        "NeverGuard Хук Движок обнаруживать pre-существующий IAT цель расхождение для {} в {}",
                         record.hook_name, record.module_path
                     ));
                 }
                 if current != record.replacement {
                     if let Err(err) = patch_pointer(record.slot, record.replacement) {
-                        // patch_pointer can fail after the slot write (for example
-                        // while restoring page protection). Restore this slot and
-                        // all earlier writes before returning the failure.
+                        // patch_pointer может завершаться ошибкой после slot запись (для пример
+                        // пока восстановление страница защита). Восстановление этот slot и
+                        // все earlier записывает до возвращать ошибка.
                         let _ = patch_pointer(record.slot, current);
                         restore_records(&mut applied);
                         state.healthy = false;
@@ -340,7 +340,7 @@ fn verify_locked(state: &mut HookEngineState) -> Result<(), String> {
         if current != record.replacement {
             state.healthy = false;
             return Err(format!(
-                "NeverGuard Hook Engine IAT integrity violation for {} in {}",
+                "NeverGuard Хук Движок IAT целостность нарушение для {} в {}",
                 record.hook_name, record.module_path
             ));
         }
@@ -393,11 +393,11 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     let size = module.size;
     let dos_signature = read_u16(base, size, 0)?;
     if dos_signature != IMAGE_DOS_SIGNATURE {
-        return Err(format!("NeverGuard Hook Engine invalid DOS header in {}", module.path));
+        return Err(format!("NeverGuard Хук Движок недопустимый DOS header в {}", module.path));
     }
     let nt_offset = read_u32(base, size, 0x3C)? as usize;
     if read_u32(base, size, nt_offset)? != IMAGE_NT_SIGNATURE {
-        return Err(format!("NeverGuard Hook Engine invalid PE header in {}", module.path));
+        return Err(format!("NeverGuard Хук Движок недопустимый PE header в {}", module.path));
     }
     let optional = nt_offset
         .checked_add(24)
@@ -410,7 +410,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     };
     if pointer_size != size_of::<usize>() {
         return Err(format!(
-            "NeverGuard Hook Engine module/process architecture mismatch in {}",
+            "NeverGuard Хук Движок module/process архитектура несоответствие в {}",
             module.path
         ));
     }
@@ -468,7 +468,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                     let expected = unsafe { GetProcAddress(imported_module, spec.c_name.as_ptr().cast()) };
                     if expected.is_null() {
                         return Err(format!(
-                            "NeverGuard Hook Engine cannot resolve imported {} from {}",
+                            "NeverGuard Хук Движок не может разрешать импорт {} из {}",
                             spec.name, import_dll
                         ));
                     }
@@ -490,7 +490,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
             }
             index = index.saturating_add(1);
             if index > 65_536 {
-                return Err(format!("NeverGuard Hook Engine excessive import table in {}", module.path));
+                return Err(format!("NeverGuard Хук Движок excessive импорт таблица в {}", module.path));
             }
         }
         descriptor_offset += 20;
@@ -510,7 +510,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if ok == 0 {
         return Err(format!(
-            "NeverGuard Hook Engine VirtualProtect(IAT) failed: {}",
+            "NeverGuard Хук Движок VirtualProtect(IAT) ошибка: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -535,7 +535,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if restore_ok == 0 || flush_ok == 0 {
         return Err(format!(
-            "NeverGuard Hook Engine failed to restore/flush IAT protection: {}",
+            "NeverGuard Хук Движок ошибка к restore/flush IAT защита: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -568,7 +568,7 @@ fn enumerate_modules() -> Result<Vec<ProcessModule>, String> {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard Hook Engine module enumeration failed: {}",
+                "NeverGuard Хук Движок модуль enumeration ошибка: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -617,7 +617,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
     let length = unsafe { GetModuleFileNameW(module, buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "NeverGuard Hook Engine cannot resolve module path: {}",
+            "NeverGuard Хук Движок не может разрешать модуль путь: {}",
             std::io::Error::last_os_error()
         ));
     }

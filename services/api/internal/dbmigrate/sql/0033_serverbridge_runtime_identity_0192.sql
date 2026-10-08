@@ -1,6 +1,6 @@
--- NeverLauncher 0.19.2 — ServerBridge 3 Node Discovery & Runtime Identity.
--- Runtime instances are attested by the registered Ed25519 node key and retained
--- as history so JVM restarts and overlapping replacement processes are observable.
+-- NeverLauncher 0.19.2 — ServerBridge 3 Узел Обнаружение и Среда выполнения Идентичность.
+-- Среда выполнения экземпляры являются attested через регистрировать Ed25519 узел ключ и сохранённый
+-- как история так JVM перезапуски и overlapping замена обрабатывает являются observable.
 
 ALTER TABLE server_bridge_nodes_v2
     ADD COLUMN IF NOT EXISTS runtime_id TEXT NOT NULL DEFAULT '',
