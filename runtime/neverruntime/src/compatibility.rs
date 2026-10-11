@@ -306,7 +306,7 @@ pub async fn resolve_compatibility(
 
     layers.reverse();
     let environment = CompatibilityEnvironment::current(context.features.clone());
-    let merged = merge_layers(&layers)?;
+    let merged = merge_layers(&layers, &environment)?;
     if merged.main_class.trim().is_empty() {
         return Err("resolved Minecraft metadata не содержит mainClass".to_string());
     }
@@ -447,7 +447,10 @@ pub async fn resolve_compatibility(
     })
 }
 
-fn merge_layers(layers: &[(String, String, VersionMetadata)]) -> Result<MergedVersion, String> {
+fn merge_layers(
+    layers: &[(String, String, VersionMetadata)],
+    environment: &CompatibilityEnvironment,
+) -> Result<MergedVersion, String> {
     let mut merged = MergedVersion::default();
     let mut library_positions = HashMap::<String, usize>::new();
 
@@ -471,6 +474,18 @@ fn merge_layers(layers: &[(String, String, VersionMetadata)]) -> Result<MergedVe
         for library in &layer.libraries {
             if library.name.trim().is_empty() {
                 return Err(format!("Minecraft metadata {} содержит library без name", layer.id));
+            }
+            // Filter *before* merging Maven coordinates. Mojang 1.6.x–1.12.x
+            // can list two versions of org.lwjgl.lwjgl:lwjgl with mutually
+            // exclusive OS rules (legacy LWJGL on Linux/Windows and a nightly
+            // variant on old macOS). Unconditionally replacing the earlier
+            // coordinate with the later, macOS-only one removes LWJGL from the
+            // Linux classpath even though the materializer downloaded it.
+            if library.client_req == Some(false)
+                || !rules_allow(&library.rules, environment)?
+                || !library_artifact_matches_environment(&library.name, environment)
+            {
+                continue;
             }
             let key = library_identity(&library.name);
             if let Some(index) = library_positions.get(&key).copied() {
@@ -1272,6 +1287,40 @@ mod tests {
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
         let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn os_specific_lwjgl_variants_preserve_the_active_mojang_library() {
+        // Mojang 1.6.4 contains both lwjgl:2.9.0 (Linux/Windows) and a
+        // later macOS-only nightly 2.9.1. The inactive entry must not override
+        // the active one merely because its Maven group/artifact is equal.
+        let metadata: VersionMetadata = serde_json::from_str(r#"{
+            "id":"1.6.4",
+            "libraries":[
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.0",
+                 "rules":[{"action":"allow"}, {"action":"disallow", "os":{"name":"osx","version":"^10\\.5\\.\\d$"}}],
+                 "downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.0/lwjgl-2.9.0.jar"}}},
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.1-nightly",
+                 "rules":[{"action":"allow", "os":{"name":"osx","version":"^10\\.5\\.\\d$"}}],
+                 "downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.1-nightly/lwjgl-2.9.1-nightly.jar"}}}
+            ]
+        }"#).unwrap();
+        let layers = vec![("1.6.4".to_string(), "versions/1.6.4/1.6.4.json".to_string(), metadata)];
+        let linux = CompatibilityEnvironment {
+            os: "linux".into(), arch: "x86_64".into(), os_version: "6.17".into(), features: HashMap::new(),
+        };
+        let mac = CompatibilityEnvironment {
+            os: "osx".into(), arch: "x86_64".into(), os_version: "10.5.8".into(), features: HashMap::new(),
+        };
+        let l = merge_layers(&layers, &linux).unwrap();
+        let m = merge_layers(&layers, &mac).unwrap();
+        assert_eq!(l.libraries.len(), 1);
+        assert_eq!(m.libraries.len(), 1);
+        assert_eq!(l.libraries[0].name, "org.lwjgl.lwjgl:lwjgl:2.9.0");
+        assert_eq!(m.libraries[0].name, "org.lwjgl.lwjgl:lwjgl:2.9.1-nightly");
+        let (_, _, cp) = resolve_libraries(&l.libraries, &linux).unwrap();
+        assert_eq!(cp.len(), 1);
+        assert_eq!(cp[0], "libraries/org/lwjgl/lwjgl/lwjgl/2.9.0/lwjgl-2.9.0.jar");
     }
 
     #[tokio::test]

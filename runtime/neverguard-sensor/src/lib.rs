@@ -1159,7 +1159,22 @@ pub extern "system" fn Agent_OnLoad(
     }
     let memory_snapshot = match memory_integrity::initialize() {
         Ok(snapshot) if snapshot.active && snapshot.healthy && snapshot.executable_regions > 0 => snapshot,
-        Ok(_) | Err(_) => {
+        Ok(snapshot) => {
+            // Keep the fail-closed gate, but emit enough evidence to diagnose
+            // the parent's MEMORY_READY early EOF on Windows CI.
+            eprintln!(
+                "NeverGuard Sensor Memory Integrity refused readiness: active={} healthy={} executable_regions={} image_code_regions={}",
+                snapshot.active, snapshot.healthy, snapshot.executable_regions, snapshot.image_code_regions
+            );
+            memory_integrity::shutdown();
+            let _ = hook_engine::shutdown_restore();
+            jvm_awareness::shutdown();
+            unregister_module_notifications();
+            channel.secret.zeroize();
+            return JNI_ERR;
+        }
+        Err(err) => {
+            eprintln!("NeverGuard Sensor Memory Integrity initialization failed: {err}");
             memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
             jvm_awareness::shutdown();

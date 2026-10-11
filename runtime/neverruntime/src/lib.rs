@@ -703,8 +703,15 @@ pub async fn certify_vanilla_compatibility(
         if port == 0 {
             return Err("Vanilla certification matching server port должен быть > 0".to_string());
         }
-        replace_or_append_arg_pair(&mut game_args, "--server", host.clone());
-        replace_or_append_arg_pair(&mut game_args, "--port", port.to_string());
+        if minecraft_supports_quick_play_multiplayer(version) {
+            // Minecraft 1.20+ dropped the legacy --server/--port join arguments.
+            // Use the game's native Quick Play path for an actual client join;
+            // the matching-server gate still requires proof from server logs.
+            replace_or_append_arg_pair(&mut game_args, "--quickPlayMultiplayer", format!("{host}:{port}"));
+        } else {
+            replace_or_append_arg_pair(&mut game_args, "--server", host.clone());
+            replace_or_append_arg_pair(&mut game_args, "--port", port.to_string());
+        }
     } else if matching_server_port.is_some() {
         return Err("Vanilla certification --server-port требует --server".to_string());
     }
@@ -735,6 +742,13 @@ pub async fn certify_vanilla_compatibility(
     use std::io::Write as _;
     writeln!(log_file, "NeverRuntime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
+    // Only already-resolved relative JAR paths are written; no credentials or
+    // argument tokens. This makes legacy missing-library failures diagnosable.
+    writeln!(log_file, "--- verified classpath entries ---").map_err(|e| e.to_string())?;
+    for entry in &plan.classpath_entries {
+        let relative = Path::new(entry).strip_prefix(root).unwrap_or(Path::new(entry));
+        writeln!(log_file, "{}", relative.display()).map_err(|e| e.to_string())?;
+    }
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
@@ -1202,6 +1216,19 @@ fn parse_java_major_version(output: &str) -> Option<u32> {
     if first == 1 { parts.next()?.parse::<u32>().ok() } else { Some(first) }
 }
 
+fn minecraft_supports_quick_play_multiplayer(version: &str) -> bool {
+    // Release 1.20 and newer (including the 26.x year-based version scheme)
+    // support --quickPlayMultiplayer host:port. Older versions use --server/--port.
+    let mut parts = version.split('.');
+    let first = parts.next().and_then(|v| v.parse::<u32>().ok());
+    let second = parts.next().and_then(|v| v.parse::<u32>().ok());
+    match (first, second) {
+        (Some(1), Some(minor)) => minor >= 20,
+        (Some(year), _) => year >= 26,
+        _ => false,
+    }
+}
+
 fn replace_or_append_arg_pair(args: &mut Vec<String>, key: &str, value: String) {
     if let Some(index) = args.iter().position(|item| item == key) {
         if index + 1 < args.len() { args[index + 1] = value; } else { args.push(value); }
@@ -1232,6 +1259,16 @@ async fn set_executable_if_needed(_path: &Path, _executable: bool) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn matching_server_uses_quick_play_only_for_supported_minecraft_versions() {
+        for version in ["1.3.1", "1.6.4", "1.12.2", "1.19.4"] {
+            assert!(!minecraft_supports_quick_play_multiplayer(version), "{version}");
+        }
+        for version in ["1.20", "1.20.4", "1.21.10", "26.3"] {
+            assert!(minecraft_supports_quick_play_multiplayer(version), "{version}");
+        }
+    }
 
     fn sample_manifest() -> Manifest {
         Manifest {

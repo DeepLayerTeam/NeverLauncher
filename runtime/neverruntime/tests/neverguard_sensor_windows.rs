@@ -248,6 +248,20 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
     assert!(status.success(), "JVM-Aware foreign exec javac failed: {status}");
 }
 
+// Java 8/16/17 System.load() does not accept Win32 verbatim namespace paths
+// (\\?\C:\...). Keep canonicalization, but pass a normal absolute Windows path.
+fn java_native_load_path(path: &Path) -> PathBuf {
+    let absolute = fs::canonicalize(path).expect("canonicalize native probe DLL");
+    let value = absolute.to_string_lossy();
+    if let Some(unc) = value.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{}", unc));
+    }
+    if let Some(local) = value.strip_prefix(r"\\?\") {
+        return PathBuf::from(local);
+    }
+    absolute
+}
+
 fn expected_java_major() -> u32 {
     std::env::var("NEVERGUARD_EXPECTED_JAVA_MAJOR")
         .ok()
@@ -359,7 +373,7 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     compile_module_probe(&javac, &trusted);
     let probe_dll = trusted.join("probe-native.dll");
     fs::copy(&sensor, &probe_dll).expect("copy probe DLL into trusted runtime root");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical probe DLL");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
@@ -437,7 +451,7 @@ async fn neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
     compile_module_probe(&javac, &trusted);
     let probe_dll = trusted.join("continuous-probe-native.dll");
     fs::copy(&sensor, &probe_dll).expect("copy continuous guard probe DLL");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical continuous guard probe DLL");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
@@ -486,7 +500,7 @@ async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roo
     fs::create_dir_all(&untrusted).expect("create untrusted directory");
     let probe_dll = untrusted.join("unsigned-probe-native.dll");
     fs::copy(&sensor, &probe_dll).expect("copy unsigned probe DLL outside trusted roots");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical untrusted probe DLL");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
@@ -533,7 +547,7 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
     compile_memory_integrity_probe(&javac, &trusted);
     let probe_dll = trusted.join("memory-tamper-probe.dll");
     fs::copy(&memory_probe, &probe_dll).expect("copy Memory Integrity tamper probe");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical Memory Integrity probe DLL");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
@@ -617,7 +631,7 @@ async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_st
     compile_thread_integrity_probe(&javac, &trusted);
     let probe_dll = trusted.join("thread-tamper-probe.dll");
     fs::copy(&thread_probe, &probe_dll).expect("copy Thread Integrity tamper probe");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical Thread Integrity probe DLL");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);
@@ -659,8 +673,8 @@ async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_st
 
 
 
-#[test]
-fn neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable() {
+#[tokio::test]
+async fn neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable() {
     let (java, _) = java_tools();
     let sensor = sensor_path();
 
@@ -814,7 +828,7 @@ async fn neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_priva
     compile_jvm_foreign_exec_probe(&javac, &trusted);
     let probe_dll = trusted.join("jvm-aware-foreign-probe.dll");
     fs::copy(&probe, &probe_dll).expect("copy JVM-aware adversarial probe");
-    let probe_dll = fs::canonicalize(&probe_dll).expect("canonical JVM-aware probe");
+    let probe_dll = java_native_load_path(&probe_dll);
 
     let mut command = Command::new(java);
     command.current_dir(&trusted);

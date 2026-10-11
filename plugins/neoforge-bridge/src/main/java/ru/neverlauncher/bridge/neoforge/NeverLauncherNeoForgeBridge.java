@@ -351,7 +351,10 @@ public final class NeverLauncherNeoForgeBridge {
     }
 
     private static int executeMinecraftCommand(net.minecraft.server.MinecraftServer server, String command) {
-        return server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command);
+        // Current Minecraft command dispatch is void. A normal return confirms that
+        // dispatch completed without throwing; it is not a Minecraft command score.
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command);
+        return 1;
     }
 
     private static String safeUsername(String value) {
