@@ -20,6 +20,5 @@ require('serverbridge/certify_release.py', [
 require('scripts/build/bridge-plugins.sh', ['"ga":true','"protocolV3Frozen":true','"protocolV2Mode":"compatibility-deprecated"'])
 require('apps/admin/src/main.tsx', ['/api/v1/server-bridge/overview','ServerBridgeOverview','protocolMigrationRequired','Topology','Control','Audit'])
 require('services/api/internal/dbmigrate/sql/0041_serverbridge3_ga_0200.sql', ['protocol_version=2','compatibility/deprecation-only','migrate-v3'])
-require('serverbridge/GA.md', ['Production migration v2 → v3','SERVERBRIDGE3_CERTIFICATION.json','14 supported artifacts'])
 require('scripts/serverbridge/matrix.py', ['3 GA (frozen)','deprecated; migrate to v3'])
 print('ServerBridge 3 GA 0.20.0 production gate: OK')

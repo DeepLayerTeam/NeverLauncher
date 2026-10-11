@@ -591,7 +591,9 @@ jobs:
             --run-id "${GITHUB_RUN_ID}" \
             --repository "${GITHUB_REPOSITORY}"
           cp guard-ci/targets.json guard-ci-public/targets.json
-          cat guard-ci-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s guard-ci-public/matrix.md ]]; then
+            cat guard-ci-public/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Upload Guard certification evidence
         uses: actions/upload-artifact@v4
         with:
@@ -1130,7 +1132,9 @@ jobs:
             --commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" \
             --output-dir guard-ci-result/windows-adversarial/certificate
-          cat guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md ]]; then
+            cat guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'

@@ -703,7 +703,7 @@ pub async fn certify_vanilla_compatibility(
         if port == 0 {
             return Err("Vanilla certification matching server port должен быть > 0".to_string());
         }
-        if minecraft_supports_quick_play_multiplayer(version) {
+        if minecraft_supports_quick_play_multiplayer(&version) {
             // Minecraft 1.20+ dropped the legacy --server/--port join arguments.
             // Use the game's native Quick Play path for an actual client join;
             // the matching-server gate still requires proof from server logs.

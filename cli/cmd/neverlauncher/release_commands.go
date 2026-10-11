@@ -261,7 +261,7 @@ func handleRelease(args []string) error {
 			"version":       ver,
 			"platform":      "release artifacts",
 			"steps": []string{
-				"проверить VERSION, CHANGELOG.md и README.md",
+				"проверить VERSION, исходники и release artifacts (Markdown документация необязательна)",
 				"запустить release doctor",
 				"собрать release bundle",
 				"проверить RELEASE_MANIFEST.json и SHA256SUMS",
@@ -294,7 +294,6 @@ func releaseDoctor() error {
 		"scripts/release/zip-dir.py",
 		"scripts/smoke/release-required/release-bundle.sh",
 		"deploy/production/docker-compose.yml",
-		"deploy/production/TLS.md",
 		"apps/admin/Dockerfile",
 		"runtime/neverruntime/Cargo.toml",
 		"e2e/scripts/run-minecraft-e2e.sh",

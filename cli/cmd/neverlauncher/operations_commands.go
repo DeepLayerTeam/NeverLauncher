@@ -756,7 +756,8 @@ func installReadiness(args []string) error {
 }
 
 func writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminImage string) ([]string, error) {
-	required := []string{"docker-compose.yml", "nginx.conf", "env.production.example", "README.md", "TLS.md", "production-checklist.md"}
+	required := []string{"docker-compose.yml", "nginx.conf", "env.production.example"}
+	optional := []string{"README.md", "TLS.md", "production-checklist.md"}
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return nil, err
 	}
@@ -778,6 +779,21 @@ func writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminIm
 		if err := os.WriteFile(dst, data, 0o644); err != nil {
 			return nil, err
 		}
+		created = append(created, name)
+	}
+	for _, name := range optional {
+		data, source, err := readCanonicalProductionTemplate(name)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			return nil, err
+		}
+		dst := filepath.Join(outputDir, name)
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			return nil, err
+		}
+		templateSources[name] = source
 		created = append(created, name)
 	}
 	report := map[string]any{

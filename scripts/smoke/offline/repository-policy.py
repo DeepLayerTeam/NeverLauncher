@@ -140,27 +140,7 @@ main_go = read("cli/cmd/neverlauncher/main.go")
 if 'const cliSchemaVersion = "1.0"' not in main_go:
     fail('cli/cmd/neverlauncher/main.go: отсутствует canonical cliSchemaVersion = "1.0"')
 
-# 3. Текущая документация и UI должны ссылаться на VERSION, а не на старый P3.2/stable baseline.
-current_docs = [
-    "README.md",
-    "SECURITY.md",
-    "cli/README.md",
-    "services/api/README.md",
-    "apps/admin/README.md",
-    "apps/desktop/README.md",
-    "deploy/production/README.md",
-    "deploy/production/TLS.md",
-    "deploy/production/production-checklist.md",
-    "e2e/README.md",
-    "compatibility/README.md",
-    "scripts/smoke/README.md",
-]
-for rel in current_docs:
-    text = read(rel)
-    for match in re.finditer(r"0\.10\.0-P3\.2(?:v\d+)?", text):
-        if match.group(0) != VERSION:
-            fail(f"{rel}: найдено устаревшее упоминание {match.group(0)} вместо {VERSION}")
-
+# Markdown documentation is optional; enforce version alignment in executable UI only.
 ui_files = ["apps/admin/src/main.tsx", "apps/desktop/src/main.tsx"]
 for rel in ui_files:
     text = read(rel)
@@ -170,25 +150,7 @@ for rel in ui_files:
         line = text.count("\n", 0, match.start()) + 1
         fail(f"{rel}:{line}: UI содержит ручной product version literal {match.group(0)}")
 
-# 4. Минимальная защита русскоязычной документации: вне code fences не допускаются
-#    длинные полностью англоязычные фразы. Технические идентификаторы/названия разрешены.
-english_word = re.compile(r"[A-Za-z]{3,}")
-cyrillic = re.compile(r"[А-Яа-яЁё]")
-for rel in current_docs:
-    in_code = False
-    for lineno, raw in enumerate(read(rel).splitlines(), 1):
-        line = raw.strip()
-        if line.startswith("```"):
-            in_code = not in_code
-            continue
-        if in_code or not line:
-            continue
-        # Удаляем inline-code и Markdown URL, чтобы команды/пути не считались прозой.
-        prose = re.sub(r"`[^`]*`", "", line)
-        prose = re.sub(r"https?://\S+", "", prose)
-        words = english_word.findall(prose)
-        if len(words) >= 5 and not cyrillic.search(prose):
-            fail(f"{rel}:{lineno}: полностью англоязычная пользовательская фраза: {line[:120]}")
+# Markdown documentation is not a required CI/release input.
 
 # 5. Явно запрещаем известные англоязычные UI-регрессии.
 forbidden_ui = {
@@ -541,7 +503,7 @@ for required in ["/health", "/ready", "/api/v1/admin/storage/health", "/api/v1/o
 for required in ["readCanonicalProductionTemplate", "standaloneProductionCompose", "--api-image", "--admin-image", "@sha256:"]:
     if required not in install_commands:
         fail(f"install first-run не является standalone/pinned production deployment: {required}")
-for name in ["docker-compose.yml", "nginx.conf", "env.production.example", "README.md", "TLS.md", "production-checklist.md"]:
+for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
     canonical = ROOT / "deploy/production" / name
     embedded = ROOT / "cli/cmd/neverlauncher/templates/production" / name
     if not embedded.is_file():

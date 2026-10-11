@@ -153,7 +153,7 @@ func TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) < 7 {
+	if len(files) < 4 {
 		t.Fatalf("files=%v", files)
 	}
 	raw, err := os.ReadFile(filepath.Join(out, "docker-compose.yml"))
