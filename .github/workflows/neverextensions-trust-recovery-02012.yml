@@ -57,7 +57,7 @@ jobs:
           GOOS_ACTUAL="$(go env GOOS)" GOARCH_ACTUAL="$(go env GOARCH)" GOVERSION="$(go version | awk '{print $3}')" python3 - <<'PY'
           import json,os
           checks={k:True for k in ["malicious-package-tests","trust-policy-tests","crash-loop-kill-switch-tests","safe-mode-build","cli-build","backend-build","openapi-contract"]}
-          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":os.environ['GOOS_ACTUAL'],"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
+          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":{"darwin":"macos"}.get(os.environ['GOOS_ACTUAL'], os.environ['GOOS_ACTUAL']),"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
           open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
           PY
       - uses: actions/upload-artifact@v4

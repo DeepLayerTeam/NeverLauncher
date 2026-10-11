@@ -1001,7 +1001,9 @@ func loadOrCreateNodeIdentity0199(path string) (bridgeIdentityMaterial0199, erro
 	if err := atomicWrite0199(path, []byte(text), 0o600); err != nil {
 		return bridgeIdentityMaterial0199{}, err
 	}
-	_ = os.Chmod(path, 0o600)
+	if err := restrictNodeIdentityPermissions0199(path); err != nil {
+		return bridgeIdentityMaterial0199{}, err
+	}
 	return bridgeIdentityMaterial0199{PublicKey: enc.EncodeToString(pub), Fingerprint: fingerprint}, nil
 }
 
@@ -1013,8 +1015,8 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity must be a regular non-symlink file: %s", path)
 	}
-	if info.Mode().Perm()&0o077 != 0 {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity permissions must be private (0600): %s", path)
+	if err := verifyNodeIdentityPermissions0199(path, info); err != nil {
+		return bridgeIdentityMaterial0199{}, err
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {

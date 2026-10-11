@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -72,9 +73,16 @@ require(build, [
 ], "production artifact layout staging")
 
 
+def bash_path(path: Path) -> str:
+    value = str(path.resolve())
+    if sys.platform == "win32" and len(value) >= 3 and value[1] == ":" and value[2] in ("\\", "/"):
+        return "/" + value[0].lower() + value[2:].replace("\\", "/")
+    return value
+
+
 def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
     proc = subprocess.run(
-        ["bash", str(layout_resolver), str(root), VERSION, marker, "RC layout regression"],
+        ["bash", bash_path(layout_resolver), bash_path(root), VERSION, marker, "RC layout regression"],
         text=True,
         capture_output=True,
     )
@@ -90,14 +98,14 @@ with tempfile.TemporaryDirectory(prefix="nl-release-layout-") as td:
     flat = base / "flat"
     flat.mkdir()
     (flat / "marker").write_bytes(b"ok")
-    if resolve_layout(flat, "marker", expect_ok=True) != str(flat):
+    if resolve_layout(flat, "marker", expect_ok=True) != bash_path(flat):
         raise SystemExit("flat artifact payload resolved to unexpected directory")
 
     nested = base / "nested"
     expected = nested / f"release-{VERSION}"
     expected.mkdir(parents=True)
     (expected / "marker").write_bytes(b"ok")
-    if resolve_layout(nested, "marker", expect_ok=True) != str(expected):
+    if resolve_layout(nested, "marker", expect_ok=True) != bash_path(expected):
         raise SystemExit("versioned artifact payload resolved to unexpected directory")
 
     wrong = base / "wrong"

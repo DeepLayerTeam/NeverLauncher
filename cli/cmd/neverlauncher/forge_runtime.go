@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -1984,6 +1985,17 @@ func selectInstallerJava(explicit string, minimumMajor int) (string, error) {
 			return "", errors.New("Forge/NeoForge installer требует Java; укажите --java или NEVERLAUNCHER_JAVA (можно использовать Managed Java из NeverRuntime)")
 		}
 		candidate = path
+	}
+	if runtime.GOOS == "windows" {
+		// Git Bash may export /c/.../bin/java or C:/.../bin/java;
+		// native Go file checks require a concrete executable path.
+		if len(candidate) > 3 && candidate[0] == '/' && candidate[2] == '/' &&
+			((candidate[1] >= 'a' && candidate[1] <= 'z') || (candidate[1] >= 'A' && candidate[1] <= 'Z')) {
+			candidate = candidate[1:2] + ":/" + candidate[3:]
+		}
+		if !strings.EqualFold(filepath.Ext(candidate), ".exe") {
+			candidate += ".exe"
+		}
 	}
 	info, err := os.Stat(candidate)
 	if err != nil || info.IsDir() {

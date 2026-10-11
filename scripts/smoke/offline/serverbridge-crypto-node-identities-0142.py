@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -169,14 +170,24 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
         ["openssl", "genpkey", "-algorithm", "Ed25519", "-out", str(key)],
         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
     )
-    signed = subprocess.run(
+    def bash_path(path: Path) -> str:
+        # Git Bash accepts /d/... paths; Windows subprocess paths use D:\\... .
+        value = str(path.resolve())
+        if sys.platform == "win32" and len(value) >= 3 and value[1] == ":" and value[2] in ("\\", "/"):
+            return "/" + value[0].lower() + value[2:].replace("\\", "/")
+        return value
+
+    signed_process = subprocess.run(
         [
             "bash", "-c",
             'set -euo pipefail; source "$1"; serverbridge_node_sign "$2" "$3"',
-            "--", str(root / "e2e/scripts/serverbridge-node-crypto.sh"), str(key), canonical,
+            "--", bash_path(root / "e2e/scripts/serverbridge-node-crypto.sh"), bash_path(key), canonical,
         ],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip()
+        check=False, capture_output=True, text=True,
+    )
+    if signed_process.returncode != 0:
+        raise SystemExit("ServerBridge Ed25519 signing failed: " + signed_process.stderr[-1200:])
+    signed = signed_process.stdout.strip()
     raw_signature = base64.urlsafe_b64decode(signed + "=" * ((4 - len(signed) % 4) % 4))
     if len(raw_signature) != 64:
         raise SystemExit(f"ServerBridge helper returned {len(raw_signature)}-byte Ed25519 signature")

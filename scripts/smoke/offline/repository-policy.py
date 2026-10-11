@@ -8,6 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+
 ROOT = Path(__file__).resolve().parents[3]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 errors: list[str] = []

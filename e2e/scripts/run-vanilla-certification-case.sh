@@ -11,6 +11,7 @@ TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
+source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] invalid Minecraft version" >&2; exit 2; }
 [[ "$JAVA_MAJOR" =~ ^[0-9]+$ ]] || { echo "[vanilla-cert] invalid Java major" >&2; exit 2; }
@@ -38,6 +39,7 @@ printf '[vanilla-cert] build CLI and NeverRuntime for %s/%s\n' "$TARGET_OS" "$TA
   go build -o "$NL_BIN" ./cmd/neverlauncher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
+certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[vanilla-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
 printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"

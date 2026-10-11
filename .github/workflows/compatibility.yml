@@ -59,7 +59,14 @@ jobs:
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash
-        run: printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$(command -v java)" >> "$GITHUB_ENV"
+        run: |
+          set -euo pipefail
+          java_path="$(command -v java)"
+          if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
+            java_path="$(cygpath -m "$java_path")"
+            [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
+          fi
+          printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for NeverLauncher/Gradle build tooling
         uses: actions/setup-java@v4
         with:
@@ -93,6 +100,13 @@ jobs:
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
+      - name: Export bounded and redacted Minecraft crash diagnostics
+        if: always()
+        shell: bash
+        run: |
+          python3 scripts/compatibility/export-client-diagnostics.py \
+            --runtime e2e/runtime \
+            --output e2e/runtime/client-diagnostics.txt
       - name: Upload machine-verifiable compatibility result
         if: always()
         uses: actions/upload-artifact@v4
@@ -104,6 +118,7 @@ jobs:
             e2e/compatibility-result/platform-runtime.json
             e2e/runtime/result.json
             e2e/runtime/client-package.json
+            e2e/runtime/client-diagnostics.txt
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json
@@ -162,7 +177,14 @@ jobs:
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash
-        run: printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$(command -v java)" >> "$GITHUB_ENV"
+        run: |
+          set -euo pipefail
+          java_path="$(command -v java)"
+          if [[ "${RUNNER_OS:-}" == "Windows" ]]; then
+            java_path="$(cygpath -m "$java_path")"
+            [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
+          fi
+          printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for NeverLauncher/Gradle build tooling
         uses: actions/setup-java@v4
         with:
@@ -196,6 +218,13 @@ jobs:
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
+      - name: Export bounded and redacted Minecraft crash diagnostics
+        if: always()
+        shell: bash
+        run: |
+          python3 scripts/compatibility/export-client-diagnostics.py \
+            --runtime e2e/runtime \
+            --output e2e/runtime/client-diagnostics.txt
       - name: Upload machine-verifiable compatibility result
         if: always()
         uses: actions/upload-artifact@v4
@@ -207,6 +236,7 @@ jobs:
             e2e/compatibility-result/platform-runtime.json
             e2e/runtime/result.json
             e2e/runtime/client-package.json
+            e2e/runtime/client-diagnostics.txt
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json

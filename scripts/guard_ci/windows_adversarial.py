@@ -81,6 +81,17 @@ def required_file(path: Path, label: str) -> dict[str, Any]:
     return {"name": path.name, "size": path.stat().st_size, "sha256": sha256_file(path)}
 
 
+def sanitize_failure_output(output: bytes) -> str:
+    text = output[-8192:].decode("utf-8", errors="replace")
+    for pattern in (
+        r"(?i)(--(?:accessToken|refreshToken|password|token)\s+)\S+",
+        r"(?i)(\b(?:authorization|accessToken|refreshToken|password|secret)\s*[:=]\s*)\S+",
+    ):
+        text = re.sub(pattern, r"\1[REDACTED]", text)
+    text = re.sub(r"(?i)Bearer\s+[A-Za-z0-9._~+/-]+", "Bearer [REDACTED]", text)
+    return text
+
+
 def run_scenario(scenario: Scenario, env: dict[str, str], timeout_seconds: int) -> dict[str, Any]:
     argv = [
         "cargo", "test", "--manifest-path", "runtime/neverruntime/Cargo.toml",
@@ -118,6 +129,7 @@ def run_scenario(scenario: Scenario, env: dict[str, str], timeout_seconds: int) 
         "durationMs": duration_ms,
         "outputSha256": sha256_bytes(output),
         "outputBytes": len(output),
+        "failureOutputTail": sanitize_failure_output(output) if exit_code != 0 else "",
     }
 
 

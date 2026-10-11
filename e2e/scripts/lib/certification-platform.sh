@@ -18,6 +18,18 @@ certification_exe_suffix() {
   [[ "$1" == "windows" ]] && printf '.exe' || true
 }
 
+certification_prepare_windows_sensor() {
+  local target_os="$1" root="$2" runtime_bin="$3"
+  [[ "$target_os" == "windows" ]] || return 0
+  local sensor_manifest="$root/runtime/neverguard-sensor/Cargo.toml"
+  local sensor_dll="$root/runtime/neverguard-sensor/target/debug/neverguard_sensor.dll"
+  local destination="$(dirname "$runtime_bin")/neverguard-sensor.dll"
+  cargo build --quiet --manifest-path "$sensor_manifest" --lib
+  [[ -s "$sensor_dll" ]] || { echo "[certification] built NeverGuard Sensor DLL missing: $sensor_dll" >&2; return 1; }
+  cp "$sensor_dll" "$destination"
+  [[ -s "$destination" ]] || { echo "[certification] NeverGuard Sensor DLL copy failed" >&2; return 1; }
+}
+
 certification_run_client() {
   local os_name="$1" runtime_bin="$2" output="$3"
   shift 3

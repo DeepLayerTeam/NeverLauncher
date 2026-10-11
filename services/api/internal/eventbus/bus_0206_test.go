@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -47,7 +48,7 @@ func (d *testDispatcher0206) DeliverExtensionHook(ctx context.Context, sub model
 func eventRepo0206(t *testing.T) (*repository.MemoryRepository, *Bus) {
 	t.Helper()
 	repo := repository.NewMemoryRepository("http://localhost")
-	_, err := repo.SaveExtensionVersion(context.Background(), model.ExtensionManifest{SchemaVersion: "2.0", ID: "test.events", Name: "Events", Version: "1.0.0", Publisher: "tests", API: "1", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "bin/ext"}}, Permissions: []string{"events:subscribe", "events:sync", "project:read"}})
+	_, err := repo.SaveExtensionVersion(context.Background(), model.ExtensionManifest{SchemaVersion: "2.0", ID: "test.events", Name: "Events", Version: "1.0.0", Publisher: "tests", API: extensioncontract.ExtensionAPIVersion, Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "bin/ext"}}, Permissions: []string{"events:subscribe", "events:sync", "project:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}

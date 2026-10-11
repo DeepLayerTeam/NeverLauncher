@@ -60,6 +60,10 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	if target.Arch == "aarch64" {
 		classifier += "-arm64"
 	}
+	modernClassifier := classifier
+	if target.OS == "osx" {
+		modernClassifier = strings.Replace(classifier, "natives-osx", "natives-macos", 1)
+	}
 
 	var base string
 	mux := http.NewServeMux()
@@ -105,9 +109,9 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 				"extract": map[string]any{"exclude": []any{"META-INF/"}},
 			},
 			map[string]any{
-				"name": "org.lwjgl:lwjgl-glfw:3.4.1:" + classifier,
+				"name": "org.lwjgl:lwjgl-glfw:3.4.1:" + modernClassifier,
 				"downloads": map[string]any{
-					"artifact": map[string]any{"path": "org/lwjgl/lwjgl-glfw/3.4.1/lwjgl-glfw-3.4.1-" + classifier + ".jar", "url": base + "/modern-native.jar", "sha1": sha1hex(modernNativeJar), "size": len(modernNativeJar)},
+					"artifact": map[string]any{"path": "org/lwjgl/lwjgl-glfw/3.4.1/lwjgl-glfw-3.4.1-" + modernClassifier + ".jar", "url": base + "/modern-native.jar", "sha1": sha1hex(modernNativeJar), "size": len(modernNativeJar)},
 				},
 			},
 		},

@@ -11,14 +11,22 @@ JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
 TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-CLIENT_DIR="$RUNTIME_DIR/materialized-client"
+# A processor recovery probe intentionally mutates journals and may overwrite
+# installer outputs. Never replay it on the client verified/launched by E2E.
+SOURCE_CLIENT_DIR="$RUNTIME_DIR/materialized-client"
+CLIENT_DIR="$RUNTIME_DIR/loader-hardening-client"
 LOCK="$CLIENT_DIR/.neverlauncher/${LOADER}-resolution-lock.json"
 OUT_PACKAGE="$RUNTIME_DIR/loader-hardening-package.json"
 OUT_EVIDENCE="$RUNTIME_DIR/loader-hardening.json"
 
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] unsupported loader: $LOADER" >&2; exit 2 ;; esac
 [[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
-[[ -f "$LOCK" ]] || { echo "[loader-hardening] resolution lock unavailable: $LOCK" >&2; exit 1; }
+[[ -f "$SOURCE_CLIENT_DIR/.neverlauncher/${LOADER}-resolution-lock.json" ]] || {
+  echo "[loader-hardening] initial resolution lock unavailable" >&2; exit 1;
+}
+rm -rf "$CLIENT_DIR"
+cp -R "$SOURCE_CLIENT_DIR" "$CLIENT_DIR"
+[[ -f "$LOCK" ]] || { echo "[loader-hardening] isolated resolution lock unavailable: $LOCK" >&2; exit 1; }
 
 # Forge/NeoForge must prove two recovery paths, not just a warm installer file:
 # remove the installer and mark one completed processor as interrupted. The

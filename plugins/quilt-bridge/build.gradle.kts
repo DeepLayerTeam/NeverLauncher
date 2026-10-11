@@ -14,6 +14,9 @@ java {
 repositories {
     maven("https://maven.quiltmc.org/repository/release/")
     maven("https://maven.fabricmc.net/")
+    // Project repositories take priority over settings repositories.
+    // Sponge Mixin is published in SpongePowered Maven, not Maven Central.
+    maven("https://repo.spongepowered.org/maven/")
     mavenCentral()
 }
 

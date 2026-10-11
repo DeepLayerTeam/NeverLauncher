@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -46,7 +47,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	if installed["status"] != "applied-and-verified" {
 		t.Fatalf("install=%v", installed)
 	}
-	if info, err := os.Stat(filepath.Join(client, "natives", "launch.sh")); err != nil || info.Mode().Perm()&0o111 == 0 {
+	if info, err := os.Stat(filepath.Join(client, "natives", "launch.sh")); err != nil || (runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0) {
 		t.Fatalf("executable bit not preserved: mode=%v err=%v", func() os.FileMode {
 			if info != nil {
 				return info.Mode()
@@ -165,6 +166,18 @@ func TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext(t *testing.T) {
 	}
 	if !strings.Contains(text, "image: registry.example/api@sha256:"+digest) || !strings.Contains(text, "image: registry.example/admin@sha256:"+digest) {
 		t.Fatalf("pinned images missing:\n%s", text)
+	}
+}
+
+func TestStandaloneComposeHandlesWindowsCRLF(t *testing.T) {
+	original := "services:\r\n  api:\r\n    build:\r\n      context: ../..\r\n      dockerfile: services/api/Dockerfile\r\n    image: previous-api\r\n  admin:\r\n    build:\r\n      context: ../..\r\n      dockerfile: apps/admin/Dockerfile\r\n    image: previous-admin\r\n"
+	doc, err := standaloneProductionCompose([]byte(original), "registry.example/api@sha256:abc", "registry.example/admin@sha256:def")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := string(doc)
+	if strings.Contains(result, "build:") || strings.Contains(result, "context:") || strings.Contains(result, "dockerfile:") || !strings.Contains(result, "image: registry.example/api@sha256:abc") || !strings.Contains(result, "image: registry.example/admin@sha256:def") {
+		t.Fatalf("CRLF standalone compose still requires source trees: %s", result)
 	}
 }
 

@@ -810,6 +810,9 @@ func standaloneProductionCompose(template []byte, apiImage, adminImage string) (
 	apiSeen, adminSeen := false, false
 	out := make([]string, 0, len(lines))
 	for _, line := range lines {
+		// Embedded production templates can be checked out with CRLF on Windows.
+		// Normalize the line ending before exact indentation/build matching.
+		line = strings.TrimSuffix(line, "\r")
 		if strings.HasPrefix(line, "  ") && !strings.HasPrefix(line, "    ") && strings.HasSuffix(strings.TrimSpace(line), ":") {
 			service = strings.TrimSuffix(strings.TrimSpace(line), ":")
 		}

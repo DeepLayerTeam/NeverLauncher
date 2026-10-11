@@ -32,6 +32,7 @@ printf '[forge-cert] build CLI and NeverRuntime\n'
   go build -o "$NL_BIN" ./cmd/neverlauncher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
+certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
 [[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[forge-cert] NeverRuntime binary is missing" >&2; exit 1; }
 
 printf '[forge-cert] materialize Forge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
