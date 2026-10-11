@@ -725,7 +725,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             jq maven postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
-            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+            build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev \
+            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
       - name: Federation PostgreSQL migration + restart + multi-instance E2E
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
       - name: Durable 0.21.3 PostgreSQL multi-replica restart + fencing E2E

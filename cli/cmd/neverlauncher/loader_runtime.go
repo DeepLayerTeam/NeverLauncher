@@ -472,13 +472,28 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	requested = strings.TrimSpace(requested)
 	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
 	if mutable {
-		for _, entry := range entries {
-			version := strings.TrimSpace(entry.Loader.Version)
-			if version == "" {
-				continue
+		if loader == "quilt" {
+			// Quilt Meta v3 does not guarantee newest-first ordering or a
+			// Fabric-style stable flag. Select the highest stable SemVer,
+			// not the first stable row (which may be years out of date).
+			best := -1
+			for i, entry := range entries {
+				version := strings.TrimSpace(entry.Loader.Version)
+				if !isStableQuiltLoaderVersion(version) {
+					continue
+				}
+				if best < 0 || quiltStableVersionLess(entries[best].Loader.Version, version) {
+					best = i
+				}
 			}
-			if entry.Loader.Stable || (loader == "quilt" && isStableQuiltLoaderVersion(version)) {
-				return entry, url, sha256HexBytes(data), nil
+			if best >= 0 {
+				return entries[best], url, sha256HexBytes(data), nil
+			}
+		} else {
+			for _, entry := range entries {
+				if strings.TrimSpace(entry.Loader.Version) != "" && entry.Loader.Stable {
+					return entry, url, sha256HexBytes(data), nil
+				}
 			}
 		}
 		if requested == "latest" {
@@ -524,6 +539,21 @@ func isStableQuiltLoaderVersion(value string) bool {
 		}
 	}
 	return true
+}
+
+// quiltStableVersionLess compares numeric SemVer triples without using
+// lexicographic ordering (0.9.9 must sort below 0.10.0).
+func quiltStableVersionLess(a, b string) bool {
+	aParts := strings.Split(strings.SplitN(a, "+", 2)[0], ".")
+	bParts := strings.Split(strings.SplitN(b, "+", 2)[0], ".")
+	for i := 0; i < 3; i++ {
+		av, _ := strconv.Atoi(aParts[i])
+		bv, _ := strconv.Atoi(bParts[i])
+		if av != bv {
+			return av < bv
+		}
+	}
+	return false
 }
 
 func profileHasLibrary(libraries []MojangLibrary, coordinate string) bool {

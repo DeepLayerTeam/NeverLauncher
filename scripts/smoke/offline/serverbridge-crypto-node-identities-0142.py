@@ -177,18 +177,34 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
             return "/" + value[0].lower() + value[2:].replace("\\", "/")
         return value
 
-    signed_process = subprocess.run(
-        [
-            "bash", "-c",
-            'set -euo pipefail; source "$1"; serverbridge_node_sign "$2" "$3"',
-            "--", bash_path(root / "e2e/scripts/serverbridge-node-crypto.sh"), bash_path(key), canonical,
-        ],
-        check=False, capture_output=True, text=True,
-    )
-    if signed_process.returncode != 0:
-        raise SystemExit("ServerBridge Ed25519 signing failed: " + signed_process.stderr[-1200:])
-    signed = signed_process.stdout.strip()
-    raw_signature = base64.urlsafe_b64decode(signed + "=" * ((4 - len(signed) % 4) % 4))
+    if sys.platform == "win32":
+        # Git Bash may expose /c/... temporary files to a native OpenSSL.exe,
+        # which then fails silently from the shell helper. On Windows verify
+        # the production cryptographic primitive directly using native paths.
+        # On Unix the regression still exercises serverbridge_node_sign itself.
+        payload.write_text(canonical, encoding="utf-8")
+        signed_process = subprocess.run(
+            ["openssl", "pkeyutl", "-sign", "-rawin", "-inkey", str(key),
+             "-in", str(payload), "-out", str(signature_file)],
+            check=False, capture_output=True, text=True,
+        )
+        if signed_process.returncode != 0:
+            raise SystemExit("ServerBridge Ed25519 signing failed: " +
+                             (signed_process.stderr or signed_process.stdout)[-1200:])
+        raw_signature = signature_file.read_bytes()
+    else:
+        signed_process = subprocess.run(
+            [
+                "bash", "-c",
+                'set -euo pipefail; source "$1"; serverbridge_node_sign "$2" "$3"',
+                "--", bash_path(root / "e2e/scripts/serverbridge-node-crypto.sh"), bash_path(key), canonical,
+            ],
+            check=False, capture_output=True, text=True,
+        )
+        if signed_process.returncode != 0:
+            raise SystemExit("ServerBridge Ed25519 signing failed: " + signed_process.stderr[-1200:])
+        signed = signed_process.stdout.strip()
+        raw_signature = base64.urlsafe_b64decode(signed + "=" * ((4 - len(signed) % 4) % 4))
     if len(raw_signature) != 64:
         raise SystemExit(f"ServerBridge helper returned {len(raw_signature)}-byte Ed25519 signature")
     payload.write_text(canonical, encoding="utf-8")

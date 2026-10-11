@@ -85,7 +85,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
-            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
       - name: Run actual-client compatibility target
         env:
           NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
@@ -203,7 +203,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
-            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
       - name: Run actual-client compatibility target
         env:
           NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}

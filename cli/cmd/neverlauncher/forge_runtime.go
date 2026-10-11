@@ -753,7 +753,7 @@ func installForgeLegacy(
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
-	if err := verifyForgeLegacyUniversal(ctx, opts.HTTPClient, universalCoord, universalRel, universalSHA1, bundle, opts.StrictUpstream); err != nil {
+	if err := verifyForgeLegacyUniversal(ctx, opts.HTTPClient, universalCoord, universalRel, universalSHA1, bundle, opts.StrictUpstream, validSHA1Hex(installerSHA1) && bundle.LegacyMode == "legacy-v1-universal"); err != nil {
 		return forgeMaterializeResult{}, err
 	}
 	files = append(files, vanillaDownloadedFile{
@@ -940,7 +940,7 @@ func extractInstallerEntry(installerPath, entryName, destination string) error {
 	return fmt.Errorf("installer entry %s отсутствует", wanted)
 }
 
-func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordinate, rel, actualSHA1 string, bundle installerBundle, strict bool) error {
+func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordinate, rel, actualSHA1 string, bundle installerBundle, strict, authenticatedEmbeddedInstaller bool) error {
 	acceptable := map[string]bool{}
 	baseURL := ""
 	for _, lib := range append(append([]MojangLibrary(nil), bundle.Profile.Libraries...), bundle.Version.Libraries...) {
@@ -972,6 +972,16 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 	shaURL := baseURL + "/" + strings.TrimPrefix(filepath.ToSlash(rel), "/") + ".sha1"
 	shaBytes, err := fetchLimitedBytes(ctx, client, shaURL, 64<<10)
 	if err != nil {
+		// Some official Forge 1.7.10 Maven artifacts no longer publish a
+		// universal .sha1 sidecar. The universal JAR is extracted directly
+		// from a downloaded installer whose own upstream SHA-1 was already
+		// checked by downloadVanillaArtifact. In that narrowly-scoped case
+		// the verified installer is the integrity anchor for the ZIP entry.
+		// Other missing checksums, network failures and repacked installers
+		// must remain fail-closed.
+		if authenticatedEmbeddedInstaller && strings.Contains(err.Error(), "HTTP 404") {
+			return nil
+		}
 		if strict {
 			return fmt.Errorf("Forge legacy universal SHA-1 sidecar: %w", err)
 		}

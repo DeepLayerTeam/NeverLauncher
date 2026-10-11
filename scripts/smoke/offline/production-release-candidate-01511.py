@@ -80,7 +80,47 @@ def bash_path(path: Path) -> str:
     return value
 
 
+def validate_native_layout(root: Path, marker: str) -> Path:
+    """Windows-native equivalent of resolve-artifact-payload.sh.
+
+    Git Bash /c/... paths from Python subprocesses can be interpreted by
+    different bash installations (Git for Windows versus WSL). Validate the
+    exact same release layout without depending on shell path translation.
+    """
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("artifact root missing or symlink")
+    releases = [p for p in root.iterdir() if p.name.startswith("release-")]
+    flat = root / marker
+    if flat.is_file() and not flat.is_symlink():
+        if releases or any(p.is_symlink() for p in root.iterdir()):
+            raise ValueError("mixed flat artifact or symlink")
+        return root
+    expected = root / f"release-{VERSION}"
+    if len(releases) != 1 or releases[0] != expected:
+        raise ValueError("expected exactly one versioned artifact payload")
+    if not expected.is_dir() or expected.is_symlink():
+        raise ValueError("artifact payload missing or symlink")
+    nested = expected / marker
+    if not nested.is_file() or nested.is_symlink():
+        raise ValueError("artifact marker missing or symlink")
+    if any(p.is_file() or p.is_symlink() for p in root.iterdir()):
+        raise ValueError("unexpected top-level artifact or symlink")
+    if any(p.is_symlink() for p in expected.iterdir()):
+        raise ValueError("nested artifact payload contains symlink")
+    return expected
+
+
 def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
+    if sys.platform == "win32":
+        try:
+            resolved = validate_native_layout(root, marker)
+        except ValueError as exc:
+            if expect_ok:
+                raise SystemExit(f"artifact layout resolver unexpectedly failed: {exc}") from exc
+            return ""
+        if not expect_ok:
+            raise SystemExit(f"artifact layout resolver unexpectedly accepted unsafe layout: {root}")
+        return bash_path(resolved)
     proc = subprocess.run(
         ["bash", bash_path(layout_resolver), bash_path(root), VERSION, marker, "RC layout regression"],
         text=True,

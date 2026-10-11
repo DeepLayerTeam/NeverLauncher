@@ -54,6 +54,14 @@ extern "system" {
         module: *mut *mut c_void,
     ) -> i32;
     fn FreeLibrary(module: *mut c_void) -> i32;
+    fn GetCurrentProcess() -> *mut c_void;
+    fn ReadProcessMemory(
+        process: *mut c_void,
+        base: *const c_void,
+        buffer: *mut c_void,
+        size: usize,
+        bytes_read: *mut usize,
+    ) -> i32;
 }
 
 #[derive(Clone, Debug)]
@@ -370,11 +378,65 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
             region.base, region.size
         ));
     }
-    let _pin = pin_image(region.allocation_base.max(region.base))?;
-    let bytes = unsafe { std::slice::from_raw_parts(region.base as *const u8, region.size) };
-    let digest = Sha256::digest(bytes);
+    // VirtualQuery MEM_IMAGE also covers image sections mapped using
+    // MapViewOfFile(SEC_IMAGE), not just modules in the Windows loader list.
+    // GetModuleHandleExW(FROM_ADDRESS) returns ERROR_MOD_NOT_FOUND for those
+    // legitimate mappings. Retain the loader reference when available, but
+    // *never* exempt an unregistered executable image from integrity checks.
+    let _pin = pin_image(region.allocation_base.max(region.base)).ok();
+    let mut digest = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+    let mut offset = 0usize;
+    let process = unsafe { GetCurrentProcess() };
+    while offset < region.size {
+        let chunk = (region.size - offset).min(buffer.len());
+        let mut read = 0usize;
+        let copied = unsafe {
+            ReadProcessMemory(
+                process,
+                (region.base + offset) as *const c_void,
+                buffer.as_mut_ptr().cast(),
+                chunk,
+                &mut read,
+            )
+        };
+        if copied == 0 || read != chunk {
+            buffer.fill(0);
+            return Err(format!(
+                "NeverGuard Memory Integrity executable image unreadable at 0x{:X}: {}",
+                region.base + offset,
+                std::io::Error::last_os_error()
+            ));
+        }
+        digest.update(&buffer[..chunk]);
+        offset += chunk;
+    }
+    buffer.fill(0);
+    // Fail closed if an image was unmapped/remapped or had permissions changed
+    // during the read; never trust a digest over two different mappings.
+    let mut after = MemoryBasicInformation::default();
+    let queried = unsafe {
+        VirtualQuery(
+            region.base as *const c_void,
+            &mut after,
+            std::mem::size_of::<MemoryBasicInformation>(),
+        )
+    };
+    if queried == 0
+        || after.base_address as usize != region.base
+        || after.allocation_base as usize != region.allocation_base
+        || after.region_size != region.size
+        || after.protect != region.protect
+        || after.state != MEM_COMMIT
+        || after.kind != MEM_IMAGE
+    {
+        return Err(format!(
+            "NeverGuard Memory Integrity executable image mapping changed while hashing at 0x{:X}",
+            region.base
+        ));
+    }
     let mut value = [0u8; 32];
-    value.copy_from_slice(&digest);
+    value.copy_from_slice(&digest.finalize());
     Ok(ImageCodeBaseline {
         base: region.base,
         size: region.size,

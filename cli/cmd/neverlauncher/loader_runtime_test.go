@@ -275,6 +275,49 @@ func TestQuiltLatestStableSelectionUsesStableSemVerWhenMetaOmitsStableFlag(t *te
 	}
 }
 
+func TestForgeLegacyUniversalMissingSidecarRequiresVerifiedEmbeddedInstaller(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+	coordinate := "net.minecraftforge:forge:1.7.10-10.13.4.1614"
+	bundle := installerBundle{
+		LegacyMode: "legacy-v1-universal",
+		Profile: forgeInstallerProfile{Libraries: []MojangLibrary{
+			{Name: coordinate, URL: server.URL},
+		}},
+	}
+	ctx := context.Background()
+	const rel = "net/minecraftforge/forge/1.7.10-10.13.4.1614/forge-1.7.10-10.13.4.1614-universal.jar"
+	if err := verifyForgeLegacyUniversal(ctx, server.Client(), coordinate, rel, strings.Repeat("a", 40), bundle, true, true); err != nil {
+		t.Fatalf("verified embedded universal should inherit verified installer integrity: %v", err)
+	}
+	if err := verifyForgeLegacyUniversal(ctx, server.Client(), coordinate, rel, strings.Repeat("a", 40), bundle, true, false); err == nil {
+		t.Fatal("missing sidecar accepted without authenticated installer")
+	}
+	server.Close()
+}
+
+func TestQuiltLatestStableSelectionHandlesUnsortedMetaAndJava25(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`[
+			{"loader":{"version":"0.24.0","maven":"org.quiltmc:quilt-loader:0.24.0"}},
+			{"loader":{"version":"0.30.0-beta.4","maven":"org.quiltmc:quilt-loader:0.30.0-beta.4"}},
+			{"loader":{"version":"0.29.2","maven":"org.quiltmc:quilt-loader:0.29.2"}},
+			{"loader":{"version":"0.30.0","maven":"org.quiltmc:quilt-loader:0.30.0"}},
+			{"loader":{"version":"0.9.9","maven":"org.quiltmc:quilt-loader:0.9.9"}}
+		]`))
+	}))
+	defer server.Close()
+	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Loader.Version != "0.30.0" {
+		t.Fatalf("oldest-first Quilt metadata returned %q, want newest stable loader", entry.Loader.Version)
+	}
+}
+
 func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.T) {
 	mux := http.NewServeMux()
 	server := httptest.NewServer(mux)
