@@ -705,13 +705,11 @@ mod windows_impl {
             }
         }
 
-        for pid in &descendants {
-            if !job_members.contains(pid) {
-                return Err(format!(
-                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
-                ));
-            }
-        }
+        // The ToolHelp process snapshot and the Job Object PID snapshot are
+        // independent. A child can be created between those reads, so absence
+        // from the earlier PID list is not proof of breakaway. Check every
+        // *live* descendant with IsProcessInJob below; that OS membership
+        // query is authoritative and remains fail-closed for real escapes.
 
         for pid in std::iter::once(root_pid).chain(descendants.iter().copied()) {
             let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };

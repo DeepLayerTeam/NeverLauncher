@@ -606,10 +606,16 @@ async fn neverguard_thread_process_integrity_tracks_job_bound_descendant_process
         .await
         .expect("arm Thread & Process Integrity before Java main");
     let status = child.wait().await.expect("wait Process Tree Java probe");
-    assert!(status.success(), "Process Tree probe failed: {status}");
     sleep(Duration::from_millis(250)).await;
+    let module_report = session.report().module_guard;
+    assert!(
+        status.success(),
+        "Process Tree probe failed: {status}; guard violation: {}; process-tree violation: {}",
+        module_report.last_violation,
+        module_report.thread_process_integrity.last_violation,
+    );
 
-    let report = session.report().module_guard.thread_process_integrity;
+    let report = module_report.thread_process_integrity;
     assert!(report.healthy, "Thread & Process Integrity violation: {}", report.last_violation);
     assert!(report.job_bound);
     assert!(!report.breakaway_allowed);

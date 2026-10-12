@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -301,5 +303,60 @@ func TestDisabledInstallPausesAsyncAndSyncWithoutDroppingBacklog0206(t *testing.
 	}
 	if len(items) == 0 || items[0].Event.IdempotencyKey != "while-disabled" {
 		t.Fatalf("durable backlog did not resume after enable: %#v", items)
+	}
+}
+
+func TestLargeReleaseManifestUsesContentAddressedExtensionEvent0206(t *testing.T) {
+	_, bus := eventRepo0206(t)
+	ctx := context.Background()
+	files := make([]model.ManifestFile, 14000)
+	for i := range files {
+		files[i] = model.ManifestFile{
+			Path:     fmt.Sprintf("mods/mod-%06d.jar", i),
+			Size:     1024,
+			SHA256:   strings.Repeat("a", 64),
+			URL:      fmt.Sprintf("https://example.invalid/mod-%06d.jar", i),
+			Required: true,
+		}
+	}
+	release := model.ReleaseVersion{
+		ID: "large-release", ProjectID: "p1", ProfileID: "vanilla", Version: "1.0.0", Status: "staged",
+		Manifest: model.Manifest{SchemaVersion: "1.0", ProjectID: "p1", Files: files},
+	}
+	for _, action := range []string{"created", "before-publish", "published"} {
+		var err error
+		switch action {
+		case "created":
+			err = bus.ReleaseCreated(ctx, "admin", release)
+		case "before-publish":
+			err = bus.BeforeReleasePublish(ctx, "admin", release)
+		case "published":
+			err = bus.ReleasePublished(ctx, "admin", release)
+		}
+		if err != nil {
+			t.Fatalf("large release %s: %v", action, err)
+		}
+	}
+	for _, typ := range []string{"release.created", "release.before-publish", "release.published"} {
+		key := map[string]string{"release.created": "created:large-release", "release.before-publish": "before-publish:large-release", "release.published": "published:large-release"}[typ]
+		p, err := releaseEventPayload0206(map[string]string{"release.created": "created", "release.before-publish": "publish", "release.published": "published"}[typ], "admin", release)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !p.ManifestOmitted || p.ManifestFileCount != len(files) || len(p.ManifestSHA256) != 64 || len(p.Release.Manifest.Files) != 0 {
+			t.Fatalf("missing content-addressed projection: %s %+v", typ, p)
+		}
+		_, inserted, err := bus.Publish(ctx, PublishInput{Type: typ, ProjectID: "p1", AggregateType: "release", AggregateID: release.ID, OrderingKey: "release:" + release.ID, IdempotencyKey: key, Source: "httpapi", Payload: p})
+		if err != nil || inserted {
+			t.Fatalf("event idempotency %s inserted=%v err=%v", typ, inserted, err)
+		}
+	}
+}
+
+func TestSmallReleaseEventRetainsFullManifest0206(t *testing.T) {
+	release := model.ReleaseVersion{ID: "small", Manifest: model.Manifest{Files: []model.ManifestFile{{Path: "a.jar", Size: 3}}}}
+	payload, err := releaseEventPayload0206("created", "admin", release)
+	if err != nil || payload.ManifestOmitted || len(payload.Release.Manifest.Files) != 1 {
+		t.Fatalf("small release changed: %+v %v", payload, err)
 	}
 }

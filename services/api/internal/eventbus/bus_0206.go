@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -331,10 +332,56 @@ type ProjectPayload struct {
 	Project model.Project `json:"project"`
 }
 type ReleasePayload struct {
-	Action  string               `json:"action"`
-	Actor   string               `json:"actor,omitempty"`
-	Release model.ReleaseVersion `json:"release"`
+	Action            string               `json:"action"`
+	Actor             string               `json:"actor,omitempty"`
+	Release           model.ReleaseVersion `json:"release"`
+	ManifestSHA256    string               `json:"manifestSha256,omitempty"`
+	ManifestFileCount int                  `json:"manifestFileCount,omitempty"`
+	ManifestOmitted   bool                 `json:"manifestOmitted,omitempty"`
 }
+
+// A release may contain tens of thousands of files. The extension event bus has
+// a strict 1 MiB payload boundary; embedding the complete signed manifest in a
+// synchronous before-publish hook makes valid large releases unpublishable.
+// Preserve small snapshots for existing consumers, but use an explicitly marked,
+// content-addressed projection for large manifests. The canonical manifest is
+// still stored and verified by the release repository, not by this event.
+func releaseEventPayload0206(action, actor string, release model.ReleaseVersion) (ReleasePayload, error) {
+	payload := ReleasePayload{Action: action, Actor: actor, Release: release}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return ReleasePayload{}, err
+	}
+	if len(encoded) <= 512<<10 {
+		return payload, nil
+	}
+	manifestBytes, err := json.Marshal(release.Manifest)
+	if err != nil {
+		return ReleasePayload{}, err
+	}
+	digest := sha256.Sum256(manifestBytes)
+	payload.ManifestSHA256 = hex.EncodeToString(digest[:])
+	payload.ManifestFileCount = len(release.Manifest.Files)
+	payload.ManifestOmitted = true
+	// Preserve stable identity, Minecraft/loader and Java metadata. Never emit a
+	// partial file list or an invalid-looking signature for a truncated manifest.
+	payload.Release.Manifest = model.Manifest{
+		SchemaVersion: release.Manifest.SchemaVersion,
+		ProjectID:     release.Manifest.ProjectID,
+		ProfileID:     release.Manifest.ProfileID,
+		Channel:       release.Manifest.Channel,
+		Version:       release.Manifest.Version,
+		CreatedAt:     release.Manifest.CreatedAt,
+		Minecraft: model.MinecraftInfo{
+			Version:       release.Manifest.Minecraft.Version,
+			Loader:        release.Manifest.Minecraft.Loader,
+			LoaderVersion: release.Manifest.Minecraft.LoaderVersion,
+		},
+		Runtime: model.RuntimeInfo{Java: release.Manifest.Runtime.Java},
+	}
+	return payload, nil
+}
+
 type PackagePayload struct {
 	Action    string `json:"action"`
 	Actor     string `json:"actor,omitempty"`
@@ -371,14 +418,26 @@ func (b *Bus) ProjectSaved(ctx context.Context, actor, action string, p model.Pr
 	return err
 }
 func (b *Bus) ReleaseCreated(ctx context.Context, actor string, r model.ReleaseVersion) error {
-	_, _, err := b.Publish(ctx, PublishInput{Type: "release.created", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "created:" + r.ID, Source: "httpapi", Payload: ReleasePayload{Action: "created", Actor: actor, Release: r}})
+	payload, err := releaseEventPayload0206("created", actor, r)
+	if err != nil {
+		return err
+	}
+	_, _, err = b.Publish(ctx, PublishInput{Type: "release.created", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "created:" + r.ID, Source: "httpapi", Payload: payload})
 	return err
 }
 func (b *Bus) BeforeReleasePublish(ctx context.Context, actor string, r model.ReleaseVersion) error {
-	return b.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "before-publish:" + r.ID, Source: "httpapi", Payload: ReleasePayload{Action: "publish", Actor: actor, Release: r}})
+	payload, err := releaseEventPayload0206("publish", actor, r)
+	if err != nil {
+		return err
+	}
+	return b.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "before-publish:" + r.ID, Source: "httpapi", Payload: payload})
 }
 func (b *Bus) ReleasePublished(ctx context.Context, actor string, r model.ReleaseVersion) error {
-	_, _, err := b.Publish(ctx, PublishInput{Type: "release.published", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "published:" + r.ID, Source: "httpapi", Payload: ReleasePayload{Action: "published", Actor: actor, Release: r}})
+	payload, err := releaseEventPayload0206("published", actor, r)
+	if err != nil {
+		return err
+	}
+	_, _, err = b.Publish(ctx, PublishInput{Type: "release.published", ProjectID: r.ProjectID, AggregateType: "release", AggregateID: r.ID, OrderingKey: "release:" + r.ID, IdempotencyKey: "published:" + r.ID, Source: "httpapi", Payload: payload})
 	return err
 }
 func (b *Bus) PackageEvent(ctx context.Context, eventType string, p PackagePayload) error {

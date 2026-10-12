@@ -779,3 +779,20 @@ func TestLegacyNativeClassifierContainerHasNoInventedBaseJar(t *testing.T) {
 		t.Fatal("main LWJGL classpath library must not be skipped")
 	}
 }
+
+func TestForgeLatestStableChoosesNumericMaximumIndependentOfMetadataOrder(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, `<metadata><versioning><versions>
+			<version>1.18-38.0.17</version><version>1.18-38.0.9</version><version>1.18-38.0.0</version>
+			<version>1.16.5-36.2.42</version><version>1.16.5-36.0.0</version>
+			<version>1.18-38.1.0-beta</version>
+		</versions></versioning></metadata>`)
+	}))
+	defer server.Close()
+	for _, tc := range []struct{ minecraft, want string }{{"1.18", "38.0.17"}, {"1.16.5", "36.2.42"}} {
+		got, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "forge", tc.minecraft, "latest-stable", server.URL)
+		if err != nil || got != tc.want {
+			t.Fatalf("forge %s: got %s want %s, err=%v", tc.minecraft, got, tc.want, err)
+		}
+	}
+}

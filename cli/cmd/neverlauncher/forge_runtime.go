@@ -1069,26 +1069,31 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 		if len(versions) == 0 {
 			lastSelectionErr = fmt.Errorf("%s Maven metadata не содержит versions", loader)
 		} else {
-			for i := len(versions) - 1; i >= 0; i-- {
-				candidate := strings.TrimSpace(versions[i])
+			// Maven metadata does not guarantee numeric order. Selecting the last
+			// matching row previously pinned old 38.0.0/36.0.0 Forge releases
+			// whose launchers or resource packs fail with modern runtimes.
+			best := ""
+			for _, raw := range versions {
+				candidate := strings.TrimSpace(raw)
 				if candidate == "" || (!allowPrerelease && isPrereleaseVersion(candidate)) {
 					continue
 				}
+				matches := false
+				switch {
+				case loader == "forge", legacyNeoForge1201:
+					matches = strings.HasPrefix(candidate, minecraftVersion+"-")
+				default:
+					matches = neoForgeVersionMatchesMinecraft(candidate, minecraftVersion)
+				}
+				if matches && (best == "" || compareForgeLikeVersions(candidate, best) > 0) {
+					best = candidate
+				}
+			}
+			if best != "" {
 				if loader == "forge" {
-					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
-						continue
-					}
-					return strings.TrimPrefix(candidate, minecraftVersion+"-"), candidate, metadataURL, sourceSHA, nil
+					return strings.TrimPrefix(best, minecraftVersion+"-"), best, metadataURL, sourceSHA, nil
 				}
-				if legacyNeoForge1201 {
-					if !strings.HasPrefix(candidate, minecraftVersion+"-") {
-						continue
-					}
-					return candidate, candidate, metadataURL, sourceSHA, nil
-				}
-				if neoForgeVersionMatchesMinecraft(candidate, minecraftVersion) {
-					return candidate, candidate, metadataURL, sourceSHA, nil
-				}
+				return best, best, metadataURL, sourceSHA, nil
 			}
 			lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
 		}
@@ -1099,6 +1104,39 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 		}
 	}
 	return "", "", metadataURL, "", fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
+}
+
+// Compare numeric Maven release components, not lexical strings or the order
+// in which the remote index happens to list them. Pre-releases are already
+// filtered for latest-stable by the caller.
+func compareForgeLikeVersions(a, b string) int {
+	parts := func(v string) []string {
+		return strings.FieldsFunc(v, func(r rune) bool { return r == '.' || r == '-' || r == '+' })
+	}
+	x, y := parts(a), parts(b)
+	for i := 0; i < len(x) || i < len(y); i++ {
+		if i >= len(x) {
+			return -1
+		}
+		if i >= len(y) {
+			return 1
+		}
+		ai, aErr := strconv.ParseUint(x[i], 10, 64)
+		bi, bErr := strconv.ParseUint(y[i], 10, 64)
+		if aErr == nil && bErr == nil {
+			if ai < bi {
+				return -1
+			}
+			if ai > bi {
+				return 1
+			}
+			continue
+		}
+		if cmp := strings.Compare(x[i], y[i]); cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
 }
 
 func forgeLikeMetadataRefreshURL(metadataURL string, attempt int) string {

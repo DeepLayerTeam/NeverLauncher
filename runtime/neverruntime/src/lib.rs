@@ -786,6 +786,23 @@ pub async fn certify_vanilla_compatibility(
     };
     let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
     let exit_code = status.and_then(|value| value.code());
+    // 0xE3 is the deliberate NeverGuard fail-closed termination code. Surface
+    // its bounded reason in the client certification artifact instead of a
+    // blank process log, so Windows runner failures remain actionable.
+    #[cfg(windows)]
+    if exit_code == Some(0xE3) {
+        let guard = _sensor_session.report().module_guard;
+        let reason = if guard.last_violation.is_empty() {
+            "Guard terminated the runtime without a recorded violation"
+        } else {
+            guard.last_violation.as_str()
+        };
+        let bounded = reason.chars().take(1024).collect::<String>();
+        let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
+            .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
+        writeln!(diagnostics, "--- NeverGuard fail-closed ---\n{bounded}")
+            .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+    }
     let finished_at = now_unix()?;
     let runtime_seconds = finished_at.saturating_sub(started_at);
     let passed = timed_out || success;
