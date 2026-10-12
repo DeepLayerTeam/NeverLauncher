@@ -383,6 +383,8 @@ pub async fn resolve_compatibility(
         ));
     }
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
+    let is_modern_forge = raw_game_args.iter().any(|value| value == "--fml.forgeVersion")
+        && merged.main_class == "cpw.mods.bootstraplauncher.BootstrapLauncher";
     let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     if raw_jvm_args.is_empty() {
         // Minecraft releases before the arguments.jvm metadata era relied on the
@@ -400,10 +402,12 @@ pub async fn resolve_compatibility(
     let game_args = substitute_all(raw_game_args, &variables)?;
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
-    if is_neoforge {
-        // Modern NeoForge creates the transformed Minecraft production module itself.
-        // Keep Mojang's base client on the legacy classpath for launcher compatibility,
-        // but prevent BootstrapLauncher from turning it into a second named module.
+    if is_neoforge || is_modern_forge {
+        // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
+        // Keep Mojang's base client on the legacy classpath, but prevent
+        // BootstrapLauncher from turning it into an additional named module.
+        // Otherwise Java's module resolver fails with duplicate packages
+        // (minecraft vs. the untransformed base client JAR module).
         ensure_neoforge_bootstrap_ignores_base_client(&mut jvm_args, &client_jar)?;
     }
 
@@ -932,7 +936,7 @@ fn ensure_neoforge_bootstrap_ignores_base_client(jvm_args: &mut Vec<String>, cli
         .rsplit('/')
         .next()
         .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| "NeoForge base client JAR path не содержит filename".to_string())?;
+        .ok_or_else(|| "ModLauncher base client JAR path не содержит filename".to_string())?;
 
     for arg in jvm_args.iter_mut() {
         let Some(list) = arg.strip_prefix("-DignoreList=") else {
@@ -1286,6 +1290,39 @@ mod tests {
         assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn modern_forge_bootstrap_ignores_base_minecraft_module() {
+        let root = temp_root("forge-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.19.4")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.19.4-forge-45.4.5")).unwrap();
+        stdfs::write(
+            root.join("versions/1.19.4/1.19.4.json"),
+            r#"{
+              "id":"1.19.4","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"3",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":17}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/1.19.4-forge-45.4.5/1.19.4-forge-45.4.5.json"),
+            r#"{
+              "id":"1.19.4-forge-45.4.5","inheritsFrom":"1.19.4","mainClass":"cpw.mods.bootstraplauncher.BootstrapLauncher",
+              "arguments":{"game":["--fml.forgeVersion","45.4.5","--launchTarget","forgeclient"]}
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
+        assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base vanilla client must not become an additional Forge module: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 

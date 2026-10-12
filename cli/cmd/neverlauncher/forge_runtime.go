@@ -1444,6 +1444,14 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
 		}
+		// Forge 1.7.x versionInfo can repeat Mojang native-only coordinates.
+		// lwjgl-platform and jinput-platform have classified native archives,
+		// but no unclassified Maven JAR or .sha1 sidecar. The Vanilla
+		// materializer has already installed their verified native classifiers.
+		// Never invent an upstream base JAR for those classifier-only entries.
+		if isLegacyNativeClassifierContainer(*lib) {
+			continue
+		}
 		rel := strings.TrimSpace(lib.Downloads.Artifact.Path)
 		if rel == "" {
 			var err error
@@ -1555,6 +1563,18 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		}
 	}
 	return dedupeDownloadedFiles(append(localFiles, downloaded...)), nil
+}
+
+func isLegacyNativeClassifierContainer(lib MojangLibrary) bool {
+	if hasMojangDownloadDescriptor(lib.Downloads.Artifact) || len(lib.Natives) == 0 {
+		return false
+	}
+	coordinate := strings.Split(lib.Name, ":")
+	if len(coordinate) < 3 {
+		return false
+	}
+	return coordinate[0] == "org.lwjgl.lwjgl" && coordinate[1] == "lwjgl-platform" ||
+		coordinate[0] == "net.java.jinput" && coordinate[1] == "jinput-platform"
 }
 
 func hasLegacySHA1Checksums(values []string) bool {

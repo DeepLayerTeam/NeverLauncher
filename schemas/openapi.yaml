@@ -9607,6 +9607,7 @@
           "api"
         ],
         "summary": "POST /api/v1/packages/{packageId}/smoke-test",
+        "description": "Legacy smoke-test performs integrity validation only; it never launches Minecraft and never constitutes runtime validation or evidence of successful game launch. Use runtime-validations/evidence for verified runtime results.",
         "responses": {
           "200": {
             "description": "Success",

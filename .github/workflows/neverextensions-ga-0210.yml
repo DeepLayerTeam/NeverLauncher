@@ -86,7 +86,7 @@ jobs:
           import json,os
           contract={"packageFormatVersion":"1.0","manifestSchemaVersion":"2.0","hostProtocolVersion":"1.0","extensionApiVersion":"1.0","legacyApiAliases":["3.7"]}
           checks={k:True for k in ["frozen-contract-tests","package-malicious-tests","registry-trust-tests","lifecycle-host-tests","dependency-update-tests","permission-security-tests","ga-reconcile-tests","cli-sdk-tests","backend-sdk-tests","admin-build","desktop-build","migration-tests","openapi-contract","backend-build","cli-build"]}
-          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":os.environ['GOOS_ACTUAL'],"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","contract":contract,"checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
+          doc={"schemaVersion":"1.0","targetId":"${{ matrix.target }}","os":{"darwin":"macos"}.get(os.environ['GOOS_ACTUAL'],os.environ['GOOS_ACTUAL']),"arch":os.environ['GOARCH_ACTUAL'],"goVersion":os.environ['GOVERSION'],"status":"pass","contract":contract,"checks":checks,"commit":"${{ github.sha }}","runId":"${{ github.run_id }}"}
           open("evidence/${{ matrix.target }}.json","w",encoding="utf-8").write(json.dumps(doc,indent=2,sort_keys=True)+"\n")
           PY
       - uses: actions/upload-artifact@v4

@@ -763,3 +763,19 @@ exit 17
 	}
 	return path
 }
+
+func TestLegacyNativeClassifierContainerHasNoInventedBaseJar(t *testing.T) {
+	for _, coordinate := range []string{"org.lwjgl.lwjgl:lwjgl-platform:2.9.1", "net.java.jinput:jinput-platform:2.0.5"} {
+		lib := MojangLibrary{Name: coordinate, Natives: map[string]string{"windows": "natives-windows", "linux": "natives-linux"}}
+		if !isLegacyNativeClassifierContainer(lib) {
+			t.Fatalf("must not download missing classifier-only base JAR: %s", coordinate)
+		}
+		lib.Downloads.Artifact = MojangDownload{URL: "https://example.com/lib.jar", SHA1: "0123456789abcdef0123456789abcdef01234567"}
+		if isLegacyNativeClassifierContainer(lib) {
+			t.Fatalf("must not skip verified base JAR: %s", coordinate)
+		}
+	}
+	if isLegacyNativeClassifierContainer(MojangLibrary{Name: "org.lwjgl.lwjgl:lwjgl:2.9.1", Natives: map[string]string{"windows": "natives-windows"}}) {
+		t.Fatal("main LWJGL classpath library must not be skipped")
+	}
+}

@@ -161,8 +161,16 @@ func compatibilityGETWithHeaders(ctx context.Context, client *http.Client, rawUR
 				req.Header.Add(key, value)
 			}
 		}
+		// A 304 is not a downloadable artifact: the materializer does not
+		// supply conditional validators or possess a verified HTTP cache entry.
+		// Certain CDNs/proxies nevertheless return 304 for unconditional GETs.
+		// Request fresh bytes instead of treating the empty body as a valid file.
+		if attempt > 0 {
+			req.Header.Set("Cache-Control", "no-cache, no-store")
+			req.Header.Set("Pragma", "no-cache")
+		}
 		resp, err := client.Do(req)
-		if err == nil && !retryableCompatibilityStatus(resp.StatusCode) {
+		if err == nil && !retryableCompatibilityStatus(resp.StatusCode) && resp.StatusCode != http.StatusNotModified {
 			return resp, nil
 		}
 		if err == nil {

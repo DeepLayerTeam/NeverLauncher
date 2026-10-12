@@ -37,6 +37,33 @@ func TestCompatibilityGETRetriesTransientStatus(t *testing.T) {
 	}
 }
 
+func TestCompatibilityGETRetriesUnexpectedNotModifiedWithoutTrustingCache(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n == 1 {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		if r.Header.Get("Cache-Control") != "no-cache, no-store" || r.Header.Get("Pragma") != "no-cache" {
+			http.Error(w, "must bypass invalid intermediary cache", http.StatusBadRequest)
+			return
+		}
+		_, _ = io.WriteString(w, "verified-asset-payload")
+	}))
+	defer server.Close()
+
+	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "NeverLauncher/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil || string(data) != "verified-asset-payload" || calls.Load() != 2 {
+		t.Fatalf("invalid revalidation result: %q, %d requests, %v", data, calls.Load(), err)
+	}
+}
+
 func TestMaterializationLockIsExclusive(t *testing.T) {
 	dir := t.TempDir()
 	first, err := acquireCompatibilityMaterializationLock(dir)
