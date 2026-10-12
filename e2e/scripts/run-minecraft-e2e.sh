@@ -11,6 +11,26 @@ BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+# ServerBridge v3 refuses trust-on-first-use over plain HTTP to a Docker service
+# hostname. Pin the API's Ed25519 control signing key explicitly in every bridge.
+# The API uses the manifest signing seed unless a separate control key is set.
+CONTROL_PUBLIC_KEY="$(python3 - "$SIGNING_SEED" <<'PYKEY'
+import base64
+import subprocess
+import sys
+seed = bytes.fromhex(sys.argv[1])
+if len(seed) != 32:
+    raise SystemExit("invalid E2E Ed25519 signing seed")
+private_der = bytes.fromhex("302e020100300506032b657004220420") + seed
+public_der = subprocess.run(
+    ["openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER"],
+    input=private_der, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+).stdout
+if len(public_der) != 44 or not public_der.startswith(bytes.fromhex("302a300506032b6570032100")):
+    raise SystemExit("unexpected Ed25519 public key encoding")
+print(base64.urlsafe_b64encode(public_der[-32:]).decode("ascii").rstrip("="))
+PYKEY
+)"
 PINNED_PUBLIC_KEY="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8"
 ADMIN_EMAIL="admin@neverlauncher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
@@ -91,6 +111,7 @@ write_env_file() {
 NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
 NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
 NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
+NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY
 NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
 NEVERLAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
 NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
@@ -821,7 +842,7 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
   export LIBGL_ALWAYS_SOFTWARE=1
   export NEVERLAUNCHER_RESOLUTION_WIDTH=854
   export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
-  xvfb-run -a -s '-screen 0 1280x720x24' \
+  xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
     cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
       --manifest "$RUNTIME_DIR/manifest.json" \
       --pinned-public-key "$PINNED_PUBLIC_KEY" \

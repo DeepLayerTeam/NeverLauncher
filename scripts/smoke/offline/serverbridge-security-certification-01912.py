@@ -43,6 +43,15 @@ require(contracts,['serverbridge3-security-01912','securityCapabilityDigest','ac
 require(tests,['NodeCanonicalRejectsTamper','EventRejectsTamper','CommandCanonicalRejectsReplayAcrossRuntime','AllowlistRejectsTamperedBridge','SecurityFeatureSetIsExact'],'Go adversarial tests')
 require(event_tests,['TestServerBridgeEventMemoryAckReplay0194'],'event replay/idempotency regression')
 require(e2e,['TARGETS=(velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla)','for target in "${TARGETS[@]}"'],'per-target E2E execution')
+# The Docker backend uses a non-loopback HTTP hostname. A v3 bridge must be
+# provisioned with a trust anchor; silent HTTP TOFU would be a downgrade.
+minecraft_e2e=read('e2e/scripts/run-minecraft-e2e.sh')
+compose_e2e=read('e2e/docker-compose.minecraft-e2e.yml')
+require(minecraft_e2e, ['CONTROL_PUBLIC_KEY=', 'NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY',
+    '"openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER"'], 'Minecraft E2E control key derivation')
+if compose_e2e.count('NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:') != 10:
+    raise SystemExit('Every Docker ServerBridge adapter must pin the API control signing key')
+
 require(harness,['overlap key rotation','retired previous key cannot authorize rotation after finalize','capability downgrade rejected','tampered bridge artifact rejected by certified hash','replayed event preserves original signed sequence','tampered/runtime-replayed command rejected','tampered/runtime-replayed event rejected','tampered node runtime rejected'],'runtime adversarial harness')
 
 matrix=json.loads(read('serverbridge/security-e2e-matrix.json'))

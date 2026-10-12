@@ -35,7 +35,7 @@ certification_run_client() {
   shift 3
   if [[ "$os_name" == "linux" ]]; then
     export LIBGL_ALWAYS_SOFTWARE=1
-    xvfb-run -a -s '-screen 0 1280x720x24' "$runtime_bin" "$@" > "$output"
+    xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "$runtime_bin" "$@" > "$output"
   else
     "$runtime_bin" "$@" > "$output"
   fi

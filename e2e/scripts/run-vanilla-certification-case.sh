@@ -85,7 +85,7 @@ export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
 if [[ "$TARGET_OS" == "linux" ]]; then
   export LIBGL_ALWAYS_SOFTWARE=1
-  xvfb-run -a -s '-screen 0 1280x720x24' \
+  xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
     "$NEVERRUNTIME_BIN" certify-vanilla \
       --root "$RUNTIME_DIR/materialized-client" \
       --version "$MINECRAFT_VERSION" \

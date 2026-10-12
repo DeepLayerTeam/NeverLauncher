@@ -1445,9 +1445,9 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			continue
 		}
 		// Forge 1.7.x versionInfo can repeat Mojang native-only coordinates.
-		// lwjgl-platform and jinput-platform have classified native archives,
-		// but no unclassified Maven JAR or .sha1 sidecar. The Vanilla
-		// materializer has already installed their verified native classifiers.
+		// lwjgl-platform, jinput-platform and the old Twitch platform bridges
+		// have classified native archives but no unclassified Maven JAR or
+		// .sha1 sidecar. Vanilla already materialized verified classifiers.
 		// Never invent an upstream base JAR for those classifier-only entries.
 		if isLegacyNativeClassifierContainer(*lib) {
 			continue
@@ -1574,7 +1574,8 @@ func isLegacyNativeClassifierContainer(lib MojangLibrary) bool {
 		return false
 	}
 	return coordinate[0] == "org.lwjgl.lwjgl" && coordinate[1] == "lwjgl-platform" ||
-		coordinate[0] == "net.java.jinput" && coordinate[1] == "jinput-platform"
+		coordinate[0] == "net.java.jinput" && coordinate[1] == "jinput-platform" ||
+		coordinate[0] == "tv.twitch" && (coordinate[1] == "twitch-platform" || coordinate[1] == "twitch-external-platform")
 }
 
 func hasLegacySHA1Checksums(values []string) bool {

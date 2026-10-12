@@ -765,7 +765,7 @@ exit 17
 }
 
 func TestLegacyNativeClassifierContainerHasNoInventedBaseJar(t *testing.T) {
-	for _, coordinate := range []string{"org.lwjgl.lwjgl:lwjgl-platform:2.9.1", "net.java.jinput:jinput-platform:2.0.5"} {
+	for _, coordinate := range []string{"org.lwjgl.lwjgl:lwjgl-platform:2.9.1", "net.java.jinput:jinput-platform:2.0.5", "tv.twitch:twitch-platform:5.16", "tv.twitch:twitch-external-platform:4.5"} {
 		lib := MojangLibrary{Name: coordinate, Natives: map[string]string{"windows": "natives-windows", "linux": "natives-linux"}}
 		if !isLegacyNativeClassifierContainer(lib) {
 			t.Fatalf("must not download missing classifier-only base JAR: %s", coordinate)

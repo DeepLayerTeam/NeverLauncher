@@ -156,7 +156,7 @@ printf '[matching-e2e] launch actual Mojang client %s and connect to exact match
 export LIBGL_ALWAYS_SOFTWARE=1
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
-xvfb-run -a -s '-screen 0 1280x720x24' \
+xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
   "$NEVERRUNTIME_BIN" certify-vanilla \
     --root "$CLIENT_DIR" \
     --version "$MINECRAFT_VERSION" \
