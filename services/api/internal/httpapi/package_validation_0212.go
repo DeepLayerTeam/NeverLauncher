@@ -121,7 +121,9 @@ func (s Server) runPackageIntegrityCheck0212(r *http.Request, lookup packageLook
 	if passed {
 		status = "integrity-passed"
 	}
-	_, _ = s.Repo.UpdateVersionStatus(lookup.Release.ProjectID, lookup.Release.ID, status)
+	if _, err := s.Repo.UpdateVersionStatus(lookup.Release.ProjectID, lookup.Release.ID, status); err != nil {
+		return model.IntegrityCheckResult{}, err
+	}
 	return stored, nil
 }
 
@@ -509,6 +511,10 @@ func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVe
 		if result.Result != "passed" {
 			return packageLookup{}, errors.New("package integrity check failed")
 		}
+		// The integrity check persists a status transition to integrity-passed.
+		// Keep the publish snapshot in sync with the database: durable publish
+		// includes this status in its compare-and-swap precondition.
+		lookup.Release.Status = "integrity-passed"
 	}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {
 		return packageLookup{}, err

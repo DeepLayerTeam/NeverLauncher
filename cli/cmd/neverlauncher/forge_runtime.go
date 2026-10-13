@@ -890,7 +890,10 @@ func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile
 	} else if inherited != parent {
 		return nil, false, fmt.Errorf("Forge legacy versionInfo inheritsFrom=%s, ожидался %s", inherited, parent)
 	} else {
-		return append([]byte(nil), trimmed...), false, nil
+		// A profile that already inherits the correct Vanilla version is
+		// normalized as well. This flag describes the final invariant, not
+		// whether the current materialization happened to rewrite the JSON.
+		return append([]byte(nil), trimmed...), true, nil
 	}
 	out, err := json.MarshalIndent(object, "", "  ")
 	if err != nil {

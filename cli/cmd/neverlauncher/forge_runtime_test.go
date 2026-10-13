@@ -796,3 +796,17 @@ func TestForgeLatestStableChoosesNumericMaximumIndependentOfMetadataOrder(t *tes
 		}
 	}
 }
+
+func TestForgeLegacyProfileAlreadyInheritedReportsNormalized(t *testing.T) {
+	raw := []byte(`{"id":"1.7.10-forge-test","inheritsFrom":"1.7.10","mainClass":"net.minecraft.launchwrapper.Launch"}`)
+	profile, normalized, err := normalizeForgeLegacyRuntimeProfile(raw, loaderVersionProfile{}, "1.7.10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !normalized {
+		t.Fatal("profile already inheriting Vanilla must still satisfy legacyProfileNormalized certification")
+	}
+	if string(profile) != string(raw) {
+		t.Fatalf("already normalized profile was unnecessarily rewritten: %s", profile)
+	}
+}
