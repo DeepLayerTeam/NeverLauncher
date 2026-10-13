@@ -194,7 +194,7 @@ mod windows_impl {
             },
             Memory::{HeapSetInformation, HeapEnableTerminationOnCorruption},
             Threading::{
-                GetProcessMitigationPolicy, OpenProcess, OpenThread, ResumeThread,
+                GetExitCodeProcess, GetProcessMitigationPolicy, OpenProcess, OpenThread, ResumeThread,
                 SetProcessMitigationPolicy, ProcessChildProcessPolicy, ProcessDynamicCodePolicy,
                 ProcessExtensionPointDisablePolicy, ProcessImageLoadPolicy,
                 ProcessStrictHandleCheckPolicy, CREATE_SUSPENDED, PROCESS_MITIGATION_POLICY,
@@ -724,20 +724,57 @@ mod windows_impl {
                 // longer part of the live tree and cannot violate the current boundary.
                 continue;
             }
+            // ToolHelp can enumerate a just-exited child whose process object
+            // remains open. Windows removes terminated processes from the Job
+            // Object even while OpenProcess still succeeds. Checking membership
+            // for an exited process would falsely report a breakaway.
+            const STILL_ACTIVE_EXIT_CODE: u32 = 259;
+            let mut exit_code = 0u32;
+            let exit_ok = unsafe { GetExitCodeProcess(process, &mut exit_code) };
+            if exit_ok == 0 {
+                let error = std::io::Error::last_os_error();
+                unsafe { let _ = CloseHandle(process); }
+                return Err(format!(
+                    "NeverGuard cannot check process liveness for PID {pid}: {error}"
+                ));
+            }
+            if exit_code != STILL_ACTIVE_EXIT_CODE {
+                unsafe { let _ = CloseHandle(process); }
+                if pid == root_pid {
+                    return Err(format!("NeverGuard runtime root PID {pid} terminated during Job Object verification"));
+                }
+                continue;
+            }
             let mut in_job = 0i32;
             let ok = unsafe { IsProcessInJob(process, job, &mut in_job) };
-            unsafe { let _ = CloseHandle(process); }
             if ok == 0 {
+                let error = std::io::Error::last_os_error();
+                unsafe { let _ = CloseHandle(process); }
                 return Err(format!(
-                    "NeverGuard Job Object membership query failed for PID {pid}: {}",
-                    std::io::Error::last_os_error()
+                    "NeverGuard Job Object membership query failed for PID {pid}: {error}"
                 ));
             }
             if in_job == 0 {
+                // A child may exit between the two OS queries. Recheck the
+                // *same handle*, not a recycled PID, before declaring escape.
+                let mut final_exit_code = 0u32;
+                let final_ok = unsafe { GetExitCodeProcess(process, &mut final_exit_code) };
+                if final_ok == 0 {
+                    let error = std::io::Error::last_os_error();
+                    unsafe { let _ = CloseHandle(process); }
+                    return Err(format!(
+                        "NeverGuard process liveness recheck failed for PID {pid}: {error}"
+                    ));
+                }
+                unsafe { let _ = CloseHandle(process); }
+                if pid != root_pid && final_exit_code != STILL_ACTIVE_EXIT_CODE {
+                    continue;
+                }
                 return Err(format!(
                     "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
                 ));
             }
+            unsafe { let _ = CloseHandle(process); }
         }
 
         let mut records = Vec::with_capacity(job_members.len());

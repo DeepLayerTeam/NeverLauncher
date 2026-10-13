@@ -1186,11 +1186,11 @@ func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.S
 	rows, err := r.db.QueryContext(ctx, `SELECT
 s.id,t.id,t.name,s.project_id,t.profile_id,
 CASE
- WHEN s.status<>'active' OR s.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR s.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'source-stale'
+ WHEN s.status<>'active' OR s.last_heartbeat_at IS NULL OR s.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR s.routing_observed_at IS NULL OR s.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'source-stale'
  WHEN s.routing_state='maintenance' THEN 'source-maintenance'
  WHEN s.routing_state='draining' THEN 'source-draining'
  WHEN s.routing_health='unhealthy' OR NOT s.routing_accepting THEN 'source-unhealthy'
- WHEN t.status<>'active' OR t.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR t.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'stale'
+ WHEN t.status<>'active' OR t.last_heartbeat_at IS NULL OR t.last_heartbeat_at<=CURRENT_TIMESTAMP-interval '90 seconds' OR t.routing_observed_at IS NULL OR t.routing_observed_at<=CURRENT_TIMESTAMP-interval '90 seconds' THEN 'stale'
  WHEN t.routing_state='maintenance' THEN 'maintenance'
  WHEN t.routing_state='draining' THEN 'draining'
  WHEN t.routing_health='unhealthy' OR NOT t.routing_accepting THEN 'unhealthy'
@@ -1198,7 +1198,11 @@ CASE
  ELSE 'active' END AS effective_status,
 s.routing_health,t.routing_health,t.routing_state,t.routing_players_online,t.routing_capacity_max,t.routing_accepting,
 t.runtime_id,t.runtime_epoch,t.routing_revision,
-COALESCE(e.last_seen_at,LEAST(s.routing_observed_at,t.routing_observed_at)),COALESCE(e.created_at,GREATEST(s.created_at,t.created_at))
+-- Legacy nodes have no signed routing snapshot yet; preserve a non-NULL
+-- observation timestamp for the API model without treating them as routable.
+COALESCE(e.last_seen_at,LEAST(s.routing_observed_at,t.routing_observed_at),
+         LEAST(s.last_heartbeat_at,t.last_heartbeat_at),GREATEST(s.created_at,t.created_at)),
+COALESCE(e.created_at,GREATEST(s.created_at,t.created_at))
 FROM server_bridge_nodes_v2 s
 JOIN server_bridge_nodes_v2 t ON t.project_id=s.project_id
  AND (s.profile_id='' OR t.profile_id='' OR t.profile_id=s.profile_id)
