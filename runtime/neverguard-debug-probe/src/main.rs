@@ -13,6 +13,7 @@ fn main() {
         .unwrap_or_else(|| process::exit(64));
 
     if unsafe { DebugActiveProcess(pid) } == 0 {
+        eprintln!("NeverGuard adversarial debugger could not attach to PID {pid}: {}", std::io::Error::last_os_error());
         process::exit(2);
     }
     unsafe {

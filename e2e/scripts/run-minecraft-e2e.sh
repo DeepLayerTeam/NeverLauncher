@@ -191,6 +191,34 @@ wait_bridge_heartbeat() {
   compose logs "$service" >&2 || true
   return 1
 }
+# A 200 heartbeat means the node authenticated, not that its signed routing
+# snapshot advertises a ready/healthy target. Real v3 bridge plugins fail
+# closed on a missing or stale routing snapshot; protocol-v2 probes do not.
+# Wait for the same PostgreSQL readiness conditions the backend enforces.
+wait_bridge_routable() {
+  local service="$1" node_id="$2" elapsed state
+  [[ "$node_id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "invalid node id" >&2; return 1; }
+  for elapsed in $(seq 1 90); do
+    state="$(psql "$DB_DSN" -AtF '|' -c "
+      SELECT n.status, n.routing_state, n.routing_health,
+             n.routing_accepting, n.runtime_epoch,
+             n.routing_observed_at > now() - interval '90 seconds',
+             n.last_heartbeat_at > now() - interval '90 seconds',
+             (n.routing_capacity_max=0 OR n.routing_players_online < n.routing_capacity_max)
+      FROM server_bridge_nodes_v2 n
+      WHERE n.id = '$node_id'" 2>/dev/null)" || true
+    if [[ "$state" == active\|ready\|healthy\|t\|*\|t\|t\|t || "$state" == active\|ready\|degraded\|t\|*\|t\|t\|t ]]; then
+      printf '[e2e] %s is accepting authenticated v3 routing requests: %s\n' "$service" "$state"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "[e2e] $service did not become routable after signed heartbeats; last state: $state" >&2
+  psql "$DB_DSN" -AtF '|' -c "SELECT id,status,runtime_epoch,runtime_id,routing_state,routing_health,routing_accepting,routing_observed_at,last_heartbeat_at FROM server_bridge_nodes_v2 WHERE id='$node_id'" >&2 || true
+  compose logs --tail=80 "$service" >&2 || true
+  return 1
+}
+
 capture_health_evidence() {
   local service="$1" id out
   id="$(compose ps -aq "$service")"
@@ -952,6 +980,12 @@ if [[ "$MODE" == "full" ]]; then
       wait_healthy "$service"
     fi
     wait_bridge_heartbeat "$service"
+    # Heartbeat may precede the first healthy platform telemetry sample.
+    # Wait for a fresh signed routing snapshot instead of bypassing v3 trust.
+    case "$service" in
+      spigot|paper|purpur|folia|fabric|forge|neoforge)
+        wait_bridge_routable "$service" "$id" ;;
+    esac
     capture_health_evidence "$service"
     flow_for_server "$id" "$key" "$plugin_sha" "$service" "$port"
     compose stop "$service" >/dev/null

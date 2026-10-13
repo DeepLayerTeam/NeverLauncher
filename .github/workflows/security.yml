@@ -1,0 +1,29 @@
+name: Security Contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-security-contracts:
+    name: Verify identity, attestation and ServerBridge boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Offline trust boundary regression gates
+        run: |
+          python3 scripts/smoke/offline/device-key-storage.py
+          python3 scripts/smoke/offline/hardware-bound-identity.py
+          python3 scripts/smoke/offline/challenge-response-attestation.py
+          python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
+          python3 scripts/smoke/offline/neverguard-integrity-evidence-0132.py
+      - name: Canonical OpenAPI security contracts
+        run: python3 scripts/contracts/validate-openapi.py

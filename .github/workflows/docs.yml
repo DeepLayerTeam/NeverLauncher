@@ -1,0 +1,38 @@
+name: Documentation Contracts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'ARCHITECTURE.md'
+      - 'COMPATIBILITY.md'
+      - 'scripts/contracts/**'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'wiki/**'
+      - 'ARCHITECTURE.md'
+      - 'COMPATIBILITY.md'
+      - 'scripts/contracts/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-contracts:
+    name: Validate public API and version contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python3 scripts/contracts/validate-openapi.py
+      - run: python3 scripts/version/manage.py check

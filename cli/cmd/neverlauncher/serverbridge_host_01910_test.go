@@ -130,6 +130,28 @@ while :; do sleep 1; done`)
 	if pid == 0 {
 		t.Fatal("Minecraft process did not enter running state")
 	}
+	// The supervisor publishes the PID as soon as it starts the subprocess,
+	// while the POSIX shell still needs to execute the TERM handler. Stopping
+	// before its `ready` marker races with trap installation (macOS CI).
+	// Readiness of the test fixture, not the PID alone, is the stop precondition.
+	ready := false
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		stdout, err := os.ReadFile(paths["stdout"])
+		if err == nil && strings.Contains(string(stdout), "ready") {
+			ready = true
+			break
+		}
+		select {
+		case err := <-done:
+			t.Fatalf("supervised process exited before ready: %v", err)
+		default:
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !ready {
+		t.Fatal("supervised process did not install signal handler before stop")
+	}
 	if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
 		t.Fatal(err)
 	}

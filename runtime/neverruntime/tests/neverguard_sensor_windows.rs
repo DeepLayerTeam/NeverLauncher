@@ -757,12 +757,19 @@ async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_att
         .expect("attach adversarial debugger probe");
     let status = child.wait().await.expect("wait debugger-attached JVM");
     assert!(!status.success(), "live debugger attach must be fail-closed");
-    let _ = debugger_child.wait().await;
+    let debugger_status = debugger_child.wait().await.expect("wait adversarial debugger probe");
     sleep(Duration::from_millis(250)).await;
 
     let report = session.report().module_guard;
-    assert!(!report.healthy, "Module Guard must reflect debugger boundary failure");
-    assert!(!report.debug_instrumentation.healthy);
+    assert!(
+        debugger_status.success(),
+        "adversarial debugger did not attach/complete (status={debugger_status}); guard report={report:?}"
+    );
+    assert!(!report.healthy, "Module Guard must reflect debugger boundary failure: {report:?}");
+    assert!(
+        !report.debug_instrumentation.healthy,
+        "live debugger must be detected specifically by Debug & Instrumentation Guard: {report:?}"
+    );
     assert!(
         report.debug_instrumentation.violation_count >= 1,
         "expected Debug & Instrumentation Guard violation: {report:?}"
