@@ -274,8 +274,25 @@ def main() -> int:
     if bool(args.webauthn_helper) != bool(args.webauthn_state):
         raise RuntimeError("--webauthn-helper and --webauthn-state must be provided together")
     if args.webauthn_helper and args.webauthn_state:
-        print("[e2e-upload] refresh phishing-resistant step-up immediately before publish", file=sys.stderr, flush=True)
+        print("[e2e-upload] refresh phishing-resistant step-up before package signing", file=sys.stderr, flush=True)
         client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
+
+    # Never infer runtime or integrity certification from an administrative
+    # publish request. Explicitly complete the same audited package pipeline
+    # used by the public package API before final durable publication.
+    package_path = f"/api/v1/packages/{quote(version_id, safe='')}"
+    validated = client.json("POST", package_path + "/validate")
+    if not isinstance(validated, dict) or validated.get("data", {}).get("status") != "valid":
+        raise RuntimeError(f"package validation did not pass: {validated!r}")
+    client.json("POST", package_path + "/sign")
+    client.json("POST", package_path + "/stage")
+    integrity = client.json("POST", package_path + "/integrity-check")
+    if not isinstance(integrity, dict) or integrity.get("data", {}).get("result", {}).get("result") != "passed":
+        raise RuntimeError(f"package integrity check did not pass: {integrity!r}")
+
+    if args.webauthn_helper and args.webauthn_state:
+        print("[e2e-upload] refresh phishing-resistant step-up immediately before publish", file=sys.stderr, flush=True)
+        client.passkey_step_up(args.webauthn_helper, args.webauthn_state, sign_count=2)
 
     published = client.json("POST", f"/api/v1/admin/projects/{quote(project, safe='')}/versions/{quote(version_id, safe='')}/publish")
     manifest_url = f"{args.api.rstrip('/')}/api/v1/projects/{quote(project, safe='')}/profiles/{quote(profile, safe='')}/manifest?channel={quote(channel, safe='')}"

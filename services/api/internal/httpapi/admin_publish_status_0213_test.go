@@ -44,6 +44,43 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 		}
 	}
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions/"+release.ID+"/publish", nil)
+	if _, err := srv.prepareAdminPublish0212(req, current); err == nil {
+		t.Fatal("publish must reject a release before explicit signing and integrity validation")
+	}
+	// Replicate the canonical sign -> stage -> integrity-check pipeline. This
+	// must happen before entering the administrative publish transaction.
+	manifest := current.Manifest
+	manifest.Files = []model.ManifestFile{{Path: "client/data.jar", URL: key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}}
+	signed, err := srv.signManifest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err = repo.UpdateVersionManifest(release.ProjectID, release.ID, signed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err = repo.UpdateVersionStatus(release.ProjectID, release.ID, "staged")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := repo.ListFiles(release.ProjectID, release.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := srv.runPackageIntegrityCheck0212(req, packageLookup{Release: current, Files: files})
+	if err != nil || result.Result != "passed" {
+		t.Fatalf("explicit integrity validation must pass: result=%+v err=%v", result, err)
+	}
+	versionsAfter, err := repo.ListVersions(release.ProjectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, updated := range versionsAfter {
+		if updated.ID == release.ID {
+			current = updated
+			break
+		}
+	}
 	lookup, err := srv.prepareAdminPublish0212(req, current)
 	if err != nil {
 		t.Fatal(err)

@@ -135,6 +135,25 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 	if res.Code != http.StatusConflict {
 		t.Fatalf("непроверенная версия должна быть заблокирована (409), получено %d: %s", res.Code, res.Body.String())
 	}
+
+	// The legitimate administrative flow must still work when the caller
+	// explicitly completes the canonical audited validation pipeline.
+	for _, suffix := range []string{"validate", "sign", "stage", "integrity-check"} {
+		req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+created.ID+"/"+suffix, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		res = httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("explicit %s => %d %s", suffix, res.Code, res.Body.String())
+		}
+	}
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions/"+created.ID+"/publish", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK && res.Code != http.StatusAccepted {
+		t.Fatalf("публикация после integrity PASS => %d %s", res.Code, res.Body.String())
+	}
 }
 
 func loginAdmin(t *testing.T, handler http.Handler) string {

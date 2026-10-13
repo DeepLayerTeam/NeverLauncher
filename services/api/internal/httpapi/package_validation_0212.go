@@ -448,13 +448,15 @@ func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) b
 	return true
 }
 
-// prepareAdminPublish0212 preserves the convenient admin publish operation but
-// routes it through the same signed/staged/integrity evidence used by the
-// canonical package pipeline. Runtime-required policies still require external
-// signed runtime evidence before the final publish can proceed.
+// prepareAdminPublish0212 is deliberately read-only. Publication must not
+// manufacture signing/staging/integrity evidence: callers must complete the
+// canonical package validation pipeline before requesting a release.
 func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVersion) (packageLookup, error) {
 	if release.Status == "published" {
 		return packageLookup{}, errors.New("release уже опубликован; published manifest immutable")
+	}
+	if release.Status != "integrity-passed" {
+		return packageLookup{}, errors.New("publish требует предварительный signed/staged integrity PASS; используйте package validate/sign/stage/integrity-check")
 	}
 	files, err := s.Repo.ListFiles(release.ProjectID, release.ID)
 	if err != nil {
@@ -463,59 +465,13 @@ func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVe
 	if len(files) == 0 {
 		return packageLookup{}, errors.New("publish требует package files и integrity evidence")
 	}
-	if s.verifyManifestSignature(release.Manifest) != nil || !manifestFilesMatch0212(release.Manifest, files) {
-		manifest := release.Manifest
-		manifest.SchemaVersion = "1.0"
-		manifest.ProjectID = release.ProjectID
-		manifest.ProfileID = release.ProfileID
-		manifest.Channel = release.Channel
-		manifest.Version = release.Version
-		manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		manifest.Files = manifest.Files[:0]
-		for _, f := range files {
-			manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...)})
-		}
-		if err := validateCompatibilityManifest(manifest); err != nil {
-			return packageLookup{}, err
-		}
-		signed, err := s.signManifest(manifest)
-		if err != nil {
-			return packageLookup{}, err
-		}
-		release, err = s.Repo.UpdateVersionManifest(release.ProjectID, release.ID, signed)
-		if err != nil {
-			return packageLookup{}, err
-		}
+	if err := s.verifyManifestSignature(release.Manifest); err != nil {
+		return packageLookup{}, fmt.Errorf("publish требует доверенный Ed25519 manifest: %w", err)
 	}
-	if release.Status != "staged" && release.Status != "integrity-passed" {
-		if _, err := s.Repo.UpdateVersionStatus(release.ProjectID, release.ID, "staged"); err != nil {
-			return packageLookup{}, err
-		}
-		release.Status = "staged"
+	if !manifestFilesMatch0212(release.Manifest, files) {
+		return packageLookup{}, errors.New("publish требует manifest, соответствующий текущим package files")
 	}
 	lookup := packageLookup{Release: release, Files: files}
-	manifestDigest, err := manifestDigest0212(release.Manifest)
-	if err != nil {
-		return packageLookup{}, err
-	}
-	artifactDigest, err := artifactDigest0212(files)
-	if err != nil {
-		return packageLookup{}, err
-	}
-	current, err := s.Repo.LatestIntegrityCheck(r.Context(), release.ID)
-	if err != nil || current.Result != "passed" || current.ManifestDigest != manifestDigest || current.ArtifactDigest != artifactDigest {
-		result, runErr := s.runPackageIntegrityCheck0212(r, lookup)
-		if runErr != nil {
-			return packageLookup{}, runErr
-		}
-		if result.Result != "passed" {
-			return packageLookup{}, errors.New("package integrity check failed")
-		}
-		// The integrity check persists a status transition to integrity-passed.
-		// Keep the publish snapshot in sync with the database: durable publish
-		// includes this status in its compare-and-swap precondition.
-		lookup.Release.Status = "integrity-passed"
-	}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {
 		return packageLookup{}, err
 	}

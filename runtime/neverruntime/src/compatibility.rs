@@ -383,8 +383,16 @@ pub async fn resolve_compatibility(
         ));
     }
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
+    // Forge 1.20.2+ uses net.minecraftforge.bootstrap.BootstrapLauncher rather
+    // than cpw.mods.bootstraplauncher.BootstrapLauncher. Both launchers create
+    // a transformed named Minecraft module, and must ignore the Mojang client
+    // JAR on the bootstrap module path to avoid duplicate net.minecraft.*.
     let is_modern_forge = raw_game_args.iter().any(|value| value == "--fml.forgeVersion")
-        && merged.main_class == "cpw.mods.bootstraplauncher.BootstrapLauncher";
+        && matches!(
+            merged.main_class.as_str(),
+            "cpw.mods.bootstraplauncher.BootstrapLauncher"
+                | "net.minecraftforge.bootstrap.BootstrapLauncher"
+        );
     let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     if raw_jvm_args.is_empty() {
         // Minecraft releases before the arguments.jvm metadata era relied on the
@@ -1323,6 +1331,39 @@ mod tests {
         assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
         let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge ignoreList");
         assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base vanilla client must not become an additional Forge module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn forge_1202_bootstrap_ignores_base_minecraft_module() {
+        let root = temp_root("forge-1202-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.20.2")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.20.2-forge-48.1.0")).unwrap();
+        stdfs::write(
+            root.join("versions/1.20.2/1.20.2.json"),
+            r#"{
+              "id":"1.20.2","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"5",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":17}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/1.20.2-forge-48.1.0/1.20.2-forge-48.1.0.json"),
+            r#"{
+              "id":"1.20.2-forge-48.1.0","inheritsFrom":"1.20.2","mainClass":"net.minecraftforge.bootstrap.BootstrapLauncher",
+              "arguments":{"game":["--fml.forgeVersion","48.1.0","--launchTarget","forgeclient"]}
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("resolve Forge 1.20.2");
+        assert_eq!(result.main_class, "net.minecraftforge.bootstrap.BootstrapLauncher");
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge 1.20.2 ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|prefix| "1.20.2.jar".starts_with(prefix.trim()) && !prefix.trim().is_empty()), "base Minecraft JAR must not be added as a duplicate module: {ignore}");
         let _ = stdfs::remove_dir_all(root);
     }
 
