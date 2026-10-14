@@ -165,6 +165,8 @@ class MatrixToolTests(unittest.TestCase):
 
     def write_results(self, root: Path, doc: dict, mutate=None) -> None:
         for target in doc["targets"]:
+            if not target["required"]:
+                continue
             result = self.passing_result(target)
             if mutate is not None:
                 mutate(target, result)
@@ -187,6 +189,49 @@ class MatrixToolTests(unittest.TestCase):
             "--repository", "DeepLayerTeam/NeverLauncher",
         )
 
+
+
+    def test_upstream_blockers_are_explicit_and_excluded_from_ci_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self.target_doc()
+            blocked = [t for t in doc["targets"] if "unavailableReason" in t]
+            self.assertEqual(len(blocked), 12)
+            self.assertTrue(all(t["required"] is False for t in blocked))
+            path = Path(tmp) / "targets.json"
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("plan", "--targets", str(path))
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            planned = json.loads(proc.stdout)["include"]
+            self.assertEqual(len(planned), len(doc["targets"]) - 12)
+            self.assertFalse({t["id"] for t in blocked} & {t["id"] for t in planned})
+
+    def test_cannot_rebrand_upstream_blocked_as_certified(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self.target_doc()
+            blocked = next(t for t in doc["targets"] if "unavailableReason" in t)
+            blocked["required"] = True
+            path = Path(tmp) / "targets.json"
+            path.write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("validate", "--targets", str(path))
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("upstream", proc.stderr)
+
+    def test_cannot_inject_fabricated_pass_for_upstream_blocked_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = self.target_doc()
+            path = Path(tmp)
+            output = self.aggregate(path, doc)
+            self.assertEqual(output.returncode, 0, output.stderr)
+            result_dir = path / "results"
+            blocked = next(t for t in doc["targets"] if "unavailableReason" in t)
+            injected = result_dir / blocked["id"]
+            injected.mkdir(parents=True)
+            (injected / "compatibility-result.json").write_text(json.dumps(self.passing_result(blocked)), encoding="utf-8")
+            proc = run("aggregate", "--targets", str(path / "targets.json"),
+                       "--results-root", str(result_dir), "--output-dir", str(path / "out2"),
+                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("unexpectedly produced certification evidence", proc.stderr)
 
     def test_validate_0178_requires_loader_native_integration_anchor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

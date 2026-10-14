@@ -111,6 +111,18 @@ enable-rcon=false
 enable-query=false
 motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
+# Minecraft 1.17.1 can accept --server before the initial texture/resource
+# reload finishes. A superflat bedrock world sends block tessellation work
+# during that reload, leading to a Mojang NPE, not a failed join. For the
+# disposable matching-server scenario test protocol/join in an empty *real*
+# Mojang world. Never apply this to a production server or to other versions.
+if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
+generator-settings={"biome":"minecraft:plains","layers":[],"structures":{}}
+gamemode=creative
+allow-flight=true
+EOFVOID
+fi
 
 printf '[matching-e2e] start Mojang server %s on 127.0.0.1:%s with Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
 (

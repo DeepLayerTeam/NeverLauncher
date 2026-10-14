@@ -167,9 +167,23 @@ FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
 }
 
 
-# Quilt Compatibility II 0.17.2 certifies the same stable Minecraft release
-# span as Fabric Compatibility II, but through Quilt Meta v3 and Quilt KnotClient.
-QUILT_COMPATIBILITY_II_0172: dict[str, int] = dict(FABRIC_COMPATIBILITY_II_0171)
+# Quilt Meta v3 responds HTTP 404 for these Minecraft versions; retaining
+# them as required would falsely claim upstream loader availability.
+UPSTREAM_BLOCKED_QUILT = frozenset({"1.14", "1.14.1", "1.14.2", "1.14.3"})
+UPSTREAM_BLOCKED_NEOFORGE = frozenset({
+    "1.20.3", "1.20.5", "1.21.2", "1.21.6", "1.21.7", "1.21.9", "26.1", "26.1.1"
+})
+BLOCKED_UPSTREAM_REASONS = {
+    ("quilt", version): "upstream-missing" for version in UPSTREAM_BLOCKED_QUILT
+} | {
+    ("neoforge", version): "upstream-prerelease-only" for version in UPSTREAM_BLOCKED_NEOFORGE
+}
+
+# Keep unsupported historical versions in the catalogue (not certified).
+QUILT_COMPATIBILITY_II_0172: dict[str, int] = {
+    version: java for version, java in FABRIC_COMPATIBILITY_II_0171.items()
+    if version not in UPSTREAM_BLOCKED_QUILT
+}
 
 
 # Forge Modern 0.17.3 certifies the official processor-based Forge line.
@@ -197,12 +211,11 @@ FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 # release from the original 1.20.x line through the current stable 26.2 line.
 # 26.3 is intentionally absent until a stable net.neoforged:neoforge build exists.
 NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
-    "1.20.1": 17, "1.20.2": 17, "1.20.3": 17, "1.20.4": 17,
-    "1.20.5": 21, "1.20.6": 21,
-    "1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21,
-    "1.21.4": 21, "1.21.5": 21, "1.21.6": 21, "1.21.7": 21,
-    "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
-    "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25,
+    "1.20.1": 17, "1.20.2": 17, "1.20.4": 17, "1.20.6": 21,
+    "1.21": 21, "1.21.1": 21, "1.21.3": 21,
+    "1.21.4": 21, "1.21.5": 21, "1.21.8": 21,
+    "1.21.10": 21, "1.21.11": 21,
+    "26.1.2": 25, "26.2": 25,
 }
 
 # Cross-platform Loaders 0.17.9 certifies a real current client for each
@@ -622,7 +635,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         die("targets must contain a non-empty array")
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
-    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "javaMajor", "scope", "matchingServer", "required"}
+    allowed_target_keys = {"id", "minecraft", "loader", "loaderVersion", "os", "arch", "javaMajor", "scope", "matchingServer", "required", "unavailableReason"}
     for index, raw in enumerate(rows):
         if not isinstance(raw, dict):
             die(f"target #{index + 1} must be an object")
@@ -639,6 +652,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         java_major = raw.get("javaMajor")
         required = raw.get("required")
         matching_server = raw.get("matchingServer", False)
+        unavailable_reason = raw.get("unavailableReason")
         if not ID_RE.fullmatch(target_id):
             die(f"target #{index + 1}: invalid id {target_id!r}")
         if target_id in seen:
@@ -673,6 +687,14 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: client scope is not enabled for loader {loader} in VERSION={PRODUCT_VERSION}")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
+        expected_blocker = BLOCKED_UPSTREAM_REASONS.get((loader, minecraft)) if (os_name, arch) == ("linux", "x86_64") else None
+        if expected_blocker is None:
+            if unavailable_reason is not None:
+                die(f"{target_id}: unverified upstream blocker is forbidden")
+        elif required or unavailable_reason != expected_blocker:
+            die(f"{target_id}: upstream {expected_blocker} requires required=false and matching unavailableReason")
+        if not required and expected_blocker is None and unavailable_reason is None:
+            die(f"{target_id}: optional targets require a reviewed unavailableReason")
         if not isinstance(matching_server, bool):
             die(f"{target_id}: matchingServer must be boolean")
         if matching_server and not (loader == "vanilla" and scope == "client" and os_name == "linux" and arch == "x86_64"):
@@ -688,6 +710,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             "scope": scope,
             "matchingServer": matching_server,
             "required": required,
+            **({"unavailableReason": unavailable_reason} if unavailable_reason is not None else {}),
         })
     validate_baseline_ii(normalized)
     if loader_native_e2e_0178_required():
@@ -750,6 +773,10 @@ def command_plan(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
     include = []
     for target in payload["targets"]:
+        if not target["required"]:
+            # Explicitly unsupported upstream targets remain in published
+            # evidence but do not consume CI runners or forge PASS claims.
+            continue
         row = dict(target)
         row["runner"] = runner_for_target(target)
         row["javaDistribution"] = java_distribution_for_target(target)
@@ -928,7 +955,7 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
     for target in targets:
         record = records.get(target["id"], {})
         checks = record.get("checks") if isinstance(record.get("checks"), dict) else {}
-        status = "✅ PASS" if record.get("status") == "passed" else "❌ FAIL"
+        status = ("⚪ NOT CERTIFIED — " + str(target["unavailableReason"])) if not target["required"] and record.get("status") == "unsupported" else ("✅ PASS" if record.get("status") == "passed" else "❌ FAIL")
         paper = "—" if target["scope"] == "client" else ("✅" if checks.get("paperJoin") is True else "❌")
         matching = "✅" if target.get("matchingServer") is True and checks.get("matchingServer") is True else ("—" if not target.get("matchingServer") else "❌")
         runtime = (record.get("evidence") or {}).get("javaRuntime") if isinstance(record.get("evidence"), dict) else {}
@@ -993,7 +1020,12 @@ def command_aggregate(args: argparse.Namespace) -> int:
         if target_id not in results:
             if target["required"]:
                 errors.append(f"missing required result: {target_id}")
-            records[target_id] = {"status": "missing", "checks": {}}
+            records[target_id] = ({"status": "unsupported", "checks": {}, "unavailableReason": target["unavailableReason"]}
+                                  if not target["required"] else {"status": "missing", "checks": {}})
+            continue
+        if not target["required"]:
+            errors.append(f"{target_id}: upstream-unavailable target unexpectedly produced certification evidence")
+            records[target_id] = {"status": "invalid", "checks": {}}
             continue
         path, result = results[target_id]
         product_version = str(result.get("productVersion", ""))

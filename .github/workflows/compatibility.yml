@@ -105,6 +105,13 @@ jobs:
               break
             fi
           done
+      - name: Install verified software OpenGL for Windows client E2E
+        if: runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          ./scripts/compatibility/install-windows-mesa.ps1 `
+            -Architecture '${{ matrix.arch }}' `
+            -JavaExecutable "$env:NEVERLAUNCHER_E2E_JAVA"
       - name: Run actual-client compatibility target
         env:
           NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
@@ -245,6 +252,13 @@ jobs:
               break
             fi
           done
+      - name: Install verified software OpenGL for Windows client E2E
+        if: runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          ./scripts/compatibility/install-windows-mesa.ps1 `
+            -Architecture '${{ matrix.arch }}' `
+            -JavaExecutable "$env:NEVERLAUNCHER_E2E_JAVA"
       - name: Run actual-client compatibility target
         env:
           NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
