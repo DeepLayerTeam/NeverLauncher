@@ -86,6 +86,7 @@ jobs:
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 scripts/compatibility/test_matrix.py
           python3 scripts/compatibility/test_certify_jre.py
+          python3 scripts/compatibility/test_retry_macos_sdl3.py
           python3 scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py
           python3 scripts/smoke/offline/fabric-compatibility-II-0171.py
           python3 scripts/smoke/offline/quilt-compatibility-II-0172.py

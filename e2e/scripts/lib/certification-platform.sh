@@ -36,6 +36,44 @@ certification_run_client() {
   if [[ "$os_name" == "linux" ]]; then
     export LIBGL_ALWAYS_SOFTWARE=1
     xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "$runtime_bin" "$@" > "$output"
+  elif [[ "$os_name" == "macos" && "${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric" && "${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" ]]; then
+    # A minority of hosted macOS runs abort in SDL 3 before creating a window.
+    # Re-run the *real, verified* client once only when the first result proves
+    # that exact native abort. No retry for JVM exceptions, security failures,
+    # missing dependencies, normal exits, or other Minecraft/loader versions.
+    local first_rc=0
+    "$runtime_bin" "$@" > "$output" || first_rc=$?
+    local client_root="$(dirname "$output")/materialized-client"
+    local eligibility="$(dirname "$output")/../../scripts/compatibility/retry-macos-sdl3.py"
+    if python3 "$eligibility" --report "$output" --client-root "$client_root"; then
+      cp "$output" "${output%.json}.first-attempt.json"
+      printf '[certification] macOS SDL 3 SIGABRT: repeat full Fabric client certification once\n' >&2
+      "$runtime_bin" "$@" > "$output"
+      python3 - "$output" "${output%.json}.first-attempt.json" "$(dirname "$output")/certification-retry.json" <<'PYRETRY'
+import hashlib, json, sys
+last, first, output = sys.argv[1:]
+with open(first, 'rb') as f:
+    first_bytes = f.read()
+with open(last, 'rb') as f:
+    final_bytes = f.read()
+final = json.loads(final_bytes)
+payload = {
+  'schemaVersion': '1.0',
+  'reason': 'macos-fabric-26.3-sdl3-sigabrt',
+  'attempts': 2,
+  'firstEvidenceSha256': hashlib.sha256(first_bytes).hexdigest(),
+  'lastEvidenceSha256': hashlib.sha256(final_bytes).hexdigest(),
+  'lastStatus': final.get('status'),
+  'lastSuccess': final.get('status') == 'passed' and (
+      final.get('success') is True or final.get('timedOut') is True),
+}
+with open(output, 'w', encoding='utf-8') as f:
+    json.dump(payload, f, sort_keys=True, indent=2)
+    f.write('\n')
+PYRETRY
+    else
+      return "$first_rc"
+    fi
   else
     "$runtime_bin" "$@" > "$output"
   fi

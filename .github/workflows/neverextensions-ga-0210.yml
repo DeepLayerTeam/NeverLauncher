@@ -96,6 +96,10 @@ jobs:
 
   certificate:
     needs: ga-e2e
+    # A cancelled/unallocated platform job must produce an explicit failed
+    # completeness certificate, not silently skip publication verification.
+    # The existing aggregator still requires evidence from all three platforms.
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

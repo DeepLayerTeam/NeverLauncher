@@ -138,6 +138,8 @@ jobs:
             e2e/runtime/result.json
             e2e/runtime/client-package.json
             e2e/runtime/client-diagnostics.txt
+            e2e/runtime/certification-retry.json
+            e2e/runtime/fabric-certification.first-attempt.json
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json
@@ -275,6 +277,8 @@ jobs:
             e2e/runtime/result.json
             e2e/runtime/client-package.json
             e2e/runtime/client-diagnostics.txt
+            e2e/runtime/certification-retry.json
+            e2e/runtime/fabric-certification.first-attempt.json
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json
