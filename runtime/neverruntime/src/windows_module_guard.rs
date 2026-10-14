@@ -125,6 +125,15 @@ mod imp {
     };
     use zeroize::Zeroize;
 
+    // Read the debug port from the Guard process, not the (possibly suspended)
+    // JVM sensor. A debugger can stop all JVM threads before the sensor emits
+    // its debug-tamper packet. In that case the stream timeout must still
+    // identify the debugger and attribute the violation to Debug Guard.
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn CheckRemoteDebuggerPresent(process: HANDLE, debugger_present: *mut i32) -> i32;
+    }
+
     type HmacSha256 = Hmac<Sha256>;
 
     const SENSOR_PROTOCOL_VERSION: u32 = 3;
@@ -658,7 +667,8 @@ mod imp {
             match read {
                 Err(_) => {
                     if process_alive(pid) {
-                        fail_closed(&state, pid, "Module Guard heartbeat timeout", 0);
+                        let reason = debug_aware_stream_failure(pid, "Module Guard heartbeat timeout");
+                        fail_closed(&state, pid, &reason, 0);
                     } else {
                         mark_stopped(&state);
                     }
@@ -666,12 +676,11 @@ mod imp {
                 }
                 Ok(Err(err)) => {
                     if process_alive(pid) {
-                        fail_closed(
-                            &state,
+                        let reason = debug_aware_stream_failure(
                             pid,
                             &format!("Module Guard event stream disconnected: {err}"),
-                            0,
                         );
+                        fail_closed(&state, pid, &reason, 0);
                     } else {
                         mark_stopped(&state);
                     }
@@ -1598,6 +1607,26 @@ mod imp {
             report.continuous_guard.last_violation = reason.to_string();
         });
         terminate_runtime(pid);
+    }
+
+    fn debug_aware_stream_failure(pid: u32, default_reason: &str) -> String {
+        // Query the process from the out-of-process Guard. This remains useful
+        // even if the debugger has stopped all sensor/JVM threads. Failure to
+        // obtain a debugger verdict does not downgrade the original fail-closed
+        // stream violation.
+        let handle = OwnedHandle(unsafe {
+            OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+        });
+        if handle.raw().is_null() {
+            return default_reason.to_string();
+        }
+        let mut debugged = 0i32;
+        let success = unsafe { CheckRemoteDebuggerPresent(handle.raw(), &mut debugged) };
+        if success != 0 && debugged != 0 {
+            "NeverGuard Debug & Instrumentation Guard live debugger attached; sensor stream interrupted".to_string()
+        } else {
+            default_reason.to_string()
+        }
     }
 
     fn mark_stopped(state: &Arc<Mutex<WindowsModuleGuardReport>>) {

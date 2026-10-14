@@ -422,11 +422,13 @@ pub async fn resolve_compatibility(
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
-    // Legacy GLFW requires the macOS primordial AppKit thread. Modern 26.x
-    // clients initialize SDL 3 themselves; forcing -XstartOnFirstThread
-    // regressed previously successful macOS/26.3 Vanilla certification.
-    // Respect an explicitly supplied upstream flag in both cases.
-    let uses_sdl3_client = layers.iter().any(|(id, _, _)| id.starts_with("26."));
+    // Minecraft 26.x Vanilla and Fabric initialize SDL 3 themselves; forcing
+    // -XstartOnFirstThread aborts those clients on macOS. ForgeBootstrap still
+    // creates a GLFW/AppKit early-display window *before* handing control to
+    // Minecraft's SDL 3 renderer, and must run on the primordial thread.
+    // Classify the actual entry point, not only the Minecraft version.
+    let minecraft_26x = layers.iter().any(|(id, _, _)| id.starts_with("26."));
+    let uses_sdl3_client = macos_uses_sdl3_game_entry(minecraft_26x, &merged.main_class);
     ensure_macos_first_thread(&mut jvm_args, &environment.os, uses_sdl3_client);
     if is_neoforge || is_modern_forge {
         // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
@@ -957,6 +959,11 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
     Ok(out)
 }
 
+fn macos_uses_sdl3_game_entry(minecraft_26x: bool, main_class: &str) -> bool {
+    // ForgeBootstrap owns an early GLFW window even on SDL 3 Minecraft versions.
+    minecraft_26x && !main_class.starts_with("net.minecraftforge.bootstrap.")
+}
+
 fn ensure_macos_first_thread(jvm_args: &mut Vec<String>, os: &str, uses_sdl3_client: bool) {
     if os == "osx" && !uses_sdl3_client && !jvm_args.iter().any(|arg| arg == "-XstartOnFirstThread") {
         jvm_args.push("-XstartOnFirstThread".to_string());
@@ -1241,6 +1248,22 @@ mod tests {
         let _ = stdfs::remove_dir_all(&root);
         stdfs::create_dir_all(&root).expect("mkdir");
         root
+    }
+
+    #[test]
+    fn macos_26x_forge_bootstrap_still_requires_first_thread() {
+        assert!(macos_uses_sdl3_game_entry(true, "net.minecraft.client.main.Main"));
+        assert!(macos_uses_sdl3_game_entry(true, "net.fabricmc.loader.impl.launch.knot.KnotClient"));
+        assert!(!macos_uses_sdl3_game_entry(true, "net.minecraftforge.bootstrap.ForgeBootstrap"));
+        assert!(!macos_uses_sdl3_game_entry(false, "net.minecraft.client.main.Main"));
+
+        let mut forge = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(
+            &mut forge,
+            "osx",
+            macos_uses_sdl3_game_entry(true, "net.minecraftforge.bootstrap.ForgeBootstrap"),
+        );
+        assert_eq!(forge, ["-Xmx1024m", "-XstartOnFirstThread"]);
     }
 
     #[test]

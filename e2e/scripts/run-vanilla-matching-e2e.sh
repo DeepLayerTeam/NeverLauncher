@@ -167,6 +167,12 @@ OPTIONS
 fi
 
 printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
+# The hosted Linux runner has no ALSA playback device. OpenAL Soft repeatedly
+# probes the missing hardware during the first resource reload, delaying block
+# models while a 1.17.1 quick-connect client is already receiving chunks.
+# Use OpenAL Soft's real null backend in this *headless CI only*: rendering,
+# world loading, the actual server join and all fail-closed checks stay enabled.
+export ALSOFT_DRIVERS=null
 export LIBGL_ALWAYS_SOFTWARE=1
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
