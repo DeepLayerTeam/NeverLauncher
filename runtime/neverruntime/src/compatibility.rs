@@ -410,6 +410,18 @@ pub async fn resolve_compatibility(
     let game_args = substitute_all(raw_game_args, &variables)?;
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
+    // Modern Mojang releases (including 26.x) can omit the old
+    // -Djava.library.path placeholder even though their LWJGL native binaries
+    // are extracted to the verified per-platform natives directory. Without
+    // the property, the game crashes before it can load SDL/LWJGL on Linux
+    // ARM64 (and can silently search the host rather than the packaged natives
+    // on other platforms). Preserve a property provided by upstream metadata.
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
+        jvm_args.push(format!("-Djava.library.path={}", context.natives_directory));
+    }
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
+        jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
+    }
     if is_neoforge || is_modern_forge {
         // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
         // Keep Mojang's base client on the legacy classpath, but prevent
@@ -1265,6 +1277,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn modern_minecraft_without_native_jvm_property_uses_verified_platform_natives() {
+        // Minecraft 26.x uses its own LWJGL bootstrap and no longer guarantees
+        // the historic -Djava.library.path argument in the version metadata.
+        let root = temp_root("modern-native-jvm-args");
+        stdfs::create_dir_all(root.join("versions/26.3")).unwrap();
+        stdfs::write(
+            root.join("versions/26.3/26.3.json"),
+            r#"{
+              "id":"26.3","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"34",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "libraries":[],
+              "arguments":{"jvm":["-Dminecraft.launcher.brand=${launcher_name}","-cp","${classpath}"],
+                           "game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":25}
+            }"#,
+        ).unwrap();
+        let native_path = root.join("natives/linux/aarch64");
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(),
+            access_token: "offline".into(), user_type: "legacy".into(), launcher_name: "NeverLauncher".into(),
+            launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(),
+            natives_directory: native_path.to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "26.3", None, &ctx).await.expect("resolve modern runtime");
+        let java_path = format!("-Djava.library.path={}", native_path.display());
+        let lwjgl_path = format!("-Dorg.lwjgl.librarypath={}", native_path.display());
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.as_str() == java_path.as_str()).count(), 1);
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.as_str() == lwjgl_path.as_str()).count(), 1);
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.starts_with("-Djava.library.path=")).count(), 1);
+        assert!(!result.jvm_args.iter().any(|arg| arg == "-cp"));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
     async fn neoforge_bootstrap_ignores_base_client_jar_module() {
         let root = temp_root("neoforge-module-isolation");
         stdfs::create_dir_all(root.join("versions/1.21.1")).unwrap();
@@ -1424,6 +1471,7 @@ mod tests {
         };
         let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("resolve legacy");
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
         assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=NeverLauncher"));
         assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
         assert_eq!(result.java_major_version, Some(8));
@@ -1462,6 +1510,7 @@ mod tests {
         let expected_assets = root.join("assets/virtual/pre-1.6").to_string_lossy().to_string();
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && pair[1] == expected_assets));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
         let _ = stdfs::remove_dir_all(root);
     }
 

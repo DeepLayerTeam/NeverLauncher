@@ -86,6 +86,20 @@ if not any(needle in p.replace('\\','/') or version in p.rsplit('/',1)[-1] for p
     raise SystemExit(f'exact loader version {version!r} is not present in server runtime artifact paths')
 PY
 
+# Each matrix job starts with a freshly materialized game directory. Minecraft
+# 1.20+ can display onboarding / multiplayer disclosure screens before Quick
+# Play is processed; in a headless run nobody can dismiss those screens. Keep
+# the bypass confined to this disposable E2E profile, not production installs.
+CLIENT_OPTIONS="$RUNTIME_DIR/materialized-client/options.txt"
+if [[ ! -e "$CLIENT_OPTIONS" ]]; then
+  cat > "$CLIENT_OPTIONS" <<'OPTIONS'
+onboardAccessibility:false
+skipMultiplayerWarning:true
+joinedFirstServer:true
+pauseOnLostFocus:false
+OPTIONS
+fi
+
 printf '[loader-native] launch actual %s client profile %s -> 127.0.0.1:%s\n' "$LOADER" "$CLIENT_PROFILE_ID" "$SERVER_PORT"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
