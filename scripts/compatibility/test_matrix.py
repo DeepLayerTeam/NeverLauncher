@@ -849,6 +849,24 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("loaderNativeClientJoin", proc.stderr)
 
+    def test_vanilla_ci_reuses_pinned_target_jdk_without_redundant_download(self) -> None:
+        # Every shard must retain its *target* JDK (the executable is pinned to
+        # NEVERLAUNCHER_E2E_JAVA), while not doing an unnecessary network
+        # download of Java 21 for pure Vanilla Go/Rust certification jobs.
+        workflow = (ROOT / ".github" / "workflows" / "compatibility.yml").read_text(encoding="utf-8")
+        restore_blocks = re.findall(
+            r"(?m)^      - name: Restore Java 21 for loader/Gradle build tooling\n"
+            r"((?:^        .*\n|^          .*\n)+)",
+            workflow,
+        )
+        self.assertEqual(len(restore_blocks), 2, "both matrix shards must use the same Java rule")
+        for block in restore_blocks:
+            self.assertIn("if: matrix.loader != 'vanilla' && matrix.javaMajor != 21", block)
+            self.assertIn("uses: actions/setup-java@v4", block)
+            self.assertIn("java-version: '21'", block)
+        self.assertEqual(workflow.count("- name: Install target Java ${{ matrix.javaMajor }}"), 2)
+        self.assertEqual(workflow.count("NEVERLAUNCHER_E2E_JAVA=%s"), 2)
+
     def test_0178_aggregate_rejects_missing_loader_native_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)

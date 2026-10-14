@@ -72,7 +72,12 @@ jobs:
             [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
           fi
           printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
-      - name: Restore Java 21 for NeverLauncher/Gradle build tooling
+      - name: Restore Java 21 for loader/Gradle build tooling
+        # Vanilla certification invokes Go, Rust and the already pinned target
+        # JVM only; it never runs Gradle. A second JDK download makes otherwise
+        # valid ARM64 jobs fail on transient Adoptium/GitHub HTTP 5xx responses.
+        # Loader and integration jobs retain the existing Java 21 toolchain.
+        if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
@@ -204,7 +209,12 @@ jobs:
             [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
           fi
           printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
-      - name: Restore Java 21 for NeverLauncher/Gradle build tooling
+      - name: Restore Java 21 for loader/Gradle build tooling
+        # Vanilla certification invokes Go, Rust and the already pinned target
+        # JVM only; it never runs Gradle. A second JDK download makes otherwise
+        # valid ARM64 jobs fail on transient Adoptium/GitHub HTTP 5xx responses.
+        # Loader and integration jobs retain the existing Java 21 toolchain.
+        if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
