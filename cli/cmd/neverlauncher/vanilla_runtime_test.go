@@ -988,3 +988,64 @@ func TestInstallVanillaServerRejectsMissingServerDownload(t *testing.T) {
 		t.Fatalf("missing verified server artifact must fail closed, got %v", err)
 	}
 }
+
+// Minecraft 26.x can omit Mojang Linux ARM64 classifiers while retaining
+// the Java LWJGL modules. The fallback must never use x86_64 artifacts.
+func TestLWJGLLinuxARM64Fallback(t *testing.T) {
+	arm := vanillaTarget{OS: "linux", Arch: "aarch64"}
+	want := "org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3-natives-linux-arm64.jar"
+	if got, ok := lwjglLinuxARM64Fallback("org.lwjgl:lwjgl-sdl:3.4.3", arm); !ok || got != want {
+		t.Fatalf("ARM64 SDL path = %q, %v; want %q", got, ok, want)
+	}
+	for _, tc := range []struct {
+		name   string
+		target vanillaTarget
+	}{
+		{"org.lwjgl:lwjgl-sdl:3.4.3", vanillaTarget{OS: "linux", Arch: "x86_64"}},
+		{"org.lwjgl:lwjgl-sdl:3.4.3", vanillaTarget{OS: "windows", Arch: "aarch64"}},
+		{"org.lwjgl:lwjgl-vulkan:3.4.3", arm},
+		{"org.lwjgl:lwjgl-sdl:../../bad", arm},
+		{"evil:lwjgl-sdl:3.4.3", arm},
+	} {
+		if got, ok := lwjglLinuxARM64Fallback(tc.name, tc.target); ok || got != "" {
+			t.Fatalf("unexpected fallback for %s/%+v: %q", tc.name, tc.target, got)
+		}
+	}
+}
+
+func TestPreferMojangARM64Natives(t *testing.T) {
+	java := MojangLibrary{Name: "org.lwjgl:lwjgl:3.4.3"}
+	arm := MojangLibrary{Name: "org.lwjgl:lwjgl:3.4.3:natives-linux-arm64"}
+	if mojangHasARM64Native(java, []MojangLibrary{java}) {
+		t.Fatal("unexpected native classifier")
+	}
+	if !mojangHasARM64Native(java, []MojangLibrary{java, arm}) {
+		t.Fatal("Mojang ARM64 classifier must suppress fallback")
+	}
+}
+
+func TestFlattenLWJGLARM64Natives(t *testing.T) {
+	root := t.TempDir()
+	nested := "linux/arm64/org/lwjgl/liblwjgl.so"
+	dst := filepath.Join(root, filepath.FromSlash(nested))
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dst, []byte("native-content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	aliases, err := flattenLWJGLARM64Natives(root, []string{nested, "META-INF/license.txt", "windows/x64/org/lwjgl/lwjgl.dll"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(aliases) != 1 || aliases[0] != "liblwjgl.so" {
+		t.Fatalf("invalid aliases: %#v", aliases)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "liblwjgl.so"))
+	if err != nil || string(data) != "native-content" {
+		t.Fatalf("invalid alias: %q / %v", data, err)
+	}
+	if _, err := flattenLWJGLARM64Natives(root, []string{nested}); err == nil {
+		t.Fatal("collision should fail closed")
+	}
+}

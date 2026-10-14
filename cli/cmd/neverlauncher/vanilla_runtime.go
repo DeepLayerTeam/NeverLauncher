@@ -29,6 +29,7 @@ const (
 	defaultMojangVersionManifest = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 	defaultMojangAssetBase       = "https://resources.download.minecraft.net"
 	defaultMojangLibraryBase     = "https://libraries.minecraft.net"
+	defaultLWJGLMavenBase        = "https://repo.maven.apache.org/maven2"
 )
 
 // 0.17.0v1 expands the actual-client Legacy Vanilla grid rather than treating
@@ -520,6 +521,28 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) {
 				continue
 			}
+			// Some Mojang 26.x manifests omit Linux ARM64 native classifiers
+			// altogether, while still listing the Java LWJGL modules. Do not
+			// substitute x86_64 binaries. Resolve the matching official Maven
+			// Central native artifact and verify its published checksum before
+			// it can enter the content-addressed client package.
+			if nativeRel, ok := lwjglLinuxARM64Fallback(lib.Name, target); ok {
+				if !mojangHasARM64Native(lib, metadata.Libraries) {
+					upstream := defaultLWJGLMavenBase + "/" + nativeRel
+					shaData, err := fetchLimitedBytes(ctx, client, upstream+".sha1", 256)
+					if err != nil {
+						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 checksum %s: %w", lib.Name, err)
+					}
+					sha := parseSHA1Sidecar(string(shaData))
+					if sha == "" {
+						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 checksum invalid for %s", lib.Name)
+					}
+					t := target
+					if err := addTask(vanillaDownloadTask{Path: "libraries/" + nativeRel, URL: upstream, SHA1: sha, Kind: "native-archive", TargetOS: []string{target.OS}, NativeTarget: &t}); err != nil {
+						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 %s: %w", lib.Name, err)
+					}
+				}
+			}
 			classifierTemplate := nativeClassifierForTarget(lib.Natives, target.OS)
 			if classifierTemplate == "" {
 				continue
@@ -641,6 +664,19 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			if err != nil {
 				_ = os.RemoveAll(stagingDir)
 				return vanillaInstallResult{}, fmt.Errorf("native extraction %s: %w", task.Path, err)
+			}
+			// LWJGL's native ARM64 archives store the shared objects below
+			// linux/arm64/org/lwjgl/*.so. Unlike classifiers explicitly listed
+			// in Mojang's version metadata, these supplemental archives are
+			// absent from the JVM classpath, so also publish safe flat aliases
+			// for java.library.path / org.lwjgl.librarypath resolution.
+			if target.OS == "linux" && target.Arch == "aarch64" && strings.HasSuffix(task.Path, "-natives-linux-arm64.jar") && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") {
+				aliases, aliasErr := flattenLWJGLARM64Natives(stagingDir, extracted)
+				if aliasErr != nil {
+					_ = os.RemoveAll(stagingDir)
+					return vanillaInstallResult{}, fmt.Errorf("LWJGL ARM64 aliases: %w", aliasErr)
+				}
+				extracted = append(extracted, aliases...)
 			}
 			for _, rel := range extracted {
 				full := filepath.Join(stagingDir, filepath.FromSlash(rel))
@@ -1434,6 +1470,84 @@ func nativeClassifierForTarget(natives map[string]string, osName string) string 
 		return natives["macos"]
 	}
 	return ""
+}
+
+// lwjglLinuxARM64Fallback describes only native LWJGL modules with published
+// ARM64 classifiers. This is not a generic fallback for missing Mojang libraries:
+// missing or malformed upstream checksums cause installation to fail closed.
+func flattenLWJGLARM64Natives(root string, extracted []string) ([]string, error) {
+	aliases := []string{}
+	for _, rel := range extracted {
+		clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
+		if !strings.HasPrefix(clean, "linux/arm64/org/lwjgl/") || !strings.HasSuffix(clean, ".so") {
+			continue
+		}
+		base := path.Base(clean)
+		if strings.ContainsAny(base, "\\/") || base == "." || base == ".." {
+			return nil, fmt.Errorf("invalid LWJGL native name: %s", base)
+		}
+		from, err := secureClientDestination(root, clean)
+		if err != nil {
+			return nil, err
+		}
+		to, err := secureClientDestination(root, base)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := os.Lstat(to); err == nil {
+			return nil, fmt.Errorf("LWJGL native filename collision: %s", base)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		data, err := os.ReadFile(from)
+		if err != nil {
+			return nil, err
+		}
+		if int64(len(data)) > maxCompatibilityNativeEntry {
+			return nil, fmt.Errorf("oversized LWJGL native alias: %s", base)
+		}
+		if err := writeAtomicBytes(to, data, 0o644); err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, base)
+	}
+	return aliases, nil
+}
+
+func lwjglLinuxARM64Fallback(name string, target vanillaTarget) (string, bool) {
+	if target.OS != "linux" || target.Arch != "aarch64" {
+		return "", false
+	}
+	parts := strings.Split(name, ":")
+	if len(parts) != 3 || parts[0] != "org.lwjgl" {
+		return "", false
+	}
+	switch parts[1] {
+	case "lwjgl", "lwjgl-freetype", "lwjgl-glfw", "lwjgl-jemalloc", "lwjgl-openal", "lwjgl-opengl", "lwjgl-sdl", "lwjgl-shaderc", "lwjgl-spvc", "lwjgl-stb", "lwjgl-tinyfd", "lwjgl-vma":
+	default:
+		return "", false // e.g. lwjgl-vulkan does not publish an ordinary native JAR
+	}
+	if !regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:[-.][A-Za-z0-9]+)*$`).MatchString(parts[2]) {
+		return "", false
+	}
+	module, ver := parts[1], parts[2]
+	return "org/lwjgl/" + module + "/" + ver + "/" + module + "-" + ver + "-natives-linux-arm64.jar", true
+}
+
+// Prefer exactly the classifiers supplied by Mojang whenever present.
+func mojangHasARM64Native(lib MojangLibrary, all []MojangLibrary) bool {
+	for name := range lib.Downloads.Classifiers {
+		if name == "natives-linux-arm64" || name == "natives-linux-aarch64" {
+			return true
+		}
+	}
+	prefix := lib.Name + ":natives-linux-arm64"
+	for _, entry := range all {
+		if entry.Name == prefix || entry.Name == lib.Name+":natives-linux-aarch64" {
+			return true
+		}
+	}
+	return false
 }
 
 func isClassifiedNativeLibrary(name string) bool {
