@@ -422,11 +422,12 @@ pub async fn resolve_compatibility(
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
-    // macOS requires SDL/GLFW UI initialization on AppKit's primordial
-    // thread. The official launcher can provide this via launcher traits,
-    // but a standalone custom launcher cannot assume the JVM metadata does.
-    // Only inject it for macOS and never duplicate an upstream flag.
-    ensure_macos_first_thread(&mut jvm_args, &environment.os);
+    // Legacy GLFW requires the macOS primordial AppKit thread. Modern 26.x
+    // clients initialize SDL 3 themselves; forcing -XstartOnFirstThread
+    // regressed previously successful macOS/26.3 Vanilla certification.
+    // Respect an explicitly supplied upstream flag in both cases.
+    let uses_sdl3_client = layers.iter().any(|(id, _, _)| id.starts_with("26."));
+    ensure_macos_first_thread(&mut jvm_args, &environment.os, uses_sdl3_client);
     if is_neoforge || is_modern_forge {
         // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
         // Keep Mojang's base client on the legacy classpath, but prevent
@@ -956,8 +957,8 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
     Ok(out)
 }
 
-fn ensure_macos_first_thread(jvm_args: &mut Vec<String>, os: &str) {
-    if os == "osx" && !jvm_args.iter().any(|arg| arg == "-XstartOnFirstThread") {
+fn ensure_macos_first_thread(jvm_args: &mut Vec<String>, os: &str, uses_sdl3_client: bool) {
+    if os == "osx" && !uses_sdl3_client && !jvm_args.iter().any(|arg| arg == "-XstartOnFirstThread") {
         jvm_args.push("-XstartOnFirstThread".to_string());
     }
 }
@@ -1243,13 +1244,21 @@ mod tests {
     }
 
     #[test]
-    fn macos_sdl_launch_requires_first_thread_exactly_once() {
-        let mut args = vec!["-Xmx1024m".to_string()];
-        ensure_macos_first_thread(&mut args, "linux");
-        assert_eq!(args, ["-Xmx1024m"]);
-        ensure_macos_first_thread(&mut args, "osx");
-        ensure_macos_first_thread(&mut args, "osx");
-        assert_eq!(args, ["-Xmx1024m", "-XstartOnFirstThread"]);
+    fn macos_legacy_glfw_requires_first_thread_but_modern_sdl3_does_not() {
+        let mut legacy = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(&mut legacy, "linux", false);
+        assert_eq!(legacy, ["-Xmx1024m"]);
+        ensure_macos_first_thread(&mut legacy, "osx", false);
+        ensure_macos_first_thread(&mut legacy, "osx", false);
+        assert_eq!(legacy, ["-Xmx1024m", "-XstartOnFirstThread"]);
+
+        let mut sdl3 = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(&mut sdl3, "osx", true);
+        assert_eq!(sdl3, ["-Xmx1024m"]);
+        // An upstream flag is preserved rather than silently overridden.
+        let mut upstream = vec!["-XstartOnFirstThread".to_string()];
+        ensure_macos_first_thread(&mut upstream, "osx", true);
+        assert_eq!(upstream, ["-XstartOnFirstThread"]);
     }
 
     #[tokio::test]

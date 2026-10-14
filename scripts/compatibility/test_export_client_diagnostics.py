@@ -34,6 +34,23 @@ class ClientDiagnosticsTest(unittest.TestCase):
                 self.assertNotIn(secret, data)
             self.assertIn("[REDACTED]", data)
 
+    def test_native_crash_report_is_bounded_and_redacted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = Path(tmp) / "runtime"
+            client = runtime / "materialized-client"
+            client.mkdir(parents=True)
+            (client / "hs_err_pid123.log").write_text(
+                "Native JVM crash\n" + "X" * (MODULE.MAX_BYTES + 20) +
+                "\n--accessToken DO_NOT_DISCLOSE\n", encoding="utf-8"
+            )
+            output = runtime / "client-diagnostics.txt"
+            MODULE.export(runtime, output)
+            data = output.read_text(encoding="utf-8")
+            self.assertIn("native crash report", data)
+            self.assertIn("[REDACTED]", data)
+            self.assertNotIn("DO_NOT_DISCLOSE", data)
+            self.assertNotIn("Native JVM crash", data)  # beyond bounded tail
+
     def test_missing_log_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             runtime = Path(tmp) / "runtime"

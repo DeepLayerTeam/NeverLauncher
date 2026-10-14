@@ -785,6 +785,25 @@ pub async fn certify_vanilla_compatibility(
         }
     };
     let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
+    // Save a bounded termination marker on failure. A JVM terminated by a
+    // native signal on Unix often has no Java stack trace and status.code()
+    // is None; previously macOS SDL/GLFW crashes left no useful evidence.
+    if !timed_out && !success {
+        let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
+            .map_err(|e| format!("cannot append certification exit diagnostics: {e}"))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            let signal = status.as_ref().and_then(|value| value.signal());
+            writeln!(diagnostics, "--- runtime exit --- code={:?} signal={:?}",
+                status.as_ref().and_then(|value| value.code()), signal)
+                .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
+        }
+        #[cfg(not(unix))]
+        writeln!(diagnostics, "--- runtime exit --- code={:?}",
+            status.as_ref().and_then(|value| value.code()))
+            .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
+    }
     let exit_code = status.and_then(|value| value.code());
     // 0xE3 is the deliberate NeverGuard fail-closed termination code. Surface
     // its bounded reason in the client certification artifact instead of a

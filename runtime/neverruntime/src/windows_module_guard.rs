@@ -1364,10 +1364,34 @@ mod imp {
             .map(|module| (module.base_address, module.normalized_path.as_str()))
             .collect::<HashMap<_, _>>();
         if observed_map.len() != expected.len() {
+            // Count-only errors did not show whether the Sensor missed a
+            // loader notification or whether a previously measured DLL was
+            // unexpectedly unloaded. Hash the paths to avoid disclosing CI
+            // home directories or installation paths in uploaded diagnostics.
+            // This is diagnostic only: any difference still fails closed.
+            let mut added = observed_map
+                .iter()
+                .filter(|(base, _)| !expected.contains_key(*base))
+                .map(|(base, path)| (*base, *path))
+                .collect::<Vec<_>>();
+            added.sort_unstable_by_key(|(base, _)| *base);
+            let missing = expected.keys().filter(|base| !observed_map.contains_key(*base)).count();
+            let samples = added
+                .iter()
+                .take(4)
+                .map(|(base, path)| {
+                    let fingerprint = hex::encode(Sha256::digest(path.as_bytes()));
+                    format!("0x{base:X}:{}", &fingerprint[..16])
+                })
+                .collect::<Vec<_>>()
+                .join(",");
             return Err(format!(
-                "Module Guard external snapshot drift: expected {} modules, observed {}",
+                "Module Guard external snapshot drift: expected {} modules, observed {}; unobserved loads={}, missing unloads={}, path digests=[{}]",
                 expected.len(),
-                observed_map.len()
+                observed_map.len(),
+                added.len(),
+                missing,
+                samples
             ));
         }
         for (base, expected_path) in expected {
