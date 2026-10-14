@@ -810,3 +810,18 @@ func TestForgeLegacyProfileAlreadyInheritedReportsNormalized(t *testing.T) {
 		t.Fatalf("already normalized profile was unnecessarily rewritten: %s", profile)
 	}
 }
+
+func TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, `<metadata><versioning><versions><version>20.5.0-beta</version><version>20.5.17-beta</version><version>20.4.250</version></versions></versioning></metadata>`)
+	}))
+	defer server.Close()
+	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest-stable", server.URL)
+	if err == nil || !strings.Contains(err.Error(), "latest-stable") || !strings.Contains(err.Error(), "20.5.17-beta") || !strings.Contains(err.Error(), "prerelease") {
+		t.Fatalf("prerelease-only upstream must remain failed and explain why: %v", err)
+	}
+	got, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest", server.URL)
+	if err != nil || got != "20.5.17-beta" {
+		t.Fatalf("explicit latest must still allow prerelease: %q %v", got, err)
+	}
+}

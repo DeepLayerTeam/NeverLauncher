@@ -339,3 +339,14 @@ func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.
 		t.Fatalf("exact Quilt loader mismatch: %s", entry.Loader.Version)
 	}
 }
+
+func TestQuiltUnsupportedMinecraftVersion404StaysFailClosed(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+	_, _, _, err := resolveMetaLoaderVersionWithEvidence(context.Background(), server.Client(), "quilt", server.URL, "1.14.3", "latest-stable")
+	if err == nil || !strings.Contains(err.Error(), "1.14.3") || !strings.Contains(err.Error(), "HTTP 404") || !strings.Contains(err.Error(), "compatibility index") {
+		t.Fatalf("missing Quilt release must fail with an actionable upstream error: %v", err)
+	}
+}

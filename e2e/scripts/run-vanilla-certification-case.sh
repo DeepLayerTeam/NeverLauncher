@@ -80,6 +80,34 @@ if not (minecraft.get('version') == mc and minecraft.get('loader') == 'vanilla' 
     raise SystemExit('invalid client package runtime settings')
 PY
 
+# The freshly materialized CI profile has not accepted the one-time
+# accessibility and multiplayer disclosures. Seed only the disposable test
+# profile; never change user installations or disable launch attestations.
+# Software-rendered Linux 1.17.1 occasionally crashes while tesselating the
+# initial world. Keep the renderer in its lowest-feature *real* graphics mode
+# so the E2E tests startup rather than host GPU acceleration.
+CLIENT_OPTIONS="$RUNTIME_DIR/materialized-client/options.txt"
+if [[ ! -e "$CLIENT_OPTIONS" ]]; then
+  cat > "$CLIENT_OPTIONS" <<'OPTIONS'
+onboardAccessibility:false
+skipMultiplayerWarning:true
+joinedFirstServer:true
+pauseOnLostFocus:false
+OPTIONS
+fi
+if [[ "$TARGET_OS" == "linux" && "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  # Minecraft options are plain key/value lines; append overrides to the
+  # one-use profile before its first launch, not to a production profile.
+  cat >> "$CLIENT_OPTIONS" <<'OPTIONS'
+graphicsMode:0
+renderDistance:2
+mipmapLevels:0
+maxFps:30
+entityShadows:false
+biomeBlendRadius:0
+OPTIONS
+fi
+
 printf '[vanilla-cert] launch actual Mojang client with Java %s on %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480

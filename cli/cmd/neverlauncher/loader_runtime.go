@@ -460,6 +460,12 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), minecraftVersion)
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
+		if strings.Contains(err.Error(), "HTTP 404") {
+			// Quilt/Fabric Meta returns 404 when the requested Minecraft version
+			// has no loader mapping. A valid HTTP 404 must never be converted to
+			// an invented fallback or accepted as a passing certification.
+			return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: Minecraft %s is not present in the upstream compatibility index (HTTP 404): %w", loader, minecraftVersion, err)
+		}
 		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: %w", loader, err)
 	}
 	var entries []loaderMetaEntry

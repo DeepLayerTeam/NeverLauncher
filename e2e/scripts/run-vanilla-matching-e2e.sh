@@ -151,6 +151,20 @@ skipMultiplayerWarning:true
 joinedFirstServer:true
 pauseOnLostFocus:false
 OPTIONS
+# The 1.17.1 matching-server target is rendered on llvmpipe in Xvfb.
+# It can successfully authenticate/join and then crash on its first chunk
+# tessellation. Exercise the real client in low-feature graphics mode; keep
+# the server join proof, exact-version checks and fail-closed result intact.
+if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  cat >> "$CLIENT_DIR/options.txt" <<'OPTIONS'
+graphicsMode:0
+renderDistance:2
+mipmapLevels:0
+maxFps:30
+entityShadows:false
+biomeBlendRadius:0
+OPTIONS
+fi
 
 printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
 export LIBGL_ALWAYS_SOFTWARE=1

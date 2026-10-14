@@ -1076,9 +1076,10 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 			// matching row previously pinned old 38.0.0/36.0.0 Forge releases
 			// whose launchers or resource packs fail with modern runtimes.
 			best := ""
+			bestCompatiblePrerelease := ""
 			for _, raw := range versions {
 				candidate := strings.TrimSpace(raw)
-				if candidate == "" || (!allowPrerelease && isPrereleaseVersion(candidate)) {
+				if candidate == "" {
 					continue
 				}
 				matches := false
@@ -1088,7 +1089,16 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 				default:
 					matches = neoForgeVersionMatchesMinecraft(candidate, minecraftVersion)
 				}
-				if matches && (best == "" || compareForgeLikeVersions(candidate, best) > 0) {
+				if !matches {
+					continue
+				}
+				if isPrereleaseVersion(candidate) && !allowPrerelease {
+					if bestCompatiblePrerelease == "" || compareForgeLikeVersions(candidate, bestCompatiblePrerelease) > 0 {
+						bestCompatiblePrerelease = candidate
+					}
+					continue
+				}
+				if best == "" || compareForgeLikeVersions(candidate, best) > 0 {
 					best = candidate
 				}
 			}
@@ -1098,7 +1108,11 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 				}
 				return best, best, metadataURL, sourceSHA, nil
 			}
-			lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
+			if bestCompatiblePrerelease != "" {
+				lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s; upstream содержит только prerelease (например %s), который запрещён запрошенной stable-политикой", loader, requested, minecraftVersion, bestCompatiblePrerelease)
+			} else {
+				lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
+			}
 		}
 		if attempt+1 < semanticAttempts {
 			if err := sleepContext(ctx, compatibilityRetryDelay(nil, attempt)); err != nil {
