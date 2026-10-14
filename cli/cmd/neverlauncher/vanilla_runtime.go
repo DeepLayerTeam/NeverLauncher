@@ -1008,10 +1008,17 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	syncErr := out.Sync()
 	closeErr := out.Close()
 	totalWritten := resumeOffset + written
-	if copyErr != nil || syncErr != nil || closeErr != nil {
-		// Keep a regular partial file. A later invocation can safely resume it from
-		// the exact byte offset because the final Mojang SHA-1 remains mandatory.
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %v %v %v", task.Path, copyErr, syncErr, closeErr)
+	// Preserve the original transport error for the narrow caller-side retry
+	// policy. A formatted %v string loses errors.Is/As classification.
+	// Keep partial bytes for a later SHA-1-checked recovery attempt.
+	if copyErr != nil {
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %w (sync=%v close=%v)", task.Path, copyErr, syncErr, closeErr)
+	}
+	if syncErr != nil {
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %w (close=%v)", task.Path, syncErr, closeErr)
+	}
+	if closeErr != nil {
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %w", task.Path, closeErr)
 	}
 	gotSHA1 := hex.EncodeToString(h1.Sum(nil))
 	gotSHA256 := hex.EncodeToString(h256.Sum(nil))

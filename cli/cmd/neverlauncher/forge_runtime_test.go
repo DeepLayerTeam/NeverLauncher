@@ -825,3 +825,64 @@ func TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable(t *testing.T) {
 		t.Fatalf("explicit latest must still allow prerelease: %q %v", got, err)
 	}
 }
+
+// Interrupted Forge CDN transfers are retried within one materialization.
+// The recovered file still has to match the publisher's exact SHA-1.
+func TestForgeInstallerTransportRecovery(t *testing.T) {
+	payload := bytes.Repeat([]byte("forge-installer-content"), 4096)
+	digest := sha1HexLocal(payload)
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := requests.Add(1)
+		w.Header().Set("Content-Length", fmt.Sprint(len(payload)))
+		if n == 1 {
+			// An early EOF after a valid HTTP 200 must never be committed.
+			_, _ = w.Write(payload[:1024])
+			return
+		}
+		_, _ = w.Write(payload)
+	}))
+	defer server.Close()
+	root := t.TempDir()
+	task := vanillaDownloadTask{Path: "installers/forge.jar", URL: server.URL + "/installer.jar", SHA1: digest, Kind: "forge-installer"}
+	result, err := downloadForgeInstallerRecoveringTransport(context.Background(), server.Client(), task, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requests.Load() != 2 || result.SHA1 != digest || result.Size != int64(len(payload)) {
+		t.Fatalf("recovery must fetch exactly two complete verified attempts: requests=%d result=%+v", requests.Load(), result)
+	}
+	final, err := os.ReadFile(filepath.Join(root, "installers", "forge.jar"))
+	if err != nil || !bytes.Equal(final, payload) {
+		t.Fatalf("recovered file was not committed atomically: %v", err)
+	}
+}
+
+func TestForgeInstallerTransportRecoveryDoesNotRetryIntegrityOrHTTPFailures(t *testing.T) {
+	for _, scenario := range []string{"checksum", "http404", "unverified"} {
+		t.Run(scenario, func(t *testing.T) {
+			var requests atomic.Int32
+			payload := []byte("rejected installer")
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
+				if scenario == "http404" {
+					http.NotFound(w, r)
+					return
+				}
+				if scenario == "unverified" {
+					w.Header().Set("Content-Length", fmt.Sprint(len(payload)*2))
+				}
+				_, _ = w.Write(payload)
+			}))
+			defer server.Close()
+			digest := sha1HexLocal([]byte("other bytes"))
+			if scenario == "unverified" {
+				digest = ""
+			}
+			_, err := downloadForgeInstallerRecoveringTransport(context.Background(), server.Client(), vanillaDownloadTask{Path: "forge.jar", URL: server.URL + "/installer.jar", SHA1: digest}, t.TempDir())
+			if err == nil || requests.Load() != 1 {
+				t.Fatalf("must fail once without retry for %s: requests=%d err=%v", scenario, requests.Load(), err)
+			}
+		})
+	}
+}

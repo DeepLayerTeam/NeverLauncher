@@ -122,13 +122,13 @@ if [[ "$TARGET_OS" == "linux" ]]; then
       --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
       > "$RUNTIME_DIR/vanilla-certification.json"
 else
-  "$NEVERRUNTIME_BIN" certify-vanilla \
+  certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \
+    certify-vanilla \
     --root "$RUNTIME_DIR/materialized-client" \
     --version "$MINECRAFT_VERSION" \
     --java "$JAVA_BIN" \
     --required-java-major "$JAVA_MAJOR" \
-    --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
-    > "$RUNTIME_DIR/vanilla-certification.json"
+    --max-runtime-seconds "$MAX_RUNTIME_SECONDS"
 fi
 
 python3 - "$RUNTIME_DIR/vanilla-certification.json" "$MINECRAFT_VERSION" "$JAVA_MAJOR" <<'PY'

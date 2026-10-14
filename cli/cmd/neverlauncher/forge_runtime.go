@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -302,8 +303,18 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if loader != "forge" && loader != "neoforge" {
 		return forgeMaterializeResult{}, fmt.Errorf("поддерживаются только Forge и NeoForge, получен %s", loader)
 	}
-	if opts.HTTPClient == nil {
+	defaultInstallerClient := opts.HTTPClient == nil
+	if defaultInstallerClient {
 		opts.HTTPClient = secureHTTPClient()
+	}
+	// Slow Forge Maven responses can spend minutes streaming large installers.
+	// Only extend the full-body timeout for the default production client; test
+	// and caller-supplied HTTP clients retain their explicitly chosen limits.
+	installerClient := opts.HTTPClient
+	if defaultInstallerClient {
+		extended := *opts.HTTPClient
+		extended.Timeout = 8 * time.Minute
+		installerClient = &extended
 	}
 	if opts.ProcessorTimeout <= 0 {
 		opts.ProcessorTimeout = 10 * time.Minute
@@ -399,7 +410,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 				if opts.LoaderCacheOnly {
 					return forgeMaterializeResult{}, fmt.Errorf("%s cache-only installer recovery: %w", loader, restoreErr)
 				}
-				downloaded, downloadErr := downloadPinnedSHA256Artifact(ctx, opts.HTTPClient, opts.ClientDir, installerRel, installerURL, pinned.PayloadSHA256, loader+"-installer", maxCompatibilityArtifact)
+				downloaded, downloadErr := downloadPinnedSHA256Artifact(ctx, installerClient, opts.ClientDir, installerRel, installerURL, pinned.PayloadSHA256, loader+"-installer", maxCompatibilityArtifact)
 				if downloadErr != nil {
 					return forgeMaterializeResult{}, fmt.Errorf("%s pinned installer download: %w", loader, downloadErr)
 				}
@@ -430,7 +441,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		if installerSHA1 != "" && !validSHA1Hex(installerSHA1) {
 			return forgeMaterializeResult{}, fmt.Errorf("%s installer SHA-1 некорректен", loader)
 		}
-		installerFile, err = downloadVanillaArtifact(ctx, opts.HTTPClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
+		installerFile, err = downloadForgeInstallerRecoveringTransport(ctx, installerClient, vanillaDownloadTask{Path: installerRel, URL: installerURL, SHA1: installerSHA1, Kind: loader + "-installer"}, opts.ClientDir)
 		if err != nil {
 			return forgeMaterializeResult{}, fmt.Errorf("%s installer download: %w", loader, err)
 		}
@@ -1186,6 +1197,34 @@ func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataUR
 		}
 	}
 	return nil, fmt.Errorf("metadata GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
+}
+
+// downloadForgeInstallerRecoveringTransport retries only interrupted HTTP body
+// transfers of SHA-1-pinned installers. The vanilla artifact downloader keeps
+// incomplete bytes in .nlpart and atomically publishes only a hash-verified
+// final jar. Unknown-size partial files restart cleanly on the next attempt.
+// Never retry bad checksums, rejected paths, 404s or cancelled operations.
+func downloadForgeInstallerRecoveringTransport(ctx context.Context, client *http.Client, task vanillaDownloadTask, root string) (vanillaDownloadedFile, error) {
+	const attempts = 3
+	for attempt := 0; attempt < attempts; attempt++ {
+		file, err := downloadVanillaArtifact(ctx, client, task, root)
+		if err == nil {
+			return file, nil
+		}
+		if ctx.Err() != nil {
+			return vanillaDownloadedFile{}, ctx.Err()
+		}
+		var networkError net.Error
+		transient := errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) ||
+			errors.Is(err, io.EOF) || (errors.As(err, &networkError) && networkError.Timeout())
+		if !validSHA1Hex(task.SHA1) || !transient || attempt == attempts-1 {
+			return vanillaDownloadedFile{}, err
+		}
+		if sleepErr := sleepContext(ctx, compatibilityRetryDelay(nil, attempt)); sleepErr != nil {
+			return vanillaDownloadedFile{}, sleepErr
+		}
+	}
+	return vanillaDownloadedFile{}, errors.New("unreachable installer recovery state")
 }
 
 func forgeInstallerURL(loader, minecraftVersion, artifactVersion string) string {
