@@ -55,7 +55,12 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
-          java-version: ${{ matrix.javaMajor }}
+          # Forge 1.16.3/1.16.4 bundle ModLauncher 8.0.x, which references
+          # the one-argument ManifestEntryVerifier constructor removed in
+          # Java 8u321. This compatibility-only job must use the original
+          # supported Java 8 update; other targets retain current patched Java.
+          # Never use this retired JDK for production/authenticated workloads.
+          java-version: ${{ matrix.loader == 'forge' && (matrix.minecraft == '1.16.3' || matrix.minecraft == '1.16.4') && '8.0.312+7' || matrix.javaMajor }}
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash
@@ -182,7 +187,12 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
-          java-version: ${{ matrix.javaMajor }}
+          # Forge 1.16.3/1.16.4 bundle ModLauncher 8.0.x, which references
+          # the one-argument ManifestEntryVerifier constructor removed in
+          # Java 8u321. This compatibility-only job must use the original
+          # supported Java 8 update; other targets retain current patched Java.
+          # Never use this retired JDK for production/authenticated workloads.
+          java-version: ${{ matrix.loader == 'forge' && (matrix.minecraft == '1.16.3' || matrix.minecraft == '1.16.4') && '8.0.312+7' || matrix.javaMajor }}
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
         shell: bash

@@ -997,6 +997,10 @@ func TestLWJGLLinuxARM64Fallback(t *testing.T) {
 	if got, ok := lwjglLinuxARM64Fallback("org.lwjgl:lwjgl-sdl:3.4.3", arm); !ok || got != want {
 		t.Fatalf("ARM64 SDL path = %q, %v; want %q", got, ok, want)
 	}
+	core := "org/lwjgl/lwjgl/3.4.1/lwjgl-3.4.1-natives-linux-arm64.jar"
+	if got, ok := lwjglLinuxARM64Fallback("org.lwjgl:lwjgl:3.4.1:unsafe", arm); !ok || got != core {
+		t.Fatalf("NeoForge ARM64 unsafe core = %q, %v; want %q", got, ok, core)
+	}
 	for _, tc := range []struct {
 		name   string
 		target vanillaTarget
@@ -1004,6 +1008,8 @@ func TestLWJGLLinuxARM64Fallback(t *testing.T) {
 		{"org.lwjgl:lwjgl-sdl:3.4.3", vanillaTarget{OS: "linux", Arch: "x86_64"}},
 		{"org.lwjgl:lwjgl-sdl:3.4.3", vanillaTarget{OS: "windows", Arch: "aarch64"}},
 		{"org.lwjgl:lwjgl-vulkan:3.4.3", arm},
+		{"org.lwjgl:lwjgl:3.4.1:malicious", arm},
+		{"org.lwjgl:lwjgl-sdl:3.4.3:unsafe", arm},
 		{"org.lwjgl:lwjgl-sdl:../../bad", arm},
 		{"evil:lwjgl-sdl:3.4.3", arm},
 	} {

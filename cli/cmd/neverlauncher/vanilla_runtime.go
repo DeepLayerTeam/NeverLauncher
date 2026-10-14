@@ -1519,6 +1519,14 @@ func lwjglLinuxARM64Fallback(name string, target vanillaTarget) (string, bool) {
 		return "", false
 	}
 	parts := strings.Split(name, ":")
+	// NeoForge 26.x can ship the LWJGL core as
+	// org.lwjgl:lwjgl:<version>:unsafe. The Java artifact still needs the
+	// *unclassified* core native archive, otherwise its early display fails
+	// before Minecraft's main class starts on Linux ARM64. Do not generalize
+	// this rule to other classifiers or Maven groups.
+	if len(parts) == 4 && parts[0] == "org.lwjgl" && parts[1] == "lwjgl" && parts[3] == "unsafe" {
+		parts = parts[:3]
+	}
 	if len(parts) != 3 || parts[0] != "org.lwjgl" {
 		return "", false
 	}

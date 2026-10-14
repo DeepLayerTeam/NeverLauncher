@@ -422,6 +422,11 @@ pub async fn resolve_compatibility(
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
+    // macOS requires SDL/GLFW UI initialization on AppKit's primordial
+    // thread. The official launcher can provide this via launcher traits,
+    // but a standalone custom launcher cannot assume the JVM metadata does.
+    // Only inject it for macOS and never duplicate an upstream flag.
+    ensure_macos_first_thread(&mut jvm_args, &environment.os);
     if is_neoforge || is_modern_forge {
         // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
         // Keep Mojang's base client on the legacy classpath, but prevent
@@ -951,6 +956,12 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
     Ok(out)
 }
 
+fn ensure_macos_first_thread(jvm_args: &mut Vec<String>, os: &str) {
+    if os == "osx" && !jvm_args.iter().any(|arg| arg == "-XstartOnFirstThread") {
+        jvm_args.push("-XstartOnFirstThread".to_string());
+    }
+}
+
 fn ensure_neoforge_bootstrap_ignores_base_client(jvm_args: &mut Vec<String>, client_jar: &str) -> Result<(), String> {
     let file_name = client_jar
         .rsplit('/')
@@ -1229,6 +1240,16 @@ mod tests {
         let _ = stdfs::remove_dir_all(&root);
         stdfs::create_dir_all(&root).expect("mkdir");
         root
+    }
+
+    #[test]
+    fn macos_sdl_launch_requires_first_thread_exactly_once() {
+        let mut args = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(&mut args, "linux");
+        assert_eq!(args, ["-Xmx1024m"]);
+        ensure_macos_first_thread(&mut args, "osx");
+        ensure_macos_first_thread(&mut args, "osx");
+        assert_eq!(args, ["-Xmx1024m", "-XstartOnFirstThread"]);
     }
 
     #[tokio::test]
