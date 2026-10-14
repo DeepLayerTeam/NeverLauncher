@@ -730,6 +730,8 @@ jobs:
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
       - name: Federation PostgreSQL migration + restart + multi-instance E2E
         run: bash e2e/scripts/run-federation-postgres-e2e.sh
+      - name: Validate durable PostgreSQL bootstrap and fail-closed retries
+        run: python3 -m unittest discover -s e2e/scripts -p test_durable_postgres_startup.py -v
       - name: Durable 0.21.3 PostgreSQL multi-replica restart + fencing E2E
         run: bash e2e/scripts/run-durable-boundaries-0213-e2e.sh
       - name: Device Trust 0.12.9 to 0.12.10 migration E2E
@@ -968,6 +970,7 @@ jobs:
             e2e/runtime/spark-paper-build.json
             e2e/runtime/bytesocks-build.json
             e2e/runtime/bridge-diagnostics.json
+            e2e/runtime-durable-0213/*.log
             e2e/runtime/validate-*.json
             e2e/runtime/join-*.json
             e2e/runtime/revoke-*.json

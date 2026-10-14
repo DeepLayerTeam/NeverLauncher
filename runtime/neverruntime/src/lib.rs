@@ -703,7 +703,7 @@ pub async fn certify_vanilla_compatibility(
         if port == 0 {
             return Err("Vanilla certification matching server port должен быть > 0".to_string());
         }
-        if minecraft_supports_quick_play_multiplayer(&version) {
+        if minecraft_supports_quick_play_for_resolution(&version, &resolution.inheritance_chain) {
             // Minecraft 1.20+ dropped the legacy --server/--port join arguments.
             // Use the game's native Quick Play path for an actual client join;
             // the matching-server gate still requires proof from server logs.
@@ -1233,6 +1233,16 @@ fn parse_java_major_version(output: &str) -> Option<u32> {
     if first == 1 { parts.next()?.parse::<u32>().ok() } else { Some(first) }
 }
 
+// Modded profiles use IDs such as "quilt-loader-0.30.1-1.21.1", not
+// Mojang release numbers. Resolve Quick Play capabilities against the root
+// (vanilla) version of the verified inheritsFrom chain, never the modded ID.
+// Otherwise a 1.21.x loader client silently receives removed --server/--port
+// arguments, stays alive, and never joins the actual loader-native server.
+fn minecraft_supports_quick_play_for_resolution(version: &str, inheritance_chain: &[String]) -> bool {
+    let vanilla_version = inheritance_chain.first().map(String::as_str).unwrap_or(version);
+    minecraft_supports_quick_play_multiplayer(vanilla_version)
+}
+
 fn minecraft_supports_quick_play_multiplayer(version: &str) -> bool {
     // Release 1.20 and newer (including the 26.x year-based version scheme)
     // support --quickPlayMultiplayer host:port. Older versions use --server/--port.
@@ -1276,6 +1286,29 @@ async fn set_executable_if_needed(_path: &Path, _executable: bool) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn modded_profile_uses_root_minecraft_release_for_quick_play() {
+        for profile in [
+            "fabric-loader-0.19.5-1.21.1",
+            "quilt-loader-0.30.1-1.21.1",
+            "1.21.1-forge-52.1.0",
+            "neoforge-21.1.0-1.21.1",
+        ] {
+            let chain = vec!["1.21.1".to_string(), profile.to_string()];
+            assert!(minecraft_supports_quick_play_for_resolution(profile, &chain), "{profile}");
+            if !profile.starts_with("1.") {
+                assert!(!minecraft_supports_quick_play_multiplayer(profile), "regression must exercise modded IDs");
+            }
+        }
+        let legacy = vec!["1.16.4".to_string(), "1.16.4-forge-35.1.37".to_string()];
+        assert!(!minecraft_supports_quick_play_for_resolution(&legacy[1], &legacy));
+        let vanilla = vec!["26.3".to_string()];
+        assert!(minecraft_supports_quick_play_for_resolution("26.3", &vanilla));
+        // A malformed or incomplete inheritance chain cannot infer support
+        // merely from a version-looking suffix on the loader profile.
+        assert!(!minecraft_supports_quick_play_for_resolution("quilt-loader-0.30.1-1.21.1", &[]));
+    }
 
     #[test]
     fn matching_server_uses_quick_play_only_for_supported_minecraft_versions() {

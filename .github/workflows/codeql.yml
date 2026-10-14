@@ -23,8 +23,16 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: go
-          build-mode: none
+          # Go requires an instrumented build. This repository has two modules,
+          # neither of which lives at the repository root.
+          build-mode: manual
           queries: security-and-quality
+      - name: Build both Go modules for CodeQL extraction
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd cli && go build ./...)
+          (cd services/api && go build ./...)
       - uses: github/codeql-action/analyze@v3
         with:
           category: /language:go

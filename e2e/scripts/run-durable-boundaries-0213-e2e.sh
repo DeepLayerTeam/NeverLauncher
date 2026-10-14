@@ -16,30 +16,88 @@ fi
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[durable-0213] required command missing: $1" >&2; exit 1; }; }
 for cmd in docker go; do need "$cmd"; done
 
+# Keep failure logs in a stable artifact directory. Do not print PostgreSQL
+# environment variables or the connection string into CI logs.
+EVIDENCE_DIR="$ROOT/e2e/runtime-durable-0213"
+mkdir -p "$EVIDENCE_DIR"
+START_LOG="$EVIDENCE_DIR/docker-start.log"
+READY_LOG="$EVIDENCE_DIR/postgres-readiness.log"
+
 cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
-cleanup
 
-echo "[durable-0213] starting isolated PostgreSQL"
-docker run -d --rm --name "$CONTAINER" \
-  -e POSTGRES_DB=neverlauncher \
-  -e POSTGRES_USER=neverlauncher \
-  -e POSTGRES_PASSWORD=neverlauncher \
-  -p "$PUBLISH_PORT" postgres:16-alpine >/dev/null
+postgres_diagnostics() {
+  echo "[durable-0213] PostgreSQL container diagnostics:" >&2
+  docker ps -a --filter "name=^/${CONTAINER}$" \
+    --format 'name={{.Names}} status={{.Status}} ports={{.Ports}}' >&2 || true
+  docker logs --tail 70 "$CONTAINER" >&2 || true
+}
+
+# On shared or congested CI runners Docker can transiently reject container
+# creation. The selected port is ephemeral, and each attempt must start a
+# fresh database. Keep the container after an unexpected exit until we have
+# captured its logs; cleanup removes it at script exit.
+STARTED=false
+for attempt in 1 2 3; do
+  cleanup
+  echo "[durable-0213] starting isolated PostgreSQL (attempt $attempt/3)"
+  if docker run -d --name "$CONTAINER" \
+      -e POSTGRES_DB=neverlauncher \
+      -e POSTGRES_USER=neverlauncher \
+      -e POSTGRES_PASSWORD=neverlauncher \
+      -p "$PUBLISH_PORT" postgres:16-alpine >"$START_LOG" 2>&1; then
+    if docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>>"$START_LOG" | grep -qx true; then
+      STARTED=true
+      break
+    fi
+    echo "[durable-0213] PostgreSQL exited immediately after container creation" >&2
+  else
+    echo "[durable-0213] docker run failed (attempt $attempt/3)" >&2
+  fi
+  cat "$START_LOG" >&2
+  postgres_diagnostics
+  if (( attempt < 3 )); then sleep "$attempt"; fi
+done
+if [[ "$STARTED" != true ]]; then
+  echo "[durable-0213] unable to start PostgreSQL after 3 attempts" >&2
+  exit 1
+fi
 
 if [[ -z "$PORT" ]]; then
-  PORT="$(docker port "$CONTAINER" 5432/tcp | awk -F: '/127\.0\.0\.1/ {print $NF; exit}')"
-  [[ "$PORT" =~ ^[0-9]+$ ]] || { echo "[durable-0213] unable to resolve published PostgreSQL port" >&2; exit 1; }
+  # docker inspect returns the actual mapped host port for both IPv4-only and
+  # dual-stack Docker configurations. A fixed port is never assumed.
+  PORT="$(docker inspect -f '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}' "$CONTAINER" 2>>"$START_LOG")" || {
+    cat "$START_LOG" >&2
+    postgres_diagnostics
+    echo "[durable-0213] could not inspect the published PostgreSQL port" >&2
+    exit 1
+  }
+  if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( 10#$PORT < 1 || 10#$PORT > 65535 )); then
+    postgres_diagnostics
+    echo "[durable-0213] Docker returned an invalid PostgreSQL host port" >&2
+    exit 1
+  fi
 fi
 DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:${PORT}/neverlauncher?sslmode=disable"
 
+READY=false
 for _ in $(seq 1 60); do
-  if docker exec "$CONTAINER" pg_isready -U neverlauncher -d neverlauncher >/dev/null 2>&1; then
+  if docker exec "$CONTAINER" pg_isready -U neverlauncher -d neverlauncher >"$READY_LOG" 2>&1; then
+    READY=true
+    break
+  fi
+  if [[ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)" != true ]]; then
+    echo "[durable-0213] PostgreSQL container terminated before becoming ready" >&2
     break
   fi
   sleep 1
 done
-docker exec "$CONTAINER" pg_isready -U neverlauncher -d neverlauncher >/dev/null
+if [[ "$READY" != true ]]; then
+  cat "$READY_LOG" >&2 || true
+  postgres_diagnostics
+  echo "[durable-0213] PostgreSQL did not become ready within 60 seconds" >&2
+  exit 1
+fi
 
 echo "[durable-0213] running multi-replica lease/restart/fencing tests"
 (
