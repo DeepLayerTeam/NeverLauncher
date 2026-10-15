@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
@@ -249,7 +249,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
@@ -305,7 +305,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
@@ -511,7 +511,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
@@ -659,7 +659,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
@@ -708,7 +708,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
       - uses: actions/setup-node@v4
@@ -1142,7 +1142,7 @@ jobs:
           if [[ -s guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md ]]; then
             cat guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: cli/go.sum
