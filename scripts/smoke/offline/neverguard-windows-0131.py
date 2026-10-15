@@ -90,5 +90,5 @@ require(ci, [
     "build-windows-desktop.ps1",
 ], "NeverGuard Windows CI")
 
-# Markdown security documentation is optional; enforcement is verified above.
+# Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[NeverLauncher] NeverGuard Windows authenticated IPC gate OK: {version}")

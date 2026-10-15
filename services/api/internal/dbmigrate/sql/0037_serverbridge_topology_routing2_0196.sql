@@ -1,7 +1,7 @@
--- NeverLauncher 0.19.6: ServerBridge Topology & Routing 2.
--- Authenticated heartbeats publish a signed routing snapshot. Handoffs are bound
--- to the current source+target runtime/routing proofs and fail closed on stale,
--- maintenance, draining, unhealthy or full targets.
+-- NeverLauncher 0.19.6: топология и маршрутизация ServerBridge 2. Аутентифицированные
+-- heartbeat публикуют подписанный снимок маршрутов. Передачи привязаны к актуальным
+-- доказательствам процессов и маршрутов источника и цели; устаревшие, обслуживаемые,
+-- выводимые из работы, нездоровые и заполненные цели отклоняются.
 
 ALTER TABLE server_bridge_nodes_v2
     ADD COLUMN IF NOT EXISTS routing_state TEXT NOT NULL DEFAULT 'unknown',

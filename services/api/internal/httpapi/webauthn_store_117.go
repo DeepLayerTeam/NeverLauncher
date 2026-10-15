@@ -61,8 +61,8 @@ type webauthnChallenge117 struct {
 type passkeyStore117 struct {
 	mu              sync.Mutex
 	credentials     map[string]passkeyCredential117 // id
-	credentialIndex map[string]string               // base64 credential id -> id
-	challenges      map[string]webauthnChallenge117 // token hash
+	credentialIndex map[string]string               // Идентификатор учётных данных в base64 → id.
+	challenges      map[string]webauthnChallenge117 // Хеш токена.
 	policies        map[string]string
 	persistent      *passkeyPostgres117
 }
@@ -291,7 +291,7 @@ func (p *passkeyPostgres117) createChallenge(userID, purpose string, challenge [
 	if userID != "" {
 		nullable = userID
 	}
-	// Bound table growth without making cleanup a separate scheduler dependency.
+	// Ограничивайте рост таблицы без отдельной зависимости от планировщика очистки.
 	_, _ = p.db.ExecContext(ctx, `DELETE FROM webauthn_challenges WHERE expires_at < now()-interval '1 hour' OR (used_at IS NOT NULL AND used_at < now()-interval '1 hour')`)
 	_, err = p.db.ExecContext(ctx, `INSERT INTO webauthn_challenges(id,token_hash,user_id,purpose,challenge,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,now(),now()+interval '5 minutes')`, id, tokenHash117(token), nullable, purpose, challenge, string(raw))
 	return token, err

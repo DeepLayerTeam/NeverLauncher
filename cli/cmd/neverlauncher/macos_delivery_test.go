@@ -228,9 +228,9 @@ func TestMacOSProductionEvidenceAdhocAndNotarized0154(t *testing.T) {
 			if err := verifyDeliveryManifest0151(dir, ver); err != nil {
 				t.Fatal(err)
 			}
-			// Synthetic Mach-O fixtures exercise manifest, hashing, notarization
-			// and dual-architecture policy without claiming genuine Apple signing.
-			// The real release path still requires native codesign/stapler/spctl.
+			// Искусственные фикстуры Mach-O проверяют манифест, хеширование, нотариальное
+			// заверение и правила двух архитектур, не выдавая их за настоящую подпись Apple.
+			// Реальный выпуск по-прежнему требует нативных codesign/stapler/spctl.
 			nativeCalls := 0
 			fixtureNativeVerifier := func(packagePath, teamID string) error {
 				if teamID != tc.team || !strings.HasSuffix(packagePath, ".zip") {

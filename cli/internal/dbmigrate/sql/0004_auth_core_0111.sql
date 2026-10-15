@@ -1,5 +1,5 @@
--- NeverLauncher 0.11.1 — normalized persistent authentication core.
--- PostgreSQL is the source of truth for sessions, refresh-token families and MFA.
+-- NeverLauncher 0.11.1: нормализованное постоянное ядро аутентификации.
+-- PostgreSQL — источник истины для сеансов, семейств refresh-токенов и MFA.
 
 CREATE TABLE IF NOT EXISTS auth_sessions (
     id TEXT PRIMARY KEY,

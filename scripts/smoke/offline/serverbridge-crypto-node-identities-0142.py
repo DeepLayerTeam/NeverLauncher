@@ -151,10 +151,10 @@ require(crypto_helper, [
     "invalid Ed25519 signature length",
 ], "ServerBridge E2E Ed25519 signer")
 
-# Regression for OpenSSL Ed25519 one-shot signing. stdin is not seekable on
-# affected OpenSSL builds and previously produced a zero-byte signature while
-# the E2E continued to an HTTP 401. Exercise the actual helper and verify the
-# resulting 64-byte signature against the generated public key.
+# Регрессионная проверка одноразовой подписи Ed25519 в OpenSSL. stdin на
+# некоторых сборках OpenSSL не поддерживает позиционирование и раньше
+# выдавал нулевую подпись, а E2E доходил до HTTP 401. Вызовите настоящий
+# помощник и проверьте 64-байтную подпись по созданному открытому ключу.
 with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
     td = Path(td)
     key = td / "node.pem"
@@ -171,17 +171,17 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-ed25519-") as td:
         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
     )
     def bash_path(path: Path) -> str:
-        # Git Bash accepts /d/... paths; Windows subprocess paths use D:\\... .
+        # Git Bash понимает пути /d/...; для подпроцессов Windows нужны D:\... .
         value = str(path.resolve())
         if sys.platform == "win32" and len(value) >= 3 and value[1] == ":" and value[2] in ("\\", "/"):
             return "/" + value[0].lower() + value[2:].replace("\\", "/")
         return value
 
     if sys.platform == "win32":
-        # Git Bash may expose /c/... temporary files to a native OpenSSL.exe,
-        # which then fails silently from the shell helper. On Windows verify
-        # the production cryptographic primitive directly using native paths.
-        # On Unix the regression still exercises serverbridge_node_sign itself.
+        # Git Bash может передать временные файлы /c/... нативному OpenSSL.exe,
+        # который молча завершится ошибкой. В Windows проверяйте производственную
+        # криптографическую операцию напрямую с нативными путями. В Unix
+        # регрессия по-прежнему проверяет сам serverbridge_node_sign.
         payload.write_text(canonical, encoding="utf-8")
         signed_process = subprocess.run(
             ["openssl", "pkeyutl", "-sign", "-rawin", "-inkey", str(key),

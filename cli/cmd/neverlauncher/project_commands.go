@@ -354,7 +354,7 @@ func handleSDK(args []string) error {
 		printJSON(map[string]any{"version": version, "sdkVersion": neverExtensionsSDKVersion02010, "api": neverExtensionsAPIVersion0210, "manifest": canonicalExtensionManifestName0201, "manifestSchema": "2.0", "generatedTypes": "sdk/api/extension-host-protocol.json + canonical OpenAPI", "sdks": sdks})
 		return nil
 	case "init":
-		// sdk init is a compatibility alias to the GA extension initializer.
+		// Команда sdk init — совместимый псевдоним инициализатора расширений GA.
 		return handleExtensionSDK02010("init", args[1:])
 	case "validate":
 		if len(args) < 2 {

@@ -135,5 +135,5 @@ func TestResolverRejectsIncompatiblePlatformAndAPI02011(t *testing.T) {
 	if _, err := r.Resolve(context.Background(), Scope{Scope: "global"}, []model.ExtensionUpdateRoot{{ExtensionID: id}}); err == nil {
 		t.Fatal("incompatible API/OS candidate was accepted")
 	}
-	_ = fmt.Sprintf("%v", time.Now()) // keep deterministic imports audited by gofmt/vet
+	_ = fmt.Sprintf("%v", time.Now()) // Детерминированные импорты проверяются инструментами gofmt/vet.
 }

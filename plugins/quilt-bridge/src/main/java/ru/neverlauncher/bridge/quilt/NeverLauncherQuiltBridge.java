@@ -153,9 +153,9 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
                 LOGGER.info("neverlauncher.join.allowed username={} serverId={} platform=quilt", login.username, serverId());
                 return CompletableFuture.completedFuture(null);
             }
-            // Quilt's login synchronizer may complete off the logical server thread.
-            // Disconnect on MinecraftServer's executor and keep the login gate blocked
-            // until that state transition has actually been applied.
+            // Синхронизатор входа Quilt может завершиться вне логического потока
+            // сервера. Выполняйте отключение через исполнитель MinecraftServer и
+            // блокируйте вход, пока переход состояния действительно не применён.
             return server.submit(() -> {
                 handler.disconnect(Text.literal(decision.userMessage()));
                 LOGGER.info("neverlauncher.join.denied username={} reason={} platform=quilt", login.username, decision.reason);
@@ -389,7 +389,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
 
     private static int executeMinecraftCommand(MinecraftServer server, String command) {
         server.getCommandManager().executeWithPrefix(server.getCommandSource(), command);
-        return 1; // successful submission; failures surface as exceptions
+        return 1; // Успешная отправка; ошибки передаются через исключения.
     }
 
     private static String safeUsername(String value) {

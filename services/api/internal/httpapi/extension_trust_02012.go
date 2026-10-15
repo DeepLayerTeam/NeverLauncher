@@ -88,8 +88,8 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 		writeError(w, 400, err.Error())
 		return
 	}
-	// Immediately quarantine every published artifact signed by this key. This
-	// makes revocation effective even for already-installed exact versions.
+	// Немедленно изолируйте все опубликованные артефакты, подписанные этим
+	// ключом. Так отзыв действует даже для уже установленных точных версий.
 	versions, listErr := s.Repo.SearchExtensionRegistry(r.Context(), model.ExtensionRegistrySearch{IncludeYanked: true})
 	if listErr == nil {
 		for _, item := range versions {
@@ -113,10 +113,10 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"key": key, "runtimeDisabled": blocked}})
 }
 
-// enforceExtensionTrustRuntime02012 closes the time-of-check/time-of-use gap for
-// already running registry extensions. A policy/key/quarantine change is applied
-// to the live host set immediately and persisted as an emergency disable so a
-// backend restart cannot resurrect an artifact rejected by current trust state.
+// enforceExtensionTrustRuntime02012 устраняет промежуток между проверкой и
+// использованием для работающих расширений реестра. Изменение политики, ключа
+// или карантина немедленно применяется к живым хостам и сохраняется как аварийное
+// отключение, чтобы перезапуск бэкенда не восстановил отвергнутый артефакт.
 func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source string) (int, error) {
 	installs, err := s.Repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
@@ -129,7 +129,7 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 		}
 		publication, err := s.Repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
 		if errors.Is(err, repository.ErrNotFound) {
-			continue // Local/legacy installation: registry trust policy does not own it.
+			continue // Локальная или устаревшая установка: политика доверия реестра на неё не распространяется.
 		}
 		if err != nil {
 			return blocked, err
@@ -328,10 +328,10 @@ func (s Server) importExtensionRecoveryState02012(ctx context.Context, state mod
 		return nil, errors.New("unsupported extension recovery schemaVersion")
 	}
 	counts := map[string]int{"publishers": 0, "keys": 0, "quarantine": 0, "pins": 0, "installs": 0, "emergencyDisables": 0}
-	// Import in a monotonic trust-safe order. Publisher records are temporarily
-	// activated only so their public keys can be inserted through the normal
-	// repository invariants; the exact active state is restored after keys.
-	// Revoked keys are never reactivated.
+	// Импортируйте в монотонном безопасном для доверия порядке. Издатели
+	// временно активируются только ради ввода их открытых ключей через
+	// обычные ограничения репозитория; после ключей восстанавливается
+	// точное состояние. Отозванные ключи никогда не активируются вновь.
 	publisherStates := make([]model.ExtensionRegistryPublisher, 0, len(state.Publishers))
 	for _, p := range state.Publishers {
 		publisherStates = append(publisherStates, p)
@@ -492,9 +492,9 @@ func (s Server) extensionRecoveryRestore02012(w http.ResponseWriter, r *http.Req
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"restored": counts, "stateSha256": backup.StateSHA256}})
 }
 
-// quarantineRejectedUpload02012 persists suspicious bytes into configured
-// storage before returning the rejection. This is intentionally best-effort at
-// the callsite: the artifact is never accepted even if forensic storage fails.
+// quarantineRejectedUpload02012 сохраняет подозрительные байты в настроенное
+// хранилище до возврата отказа. На месте вызова это намеренно необязательное
+// действие: артефакт не принимается даже при сбое криминалистического хранилища.
 func (s Server) quarantineRejectedUpload02012(ctx context.Context, tmpPath, uploadSHA, reason string, meta *model.ExtensionRegistryVersion) (model.ExtensionQuarantineEntry, error) {
 	id, err := randomID02012("q-")
 	if err != nil {

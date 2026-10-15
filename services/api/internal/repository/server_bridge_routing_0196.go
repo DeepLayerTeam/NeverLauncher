@@ -74,9 +74,9 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 	if n, _ := res.RowsAffected(); n != 1 {
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: active runtime changed during routing update", ErrConflict)
 	}
-	// Once a backend stops accepting routes, invalidate outstanding handoffs now
-	// instead of waiting for redemption. The captured target proof remains audit
-	// evidence, while no stale credential can enter a draining/unhealthy server.
+	// После прекращения приёма маршрутов серверной частью немедленно аннулируйте ещё не использованные
+	// передачи, не дожидаясь их погашения. Сохранённое доказательство цели остаётся для аудита, но
+	// устаревшие учётные данные уже не смогут попасть на перегруженный или неисправный сервер.
 	if !routing.AcceptingConnections || routing.State != "ready" || routing.Health == "unhealthy" {
 		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE target_node_id=$1 AND status='active'`, serverID, now.UTC()); err != nil {
 			return model.ServerBridgeRoutingSnapshot{}, err
@@ -148,10 +148,10 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 	return out, rows.Err()
 }
 
-// EnsureServerBridgeNodeRoutable is the final admission guard used by direct
-// validate-join and handoff consumers. A 0.19.6 backend cannot accept a player
-// merely because a launcher/session proof is valid; the exact runtime must also
-// still advertise a fresh, accepting and non-full route state.
+// EnsureServerBridgeNodeRoutable — последняя проверка допуска для прямой проверки подключения
+// и потребителей передачи. Серверная часть 0.19.6 не должна принимать игрока только потому,
+// что доказательство лаунчера и сеанса действительно: точный процесс обязан по-прежнему
+// публиковать актуальное состояние маршрута, принимающее подключения и не превышающее лимит.
 func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, now time.Time) error {
 	if err := r.check(); err != nil {
 		return err

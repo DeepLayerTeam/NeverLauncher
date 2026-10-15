@@ -91,8 +91,8 @@ func processTreeUsage(rootPID int) (int64, int, error) {
 	return rss, count, nil
 }
 
-// HardenBackendProcess prevents same-uid child processes from attaching to the
-// Backend with ptrace or reading its process memory through procfs on Linux.
+// HardenBackendProcess в Linux не позволяет дочерним процессам того же uid
+// прикрепляться к Backend через ptrace либо читать его память через procfs.
 func HardenBackendProcess() error {
 	_, _, errno := syscall.RawSyscall6(syscall.SYS_PRCTL, uintptr(4), uintptr(0), 0, 0, 0, 0) // PR_SET_DUMPABLE=0
 	if errno != 0 {

@@ -162,5 +162,5 @@ require(ci, [
     'cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows',
 ], "Windows Guard Attestation native CI")
 
-# Markdown security documentation is optional; enforcement is verified above.
+# Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[NeverLauncher] NeverGuard Guard Attestation + Backend verification 0.13.4 gate OK: {version}")

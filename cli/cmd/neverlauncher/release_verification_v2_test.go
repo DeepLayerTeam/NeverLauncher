@@ -95,7 +95,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatalf("unexpected trust state: %#v", s)
 	}
 
-	// A signed older release is rejected after 0.15.8 has been accepted.
+	// Подписанный старый релиз отклоняется после принятия версии 0.15.8.
 	if err := os.WriteFile(filepath.Join(bundle, "RELEASE_MANIFEST.json"), []byte("{\"version\":\"0.15.7\"}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal("expected anti-rollback rejection")
 	}
 
-	// Rotation advances trust epoch and makes the old release key verify-only.
+	// Ротация повышает эпоху доверия и переводит старый ключ выпуска в режим verify-only.
 	if _, err := rotateSecurityKey([]string{"rotate-key", "--registry-dir", registry, "--key", "release-signing"}); err != nil {
 		t.Fatal(err)
 	}
@@ -134,8 +134,8 @@ func TestReleaseVerificationV2TrustLifecycleAndAntiRollback(t *testing.T) {
 		t.Fatal("old key missing after rotation")
 	}
 
-	// A fresh verifier using the current policy can still verify a historical
-	// release with a verify-only key, but a later revocation blocks it.
+	// Новый проверяющий компонент с текущей политикой может проверить исторический
+	// выпуск ключом verify-only, но последующий отзыв блокирует его.
 	freshState := filepath.Join(tmp, "fresh-trust-state.json")
 	if _, err := verifyReleaseSignatureV20158(bundle, rootPub, freshState, policy2); err != nil {
 		t.Fatalf("verify-only historical key should verify before revocation: %v", err)

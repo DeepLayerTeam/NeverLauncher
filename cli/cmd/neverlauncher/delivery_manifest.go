@@ -249,18 +249,18 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 		}
 		name := item.Name()
 		if windowsSigningRequired0152(ver) && strings.Contains(strings.ToLower(name), "windows-amd64") {
-			// 0.15.2 keeps pre-signing x64 Guard CI aliases in the bundle for certification evidence,
-			// but they are not publishable delivery artifacts. Canonical signed delivery uses windows-x64.
+			// В 0.15.2 пакет сохраняет старые x64-псевдонимы Guard CI до подписания как доказательства сертификации, но
+			// публиковать их как поставочные артефакты нельзя. Канонический подписанный пакет использует windows-x64.
 			continue
 		}
 		if linuxProductionRequired0153(ver) && strings.Contains(strings.ToLower(name), "linux-amd64") {
-			// 0.15.3 keeps the historical x64 Guard CI alias only as certification evidence.
-			// Publishable Linux delivery uses canonical linux-x64/linux-arm64 names.
+			// В 0.15.3 старый псевдоним x64 Guard CI сохраняется только для сертификации.
+			// Публикуемые пакеты Linux используют канонические имена linux-x64/linux-arm64.
 			continue
 		}
 		if macOSProductionRequired0154(ver) && strings.Contains(strings.ToLower(name), "macos-universal") {
-			// 0.15.4 keeps the historical universal Guard CI package only as certification evidence.
-			// Publishable macOS delivery uses separately notarized macos-x64/macos-arm64 packages.
+			// В 0.15.4 старый универсальный пакет Guard CI сохраняется только для сертификации.
+			// Публикуемые пакеты macOS отдельно нотариально заверяются для macos-x64/macos-arm64.
 			continue
 		}
 		switch name {

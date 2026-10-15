@@ -5,11 +5,11 @@ import org.bukkit.Bukkit;
 import java.util.Locale;
 
 /**
- * Runtime discriminator for the Bukkit-compatible server family.
+ * Признак типа среды выполнения в семействе серверов, совместимых с Bukkit.
  *
- * The bridge deliberately compiles against the Bukkit/Spigot API only. Paper,
- * Purpur and Folia detection uses brand/class probes without linking their APIs,
- * so the same common runtime remains binary-compatible with plain CraftBukkit.
+ * Мост специально компилируется только с API Bukkit/Spigot. Paper, Purpur
+ * и Folia определяются по бренду или наличию классов без прямой привязки к
+ * их API, поэтому общая среда бинарно совместима и с обычным CraftBukkit.
  */
 public enum BukkitFamilyPlatform {
     BUKKIT("bukkit", "Bukkit"),

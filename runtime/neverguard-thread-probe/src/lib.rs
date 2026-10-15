@@ -65,9 +65,9 @@ unsafe fn create_private_executable_thread() {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i32 {
-    // Delay until Module Guard/Hook Engine have reconciled this newly loaded DLL.
-    // The later VirtualAlloc therefore has legitimate Memory Integrity provenance;
-    // the violation is specifically the thread start address in MEM_PRIVATE code.
+    // Дождитесь согласования вновь загруженной DLL в Module Guard/Hook Engine.
+    // Тогда более поздний VirtualAlloc имеет законное происхождение для Memory
+    // Integrity; конкретное нарушение — адрес начала потока в коде MEM_PRIVATE.
     let _ = thread::Builder::new()
         .name("neverguard-thread-probe".to_string())
         .spawn(|| {

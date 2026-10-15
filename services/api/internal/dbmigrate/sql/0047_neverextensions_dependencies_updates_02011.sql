@@ -1,6 +1,6 @@
--- NeverLauncher 0.20.11: dependency/update resolver persistence.
--- Adds API compatibility bounds, exact scoped pins, HA update leases and
--- durable compensation-transaction records.
+-- NeverLauncher 0.20.11: постоянное состояние разрешения зависимостей и
+-- обновлений. Добавляет диапазоны совместимости API, точные закрепления в
+-- области действия, аренды обновлений HA и записи компенсирующих транзакций.
 
 ALTER TABLE extension_registry_compatibility
     ADD COLUMN IF NOT EXISTS min_api TEXT NOT NULL DEFAULT '',

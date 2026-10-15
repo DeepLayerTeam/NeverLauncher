@@ -251,9 +251,9 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	// 0.12.8 hardening: a session already bound to a verified device may not
-	// silently enroll a second key. Key continuity must go through rotation
-	// (old-key proof) or recovery (fresh phishing-resistant account proof).
+	// Усиление 0.12.8: сеанс, уже привязанный к проверенному устройству, не может незаметно
+	// зарегистрировать второй ключ. Преемственность ключа требует ротации с доказательством старым
+	// ключом либо восстановления с новым устойчивым к фишингу подтверждением учётной записи.
 	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); ok && session.TrustedDeviceID != "" && session.DeviceTrustState == "verified" {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "сессия уже привязана к trusted device; используйте key rotation или key recovery", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
 		return
@@ -315,7 +315,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	// The key algorithm/binding is fixed by the server-side registration challenge.
+	// Алгоритм и привязка ключа фиксируются серверным запросом регистрации.
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, req.DeviceID, "register", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {

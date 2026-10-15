@@ -47,11 +47,11 @@ func gameplayTrustAllow0127(rec authSessionRecord) gameplayTrustDecision0127 {
 	}
 }
 
-// evaluateGameplayTrust0127 validates the current server-authoritative Never
-// session against the device/binding snapshot attached to a Minecraft or
-// ServerBridge credential. It deliberately does not call observe(): server-side
-// /hasJoined and plugin validation requests originate from the game server, not
-// the player's launcher, and therefore must never mutate player IP/UA risk.
+// evaluateGameplayTrust0127 сверяет авторитетный серверный сеанс
+// Never со снимком устройства и привязки, приложенным к данным
+// Minecraft/ServerBridge. Метод намеренно не вызывает observe():
+// серверный /hasJoined и запросы плагинов идут от игрового сервера,
+// а не лаунчера игрока, и не должны менять риск по IP/UA игрока.
 func (s Server) evaluateGameplayTrust0127(r *http.Request, userID, sessionID, expectedDeviceID string, expectedBindingEpoch int64, requireBoundDevice bool) (authSessionRecord, gameplayTrustDecision0127) {
 	rec, ok := s.State.AuthSessions.get(strings.TrimSpace(sessionID), strings.TrimSpace(userID))
 	if !ok {
@@ -106,7 +106,7 @@ func (s Server) evaluateGameplayTrust0127(r *http.Request, userID, sessionID, ex
 	case "step-up":
 		return rec, gameplayTrustDeny0127("session_step_up_required", rec)
 	case "allow":
-		// continue
+		// Продолжаем обработку.
 	default:
 		return rec, gameplayTrustDeny0127("session_risk_unknown", rec)
 	}

@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// ExtensionRegistryPublisher is an identity allowed to publish signed .nlext
-// packages into the private/local NeverExtensions registry.
+// ExtensionRegistryPublisher — идентичность, которой разрешено публиковать
+// подписанные .nlext в закрытый/локальный реестр NeverExtensions.
 type ExtensionRegistryPublisher struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
@@ -12,8 +12,8 @@ type ExtensionRegistryPublisher struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// ExtensionRegistryPublisherKey is a trusted Ed25519 public key. Fingerprint
-// is globally unique so an artifact can unambiguously bind to one publisher.
+// ExtensionRegistryPublisherKey — доверенный открытый ключ Ed25519. Fingerprint
+// уникален глобально, чтобы артефакт однозначно связывался с одним издателем.
 type ExtensionRegistryPublisherKey struct {
 	PublisherID     string     `json:"publisherId"`
 	Fingerprint     string     `json:"fingerprint"`
@@ -24,8 +24,8 @@ type ExtensionRegistryPublisherKey struct {
 	RevokedAt       *time.Time `json:"revokedAt,omitempty"`
 }
 
-// ExtensionRegistryCompatibility is immutable metadata attached to one
-// published version. Empty OS/architecture lists mean platform-independent.
+// ExtensionRegistryCompatibility — неизменяемые метаданные одной опубликованной
+// версии. Пустые списки ОС или архитектур означают независимость от платформы.
 type ExtensionRegistryCompatibility struct {
 	MinNeverLauncher       string   `json:"minNeverLauncher,omitempty"`
 	MaxNeverLauncher       string   `json:"maxNeverLauncher,omitempty"`
@@ -35,7 +35,7 @@ type ExtensionRegistryCompatibility struct {
 	SupportedArchitectures []string `json:"supportedArchitectures,omitempty"`
 }
 
-// ExtensionRegistryArtifact points at immutable bytes in configured storage.
+// ExtensionRegistryArtifact указывает на неизменяемые байты в настроенном хранилище.
 type ExtensionRegistryArtifact struct {
 	PackageIdentity         string    `json:"packageIdentity"`
 	ExtensionID             string    `json:"extensionId"`
@@ -49,7 +49,7 @@ type ExtensionRegistryArtifact struct {
 	CreatedAt               time.Time `json:"createdAt"`
 }
 
-// ExtensionRegistryVersion is the complete registry view of one publication.
+// ExtensionRegistryVersion — полное представление одной публикации в реестре.
 type ExtensionRegistryVersion struct {
 	ExtensionID   string                         `json:"extensionId"`
 	Version       string                         `json:"version"`
@@ -63,8 +63,8 @@ type ExtensionRegistryVersion struct {
 	YankReason    string                         `json:"yankReason,omitempty"`
 }
 
-// ExtensionRegistryPublication is persisted only after the .nlext bytes have
-// passed package-integrity and trusted Ed25519 verification.
+// ExtensionRegistryPublication сохраняется только после
+// проверки целостности .nlext и доверенной подписи Ed25519.
 type ExtensionRegistryPublication struct {
 	Manifest      ExtensionManifest
 	PublisherID   string
@@ -73,7 +73,7 @@ type ExtensionRegistryPublication struct {
 	Channels      []string
 }
 
-// ExtensionRegistrySearch describes server-side registry filtering.
+// ExtensionRegistrySearch описывает фильтрацию реестра на стороне сервера.
 type ExtensionRegistrySearch struct {
 	Query           string
 	Channel         string
@@ -83,7 +83,7 @@ type ExtensionRegistrySearch struct {
 	IncludeYanked   bool
 }
 
-// ExtensionRegistryExtension is returned by the detail API.
+// ExtensionRegistryExtension возвращается API деталей расширения.
 type ExtensionRegistryExtension struct {
 	Extension Extension                  `json:"extension"`
 	Versions  []ExtensionRegistryVersion `json:"versions"`

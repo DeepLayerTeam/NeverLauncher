@@ -112,8 +112,8 @@ def validate_authorization_invariants() -> None:
     minecraft = (ROOT / "services/api/internal/httpapi/minecraft_auth_119.go").read_text(encoding="utf-8")
     installer = (ROOT / "services/api/internal/httpapi/installation.go").read_text(encoding="utf-8")
 
-    # JWT permissions may remain as compatibility output only; request authorization
-    # must never call authClaims.HasPermission directly.
+    # JWT-разрешения могут остаться лишь выходными данными совместимости; авторизация
+    # запросов никогда не должна вызывать authClaims.HasPermission напрямую.
     matches = re.findall(r"\.HasPermission\(", all_http)
     if matches:
         fail("HTTP handlers still authorize from JWT claims.HasPermission")

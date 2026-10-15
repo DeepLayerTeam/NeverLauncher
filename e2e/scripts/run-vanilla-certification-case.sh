@@ -80,12 +80,12 @@ if not (minecraft.get('version') == mc and minecraft.get('loader') == 'vanilla' 
     raise SystemExit('invalid client package runtime settings')
 PY
 
-# The freshly materialized CI profile has not accepted the one-time
-# accessibility and multiplayer disclosures. Seed only the disposable test
-# profile; never change user installations or disable launch attestations.
-# Software-rendered Linux 1.17.1 occasionally crashes while tesselating the
-# initial world. Keep the renderer in its lowest-feature *real* graphics mode
-# so the E2E tests startup rather than host GPU acceleration.
+# Новый CI-профиль ещё не подтвердил одноразовые предупреждения о
+# доступности и мультиплеере. Настраивайте только одноразовый тестовый
+# профиль; не меняйте пользовательские установки и аттестацию запуска.
+# Minecraft 1.17.1 на программном Linux иногда падает при тесселяции
+# первого мира. Используйте минимальные возможности настоящего графического
+# режима для проверки запуска, а не ускорения GPU хоста.
 CLIENT_OPTIONS="$RUNTIME_DIR/materialized-client/options.txt"
 if [[ ! -e "$CLIENT_OPTIONS" ]]; then
   cat > "$CLIENT_OPTIONS" <<'OPTIONS'
@@ -96,8 +96,8 @@ pauseOnLostFocus:false
 OPTIONS
 fi
 if [[ "$TARGET_OS" == "linux" && "$MINECRAFT_VERSION" == "1.17.1" ]]; then
-  # Minecraft options are plain key/value lines; append overrides to the
-  # one-use profile before its first launch, not to a production profile.
+  # Настройки Minecraft — обычные строки ключ–значение; добавляйте переопределения
+  # только в одноразовый профиль до первого запуска, не в производственный.
   cat >> "$CLIENT_OPTIONS" <<'OPTIONS'
 graphicsMode:0
 renderDistance:2

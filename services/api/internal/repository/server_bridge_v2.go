@@ -12,9 +12,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// ServerBridgeRepository is implemented by the PostgreSQL repository and is the
-// source of truth for ServerBridge Protocol v2/v3 rolling upgrades. MemoryRepository intentionally
-// does not implement it; dev/test therefore keeps the lightweight in-memory path.
+// ServerBridgeRepository реализуется репозиторием PostgreSQL и служит источником истины
+// при постепенном переходе между протоколами ServerBridge v2/v3. MemoryRepository
+// намеренно его не реализует: разработка и тесты используют упрощённый путь в памяти.
 type ServerBridgeRepository interface {
 	SaveServerBridgeNode(context.Context, model.ServerBridgeNode) (model.ServerBridgeNode, error)
 	GetServerBridgeNode(context.Context, string) (model.ServerBridgeNode, error)
@@ -131,10 +131,10 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, n.ID); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
-	// Registration is intentionally create-only. The node-id advisory lock closes
-	// the GET-before-INSERT race between concurrent admin requests; changing an
-	// existing identity is allowed only through RotateServerBridgeNodeIdentity,
-	// whose HTTP route requires a fresh phishing-resistant admin step-up.
+	// Регистрация намеренно допускает только создание. Консультативная блокировка по ID узла
+	// закрывает гонку GET перед INSERT между параллельными запросами администраторов; изменение
+	// существующей идентичности допускается только через RotateServerBridgeNodeIdentity, маршрут
+	// HTTP которого требует нового устойчивого к фишингу подтверждения администратора.
 	var existingID string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 LIMIT 1`, n.ID).Scan(&existingID)
 	if err == nil {
@@ -263,9 +263,9 @@ func (r *SQLRepository) ConsumeServerBridgeNodeNonce(ctx context.Context, nodeID
 		return false, err
 	}
 	defer tx.Rollback()
-	// Expired-nonce cleanup is deliberately not performed on this hot path.
-	// 0.14.9 moves cleanup behind a cross-instance PostgreSQL advisory lock so
-	// concurrent API replicas do not serialize every signed request on a table-wide DELETE.
+	// Очистка истёкших одноразовых номеров намеренно не выполняется в этом горячем пути. В версии
+	// 0.14.9 очистка вынесена за общую для экземпляров консультативную блокировку PostgreSQL, чтобы
+	// параллельные реплики API не сериализовали каждый подписанный запрос через DELETE всей таблицы.
 	res, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_node_nonces_v2(node_id,nonce_hash,identity_epoch,consumed_at,expires_at)
 SELECT id,$2,$3,$4,$5 FROM server_bridge_nodes_v2 WHERE id=$1 AND status='active' AND identity_epoch=$3
 ON CONFLICT(node_id,nonce_hash) DO NOTHING`, nodeID, nonceHash, identityEpoch, consumedAt.UTC(), expiresAt.UTC())
@@ -511,7 +511,7 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 	if n, _ := res.RowsAffected(); n != 1 {
 		return fmt.Errorf("%w: active runtime changed or telemetry sample is stale", ErrConflict)
 	}
-	// Keep per-node history bounded even if global maintenance is delayed.
+	// Ограничивайте историю каждого узла, даже если общее обслуживание задерживается.
 	if telemetry.Sequence%64 == 0 {
 		if _, err = tx.ExecContext(ctx, `DELETE FROM server_bridge_telemetry_samples_v3 t
 			USING (
@@ -527,9 +527,9 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 	return tx.Commit()
 }
 
-// AppendServerBridgeEvents atomically advances a contiguous per-runtime cursor and
-// writes the event row plus the global audit row in the same PostgreSQL transaction.
-// Resending an already-ACKed sequence is idempotent only when its digest/event id match.
+// AppendServerBridgeEvents атомарно продвигает непрерывный курсор каждого процесса и записывает
+// событие вместе с общей записью аудита в одной транзакции PostgreSQL. Повторная отправка уже
+// подтверждённого порядкового номера идемпотентна только при совпадении хеша и ID события.
 func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID string, events []model.ServerBridgeEvent, now time.Time) (model.ServerBridgeEventAppendResult, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeEventAppendResult{}, err
@@ -916,10 +916,10 @@ func scanServerBridgeHandoff(row interface{ Scan(...any) error }) (model.ServerB
 
 const bridgeHandoffSelect0148 = `SELECT id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence FROM server_bridge_handoffs_v2`
 
-// CreateServerBridgeHandoff mints a target-specific credential only from a very
-// recent join ticket already redeemed by the authenticated proxy. The target is
-// resolved by canonical node id first, then by unique node name. This is what
-// allows zero-patch installs to use the proxy's existing backend name directly.
+// CreateServerBridgeHandoff создаёт учётные данные для конкретной цели исключительно по недавно
+// использованному токену подключения, уже погашенному аутентифицированным прокси. Цель сначала
+// определяется по каноническому ID узла, затем по уникальному имени. Поэтому установки без
+// дополнительных правок используют имеющееся имя серверной части из конфигурации прокси.
 func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.ServerBridgeHandoff, now time.Time) (model.ServerBridgeHandoff, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeHandoff{}, err
@@ -1034,9 +1034,9 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		h.TargetRoutingSignature = targetRouteSignature
 	}
 
-	// The source proof is the latest successfully consumed launcher ticket for an
-	// auth session that is still active and on the same binding epoch. This keeps
-	// later proxy server switches working without replaying the launcher ticket.
+	// Исходное доказательство — последний успешно погашенный токен лаунчера для сеанса
+	// авторизации, который всё ещё активен и использует ту же эпоху привязки. Это позволяет
+	// переключать серверную часть через прокси без повторного использования токена лаунчера.
 	var sourceJoin model.ServerBridgeJoinTicket
 	var consumedAt sql.NullTime
 	err = tx.QueryRowContext(ctx, bridgeJoinSelectV2+` WHERE server_id=$1 AND username_normalized=$2 AND status='consumed' AND EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=server_bridge_join_tickets_v2.session_id AND a.user_id=server_bridge_join_tickets_v2.user_id AND a.status='active' AND a.expires_at>$3 AND a.binding_epoch=server_bridge_join_tickets_v2.binding_epoch) ORDER BY consumed_at DESC LIMIT 1`, h.SourceNodeID, h.UsernameNormalized, now.UTC()).
@@ -1074,9 +1074,9 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: session correlation proof mismatch", ErrConflict)
 	}
 	h.MinecraftSessionID = sourceJoin.MinecraftSessionID
-	// A lifecycle transfer is runtime-bound. The explicit 0.19.7 correlation
-	// proof therefore requires v3 + Routing 2 on both ends; older rolling-upgrade
-	// paths continue with the pre-0.19.7 handoff without fabricating a runtime.
+	// Передача игрового сеанса привязана к конкретному процессу. Поэтому явное доказательство
+	// корреляции 0.19.7 требует v3 и Routing 2 на обеих сторонах; старые пути постепенного обновления
+	// продолжают передачу по схеме до 0.19.7, не создавая фиктивную идентичность процесса.
 	lifecycleTransfer := sourceJoin.ProtocolVersion >= 3 && targetProtocolVersion >= 3 && routingV3 && len(h.SourceRuntimeID) == 64 && h.SourceRuntimeEpoch > 0 && len(h.TargetRuntimeID) == 64 && h.TargetRuntimeEpoch > 0
 	if expectedCorrelation != "" && !lifecycleTransfer {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer requires v3 runtime-bound source and target", ErrConflict)
@@ -1179,10 +1179,10 @@ func (r *SQLRepository) ListServerBridgeTopology(ctx context.Context) ([]model.S
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	// Topology & Routing 2 derives the live graph from authenticated node/runtime
-	// advertisements instead of waiting for the first successful handoff to create
-	// an edge. Historical observed edges are joined only for created/last-seen
-	// metadata; routing eligibility is always recomputed from current node state.
+	// Topology & Routing 2 строит актуальный граф из аутентифицированных объявлений узлов
+	// и процессов, не ожидая первой успешной передачи для создания связи. Исторические
+	// наблюдавшиеся связи добавляются только ради метаданных создания и последнего
+	// наблюдения; доступность маршрута всегда пересчитывается по текущему состоянию узлов.
 	rows, err := r.db.QueryContext(ctx, `SELECT
 s.id,t.id,t.name,s.project_id,t.profile_id,
 CASE
@@ -1249,9 +1249,9 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		return result, nil
 	}
 	result.LeaseAcquired = true
-	// Every maintenance batch locks only the rows it will mutate. The advisory
-	// lock prevents duplicate NeverLauncher maintenance work across replicas;
-	// SKIP LOCKED additionally avoids waiting behind normal ticket/handoff writes.
+	// Каждый пакет обслуживания блокирует только изменяемые строки. Консультативная
+	// блокировка предотвращает дублирование обслуживания NeverLauncher между репликами,
+	// а SKIP LOCKED дополнительно исключает ожидание обычных записей токенов и передач.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 n USING (SELECT node_id,nonce_hash FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE n.node_id=q.node_id AND n.nonce_hash=q.nonce_hash`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1267,10 +1267,10 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
-	// A gameplay lifecycle may outlive its short-lived join/handoff rows, but it
-	// must never outlive the Never session or the exact proxy/backend runtime it
-	// was bound to. Invalidate under the same maintenance transaction so the
-	// existing durable Control API can fan out player.kick to every live side.
+	// Игровой сеанс может пережить краткоживущие строки токенов подключения и передачи,
+	// но не должен переживать сеанс Never либо конкретные процессы прокси и серверной
+	// части, к которым привязан. Аннулируйте его в той же транзакции обслуживания, чтобы
+	// долговечный Control API разослал player.kick всем действующим участникам.
 	staleRows, queryErr := tx.QueryContext(ctx, `SELECT p.correlation_id FROM server_bridge_player_sessions_v3 p
 		WHERE p.status='active' AND (
 			NOT EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=p.never_session_id AND a.user_id=p.user_id AND a.status='active' AND a.expires_at>$1 AND a.binding_epoch=p.binding_epoch)
@@ -1312,10 +1312,10 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.TopologyEdgesPurged, _ = res.RowsAffected()
 	}
-	// Terminal transient rows are operational evidence, not permanent audit
-	// records. Keep recent rows for diagnostics, but cap unbounded growth. A
-	// consumed join remains available while its auth session is active because it
-	// is the source proof for later proxy -> backend handoffs.
+	// Завершённые временные записи — эксплуатационные свидетельства, а не постоянный журнал
+	// аудита. Сохраняйте последние для диагностики, ограничивая неограниченный рост.
+	// Погашенный токен подключения остаётся доступным, пока активен его сеанс авторизации:
+	// это исходное доказательство для следующих передач прокси → серверная часть.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_join_tickets_v2 j USING (SELECT j2.id FROM server_bridge_join_tickets_v2 j2 LEFT JOIN auth_sessions a ON a.id=j2.session_id WHERE ((j2.status='consumed' AND COALESCE(j2.consumed_at,j2.expires_at) <= $1::timestamptz - interval '1 hour' AND (a.id IS NULL OR a.status<>'active' OR a.expires_at <= $1::timestamptz)) OR (j2.status IN ('invalidated','replaced') AND COALESCE(j2.invalidated_at,j2.expires_at) <= $1::timestamptz - interval '1 hour')) ORDER BY COALESCE(j2.consumed_at,j2.invalidated_at,j2.expires_at) LIMIT 5000 FOR UPDATE OF j2 SKIP LOCKED) q WHERE j.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1331,16 +1331,16 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	} else {
 		result.TelemetrySamplesPurged, _ = res.RowsAffected()
 	}
-	// Raw delivery rows are retained for bounded diagnostics only. Permanent event
-	// evidence lives in audit_events, which is written in the same transaction as
-	// the ACK cursor. Keep cursor rows so a reconnect cannot reuse an old sequence.
+	// Необработанные строки доставки хранятся ограниченное время только для диагностики. Постоянные свидетельства
+	// событий находятся в audit_events, которые записываются в той же транзакции, что и курсор ACK. Сохраняйте
+	// строки курсоров, чтобы повторное подключение не могло использовать старый порядковый номер.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_events_v3 e USING (SELECT server_id,runtime_epoch,sequence FROM server_bridge_events_v3 WHERE received_at <= $1::timestamptz - interval '30 days' ORDER BY received_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE e.server_id=q.server_id AND e.runtime_epoch=q.runtime_epoch AND e.sequence=q.sequence`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.EventStreamRowsPurged, _ = res.RowsAffected()
 	}
-	// Control commands are transient delivery state. Permanent evidence remains in
-	// audit_events; retain terminal/expired rows for 30 days for diagnostics.
+	// Команды управления — временное состояние доставки. Постоянные свидетельства сохраняются
+	// в audit_events; завершённые и истёкшие строки хранятся 30 дней для диагностики.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 c USING (SELECT id FROM server_bridge_control_commands_v3 WHERE status IN ('succeeded','failed','unsupported','indeterminate','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE c.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
@@ -1418,9 +1418,9 @@ func scanServerBridgeControl0195(row interface{ Scan(...any) error }) (model.Ser
 
 const serverBridgeControlSelect0195 = `SELECT id,server_id,runtime_epoch,runtime_id,command_type,payload,payload_sha256,request_digest,requested_by,idempotency_key,status,attempt,created_at,updated_at,expires_at,delivery_sequence,lease_owner,lease_token,lease_until,completed_at,result,error FROM server_bridge_control_commands_v3`
 
-// CreateServerBridgeControlCommand is exactly-once at admission per (server, actor, idempotency key).
-// Reuse with the same canonical request returns the original command; reuse with a different
-// digest is rejected on every API replica by the PostgreSQL unique key + advisory lock.
+// CreateServerBridgeControlCommand обеспечивает однократный допуск по сочетанию (сервер, инициатор, ключ
+// идемпотентности). Повтор с тем же каноническим запросом возвращает исходную команду; повтор с другим хешем
+// отклоняется на всех репликах API благодаря уникальному ключу PostgreSQL и консультативной блокировке.
 func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c model.ServerBridgeControlCommand, now time.Time) (model.ServerBridgeControlCommand, bool, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
@@ -1473,10 +1473,10 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	return created, false, err
 }
 
-// LeaseServerBridgeControlCommand provides a fenced, resumable command channel. leaseOwner is
-// the bridge channel identity and survives Backend endpoint failover; leaseToken fences stale
-// deliveries. A reconnect from the same owner receives its still-live lease instead of causing
-// a second delivery attempt. resumeAfter is the highest locally acknowledged delivery sequence.
+// LeaseServerBridgeControlCommand обеспечивает защищённый от устаревших владельцев возобновляемый канал
+// команд. leaseOwner идентифицирует канал моста и сохраняется при переключении конечной точки Backend;
+// leaseToken защищает от устаревших доставок. Повторное соединение того же владельца получает ещё действующую
+// аренду вместо повторной доставки. resumeAfter — максимальный номер доставки, подтверждённой локально.
 func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, leaseOwner, leaseToken string, resumeAfter int64, now time.Time, lease time.Duration) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1511,7 +1511,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery',lease_until=NULL WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	// HTTP response loss or Backend endpoint failover: resume the exact live lease for this channel.
+	// При потере ответа HTTP или переключении конечной точки Backend возобновите точно ту же действующую аренду этого канала.
 	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND status='leased' AND lease_owner=$4 AND lease_until>$5 AND delivery_sequence>$6 ORDER BY delivery_sequence LIMIT 1 FOR UPDATE`, serverID, runtimeEpoch, runtimeID, leaseOwner, now.UTC(), resumeAfter)); scanErr == nil {
 		if err = tx.Commit(); err != nil {
 			return model.ServerBridgeControlCommand{}, err
@@ -1541,9 +1541,9 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
 }
 
-// CompleteServerBridgeControlCommand is an idempotent fenced commit. Only the channel and lease
-// token that received the command can complete it. The token is retained after completion so a
-// retry routed to a different Backend replica receives the same durable result.
+// CompleteServerBridgeControlCommand — идемпотентная фиксация с защитой токеном аренды.
+// Завершить команду может только канал с токеном, получивший её. Токен сохраняется после
+// завершения, чтобы повтор на другой реплике Backend получил тот же сохранённый результат.
 func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1618,8 +1618,8 @@ func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serve
 	return c, err
 }
 
-// ListServerBridgeRecentControlCommands returns bounded control-plane history for the
-// GA operator overview. Lease tokens remain redacted by the model JSON contract.
+// ListServerBridgeRecentControlCommands возвращает ограниченную историю управляющего
+// контура для обзора оператора GA. Токены аренды скрываются согласно JSON-контракту модели.
 func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Context, limit int) ([]model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
 		return nil, err

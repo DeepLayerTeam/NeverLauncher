@@ -161,8 +161,8 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 		t.Fatalf("bridge accepted mismatched channel: %d %s", cm.Code, cm.Body.String())
 	}
 
-	// A player-side network/UA drift creates an enforceable risk decision. The
-	// plugin request itself must not overwrite that player risk with server IP/UA.
+	// Изменение сети или UA на стороне игрока создаёт обязательное решение о риске.
+	// Запрос плагина не должен перезаписывать этот риск IP/UA игрового сервера.
 	drift := httptest.NewRequest(http.MethodGet, "/api/v1/auth/sessions", nil)
 	drift.Header.Set("Authorization", "Bearer "+bound.Access)
 	drift.Header.Set("User-Agent", "NeverLauncher-Risk-Drift/0.12.7")

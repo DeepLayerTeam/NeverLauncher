@@ -123,8 +123,8 @@ def prepare(data: bytes) -> bytes:
     settings = compound(generator, 'settings')
     if settings.get('layers', (0, None))[0] != 9:
         raise NBTError('missing flat generator layers')
-    # Retain all the original server-generated registry/structure settings.
-    # Replacing a single list avoids the server.properties codec bug entirely.
+    # Сохраняйте исходные настройки реестра и структур, созданные сервером.
+    # Замена одного списка полностью обходит ошибку кодека server.properties.
     settings['layers'] = (9, (10, [{'height': (3, 1), 'block': (8, 'minecraft:air')}]))
     settings['features'] = (1, 0)
     settings['lakes'] = (1, 0)
@@ -145,7 +145,7 @@ def main() -> int:
     changed = prepare(uncompressed)
     if changed == uncompressed:
         raise SystemExit('level.dat generator did not change')
-    # Verify the payload is completely parseable *before* replacing the file.
+    # Перед заменой файла проверьте, что данные полностью поддаются разбору.
     parsed = Reader(changed)
     assert parsed.number('B') == 10
     parsed.name()

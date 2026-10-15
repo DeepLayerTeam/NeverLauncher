@@ -23,6 +23,6 @@ func killProcessTree(p *os.Process) error {
 func resourceIsolationMode() string                { return "single-process+protocol-bounds" }
 func processTreeUsage(pid int) (int64, int, error) { return 0, 1, nil }
 
-// HardenBackendProcess is a platform hook. Linux enforces PR_SET_DUMPABLE=0;
-// other platforms retain the process separation and secret-free environment.
+// HardenBackendProcess — платформенный обработчик. Linux применяет PR_SET_DUMPABLE=0;
+// другие платформы сохраняют разделение процессов и окружение без секретов.
 func HardenBackendProcess() error { return nil }

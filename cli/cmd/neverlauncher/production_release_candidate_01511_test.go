@@ -43,7 +43,7 @@ func TestProductionReleaseCandidate01511BindsExactCohort(t *testing.T) {
 	if commit != testSourceCommit01511 {
 		t.Fatalf("source commit=%s", commit)
 	}
-	// Signature envelopes are produced after candidate certification and are intentionally outside the pre-sign cohort.
+	// Конверты подписей создаются после сертификации кандидата и намеренно не входят в набор до подписания.
 	if err := os.WriteFile(filepath.Join(dir, "SHA256SUMS.sig"), []byte("signature"), 0o644); err != nil {
 		t.Fatal(err)
 	}

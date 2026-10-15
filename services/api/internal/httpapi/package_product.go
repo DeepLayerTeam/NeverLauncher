@@ -413,8 +413,8 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Synchronous extension vetoes run before a durable job is accepted. After
-	// enqueue, the job is recoverable and the irreversible DB commit is fenced.
+	// Синхронные запреты расширений выполняются до принятия постоянного задания. После
+	// постановки в очередь оно восстанавливаемо, а необратимая фиксация БД защищена fencing.
 	if err := s.beforePackagePublish0206(r, lookup.Release); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -491,9 +491,9 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rollback is a new immutable release, therefore it receives a new manifest
-	// digest and MUST obtain its own validation evidence. File records point to
-	// the already immutable storage objects of the target release.
+	// Откат — новый неизменяемый релиз, поэтому получает новый дайджест
+	// манифеста и обязательно требует собственных свидетельств валидации.
+	// Записи файлов ссылаются на уже неизменяемые объекты целевого выпуска.
 	rollbackVersion := toVersion + "-rollback-" + time.Now().UTC().Format("20060102T150405.000000000Z")
 	created, err := s.Repo.CreateVersion(projectID, profileID, channel, rollbackVersion)
 	if err != nil {
@@ -592,8 +592,8 @@ func (s Server) channelRollbackProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
-	// Release the preparation lease before the durable worker acquires the same
-	// fenced package scope for the irreversible publish commit.
+	// Освободите аренду подготовки до получения тем же постоянным исполнителем
+	// защищённой области пакета для необратимой фиксации публикации.
 	unlockRollback()
 	rollbackLeaseReleased = true
 	release, job, pending, err := s.publishDurably0213(r, lookup)

@@ -34,7 +34,7 @@ for path,item in spec.get('paths',{}).items():
 for missing in sorted(code-doc): errors.append(f'route missing from OpenAPI: {missing[0].upper()} {missing[1]}')
 for extra in sorted(doc-code): errors.append(f'OpenAPI operation missing from canonical router: {extra[0].upper()} {extra[1]}')
 if len(ids)!=len(set(ids)): errors.append('operationId values must be unique')
-# P3 invariant: historical routers are physically removed from the canonical server.
+# Инвариант P3: исторические маршрутизаторы физически удалены из канонического сервера.
 config=(HTTP/'handler.go').read_text(encoding="utf-8")
 if 'registerLegacy' in config or 'EnableLegacyAPI' in config: errors.append('legacy API registration must be removed in P3')
 if errors:

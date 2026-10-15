@@ -24,7 +24,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Native SpongeAPI adapter; reflection is restricted to optional/version-varying metrics. */
+/** Нативный адаптер SpongeAPI; рефлексия используется только для необязательных метрик и различий версий. */
 @Plugin("neverlauncher_sponge_bridge")
 public final class NeverLauncherSpongeBridge {
     private final PluginContainer container;

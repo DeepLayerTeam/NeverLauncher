@@ -186,8 +186,8 @@ pub fn reconcile_and_verify() -> Result<ThreadIntegritySnapshot, String> {
                     && previous.allocation_base == record.allocation_base
                     && previous.module_path.eq_ignore_ascii_case(&record.module_path) => {}
             Some(_) => {
-                // TID reuse is possible after a thread exits. The newly observed
-                // start address has already passed the executable-image validation.
+                // После завершения потока TID может использоваться повторно. Новый
+                // наблюдаемый стартовый адрес уже прошёл проверку исполняемого образа.
                 state.retired_thread_count = state.retired_thread_count.saturating_add(1);
                 state.new_thread_count = state.new_thread_count.saturating_add(1);
             }
@@ -258,8 +258,8 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         )
     };
     if thread.is_null() {
-        // A thread can legitimately exit between the ToolHelp snapshot and OpenThread.
-        // Retry with the limited right because some Windows builds reject the combined mask.
+        // Поток может законно завершиться между снимком ToolHelp и OpenThread. Повторяйте с
+        // ограниченными правами, поскольку некоторые Windows-сборки отклоняют объединённую маску.
         thread = unsafe { OpenThread(THREAD_QUERY_LIMITED_INFORMATION, 0, thread_id) };
         if thread.is_null() {
             return Ok(None);
@@ -278,8 +278,8 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         )
     };
     if status < 0 || start_address.is_null() {
-        // The ToolHelp snapshot is inherently racy with normal JVM thread teardown.
-        // A thread that has already exited is not an integrity violation.
+        // Снимок ToolHelp по природе подвержен гонке с обычным завершением потоков
+        // JVM. Уже завершившийся поток не является нарушением целостности.
         let mut exit_code = 0u32;
         let exit_known = unsafe { GetExitCodeThread(thread.0, &mut exit_code) } != 0;
         if exit_known && exit_code != STILL_ACTIVE {

@@ -183,7 +183,7 @@ func verifyLoaderPayloadCache(root, loader, minecraft, source, expectedSHA256 st
 		err = errors.New("loader payload cache SHA-256 mismatch")
 		return
 	}
-	// Touch verified payload so future GC implementations can use access time by mtime.
+	// Обновляйте время доступа проверенных данных, чтобы будущие реализации сборщика мусора могли использовать mtime.
 	_ = os.Chtimes(payloadPath, time.Now(), time.Now())
 	size = record.Size
 	return

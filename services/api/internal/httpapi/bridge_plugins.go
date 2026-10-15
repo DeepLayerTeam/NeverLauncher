@@ -207,8 +207,8 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Maintenance is opportunistic and never makes an otherwise valid heartbeat fail.
-	// PostgreSQL serializes the actual cleanup across active/active API replicas.
+	// Обслуживание выполняется при возможности и никогда не должно портить правильный
+	// heartbeat. PostgreSQL сериализует очистку между активными репликами API.
 	s.State.ServerBridge.maybeMaintain0149()
 	_ = s.flushPersistenceState950("server-bridge-plugin-heartbeat")
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("plugin-heartbeat"), Actor: server.ID, Action: "serverbridge:plugin:heartbeat", Target: server.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -301,9 +301,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusConflict, bridgeValidateResponse940(s.Version, false, "serverbridge_session_correlation_missing", req, join))
 		return
 	}
-	// A direct launcher join must not steal capacity already reserved by proxy
-	// handoffs. A handoff redemption owns its reservation and is revalidated by
-	// ConsumeServerBridgeHandoff against the same target runtime and live route.
+	// Прямой вход лаунчера не должен забирать вместимость, зарезервированную
+	// передачами прокси. Погашение handoff владеет резервированием и повторно
+	// проверяется ConsumeServerBridgeHandoff для той же среды цели и текущего маршрута.
 	if !fromHandoff && req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeatureRoutingV2) && !bridgeProxyKind0148(server.Kind) {
 		if err := s.State.ServerBridge.ensureRoutable0196(server); err != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-routing-denied"), Actor: server.ID, Action: "serverbridge:validate-join:routing-denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -327,9 +327,9 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !trust.Allowed {
 		if gameplayTrustPermanentFailure0127(trust.Reason) {
 			if fromHandoff {
-				// The proxy already owns an active correlated lifecycle. A permanent
-				// Device Trust failure invalidates that lifecycle across the topology,
-				// not merely this one pending backend handoff.
+				// Прокси уже владеет активным связанным жизненным циклом.
+				// Постоянная ошибка Device Trust аннулирует его по всей
+				// топологии, а не только эту ожидающую передачу.
 				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)
@@ -347,8 +347,8 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !minecraftIntegrity.Allowed {
 		if minecraftIntegrityPermanentFailure0135(minecraftIntegrity.Reason) || minecraftIntegrity.Reason == "minecraft_integrity_session_required" || minecraftIntegrity.Reason == "minecraft_integrity_binding_mismatch" {
 			if fromHandoff {
-				// Guard/binding failure on transfer revokes the whole correlated
-				// gameplay lifecycle and fans disconnect to proxy + current backend.
+				// Ошибка Guard или привязки при передаче отзывает весь связанный
+				// игровой сеанс и рассылает отключение прокси и текущему бэкенду.
 				s.State.ServerBridge.invalidateSession(join.SessionID, "")
 			} else {
 				s.State.ServerBridge.invalidateJoin(req.Username, req.ServerID)

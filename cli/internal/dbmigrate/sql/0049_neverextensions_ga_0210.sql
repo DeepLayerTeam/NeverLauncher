@@ -1,6 +1,6 @@
--- NeverLauncher 0.21.0: NeverExtensions GA contract + 0.20 -> 0.21 upgrade marker.
--- Existing signed 0.20 packages remain immutable and keep api='3.7'; runtime maps
--- that value to Extension API v1. New publications are enforced as api='1.0'.
+-- NeverLauncher 0.21.0: контракт GA для NeverExtensions и отметка обновления 0.20
+-- -> 0.21. Подписанные пакеты 0.20 неизменяемы и сохраняют api='3.7'; среда
+-- сопоставляет его с Extension API v1. Для новых публикаций обязательно api='1.0'.
 
 CREATE TABLE IF NOT EXISTS extension_ga_contract (
     singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),

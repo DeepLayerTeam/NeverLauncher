@@ -1,7 +1,7 @@
--- NeverLauncher 0.20.3: production NeverExtensions private/local registry.
--- Registry metadata is normalized around immutable extension versions and
--- content-addressed signed .nlext artifacts. Mutable state is intentionally
--- limited to publisher/key activation, channel pointers and yank metadata.
+-- NeverLauncher 0.20.3: производственный закрытый или локальный реестр
+-- NeverExtensions. Метаданные нормализованы вокруг неизменяемых версий расширений
+-- и подписанных .nlext, адресуемых по содержимому. Изменяемое состояние ограничено
+-- активацией издателей и ключей, указателями каналов и метаданными отзыва.
 
 CREATE TABLE IF NOT EXISTS extension_registry_publishers (
     id TEXT PRIMARY KEY,

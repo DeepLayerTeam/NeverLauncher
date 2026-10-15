@@ -126,10 +126,10 @@ class PasskeyStepUpTests(unittest.TestCase):
             client.set_upload_passkey(helper, state)
             assertion = '{"transactionToken":"x","credential":{"type":"public-key"}}'
             with patch.object(module.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout=assertion, stderr="")) as run, patch.object(module.time, "monotonic", side_effect=[100, 200, 581, 582, 583]):
-                client.refresh_upload_auth_if_due(force=True)  # count=1 @100
-                client.refresh_upload_auth_if_due()            # 100 seconds later
-                client.refresh_upload_auth_if_due()            # 481 seconds later
-                client.refresh_upload_auth_if_due()            # one second later
+                client.refresh_upload_auth_if_due(force=True)  # количество=1 @100
+                client.refresh_upload_auth_if_due()            # через 100 секунд
+                client.refresh_upload_auth_if_due()            # ещё через 481 секунду
+                client.refresh_upload_auth_if_due()            # ещё через одну секунду
             self.assertEqual(run.call_count, 2)
             self.assertEqual([c.args[0][-1] for c in run.call_args_list], ["--sign-count=1", "--sign-count=2"])
             self.assertEqual(client.passkey_sign_count, 2)

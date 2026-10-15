@@ -32,7 +32,7 @@ final class BridgeBackendPool {
             Endpoint endpoint = new Endpoint(i, bases.get(i), URI.create(bases.get(i) + relative));
             if (blockedUntilMillis.get(i) <= now) healthy.add(endpoint); else blocked.add(endpoint);
         }
-        healthy.addAll(blocked); // all-down case still probes every configured endpoint once
+        healthy.addAll(blocked); // Даже если все узлы недоступны, каждый настроенный адрес проверяется один раз.
         return healthy;
     }
 

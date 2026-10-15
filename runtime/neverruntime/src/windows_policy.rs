@@ -311,9 +311,9 @@ mod windows_impl {
     pub fn ensure_windows_protection_core_with_profile(
         profile: WindowsProtectionProfile,
     ) -> Result<WindowsProtectionCoreReport, String> {
-        // Apply process-global heap/DLL hardening before profile mitigations and before
-        // the Tokio runtime is constructed by neverguard.exe. This preserves the
-        // original production ordering while making mitigation requirements profile-aware.
+        // Применяйте глобальную защиту heap и DLL до профильных ограничений
+        // и создания Tokio runtime процессом neverguard.exe. Это сохраняет
+        // производственный порядок и учитывает требования каждого профиля.
         let hardening = ensure_windows_production_hardening()?;
         let process_policy = ensure_guard_process_policy_with_profile(profile)?;
         Ok(build_core_report(profile, process_policy, hardening))
@@ -705,11 +705,11 @@ mod windows_impl {
             }
         }
 
-        // The ToolHelp process snapshot and the Job Object PID snapshot are
-        // independent. A child can be created between those reads, so absence
-        // from the earlier PID list is not proof of breakaway. Check every
-        // *live* descendant with IsProcessInJob below; that OS membership
-        // query is authoritative and remains fail-closed for real escapes.
+        // Снимки процессов ToolHelp и PID внутри Job Object независимы.
+        // Потомок может возникнуть между чтениями, поэтому его отсутствие
+        // в раннем списке ещё не означает выход из задания. Проверяйте
+        // всех живых потомков через IsProcessInJob; этот системный запрос
+        // определяющий и строго блокирует настоящий побег.
 
         for pid in std::iter::once(root_pid).chain(descendants.iter().copied()) {
             let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
@@ -720,14 +720,14 @@ mod windows_impl {
                         std::io::Error::last_os_error()
                     ));
                 }
-                // A short-lived child can exit after the process snapshot. It is no
-                // longer part of the live tree and cannot violate the current boundary.
+                // Кратковременный дочерний процесс может завершиться после снимка.
+                // Он больше не входит в живое дерево и не нарушает текущую границу.
                 continue;
             }
-            // ToolHelp can enumerate a just-exited child whose process object
-            // remains open. Windows removes terminated processes from the Job
-            // Object even while OpenProcess still succeeds. Checking membership
-            // for an exited process would falsely report a breakaway.
+            // ToolHelp может показать недавно завершённый дочерний
+            // процесс, чей объект ещё открыт. Windows удаляет завершённые
+            // процессы из Job Object, даже если OpenProcess ещё успешен.
+            // Проверка их членства даст ложное сообщение о побеге.
             const STILL_ACTIVE_EXIT_CODE: u32 = 259;
             let mut exit_code = 0u32;
             let exit_ok = unsafe { GetExitCodeProcess(process, &mut exit_code) };
@@ -755,8 +755,8 @@ mod windows_impl {
                 ));
             }
             if in_job == 0 {
-                // A child may exit between the two OS queries. Recheck the
-                // *same handle*, not a recycled PID, before declaring escape.
+                // Дочерний процесс может завершиться между двумя запросами ОС. Перед объявлением
+                // побега перепроверьте тот же дескриптор, а не повторно используемый PID.
                 let mut final_exit_code = 0u32;
                 let final_ok = unsafe { GetExitCodeProcess(process, &mut final_exit_code) };
                 if final_ok == 0 {

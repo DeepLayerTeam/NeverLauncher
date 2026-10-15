@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Shared production-like Ed25519 helpers for ServerBridge E2E. Source this file.
-# Requires: openssl, python3, curl, sha256sum.
+# Общие производственные помощники Ed25519 для ServerBridge E2E. Подключайте
+# этот файл через source. Требуются openssl, python3, curl, sha256sum.
 
 serverbridge_node_public() {
   local key="$1"
@@ -54,9 +54,9 @@ serverbridge_node_sign() {
     rm -f "$canonical_file" "$signature_file"
     return 1
   fi
-  # Ed25519 is a one-shot algorithm in OpenSSL. pkeyutl must receive a seekable
-  # input file; piping the canonical payload through stdin can fail with
-  # "unable to determine file size for oneshot operation" and yield 0 bytes.
+  # В OpenSSL Ed25519 — однопроходный алгоритм. pkeyutl нужен входной файл с
+  # позиционированием; передача канонических данных через stdin может дать ошибку
+  # "unable to determine file size for oneshot operation" и нулевой результат.
   if ! openssl pkeyutl -sign -rawin -inkey "$key" -in "$canonical_file" -out "$signature_file" >/dev/null 2>&1; then
     rm -f "$canonical_file" "$signature_file"
     return 1

@@ -1,6 +1,6 @@
--- NeverLauncher 0.11.9 — Minecraft Auth Compatibility 2.0.
--- Separates canonical Never users/sessions from persistent Minecraft profiles and
--- opaque Yggdrasil-compatible session tokens.
+-- NeverLauncher 0.11.9: совместимость аутентификации Minecraft 2.0.
+-- Отделяет канонических пользователей и сеансы Never от постоянных профилей
+-- Minecraft и непрозрачных совместимых с Yggdrasil токенов сеансов.
 
 CREATE TABLE IF NOT EXISTS minecraft_profiles (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

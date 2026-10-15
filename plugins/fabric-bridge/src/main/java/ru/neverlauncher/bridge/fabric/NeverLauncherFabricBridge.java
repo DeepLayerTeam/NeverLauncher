@@ -153,9 +153,9 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
                 LOGGER.info("neverlauncher.join.allowed username={} serverId={} platform=fabric", login.username, serverId());
                 return CompletableFuture.completedFuture(null);
             }
-            // Fabric's login synchronizer may complete off the logical server thread.
-            // Disconnect on MinecraftServer's executor and keep the login gate blocked
-            // until that state transition has actually been applied.
+            // Синхронизатор входа Fabric может завершиться вне логического серверного
+            // потока. Выполняйте отключение через исполнитель MinecraftServer и держите
+            // вход заблокированным, пока переход состояния действительно не применён.
             return server.submit(() -> {
                 handler.disconnect(Text.literal(decision.userMessage()));
                 LOGGER.info("neverlauncher.join.denied username={} reason={} platform=fabric", login.username, decision.reason);
@@ -391,7 +391,7 @@ public final class NeverLauncherFabricBridge implements ModInitializer {
 
     private static int executeMinecraftCommand(MinecraftServer server, String command) {
         server.getCommandManager().executeWithPrefix(server.getCommandSource(), command);
-        return 1; // successful submission; failures surface as exceptions
+        return 1; // Успешная отправка; ошибки передаются через исключения.
     }
 
     private static String safeUsername(String value) {

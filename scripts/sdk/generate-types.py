@@ -253,7 +253,7 @@ def emit_openapi_request_map_ts(doc: dict, ops: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 def extension_openapi_operations() -> list[dict[str, str]]:
-    # canonical OpenAPI is serialized as JSON despite its .yaml filename
+    # Канонический OpenAPI сериализован как JSON, несмотря на расширение .yaml.
     doc = json.loads(OPENAPI.read_text(encoding="utf-8"))
     items: list[dict[str, str]] = []
     for path, methods in doc.get("paths", {}).items():

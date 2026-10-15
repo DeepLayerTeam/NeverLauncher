@@ -146,7 +146,7 @@ ul { padding-left: 18px; }
 .deviceActions button { border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 12px; background: rgba(15, 23, 42, 0.7); color: #cbd5e1; padding: 9px 11px; }
 @media (max-width: 760px) { .deviceCard { flex-direction: column; } }
 
-/* NeverExtensions Desktop Host 0.20.9 */
+/* Хост настольного приложения NeverExtensions 0.20.9 */
 .desktopExtensions0209 { margin-top: 22px; border: 1px solid rgba(148,163,184,.18); border-radius: 20px; padding: 22px; background: rgba(15,23,42,.68); }
 .desktopExtensionsHeader { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
 .desktopExtensionsHeader h3 { margin:0; }

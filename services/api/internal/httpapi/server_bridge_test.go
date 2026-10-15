@@ -62,8 +62,8 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 		t.Fatalf("uuid отсутствует: err=%v body=%s", err, res.Body.String())
 	}
 
-	// Protocol v2 join tickets are one-time. A replay of the same server-side
-	// validation must not authorize the player again after the successful consume.
+	// Билеты входа Protocol v2 одноразовые. Повтор одной серверной
+	// проверки после погашения не может снова разрешить игрока.
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/session/has-joined?username=AdminPlayer&serverId=velocity-main", nil)
 	signBridgeNodeRequest0142(t, req, "velocity-main", identity)
 	res = httptest.NewRecorder()

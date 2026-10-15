@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// productionTemplates contains the exact canonical production deployment files
-// so an installed nl binary can create a standalone first-run directory without
-// depending on a source checkout.
+// productionTemplates содержит точные канонические файлы производственного
+// развёртывания, чтобы установленный бинарный файл nl мог создать
+// самостоятельный каталог первого запуска без исходного репозитория.
 //
 //go:embed templates/production/*
 var productionTemplates embed.FS

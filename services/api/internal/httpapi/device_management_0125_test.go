@@ -89,8 +89,8 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 		t.Fatalf("unbound session revoked devices: status=%d body=%#v", code, out)
 	}
 
-	// Leave an outstanding proof challenge for the secondary device. Revocation
-	// must consume it before the old key can complete the ceremony.
+	// Оставьте ожидающий запрос подтверждения для второго устройства.
+	// Отзыв должен погасить его до завершения процедуры старым ключом.
 	code, challengeOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+secondary.ID+"/verify/begin", unboundAccess, map[string]any{})
 	if code != http.StatusOK {
 		t.Fatalf("verify begin status=%d body=%#v", code, challengeOut)
@@ -135,7 +135,7 @@ func TestDeviceManagementRevokeOthersAndChallengeInvalidation0125(t *testing.T) 
 		t.Fatalf("revoked filter incorrect: status=%d body=%#v", code, revokedOut)
 	}
 
-	// A revoked fingerprint is a tombstone: the same key cannot be enrolled again.
+	// Отозванный отпечаток — постоянная отметка: тот же ключ больше нельзя зарегистрировать.
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", unboundAccess, map[string]any{"name": "Reuse revoked key"})
 	if code != http.StatusOK {
 		t.Fatalf("reuse begin failed unexpectedly: %d %#v", code, beginOut)

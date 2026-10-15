@@ -24,7 +24,7 @@ rand = "0.8"
 base64 = "0.22"
 zeroize = "1"
 
-# Hardware-bound device identity. Exact version is pinned because backend
-# selection/fallback semantics are security-sensitive.
+# Аппаратно привязанная идентификация устройства. Точная версия закреплена,
+# поскольку выбор бэкенда и поведение резервного режима влияют на безопасность.
 hardware-enclave = { version = "=0.2.10", default-features = false, features = ["signing", "encryption", "linux-tpm"] }
 p256 = { version = "0.13", features = ["ecdsa"] }

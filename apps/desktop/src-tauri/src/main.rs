@@ -636,8 +636,8 @@ async fn install_launcher_update(
         return Err(format!("transactional updater helper небезопасен: {}", helper.display()));
     }
 
-    // Guard owns handles/IPC that may keep its executable busy on Windows. Stop it
-    // before the external helper waits for Desktop and enters the transaction.
+    // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
+    // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
     neverguard.shutdown().await.map_err(|e| format!("не удалось остановить NeverGuard перед обновлением: {e}"))?;
 
     let parent_pid = std::process::id().to_string();
@@ -661,8 +661,8 @@ async fn install_launcher_update(
     let updater_pid = child.id().ok_or_else(|| "updater helper запущен без process id".to_string())?;
     drop(child);
 
-    // Return the schedule result to the UI, then leave this process so the helper can
-    // atomically replace the Desktop binary/app bundle on every supported OS.
+    // Верните результат планирования в интерфейс, затем завершите процесс, чтобы помощник мог
+    // атомарно заменить исполняемый файл Desktop или пакет приложения во всех поддерживаемых ОС.
     let exit_handle = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_millis(150));

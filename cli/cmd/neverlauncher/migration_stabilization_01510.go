@@ -258,7 +258,7 @@ func removeSafeComponentTreePayload01510(u *transactionalUpdater0156, journal *c
 		}
 		rel, err := filepath.Rel(control, abs)
 		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			continue // Never clean a path outside the updater control directory.
+			continue // Никогда не удаляйте путь за пределами управляющего каталога обновлятора.
 		}
 		if err := os.RemoveAll(abs); err != nil {
 			return err

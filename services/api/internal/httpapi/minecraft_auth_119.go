@@ -76,8 +76,8 @@ func newMinecraftProfileUUID119() (string, error) {
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	// Local GameProfile identity is deliberately independent from Never user IDs.
-	// UUIDv4 is persisted once and remains stable for the lifetime of the profile.
+	// Локальная идентичность GameProfile намеренно не зависит от ID пользователей Never.
+	// UUIDv4 сохраняется один раз и остаётся неизменным весь срок жизни профиля.
 	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
 	h := hex.EncodeToString(b)
@@ -144,9 +144,9 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 		if err == nil {
 			return profile, nil
 		}
-		// Another instance may have created either this user's profile or the
-		// same case-insensitive name between our lookup and INSERT. Resolve the
-		// winner and retry only the name conflict; do not hide other DB errors.
+		// Другой экземпляр мог создать профиль этого пользователя или такое же имя
+		// без учёта регистра между SELECT и INSERT. Найдите победившую запись и
+		// повторяйте только при конфликте имени; не скрывайте другие ошибки БД.
 		if existing, getErr := repo.GetMinecraftProfileByUser(user.ID); getErr == nil {
 			return existing, nil
 		}
@@ -169,11 +169,11 @@ func (s Server) issueMinecraftSession119(user model.User, neverSessionID, client
 	return s.issueMinecraftSessionWithTrust119(user, neverSessionID, clientToken, parentSession.TrustedDeviceID, parentSession.BindingEpoch)
 }
 
-// issueMinecraftSessionWithTrust119 persists the exact device/binding snapshot
-// that was already authorized by the caller. It never "upgrades" a request to
-// a newer concurrent binding: if a re-bind wins before this check, issuance
-// fails; if it wins after this check, the persisted old snapshot is rejected by
-// the next live trust evaluation. This closes a token-issuance TOCTOU window.
+// issueMinecraftSessionWithTrust119 сохраняет точный снимок устройства
+// и привязки, уже разрешённый вызывающей стороной. Он не повышает
+// привязку при гонке: если перепривязка произошла до проверки, выдача
+// неуспешна; если после — старый сохранённый снимок отклонит следующая
+// живая проверка. Это закрывает TOCTOU при выдаче токена.
 func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64) (model.MinecraftSession, string, model.MinecraftProfile, error) {
 	return s.issueMinecraftSessionWithTrustAndIntegrity119(user, neverSessionID, clientToken, trustedDeviceID, bindingEpoch, nil)
 }
@@ -560,8 +560,8 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := repo.ConsumeMinecraftJoin(username, serverID, join.MinecraftSessionID, time.Now().UTC()); err != nil {
-		// One-Time Join Tickets: only the first concurrent /hasJoined for this
-		// exact session may authorize the connection. Lost/replayed checks fail closed.
+		// Одноразовые билеты входа: только первый параллельный /hasJoined данного сеанса
+		// может разрешить подключение. Проигравшие и повторные запросы строго отклоняются.
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}

@@ -81,8 +81,8 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         source = app / bundle_path
         if not source.is_file():
             raise RuntimeError(f"missing signed macOS bundle executable: {source}")
-        # The app main executable is signed by the final APP_ROOT codesign step,
-        # after Resources have been generated. Helpers must already be signed.
+        # Основной исполняемый файл приложения подписывается финальным шагом APP_ROOT
+        # codesign после создания Resources. Помощники должны быть подписаны раньше.
         inspect_macho(source, arch, require_signature=(component != "desktop-launcher"))
         canonical_name = canonical_pattern.format(arch=arch)
         canonical = out / canonical_name

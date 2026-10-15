@@ -1,9 +1,9 @@
--- NeverLauncher 0.18.10 — Guard Attestation v2 challenge/ticket purposes.
+-- NeverLauncher 0.18.10: назначения запросов и разрешений Guard Attestation v2.
 --
--- Attestation v2 is intentionally post-launch on Windows: a fresh challenge is
--- completed only after NeverGuard Sensor and Continuous Guard are active. The
--- resulting short-lived ticket is consumed exactly once by ServerBridge join.
--- Existing v1 bootstrap purposes remain valid for Minecraft-session issuance.
+-- В Windows аттестация v2 намеренно проходит после запуска: новый запрос выполняется,
+-- только когда активны NeverGuard Sensor и Continuous Guard. Полученный короткий
+-- билет однократно погашается при входе ServerBridge. Старые назначения первоначальной
+-- инициализации v1 остаются допустимыми для выдачи сеансов Minecraft.
 
 ALTER TABLE device_challenges
     DROP CONSTRAINT IF EXISTS device_challenges_purpose_check;

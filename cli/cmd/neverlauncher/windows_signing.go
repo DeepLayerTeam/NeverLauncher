@@ -654,7 +654,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 		return fmt.Errorf("Windows delivery Guard allowlist: %w", err)
 	}
 
-	// Stable ordering is not a trust primitive, but deterministic evidence avoids accidental rebuild drift.
+	// Устойчивый порядок не является механизмом доверия, но детерминированные свидетельства предотвращают случайные расхождения между сборками.
 	architectures := make([]string, 0, len(seenTargets))
 	for arch := range seenTargets {
 		architectures = append(architectures, arch)

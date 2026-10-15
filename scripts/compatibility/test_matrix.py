@@ -792,8 +792,8 @@ class MatrixToolTests(unittest.TestCase):
             matrix = json.loads((tmp / "out" / "matrix.json").read_text(encoding="utf-8"))
             self.assertEqual(matrix["status"], "passed")
             self.assertEqual(len(matrix["targets"]), len(doc["targets"]))
-            # Unsupported upstream combinations cannot have a genuine
-            # certification evidence digest; only executed targets do.
+            # Неподдерживаемые комбинации издателя не имеют настоящего дайджеста
+            # свидетельства сертификации; он есть только у реально выполненных целей.
             for target, row in zip(doc["targets"], matrix["targets"]):
                 if target["required"]:
                     self.assertRegex(row["evidenceSha256"], r"^[0-9a-f]{64}$")
@@ -925,9 +925,9 @@ class MatrixToolTests(unittest.TestCase):
             self.assertIn("loaderNativeClientJoin", proc.stderr)
 
     def test_vanilla_ci_reuses_pinned_target_jdk_without_redundant_download(self) -> None:
-        # Every shard must retain its *target* JDK (the executable is pinned to
-        # NEVERLAUNCHER_E2E_JAVA), while not doing an unnecessary network
-        # download of Java 21 for pure Vanilla Go/Rust certification jobs.
+        # Каждый сегмент должен сохранить целевой JDK (исполняемый файл
+        # закреплён NEVERLAUNCHER_E2E_JAVA), но для чистых заданий
+        # сертификации Vanilla Go/Rust не нужно заново скачивать Java 21.
         workflow = (ROOT / ".github" / "workflows" / "compatibility.yml").read_text(encoding="utf-8")
         restore_blocks = re.findall(
             r"(?m)^      - name: Restore Java 21 for loader/Gradle build tooling\n"
@@ -1008,8 +1008,8 @@ class EvidenceUploadRetryContractTests(unittest.TestCase):
         self.assertIn('with: *compatibility_evidence_a', workflow)
         self.assertIn('with: &compatibility_evidence_b', workflow)
         self.assertIn('with: *compatibility_evidence_b', workflow)
-        # The retry has no continue-on-error: it must fail if Github's
-        # CreateArtifact endpoint is still unavailable.
+        # У повторной попытки нет continue-on-error: она должна
+        # провалиться, если CreateArtifact GitHub остаётся недоступен.
         for block in workflow.split('- name: Retry transient compatibility evidence upload')[1:]:
             self.assertIn('uses: actions/upload-artifact@v4', block.split('      - name:', 1)[0])
             self.assertNotIn('continue-on-error', block.split('      - name:', 1)[0])

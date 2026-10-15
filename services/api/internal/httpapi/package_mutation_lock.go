@@ -12,10 +12,10 @@ import (
 
 var fallbackPackageMutation sync.Mutex
 
-// lockPackageMutation is a distributed mutation boundary in 0.21.3. SQL-backed
-// deployments acquire a persisted fencing lease, so two API processes cannot
-// mutate the same package storage/metadata concurrently. The mutex remains only
-// as a compatibility fallback for repositories that predate DurableControlPlane.
+// lockPackageMutation — граница распределённых изменений в 0.21.3.
+// SQL-развёртывания берут постоянную аренду с fencing, чтобы два API-процесса
+// не меняли файлы и метаданные одного пакета одновременно. Mutex остаётся
+// только для совместимости со старыми репозиториями без DurableControlPlane.
 func (s Server) lockPackageMutation(ctx context.Context, scope string) (func(), error) {
 	scope = strings.TrimSpace(scope)
 	if scope == "" {
@@ -59,10 +59,10 @@ func (s Server) lockPackageMutation(ctx context.Context, scope string) (func(), 
 	return mu.Unlock, nil
 }
 
-// lockPackageLookupMutation resolves aliases (for example a version string) to
-// the canonical release ID before acquiring the distributed lease, then reloads
-// the package under that lease. This prevents ID-vs-version aliases from creating
-// two different lock scopes for the same release.
+// lockPackageLookupMutation разрешает псевдонимы, например строку
+// версии, в канонический release ID до получения распределённой
+// аренды, затем заново загружает пакет под ней. Так ID и строка
+// версии не создают разные области блокировки одного выпуска.
 func (s Server) lockPackageLookupMutation(ctx context.Context, packageID string) (packageLookup, func(), error) {
 	lookup, err := s.lookupPackage(packageID)
 	if err != nil {

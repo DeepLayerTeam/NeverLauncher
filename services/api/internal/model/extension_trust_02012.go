@@ -7,17 +7,17 @@ const (
 	ExtensionTrustModeAudit  = "audit"
 )
 
-// ExtensionTrustPolicy is the registry-wide publisher trust policy. Strict mode
-// fails closed; audit mode records policy violations but still requires a valid
-// package signature and a non-revoked registered key.
+// ExtensionTrustPolicy — общая политика доверия к издателям реестра.
+// Строгий режим запрещает нарушения; режим аудита их записывает, но также
+// требует правильную подпись и неотозванный зарегистрированный ключ.
 type ExtensionTrustPolicy struct {
 	Mode              string    `json:"mode"`
 	AllowedPublishers []string  `json:"allowedPublishers,omitempty"`
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
-// ExtensionQuarantineEntry records an artifact that must not be published,
-// installed, updated or started until an administrator explicitly releases it.
+// ExtensionQuarantineEntry отмечает артефакт, который нельзя публиковать,
+// устанавливать, обновлять или запускать до явного разрешения администратора.
 type ExtensionQuarantineEntry struct {
 	ID              string     `json:"id"`
 	PackageIdentity string     `json:"packageIdentity"`
@@ -36,8 +36,8 @@ type ExtensionQuarantineEntry struct {
 	ReleasedBy      string     `json:"releasedBy,omitempty"`
 }
 
-// ExtensionEmergencyDisable is a persistent kill-switch. It survives Backend
-// restarts and is checked before an extension can be enabled or started.
+// ExtensionEmergencyDisable — постоянный аварийный выключатель. Переживает
+// перезапуски бэкенда и проверяется перед включением или запуском расширения.
 type ExtensionEmergencyDisable struct {
 	ExtensionID string     `json:"extensionId"`
 	Scope       string     `json:"scope"`
@@ -49,8 +49,8 @@ type ExtensionEmergencyDisable struct {
 	ClearedBy   string     `json:"clearedBy,omitempty"`
 }
 
-// ExtensionRecoveryExport is portable JSON state. Private signing keys and
-// extension secret plaintext are deliberately excluded.
+// ExtensionRecoveryExport — переносимое состояние JSON. Закрытые
+// ключи подписи и открытые секреты расширений специально исключены.
 type ExtensionRecoveryExport struct {
 	SchemaVersion     string                          `json:"schemaVersion"`
 	GeneratedAt       time.Time                       `json:"generatedAt"`

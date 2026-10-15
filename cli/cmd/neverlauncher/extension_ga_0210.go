@@ -29,9 +29,9 @@ func supportedExtensionAPI0210(raw string) bool {
 	}
 }
 
-// supportsHostHello0210 mirrors the Backend compatibility rule: 0.20 signed/source
-// manifests may use the legacy 3.7 marker and an old SDK that did not send an
-// Extension API field. New API v1 manifests must explicitly negotiate API v1.
+// Функция supportsHostHello0210 повторяет правило совместимости бэкенда: подписанные
+// манифесты или манифесты исходников 0.20 могут использовать старый маркер 3.7 и SDK
+// без поля Extension API. Новые манифесты API v1 должны явно согласовывать API v1.
 func supportsHostHello0210(manifestAPI, helloAPI string) bool {
 	manifestAPI = strings.TrimSpace(manifestAPI)
 	helloAPI = strings.TrimSpace(helloAPI)

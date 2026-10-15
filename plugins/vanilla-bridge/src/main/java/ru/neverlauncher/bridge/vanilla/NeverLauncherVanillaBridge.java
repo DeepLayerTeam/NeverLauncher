@@ -14,10 +14,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Production sidecar for stock Mojang dedicated servers. Vanilla has no plugin
- * lifecycle/login API, therefore this adapter deliberately exposes no LOGIN_GATE
- * capability. It integrates via local RCON + bounded latest.log tailing and the
- * same signed ServerBridge v3 runtime/control/event transport as native adapters.
+ * Производственный sidecar для стандартных выделенных серверов Mojang. У Vanilla нет
+ * API жизненного цикла плагинов или входа, поэтому адаптер намеренно не объявляет
+ * LOGIN_GATE. Интеграция использует локальный RCON и ограниченное чтение хвоста latest.log
+ * вместе с подписанным транспортом исполнения, управления и событий ServerBridge v3.
  */
 public final class NeverLauncherVanillaBridge implements AutoCloseable {
     private static final Pattern LIST = Pattern.compile("There are (\\d+) of a max of (\\d+) players online", Pattern.CASE_INSENSITIVE);
@@ -73,7 +73,7 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     }
 
     void start() throws Exception {
-        // Verify credentials before publishing ready.
+        // Проверяйте учётные данные до публикации готовности.
         rcon("list");
         api.setRoutingModes(false, false);
         api.startControlChannel(this::executeControl);

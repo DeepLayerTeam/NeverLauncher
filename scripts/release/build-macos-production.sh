@@ -49,7 +49,7 @@ WORK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/neverlauncher-macos-production.XXXXXX")"
 cleanup() { rm -rf -- "${WORK_ROOT}"; }
 trap cleanup EXIT
 
-# Tauri's Rust build embeds assets produced by the desktop web build.
+# Сборка Rust в Tauri встраивает ресурсы настольной веб-сборки.
 (
   cd "${ROOT_DIR}/apps/desktop"
   npm ci
@@ -104,10 +104,10 @@ for arch in x64 arm64; do
 </dict></plist>
 EOF_PLIST
 
-  # Sign nested helper tools first. Never sign Contents/MacOS/neverlauncher-desktop
-  # directly while it lives inside the .app: codesign treats the bundle main
-  # executable as the bundle itself and requires every nested helper to already
-  # be signed. The final APP_ROOT signature signs/seals the main executable.
+  # Сначала подписывайте вложенные вспомогательные утилиты. Не подписывайте
+  # Contents/MacOS/neverlauncher-desktop напрямую внутри .app: codesign воспринимает
+  # основной исполняемый файл как сам пакет и требует предварительной подписи всех
+  # помощников. Итоговая подпись APP_ROOT подписывает и запечатывает основной файл.
   for binary in neverguard neverruntime neverlauncher-cli; do
     case "${binary}" in
       neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
@@ -127,16 +127,16 @@ EOF_PLIST
     fi
   done
 
-  # Generate the Resources that must be sealed by the outer application
-  # signature. The main executable is intentionally still unsigned here.
+  # Создайте Resources, которые должна защищать внешняя подпись
+  # приложения. Основной исполняемый файл здесь намеренно ещё не подписан.
   python3 "${ROOT_DIR}/scripts/release/macos-package.py" manifest \
     --version "${VERSION}" --arch "${arch}" --team-id "${TEAM_ID}" \
     --trust-mode "${UPDATE_TRUST_MODE}" \
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
   chmod 0644 "${APP_ROOT}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" "${RES_DIR}/COMPONENT_UPDATE_MANIFEST.json"
 
-  # Complete inside-out signing by signing the application bundle exactly once.
-  # This signs the main executable and seals already-signed Helpers + Resources.
+  # Завершите подписание изнутри наружу, подписав пакет приложения ровно один раз. Это
+  # подпишет основной исполняемый файл и защитит уже подписанные Helpers и Resources.
   codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
   codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
   for binary in neverguard neverruntime neverlauncher-cli; do

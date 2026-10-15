@@ -1,7 +1,7 @@
-# GitHub-hosted Windows runners have no modern OpenGL ICD. Install a known,
-# SHA-256 pinned Mesa llvmpipe WGL runtime *only* in the disposable runner JDK.
-# Source: https://github.com/mmozeiko/build-mesa/releases/tag/26.2.4
-# Never use this as a production launcher or anti-cheat bypass.
+# В Windows-агентах GitHub нет современного OpenGL ICD. Устанавливайте известную
+# Mesa llvmpipe WGL с закреплённым SHA-256 только во временный JDK CI-агента.
+# Источник: https://github.com/mmozeiko/build-mesa/releases/tag/26.2.4. Никогда
+# не используйте это для производственного лаунчера или обхода античита.
 param(
     [Parameter(Mandatory = $true)][ValidateSet('x86_64','aarch64')][string]$Architecture,
     [Parameter(Mandatory = $true)][string]$JavaExecutable
@@ -23,7 +23,7 @@ $work = Join-Path $env:RUNNER_TEMP ("neverlauncher-mesa-" + [Guid]::NewGuid().To
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 try {
     $archive = Join-Path $work $name
-    # Retry transient upstream failures but never accept changed bytes.
+    # Повторяйте временные ошибки внешнего сервиса, но никогда не принимайте изменившиеся байты.
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         try { Invoke-WebRequest -Uri $url -OutFile $archive -MaximumRedirection 5; break }
         catch { if ($attempt -eq 3) { throw }; Start-Sleep -Seconds (2 * $attempt) }
@@ -39,7 +39,7 @@ try {
     $candidates = @(Get-ChildItem -Path $unpack -File -Recurse -Filter opengl32.dll)
     if ($candidates.Count -ne 1) { throw "Mesa package must contain exactly one opengl32.dll, found $($candidates.Count)" }
     $dll = $candidates[0].FullName
-    # Confirm PE machine architecture before injection into the JVM directory.
+    # Проверяйте архитектуру PE до добавления в каталог JVM.
     $stream = [IO.File]::OpenRead($dll)
     try {
         $reader = New-Object IO.BinaryReader($stream)
@@ -52,8 +52,8 @@ try {
         if ($reader.ReadUInt16() -ne $peMachine) { throw 'Mesa DLL: PE machine does not match Java architecture' }
     } finally { $stream.Dispose() }
     $destination = Join-Path $runtimeDirectory 'opengl32.dll'
-    # This is a CI-managed JDK, not a user's installation. Do not overwrite an
-    # existing JDK DLL; if it is present, the reason must be investigated.
+    # Это JDK под управлением CI, не пользовательская установка. Не
+    # перезаписывайте существующую DLL JDK; если она есть, нужно выяснить причину.
     if (Test-Path -LiteralPath $destination) { throw "JDK directory already contains opengl32.dll: $destination" }
     Copy-Item -LiteralPath $dll -Destination $destination
     if ((Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $dll).Hash) {

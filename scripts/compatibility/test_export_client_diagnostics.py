@@ -49,7 +49,7 @@ class ClientDiagnosticsTest(unittest.TestCase):
             self.assertIn("native crash report", data)
             self.assertIn("[REDACTED]", data)
             self.assertNotIn("DO_NOT_DISCLOSE", data)
-            self.assertNotIn("Native JVM crash", data)  # beyond bounded tail
+            self.assertNotIn("Native JVM crash", data)  # За пределами ограниченного хвоста.
 
     def test_missing_log_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

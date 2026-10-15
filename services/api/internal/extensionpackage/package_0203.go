@@ -519,8 +519,8 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	return a, nil
 }
 
-// VerifyFile verifies complete .nlext integrity and its Ed25519 signature against
-// the exact trusted raw public key registered for the publisher.
+// VerifyFile проверяет полную целостность .nlext и подпись Ed25519 строго
+// по доверенному сырому открытому ключу, зарегистрированному за издателем.
 func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackage, error) {
 	if len(publicKey) != ed25519.PublicKeySize {
 		return VerifiedPackage{}, errors.New("trusted Ed25519 public key must be 32 bytes")
@@ -552,9 +552,9 @@ func VerifyFile(packagePath string, publicKey ed25519.PublicKey) (VerifiedPackag
 	return VerifiedPackage{Manifest: a.manifest, Descriptor: a.descriptor, Signature: *a.signature, SHA256: hex.EncodeToString(h.Sum(nil)), Size: size, PackageIdentity: a.descriptor.PackageIdentity, KeyFingerprint: fingerprint}, nil
 }
 
-// InspectSignedFile validates package structure/identity and returns signature
-// metadata without making a trust decision. Registry publish uses this to select
-// the exact publisher key and then calls VerifyFile with that trusted key.
+// InspectSignedFile проверяет структуру и идентичность пакета и возвращает
+// метаданные подписи без решения о доверии. Реестр выбирает точный ключ
+// издателя, затем вызывает VerifyFile с этим доверенным ключом.
 func InspectSignedFile(packagePath string) (VerifiedPackage, error) {
 	a, err := analyze0203(packagePath)
 	if err != nil {
@@ -574,12 +574,12 @@ func InspectSignedFile(packagePath string) (VerifiedPackage, error) {
 	return VerifiedPackage{Manifest: a.manifest, Descriptor: a.descriptor, Signature: *a.signature, SHA256: hex.EncodeToString(h.Sum(nil)), Size: size, PackageIdentity: a.descriptor.PackageIdentity, KeyFingerprint: a.signature.KeyFingerprint}, nil
 }
 
-// ExtractPayloadFile re-validates the canonical .nlext structure and extracts
-// only payload/ entries into an empty destination directory. It refuses to
-// extract when packageIdentity does not match the expected immutable identity.
-// Paths were already rejected for traversal/symlink/case-collision by analyze0203;
-// this routine additionally creates every output file with O_EXCL so an
-// unexpected pre-existing path cannot be overwritten.
+// ExtractPayloadFile повторно проверяет каноническую структуру
+// .nlext и извлекает только payload/ в пустой каталог. При несовпадении
+// packageIdentity с ожидаемой неизменяемой идентичностью распаковка
+// отклоняется. Пути уже проверены analyze0203 на traversal, ссылки
+// и конфликты регистра; здесь файлы дополнительно создаются с O_EXCL
+// против перезаписи неожиданных существующих путей.
 func ExtractPayloadFile(packagePath, destination, expectedPackageIdentity string) (model.ExtensionManifest, error) {
 	a, err := analyze0203(packagePath)
 	if err != nil {

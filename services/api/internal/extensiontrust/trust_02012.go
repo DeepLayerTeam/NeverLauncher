@@ -26,9 +26,9 @@ func contains(values []string, value string) bool {
 	return false
 }
 
-// EvaluatePublisher applies the mutable registry trust policy on top of the
-// cryptographic key checks. Audit mode reports an allow-list violation without
-// weakening the mandatory publisher-active and key-not-revoked checks.
+// EvaluatePublisher применяет изменяемую политику доверия реестра после криптографической
+// проверки ключей. Режим аудита сообщает нарушение списка разрешённых, не ослабляя
+// обязательные проверки активности издателя и отсутствия отзыва ключа.
 func EvaluatePublisher(ctx context.Context, repo repository.Repository, publisherID string) (Decision, error) {
 	publisherID = strings.ToLower(strings.TrimSpace(publisherID))
 	publishers, err := repo.ListExtensionRegistryPublishers(ctx)

@@ -391,9 +391,9 @@ func extensionTest02010(args []string) error {
 	return nil
 }
 
-// localDevHost02010 implements the authenticated loopback Host Protocol used by
-// extension processes. It is intentionally fail-closed: only intrinsic capabilities
-// and permissions explicitly passed with --grant are exposed.
+// localDevHost02010 реализует аутентифицированный локальный Host Protocol
+// для процессов расширений. Он по умолчанию запрещает доступ: открыты только
+// встроенные возможности и разрешения, явно переданные через --grant.
 type localDevHost02010 struct {
 	manifest                       CanonicalExtensionManifest0201
 	token, callbackToken, instance string

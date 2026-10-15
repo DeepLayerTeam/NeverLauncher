@@ -1003,8 +1003,8 @@ func ensureExtensionEntrypointsInPackage0202(manifest CanonicalExtensionManifest
 }
 
 func sameZipTimestamp0202(actual, expected time.Time) bool {
-	// ZIP's DOS timestamp has two-second granularity; Go may additionally retain
-	// an extended timestamp. Accept the canonical instant within that granularity.
+	// Временная метка ZIP в формате DOS имеет точность две секунды; Go также может сохранять
+	// расширенную метку. Допускайте канонический момент времени с этой погрешностью.
 	delta := actual.Unix() - expected.Unix()
 	return delta >= -1 && delta <= 1
 }
@@ -1095,8 +1095,8 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 	if err := tmp.Close(); err != nil {
 		return nil, err
 	}
-	// Close the source archive before an in-place replacement. This is required
-	// on Windows, where an open ZIP cannot be renamed over.
+	// Закройте исходный архив до замены на месте. Это обязательно в
+	// Windows, где открытый ZIP нельзя переименовать поверх другого файла.
 	if err := analysis.Close(); err != nil {
 		return nil, err
 	}
@@ -1252,7 +1252,7 @@ func replaceFileAtomically0202(tempPath, destination string, mode os.FileMode) e
 	if err := os.Rename(tempPath, destination); err == nil {
 		return nil
 	}
-	// Windows cannot replace an existing destination atomically with os.Rename.
+	// Windows не умеет атомарно заменять существующий файл назначения посредством os.Rename.
 	backup := destination + ".replace-old"
 	_ = os.Remove(backup)
 	if _, err := os.Stat(destination); err == nil {

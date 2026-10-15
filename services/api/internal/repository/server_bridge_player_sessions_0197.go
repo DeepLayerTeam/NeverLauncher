@@ -105,7 +105,7 @@ func (r *SQLRepository) invalidatePlayerSessionRowTx0197(ctx context.Context, tx
 
 func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql.Tx, join model.ServerBridgeJoinTicket, redemption model.ServerBridgeJoinRedemption, now time.Time) error {
 	correlationID := strings.ToLower(strings.TrimSpace(join.SessionCorrelationID))
-	if correlationID == "" { // pre-0.19.7 rolling-upgrade ticket
+	if correlationID == "" { // Токен постепенного обновления до версии 0.19.7.
 		return nil
 	}
 	if !validPlayerCorrelation0197(correlationID) {
@@ -120,8 +120,8 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 		return err
 	}
 	if len(runtimeID) != 64 || runtimeEpoch < 1 {
-		// Protocol v2 nodes predate process runtime identity. Keep rolling upgrades
-		// operational without fabricating an unverifiable lifecycle binding.
+		// Узлы протокола v2 появились до идентификации процессов. Обеспечьте работоспособность
+		// постепенного обновления, не выдумывая непроверяемую привязку жизненного цикла.
 		if join.ProtocolVersion < 3 {
 			return nil
 		}
@@ -325,7 +325,7 @@ func (r *SQLRepository) applyPlayerLifecycleEventTx0197(ctx context.Context, tx 
 	}
 	correlationID := strings.ToLower(strings.TrimSpace(event.Payload["sessionCorrelationId"]))
 	if !validPlayerCorrelation0197(correlationID) {
-		return nil // rolling-upgrade event without lifecycle correlation
+		return nil // Событие постепенного обновления без корреляции жизненного цикла.
 	}
 	var status, proxyNode, backendNode string
 	err := tx.QueryRowContext(ctx, `SELECT status,COALESCE(proxy_node_id,''),COALESCE(backend_node_id,'') FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1 FOR UPDATE`, correlationID).Scan(&status, &proxyNode, &backendNode)

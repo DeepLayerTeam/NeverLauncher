@@ -2,9 +2,9 @@ package model
 
 import "time"
 
-// ExtensionUpdatePin freezes one extension to an exact immutable registry version
-// within a global/project install scope. Resolver decisions are fail-closed when a
-// pin cannot satisfy dependency or compatibility requirements.
+// ExtensionUpdatePin закрепляет расширение на одной неизменяемой версии
+// реестра в глобальной или проектной области. Если закрепление несовместимо
+// с зависимостями или требованиями, разрешение завершается отказом.
 type ExtensionUpdatePin struct {
 	ExtensionID string    `json:"extensionId"`
 	Scope       string    `json:"scope"`
@@ -14,29 +14,29 @@ type ExtensionUpdatePin struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-// ExtensionUpdateRoot is an explicit root requested by an operator. Empty
-// Version means "best version in Channel"; empty Channel resolves to stable.
+// ExtensionUpdateRoot — явное корневое расширение, указанное оператором.
+// Пустое Version означает лучшую версию в Channel; пустой Channel — stable.
 type ExtensionUpdateRoot struct {
 	ExtensionID string `json:"extensionId"`
 	Version     string `json:"version,omitempty"`
 	Channel     string `json:"channel,omitempty"`
 }
 
-// ExtensionUpdatePlanItem is one final graph node. Dependencies are ordered
-// before dependants in ExtensionUpdatePlan.Items.
+// ExtensionUpdatePlanItem — узел окончательного графа. В
+// ExtensionUpdatePlan.Items зависимости идут раньше зависимых.
 type ExtensionUpdatePlanItem struct {
 	ExtensionID     string   `json:"extensionId"`
 	FromVersion     string   `json:"fromVersion,omitempty"`
 	ToVersion       string   `json:"toVersion"`
 	PackageIdentity string   `json:"packageIdentity"`
-	Operation       string   `json:"operation"` // install, update, unchanged
+	Operation       string   `json:"operation"` // Возможные операции: install, update, unchanged.
 	Channel         string   `json:"channel"`
 	RequiredBy      []string `json:"requiredBy,omitempty"`
 	Optional        bool     `json:"optional,omitempty"`
 	Pinned          bool     `json:"pinned,omitempty"`
 }
 
-// ExtensionUpdatePlan is a fully resolved immutable candidate graph.
+// ExtensionUpdatePlan — полностью разрешённый неизменяемый граф-кандидат.
 type ExtensionUpdatePlan struct {
 	Scope           string                    `json:"scope"`
 	ScopeID         string                    `json:"scopeId,omitempty"`
@@ -49,13 +49,13 @@ type ExtensionUpdatePlan struct {
 	ResolvedAt      time.Time                 `json:"resolvedAt"`
 }
 
-// ExtensionUpdateTransaction records a compensation-backed multi-extension
-// update. State is persisted so an interrupted operator workflow is observable.
+// ExtensionUpdateTransaction записывает обновление нескольких расширений с компенсационным
+// механизмом. Состояние сохраняется, поэтому прерванная операция оператора наблюдаема.
 type ExtensionUpdateTransaction struct {
 	ID         string              `json:"id"`
 	Scope      string              `json:"scope"`
 	ScopeID    string              `json:"scopeId,omitempty"`
-	Status     string              `json:"status"` // running,succeeded,rolled_back,rollback_failed,failed
+	Status     string              `json:"status"` // Возможные статусы: running, succeeded, rolled_back, rollback_failed, failed.
 	Plan       ExtensionUpdatePlan `json:"plan"`
 	Applied    []string            `json:"applied,omitempty"`
 	InFlight   string              `json:"inFlight,omitempty"`

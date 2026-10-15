@@ -1,6 +1,6 @@
--- NeverLauncher 0.13.5: persist the verified Guard launch snapshot on the
--- Minecraft credential so every later validate/join/ServerBridge decision can
--- re-evaluate the release allowlist instead of trusting a one-time exchange.
+-- NeverLauncher 0.13.5: сохраняйте проверенный снимок запуска Guard в данных
+-- Minecraft, чтобы последующие validate/join/ServerBridge повторно оценивали
+-- список разрешённых выпусков, а не полагались на одноразовый обмен.
 ALTER TABLE minecraft_sessions
     ADD COLUMN IF NOT EXISTS integrity_verified BOOLEAN NOT NULL DEFAULT FALSE,
     ADD COLUMN IF NOT EXISTS guard_attestation_sha256 TEXT NOT NULL DEFAULT '',

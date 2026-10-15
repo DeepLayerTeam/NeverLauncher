@@ -323,9 +323,9 @@ func (b *Bus) retryDelay(attempt int) time.Duration {
 	return d
 }
 
-// Typed domain payloads. They intentionally contain identifiers and immutable
-// snapshots only; auth tokens, Guard/device credentials and backend secrets are
-// never copied into extension events.
+// Типизированные данные предметной области. Намеренно содержат только
+// идентификаторы и неизменяемые снимки; токены аутентификации, учётные данные
+// Guard/устройства и секреты бэкенда никогда не копируются в события расширений.
 type ProjectPayload struct {
 	Action  string        `json:"action"`
 	Actor   string        `json:"actor,omitempty"`
@@ -340,12 +340,12 @@ type ReleasePayload struct {
 	ManifestOmitted   bool                 `json:"manifestOmitted,omitempty"`
 }
 
-// A release may contain tens of thousands of files. The extension event bus has
-// a strict 1 MiB payload boundary; embedding the complete signed manifest in a
-// synchronous before-publish hook makes valid large releases unpublishable.
-// Preserve small snapshots for existing consumers, but use an explicitly marked,
-// content-addressed projection for large manifests. The canonical manifest is
-// still stored and verified by the release repository, not by this event.
+// Релиз может включать десятки тысяч файлов. Шина событий расширений ограничивает
+// данные 1 МиБ; полный подписанный манифест в синхронном before-publish делает
+// большие корректные релизы неопубликуемыми. Для старых потребителей сохраняйте
+// небольшие снимки, а для больших манифестов используйте явно помеченную
+// проекцию с адресацией по содержимому. Канонический манифест по-прежнему
+// хранится и проверяется репозиторием релизов, а не событием.
 func releaseEventPayload0206(action, actor string, release model.ReleaseVersion) (ReleasePayload, error) {
 	payload := ReleasePayload{Action: action, Actor: actor, Release: release}
 	encoded, err := json.Marshal(payload)
@@ -363,8 +363,8 @@ func releaseEventPayload0206(action, actor string, release model.ReleaseVersion)
 	payload.ManifestSHA256 = hex.EncodeToString(digest[:])
 	payload.ManifestFileCount = len(release.Manifest.Files)
 	payload.ManifestOmitted = true
-	// Preserve stable identity, Minecraft/loader and Java metadata. Never emit a
-	// partial file list or an invalid-looking signature for a truncated manifest.
+	// Сохраняйте устойчивую идентичность, метаданные Minecraft/загрузчика и Java. Никогда не
+	// публикуйте обрезанный список файлов или похожую на ошибочную подпись сокращённого манифеста.
 	payload.Release.Manifest = model.Manifest{
 		SchemaVersion: release.Manifest.SchemaVersion,
 		ProjectID:     release.Manifest.ProjectID,

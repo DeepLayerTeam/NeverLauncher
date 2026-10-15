@@ -187,8 +187,8 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 	return report, nil
 }
 
-// Validate performs all GA integrity/trust/dependency checks without mutation.
+// Validate проводит все проверки целостности, доверия и зависимостей GA без изменений состояния.
 func (m *Manager) Validate(ctx context.Context) (Report, error) { return m.run(ctx, false) }
 
-// Reconcile fail-closes invalid enabled installations by persisting the kill-switch and disabling them.
+// Reconcile строго отключает некорректные активные установки, сохраняя аварийный выключатель и состояние отключения.
 func (m *Manager) Reconcile(ctx context.Context) (Report, error) { return m.run(ctx, true) }

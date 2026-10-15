@@ -612,7 +612,7 @@ func waitForComponentParent0157(pid int, timeout time.Duration) error {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	// On Windows the process handle can disappear just before image mappings are fully released.
+	// В Windows дескриптор процесса может исчезнуть непосредственно перед полным освобождением отображений исполняемого файла.
 	if runtime.GOOS == "windows" {
 		time.Sleep(250 * time.Millisecond)
 	}
@@ -996,7 +996,7 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 	fromVersion := currentComponentVersion0157(root)
 	statePath := filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157))
 	if fromVersion == "" {
-		// 0.15.7-0.15.9 development bundles could contain state inside the app.
+		// Пакеты разработки версий 0.15.7–0.15.9 могли хранить состояние внутри приложения.
 		legacyEmbedded := filepath.Join(root, liveBundle, "Contents", "Resources", "COMPONENT_UPDATE_STATE.json")
 		if raw, err := os.ReadFile(legacyEmbedded); err == nil {
 			var state componentUpdateState0157
@@ -1013,9 +1013,9 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 	if err := os.WriteFile(stateTarget, stateBytes, 0o644); err != nil {
 		return nil, err
 	}
-	// Development self-tests use an unsigned synthetic tree. Production packages are already signed/notarized;
-	// mutating them after extraction would invalidate the outer bundle signature, so production state is stored
-	// outside the app bundle after commit.
+	// В самопроверках разработки используется искусственное дерево без подписи. Производственные
+	// пакеты уже подписаны или нотариально заверены; изменение после распаковки нарушит подпись
+	// внешнего пакета. Поэтому рабочее состояние сохраняется вне пакета приложения после фиксации.
 	if !allowDevelopment || manifest.TrustMode != "development-self-test" {
 		_ = os.Remove(stateTarget)
 	}
@@ -1056,8 +1056,8 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 			return nil, err
 		}
 	}
-	// Extract adjacent packages under the destination updater control directory so all subsequent staging/renames
-	// stay on the same filesystem. macOS needs the final root before ditto extraction for the same reason.
+	// Распаковывайте смежные пакеты в управляющем каталоге обновления назначения, чтобы все последующие промежуточные операции и переименования
+	// происходили в одной файловой системе. По той же причине macOS требует окончательный корневой каталог перед распаковкой через ditto.
 	probeDir, err := os.MkdirTemp("", "neverlauncher-component-probe-")
 	if err != nil {
 		return nil, err
@@ -1188,8 +1188,8 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		}
 	}
 
-	// Exercise the whole-app swap rollback path on every CI host. The tree is synthetic,
-	// but the journal/rename/recovery machinery is exactly what macOS production uses.
+	// На каждом CI-агенте проверяйте откат полной замены приложения. Дерево искусственное, но журнал,
+	// переименования и механизм восстановления точно соответствуют производственному процессу macOS.
 	treeRoot := filepath.Join(root, "tree-root")
 	if err := os.MkdirAll(filepath.Join(treeRoot, "NeverLauncher.app", "Contents", "MacOS"), 0o755); err != nil {
 		return nil, err

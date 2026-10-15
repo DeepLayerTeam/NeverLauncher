@@ -366,17 +366,17 @@ func (s Server) restoreStorageObjects880(stage string) (int, error) {
 		return 0, err
 	}
 
-	// Local storage can be restored as an atomic directory switch because both
-	// staging and live roots are prepared on the same filesystem. This also
-	// removes objects created after the backup instead of leaving orphans.
+	// Локальное хранилище восстанавливается атомарной заменой каталога, поскольку
+	// промежуточный и активный корни находятся в одной файловой системе. Это также
+	// удаляет объекты, созданные после копии, а не оставляет их бесхозными.
 	if local, ok := s.Storage.(interface{ RootPath() string }); ok {
 		return restoreLocalStorageAtomic880(root, local.RootPath())
 	}
 
-	// S3-compatible storage does not provide an atomic prefix rename. The API is
-	// still write-locked by maintenance mode, every object is checksum-verified
-	// by backup extraction, and the safety backup created by the caller remains
-	// available for operator rollback.
+	// S3-совместимое хранилище не имеет атомарного переименования префикса.
+	// API уже заблокирован для записи режимом обслуживания, каждый объект
+	// проверен по хешу при извлечении копии, а резервная копия безопасности
+	// вызывающей стороны доступна оператору для отката.
 	return s.restoreStorageObjectsSequential880(root)
 }
 

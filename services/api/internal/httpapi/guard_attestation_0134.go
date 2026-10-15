@@ -36,9 +36,9 @@ const (
 )
 
 func canonicalGuardAttestationTime0134(value time.Time) time.Time {
-	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
-	// persistence and response/signing so challenge bindings remain byte-identical
-	// after the challenge is read back from PostgreSQL.
+	// PostgreSQL TIMESTAMPTZ хранит микросекунды. Нормализуйте время
+	// до сохранения и ответа или подписи, чтобы привязки запросов
+	// оставались побайтно идентичными после повторного чтения.
 	return value.UTC().Truncate(time.Microsecond)
 }
 
@@ -64,7 +64,7 @@ type guardReleasePolicyDocument0140 struct {
 }
 
 type guardReleasePolicy0134 struct {
-	// Legacy 0.13.x shape. Kept only for controlled rollback/upgrade compatibility.
+	// Старая структура 0.13.x. Сохранена только для управляемого отката и совместимости обновления.
 	GuardSHA256         []string `json:"guardSha256,omitempty"`
 	LauncherSHA256      []string `json:"launcherSha256,omitempty"`
 	RequireAuthenticode bool     `json:"requireAuthenticode,omitempty"`

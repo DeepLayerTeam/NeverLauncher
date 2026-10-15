@@ -111,7 +111,7 @@ identity_sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'')::text FROM schema
 [[ "$identity_sealed" == "true" ]] || { echo "0.14.2 identity migration is not sealed" >&2; exit 1; }
 
 node_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT status,token_hash,token_prefix,key_algorithm,public_key,key_fingerprint,identity_epoch,plugin_version,plugin_sha256,integrity_status,(integrity_verified_at IS NULL)::text,(last_heartbeat_at IS NULL)::text FROM server_bridge_nodes_v2 WHERE id='paper-0141'")"
-# psql renders empty text columns as adjacent delimiters.
+# psql отображает пустые текстовые столбцы соседними разделителями.
 [[ "$node_state" == "identity-enrollment-required||||||0||||true|true" ]] || { echo "unexpected migrated node state: $node_state" >&2; exit 1; }
 disabled_legacy_secret="$(psql "$DB_DSN" -AtF '|' -qc "SELECT token_hash,token_prefix,status FROM server_bridge_nodes_v2 WHERE id='paper-disabled-0141'")"
 [[ "$disabled_legacy_secret" == "||disabled" ]] || { echo "disabled node retained legacy bearer material: $disabled_legacy_secret" >&2; exit 1; }

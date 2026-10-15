@@ -456,8 +456,8 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, errors.New("release signature signedAt invalid")
 	}
 
-	// The release-time policy must show the signer as active. The current
-	// policy may keep it active/verify-only, but a later revocation wins.
+	// Политика на момент выпуска должна указывать, что подписант активен. Текущая политика
+	// может сохранять статус active/verify-only, но более поздний отзыв имеет приоритет.
 	embeddedKey, err := trustedReleaseKeyRecord0158(embeddedPolicy, env.KeyID, env.KeyFingerprint)
 	if err != nil {
 		return releaseVerificationV2Context{}, err

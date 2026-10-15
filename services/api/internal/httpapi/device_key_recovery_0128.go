@@ -258,10 +258,10 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			return
 		}
 	} else {
-		// In-memory/dev fallback preserves the same ordering: replacement first,
-		// current-session rebind second, old identity revoke last. On any failure
-		// before rebind the replacement is revoked so it cannot become an orphaned
-		// active identity.
+		// Резервный режим разработки или памяти сохраняет тот же порядок:
+		// сначала замена, потом перепривязка текущего сеанса, затем отзыв
+		// старой идентичности. При ошибке до перепривязки замена отзывается,
+		// чтобы не оставить бесхозную активную идентичность.
 		replacement, err = s.Repo.SaveTrustedDevice(r.Context(), replacement)
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
@@ -292,8 +292,8 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		}
 	}
 
-	// ServerBridge lives outside PostgreSQL, so invalidate joins for both the
-	// rebound current session and every revoked sibling session after commit.
+	// ServerBridge существует вне PostgreSQL, поэтому после фиксации аннулируйте входы
+	// и текущего перепривязанного сеанса, и всех отозванных родственных сеансов.
 	invalidatedBridge := s.State.ServerBridge.invalidateSession(claims.SessionID, "")
 	seen := map[string]struct{}{claims.SessionID: {}}
 	for _, sid := range result.RevokedSessionIDs {

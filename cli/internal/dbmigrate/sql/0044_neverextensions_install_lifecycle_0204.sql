@@ -1,7 +1,7 @@
--- NeverLauncher 0.20.4: production NeverExtensions install lifecycle.
--- Existing 0.20.1/0.20.3 installation rows represented desired metadata only;
--- they are migrated to desired=disabled/current=absent because no payload had
--- ever been staged/activated on disk before this release.
+-- NeverLauncher 0.20.4: производственный жизненный цикл установки NeverExtensions.
+-- Строки установки 0.20.1/0.20.3 описывали лишь желаемое состояние; они
+-- преобразуются в desired=disabled/current=absent, поскольку до этого выпуска
+-- файлы расширений ещё не подготавливались и не активировались на диске.
 
 ALTER TABLE extension_installs ADD COLUMN IF NOT EXISTS desired_version TEXT;
 UPDATE extension_installs SET desired_version=version WHERE desired_version IS NULL OR desired_version='';

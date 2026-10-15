@@ -1,12 +1,12 @@
--- NeverLauncher 0.14.3 — One-Time Join Tickets.
+-- NeverLauncher 0.14.3: одноразовые разрешения на вход.
 --
--- ServerBridge tickets are now bound to the exact cryptographic node identity
--- epoch that existed at issue time. Redemption stores the already-authenticated
--- Ed25519 request nonce proof and succeeds through a single conditional UPDATE.
--- Standard Yggdrasil /join -> /hasJoined authorizations become consume-once too.
+-- Разрешения ServerBridge теперь привязаны к точной эпохе криптографической идентичности
+-- узла на момент выдачи. При погашении хранится ранее аутентифицированное Ed25519-доказательство
+-- nonce; успешное погашение выполняется единственным условным UPDATE. Стандартные
+-- разрешения Yggdrasil /join -> /hasJoined также становятся одноразовыми.
 
--- 0.14.2 tickets did not persist an issuance identity binding. They are short
--- lived, so fail closed across the upgrade instead of guessing the old binding.
+-- Разрешения 0.14.2 не сохраняли привязку идентичности на момент выдачи. Они
+-- краткосрочны, поэтому при обновлении отклоняйте их, не угадывая старую привязку.
 UPDATE server_bridge_join_tickets_v2
 SET status='invalidated', invalidated_at=now()
 WHERE status='active';
@@ -58,9 +58,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_join_v2_redemption_nonce_0143
     ON server_bridge_join_tickets_v2(server_id,redeemed_nonce_hash)
     WHERE ticket_version=2 AND status='consumed';
 
--- minecraft_joins is an ephemeral 120-second compatibility authorization table.
--- Existing rows cannot be proven one-time because older /hasJoined only read
--- them, therefore discard them at this security boundary and start clean.
+-- minecraft_joins — временная таблица совместимых разрешений на 120 секунд.
+-- Старые строки нельзя считать одноразовыми, поскольку прежний /hasJoined лишь
+-- читал их; на этой границе безопасности отбросьте их и начните заново.
 DELETE FROM minecraft_joins;
 
 ALTER TABLE minecraft_joins

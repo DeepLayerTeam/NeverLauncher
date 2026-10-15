@@ -1,7 +1,7 @@
 package main
 
-// The SDK authenticates with NEVERLAUNCHER_EXTENSION_HOST_URL and NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
-// It performs POST /v1/hello before starting heartbeat and capability traffic.
+// SDK аутентифицируется через NEVERLAUNCHER_EXTENSION_HOST_URL и NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
+// Перед heartbeat и запросами возможностей он выполняет POST /v1/hello.
 
 import (
 	"context"

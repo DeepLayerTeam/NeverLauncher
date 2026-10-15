@@ -760,9 +760,9 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	// Keep the in-memory dev/test path aligned with PostgreSQL: identity rotation
-	// between the initial lookup and ticket insertion must fail closed rather than
-	// minting a ticket bound to a retired key epoch.
+	// Держите тестовый путь в памяти согласованным с PostgreSQL:
+	// ротация идентичности между начальным поиском и записью билета
+	// должна отказать, а не выдать билет для отозванной эпохи ключа.
 	current := b.servers[req.ServerID]
 	if current.ID == "" || current.Status != "active" || current.IdentityEpoch != server.IdentityEpoch ||
 		!strings.EqualFold(current.KeyFingerprint, server.KeyFingerprint) {

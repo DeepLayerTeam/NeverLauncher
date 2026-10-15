@@ -24,8 +24,8 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["NEOFORGE_COMPATIBILITY_II_0176"])
-# Upstream versions with prereleases only: their release status must not be
-# represented as certified stable. Keep historical target catalogue complete.
+# Версии издателя, содержащие только prerelease, нельзя выдавать за стабильные
+# сертифицированные. Сохраняйте полный исторический каталог целей.
 blocked = {"1.20.3": 17, "1.20.5": 21, "1.21.2": 21,
            "1.21.6": 21, "1.21.7": 21, "1.21.9": 21,
            "26.1": 25, "26.1.1": 25}

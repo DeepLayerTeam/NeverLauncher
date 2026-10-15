@@ -138,7 +138,7 @@ func TestTransactionalUpdaterCrashRecovery0156(t *testing.T) {
 		updater.releaseLock()
 		t.Fatal(err)
 	}
-	updater.releaseLock() // Simulate process death after a live-tree switch but before commit.
+	updater.releaseLock() // Имитируем завершение процесса после переключения рабочего дерева, но до фиксации.
 
 	if raw, _ := os.ReadFile(dst); string(raw) != "new" {
 		t.Fatalf("crash simulation did not switch file: %q", raw)

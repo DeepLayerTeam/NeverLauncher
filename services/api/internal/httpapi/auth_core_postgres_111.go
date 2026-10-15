@@ -21,9 +21,9 @@ type authSessionPostgres111 struct {
 	db *sql.DB
 }
 
-// ConfigureAuthCore111 switches authentication state from process-local development
-// storage to normalized PostgreSQL tables. PostgreSQL is mandatory whenever the
-// repository itself is persistent; memory mode remains available only for dev/tests.
+// ConfigureAuthCore111 переводит аутентификацию с локального временного
+// состояния на нормализованные таблицы PostgreSQL. PostgreSQL обязателен
+// при постоянном репозитории; режим памяти только для разработки и тестов.
 func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil {
 		return errors.New("auth core runtime state не инициализирован")
@@ -51,7 +51,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		db.Close()
 		return fmt.Errorf("auth core postgres ping: %w", err)
 	}
-	// Fail closed if migrations were disabled or did not create the normalized schema.
+	// Строго отказывайте, если миграции отключены или не создали нормализованную схему.
 	for _, table := range []string{"auth_sessions", "refresh_token_families", "refresh_tokens", "mfa_methods", "recovery_codes", "auth_events", "webauthn_credentials", "webauthn_challenges", "mfa_policies"} {
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
@@ -462,8 +462,8 @@ func scanSession111(row rowScanner111) (authSessionRecord, error) {
 	return rec, nil
 }
 
-// stableSessionSort111 is used by tests/compatibility callers that aggregate rows
-// from more than one backend.
+// stableSessionSort111 применяется тестами и совместимым
+// кодом, агрегирующим строки разных бэкендов.
 func stableSessionSort111(items []authSessionRecord) {
 	sort.Slice(items, func(i, j int) bool { return items[i].LastSeenAt.After(items[j].LastSeenAt) })
 }

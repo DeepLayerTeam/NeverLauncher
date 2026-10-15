@@ -164,7 +164,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 	if requiresHost && m.Host == nil {
 		return m.fail(tx, errors.New("extension host is required for backend extension health verification"))
 	}
-	// Stop all enabled selected hosts before touching any payload so dependants never run against a half-updated graph.
+	// Остановите все выбранные активные хосты до изменения файлов, чтобы зависимые расширения не работали с наполовину обновлённым графом.
 	if m.Host != nil {
 		for _, item := range plan.Items {
 			cur := snapshots[item.ExtensionID]
@@ -215,7 +215,7 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		}
 		_ = after
 	}
-	// Start all enabled final installs dependency-first and require a healthy Host handshake/heartbeat for backend targets.
+	// Запускайте все итоговые активные установки в порядке зависимостей; для целей бэкенда обязателен здоровый handshake/heartbeat Host.
 	if m.Host != nil {
 		for _, item := range plan.Items {
 			cur, e := m.Repo.GetExtensionInstallState(ctx, item.ExtensionID, plan.Scope, plan.ScopeID)
@@ -294,10 +294,10 @@ func planItem02011(plan model.ExtensionUpdatePlan, id string) (model.ExtensionUp
 	return model.ExtensionUpdatePlanItem{}, false
 }
 
-// recoverInterrupted02011 is invoked only after this replica owns the scope
-// lease. A previous running transaction therefore cannot still be active on a
-// healthy replica. The durable in-flight marker closes the crash window between
-// filesystem/lifecycle mutation and the applied journal write.
+// recoverInterrupted02011 вызывается, только когда реплика владеет арендой
+// области. Поэтому прежняя транзакция не может продолжать работать на
+// здоровой реплике. Постоянный маркер операции закрывает окно сбоя между
+// изменением файлов/жизненного цикла и записью журнала применения.
 func (m *Manager) recoverInterrupted02011(ctx context.Context, scope, scopeID string, healthTimeout time.Duration) error {
 	txs, err := m.Repo.ListExtensionUpdateTransactions(ctx, scope, scopeID, "running")
 	if err != nil {

@@ -135,13 +135,13 @@ fn resolve_ntdll_export(name: &'static [u8]) -> Option<*mut c_void> {
 
 fn resolve_ldr_register_dll_notification() -> Option<LdrRegisterDllNotificationFn> {
     let address = resolve_ntdll_export(b"LdrRegisterDllNotification\0")?;
-    // SAFETY: GetProcAddress resolved the documented ntdll export with this ABI.
+    // БЕЗОПАСНОСТЬ: GetProcAddress разрешил документированный экспорт ntdll с данным ABI.
     Some(unsafe { std::mem::transmute::<*mut c_void, LdrRegisterDllNotificationFn>(address) })
 }
 
 fn resolve_ldr_unregister_dll_notification() -> Option<LdrUnregisterDllNotificationFn> {
     let address = resolve_ntdll_export(b"LdrUnregisterDllNotification\0")?;
-    // SAFETY: GetProcAddress resolved the documented ntdll export with this ABI.
+    // БЕЗОПАСНОСТЬ: GetProcAddress разрешил документированный экспорт ntdll с данным ABI.
     Some(unsafe { std::mem::transmute::<*mut c_void, LdrUnregisterDllNotificationFn>(address) })
 }
 
@@ -178,10 +178,10 @@ impl ModuleEventSlot {
     }
 }
 
-// The producer side only writes a slot after reserving a unique ring index and
-// publishes it with Release. The worker is the only consumer and clears slots
-// after an Acquire load. Loader notifications are therefore allocation-free and
-// never take a process-global lock while the Windows loader lock is held.
+// Производитель записывает слот только после резервирования уникального индекса
+// кольца и публикует его с Release. Единственный потребитель очищает слоты после
+// Acquire-загрузки. Поэтому уведомления загрузчика не выделяют память и не берут
+// глобальную блокировку процесса при удержании Windows loader lock.
 unsafe impl Sync for ModuleEventSlot {}
 
 static MODULE_RING: [ModuleEventSlot; MODULE_RING_CAPACITY] =
@@ -202,8 +202,8 @@ fn unicode_for_entry(entry: &LdrDllNotificationEntry) -> Option<UnicodeString> {
     if source.is_null() {
         None
     } else {
-        // SAFETY: the structure is owned by the loader and documented as valid
-        // for the duration of this notification callback.
+        // БЕЗОПАСНОСТЬ: структурой владеет загрузчик, и она
+        // действительна во время данного callback уведомления.
         Some(unsafe { *source })
     }
 }
@@ -243,18 +243,18 @@ fn queue_module_event(reason: u32, entry: &LdrDllNotificationEntry) {
             if available > MODULE_PATH_WCHARS {
                 event.flags |= MODULE_EVENT_FLAG_PATH_TRUNCATED;
             }
-            // Avoid allocation, filesystem calls, synchronization primitives,
-            // and calls into other modules from the loader notification.
+            // Избегайте выделений памяти, файловых операций, примитивов
+            // синхронизации и обращений к другим модулям из уведомления загрузчика.
             for index in 0..to_copy {
-                // SAFETY: UNICODE_STRING.Length bounds the readable UTF-16 data
-                // supplied by the Windows loader for this callback.
+                // БЕЗОПАСНОСТЬ: UNICODE_STRING.Length ограничивает читаемые
+                // UTF-16-данные, переданные Windows-загрузчиком в callback.
                 event.path[index] = unsafe { *name.buffer.add(index) };
             }
         }
     }
 
-    // SAFETY: the slot is exclusively owned by this reserved write index until
-    // ready becomes true. The consumer clears ready before the ring can reuse it.
+    // БЕЗОПАСНОСТЬ: слот эксклюзивно принадлежит зарезервированному индексу записи, пока
+    // ready не станет true. Потребитель сбрасывает ready до повторного использования кольца.
     unsafe {
         *slot.event.get() = event;
     }
@@ -271,12 +271,12 @@ unsafe extern "system" fn module_notification(
     }
     match notification_reason {
         MODULE_EVENT_REASON_LOADED => {
-            // SAFETY: the union member is selected by NotificationReason.
+            // БЕЗОПАСНОСТЬ: поле union выбирается по NotificationReason.
             let entry = unsafe { (*notification_data).loaded };
             queue_module_event(MODULE_EVENT_REASON_LOADED, &entry);
         }
         MODULE_EVENT_REASON_UNLOADED => {
-            // SAFETY: the union member is selected by NotificationReason.
+            // БЕЗОПАСНОСТЬ: поле union выбирается по NotificationReason.
             let entry = unsafe { (*notification_data).unloaded };
             queue_module_event(MODULE_EVENT_REASON_UNLOADED, &entry);
         }
@@ -290,8 +290,8 @@ fn register_module_notifications() -> Result<(), ()> {
     MODULE_READ_INDEX.store(0, Ordering::Release);
     MODULE_DROPPED_EVENTS.store(0, Ordering::Release);
     let mut cookie = std::ptr::null_mut();
-    // SAFETY: callback and cookie pointers remain valid for the lifetime of the
-    // loaded Sensor DLL; Flags must be zero per LdrRegisterDllNotification.
+    // БЕЗОПАСНОСТЬ: указатели callback и cookie действительны всё время загрузки
+    // DLL Sensor; Flags должен быть нулём по LdrRegisterDllNotification.
     let register = resolve_ldr_register_dll_notification().ok_or(())?;
     let status = unsafe { register(0, module_notification, std::ptr::null_mut(), &mut cookie) };
     if status < 0 || cookie.is_null() {
@@ -304,8 +304,8 @@ fn register_module_notifications() -> Result<(), ()> {
 fn unregister_module_notifications() {
     let cookie = MODULE_NOTIFICATION_COOKIE.swap(std::ptr::null_mut(), Ordering::AcqRel);
     if !cookie.is_null() {
-        // SAFETY: cookie was returned by LdrRegisterDllNotification and is
-        // exchanged exactly once before unregistration.
+        // БЕЗОПАСНОСТЬ: cookie получен из LdrRegisterDllNotification
+        // и заменяется ровно один раз до снятия регистрации.
         if let Some(unregister) = resolve_ldr_unregister_dll_notification() {
             unsafe {
                 let _ = unregister(cookie);
@@ -651,14 +651,14 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             std::process::abort();
         }
     };
-    // Send an authenticated liveness event as soon as this worker is running
-    // and the initial real thread snapshot has succeeded. In a short-lived
-    // Java process, waiting two seconds before the first Module Guard event
-    // made the legitimate lifecycle certificate report zero heartbeats.
-    // Unlike incrementing a counter locally, this traverses the exact signed
-    // event stream (sequence, HMAC and event-chain verification) that is used
-    // for subsequent periodic Module Guard heartbeats. Expensive integrity
-    // scans remain independently mandatory on their existing cadence.
+    // Отправляйте аутентифицированное событие жизнеспособности сразу после
+    // запуска исполнителя и успешного первого настоящего снимка потоков. В
+    // коротком Java-процессе ожидание двух секунд перед первым событием Module
+    // Guard приводило к нулю heartbeat в законном сертификате жизненного
+    // цикла. В отличие от локального увеличения счётчика, это проходит полный
+    // подписанный поток событий с sequence, HMAC и проверкой цепочки,
+    // используемый для всех следующих heartbeat. Дорогие проверки целостности
+    // остаются независимо обязательными с прежней периодичностью.
     let startup_heartbeat = RawModuleEvent {
         reason: MODULE_EVENT_REASON_HEARTBEAT,
         ..EMPTY_MODULE_EVENT
@@ -709,8 +709,8 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             if !slot.ready.load(Ordering::Acquire) {
                 break;
             }
-            // SAFETY: ready=true publishes a completely initialized Copy value
-            // and this worker is the single consumer for the ring.
+            // БЕЗОПАСНОСТЬ: ready=true публикует полностью инициализированное
+            // значение Copy; данный исполнитель — единственный потребитель кольца.
             let event = unsafe { *slot.event.get() };
             slot.ready.store(false, Ordering::Release);
             MODULE_READ_INDEX.store(read + 1, Ordering::Release);
@@ -728,9 +728,9 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             }
         }
 
-        // The native JVM can create thousands of protected memory regions
-        // during startup. Drain the bounded queue without replacing the
-        // independent full executable-region/hash verification below.
+        // Нативная JVM при запуске способна создать тысячи защищённых
+        // областей памяти. Опустошайте ограниченную очередь, не заменяя
+        // независимую полную проверку исполняемых областей и хешей ниже.
         if memory_drain_at.elapsed() >= MEMORY_TRANSITION_DRAIN_INTERVAL {
             if let Err(err) = memory_integrity::drain_pending_transitions() {
                 let tamper = memory_tamper_event(&err);
@@ -1136,10 +1136,10 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     channel.secret.zeroize();
 }
 
-/// JVM native-agent entry point. Module notification is registered before the
-/// startup proof is accepted. The JVM remains inside Agent_OnLoad until the
-/// parent authenticates the Sensor, captures a baseline and returns a signed
-/// Module Guard arm acknowledgement. Any failure aborts VM startup.
+/// Точка входа нативного агента JVM. Уведомления о модулях регистрируются до
+/// принятия доказательства запуска. JVM остаётся в Agent_OnLoad, пока родитель
+/// не аутентифицирует Sensor, не снимет базовую картину и не вернёт подписанное
+/// подтверждение включения Module Guard. Любая ошибка прерывает запуск VM.
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Agent_OnLoad(
@@ -1206,8 +1206,8 @@ pub extern "system" fn Agent_OnLoad(
     let memory_snapshot = match memory_integrity::initialize() {
         Ok(snapshot) if snapshot.active && snapshot.healthy && snapshot.executable_regions > 0 => snapshot,
         Ok(snapshot) => {
-            // Keep the fail-closed gate, but emit enough evidence to diagnose
-            // the parent's MEMORY_READY early EOF on Windows CI.
+            // Сохраняйте строгую блокировку при ошибках, но выводите достаточно сведений
+            // для диагностики раннего EOF MEMORY_READY родительского процесса в Windows CI.
             eprintln!(
                 "NeverGuard Sensor Memory Integrity refused readiness: active={} healthy={} executable_regions={} image_code_regions={}",
                 snapshot.active, snapshot.healthy, snapshot.executable_regions, snapshot.image_code_regions

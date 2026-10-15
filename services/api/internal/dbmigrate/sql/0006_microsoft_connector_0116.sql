@@ -1,6 +1,6 @@
--- NeverLauncher 0.11.6: encrypted external provider credentials.
--- encrypted_refresh_token contains an application-layer AES-GCM envelope. Plaintext
--- Microsoft/OIDC refresh tokens are never stored in PostgreSQL.
+-- NeverLauncher 0.11.6: зашифрованные учётные данные внешних провайдеров.
+-- Поле encrypted_refresh_token содержит конверт AES-GCM уровня приложения.
+-- Открытые refresh-токены Microsoft/OIDC никогда не хранятся в PostgreSQL.
 CREATE TABLE IF NOT EXISTS provider_credentials (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

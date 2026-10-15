@@ -112,8 +112,8 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 		return decision
 	}
 
-	// Wildcard memberships from historical users.project_roles are intentionally
-	// ignored. Instance-wide access must come from the user's global RoleID.
+	// Исторические wildcard-назначения из users.project_roles намеренно
+	// игнорируются. Глобальные права должны приходить из общей RoleID пользователя.
 	roleID := strings.TrimSpace(user.ProjectRoles[projectID])
 	if roleID == "" {
 		decision.ReasonCode = "project-membership-required"
@@ -130,9 +130,9 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 	return decision
 }
 
-// IsProjectAction is the hard boundary between instance-wide privileges and
-// project-scoped privileges. Adding a global administrative permission here
-// is a security-sensitive change and is covered by the 0.21.1 frozen gate.
+// IsProjectAction — строгая граница между правами всего экземпляра и
+// отдельного проекта. Добавление сюда глобального административного
+// права меняет безопасность и проверяется фиксированной проверкой 0.21.1.
 func IsProjectAction(action string) bool {
 	switch strings.TrimSpace(action) {
 	case "project:read", "project:write",
@@ -184,7 +184,7 @@ func policyRevision(user model.User, roles map[string]model.Role) string {
 			keys = append(keys, projectID)
 		}
 	}
-	// Small insertion sort keeps this package dependency-free and deterministic.
+	// Небольшая сортировка вставками обеспечивает отсутствие внешних зависимостей и детерминированный результат.
 	for i := 1; i < len(keys); i++ {
 		for j := i; j > 0 && keys[j] < keys[j-1]; j-- {
 			keys[j], keys[j-1] = keys[j-1], keys[j]

@@ -142,8 +142,8 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 	}
 	journal, err := u.prepareLocked(req)
 	if err != nil {
-		// prepare never mutates live bytes, but it may already have created a durable
-		// staging journal. Terminalize it so the next run does not inherit noise.
+		// Подготовка не меняет активные байты, но уже могла создать устойчивый журнал промежуточного состояния.
+		// Переведите его в конечное состояние, чтобы следующий запуск не унаследовал лишние записи.
 		_, _ = u.recoverIncompleteLocked()
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		return nil, err
 	}
 
-	// Stage verified bytes before touching the live tree.
+	// Подготовьте проверенные байты в промежуточном каталоге до изменения активного дерева.
 	for _, spec := range files {
 		stagePath := filepath.Join(stageDir, filepath.FromSlash(spec.Path))
 		if err := os.MkdirAll(filepath.Dir(stagePath), 0o755); err != nil {
@@ -297,7 +297,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		}
 	}
 
-	// Capture all live paths before any replacement/removal. This is the rollback boundary.
+	// Сохраните все активные пути перед заменой или удалением. Это граница возможности отката.
 	touchedPaths := make([]string, 0, len(files)+len(remove))
 	for _, spec := range files {
 		touchedPaths = append(touchedPaths, spec.Path)
@@ -438,7 +438,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	if err := u.writeJournal(journal); err != nil {
 		return err
 	}
-	// Rollback bytes are unnecessary after a durable committed journal. Keep the journal for audit/status.
+	// После надёжной фиксации журнала байты для отката больше не нужны. Сохраните журнал для аудита и отслеживания состояния.
 	_ = os.RemoveAll(filepath.Join(u.transactionDir(journal.ID), "stage"))
 	_ = os.RemoveAll(filepath.Join(u.transactionDir(journal.ID), "backup"))
 	syncDirBestEffort0156(u.transactionDir(journal.ID))
@@ -450,8 +450,8 @@ func (u *transactionalUpdater0156) rollbackLocked(journal *updaterJournal0156, c
 	if cause != nil {
 		journal.Error = cause.Error()
 	}
-	// Journal persistence failure must never prevent restoration of already-switched bytes.
-	// We retry with the terminal state after live-tree recovery is complete.
+	// Ошибка сохранения журнала никогда не должна мешать восстановлению уже переключённых байтов.
+	// Повторяем сохранение с терминальным состоянием после полного восстановления активного дерева.
 	_ = u.writeJournal(journal)
 	backupDir := filepath.Join(u.transactionDir(journal.ID), "backup")
 	for i := len(journal.Touched) - 1; i >= 0; i-- {
@@ -529,7 +529,7 @@ func (u *transactionalUpdater0156) recoverIncompleteLocked() ([]string, error) {
 		case "committed", "rolled-back":
 			continue
 		case "staging":
-			// No live bytes were touched yet; record a terminal rollback state.
+			// Активные байты ещё не менялись; зафиксируйте конечное состояние отката.
 			journal.Phase = "rolled-back"
 			journal.Error = "recovered incomplete staging transaction"
 			if err := u.writeJournal(journal); err != nil {

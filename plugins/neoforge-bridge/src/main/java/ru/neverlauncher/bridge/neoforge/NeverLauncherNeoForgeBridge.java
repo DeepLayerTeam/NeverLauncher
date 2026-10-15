@@ -351,8 +351,8 @@ public final class NeverLauncherNeoForgeBridge {
     }
 
     private static int executeMinecraftCommand(net.minecraft.server.MinecraftServer server, String command) {
-        // Current Minecraft command dispatch is void. A normal return confirms that
-        // dispatch completed without throwing; it is not a Minecraft command score.
+        // Современная отправка команд Minecraft возвращает void. Обычный возврат означает
+        // отсутствие исключения при отправке, а не числовой результат команды Minecraft.
         server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command);
         return 1;
     }

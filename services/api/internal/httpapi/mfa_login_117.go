@@ -27,10 +27,10 @@ func authMethodStrength117(methods []string) string {
 	return strength
 }
 
-// evaluateLoginMFA117 preserves the pre-0.11.7 rule that an enabled local TOTP
-// method is mandatory, while allowing a registered passkey to satisfy that
-// second factor. A per-user MFA policy can additionally require any MFA or a
-// phishing-resistant passkey.
+// evaluateLoginMFA117 сохраняет правило до 0.11.7: включённый
+// локальный TOTP обязателен, но зарегистрированный passkey может
+// удовлетворить второму фактору. Политика пользователя также
+// может требовать любой MFA или устойчивый к фишингу passkey.
 func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp, recovery string) (loginMFAResult117, error) {
 	methods := mergeAuthMethods117(baseMethods)
 	strength := authMethodStrength117(methods)
@@ -39,8 +39,8 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	totpEnabled := s.State.Security.totpEnabled(user.ID)
 	suppliedSecondFactor := strings.TrimSpace(totp) != "" || strings.TrimSpace(recovery) != ""
 
-	// PHISHING_RESISTANT is intentionally local-policy controlled. An upstream
-	// IdP saying "mfa" does not prove that the NeverLauncher RP saw a passkey.
+	// PHISHING_RESISTANT специально контролируется локальной политикой. Заявление
+	// внешнего IdP о "mfa" не доказывает, что RP NeverLauncher проверил passkey.
 	if policy == mfaPhishingResistant117 {
 		if passkeys == 0 {
 			return loginMFAResult117{}, errors.New("phishing-resistant MFA is required but no passkey is registered")

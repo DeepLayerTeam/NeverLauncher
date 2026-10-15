@@ -11,7 +11,7 @@ MAX_BYTES = 32 * 1024
 MAX_LOGS = 3
 MAX_NATIVE_REPORTS = 2
 
-# Never upload unredacted client logs: arguments may contain live session tokens.
+# Никогда не отправляйте клиентские журналы без удаления секретов: аргументы могут содержать действующие токены сеансов.
 REDACTIONS = (
     (re.compile(r"(?i)(--(?:accessToken|token|refreshToken|clientToken|password|session)\s+)([^\s]+)"), r"\1[REDACTED]"),
     (re.compile(r"(?i)([\"']?(?:accessToken|refreshToken|clientToken|authorization|password|secret|api[-_]?key)[\"']?\s*[:=]\s*[\"']?)([^\s,;\"']+)"), r"\1[REDACTED]"),
@@ -25,7 +25,7 @@ def redacted_tail(path: Path) -> str:
         text = handle.read(MAX_BYTES).decode("utf-8", errors="replace")
     for pattern, replacement in REDACTIONS:
         text = pattern.sub(replacement, text)
-    # Native reports may include local installation usernames/paths.
+    # Нативные отчёты могут включать пользовательские имена и пути локальной установки.
     text = re.sub(r"/Users/[^/\s]+/", "/Users/[REDACTED]/", text)
     text = re.sub(r"(?i)[A-Z]:\\Users\\[^\\\s]+\\", r"C:\\Users\\[REDACTED]\\", text)
     return text
@@ -46,10 +46,10 @@ def export(runtime: Path, destination: Path) -> None:
         output.append(f"--- certification {index}, last {MAX_BYTES} bytes ---")
         output.append(redacted_tail(path))
 
-    # JVM native crashes may leave no Java exception or stdout at all (notably
-    # macOS SDL 3 / AppKit). Capture the *bounded* HotSpot report, instead of
-    # relying on an empty certification log. Never follow symlinks or upload
-    # complete process dumps/core files.
+    # Нативные падения JVM иногда не оставляют ни Java-исключения, ни
+    # stdout, особенно SDL 3 / AppKit в macOS. Собирайте ограниченный
+    # отчёт HotSpot вместо пустого журнала. Не переходите по символическим
+    # ссылкам и не выгружайте полные дампы процессов или core-файлы.
     client_dir = runtime / "materialized-client"
     native_reports: list[Path] = []
     if client_dir.is_dir() and not client_dir.is_symlink():
@@ -57,8 +57,8 @@ def export(runtime: Path, destination: Path) -> None:
     if sys.platform == "darwin":
         mac_reports = Path.home() / "Library" / "Logs" / "DiagnosticReports"
         if mac_reports.is_dir() and not mac_reports.is_symlink():
-            # Only reports from this isolated CI target; never copy a user's
-            # historic crash reports from the machine running this exporter.
+            # Собирайте отчёты только этой изолированной CI-цели; не копируйте
+            # старые пользовательские отчёты об ошибках с компьютера экспортёра.
             threshold = runtime.stat().st_mtime - 300 if runtime.exists() else 0
             native_reports.extend(
                 p for pattern in ("java*.ips", "java*.crash", "Java*.ips", "Java*.crash")

@@ -143,9 +143,9 @@ pub async fn ensure_managed_java(
         return Ok(cached);
     }
 
-    // The release bundle still carries the six-platform Temurin 21 bootstrap JRE.
-    // Managed Java II resolves every other certified major from verified Adoptium GA
-    // archives instead of incorrectly rejecting it against the Java 21-only bundle manifest.
+    // Пакет выпуска по-прежнему содержит загрузочную Temurin 21 JRE для шести платформ.
+    // Managed Java II находит остальные сертифицированные основные версии по проверенным
+    // архивам Adoptium GA, а не ошибочно отклоняет их по манифесту только Java 21.
     if required_major == 21 {
         if let Some((manifest_location, manifest_sha256)) = configured_distribution_manifest()? {
             return ensure_managed_java_from_distribution(
@@ -700,11 +700,11 @@ async fn resolve_adoptium_asset(major: u32, os: &str, arch: &str) -> Result<Adop
     };
     let client = managed_java_http_client()?;
 
-    // Prefer compact JRE images. Java 16 is EOL and no longer appears in the
-    // current releases UI, so Managed Java II also resolves historical GA
-    // feature releases. A JDK is accepted only when Adoptium has no JRE for
-    // the requested certified major/platform; java -version is still verified
-    // after extraction before the runtime becomes usable.
+    // Предпочитайте компактные JRE. Java 16 устарела и исчезла из
+    // интерфейса текущих выпусков, поэтому Managed Java II также
+    // ищет исторические GA. JDK допустим только если у Adoptium нет
+    // JRE для запрошенной версии и платформы; перед использованием
+    // извлечённой среды всё равно проверяется java -version.
     for image_type in ["jre", "jdk"] {
         if let Some(asset) = resolve_adoptium_latest_asset(&client, major, api_os, api_arch, image_type).await? {
             return Ok(asset);

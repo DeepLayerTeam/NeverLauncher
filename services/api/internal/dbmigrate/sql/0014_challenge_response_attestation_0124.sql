@@ -1,7 +1,7 @@
--- NeverLauncher 0.12.4 — Challenge-response device attestation.
--- The attestation proves fresh possession of the already-registered device key.
--- hardware_provider remains descriptive because hardware-enclave 0.2.10 does not expose
--- vendor TPM quote / Secure Enclave certificate attestation to the application.
+-- NeverLauncher 0.12.4: аттестация устройства по схеме вызов–ответ. Подтверждает
+-- актуальное владение уже зарегистрированным ключом устройства. hardware_provider
+-- остаётся описанием, поскольку hardware-enclave 0.2.10 не предоставляет приложению
+-- TPM quote или аттестацию сертификата Secure Enclave от производителя.
 
 ALTER TABLE trusted_devices ADD COLUMN IF NOT EXISTS attestation_state TEXT NOT NULL DEFAULT 'unattested';
 ALTER TABLE trusted_devices ADD COLUMN IF NOT EXISTS attestation_method TEXT NOT NULL DEFAULT '';

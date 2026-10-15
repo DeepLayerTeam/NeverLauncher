@@ -58,9 +58,9 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 	selectedID := resolveRequestedMinecraftVersion(manifest, requestedVersion)
 	selected, ok := findMojangManifestVersion(manifest, selectedID)
 	if !ok {
-		// A successful authoritative manifest which no longer contains a version is
-		// not treated as an outage. Do not resurrect a withdrawn/unknown version
-		// from stale local state.
+		// Успешно полученный авторитетный манифест, из которого исчезла
+		// версия, не считается сбоем связи. Не восстанавливайте отозванную
+		// или неизвестную версию из устаревшего локального состояния.
 		return vanillaResolvedMetadata{}, fmt.Errorf("Minecraft %s отсутствует в Mojang version manifest", selectedID)
 	}
 	if selected.URL == "" || selected.SHA1 == "" {

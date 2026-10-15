@@ -463,8 +463,8 @@ const FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS: u64 = 65;
 
 fn bounded_rate_limit_delay_seconds(values: impl IntoIterator<Item = Option<u64>>) -> u64 {
     let longest = values.into_iter().flatten().filter(|value| *value > 0).max().unwrap_or(1);
-    // The API uses a fixed one-minute window. Waiting one extra second avoids
-    // racing Redis expiry while keeping a hard bound against malformed proxies.
+    // API использует фиксированное минутное окно. Дополнительная секунда ожидания исключает
+    // гонку с истечением Redis, сохраняя жёсткий предел на случай неисправного прокси.
     longest.saturating_add(1).min(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS)
 }
 
@@ -704,9 +704,9 @@ pub async fn certify_vanilla_compatibility(
             return Err("Vanilla certification matching server port должен быть > 0".to_string());
         }
         if minecraft_supports_quick_play_for_resolution(&version, &resolution.inheritance_chain) {
-            // Minecraft 1.20+ dropped the legacy --server/--port join arguments.
-            // Use the game's native Quick Play path for an actual client join;
-            // the matching-server gate still requires proof from server logs.
+            // Minecraft 1.20+ убрал старые параметры подключения --server/--port.
+            // Используйте штатный Quick Play для настоящего соединения; проверка
+            // соответствия сервера всё равно требует доказательств в серверном журнале.
             replace_or_append_arg_pair(&mut game_args, "--quickPlayMultiplayer", format!("{host}:{port}"));
         } else {
             replace_or_append_arg_pair(&mut game_args, "--server", host.clone());
@@ -742,8 +742,8 @@ pub async fn certify_vanilla_compatibility(
     use std::io::Write as _;
     writeln!(log_file, "NeverRuntime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
-    // Only already-resolved relative JAR paths are written; no credentials or
-    // argument tokens. This makes legacy missing-library failures diagnosable.
+    // Записываются только уже разрешённые относительные JAR-пути, без учётных данных или
+    // токенов аргументов. Так можно диагностировать отсутствие библиотек в старых версиях.
     writeln!(log_file, "--- verified classpath entries ---").map_err(|e| e.to_string())?;
     for entry in &plan.classpath_entries {
         let relative = Path::new(entry).strip_prefix(root).unwrap_or(Path::new(entry));
@@ -785,9 +785,9 @@ pub async fn certify_vanilla_compatibility(
         }
     };
     let success = status.as_ref().map(|value| value.success()).unwrap_or(false);
-    // Save a bounded termination marker on failure. A JVM terminated by a
-    // native signal on Unix often has no Java stack trace and status.code()
-    // is None; previously macOS SDL/GLFW crashes left no useful evidence.
+    // При ошибке сохраняйте ограниченный маркер завершения. JVM, завершённая
+    // нативным сигналом Unix, часто не оставляет Java stack trace, а status.code()
+    // равен None; ранее сбои SDL/GLFW в macOS не давали полезных сведений.
     if !timed_out && !success {
         let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
             .map_err(|e| format!("cannot append certification exit diagnostics: {e}"))?;
@@ -805,9 +805,9 @@ pub async fn certify_vanilla_compatibility(
             .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
     }
     let exit_code = status.and_then(|value| value.code());
-    // 0xE3 is the deliberate NeverGuard fail-closed termination code. Surface
-    // its bounded reason in the client certification artifact instead of a
-    // blank process log, so Windows runner failures remain actionable.
+    // 0xE3 — специальный код завершения NeverGuard при строгом отказе.
+    // Добавляйте его краткую причину в артефакт сертификации клиента
+    // вместо пустого журнала, чтобы ошибки Windows-агента были понятны.
     #[cfg(windows)]
     if exit_code == Some(0xE3) {
         let guard = _sensor_session.report().module_guard;
@@ -1070,7 +1070,7 @@ async fn platform_natives_directory(base: &Path) -> PathBuf {
             return candidate;
         }
     }
-    // Backward-compatible fallback for packages materialized before 0.16.9.
+    // Обратно совместимый резервный путь для пакетов, подготовленных до 0.16.9.
     let legacy = base.join(platform);
     if fs::metadata(&legacy).await.map(|metadata| metadata.is_dir()).unwrap_or(false) {
         legacy
@@ -1252,19 +1252,19 @@ fn parse_java_major_version(output: &str) -> Option<u32> {
     if first == 1 { parts.next()?.parse::<u32>().ok() } else { Some(first) }
 }
 
-// Modded profiles use IDs such as "quilt-loader-0.30.1-1.21.1", not
-// Mojang release numbers. Resolve Quick Play capabilities against the root
-// (vanilla) version of the verified inheritsFrom chain, never the modded ID.
-// Otherwise a 1.21.x loader client silently receives removed --server/--port
-// arguments, stays alive, and never joins the actual loader-native server.
+// Профили с модами используют ID вроде "quilt-loader-0.30.1-1.21.1", а не
+// номера релизов Mojang. Определяйте поддержку Quick Play по корневой версии
+// Vanilla из проверенной цепочки inheritsFrom, никогда по ID модифицированного
+// профиля. Иначе загрузчик 1.21.x незаметно получит удалённые --server/--port,
+// останется запущенным и не подключится к настоящему серверу.
 fn minecraft_supports_quick_play_for_resolution(version: &str, inheritance_chain: &[String]) -> bool {
     let vanilla_version = inheritance_chain.first().map(String::as_str).unwrap_or(version);
     minecraft_supports_quick_play_multiplayer(vanilla_version)
 }
 
 fn minecraft_supports_quick_play_multiplayer(version: &str) -> bool {
-    // Release 1.20 and newer (including the 26.x year-based version scheme)
-    // support --quickPlayMultiplayer host:port. Older versions use --server/--port.
+    // Выпуски 1.20 и новее, включая годовую схему 26.x, поддерживают
+    // --quickPlayMultiplayer host:port. Старые используют --server/--port.
     let mut parts = version.split('.');
     let first = parts.next().and_then(|v| v.parse::<u32>().ok());
     let second = parts.next().and_then(|v| v.parse::<u32>().ok());
@@ -1324,8 +1324,8 @@ mod tests {
         assert!(!minecraft_supports_quick_play_for_resolution(&legacy[1], &legacy));
         let vanilla = vec!["26.3".to_string()];
         assert!(minecraft_supports_quick_play_for_resolution("26.3", &vanilla));
-        // A malformed or incomplete inheritance chain cannot infer support
-        // merely from a version-looking suffix on the loader profile.
+        // При повреждённой или неполной цепочке наследования нельзя делать вывод
+        // о поддержке по похожему на номер версии суффиксу профиля загрузчика.
         assert!(!minecraft_supports_quick_play_for_resolution("quilt-loader-0.30.1-1.21.1", &[]));
     }
 

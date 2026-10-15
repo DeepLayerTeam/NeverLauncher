@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Thread-safe value object produced by a platform adapter on a thread where its
- * Minecraft/proxy API may safely be queried. The HTTP heartbeat never calls
- * platform APIs directly; it only consumes the latest immutable snapshot.
+ * Потокобезопасный объект значений, создаваемый адаптером платформы в потоке,
+ * где безопасно обращаться к Minecraft/proxy API. HTTP heartbeat не вызывает
+ * API платформы напрямую, а читает только последний неизменяемый снимок.
  */
 public record BridgePlatformTelemetry(
     long sampledAtUnixMillis,

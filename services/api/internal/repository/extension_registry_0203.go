@@ -407,9 +407,9 @@ func (r *MemoryRepository) PublishExtensionRegistryVersion(ctx context.Context, 
 	if err != nil {
 		return model.ExtensionRegistryVersion{}, err
 	}
-	// Reject untrusted publications before touching canonical core state. The
-	// SQL path provides the stronger equivalent by doing both operations in one
-	// serializable transaction.
+	// Отклоняйте недоверенные публикации до изменения канонического
+	// состояния ядра. Реализация SQL обеспечивает более сильную
+	// гарантию, выполняя обе операции в одной сериализуемой транзакции.
 	r.extensionMu.Lock()
 	publisherActive, keyActive := false, false
 	for _, publisher := range r.extensionRegistryPublishers {

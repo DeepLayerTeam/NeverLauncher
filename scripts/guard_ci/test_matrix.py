@@ -122,7 +122,7 @@ def main() -> int:
         if tampered_stage.returncode == 0:
             raise SystemExit("tampered certified artifact unexpectedly staged")
 
-        # Restore the package before exercising metadata tampering.
+        # Восстанавливайте пакет до проверки подмены метаданных.
         write(linux_package, b"package-guard-linux-amd64\n")
         bad_matrix = json.loads((out / "matrix.json").read_text(encoding="utf-8"))
         bad_matrix["targets"][0]["artifacts"]["launcher"]["name"] = "neverlauncher-cli-linux-amd64"

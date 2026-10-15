@@ -101,5 +101,5 @@ if "neverguard-integrity-evidence-0132.py" not in ci:
 if "neverguard-integrity-evidence-0132.py" not in preflight:
     raise SystemExit("NeverGuard 0.13.2 integrity gate is not wired into release preflight")
 
-# Markdown security documentation is optional; enforcement is verified above.
+# Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[NeverLauncher] NeverGuard Windows Integrity Evidence v1 gate OK: {version}")

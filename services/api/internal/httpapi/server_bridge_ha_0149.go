@@ -13,9 +13,9 @@ const (
 	serverBridgeRequestTimeout0149      = 8 * time.Second
 )
 
-// maybeMaintain0149 is opportunistic by design: any healthy API replica may
-// trigger maintenance after a heartbeat, while PostgreSQL pg_try_advisory_xact_lock
-// guarantees only one replica performs cleanup in a given pass.
+// maybeMaintain0149 специально выполняется при возможности: любая здоровая реплика
+// API может запускать обслуживание после heartbeat, а PostgreSQL pg_try_advisory_xact_lock
+// допускает только одну реплику для очистки в пределах одного прохода.
 func (b *serverBridgeStore) maybeMaintain0149() {
 	if b == nil {
 		return

@@ -17,9 +17,9 @@ const (
 )
 
 func canonicalDeviceAttestationTime0124(value time.Time) time.Time {
-	// PostgreSQL TIMESTAMPTZ persists microseconds. Canonicalize before both
-	// persistence and signing so the begin/complete payload stays byte-identical
-	// after the challenge is read back from PostgreSQL.
+	// PostgreSQL TIMESTAMPTZ хранит микросекунды. Нормализуйте время
+	// до записи и подписи, чтобы данные начала и завершения были
+	// байтово одинаковыми после повторного чтения из PostgreSQL.
 	return value.UTC().Truncate(time.Microsecond)
 }
 

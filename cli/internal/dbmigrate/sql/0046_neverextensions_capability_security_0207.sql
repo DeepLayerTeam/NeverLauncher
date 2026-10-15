@@ -1,5 +1,5 @@
--- NeverLauncher 0.20.7: explicit capability grants and encrypted extension secrets.
--- Manifest permissions are requests only. Effective access is requested ∩ granted.
+-- NeverLauncher 0.20.7: явная выдача возможностей и зашифрованные секреты расширений. Права в
+-- манифесте — только запросы. Фактический доступ равен пересечению запрошенных и выданных прав.
 
 CREATE TABLE IF NOT EXISTS extension_permission_grants (
     extension_id TEXT NOT NULL REFERENCES extensions(id) ON DELETE CASCADE,

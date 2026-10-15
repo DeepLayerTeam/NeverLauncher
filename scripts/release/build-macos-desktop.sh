@@ -65,8 +65,8 @@ EOF_PLIST
 if [[ "${MODE}" == "production" ]]; then DEV_REQUIRED=true; NOTARY_REQUIRED=true; else DEV_REQUIRED=false; NOTARY_REQUIRED=false; fi
 if [[ "${MODE}" == "production" ]]; then TIMESTAMP_ARG="--timestamp"; else TIMESTAMP_ARG="--timestamp=none"; fi
 
-# Sign the nested executables first. Their final signed bytes are then pinned in
-# the package manifest, and the outer app signature seals that manifest.
+# Сначала подпишите вложенные исполняемые файлы. Затем окончательные подписанные байты
+# закрепляются в манифесте пакета, а внешняя подпись приложения защищает сам манифест.
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher.guard "${MACOS_DIR}/neverguard"
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
@@ -119,11 +119,11 @@ fi
 SIGNING_MODE="adhoc-development"
 [[ "${MODE}" == "production" ]] && SIGNING_MODE="developer-id-notarized"
 
-# The outer .app signature seals Contents/Resources and therefore changes the main
-# executable's final code-signature bytes. Full-file SHA-256 values are emitted
-# only after the final bundle signing/notarization step; the embedded manifest is
-# protected by the bundle signature and uses code-signing + external release-policy
-# binding to avoid a circular self-hash.
+# Внешняя подпись .app защищает Contents/Resources и потому меняет окончательные
+# байты подписи основного исполняемого файла. SHA-256 целых файлов формируются
+# лишь после окончательной подписи и нотариального заверения; встроенный
+# манифест защищается подписью пакета и связью code-signing с внешней
+# политикой выпуска, чтобы избежать циклического самохеширования.
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
 GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/neverguard" | awk '{print $1}')"
 DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"

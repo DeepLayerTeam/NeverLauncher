@@ -423,10 +423,10 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 
-	// Production loaded through Load() always carries an explicit rate-limit
-	// policy. Require Redis-backed fail-closed limiting there; the all-zero case
-	// is retained only for backwards-compatible direct Config construction in
-	// unit/integration harnesses.
+	// Производственная конфигурация через Load() всегда содержит
+	// явную политику ограничения частоты. Там обязателен строгий
+	// Redis-limiter; нулевые значения остаются лишь для обратной
+	// совместимости с прямым созданием Config в тестах.
 	haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
 	if haPolicySpecified {
 		if !cfg.ServerBridgeHARequired {

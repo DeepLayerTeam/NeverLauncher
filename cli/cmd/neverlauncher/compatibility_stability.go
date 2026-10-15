@@ -111,7 +111,7 @@ func secureClientDestination(root, relative string) (string, error) {
 		info, statErr := os.Lstat(current)
 		if statErr != nil {
 			if errors.Is(statErr, os.ErrNotExist) {
-				// Missing suffix is safe: it will be created below the already-checked prefix.
+				// Отсутствующий суффикс безопасен: он будет создан внутри уже проверенного префикса.
 				break
 			}
 			return "", fmt.Errorf("client path stat %s: %w", current, statErr)
@@ -161,10 +161,10 @@ func compatibilityGETWithHeaders(ctx context.Context, client *http.Client, rawUR
 				req.Header.Add(key, value)
 			}
 		}
-		// A 304 is not a downloadable artifact: the materializer does not
-		// supply conditional validators or possess a verified HTTP cache entry.
-		// Certain CDNs/proxies nevertheless return 304 for unconditional GETs.
-		// Request fresh bytes instead of treating the empty body as a valid file.
+		// HTTP 304 не является скачиваемым артефактом: материализатор не передаёт
+		// условные валидаторы и не располагает проверенной записью HTTP-кеша.
+		// Некоторые CDN или прокси всё же отвечают 304 на безусловный GET.
+		// Запрашивайте новые байты вместо принятия пустого тела за корректный файл.
 		if attempt > 0 {
 			req.Header.Set("Cache-Control", "no-cache, no-store")
 			req.Header.Set("Pragma", "no-cache")

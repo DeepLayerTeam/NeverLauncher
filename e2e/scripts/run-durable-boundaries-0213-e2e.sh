@@ -3,9 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTAINER="neverlauncher-durable-0213-${GITHUB_RUN_ID:-local}-$$"
-# Prefer a random free loopback port to avoid collisions with the other
-# PostgreSQL stacks used in the same runner. An explicit override is retained
-# for developers who require a predictable port.
+# Предпочитайте случайный свободный loopback-порт, чтобы не
+# конфликтовать с другими PostgreSQL в том же агенте. Для
+# разработчиков, которым нужен постоянный порт, остаётся явная настройка.
 PORT="${NEVERLAUNCHER_DURABLE_POSTGRES_PORT:-}"
 PUBLISH_PORT="127.0.0.1::5432"
 if [[ -n "$PORT" ]]; then
@@ -16,8 +16,8 @@ fi
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[durable-0213] required command missing: $1" >&2; exit 1; }; }
 for cmd in docker go; do need "$cmd"; done
 
-# Keep failure logs in a stable artifact directory. Do not print PostgreSQL
-# environment variables or the connection string into CI logs.
+# Сохраняйте журналы ошибок в постоянном каталоге артефактов. Не
+# выводите переменные окружения PostgreSQL или строку соединения в CI.
 EVIDENCE_DIR="$ROOT/e2e/runtime-durable-0213"
 mkdir -p "$EVIDENCE_DIR"
 START_LOG="$EVIDENCE_DIR/docker-start.log"
@@ -33,10 +33,10 @@ postgres_diagnostics() {
   docker logs --tail 70 "$CONTAINER" >&2 || true
 }
 
-# On shared or congested CI runners Docker can transiently reject container
-# creation. The selected port is ephemeral, and each attempt must start a
-# fresh database. Keep the container after an unexpected exit until we have
-# captured its logs; cleanup removes it at script exit.
+# На общих или загруженных CI-агентах Docker иногда временно отклоняет
+# создание контейнера. Порт временный, каждая попытка должна поднимать
+# новую БД. После неожиданного завершения оставьте контейнер до сбора
+# журналов; очистка удалит его при выходе из скрипта.
 STARTED=false
 for attempt in 1 2 3; do
   cleanup
@@ -64,8 +64,8 @@ if [[ "$STARTED" != true ]]; then
 fi
 
 if [[ -z "$PORT" ]]; then
-  # docker inspect returns the actual mapped host port for both IPv4-only and
-  # dual-stack Docker configurations. A fixed port is never assumed.
+  # docker inspect возвращает фактически назначенный порт хоста как для IPv4,
+  # так и для dual-stack Docker. Нельзя предполагать фиксированный порт.
   PORT="$(docker inspect -f '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}' "$CONTAINER" 2>>"$START_LOG")" || {
     cat "$START_LOG" >&2
     postgres_diagnostics

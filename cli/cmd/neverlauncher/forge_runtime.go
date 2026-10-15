@@ -307,9 +307,9 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if defaultInstallerClient {
 		opts.HTTPClient = secureHTTPClient()
 	}
-	// Slow Forge Maven responses can spend minutes streaming large installers.
-	// Only extend the full-body timeout for the default production client; test
-	// and caller-supplied HTTP clients retain their explicitly chosen limits.
+	// Медленные ответы Forge Maven могут передавать крупные установщики несколько минут.
+	// Увеличивайте общий тайм-аут тела только для стандартного производственного клиента;
+	// тестовые и предоставленные вызывающим кодом HTTP-клиенты сохраняют явно заданные ограничения.
 	installerClient := opts.HTTPClient
 	if defaultInstallerClient {
 		extended := *opts.HTTPClient
@@ -464,10 +464,10 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		legacyOpts.ResolutionSourceSHA256 = resolutionSourceSHA256
 		return installForgeLegacy(ctx, legacyOpts, vanilla, loaderVersion, artifactVersion, metadataURL, installerURL, installerSHA1, installerFile, installerPath, bundle, installerCacheHit, upstreamRecoveryUsed)
 	}
-	// Forge uses spec=0 for the classic processor-based 1.13+ installer format;
-	// NeoForge inherited this format and may use newer spec values. The actual
-	// production boundary is presence of version.json + processor metadata, not
-	// an arbitrary minimum spec number.
+	// Forge использует spec=0 для классического формата установщика 1.13+ на основе
+	// процессоров; NeoForge унаследовал этот формат и может задавать новые значения
+	// spec. Реальный критерий производственной обработки — наличие version.json и
+	// метаданных процессоров, а не произвольный минимальный номер spec.
 	if bundle.Profile.JSON == "" && bundle.Profile.Version == "" {
 		return forgeMaterializeResult{}, fmt.Errorf("%s installer profile не содержит version/json metadata; legacy pre-1.13 installer format в текущем compatibility release не поддерживается", loader)
 	}
@@ -508,8 +508,8 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
-	// Installer data is reproducible scratch state. Clear it on every run so stale
-	// processor inputs or symlink leftovers cannot survive between materializations.
+	// Данные установщика — воспроизводимое временное состояние. Очищайте его при каждом запуске, чтобы
+	// устаревшие входы процессора или оставшиеся символические ссылки не переживали повторную материализацию.
 	if err := os.RemoveAll(installerDataDir); err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("installer data cleanup: %w", err)
 	}
@@ -744,9 +744,9 @@ func installForgeLegacy(
 		}
 		files = append(files, embedded...)
 		if _, err := os.Stat(universalDest); err != nil {
-			// Some repacked installers describe the universal artifact in the
-			// profile but do not embed it. Materialize the profile libraries from
-			// their authoritative Maven URLs before failing the install.
+			// Некоторые перепакованные установщики указывают универсальный
+			// артефакт в профиле, но не включают его внутрь. Перед отказом
+			// установки загрузите библиотеки профиля по авторитетным Maven URL.
 			profileFiles, materializeErr := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Profile.Libraries, "forge", opts.Workers, opts.StrictUpstream)
 			if materializeErr != nil {
 				return forgeMaterializeResult{}, fmt.Errorf("Forge legacy profile libraries: %w", materializeErr)
@@ -901,9 +901,9 @@ func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile
 	} else if inherited != parent {
 		return nil, false, fmt.Errorf("Forge legacy versionInfo inheritsFrom=%s, ожидался %s", inherited, parent)
 	} else {
-		// A profile that already inherits the correct Vanilla version is
-		// normalized as well. This flag describes the final invariant, not
-		// whether the current materialization happened to rewrite the JSON.
+		// Профиль, уже наследующий правильную версию Vanilla, тоже
+		// нормализуется. Флаг описывает итоговый инвариант, а не
+		// факт перезаписи JSON во время текущей материализации.
 		return append([]byte(nil), trimmed...), true, nil
 	}
 	out, err := json.MarshalIndent(object, "", "  ")
@@ -986,13 +986,13 @@ func verifyForgeLegacyUniversal(ctx context.Context, client *http.Client, coordi
 	shaURL := baseURL + "/" + strings.TrimPrefix(filepath.ToSlash(rel), "/") + ".sha1"
 	shaBytes, err := fetchLimitedBytes(ctx, client, shaURL, 64<<10)
 	if err != nil {
-		// Some official Forge 1.7.10 Maven artifacts no longer publish a
-		// universal .sha1 sidecar. The universal JAR is extracted directly
-		// from a downloaded installer whose own upstream SHA-1 was already
-		// checked by downloadVanillaArtifact. In that narrowly-scoped case
-		// the verified installer is the integrity anchor for the ZIP entry.
-		// Other missing checksums, network failures and repacked installers
-		// must remain fail-closed.
+		// Некоторые официальные артефакты Forge 1.7.10 в Maven больше не
+		// публикуют сопутствующий файл .sha1 для универсального JAR. Он
+		// извлекается непосредственно из скачанного установщика, чей SHA-1
+		// уже проверил downloadVanillaArtifact. Только в этом узком случае
+		// проверенный установщик служит подтверждением целостности ZIP-записи.
+		// При иных отсутствующих хешах, сетевых сбоях или перепакованных
+		// установщиках операция должна завершаться отказом.
 		if authenticatedEmbeddedInstaller && strings.Contains(err.Error(), "HTTP 404") {
 			return nil
 		}
@@ -1083,9 +1083,9 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 		if len(versions) == 0 {
 			lastSelectionErr = fmt.Errorf("%s Maven metadata не содержит versions", loader)
 		} else {
-			// Maven metadata does not guarantee numeric order. Selecting the last
-			// matching row previously pinned old 38.0.0/36.0.0 Forge releases
-			// whose launchers or resource packs fail with modern runtimes.
+			// Метаданные Maven не гарантируют числовой порядок. Ранее выбор последней
+			// подходящей строки закреплял старые Forge 38.0.0/36.0.0, чьи загрузчики
+			// или ресурспаки не работают с современными средами выполнения.
 			best := ""
 			bestCompatiblePrerelease := ""
 			for _, raw := range versions {
@@ -1134,9 +1134,9 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 	return "", "", metadataURL, "", fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
 }
 
-// Compare numeric Maven release components, not lexical strings or the order
-// in which the remote index happens to list them. Pre-releases are already
-// filtered for latest-stable by the caller.
+// Сравнивайте числовые компоненты релизов Maven, а не строки
+// лексикографически или порядок строк в удалённом индексе. Предварительные
+// релизы уже отфильтрованы вызывающей стороной для latest-stable.
 func compareForgeLikeVersions(a, b string) int {
 	parts := func(v string) []string {
 		return strings.FieldsFunc(v, func(r rune) bool { return r == '.' || r == '-' || r == '+' })
@@ -1186,9 +1186,9 @@ func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataUR
 			return data, nil
 		}
 		lastErr = err
-		// Maven metadata can briefly return 404 while repository/CDN indexes are
-		// converging. Retry only this mutable metadata lookup; concrete artifact
-		// downloads remain strict and fail closed on 404.
+		// Метаданные Maven иногда возвращают 404 во время согласования индексов
+		// репозитория и CDN. Повторяйте только этот запрос изменяемых метаданных;
+		// загрузка конкретного артефакта остаётся строгой и при 404 завершается отказом.
 		if !strings.Contains(err.Error(), "HTTP 404") || attempt+1 == compatibilityHTTPAttempts {
 			break
 		}
@@ -1199,11 +1199,11 @@ func fetchForgeLikeMetadata(ctx context.Context, client *http.Client, metadataUR
 	return nil, fmt.Errorf("metadata GET failed after %d attempts: %w", compatibilityHTTPAttempts, lastErr)
 }
 
-// downloadForgeInstallerRecoveringTransport retries only interrupted HTTP body
-// transfers of SHA-1-pinned installers. The vanilla artifact downloader keeps
-// incomplete bytes in .nlpart and atomically publishes only a hash-verified
-// final jar. Unknown-size partial files restart cleanly on the next attempt.
-// Never retry bad checksums, rejected paths, 404s or cancelled operations.
+// Функция downloadForgeInstallerRecoveringTransport повторяет только прерванные передачи
+// HTTP-тела установщиков с закреплённым SHA-1. Загрузчик артефактов Vanilla хранит
+// неполные байты в .nlpart и атомарно публикует лишь JAR с проверенным хешем. Частичные
+// файлы с неизвестным размером при следующей попытке загружаются заново. Не повторяйте
+// попытки при неверных хешах, запрещённых путях, 404 и отменённых операциях.
 func downloadForgeInstallerRecoveringTransport(ctx context.Context, client *http.Client, task vanillaDownloadTask, root string) (vanillaDownloadedFile, error) {
 	const attempts = 3
 	for attempt := 0; attempt < attempts; attempt++ {
@@ -1245,9 +1245,9 @@ func neoForgeVersionMatchesMinecraft(loaderVersion, minecraftVersion string) boo
 		return false
 	}
 	if parts[0] == "1" {
-		// 1.20.2 through 1.21.11 use NeoForge <mc-minor>.<mc-patch>.<build>.
-		// Minecraft 1.20.1 is handled separately because its official artifact is
-		// net.neoforged:forge with Forge-style 1.20.1-47.1.x versions.
+		// Для версий 1.20.2–1.21.11 NeoForge использует формат <mc-minor>.<mc-patch>.<build>.
+		// Minecraft 1.20.1 обрабатывается отдельно: его официальный артефакт —
+		// net.neoforged:forge с версиями Forge вида 1.20.1-47.1.x.
 		patch := "0"
 		if len(parts) >= 3 && parts[2] != "" {
 			patch = parts[2]
@@ -1255,8 +1255,8 @@ func neoForgeVersionMatchesMinecraft(loaderVersion, minecraftVersion string) boo
 		prefix := parts[1] + "." + patch
 		return strings.HasPrefix(loaderVersion, prefix+".") || loaderVersion == prefix
 	}
-	// Starting with Minecraft 26.1 NeoForge includes the complete Minecraft
-	// release in its version. A missing Minecraft hotfix component maps to 0:
+	// Начиная с Minecraft 26.1 NeoForge включает полную версию Minecraft в собственный
+	// номер версии. Если компонент исправления Minecraft отсутствует, принимается 0:
 	// 26.1 -> 26.1.0.x, 26.1.1 -> 26.1.1.x, 26.2 -> 26.2.0.x.
 	patch := "0"
 	if len(parts) >= 3 && parts[2] != "" {
@@ -1282,10 +1282,10 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 		return installerBundle{}, fmt.Errorf("installer не содержит корректный install_profile.json: %w", err)
 	}
 
-	// Forge <=1.12.2 V1 embeds the complete runtime manifest under versionInfo
-	// and the universal JAR under install.filePath. There is intentionally no
-	// version.json and no post-processor pipeline: FMLTweaker applies binpatches
-	// from the universal JAR at runtime against the inherited Vanilla client.
+	// Forge <=1.12.2 V1 хранит полный манифест запуска в versionInfo, а
+	// универсальный JAR — в install.filePath. Файла version.json и конвейера
+	// постобработки здесь намеренно нет: FMLTweaker применяет двоичные патчи
+	// из универсального JAR к унаследованному клиенту Vanilla во время запуска.
 	var shape map[string]json.RawMessage
 	if err := json.Unmarshal(profileBytes, &shape); err != nil {
 		return installerBundle{}, fmt.Errorf("install_profile.json повреждён: %w", err)
@@ -1334,11 +1334,11 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 		ZipPath:    versionPath,
 	}
 
-	// Current Forge republishes some 1.12.2 installers in the V2 container
-	// format, but with an intentionally empty processor/data pipeline. This is
-	// still the legacy runtime model: the universal JAR must be materialized and
-	// FMLTweaker performs the patches in-memory. Treating it as a modern
-	// processor installer would silently produce an unusable client.
+	// Современный Forge переиздаёт часть установщиков 1.12.2 в контейнере V2,
+	// но с намеренно пустым конвейером процессоров и данных. Это по-прежнему
+	// устаревшая модель исполнения: универсальный JAR нужно подготовить, а патчи
+	// FMLTweaker накладывает в памяти. Ошибочная трактовка как современного
+	// процессорного установщика незаметно создаст неработоспособный клиент.
 	if profile.Minecraft == "1.12.2" && len(profile.Processors) == 0 && len(profile.Data) == 0 {
 		if strings.TrimSpace(profile.Path) == "" {
 			return installerBundle{}, errors.New("Forge 1.12.2 empty-processor installer не содержит path для universal JAR")
@@ -1538,11 +1538,11 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
 		}
-		// Forge 1.7.x versionInfo can repeat Mojang native-only coordinates.
-		// lwjgl-platform, jinput-platform and the old Twitch platform bridges
-		// have classified native archives but no unclassified Maven JAR or
-		// .sha1 sidecar. Vanilla already materialized verified classifiers.
-		// Never invent an upstream base JAR for those classifier-only entries.
+		// В versionInfo Forge 1.7.x могут повторяться координаты только нативных
+		// артефактов Mojang. lwjgl-platform, jinput-platform и старые мосты платформы
+		// Twitch содержат архивы с классификаторами, но не имеют обычного Maven JAR
+		// или сопутствующего .sha1. Vanilla уже подготовил проверенные классификаторы.
+		// Не создавайте несуществующий базовый JAR для таких записей.
 		if isLegacyNativeClassifierContainer(*lib) {
 			continue
 		}
@@ -1626,8 +1626,8 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 			if shaConflict || sizeConflict || unverifiedSourceConflict {
 				return nil, fmt.Errorf("конфликтующие artifacts для %s", dstRel)
 			}
-			// Forge installer/version metadata may repeat the same Maven artifact.
-			// Queue it only once so concurrent workers never share the same .nlpart.
+			// В метаданных установщика или версии Forge может повторяться один артефакт Maven. Ставьте
+			// его в очередь лишь однажды, чтобы параллельные исполнители не использовали общий .nlpart.
 			continue
 		}
 		seen[dstRel] = identity
@@ -1781,9 +1781,9 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		key := processorJournalKey(index)
 		entry, hasEntry := journal.Entries[key]
 		entryMatches := hasEntry && entry.IdentitySHA256 == identity
-		// An interrupted processor may either leave verified outputs for adoption
-		// or require a clean rerun. Both are genuine recovery paths; count the
-		// latter only after its rerun and output verification succeed.
+		// Прерванный процессор может оставить проверенные выходные файлы для принятия либо
+		// потребовать чистого повторного запуска. Оба варианта являются настоящим восстановлением;
+		// второй учитывайте только после успешного запуска и проверки результата.
 		interrupted := entryMatches && (entry.State == "running" || entry.State == "failed")
 		allReady, err := processorOutputsMatch(pc, processor)
 		if err != nil {
@@ -2112,8 +2112,8 @@ func selectInstallerJava(explicit string, minimumMajor int) (string, error) {
 		candidate = path
 	}
 	if runtime.GOOS == "windows" {
-		// Git Bash may export /c/.../bin/java or C:/.../bin/java;
-		// native Go file checks require a concrete executable path.
+		// Git Bash может экспортировать /c/.../bin/java или C:/.../bin/java;
+		// нативной проверке файлов в Go нужен конкретный путь к исполняемому файлу.
 		if len(candidate) > 3 && candidate[0] == '/' && candidate[2] == '/' &&
 			((candidate[1] >= 'a' && candidate[1] <= 'z') || (candidate[1] >= 'A' && candidate[1] <= 'Z')) {
 			candidate = candidate[1:2] + ":/" + candidate[3:]
@@ -2194,7 +2194,7 @@ func dedupeDownloadedFiles(files []vanillaDownloadedFile) []vanillaDownloadedFil
 		}
 		if current, ok := byPath[file.Path]; ok {
 			if current.SHA256 != "" && file.SHA256 != "" && current.SHA256 != file.SHA256 {
-				// A later verification result must not silently hide a conflicting artifact.
+				// Более поздняя проверка не должна незаметно скрывать конфликтующий артефакт.
 				continue
 			}
 			if current.Cached && !file.Cached {

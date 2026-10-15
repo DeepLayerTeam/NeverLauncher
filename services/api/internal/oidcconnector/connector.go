@@ -201,8 +201,8 @@ func (c *Connector) DefaultRedirectURI() string {
 	return c.cfg.RedirectURIs[0]
 }
 
-// EndSessionURL builds a provider front-channel logout URL when discovery exposes
-// end_session_endpoint. This is deliberately separate from Never session logout.
+// EndSessionURL формирует URL выхода через интерфейс провайдера, если метаданные
+// содержат end_session_endpoint. Это намеренно отделено от завершения сеанса Never.
 func (c *Connector) EndSessionURL(postLogoutRedirectURI string) (string, error) {
 	c.mu.RLock()
 	endpoint := c.discovery.EndSessionEndpoint

@@ -423,9 +423,9 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($13,'0001-01-01T00:00:00Z')::timestamptz,$14,$15,$16,$17,$18,$19,NULLIF($20,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($21,'0001-01-01T00:00:00Z')::timestamptz,$22,$23,NULLIF($24,'0001-01-01T00:00:00Z')::timestamptz,$25)
 ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,attestation_state=EXCLUDED.attestation_state,attestation_method=EXCLUDED.attestation_method,attested_at=EXCLUDED.attested_at,attestation_expires_at=EXCLUDED.attestation_expires_at,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.AttestationState, device.AttestationMethod, device.AttestedAt.UTC().Format(time.RFC3339), device.AttestationExpiresAt.UTC().Format(time.RFC3339), device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
 	if err != nil {
-		// key_fingerprint is globally unique. Resolve a concurrent or pre-existing
-		// registration back to the repository-level conflict contract instead of
-		// leaking a driver-specific unique-violation as HTTP 500.
+		// key_fingerprint уникален глобально. При конкурентной либо уже
+		// существующей регистрации возвращайте конфликт уровня репозитория, а
+		// не выдавайте HTTP 500 из-за специфической ошибки уникальности драйвера.
 		var existingID, existingUser string
 		lookupErr := r.db.QueryRowContext(ctx, `SELECT id,user_id FROM trusted_devices WHERE key_fingerprint=$1`, device.KeyFingerprint).Scan(&existingID, &existingUser)
 		if lookupErr == nil {
@@ -574,10 +574,10 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
-	// Fail inside this transaction with an attributable error if any deferred
-	// ownership invariant was broken by the cascade. COMMIT would enforce the
-	// same constraints; doing it here preserves fail-closed semantics while
-	// avoiding an opaque commit-time 409.
+	// Если каскад нарушил какой-либо отложенный инвариант владения,
+	// завершайте транзакцию с ошибкой, указывающей причину. COMMIT проверил
+	// бы те же ограничения; проверка здесь сохраняет принцип отказа по
+	// умолчанию и позволяет избежать неясного ответа 409 при фиксации.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
 		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: validate deferred constraints: %w", err)
 	}
@@ -719,11 +719,11 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	}
 	defer tx.Rollback()
 
-	// Key replacement intentionally changes both sides of several ownership
-	// relations in one transaction. Keep every deferrable FK deferred until
-	// COMMIT so PostgreSQL validates the final atomic state, never an
-	// intermediate rebind/revocation state. CHECK/UNIQUE constraints remain
-	// immediate and all deferred constraints are still enforced at COMMIT.
+	// Замена ключа намеренно меняет обе стороны нескольких отношений владения
+	// в одной транзакции. Все откладываемые внешние ключи остаются отложенными
+	// до COMMIT, чтобы PostgreSQL проверял итоговое атомарное состояние, а не
+	// промежуточную перепривязку или отзыв. Ограничения CHECK/UNIQUE проверяются
+	// сразу; все отложенные ограничения также проверяются при COMMIT.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL DEFERRED`); err != nil {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: defer constraints: %w", err)
 	}
@@ -828,8 +828,8 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 		}
 		result.RevokedSessionIDs = append(result.RevokedSessionIDs, a.session)
 	}
-	// Current gameplay credentials were minted for the old binding epoch and are
-	// explicitly revoked rather than left as stale rows that only fail live checks.
+	// Действующие игровые учётные данные были выданы для старой эпохи привязки и явно отзываются,
+	// вместо того чтобы оставлять устаревшие строки, отклоняемые только при текущих проверках.
 	if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, currentSessionID, now, reason); err != nil {
 		return result, fmt.Errorf("replace trusted device: revoke current minecraft sessions: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
@@ -840,10 +840,10 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	}
 	result.RevokedSessions = len(affected)
 	result.RevokedRefreshFamilies = len(families)
-	// Force every deferred ownership relation to validate while the transaction
-	// is still open. This preserves fail-closed semantics (COMMIT would perform
-	// the same checks) while making a violated invariant attributable to this
-	// stage instead of collapsing into an opaque commit failure.
+	// Принудительно проверяем все отложенные отношения владения, пока
+	// транзакция открыта. Это сохраняет отказ при ошибке (COMMIT
+	// выполняет те же проверки), но привязывает нарушение инварианта
+	// к текущему этапу вместо непрозрачного сбоя при фиксации.
 	if _, err := tx.ExecContext(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: validate deferred constraints: %w", err)
 	}

@@ -1,6 +1,6 @@
--- NeverLauncher 0.10.0-P0 production baseline.
--- This migration is intentionally idempotent and also normalizes the two historical
--- PostgreSQL layouts that shipped before 0.10.0 into the schema used by SQLRepository.
+-- NeverLauncher 0.10.0-P0: базовая производственная схема.
+-- Миграция намеренно идемпотентна и нормализует два исторических
+-- варианта PostgreSQL до 0.10.0 к схеме SQLRepository.
 
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
@@ -19,8 +19,8 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS default_channel TEXT NOT NULL DEFA
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
--- release_versions must exist before legacy files/channels are normalized.  The old
--- 4.5 schema called this table "versions"; copy every row before removing that table.
+-- Таблица release_versions должна существовать до нормализации старых файлов и каналов. В
+-- схеме 4.5 она называлась "versions"; скопируйте все строки перед удалением старой таблицы.
 CREATE TABLE IF NOT EXISTS release_versions (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -71,9 +71,9 @@ BEGIN
     END IF;
 END $$;
 
--- Historical 4.5 release_channels had profile_id/channel/current_version_id columns
--- with NOT NULL constraints that make current SQLRepository inserts fail.  Rebuild it
--- into the canonical (project_id,id) layout while preserving channel data.
+-- В схеме 4.5 таблица release_channels содержала profile_id/channel/current_version_id
+-- с ограничениями NOT NULL, которые мешают вставкам SQLRepository. Перестройте
+-- её в каноническом виде (project_id,id), сохранив данные каналов.
 CREATE TABLE IF NOT EXISTS release_channels (
     id TEXT NOT NULL,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -139,9 +139,9 @@ DROP TABLE release_channels;
 ALTER TABLE _nl_p0_release_channels RENAME TO release_channels;
 DROP TABLE IF EXISTS release_channels_v52;
 
--- Normalize files.  The 4.5 layout referenced "versions" and storage_objects and had
--- mandatory storage_object_id; current repository stores immutable file metadata on
--- the files row itself.  Refuse the migration rather than silently dropping orphans.
+-- Нормализуйте файлы. Схема 4.5 ссылалась на "versions" и storage_objects и требовала
+-- storage_object_id; сейчас репозиторий хранит неизменяемые метаданные прямо в строке
+-- files. При бесхозных данных откажитесь от миграции, а не удаляйте их молча.
 CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -220,12 +220,12 @@ FROM files;
 DROP TABLE files;
 ALTER TABLE _nl_p0_files RENAME TO files;
 
--- The old "versions" table now has no consumers; removing it is necessary before
--- rebuilding profiles because it carries a foreign key to the historical profile table.
+-- Старая таблица "versions" больше не используется; удаление необходимо перед
+-- перестройкой profiles, поскольку она содержит внешний ключ к прежней таблице профилей.
 DROP TABLE IF EXISTS versions;
 
--- Normalize profiles so obsolete NOT NULL title/minecraft_version columns cannot break
--- current SaveProfile inserts.
+-- Нормализуйте profiles, чтобы устаревшие обязательные столбцы
+-- title/minecraft_version не нарушали операции SaveProfile.
 CREATE TABLE IF NOT EXISTS profiles (
     id TEXT NOT NULL,
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -314,8 +314,8 @@ INSERT INTO roles(id,name,description,permissions) VALUES
  ('player','Игрок','Desktop launcher','["launcher:login","profile:download","profile:launch"]'::jsonb)
 ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, permissions=EXCLUDED.permissions;
 
--- Audit table also had an incompatible 4.5 layout (actor_id/event/payload).  Keep the
--- old columns for forensic compatibility but add/fill the columns used by SQLRepository.
+-- Таблица аудита также имела несовместимую структуру 4.5 (actor_id/event/payload). Сохраните
+-- старые столбцы для расследований, но добавьте и заполните поля, используемые SQLRepository.
 CREATE TABLE IF NOT EXISTS audit_events (
     id TEXT PRIMARY KEY,
     actor TEXT NOT NULL DEFAULT '',
@@ -371,7 +371,7 @@ ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS token_hash TEXT NOT NULL DEF
 ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
 ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
--- Rebuild to remove obsolete mandatory columns such as the historical "status" field.
+-- Перестройте таблицу, удалив устаревшие обязательные столбцы, например прежнее поле "status".
 DROP TABLE IF EXISTS _nl_p0_admin_sessions;
 CREATE TABLE _nl_p0_admin_sessions (
     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token_hash TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL,

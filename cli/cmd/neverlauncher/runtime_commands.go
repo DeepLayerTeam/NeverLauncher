@@ -226,10 +226,10 @@ type MojangLibrary struct {
 	Natives   map[string]string      `json:"natives,omitempty"`
 	Rules     []map[string]any       `json:"rules,omitempty"`
 	Extract   map[string]any         `json:"extract,omitempty"`
-	// Forge <=1.12.2 versionInfo uses the legacy lowercase clientreq/serverreq
-	// switches and a list of acceptable SHA-1 checksums instead of Mojang's
-	// downloads.artifact object. Keep them in the shared model so the legacy
-	// installer can be materialized without rewriting its runtime metadata.
+	// В versionInfo Forge <=1.12.2 используются старые переключатели
+	// clientreq/serverreq в нижнем регистре и список допустимых SHA-1 вместо
+	// объекта Mojang downloads.artifact. Сохраняйте их в общей модели, чтобы
+	// старый установщик можно было подготовить без переписывания метаданных запуска.
 	ClientReq *bool    `json:"clientreq,omitempty"`
 	ServerReq *bool    `json:"serverreq,omitempty"`
 	Checksums []string `json:"checksums,omitempty"`

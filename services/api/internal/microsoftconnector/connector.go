@@ -96,9 +96,9 @@ func (c *Connector) normalizeAuthentication(auth authconnector.Authentication) (
 	if !validGUID(tid) || !validGUID(oid) {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "Microsoft identity requires immutable tid and oid GUID claims")
 	}
-	// tid+oid is stable across applications inside a tenant and cannot be silently
-	// replaced by a mutable email/UPN. It also keeps identically-shaped objects from
-	// different tenants distinct.
+	// Пара tid+oid устойчива между приложениями одного tenant
+	// и не заменяется изменяемым email/UPN. Она также
+	// различает внешне одинаковые объекты разных tenant.
 	auth.Identity.Subject = tid + ":" + oid
 	if auth.Identity.Username == "" {
 		auth.Identity.Username = strings.TrimSpace(stringClaim(claims, "preferred_username"))

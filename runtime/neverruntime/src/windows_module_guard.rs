@@ -125,10 +125,10 @@ mod imp {
     };
     use zeroize::Zeroize;
 
-    // Read the debug port from the Guard process, not the (possibly suspended)
-    // JVM sensor. A debugger can stop all JVM threads before the sensor emits
-    // its debug-tamper packet. In that case the stream timeout must still
-    // identify the debugger and attribute the violation to Debug Guard.
+    // Считывайте порт отладки у процесса Guard, а не у потенциально
+    // приостановленного JVM Sensor. Отладчик может остановить все JVM-потоки
+    // до отправки сообщения о вмешательстве. Тогда тайм-аут потока должен
+    // всё равно распознать отладчик и отнести нарушение к Debug Guard.
     #[link(name = "kernel32")]
     extern "system" {
         fn CheckRemoteDebuggerPresent(process: HANDLE, debugger_present: *mut i32) -> i32;
@@ -173,10 +173,10 @@ mod imp {
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
     const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-    // Java 25/ARM64 can spend several seconds hashing newly mapped executable
-    // images during the in-process integrity sweep. Keep a bounded watchdog,
-    // but allow one full sweep before treating a missing authenticated packet
-    // as a dead Sensor. Failed HMAC/sequence/integrity proofs remain fatal.
+    // Java 25/ARM64 может несколько секунд хешировать новые исполняемые образы во время
+    // внутрипроцессной проверки. Сохраняйте ограниченный watchdog, но разрешайте один
+    // полный проход до признания Sensor мёртвым из-за отсутствия аутентифицированного
+    // пакета. Ошибки HMAC, последовательности и целостности остаются критичными.
     const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15);
     const RECONCILE_GRACE: Duration = Duration::from_millis(350);
     const STILL_ACTIVE_EXIT_CODE: u32 = 259;
@@ -357,9 +357,9 @@ mod imp {
             .map_err(|err| format!("Module Guard arm acknowledgement flush failed: {err}"))?;
         ack.zeroize();
 
-        // Agent_OnLoad is not allowed to return until the in-process aggressive
-        // hook engine proves that it is armed. The first authenticated stream
-        // packet is therefore a mandatory HOOK_READY record.
+        // Agent_OnLoad не может вернуться, пока внутрипроцессный
+        // aggressive hook engine не подтвердит готовность. Поэтому
+        // первый аутентифицированный пакет потока обязан быть HOOK_READY.
         let mut ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
             .await
@@ -399,8 +399,8 @@ mod imp {
         });
         ready_packet.zeroize();
 
-        // Memory Integrity must also be armed before Agent_OnLoad returns. The
-        // second authenticated stream packet is a mandatory MEMORY_READY proof.
+        // Memory Integrity тоже должна включиться до завершения Agent_OnLoad. Второй
+        // аутентифицированный пакет — обязательное доказательство MEMORY_READY.
         let mut memory_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
             .await
@@ -431,9 +431,9 @@ mod imp {
         });
         memory_ready_packet.zeroize();
 
-        // Thread & Process Integrity is the third mandatory startup proof. The
-        // Sensor validates thread origins in-process while the parent validates
-        // the complete descendant tree against the non-breakaway Job Object.
+        // Thread & Process Integrity — третье обязательное доказательство запуска.
+        // Sensor проверяет происхождение потоков внутри процесса, родитель сверяет
+        // дерево потомков с Job Object, запрещающим выход из задания.
         let mut thread_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
             .await
@@ -474,9 +474,9 @@ mod imp {
         });
         thread_ready_packet.zeroize();
 
-        // Debug & Instrumentation Guard is the fourth mandatory startup proof.
-        // Agent_OnLoad cannot return until the Sensor proves that no debugger is
-        // attached and the JVM attach mechanism is disabled by the launcher.
+        // Debug & Instrumentation Guard — четвёртое обязательное
+        // доказательство. Agent_OnLoad завершается только после подтверждения
+        // Sensor отсутствия отладчика и отключения JVM attach лаунчером.
         let mut debug_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
             .await
@@ -512,11 +512,11 @@ mod imp {
         });
         debug_ready_packet.zeroize();
 
-        // JVM-Aware Protection is the fifth mandatory startup proof. The Sensor
-        // has already resolved the loaded jvm.dll identity and certified Java
-        // major before the hook engine is armed, so post-start executable
-        // MEM_PRIVATE transitions can be attributed to HotSpot rather than merely
-        // accepted because VirtualAlloc/VirtualProtect was observed.
+        // JVM-Aware Protection — пятое обязательное доказательство.
+        // Sensor определил jvm.dll и основную версию Java до
+        // активации перехватов, поэтому последующие исполняемые
+        // переходы MEM_PRIVATE можно отнести к HotSpot, а не слепо
+        // разрешать по факту VirtualAlloc/VirtualProtect.
         let mut jvm_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
             .await
@@ -550,10 +550,10 @@ mod imp {
         });
         jvm_ready_packet.zeroize();
 
-        // Continuous Guard is the sixth mandatory startup proof. It carries the
-        // Sensor's independently maintained digest of every authenticated packet
-        // emitted so far. The parent must see the exact same chain and return a
-        // signed ACK before Agent_OnLoad is allowed to complete.
+        // Continuous Guard — шестое обязательное доказательство запуска.
+        // Оно содержит независимо вычисленный Sensor дайджест всех отправленных
+        // аутентифицированных пакетов. Родитель должен получить ту же цепочку
+        // и вернуть подписанный ACK до завершения Agent_OnLoad.
         let mut continuous_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
             .await
@@ -1372,12 +1372,12 @@ mod imp {
         policy: &WindowsModuleGuardPolicy,
         state: &Arc<Mutex<WindowsModuleGuardReport>>,
     ) -> Result<(), String> {
-        // ToolHelp and LdrRegisterDllNotification do not take one atomic
-        // snapshot. A just-mapped native DLL may be visible to ToolHelp
-        // before its loader notification has been delivered to the worker.
-        // Independently authenticate every such DLL rather than skipping the
-        // discrepancy or trusting an unmeasured path. Removed modules and
-        // changed paths still fail closed.
+        // ToolHelp и LdrRegisterDllNotification не создают единый
+        // атомарный снимок. Новая DLL может появиться в ToolHelp
+        // до доставки уведомления загрузчика обработчику. Проверяйте
+        // такую DLL независимо, не игнорируя расхождение и не
+        // доверяя непроверенному пути. Удалённые модули или
+        // изменённые пути всё равно приводят к отказу.
         let observed = module_snapshot(pid)?;
         let observed_map = observed
             .iter()
@@ -1401,10 +1401,10 @@ mod imp {
             if expected.contains_key(&module.base_address) {
                 continue;
             }
-            // An unexpected module is permitted into the measured set only
-            // after the *same* canonical path, trust-root/Authenticode and
-            // SHA-256 checks applied to a signed Sensor load event. Any
-            // missing file, untrusted DLL, or path replacement is fatal.
+            // Неожиданный модуль допускается в измеряемое множество лишь после
+            // тех же проверок канонического пути, корня доверия/Authenticode
+            // и SHA-256, что применяются к подписанному событию Sensor.
+            // Отсутствующий файл, недоверенная DLL или подмена пути критичны.
             let (normalized, _sha256) = policy
                 .validate_loaded_module(&module.path)
                 .map_err(|err| format!(
@@ -1623,10 +1623,10 @@ mod imp {
     }
 
     fn debug_aware_stream_failure(pid: u32, default_reason: &str) -> String {
-        // Query the process from the out-of-process Guard. This remains useful
-        // even if the debugger has stopped all sensor/JVM threads. Failure to
-        // obtain a debugger verdict does not downgrade the original fail-closed
-        // stream violation.
+        // Проверяйте процесс из внешнего Guard. Это работает
+        // даже при остановке отладчиком всех потоков Sensor/JVM.
+        // Невозможность получить решение по отладчику не смягчает
+        // первоначальный строгий отказ из потока.
         let handle = OwnedHandle(unsafe {
             OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
         });

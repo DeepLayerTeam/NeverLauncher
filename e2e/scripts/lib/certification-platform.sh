@@ -37,12 +37,12 @@ certification_run_client() {
     export LIBGL_ALWAYS_SOFTWARE=1
     xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "$runtime_bin" "$@" > "$output"
   elif [[ "$os_name" == "macos" && "${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" && ( "${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "forge" ) ]]; then
-    # Some hosted macOS 26.3 clients abort in SDL 3 before creating a
-    # window, including ForgeBootstrap on macOS x64. Retry only after an
-    # observed native SDL SIGABRT; success requires full real E2E evidence.
-    # Re-run the *real, verified* client once only when the first result proves
-    # that exact native abort. No retry for JVM exceptions, security failures,
-    # missing dependencies, normal exits, or other Minecraft/loader versions.
+    # Некоторые клиенты macOS 26.3 завершаются в SDL 3 до создания окна, включая
+    # ForgeBootstrap на macOS x64. Повторяйте только при зафиксированном нативном SDL
+    # SIGABRT; успешность требует настоящих свидетельств E2E. Повторно запускайте
+    # настоящий проверенный клиент лишь один раз и только если первая попытка доказала
+    # именно этот нативный сбой. Не повторяйте при ошибках JVM, сбоях безопасности,
+    # отсутствии зависимостей, обычном завершении и других версиях Minecraft или загрузчика.
     local first_rc=0
     "$runtime_bin" "$@" > "$output" || first_rc=$?
     local client_root="$(dirname "$output")/materialized-client"
@@ -52,8 +52,8 @@ certification_run_client() {
       printf '[certification] macOS SDL 3 SIGABRT: repeat full %s client certification once\n' "${NEVERLAUNCHER_E2E_LOADER:-}" >&2
       local second_rc=0
       "$runtime_bin" "$@" > "$output" || second_rc=$?
-      # Preserve the second report even when the native process fails again;
-      # never leave an old, successful retry.json as evidence of a failed run.
+      # Сохраняйте второй отчёт, даже если нативный процесс снова завершился с ошибкой;
+      # никогда не оставляйте старый успешный retry.json как свидетельство неудачного запуска.
       python3 - "$output" "${output%.json}.first-attempt.json" "$(dirname "$output")/certification-retry.json" <<'PYRETRY' 
 import hashlib, json, sys
 last, first, output = sys.argv[1:]

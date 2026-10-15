@@ -1,7 +1,7 @@
--- NeverLauncher 0.14.2 — Cryptographic Node Identities.
--- ServerBridge nodes authenticate every privileged request with an Ed25519
--- signature. PostgreSQL stores only public identity material and consumed nonces;
--- legacy 0.14.1 bearer hashes are retired and never accepted by 0.14.2 runtime.
+-- NeverLauncher 0.14.2: криптографические идентичности узлов. Узлы
+-- ServerBridge подписывают привилегированные запросы Ed25519.
+-- PostgreSQL хранит только открытые ключи и использованные nonce;
+-- старые bearer-хеши 0.14.1 больше не принимаются средой 0.14.2.
 
 ALTER TABLE server_bridge_nodes_v2
     ADD COLUMN IF NOT EXISTS key_algorithm TEXT NOT NULL DEFAULT '',
@@ -13,9 +13,9 @@ ALTER TABLE server_bridge_nodes_v2
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_status_check;
 
--- Bearer credentials are retired globally, including disabled nodes. Keeping an
--- unusable legacy credential hash would add secret-derived material with no
--- operational purpose after the cryptographic identity boundary change.
+-- Bearer-учётные данные выведены из обращения повсеместно, включая отключённые
+-- узлы. Хранение непригодных старых хешей добавляет материал на основе
+-- секретов без пользы после перехода на криптографические идентичности.
 UPDATE server_bridge_nodes_v2
 SET token_hash='', token_prefix=''
 WHERE token_hash<>'' OR token_prefix<>'';
@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS server_bridge_node_nonces_v2 (
 CREATE INDEX IF NOT EXISTS idx_server_bridge_node_nonces_v2_expiry
     ON server_bridge_node_nonces_v2(expires_at);
 
--- Active joins authenticated under a retired bearer identity must not survive the
--- identity boundary change. Fresh joins are issued only after node enrollment.
+-- Активные соединения, аутентифицированные прежней bearer-идентичностью, не должны пережить
+-- смену границы доверия. Новые разрешения выдаются только после регистрации узла.
 UPDATE server_bridge_join_tickets_v2
 SET status='invalidated', invalidated_at=now()
 WHERE status='active';

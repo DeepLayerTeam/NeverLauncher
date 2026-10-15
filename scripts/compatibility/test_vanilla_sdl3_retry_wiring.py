@@ -70,8 +70,8 @@ raise SystemExit(0 if passed else 1)
                 helper = ROOT / "e2e/scripts/lib/certification-platform.sh"
                 run = subprocess.run(["bash", "-c", 'source "$1"; certification_run_client macos "$2" "$3"', "bash", str(helper), str(fake), str(report_path)],
                                      cwd=scratch, env=env, capture_output=True, text=True)
-                # Helper finds retry eligibility relative to the source tree;
-                # when invoked from a scratch tree, source it there too.
+                # Помощник определяет допустимость повтора относительно дерева
+                # исходников; при запуске из временного дерева подключайте его там же.
                 if "retry-macos-sdl3.py" in run.stderr and "No such file" in run.stderr:
                     self.fail(run.stderr)
                 self.assertEqual(count.read_text(), "2", (run.stderr, run.stdout))

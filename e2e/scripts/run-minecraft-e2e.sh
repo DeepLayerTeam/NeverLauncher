@@ -11,9 +11,9 @@ BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
-# ServerBridge v3 refuses trust-on-first-use over plain HTTP to a Docker service
-# hostname. Pin the API's Ed25519 control signing key explicitly in every bridge.
-# The API uses the manifest signing seed unless a separate control key is set.
+# ServerBridge v3 не допускает первое доверие через обычный HTTP к имени Docker-сервиса.
+# Явно закрепляйте Ed25519-ключ управляющих подписей API во всех мостах. По умолчанию
+# API использует seed подписи манифеста, если не задан отдельный управляющий ключ.
 CONTROL_PUBLIC_KEY="$(python3 - "$SIGNING_SEED" <<'PYKEY'
 import base64
 import subprocess
@@ -191,10 +191,10 @@ wait_bridge_heartbeat() {
   compose logs "$service" >&2 || true
   return 1
 }
-# A 200 heartbeat means the node authenticated, not that its signed routing
-# snapshot advertises a ready/healthy target. Real v3 bridge plugins fail
-# closed on a missing or stale routing snapshot; protocol-v2 probes do not.
-# Wait for the same PostgreSQL readiness conditions the backend enforces.
+# Heartbeat с HTTP 200 означает успешную аутентификацию узла, а не готовность
+# и здоровье цели в подписанном снимке маршрутов. Настоящие плагины v3
+# отказывают при отсутствующем или устаревшем снимке; проверки v2 — нет.
+# Дожидайтесь условий готовности PostgreSQL, применяемых бэкендом.
 wait_bridge_routable() {
   local service="$1" node_id="$2" elapsed state
   [[ "$node_id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "invalid node id" >&2; return 1; }
@@ -247,8 +247,8 @@ json_post() {
 }
 sign_payload() {
   local algorithm="$1" key="$2" payload="$3" file="$RUNTIME_DIR/device-proof-$RANDOM-$RANDOM.txt"
-  # Device/Guard proof contracts are newline-terminated; command substitution
-  # strips trailing LF, so restore exactly one protocol-significant newline.
+  # Контракты подтверждения Device/Guard завершаются переводом строки; подстановка Bash
+  # удаляет завершающий LF, поэтому восстановите ровно один значимый для протокола перевод.
   printf '%s\n' "$payload" > "$file"
   python3 "$DEVICE_CRYPTO" sign --algorithm "$algorithm" --key "$key" --payload "$file"
   rm -f "$file"
@@ -297,10 +297,10 @@ materialize_pinned_bytesocks_dependency() {
   }
   rm -f "$jar_contents"
 
-  # Gradle resolves a timestamped Maven snapshot through the base SNAPSHOT
-  # directory while requesting the timestamped POM/JAR names. Reconstruct only
-  # that isolated build dependency; do not publish it or claim it is the
-  # cryptographically verified historical artifact.
+  # Gradle разрешает Maven snapshot с временной меткой через базовый каталог
+  # SNAPSHOT, запрашивая файлы POM/JAR с датированными именами. Восстанавливайте
+  # только эту отдельную зависимость сборки; не публикуйте её и не выдавайте
+  # за криптографически проверенный исторический артефакт.
   maven_dir="$maven_repo/me/lucko/bytesocks-java-client/$BYTESOCKS_BASE_VERSION"
   mkdir -p "$maven_dir"
   installed_jar="$maven_dir/bytesocks-java-client-${BYTESOCKS_MAVEN_VERSION}.jar"
@@ -368,8 +368,8 @@ GRADLE
   rm -rf "$source_dir" "$maven_repo"
   git init -q "$source_dir"
   git -C "$source_dir" remote add origin "$SPARK_SOURCE_REPOSITORY"
-  # Fetch full ancestry for the exact commit so spark's own git-describe based
-  # versioning can deterministically reproduce patch version 105.
+  # Получите полную историю предков точного коммита, чтобы система версий
+  # spark на базе git-describe детерминированно воспроизвела patch-версию 105.
   git -C "$source_dir" fetch --quiet --no-tags origin "$SPARK_SOURCE_COMMIT"
   git -C "$source_dir" fetch --quiet origin "refs/tags/$SPARK_SOURCE_TAG:refs/tags/$SPARK_SOURCE_TAG"
   git -C "$source_dir" checkout --quiet --detach "$SPARK_SOURCE_COMMIT"
@@ -463,9 +463,9 @@ GRADLE
   [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] Folia source targets Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
 
   (
-    # paperweight creates nested Git repositories while applying Paper/Folia patches.
-    # Export identity through the process environment so every nested git process
-    # inherits it without mutating the runner's global Git configuration.
+    # При применении патчей Paper/Folia paperweight создаёт вложенные Git-репозитории.
+    # Экспортируйте идентичность через окружение процесса, чтобы все вложенные
+    # git-процессы наследовали её без изменения глобальных настроек Git агента.
     export GIT_AUTHOR_NAME="NeverLauncher E2E"
     export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"
     export GIT_COMMITTER_NAME="NeverLauncher E2E"
@@ -476,9 +476,9 @@ GRADLE
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" createMojmapPaperclipJar
   )
 
-  # createMojmapPaperclipJar is a root-project paperweight task. Its outputZip
-  # is rooted at the Folia checkout's build/libs directory, not Folia-Server/build/libs.
-  # Keep discovery strict so a stale/unrelated JAR cannot make the runtime gate pass.
+  # createMojmapPaperclipJar — задача paperweight корневого проекта. Её outputZip
+  # находится в build/libs репозитория Folia, а не в Folia-Server/build/libs.
+  # Проверяйте строго, чтобы устаревший или посторонний JAR не помог пройти запуск.
   mapfile -t candidates < <(find "$source_dir/build/libs" -maxdepth 1 -type f -name '*paperclip*.jar' -print | sort)
   if (( ${#candidates[@]} != 1 )); then
     echo "[e2e] expected exactly one Folia paperclip JAR, found ${#candidates[@]}" >&2
@@ -733,9 +733,9 @@ else
   [[ -n "$RESOLVED_LOADER_VERSION" ]] || { echo "[e2e] loader version was not resolved" >&2; exit 1; }
   case "$(printf '%s' "$RESOLVED_LOADER_VERSION" | tr '[:upper:]' '[:lower:]')" in latest|latest-stable|stable|recommended) echo "[e2e] mutable loader selector leaked into release" >&2; exit 1 ;; esac
 
-  # 0.17.8: certification is no longer client-only. Start a clean dedicated
-  # server with the exact immutable loader version resolved above and require
-  # the already materialized loader client to complete a real network join.
+  # 0.17.8: сертификация больше не ограничивается клиентом. Запустите чистый
+  # выделенный сервер с точной неизменяемой версией загрузчика выше и потребуйте
+  # настоящего сетевого подключения от уже подготовленного клиента.
   LOADER_NATIVE_CLIENT_PROFILE_ID="$(jq -er --arg loader "$LOADER" '.[ $loader ].profileId' "$CLIENT_PACKAGE")"
   export NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION="$RESOLVED_LOADER_VERSION"
   export NEVERLAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID="$LOADER_NATIVE_CLIENT_PROFILE_ID"
@@ -771,10 +771,10 @@ printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> a
 )
 jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/runtime-verify.json" >/dev/null
 jq -e '.status == "ready" and .download.failed == 0 and (.files | length) > 10 and ([.files[] | select(.status != "ok")] | length) == 0' "$RUNTIME_DIR/runtime-sync.json" >/dev/null
-# A pristine Mojang client opens first-run accessibility and multiplayer warning
-# screens before Quick Play is allowed to connect. This is user-state, not a
-# product/security bypass: seed only the two acknowledged first-run choices so
-# the real client can exercise --quickPlayMultiplayer unattended under Xvfb.
+# Чистый клиент Mojang перед Quick Play показывает первоначальные экраны доступности
+# и предупреждение о мультиплеере. Это пользовательские настройки, а не обход
+# безопасности: заранее подтвердите только два первых выбора в одноразовом профиле,
+# чтобы настоящий клиент выполнил --quickPlayMultiplayer автоматически под Xvfb.
 cat > "$RUNTIME_DIR/client/options.txt" <<'OPTIONS'
 onboardAccessibility:false
 skipMultiplayerWarning:true
@@ -830,8 +830,8 @@ MC_SESSION="$(json_post "$API/api/v1/minecraft/session" "$HW_ACCESS_ATTESTED" "$
 MINECRAFT_ACCESS_TOKEN="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
 PLAYER_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
 jq -e --arg v "$VERSION" --arg gh "$GUARD_SHA" --arg lh "$LAUNCHER_SHA" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
-# All subsequent joins/invalidation/topology calls must use the same hardware-
-# attested NeverLauncher session that owns the integrity-bound Minecraft token.
+# Все дальнейшие запросы соединения, аннулирования и топологии должны использовать тот же аппаратно
+# аттестованный сеанс NeverLauncher, которому принадлежит токен Minecraft с проверенной целостностью.
 ACCESS_TOKEN="$HW_ACCESS_ATTESTED"
 build_join_body() {
   local server_id="$1"
@@ -860,8 +860,8 @@ consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_
 redemption_state="$(psql "$DB_DSN" -AtF '|' -qc "SELECT ticket_version,issued_identity_epoch,(issued_key_fingerprint=redeemed_key_fingerprint)::text,redeemed_identity_epoch,length(redeemed_nonce_hash),(redeemed_by_ip<>'')::text FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed' ORDER BY consumed_at DESC LIMIT 1")"
 IFS='|' read -r redemption_version issued_epoch fingerprint_match redeemed_epoch nonce_hash_len redeemed_ip_present <<< "$redemption_state"
 [[ "$redemption_version" == "2" && "$fingerprint_match" == "true" && "$redeemed_epoch" == "$issued_epoch" && "$nonce_hash_len" == "64" && "$redeemed_ip_present" == "true" ]] || { echo "[e2e] invalid one-time ticket redemption proof: $redemption_state" >&2; exit 1; }
-# The protocol probe above consumed its one-time ticket. Issue a fresh ticket for
-# the actual Minecraft connection; the server plugin must be the only consumer.
+# Проба протокола выше уже израсходовала одноразовый билет. Выдайте новый для настоящего
+# соединения Minecraft; единственным получателем должен быть серверный плагин.
 json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" > "$RUNTIME_DIR/join-paper-real-client-fresh.json"
 jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_"))' "$RUNTIME_DIR/join-paper-real-client-fresh.json" >/dev/null
 
@@ -913,8 +913,8 @@ if [[ "$MODE" == "full" ]]; then
     local -a allow_probe_mode=() deny_probe_mode=()
     case "$service" in
       forge)
-        # Forge enforces NeverLauncher in CONFIGURATION. Complete LOGIN
-        # through Login Acknowledged for both allow and deny certification.
+        # Forge проверяет NeverLauncher на этапе CONFIGURATION. Завершите LOGIN через
+        # Login Acknowledged как для разрешённого, так и для отклонённого сценария.
         allow_probe_mode=(
           --enter-configuration
           --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
@@ -922,13 +922,13 @@ if [[ "$MODE" == "full" ]]; then
         deny_probe_mode=("${allow_probe_mode[@]}")
         ;;
       neoforge)
-        # NeoForge 1.21.1 posts NeverLauncher through RegisterConfigurationTasksEvent.
-        # After Login Acknowledged its vanilla-client prelude waits for Pong(0),
-        # then SynchronizeRegistriesTask waits for Select Known Packs. Drive both
-        # protocol-native responses so the server-only NeverLauncher task becomes
-        # current without requiring a NeoForge client mod. The revoked path may
-        # disconnect at any earlier fail-closed stage; the mandatory deny marker
-        # below remains the authoritative assertion.
+        # NeoForge 1.21.1 публикует NeverLauncher через RegisterConfigurationTasksEvent.
+        # После Login Acknowledged начальная стадия Vanilla ждёт Pong(0), затем
+        # SynchronizeRegistriesTask ожидает Select Known Packs. Отправляйте оба
+        # нативных ответа протокола, чтобы серверная задача NeverLauncher стала
+        # текущей без клиентского мода NeoForge. При отозванном доступе отключение
+        # возможно на более ранней стадии строгого отказа; обязательный маркер
+        # отказа ниже остаётся решающим доказательством.
         allow_probe_mode=(
           --enter-configuration
           --drive-neoforge-configuration
@@ -952,16 +952,16 @@ if [[ "$MODE" == "full" ]]; then
     validate_join "$id" "$key" "$plugin_sha" deny
     case "$service" in
       velocity|bungeecord|waterfall)
-        # Proxy runtimes enforce an IP-level reconnect throttle before their
-        # PreLogin hooks. Keep that protection enabled and wait out the
-        # production default window so the deny probe reaches NeverLauncher.
+        # Прокси ограничивают переподключения по IP до обработчиков
+        # PreLogin. Сохраняйте защиту и ждите производственное
+        # окно, чтобы проба отказа дошла до NeverLauncher.
         sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
       spigot|paper|purpur|folia)
-        # Bukkit/Paper-family runtimes apply their own connection-throttle
-        # before AsyncPlayerPreLoginEvent. Preserve that protection and wait
-        # out the production default window so the revoked-session probe
-        # reaches the NeverLauncher deny handler instead of Bukkit's throttle.
+        # Среды Bukkit/Paper применяют своё ограничение подключений до
+        # AsyncPlayerPreLoginEvent. Сохраняйте защиту и ждите установленное
+        # окно, чтобы проба отозванного сеанса дошла до обработчика
+        # отказа NeverLauncher, а не до ограничения Bukkit.
         sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
@@ -980,8 +980,8 @@ if [[ "$MODE" == "full" ]]; then
       wait_healthy "$service"
     fi
     wait_bridge_heartbeat "$service"
-    # Heartbeat may precede the first healthy platform telemetry sample.
-    # Wait for a fresh signed routing snapshot instead of bypassing v3 trust.
+    # Heartbeat может появиться до первого здорового образца телеметрии платформы.
+    # Дожидайтесь свежего подписанного снимка маршрутизации, не обходите доверие v3.
     case "$service" in
       spigot|paper|purpur|folia|fabric|forge|neoforge)
         wait_bridge_routable "$service" "$id" ;;

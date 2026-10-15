@@ -20,9 +20,9 @@ extern "system" {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i32 {
-    // Delay until Module Guard has loaded the DLL and Aggressive Hook Engine has
-    // reconciled its IAT. The allocation then originates on this fixture's own
-    // native thread, so no jvm.dll frame exists in the VirtualAlloc call chain.
+    // Дождитесь, пока Module Guard загрузит DLL, а Aggressive Hook Engine согласует
+    // таблицу IAT. После этого выделение памяти идёт из собственного нативного
+    // потока фикстуры, и в стеке вызовов VirtualAlloc нет кадров jvm.dll.
     let _ = thread::Builder::new()
         .name("neverguard-jvm-aware-probe".to_string())
         .spawn(|| {

@@ -111,22 +111,22 @@ enable-rcon=false
 enable-query=false
 motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
-# Minecraft 1.17.1 has a documented dedicated-server generator-settings
-# regression (MC-195468). Let the server create a real flat world first, then
-# change its own level.dat in an offline, verified second stage.
-# The first boot is never counted as matching-server/client certification.
+# В выделенном сервере Minecraft 1.17.1 известна ошибка generator-settings
+# (MC-195468). Сначала дайте серверу создать настоящий плоский мир, затем
+# измените созданный level.dat на отдельном проверенном офлайн-этапе. Первый
+# запуск не засчитывается в сертификацию соответствия сервера и клиента.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
-  # This codec (1.17.1) requires a complete flat generator-settings object.
-  # The default {} produces "No key layers / No key structures" errors.
-  # Preserve these settings for both the initial and restarted server;
-  # mutate only the server-generated level.dat layers while it is stopped.
+  # Этот кодек 1.17.1 требует полный объект настройки плоского генератора.
+  # Значение {} по умолчанию приводит к ошибкам "No key layers / No key
+  # structures". Сохраняйте параметры при первоначальном и повторном
+  # запуске; меняйте только слои в серверном level.dat после остановки.
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
 generator-settings={"biome":"minecraft:plains","layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"structures":{"structures":{}},"features":false,"lakes":false}
 gamemode=creative
 allow-flight=true
 EOFVOID
   mkfifo "$SERVER_DIR/server-console.fifo"
-  # Keep a writer open so the server's FIFO stdin cannot close before stop.
+  # Держите канал записи открытым, чтобы FIFO stdin сервера не закрылся до остановки.
   exec {SERVER_CONTROL_FD}<>"$SERVER_DIR/server-console.fifo"
   SERVER_STDIN="$SERVER_DIR/server-console.fifo"
 else
@@ -165,9 +165,9 @@ except OSError: pass
 raise SystemExit('matching server did not become ready\n'+last)
 PY
 
-# Rebuild the 1.17.1 world with an air-only generator using the *actual*
-# server-produced level.dat NBT. Stop the first server gracefully, ensure the
-# world metadata has been flushed, remove old bedrock chunks, then restart.
+# Пересоздайте мир 1.17.1 генератором только воздуха на основе настоящего NBT
+# level.dat, созданного сервером. Корректно остановите первый сервер, убедитесь
+# в сохранении метаданных мира, удалите старые чанки бедрока и перезапустите.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   printf '[matching-e2e] stop initial 1.17.1 server for offline world preparation\n'
   printf 'stop\n' >&"$SERVER_CONTROL_FD"
@@ -180,11 +180,11 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
     exit 1
   fi
   wait "$SERVER_PID" || { echo '[matching-e2e] initial server exited with failure' >&2; exit 1; }
-  # Keep first-boot diagnostics but never conflate them with the certification
-  # server log. The second boot starts a clean log for the actual join proof.
+  # Сохраните диагностику первого запуска, но не смешивайте с журналом сертификационного
+  # сервера. Второй запуск начинает чистый журнал для фактического доказательства соединения.
   cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"
   python3 "$ROOT/e2e/scripts/prepare-vanilla-1171-void-world.py" "$SERVER_DIR/world/level.dat"
-  # Existing chunks retain bedrock independently of the generator settings.
+  # Существующие чанки сохраняют бедрок независимо от настроек генератора.
   rm -rf "$SERVER_DIR/world/region" "$SERVER_DIR/world/entities" "$SERVER_DIR/world/poi"
   printf '[matching-e2e] restart 1.17.1 server with verified void world\n'
   (
@@ -213,17 +213,17 @@ if 'Not a registry ops' in body or 'No key structures in MapLike' in body:
 PYREADY
 fi
 
-# Modern clients otherwise stop on first-run UI before automatic multiplayer connection.
+# Иначе современные клиенты останавливаются на первоначальном интерфейсе до автоматического подключения к мультиплееру.
 cat > "$CLIENT_DIR/options.txt" <<'OPTIONS'
 onboardAccessibility:false
 skipMultiplayerWarning:true
 joinedFirstServer:true
 pauseOnLostFocus:false
 OPTIONS
-# The 1.17.1 matching-server target is rendered on llvmpipe in Xvfb.
-# It can successfully authenticate/join and then crash on its first chunk
-# tessellation. Exercise the real client in low-feature graphics mode; keep
-# the server join proof, exact-version checks and fail-closed result intact.
+# Цель matching-server 1.17.1 отображается через llvmpipe в Xvfb. Клиент способен
+# успешно авторизоваться и войти, но упасть при тесселяции первого чанка.
+# Запускайте настоящий клиент в упрощённом графическом режиме; сохраняйте
+# доказательство входа, проверку точной версии и результат строгого отказа.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   cat >> "$CLIENT_DIR/options.txt" <<'OPTIONS'
 graphicsMode:0
@@ -236,11 +236,11 @@ OPTIONS
 fi
 
 printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
-# The hosted Linux runner has no ALSA playback device. OpenAL Soft repeatedly
-# probes the missing hardware during the first resource reload, delaying block
-# models while a 1.17.1 quick-connect client is already receiving chunks.
-# Use OpenAL Soft's real null backend in this *headless CI only*: rendering,
-# world loading, the actual server join and all fail-closed checks stay enabled.
+# На размещённом Linux-агенте нет устройства ALSA. OpenAL Soft постоянно ищет
+# отсутствующее оборудование при первоначальной перезагрузке ресурсов, замедляя
+# модели блоков, когда клиент 1.17.1 уже получает чанки. Используйте настоящий
+# null-бэкенд OpenAL Soft только в CI без интерфейса; рендеринг, загрузка
+# мира, реальный вход и строгие проверки остаются включёнными.
 export ALSOFT_DRIVERS=null
 export LIBGL_ALWAYS_SOFTWARE=1
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854

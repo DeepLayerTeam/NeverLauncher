@@ -515,8 +515,8 @@ func (s Server) extensionRegistryInstall0203(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "installed", "verified": true, "enabled": false, "install": install, "artifact": item.Artifact}})
 }
 
-// Kept local to the HTTP layer: install Source is informational/auditable and
-// is not used as a file-system path.
+// Остаётся локальным для HTTP: поле Source установки служит
+// описанию и аудиту и не используется как файловый путь.
 func registryInstallSource0203(item model.ExtensionRegistryVersion) string {
 	return item.PublisherID + "/" + item.ExtensionID + "@" + item.Version + "#" + item.Artifact.PackageIdentity
 }

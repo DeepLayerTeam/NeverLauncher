@@ -50,7 +50,7 @@ func buildRegistryTestPackage0203(t *testing.T, creatorVersion string) (string, 
 	payload := PackagePayload{FileCount: 1, TotalBytes: int64(len(payloadBytes)), Files: []PackageFile{payloadFile}}
 	manifestDigest := sha256.Sum256(manifestBytes)
 	checksumsBytes := checksumBytes0203(hex.EncodeToString(manifestDigest[:]), payload.Files)
-	buildTime := time.Unix(1791195900, 0).UTC() // 2026-10-05, even second for ZIP timestamp round-trip.
+	buildTime := time.Unix(1791195900, 0).UTC() // 2026-10-05 — чётная секунда для проверки сохранения метки времени в ZIP.
 	pathDigest := sha256.Sum256([]byte(payloadFile.Path))
 	fileID := "SPDXRef-File-" + hex.EncodeToString(pathDigest[:8])
 	sbom := spdxDocument0203{

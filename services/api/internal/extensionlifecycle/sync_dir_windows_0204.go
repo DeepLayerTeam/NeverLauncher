@@ -2,9 +2,9 @@
 
 package extensionlifecycle
 
-// Windows does not permit fsync-style Sync on directory handles opened by
-// os.Open. The file itself is flushed before Rename, and MoveFileEx/NTFS
-// provides the atomic metadata transition used by this lifecycle. Treat the
-// directory durability barrier as already satisfied instead of turning every
-// successful install/uninstall into ACCESS_DENIED.
+// Windows не поддерживает Sync в стиле fsync для дескрипторов
+// каталогов, открытых os.Open. Сам файл сбрасывается до Rename,
+// а MoveFileEx/NTFS обеспечивает атомарное изменение метаданных.
+// Считайте барьер надёжности каталога выполненным вместо
+// ACCESS_DENIED после каждой успешной установки или удаления.
 func syncDir0204(string) error { return nil }

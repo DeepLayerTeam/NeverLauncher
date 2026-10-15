@@ -130,14 +130,14 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
-	// Publishing an unvalidated release must fail closed. The separate validation
-	// tests exercise a successful integrity- and runtime-certified publication.
+	// Публикация непроверенного выпуска должна завершаться отказом. Отдельные тесты
+	// проверки проверяют успешную публикацию с подтверждённой целостностью и запуском.
 	if res.Code != http.StatusConflict {
 		t.Fatalf("непроверенная версия должна быть заблокирована (409), получено %d: %s", res.Code, res.Body.String())
 	}
 
-	// The legitimate administrative flow must still work when the caller
-	// explicitly completes the canonical audited validation pipeline.
+	// Законный административный путь должен работать, когда вызывающий
+	// код явно завершил канонический аудируемый конвейер валидации.
 	for _, suffix := range []string{"validate", "sign", "stage", "integrity-check"} {
 		req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+created.ID+"/"+suffix, nil)
 		req.Header.Set("Authorization", "Bearer "+token)

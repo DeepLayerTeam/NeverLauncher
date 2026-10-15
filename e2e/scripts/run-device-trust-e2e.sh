@@ -94,8 +94,8 @@ json_post() {
   if [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
     echo "[device-trust-e2e] POST ${url#${API}} failed: HTTP $code" >&2
     [[ -s "$tmp" ]] && cat "$tmp" >&2 || true
-    # Keep production responses generic, but surface the server-side wrapped
-    # PostgreSQL stage in CI so a failed fail-closed transaction is actionable.
+    # Оставляйте производственные ответы общими, но показывайте в CI обёрнутую серверную
+    # стадию PostgreSQL, чтобы можно было диагностировать строго отклонённую транзакцию.
     compose logs --no-color --tail 200 api-a >&2 || true
     rm -f "$tmp"
     return 22
@@ -121,9 +121,9 @@ login() {
 }
 sign_payload() {
   local algorithm="$1" key="$2" payload="$3" file="$RUNTIME_DIR/payload-$RANDOM-$RANDOM.txt"
-  # All Device Trust proof payloads are newline-terminated server contracts.
-  # Bash command substitution strips trailing newlines, so restore exactly one
-  # protocol-significant LF before signing.
+  # Все данные подтверждения Device Trust по серверному контракту завершаются
+  # переводом строки. Подстановка команд Bash удаляет завершающие переводы,
+  # поэтому восстановите ровно один значимый для протокола LF перед подписанием.
   printf '%s\n' "$payload" > "$file"
   python3 "$CRYPTO" sign --algorithm "$algorithm" --key "$key" --payload "$file"
   rm -f "$file"
@@ -359,7 +359,7 @@ STEP_BODY="$(python3 "$WEBAUTHN" assert \
 STEP_OK="$(json_post "$API/api/v1/auth/passkeys/step-up/complete" "$HW_ACCESS_ATTESTED" "$STEP_BODY")"
 HW_STEPPED_ACCESS="$(jq -er '.data.accessToken' <<<"$STEP_OK")"
 jq -e '.data.status=="stepped-up" and .data.session.authStrength=="phishing-resistant"' <<<"$STEP_OK" >/dev/null
-# Keep one integrity-bound join pending so key recovery must invalidate it before server redemption.
+# Оставьте один вход, привязанный к целостности, в ожидании, чтобы восстановление ключа обязательно аннулировало его до погашения на сервере.
 json_post "$API/api/v1/session/join" "$HW_STEPPED_ACCESS" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join-pending-recovery.json"
 RECOVERY_KEY="$RUNTIME_DIR/keys/device-recovered-ed25519.pem"
 openssl genpkey -algorithm Ed25519 -out "$RECOVERY_KEY" >/dev/null 2>&1
@@ -435,7 +435,7 @@ jq -n \
     evidence:{files:$evidenceFiles,sha256:$evidenceSha},
     claims:{repository:"postgresql",vendorHardwareProvenance:"not-verified",privateKeyServerExposed:false,deviceTrustRelease:$version}}' > "$RESULT_DIR/device-trust-result.json"
 
-# Ensure public evidence cannot accidentally contain bearer/refresh/private-key material.
+# Убедитесь, что публичные свидетельства случайно не содержат bearer-токены, refresh-токены или закрытые ключи.
 if grep -RIEq 'accessToken"[[:space:]]*:[[:space:]]*"|refreshToken"[[:space:]]*:[[:space:]]*"|BEGIN (EC |ED25519 |)PRIVATE KEY' "$RESULT_DIR"; then
   echo '[device-trust-e2e] secret material leaked into public evidence' >&2
   exit 1

@@ -18,9 +18,9 @@ func sessionBindingClaimsMatch0126(claims authClaims, session authSessionRecord)
 	if epoch < 1 {
 		epoch = 1
 	}
-	// Compatibility for an access token minted by 0.12.5 immediately before
-	// an in-place Backend upgrade. A subsequent bind/re-bind increments epoch,
-	// so pre-binding/stale tokens cannot use this compatibility path.
+	// Совместимость с токеном доступа, выданным 0.12.5 непосредственно перед
+	// обновлением бэкенда на месте. Следующая привязка увеличит эпоху, поэтому
+	// старые и допривязочные токены не смогут использовать этот путь.
 	if claims.BindingEpoch != 0 && claims.BindingEpoch != epoch {
 		return false
 	}
@@ -77,7 +77,7 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 			score = 100
 			compromise = true
 		default:
-			// Unknown persisted security reasons are not silently downgraded.
+			// Неизвестные сохранённые причины безопасности не понижаются молча.
 			score += 25
 			network = true
 		}
@@ -89,8 +89,8 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 	case compromise || score >= 100:
 		return "compromised", 100, "revoke"
 	case reattest:
-		// Device-key freshness cannot be satisfied by account MFA alone.
-		// Prefer re-attestation over network step-up when both signals exist.
+		// Актуальность ключа устройства нельзя подтвердить только MFA учётной записи. Если
+		// доступны оба сигнала, предпочитайте повторную аттестацию сетевому step-up.
 		return "elevated", score, "reattest"
 	case network:
 		return "elevated", score, "step-up"
@@ -114,9 +114,9 @@ func recomputeSessionRisk0126(rec *authSessionRecord, now time.Time) {
 	if state == "normal" {
 		rec.RiskUpdatedAt = time.Time{}
 	} else if rec.RiskUpdatedAt.IsZero() || state != previousState || score != previousScore || action != previousAction {
-		// RiskUpdatedAt is the time the decision changed, not merely the last
-		// evaluation. Otherwise every sensitive request would move the event
-		// timestamp forward and make a successful step-up immediately stale.
+		// RiskUpdatedAt — момент изменения решения, а не очередной
+		// оценки. Иначе каждый чувствительный запрос сдвигал бы
+		// отметку и сразу делал успешный step-up устаревшим.
 		rec.RiskUpdatedAt = now.UTC()
 	}
 }
@@ -196,8 +196,8 @@ func (s Server) writeRiskRequirement0126(w http.ResponseWriter, claims authClaim
 		}})
 		return true
 	case "step-up":
-		// A sensitive operation may proceed only after phishing-resistant auth
-		// performed after the risk event that triggered this decision.
+		// Чувствительную операцию разрешайте только после устойчивой к фишингу
+		// аутентификации, выполненной позже события риска, вызвавшего решение.
 		if claims.RiskUpdatedAt == 0 || claims.AuthTime < claims.RiskUpdatedAt || authStrengthLevel117(claims.AuthStrength) < authStrengthLevel117("phishing-resistant") {
 			writeStepUpRequired117(w, "phishing-resistant")
 			return true

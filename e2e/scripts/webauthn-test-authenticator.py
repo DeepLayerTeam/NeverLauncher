@@ -80,7 +80,7 @@ def generate_p256_key(path: Path) -> None:
 
 def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
     der = run("openssl", "pkey", "-in", str(key_path), "-pubout", "-outform", "DER")
-    # SubjectPublicKeyInfo for an uncompressed P-256 key ends with 0x04 || X || Y.
+    # SubjectPublicKeyInfo для несжатого ключа P-256 заканчивается на 0x04 || X || Y.
     if len(der) < 65 or der[-65] != 0x04:
         raise SystemExit("unexpected P-256 SubjectPublicKeyInfo encoding")
     point = der[-65:]
@@ -88,8 +88,8 @@ def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
 
 
 def client_data(kind: str, challenge: str, origin: str) -> bytes:
-    # The challenge is already base64url as supplied by WebAuthn options.
-    b64u_decode(challenge)  # strict-enough validation for malformed input.
+    # Запрос challenge уже представлен в base64url параметрами WebAuthn.
+    b64u_decode(challenge)  # Достаточно строгая проверка некорректного ввода.
     return json_bytes({"type": kind, "challenge": challenge, "origin": origin, "crossOrigin": False})
 
 
@@ -106,7 +106,7 @@ def registration_auth_data(rp_id: str, credential_id: bytes, key_path: Path) -> 
         hashlib.sha256(rp_id.encode("utf-8")).digest()
         + bytes([0x45])                   # UP | UV | AT
         + struct.pack(">I", 0)
-        + bytes(16)                       # AAGUID intentionally zero for CI authenticator
+        + bytes(16)                       # AAGUID намеренно равен нулю для аутентификатора CI.
         + struct.pack(">H", len(credential_id))
         + credential_id
         + cose

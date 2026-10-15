@@ -140,7 +140,7 @@ main_go = read("cli/cmd/neverlauncher/main.go")
 if 'const cliSchemaVersion = "1.0"' not in main_go:
     fail('cli/cmd/neverlauncher/main.go: отсутствует canonical cliSchemaVersion = "1.0"')
 
-# Markdown documentation is optional; enforce version alignment in executable UI only.
+# Документация Markdown необязательна; проверяйте согласование версий только в работающем интерфейсе.
 ui_files = ["apps/admin/src/main.tsx", "apps/desktop/src/main.tsx"]
 for rel in ui_files:
     text = read(rel)
@@ -150,7 +150,7 @@ for rel in ui_files:
         line = text.count("\n", 0, match.start()) + 1
         fail(f"{rel}:{line}: UI содержит ручной product version literal {match.group(0)}")
 
-# Markdown documentation is not a required CI/release input.
+# Документация Markdown не является обязательным входом CI или выпуска.
 
 # 5. Явно запрещаем известные англоязычные UI-регрессии.
 forbidden_ui = {
@@ -260,9 +260,9 @@ for required in ["key_fingerprint", "status='revoked'", "device_challenges", "tr
         fail(f"0.12.1 Device Trust persistence/revocation incomplete: {required}")
 if not (ROOT / "services/api/internal/httpapi/device_trust_0121_test.go").is_file():
     fail("0.12.1 Device Trust HTTP E2E test is missing")
-# 0.12.2 official Desktop must own the device private-key lifecycle.  The
-# private seed may exist only inside the native Tauri/keyring boundary; React
-# receives public metadata and signatures, never secret key material.
+# В 0.12.2 официальный Desktop должен полностью управлять жизненным циклом закрытого
+# ключа устройства. Закрытый seed допустим лишь внутри нативной границы Tauri/keyring;
+# React получает только публичные метаданные и подписи, никогда секретный ключ.
 desktop_device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
 desktop_tauri = read("apps/desktop/src-tauri/src/main.rs")
 desktop_ui = read("apps/desktop/src/main.tsx")
@@ -285,9 +285,9 @@ if "scripts/smoke/offline/device-key-storage.py" not in ci:
 if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
     fail("CI не запускает Tauri device-key unit tests")
 
-# 0.12.3 hardware-bound identities: real non-exportable P-256 platform key
-# path with explicit software downgrade.  Hardware binding metadata is NOT
-# remote attestation and must never elevate MFA/authorization assurance.
+# В 0.12.3 аппаратные идентичности используют настоящий неэкспортируемый P-256-ключ
+# платформы с явным переходом на программный режим. Метаданные аппаратной привязки не
+# являются удалённой аттестацией и не должны усиливать гарантии MFA или авторизации.
 hardware_gate = read("scripts/smoke/offline/hardware-bound-identity.py")
 hardware_migration = read("services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql")
 for required in ["hardware-enclave", "try_new_hardware_record", "key_binding: \"hardware\".into()", "P256Signature::from_der", "!p.contains(\"keyring\")"]:
@@ -310,10 +310,10 @@ if "Hardware-bound identity gate OK" not in hardware_gate:
 if 'Assurance:         "hardware"' in device_trust or 'Assurance:         "attested"' in device_trust:
     fail("0.12.3 self-reported hardware binding must not elevate server assurance before attestation")
 
-# 0.12.4 challenge-response attestation is a separate server-issued, single-use
-# ceremony bound to the already verified session and registered hardware key.
-# It may raise only device assurance while fresh; it must not claim vendor TPM /
-# Secure Enclave provenance or raise RBAC/MFA authentication strength.
+# В 0.12.4 аттестация вызов–ответ — отдельная одноразовая процедура сервера,
+# привязанная к уже проверенному сеансу и зарегистрированному аппаратному
+# ключу. Пока она актуальна, повышается только доверие к устройству; нельзя
+# заявлять происхождение из TPM или Secure Enclave либо усиливать RBAC/MFA.
 attestation_gate = read("scripts/smoke/offline/challenge-response-attestation.py")
 attestation_handler = read("services/api/internal/httpapi/device_attestation_0124.go")
 attestation_test = read("services/api/internal/httpapi/device_attestation_0124_test.go")
@@ -330,10 +330,10 @@ if "Challenge-response attestation gate OK" not in attestation_gate:
 for forbidden in ["authorizationElevation\": true", "phishingResistantElevation\": true", "hardwareProvenance\": \"verified\""]:
     if forbidden in attestation_handler:
         fail(f"0.12.4 attestation overstates authorization/vendor assurance: {forbidden}")
-# 0.12.5 Device Management + Revocation: device revoke is an irreversible
-# security lifecycle transition, not a UI-only delete. Production PostgreSQL
-# must cascade revocation transactionally and clients/admins must expose the
-# management flow without allowing the old fingerprint to be re-enrolled.
+# В 0.12.5 управление и отзыв устройств: отзыв — необратимый переход
+# безопасности, а не удаление записи интерфейса. PostgreSQL должен
+# транзакционно распространять отзыв; клиент и администратор должны
+# иметь доступ к управлению без повторной регистрации старого отпечатка.
 device_management_gate = read("scripts/smoke/offline/device-management-revocation.py")
 device_management = read("services/api/internal/httpapi/device_management_0125.go")
 device_management_test = read("services/api/internal/httpapi/device_management_0125_test.go")
@@ -352,10 +352,10 @@ if "device-management-revocation.py" not in preflight or "scripts/smoke/offline/
 if "Device Management + Revocation gate OK" not in device_management_gate:
     fail("0.12.5 device management gate is incomplete")
 
-# 0.12.6 Session <-> Device binding + risk integration. Binding is
-# server-authoritative, stale access tokens fail on binding_epoch mismatch,
-# bound refresh requires proof by the current device key, and risk decisions
-# are enforced by sensitive-operation step-up/reattest/revoke policy.
+# В 0.12.6 привязка Session <-> Device и интеграция рисков. Привязку определяет
+# сервер, старые токены не проходят при несовпадении binding_epoch, обновление
+# привязанного сеанса требует подтверждения текущим ключом, а риски применяют
+# усиленную проверку, повторную аттестацию или отзыв при чувствительных операциях.
 session_device_gate = read("scripts/smoke/offline/session-device-risk-0126.py")
 session_risk = read("services/api/internal/httpapi/session_device_risk_0126.go")
 session_risk_test = read("services/api/internal/httpapi/session_device_risk_0126_test.go")
@@ -378,10 +378,10 @@ if "session-device-risk-0126.py" not in preflight or "scripts/smoke/offline/sess
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
     fail("0.12.6 session/device risk gate is incomplete")
 
-# 0.12.7 Minecraft/ServerBridge trust enforcement. Gameplay credentials carry
-# the trusted-device/binding snapshot and every server-side join confirmation
-# re-evaluates the current parent session/device/risk state without mutating
-# player network observations from the game server request.
+# В 0.12.7 контроль доверия Minecraft/ServerBridge. Игровые данные несут
+# снимок доверенного устройства и привязки, а каждое серверное подтверждение
+# входа повторно оценивает родительский сеанс, устройство и риск без
+# изменения сетевых наблюдений игрока из запроса игрового сервера.
 gameplay_trust_gate = read("scripts/smoke/offline/minecraft-serverbridge-trust-0127.py")
 gameplay_trust = read("services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go")
 minecraft_auth = read("services/api/internal/httpapi/minecraft_auth_119.go")
@@ -431,8 +431,8 @@ for required in ["db migrate verify", "0011_auth_federation_release_0120", "loca
 if 'case "production", "prod", "e2e-production"' not in config_go:
     fail("config: e2e-production должен проходить production validation")
 
-# 7. P3.2v3 production completion: real release signing, strict artifacts,
-#    real pipeline/storage/migrate/install checks and deterministic deployment permissions.
+# 7. Завершение производственного этапа P3.2v3: настоящая подпись выпусков, строгие артефакты, реальные
+# проверки конвейера, хранилища, миграций, установки и детерминированных разрешений развёртывания.
 dockerfile = read("services/api/Dockerfile")
 release_signing = read("cli/cmd/neverlauncher/release_signing.go")
 release_commands = read("cli/cmd/neverlauncher/release_commands.go")
@@ -524,8 +524,8 @@ for required in ["safety backup", "restoreLocalStorageAtomic880", "os.Rename", "
         fail(f"backup/restore не содержит maintenance-safe/atomic primitive: {required}")
 
 
-# 8. P3.2v4 production completion: immutable published releases, real client/desktop
-#    lifecycle, standalone first-run and persistent supply-chain key lifecycle.
+# 8. Завершение P3.2v4: неизменяемые опубликованные выпуски, реальный жизненный цикл клиента и
+# Desktop, самостоятельный первый запуск и постоянный жизненный цикл ключей цепочки поставки.
 memory_repo = read("services/api/internal/repository/memory.go")
 postgres_repo = read("services/api/internal/repository/postgres.go")
 package_product = read("services/api/internal/httpapi/package_product.go")
@@ -599,8 +599,8 @@ if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
     fail("standalone first-run regression-test отсутствует")
 
-# 9. Real Minecraft client E2E: the release gate must materialize and
-#    launch an actual Mojang client, not regress to a synthetic Java fixture.
+# 9. E2E настоящего клиента Minecraft: проверка выпуска обязана подготовить и
+# запустить реальный клиент Mojang, а не ограничиваться искусственной Java-фикстурой.
 e2e_script = read("e2e/scripts/run-minecraft-e2e.sh")
 e2e_publish = read("e2e/scripts/publish-client-package.py")
 for required in [
@@ -689,9 +689,9 @@ if "actual-mojang-client" not in ci or "xvfb" not in ci or "Minecraft Client E2E
     fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
 
 
-# 10. 0.10.6 public CI Compatibility Matrix + hardening: targets contain no
-#     hand-written PASS state; actual-client evidence is generated by CI and
-#     aggregated fail-closed for the exact commit/run.
+# 10. Публичная матрица совместимости CI 0.10.6 и усиление защиты: цели не
+# содержат вручную заданного PASS; свидетельства настоящего клиента создаёт CI,
+# агрегируя их по точному коммиту и запуску с обязательным отказом при ошибках.
 compat_targets = read("compatibility/targets.json")
 compat_tool = read("scripts/compatibility/matrix.py")
 compat_workflow = read(".github/workflows/compatibility.yml")
@@ -736,10 +736,10 @@ if "symlink package path is forbidden" not in e2e_publish or "resolve(strict=Tru
     fail("E2E publisher must reject symlink/path ambiguity before upload")
 
 
-# 11. 0.10.7 compatibility stabilization: concurrent materializers are locked,
-#     transient upstream failures are retried, client-tree symlink escapes are
-#     rejected, portable atomic replacement is used, and the NeverRuntime bin
-#     source must exist whenever Cargo declares it.
+# 11. Стабилизация совместимости 0.10.7: параллельные материализаторы
+# блокируются, временные внешние сбои повторяются, выход через символические
+# ссылки дерева запрещён, используется переносимая атомарная замена, а
+# исходный бинарный файл NeverRuntime обязателен при объявлении Cargo.
 stability_go = read("cli/cmd/neverlauncher/compatibility_stability.go")
 stability_tests = read("cli/cmd/neverlauncher/compatibility_stability_test.go")
 vanilla_runtime = read("cli/cmd/neverlauncher/vanilla_runtime.go")
@@ -798,10 +798,10 @@ for required in ["paperHealthy", "exitCode", "evidence files are incomplete", "e
     if required not in compat_tool:
         fail(f"compatibility evidence stabilization missing: {required}")
 
-# 11b. 0.16.11 compatibility hardening: interrupted downloads must be
-# recoverable, corrupt cache entries quarantined, exact-version Mojang
-# metadata may recover from a verified local snapshot during an outage, and
-# archive/security boundaries must remain fail-closed.
+# 11b. Усиление совместимости 0.16.11: прерванные загрузки восстанавливаются,
+# повреждённые записи кеша изолируются, метаданные Mojang точной версии
+# при недоступности сети могут восстанавливаться из проверенного снимка,
+# границы архивов и безопасности всегда соблюдаются строго.
 compat_hardening = read("cli/cmd/neverlauncher/compatibility_hardening.go")
 for required in [
     "resolveVanillaMetadataWithRecovery", "latest/snapshot metadata recovery запрещён",
@@ -833,9 +833,9 @@ for required in [
 
 
 
-# 12. Minecraft Compatibility Release: production publication must be
-#     bound to machine-verifiable compatibility evidence for the same version
-#     and source commit, and the evidence must live inside signed SHA256SUMS.
+# 12. Выпуск совместимости Minecraft: публикация в производстве требует
+# машинно проверяемых свидетельств совместимости той же версии и
+# коммита; свидетельства должны входить в подписанный SHA256SUMS.
 compat_release = read("cli/cmd/neverlauncher/compatibility_release.go")
 release_commands = read("cli/cmd/neverlauncher/release_commands.go")
 build_release = read("scripts/release/build-release.sh")
@@ -901,7 +901,7 @@ for required in [
         fail(f"production release не ждёт exact-commit Compatibility/Device Trust certification: {required}")
 
 
-# 0.12.8 Cross-platform hardening + device key recovery/rotation.
+# В 0.12.8: кроссплатформенная защита, восстановление и ротация ключей устройств.
 key_recovery_gate = read("scripts/smoke/offline/cross-platform-key-recovery-0128.py")
 key_recovery_handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
 key_recovery_native = read("apps/desktop/src-tauri/src/device_keys.rs")
@@ -923,8 +923,8 @@ if "cross-platform-key-recovery-0128.py" not in preflight or "scripts/smoke/offl
     fail("0.12.8 key recovery gate is not wired into preflight/CI")
 
 
-# 0.12.9 Device Trust E2E + public trust matrix. PASS state must come only
-# from exact-commit/run CI evidence; public targets are policy, not results.
+# В 0.12.9: E2E доверенных устройств и публичная матрица доверия. PASS допустим только по
+# данным CI того же коммита и запуска; опубликованные цели — правила, а не результаты.
 device_trust_targets = read("device-trust/targets.json")
 device_trust_matrix = read("scripts/device_trust/matrix.py")
 device_trust_workflow = read(".github/workflows/device-trust.yml")
@@ -994,8 +994,8 @@ if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_
     fail("0.12.9+ mandatory Device Trust release gate is incomplete")
 
 
-# 0.12.10 Migration + stabilization. The upgrade from the exact 0.12.9
-# schema is a first-class release property, not just a fresh-install check.
+# В 0.12.10: миграция и стабилизация. Обновление строго со схемы 0.12.9 —
+# полноценное требование к выпуску, а не просто проверка чистой установки.
 stabilization_migration_api = read("services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
 stabilization_migration_cli = read("cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
 stabilization_upgrade_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
@@ -1039,8 +1039,8 @@ if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization
     fail("0.12.10 mandatory migration stabilization release gate is incomplete")
 
 
-# 0.16.1 Guard Attestation PostgreSQL challenge-purpose completion. The runtime
-# security flow is useless if the sealed SQL schema rejects its one-shot purposes.
+# В 0.16.1: исправление назначений запросов Guard Attestation в PostgreSQL. Без
+# поддержки одноразовых назначений фиксированной SQL-схемой механизм защиты бесполезен.
 guard_purpose_migration_api = read("services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 guard_purpose_migration_cli = read("cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
 if guard_purpose_migration_api != guard_purpose_migration_cli:
@@ -1072,8 +1072,8 @@ for required in [
         fail(f"0.16.1 Guard Attestation timestamp canonicalization missing: {required}")
 
 
-# 0.18.10 Guard Attestation v2 — post-launch continuous Windows evidence must
-# have sealed challenge/ticket purposes and be enforced before ServerBridge join.
+# В 0.18.10: Guard Attestation v2 требует фиксированных назначений запросов и билетов для
+# непрерывных свидетельств Windows после запуска и обязательной проверки до входа ServerBridge.
 guard_v2_migration_api = read("services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 guard_v2_migration_cli = read("cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 if guard_v2_migration_api != guard_v2_migration_cli:
@@ -1104,8 +1104,8 @@ for required in ["collect_windows_continuous_evidence_v2", "neverguard/windows-c
 if "neverguard-attestation-v2-01810.py" not in preflight or "neverguard-attestation-v2-01810.py" not in ci:
     fail("0.18.10 Guard Attestation v2 mandatory gate is not wired into preflight/CI")
 
-# 0.13.2 NeverGuard Windows Integrity Evidence v1. Evidence is collected by the
-# separate guard process and authenticated over the existing local IPC session.
+# В 0.13.2: свидетельства целостности NeverGuard Windows v1 собирает отдельный
+# Guard-процесс и аутентифицирует через существующий локальный IPC-сеанс.
 integrity_0132 = read("runtime/neverruntime/src/integrity.rs")
 guard_0132 = read("runtime/neverruntime/src/guard_ipc.rs")
 desktop_0132 = read("apps/desktop/src-tauri/src/main.rs")
@@ -1127,9 +1127,9 @@ if "neverguard-integrity-evidence-0132.py" not in preflight or "neverguard-integ
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
     fail("0.13.2 mandatory integrity evidence gate is incomplete")
 
-# 0.13.3 NeverGuard Windows runtime/process policy enforcement. NeverGuard
-# self-mitigations are applied before Tokio starts; Java starts suspended and
-# is assigned to a non-breakaway kill-on-close Job Object before execution.
+# В 0.13.3: контроль политик процесса и выполнения NeverGuard Windows. Защитные
+# меры Guard применяются до Tokio; Java запускается приостановленной внутри
+# Job Object с запретом выхода и принудительным завершением при закрытии.
 policy_0133 = read("runtime/neverruntime/src/windows_policy.rs")
 guard_0133 = read("runtime/neverruntime/src/guard_ipc.rs")
 supervisor_0133 = read("runtime/neverruntime/src/supervisor.rs")
@@ -1157,9 +1157,9 @@ if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
     fail("0.13.3 mandatory process policy release gate is incomplete")
 
 
-# 0.13.9 Cross-platform Guard CI matrix + release certification. Certification
-# must come from exact-commit CI artifacts for Linux, Windows, and macOS and
-# publish-check must re-hash those exact artifacts from the release bundle.
+# В 0.13.9: кроссплатформенная CI-матрица Guard и сертификация выпуска.
+# Данные берутся из CI-артефактов точного коммита Linux/Windows/macOS;
+# publish-check повторно хеширует те же артефакты пакета.
 guard_targets_0139 = read("guard-ci/targets.json")
 guard_matrix_0139 = read("scripts/guard_ci/matrix.py")
 guard_stage_0139 = read("scripts/guard_ci/stage_release.py")
@@ -1214,9 +1214,9 @@ if not (ROOT / "cli/cmd/neverlauncher/guard_ci_release_test.go").is_file():
 
 
 
-# 0.14.2 Cryptographic Node Identities. Privileged ServerBridge traffic must be
-# signed by a node-local Ed25519 private key; Backend stores only public identity
-# material and PostgreSQL-enforced single-use nonces.
+# В 0.14.2: криптографические идентичности узлов. Привилегированный трафик
+# ServerBridge подписывается локальным Ed25519-ключом узла; бэкенд хранит
+# только публичные данные и одноразовые nonce, контролируемые PostgreSQL.
 if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     crypto_migration_0142 = read("services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
     crypto_identity_0142 = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
@@ -1255,8 +1255,8 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
         fail("0.14.2 mandatory cryptographic identity release gate is incomplete")
 
-# 0.14.3 One-Time Join Tickets. A join authorization is identity-bound,
-# atomically consumed once, and carries a persisted redemption proof.
+# В 0.14.3: одноразовые билеты входа. Разрешение привязано к идентичности,
+# атомарно используется единожды и содержит сохраняемое доказательство погашения.
 if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
     ticket_migration_0143 = read("services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql")
     ticket_helper_0143 = read("services/api/internal/httpapi/server_bridge_join_tickets_0143.go")
@@ -1290,9 +1290,9 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         fail("0.14.3 mandatory one-time join ticket release gate is incomplete")
 
 
-# 0.15.1 Production Delivery starts with an inventory that is generated from
-# actual bundle bytes. Platform/architecture aliases are canonicalized in code,
-# and release verify must re-hash every delivery artifact fail-closed.
+# В 0.15.1: производственная поставка начинается с инвентаря, сформированного по
+# настоящим байтам пакета. Псевдонимы платформ и архитектур нормализованы в коде;
+# проверка выпуска заново хеширует каждый артефакт с отказом при ошибке.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 1):
     delivery_0151 = read("cli/cmd/neverlauncher/delivery_manifest.go")
     release_0151 = read("cli/cmd/neverlauncher/release_commands.go")
@@ -1316,9 +1316,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.1 delivery regression tests are missing")
 
 
-# 0.15.3 Linux production delivery is a native dual-architecture package boundary.
-# x64 and ARM64 artifacts are built on native Linux runners, checked as ELF64,
-# packed deterministically, and rebound to DELIVERY_MANIFEST.json before publish.
+# В 0.15.3: производственная поставка Linux определяется нативными пакетами двух архитектур.
+# x64 и ARM64 собираются на соответствующих агентах Linux, проверяются как ELF64,
+# упаковываются детерминированно и связываются с DELIVERY_MANIFEST.json до публикации.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 3):
     linux_delivery_0153 = read("cli/cmd/neverlauncher/linux_delivery.go")
     linux_builder_0153 = read("scripts/release/build-linux-production.sh")
@@ -1362,9 +1362,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.3 Linux delivery regression tests are missing")
 
 
-# 0.15.4 macOS production delivery is a thin dual-architecture Developer ID +
-# Apple notarization boundary. Ad-hoc signing is CI-only; publish must prove
-# accepted notarization, stapling and Gatekeeper validation for x64 and ARM64.
+# В 0.15.4: производственная поставка macOS требует тонких пакетов двух архитектур, Developer ID
+# и нотариального заверения Apple. Ad-hoc подпись допустима только для CI; публикация требует
+# подтверждённой нотариализации, прикреплённого билета и проверки Gatekeeper для x64 и ARM64.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 4):
     macos_delivery_0154 = read("cli/cmd/neverlauncher/macos_delivery.go")
     macos_builder_0154 = read("scripts/release/build-macos-production.sh")
@@ -1407,9 +1407,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.4 macOS delivery regression tests are missing")
 
 
-# 0.15.5 Managed JRE Distribution is a six-target first-party delivery boundary.
-# Release bytes remain the exact vendor Temurin archives; NeverRuntime verifies the
-# pinned distribution manifest, archive checksum/size and java runtime before use.
+# В 0.15.5: распространение управляемых JRE — собственная поставка для шести
+# целей. Байты выпуска точно соответствуют архивам Temurin; NeverRuntime до
+# использования проверяет закреплённый манифест, хеш, размер и среду Java.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 5):
     jre_delivery_0155 = read("cli/cmd/neverlauncher/managed_jre_delivery.go")
     jre_builder_0155 = read("scripts/release/managed-jre-distribution.py")
@@ -1480,9 +1480,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.5 Managed JRE regression tests are missing")
 
 
-# 0.16.5 Managed Java II must be an executable resolver/install/cache path for
-# Java 8/16/17/21/25. Java 16 must use historical GA fallback instead of a
-# current-release declaration, and the exact runtime path is exercised in CI.
+# В 0.16.5: Managed Java II должен реально разрешать, устанавливать и
+# кешировать Java 8/16/17/21/25. Для Java 16 требуется исторический GA, а
+# не объявление текущего выпуска; путь фактической среды проверяется в CI.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 5):
     managed_java_0165 = read("runtime/neverruntime/src/managed_java.rs")
     managed_java_cli_0165 = read("runtime/neverruntime/src/bin/neverruntime.rs")
@@ -1522,8 +1522,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.16.5 mandatory Managed Java II gate is incomplete")
 
 
-# 0.16.6 Java 16/17 Vanilla must be enforced by the real materializer/runtime
-# and by actual-client release-line certification, not only by compatibility labels.
+# В 0.16.6: Vanilla с Java 16/17 проверяется настоящими материализатором и средой
+# исполнения, а также сертификацией реального клиента, не только метками совместимости.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 6):
     vanilla_0166 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
     vanilla_tests_0166 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
@@ -1575,8 +1575,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 
 
-# 0.16.7 Java 21 Vanilla must be enforced by materializer/runtime and by
-# actual-client certification for the complete 1.20.5/1.20.6 -> 1.21.10 release line.
+# В 0.16.7: Vanilla с Java 21 проверяется материализатором, средой исполнения
+# и сертификацией настоящего клиента всей линии 1.20.5/1.20.6 -> 1.21.10.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 7):
     vanilla_0167 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
     vanilla_tests_0167 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
@@ -1625,8 +1625,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.7 Java 21 Vanilla regression coverage missing: {required}")
 
 
-# 0.16.8 Java 25 Vanilla must be an executable exact-Java path for the released
-# 26.1 hotfix line and the 26.3 game drop, backed by actual-client certification.
+# В 0.16.8: Vanilla с Java 25 должен иметь исполняемый путь точной версии Java
+# для ветки исправлений 26.1 и релиза 26.3, подтверждённый настоящим клиентом.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 8):
     vanilla_0168 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
     vanilla_tests_0168 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
@@ -1672,8 +1672,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.8 Java 25 Vanilla regression coverage missing: {required}")
 
 
-# 0.16.9 Cross-platform Vanilla must execute on matching native hosts and keep
-# OS/architecture native libraries isolated instead of merely expanding labels.
+# В 0.16.9: кроссплатформенная Vanilla должна запускаться на соответствующих нативных
+# хостах и разделять библиотеки разных ОС и архитектур, а не просто расширять метки.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 9):
     vanilla_0169 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
     vanilla_tests_0169 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
@@ -1730,8 +1730,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.9 cross-platform regression coverage missing: {required}")
 
 
-# 0.16.10 Actual Client E2E II must prove that representative real Mojang
-# clients join verified Mojang servers for the exact same Minecraft version.
+# В 0.16.10: E2E настоящих клиентов II доказывает вход образцовых реальных
+# клиентов Mojang на проверенные серверы Mojang точно той же версии Minecraft.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 10):
     vanilla_01610 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
     vanilla_tests_01610 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
@@ -1786,9 +1786,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.10 matching-server regression coverage missing: {required}")
 
 
-# 0.15.6 Unified Transactional Updater Core must be an executable file-update path,
-# not a manifest-only declaration. It is used by client install/update/package-apply
-# and is self-tested on native Linux/Windows/macOS CI runners.
+# В 0.15.6: единое транзакционное ядро обновления должно реально обновлять файлы, не
+# просто объявлять манифест. Оно используется установкой, обновлением и применением
+# клиентских пакетов и самостоятельно тестируется нативным CI Linux/Windows/macOS.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 6):
     updater_core_0156 = read("cli/cmd/neverlauncher/transactional_updater.go")
     updater_cmd_0156 = read("cli/cmd/neverlauncher/transactional_updater_command.go")
@@ -1818,8 +1818,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if ci.count("update self-test") < 4:
         fail("0.15.6 updater native runtime self-tests are missing from CI")
 
-# 0.15.7 Desktop/Guard/Runtime transactional update must wire the 0.15.6 core
-# into the actual self-update path and preserve platform signing/package boundaries.
+# В 0.15.7: транзакционное обновление Desktop/Guard/Runtime подключает ядро 0.15.6
+# к настоящему самообновлению, сохраняя подписи платформ и границы пакетов.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 7):
     component_core_0157 = read("cli/cmd/neverlauncher/component_update.go")
     component_main_0157 = read("cli/cmd/neverlauncher/main.go")
@@ -1866,8 +1866,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.7 native component updater self-tests are missing from CI")
 
 
-# 0.15.8 Release Verification v2 must bind release signatures to a root-signed
-# trust policy, enforce key lifecycle states, and persist anti-rollback state.
+# В 0.15.8: Release Verification v2 связывает подписи выпусков с политикой доверия,
+# подписанной корневым ключом, обеспечивает состояния ключей и сохраняет защиту от отката.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 8):
     rv2_0158 = read("cli/cmd/neverlauncher/release_verification_v2.go")
     keyring_0158 = read("cli/cmd/neverlauncher/security_keyring.go")
@@ -1900,9 +1900,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.8 verification gate is not wired into preflight/CI")
 
 
-# 0.15.9 Public Production Delivery Matrix must expose the complete six-target
-# public inventory and the post-publish E2E must download the real public bytes
-# before repeating Release Verification v2 with external trust material.
+# В 0.15.9: публичная матрица производственной поставки показывает полный перечень
+# шести целей; после публикации E2E загружает настоящие публичные байты перед
+# повторной проверкой Release Verification v2 по внешним данным доверия.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 9):
     public_delivery_0159 = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
     delivery_cmd_0159 = read("cli/cmd/neverlauncher/delivery_manifest.go")
@@ -1940,7 +1940,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.9 public delivery gate is not wired into preflight/CI")
 
 
-# 0.13.0 Device Trust Release certification and runtime contract.
+# В 0.13.0: сертификация выпуска Device Trust и контракт выполнения.
 if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     dt_release = read("cli/cmd/neverlauncher/device_trust_release.go")
     dt_runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
@@ -1957,9 +1957,9 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     if "device-trust-release-0130.py" not in preflight or "device-trust-release-0130.py" not in ci:
         fail("0.13.0 Device Trust Release gate is not wired into preflight/CI")
 
-# 0.15.10 Migration + stabilization seals local-state migration and recovery:
-# serialized trust-state verification, state 2.0 -> 2.1, same-version manifest
-# binding, canonical component state and cleanup of terminal updater payloads.
+# В 0.15.10: миграция и стабилизация фиксируют локальное состояние и восстановление:
+# сериализованную проверку доверия, переход 2.0 -> 2.1, привязку манифеста к версии,
+# каноническое состояние компонентов и очистку завершённых данных обновления.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 10):
     stabilization_01510 = read("cli/cmd/neverlauncher/migration_stabilization_01510.go")
     stabilization_tests_01510 = read("cli/cmd/neverlauncher/migration_stabilization_01510_test.go")
@@ -2000,9 +2000,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.10 stabilization gate is not wired into preflight/CI")
 
 
-# 0.15.11 Production Release Candidate seals the complete release cohort before
-# Ed25519 signing. It must be built from one exact Git commit with all public
-# certification inputs present and production-only Windows/macOS evidence.
+# В 0.15.11: кандидат производственного выпуска фиксирует весь набор до подписи
+# Ed25519. Сборка должна происходить из одного точного Git-коммита со всеми
+# публичными сертификациями и производственными свидетельствами Windows/macOS.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 15, 11):
     rc_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
     rc_tests_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511_test.go")
@@ -2056,8 +2056,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.11 Production Release Candidate gate is not wired into preflight/CI")
 
 
-# 0.16.0 Production Delivery Release promotes the exact-commit candidate into
-# a stable six-target GA boundary with an immutable versioned public origin.
+# В 0.16.0: выпуск производственной поставки переводит кандидата точного коммита в стабильную
+# GA-поставку для шести целей с неизменяемым версионированным публичным источником.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 16, 0):
     pdr_0160 = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
     pdr_tests_0160 = read("cli/cmd/neverlauncher/production_delivery_release_0160_test.go")
@@ -2109,10 +2109,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "production-delivery-release-0160.py" not in preflight or "production-delivery-release-0160.py" not in ci:
         fail("0.16.0 Production Delivery Release gate is not wired into preflight/CI")
 
-# 0.17.0 Minecraft Compatibility II GA binds every compatibility PASS to a
-# concrete JRE binary identity. Maintenance revisions keep the complete v1
-# Legacy grid, the v2 Java 16/17 grid, and v3 closes the 1.21.11/26.2
-# Java 21/25 release gaps with independent materializer/runtime enforcement.
+# В 0.17.0: Minecraft Compatibility II GA связывает каждый PASS с
+# конкретным бинарником JRE. Исправления сохраняют всю старую матрицу
+# v1, Java 16/17 матрицу v2, а v3 закрывает пробелы 1.21.11/26.2 по
+# Java 21/25 с независимым контролем материализатора и запуска.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 0):
     ga_matrix_0170 = read("scripts/compatibility/matrix.py")
     ga_jre_0170 = read("scripts/compatibility/certify-jre.py")
@@ -2162,8 +2162,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "minecraft-compatibility-II-ga-0170.py" not in preflight or "minecraft-compatibility-II-ga-0170.py" not in ci:
         fail("0.17.0 Minecraft Compatibility II GA gate is not wired into preflight/CI")
 
-# 0.17.1 Fabric Compatibility II requires the full stable 1.14+ line to use
-# executable materialization and actual-client evidence, not declaration-only targets.
+# В 0.17.1: Fabric Compatibility II требует для всей стабильной линии 1.14+
+# настоящую материализацию и свидетельства запуска, а не только объявления целей.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 1):
     fabric_matrix_0171 = read("scripts/compatibility/matrix.py")
     fabric_case_0171 = read("e2e/scripts/run-fabric-certification-case.sh")
@@ -2207,8 +2207,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "fabric-compatibility-II-0171.py" not in preflight or "fabric-compatibility-II-0171.py" not in ci:
         fail("0.17.1 Fabric Compatibility II gate is not wired into preflight/CI")
 
-# 0.17.2 Quilt Compatibility II extends executable client certification to the
-# broad stable Quilt line and requires concrete stable Quilt Loader resolution.
+# В 0.17.2: Quilt Compatibility II расширяет настоящую сертификацию клиентов на
+# стабильную линейку Quilt и требует выбора конкретного стабильного Quilt Loader.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 2):
     quilt_matrix_0172 = read("scripts/compatibility/matrix.py")
     quilt_runtime_0172 = read("cli/cmd/neverlauncher/loader_runtime.go")
@@ -2258,9 +2258,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "quilt-compatibility-II-0172.py" not in preflight or "quilt-compatibility-II-0172.py" not in ci:
         fail("0.17.2 Quilt Compatibility II gate is not wired into preflight/CI")
 
-# 0.17.3 Forge Modern makes processor-based Forge 1.13.2+ an executable
-# compatibility line: installer processors must run, produce a verified profile,
-# resolve a concrete Forge version and launch that profile through NeverRuntime.
+# В 0.17.3: Forge Modern делает линейку 1.13.2+ с процессорными установщиками
+# реально запускаемой: процессоры должны выполниться, создать проверенный профиль,
+# разрешить точную версию Forge и запустить профиль через NeverRuntime.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 3):
     forge_matrix_0173 = read("scripts/compatibility/matrix.py")
     forge_runtime_0173 = read("cli/cmd/neverlauncher/forge_runtime.go")
@@ -2316,8 +2316,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.3 Forge Modern gate is not wired into preflight/CI")
 
 
-# 0.17.4 Forge Legacy makes the real 1.12.2 V1 universal-installer path
-# release-bound. It must remain distinct from the processor-based 1.13.2+ path.
+# В 0.17.4: Forge Legacy привязывает настоящий универсальный V1-установщик
+# 1.12.2 к выпуску. Путь отдельный от процессорных установщиков 1.13.2+.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 4):
     legacy_runtime_0174 = read("cli/cmd/neverlauncher/forge_runtime.go")
     legacy_commands_0174 = read("cli/cmd/neverlauncher/runtime_commands.go")
@@ -2359,8 +2359,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "forge-legacy-1122-0174.py" not in preflight or "forge-legacy-1122-0174.py" not in ci:
         fail("0.17.4 Forge Legacy gate is not wired into preflight/CI")
 
-# 0.17.5 Forge Legacy 1.7.10 makes the real V1 universal + LaunchWrapper/cpw FML
-# execution path release-bound and keeps it separate from 1.12.2/modern processors.
+# В 0.17.5: Forge Legacy 1.7.10 включает настоящий путь V1 universal и
+# LaunchWrapper/cpw FML, отдельно от 1.12.2 и современных процессоров.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 5):
     legacy_runtime_0175 = read("cli/cmd/neverlauncher/forge_runtime.go")
     legacy_commands_0175 = read("cli/cmd/neverlauncher/runtime_commands.go")
@@ -2403,9 +2403,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.5 Forge Legacy gate is not wired into preflight/CI")
 
 
-# 0.17.6 NeoForge Compatibility II binds the real NeoForge processor installer
-# line, including the separate 1.20.1 net.neoforged:forge publication and the
-# post-26.1 full Minecraft version mapping, to actual-client release evidence.
+# В 0.17.6: NeoForge Compatibility II связывает реальные процессорные установщики,
+# включая отдельную публикацию 1.20.1 net.neoforged:forge и полное отображение
+# версий Minecraft после 26.1, со свидетельствами настоящих клиентов.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 6):
     neo_runtime_0176 = read("cli/cmd/neverlauncher/forge_runtime.go")
     neo_case_0176 = read("e2e/scripts/run-neoforge-certification-case.sh")
@@ -2463,8 +2463,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.6 NeoForge gate is not wired into preflight/CI")
 
 
-# 0.17.7 Loader Resolution & Pinning makes every non-Vanilla loader resolution
-# replayable from an immutable cryptographic lock and release-binds the lock.
+# В 0.17.7: разрешение и закрепление загрузчиков обеспечивает воспроизводимость каждого
+# не-Vanilla загрузчика по неизменяемому криптографическому lock-файлу, связанному с выпуском.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 7):
     pin_lock_0177 = read("cli/cmd/neverlauncher/loader_resolution.go")
     pin_meta_0177 = read("cli/cmd/neverlauncher/loader_runtime.go")
@@ -2509,8 +2509,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.7 loader resolution pinning gate is not wired into preflight/CI")
 
 
-# 0.17.8 Loader-native E2E proves a real materialized loader client can join a
-# dedicated server running the same loader family and the exact pinned version.
+# В 0.17.8: E2E загрузчиков доказывает, что настоящий подготовленный клиент
+# входит на выделенный сервер того же семейства и точно закреплённой версии.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 8):
     native_compose_0178 = read("e2e/docker-compose.minecraft-e2e.yml")
     native_runner_0178 = read("e2e/scripts/run-loader-native-e2e.sh")
@@ -2551,8 +2551,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.8 loader-native E2E gate is not wired into preflight/CI")
 
 
-# 0.17.9 Cross-platform Loaders certifies real loader clients and native trees
-# on every supported desktop OS/architecture pair, not just runner metadata.
+# В 0.17.9: кроссплатформенные загрузчики сертифицируют настоящих клиентов и нативные
+# деревья на каждой поддерживаемой паре ОС и архитектуры, а не только метаданные CI.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 9):
     platform_helper_0179 = read("e2e/scripts/lib/certification-platform.sh")
     platform_verifier_0179 = read("scripts/compatibility/verify-loader-platform.py")
@@ -2593,8 +2593,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.9 cross-platform loader gate is not wired into preflight/CI")
 
 
-# 0.17.10 Loader Hardening proves immutable loader replay survives mutable/upstream
-# failures and interrupted Forge/NeoForge processor installation.
+# В 0.17.10: усиление загрузчиков доказывает восстановление по неизменяемому lock-файлу
+# после внешних изменений или ошибок и прерывания установки процессора Forge/NeoForge.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 10):
     hardening_cache_01710 = read("cli/cmd/neverlauncher/loader_hardening.go")
     hardening_processors_01710 = read("cli/cmd/neverlauncher/forge_processor_recovery.go")
@@ -2631,8 +2631,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.10 Loader Hardening gate is not wired into preflight/CI")
 
 
-# 0.17.11 Loader Compatibility RC produces one complete release certificate
-# derived from the exact compatibility cohort and signed as part of the release bundle.
+# В 0.17.11: кандидат Loader Compatibility RC создаёт один полный
+# сертификат точной матрицы и подписывает его внутри пакета выпуска.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 17, 11):
     rc_cert_01711 = read("cli/cmd/neverlauncher/compatibility_release_certificate.go")
     rc_compat_01711 = read("cli/cmd/neverlauncher/compatibility_release.go")
@@ -2655,8 +2655,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.17.11 production candidate RC assertion incomplete: {required}")
     required_rows = [row for row in rc_targets_01711 if row.get("required")]
     unavailable_rows = [row for row in rc_targets_01711 if not row.get("required")]
-    # Historical 292-target catalogue is retained; 12 targets have no stable
-    # upstream loader and MUST NOT be certified or represented as passing.
+    # Исторический каталог из 292 целей сохраняется; у 12 нет стабильного загрузчика
+    # у издателя, их категорически нельзя сертифицировать или помечать успешными.
     blocked = {
         ("quilt", mc): "upstream-missing" for mc in ("1.14", "1.14.1", "1.14.2", "1.14.3")
     } | {
@@ -2681,8 +2681,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.11 Loader Compatibility RC gate is not wired into preflight/CI")
 
 
-# 0.18.0 Loader Compatibility GA turns the RC evidence into an executable,
-# fail-closed runtime support surface and binds that exact policy into publish-check.
+# В 0.18.0: Loader Compatibility GA превращает данные RC в реальную среду поддержки
+# с обязательным отказом при ошибках и закрепляет политику в publish-check.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 0):
     ga_runtime_0180 = read("cli/cmd/neverlauncher/loader_ga.go")
     ga_meta_0180 = read("cli/cmd/neverlauncher/loader_runtime.go")
@@ -2721,8 +2721,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.0 Loader Compatibility GA gate is not wired into preflight/CI")
 
 
-# 0.18.1 Windows Protection Core II makes the Windows Guard profile and host
-# capability model executable and authenticated instead of declarative.
+# В 0.18.1: Windows Protection Core II делает профиль Guard и модель
+# возможностей хоста выполняемыми и аутентифицированными, а не декларативными.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 1):
     windows_core_0181 = read("runtime/neverruntime/src/windows_protection.rs")
     windows_policy_0181 = read("runtime/neverruntime/src/windows_policy.rs")
@@ -2769,8 +2769,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.1 Windows Protection Core II lacks Windows compile/integration/clippy CI")
 
 
-# 0.18.2 NeverGuard Sensor must be a real signed JVM native agent loaded through
-# -agentpath before Minecraft main, with authenticated fail-closed startup proof.
+# В 0.18.2: NeverGuard Sensor должен быть настоящим подписанным нативным агентом JVM, загружаемым через
+# -agentpath до главного класса Minecraft с аутентифицированным доказательством запуска и строгим отказом.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 2):
     sensor_native_0182 = read("runtime/neverguard-sensor/src/lib.rs")
     sensor_bootstrap_0182 = read("runtime/neverruntime/src/windows_sensor.rs")
@@ -2822,9 +2822,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 
 
-# 0.18.3 Module Guard must continuously observe native module lifecycle in the
-# JVM, authenticate the ordered event stream and fail closed on policy/snapshot
-# drift instead of relying on point-in-time module snapshots alone.
+# В 0.18.3: Module Guard постоянно наблюдает за нативными модулями
+# JVM, аутентифицирует упорядоченный поток событий и блокирует отклонения
+# политик или снимков, не полагаясь только на разовый снимок.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 3):
     module_sensor_0183 = read("runtime/neverguard-sensor/src/lib.rs")
     module_parent_0183 = read("runtime/neverruntime/src/windows_module_guard.rs")
@@ -2885,9 +2885,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 
 
-# 0.18.4 Aggressive Hook Engine I must be a real in-process, bounded IAT
-# interception engine with authenticated readiness, periodic self-integrity and
-# fail-closed parent evidence. Global/cross-process hook primitives are forbidden.
+# В 0.18.4: Aggressive Hook Engine I — настоящий внутрипроцессный перехват IAT с
+# ограниченными ресурсами, доказательством готовности, периодической самопроверкой и
+# строгими свидетельствами родителя. Глобальные и межпроцессные перехваты запрещены.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 4):
     hook_engine_0184 = read("runtime/neverguard-sensor/src/hook_engine.rs")
     hook_sensor_0184 = read("runtime/neverguard-sensor/src/lib.rs")
@@ -2961,9 +2961,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 
 
-# 0.18.5 Memory Integrity must continuously inspect executable memory in the
-# protected JVM, hash executable image code, distinguish JIT/private code by
-# observed allocation/protection provenance and fail closed on code-page drift.
+# В 0.18.5: Memory Integrity постоянно исследует исполняемую память
+# JVM, хеширует страницы образов, отличает JIT/приватный код по
+# наблюдаемому выделению и защите памяти и запрещает изменения кода.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 5):
     memory_0185 = read("runtime/neverguard-sensor/src/memory_integrity.rs")
     memory_hooks_0185 = read("runtime/neverguard-sensor/src/hook_engine.rs")
@@ -3037,8 +3037,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.5 Memory Integrity lacks real Windows integration/clippy CI")
 
 
-# 0.18.6 Thread & Process Integrity continuously validates Win32 thread start
-# origins and the full runtime process tree against the non-breakaway Job Object.
+# В 0.18.6: Thread & Process Integrity постоянно проверяет источники Win32-потоков
+# и полное дерево процессов относительно Job Object с запретом выхода.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 6):
     thread_sensor_0186 = read("runtime/neverguard-sensor/src/thread_integrity.rs")
     thread_stream_0186 = read("runtime/neverguard-sensor/src/lib.rs")
@@ -3126,8 +3126,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.6 Thread & Process Integrity lacks real Windows integration/clippy CI")
 
 
-# 0.18.7 Debug & Instrumentation Guard blocks unwanted JVM startup
-# instrumentation and continuously fail-closes if a user-mode debugger attaches.
+# В 0.18.7: Debug & Instrumentation Guard блокирует нежелательные инструменты
+# запуска JVM и строго запрещает подключение пользовательского отладчика.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 7):
     debug_sensor_0187 = read("runtime/neverguard-sensor/src/debug_instrumentation.rs")
     debug_stream_0187 = read("runtime/neverguard-sensor/src/lib.rs")
@@ -3215,8 +3215,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.7 Debug Guard lacks real Windows integration/clippy CI")
 
 
-# 0.18.8 JVM-Aware Protection binds executable MEM_PRIVATE transitions to
-# certified HotSpot jvm.dll provenance for Java 8/16/17/21/25.
+# В 0.18.8: JVM-Aware Protection связывает переходы исполняемой памяти MEM_PRIVATE
+# с сертифицированным происхождением HotSpot jvm.dll для Java 8/16/17/21/25.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 8):
     jvm_sensor_0188 = read("runtime/neverguard-sensor/src/jvm_awareness.rs")
     jvm_stream_0188 = read("runtime/neverguard-sensor/src/lib.rs")
@@ -3309,8 +3309,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.8 JVM-Aware adversarial runner incomplete: {required}")
 
 
-# 0.18.9 Continuous Guard requires an independent bidirectional Sensor/Guard
-# heartbeat and a rolling transport event chain cross-checked on both sides.
+# В 0.18.9: Continuous Guard требует независимого двустороннего heartbeat Sensor/Guard
+# и скользящей цепочки событий транспорта, проверяемой обеими сторонами.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 18, 9):
     continuous_sensor_0189 = read("runtime/neverguard-sensor/src/continuous_guard.rs")
     continuous_stream_0189 = read("runtime/neverguard-sensor/src/lib.rs")
@@ -3374,8 +3374,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.9 Continuous Guard lacks real Windows integration/clippy CI")
 
 
-# 0.18.11 Windows Adversarial CI — real Windows/JVM attack simulation must run
-# for every certified Java major and issue one exact-cohort machine certificate.
+# В 0.18.11: Windows Adversarial CI выполняет настоящие атакующие тесты Windows/JVM для каждой
+# сертифицированной основной версии Java и выдаёт общий машинный сертификат точного набора.
 adversarial_runner_01811 = read("scripts/guard_ci/windows_adversarial.py")
 adversarial_tests_01811 = read("scripts/guard_ci/test_windows_adversarial.py")
 adversarial_gate_01811 = read("scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py")
@@ -3418,8 +3418,8 @@ if "Windows Adversarial CI attack-simulation + compatibility certification 0.18.
     fail("0.18.11 mandatory Windows Adversarial CI gate incomplete")
 
 
-# 0.18.12 Windows Protection RC — release certificate must bind the exact adversarial
-# certification and the Authenticode-signed x64/ARM64 bytes that are published.
+# В 0.18.12: Windows Protection RC должен связывать точную атакующую
+# сертификацию с опубликованными байтами x64/ARM64, подписанными Authenticode.
 windows_protection_rc_01812 = read("cli/cmd/neverlauncher/windows_protection_release_01812.go")
 windows_protection_rc_tests_01812 = read("cli/cmd/neverlauncher/windows_protection_release_01812_test.go")
 windows_protection_gate_01812 = read("scripts/smoke/offline/neverguard-windows-protection-rc-01812.py")
@@ -3486,8 +3486,8 @@ if "Windows Protection RC release certificate + production gates 0.18.12 gate: O
     fail("0.18.12 mandatory Windows Protection RC gate incomplete")
 
 
-# 0.19.0 NeverGuard Windows Protection GA — production fail-closed user-mode boundary
-# must promote the verified RC cohort without introducing a kernel driver payload.
+# В 0.19.0: NeverGuard Windows Protection GA переводит проверенный набор RC в производственную
+# защиту пользовательского режима со строгим отказом без добавления драйвера ядра.
 windows_protection_ga_0190 = read("cli/cmd/neverlauncher/windows_protection_ga_0190.go")
 windows_protection_ga_tests_0190 = read("cli/cmd/neverlauncher/windows_protection_ga_0190_test.go")
 windows_protection_ga_gate_0190 = read("scripts/smoke/offline/neverguard-windows-protection-ga-0190.py")

@@ -145,8 +145,8 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request) {
 	items, err := s.State.ServerBridge.topology0148()
 	if err != nil {
-		// Keep internal SQL details out of the client response, but preserve
-		// the underlying cause in server logs for CI and operations.
+		// Не раскрывайте внутренние сведения SQL в ответе клиенту, но
+		// сохраняйте первопричину в серверных журналах для CI и эксплуатации.
 		log.Printf("serverbridge topology PostgreSQL read failed: %v", err)
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL topology недоступна")
 		return

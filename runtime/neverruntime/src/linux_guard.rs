@@ -236,10 +236,10 @@ async fn build_integrity_evidence(
         .await
         .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
 
-    // PR_GET_PDEATHSIG is task/thread-local on Linux. The policy report is captured
-    // on NeverGuard's original task before heavy evidence collection is moved to a
-    // blocking worker. Re-bind those already verified hardening facts here instead
-    // of treating the worker thread's task-local state as the Guard process state.
+    // PR_GET_PDEATHSIG в Linux привязан к задаче или потоку. Отчёт политики
+    // снимается из исходной задачи NeverGuard до переноса тяжёлого сбора данных
+    // в блокирующий worker. Здесь повторно используйте уже проверенные факты
+    // защиты, не принимайте локальное состояние worker за состояние всего Guard.
     let guard_security = evidence
         .guard
         .linux

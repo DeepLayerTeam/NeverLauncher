@@ -164,8 +164,8 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 }
 
 func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
-	// Compatibility route: the historical operation never launched Minecraft.
-	// It now calls the canonical integrity implementation and states this explicitly.
+	// Маршрут совместимости: историческая операция никогда не запускала Minecraft.
+	// Теперь она использует каноническую проверку целостности и явно сообщает об этом.
 	s.packageIntegrityCheck0212(w, r)
 }
 
@@ -448,9 +448,9 @@ func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) b
 	return true
 }
 
-// prepareAdminPublish0212 is deliberately read-only. Publication must not
-// manufacture signing/staging/integrity evidence: callers must complete the
-// canonical package validation pipeline before requesting a release.
+// prepareAdminPublish0212 намеренно только читает. Публикация не должна
+// придумывать свидетельства подписи, подготовки или целостности: перед запросом
+// выпуска вызывающий код обязан выполнить каноническую проверку пакета.
 func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVersion) (packageLookup, error) {
 	if release.Status == "published" {
 		return packageLookup{}, errors.New("release уже опубликован; published manifest immutable")

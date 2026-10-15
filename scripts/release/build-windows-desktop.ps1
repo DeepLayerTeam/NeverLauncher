@@ -405,9 +405,9 @@ try {
     Write-JsonNoBom (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS.json") $GuardReleaseAllowlist
     Write-JsonNoBom (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json") $GuardReleaseAllowlist
 
-    # Backward-compatible x64 Guard CI package. This is a distinct certification
-    # artifact using the historical schema/platform contract; it is deliberately
-    # excluded from DELIVERY_MANIFEST.json for 0.15.2+.
+    # Обратно совместимый пакет x64 Guard CI — отдельный артефакт
+    # сертификации со старым контрактом схемы и платформы;
+    # намеренно исключён из DELIVERY_MANIFEST.json для 0.15.2+.
     $LegacyDesktopRoot = Join-Path $OutDir "neverlauncher-desktop-windows-amd64.exe"
     $LegacyGuardRoot = Join-Path $OutDir "neverguard-windows-amd64.exe"
     $LegacyCliRoot = Join-Path $OutDir "neverlauncher-cli-windows-amd64.exe"

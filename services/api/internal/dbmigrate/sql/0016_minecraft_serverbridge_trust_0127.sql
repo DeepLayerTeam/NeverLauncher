@@ -1,8 +1,8 @@
--- NeverLauncher 0.12.7 — Minecraft / ServerBridge trust enforcement.
--- Pin every persisted Minecraft credential to the parent Never session device
--- binding epoch. Existing active credentials are backfilled from the current
--- parent session so an in-place upgrade does not fabricate a different trust
--- snapshot; any later re-bind immediately invalidates the old credential.
+-- NeverLauncher 0.12.7: контроль доверия Minecraft / ServerBridge.
+-- Привязывайте каждую постоянную учётную запись Minecraft к эпохе
+-- привязки родительского сеанса Never. Действующие данные при обновлении
+-- дополняются снимком текущего родительского сеанса; последующая
+-- перепривязка немедленно делает прежние данные недействительными.
 
 ALTER TABLE minecraft_sessions
     ADD COLUMN IF NOT EXISTS trusted_device_id TEXT NOT NULL DEFAULT '';

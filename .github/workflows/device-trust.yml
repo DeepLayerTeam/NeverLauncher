@@ -11,9 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  # A second manual/scheduled run must not cancel an already running matrix:
-  # cancelled native jobs would make the public attestation incomplete.
-  # Serialize runs of the same event type/commit rather than fabricating PASS.
+  # Повторный ручной или плановый запуск не должен отменять уже работающую матрицу:
+  # отмена заданий на нативных платформах делает публичную аттестацию неполной.
+  # Сериализуйте запуски одного типа события и коммита, не создавая фиктивных PASS.
   group: neverlauncher-device-trust-${{ github.ref }}-${{ github.event_name }}-${{ github.sha }}
   cancel-in-progress: false
 

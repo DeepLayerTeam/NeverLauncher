@@ -23,8 +23,8 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: go
-          # Go requires an instrumented build. This repository has two modules,
-          # neither of which lives at the repository root.
+          # Для Go необходима инструментированная сборка. В
+          # репозитории два модуля, и ни один не находится в корне.
           build-mode: manual
           queries: security-and-quality
       - name: Build both Go modules for CodeQL extraction

@@ -94,7 +94,7 @@ require(workflow, [
     "e2e/device-trust-migration-result/", "matrix.py aggregate",
 ], "public Device Trust workflow")
 
-# The optional production runbook and checklist do not gate migration safety.
+# Необязательные производственные инструкции и контрольный список не ограничивают безопасность миграций.
 
 subprocess.run(["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-migration-e2e.sh")], check=True)
 subprocess.run(["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-e2e.sh")], check=True)

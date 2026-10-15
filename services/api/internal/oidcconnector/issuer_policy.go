@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// IssuerPolicy customizes issuer validation for standards-compatible providers
-// whose discovery issuer is not a fixed literal. Generic OIDC uses ExactIssuerPolicy.
-// Microsoft Entra tenant-independent metadata is the primary specialized consumer.
+// IssuerPolicy настраивает проверку издателя для совместимых со стандартами провайдеров, чей issuer в
+// метаданных не является фиксированным литералом. Для обычного OIDC используется ExactIssuerPolicy. Основной
+// специализированный потребитель — метаданные Microsoft Entra без привязки к конкретному арендатору.
 type IssuerPolicy interface {
 	ValidateDiscoveryIssuer(configuredIssuer, discoveredIssuer string) error
 	ValidateTokenIssuer(discoveredIssuer string, claims map[string]any, signingKeyIssuer string) error

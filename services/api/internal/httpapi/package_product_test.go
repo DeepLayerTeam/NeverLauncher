@@ -55,7 +55,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 		t.Fatalf("upload file => %d %s", res.Code, res.Body.String())
 	}
 
-	// Smoke-test before sign/stage must fail closed.
+	// Smoke-проверка до подписи и подготовки обязана завершаться отказом при ошибке.
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+packageID+"/smoke-test", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	res = httptest.NewRecorder()

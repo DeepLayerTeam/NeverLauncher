@@ -86,7 +86,7 @@ def validate() -> None:
     if "StartDurableControlPlane0213" not in main:
         fail("API startup does not start durable restart/outbox worker")
 
-    # No production HTTP route may retain the pre-0.21.3 direct publication API.
+    # Ни один производственный HTTP-маршрут не должен сохранять прежний прямой API публикации до 0.21.3.
     http_root = ROOT / "services/api/internal/httpapi"
     forbidden = re.compile(r"\.(?:PublishVersionWithManifest|PublishVersion)\(")
     for path in http_root.glob("*.go"):

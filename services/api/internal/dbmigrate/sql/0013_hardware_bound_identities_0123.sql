@@ -1,6 +1,6 @@
--- NeverLauncher 0.12.3 — Hardware-bound identities.
--- This migration records the local key binding separately from remote trust assurance.
--- hardware binding is descriptive until a later attestation release verifies the provider remotely.
+-- NeverLauncher 0.12.3: идентичности с аппаратной привязкой. Миграция хранит локальную привязку
+-- ключа отдельно от уровня удалённого доверия. hardware binding остаётся описательной
+-- характеристикой до появления удалённой проверки поставщика в следующем выпуске аттестации.
 
 ALTER TABLE trusted_devices ADD COLUMN IF NOT EXISTS key_binding TEXT NOT NULL DEFAULT 'software';
 ALTER TABLE trusted_devices ADD COLUMN IF NOT EXISTS hardware_provider TEXT NOT NULL DEFAULT '';

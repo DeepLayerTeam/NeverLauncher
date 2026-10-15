@@ -129,5 +129,5 @@ require(ci, [
     "build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage",
 ], "Windows native CI")
 
-# Markdown security documentation is optional; enforcement is verified above.
+# Документация безопасности Markdown необязательна; соблюдение требований проверено выше.
 print(f"[NeverLauncher] Windows production hardening 0.13.6 gate OK: {version}")

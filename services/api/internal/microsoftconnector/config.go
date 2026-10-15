@@ -48,9 +48,9 @@ type Config struct {
 	ClockSkew               string             `json:"clockSkew,omitempty"`
 	MaxResponseBytes        int64              `json:"maxResponseBytes,omitempty"`
 
-	// authorityUrl is intentionally advanced: normal deployments should use cloud.
-	// A non-Microsoft authority requires allowCustomAuthority=true and remains subject
-	// to the same HTTPS, host allowlist and DNS/IP SSRF checks as generic OIDC.
+	// authorityUrl намеренно расширяемый параметр: обычным установкам следует использовать
+	// cloud. Для немайкрософтового authority нужно allowCustomAuthority=true; также
+	// обязательны HTTPS, allowlist хостов и DNS/IP-проверки SSRF как в обычном OIDC.
 	AuthorityURL         string `json:"authorityUrl,omitempty"`
 	AllowCustomAuthority bool   `json:"allowCustomAuthority,omitempty"`
 }
@@ -236,8 +236,8 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		postLogoutSet[v] = struct{}{}
 	}
 
-	// Microsoft v2 requires offline_access to issue refresh tokens. openid/profile
-	// are mandatory here because tid/oid are part of the connector trust boundary.
+	// Microsoft v2 требует offline_access для refresh-токенов. openid/profile
+	// обязательны, поскольку tid/oid определяют границу доверия коннектора.
 	scopeSet := map[string]struct{}{"openid": {}, "profile": {}, "email": {}, "offline_access": {}}
 	for _, scope := range cfg.Scopes {
 		scope = strings.TrimSpace(scope)
@@ -287,8 +287,8 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		Claims:       oidcconnector.ClaimMapping{Subject: "sub", Email: "email", Username: "preferred_username", DisplayName: "name", Groups: "groups", Roles: "roles"},
 		RoleMappings: cloneStringsMap(cfg.RoleMappings), Provisioning: oidcconnector.ProvisioningConfig{Mode: cfg.Provisioning.Mode, DefaultRole: cfg.Provisioning.DefaultRole},
 	}
-	// Validate the delegated generic configuration now as part of Microsoft config
-	// loading, before any network call is attempted.
+	// Проверяйте делегированную общую конфигурацию при
+	// загрузке Microsoft, до любого сетевого вызова.
 	if _, err := oidcconnector.Normalize(oidcCfg); err != nil {
 		return RuntimeConfig{}, fmt.Errorf("Microsoft connector %q OIDC configuration: %w", cfg.ID, err)
 	}
@@ -348,6 +348,6 @@ func cloneStringsMap(in map[string]string) map[string]string {
 	return out
 }
 
-// keep time imported as a compile-time guard for the configuration contract; the
-// delegated OIDC normalizer owns the actual duration parsing.
+// Импорт time сохранён как проверка компиляции контракта конфигурации;
+// длительность фактически разбирает делегированный нормализатор OIDC.
 var _ = time.Second

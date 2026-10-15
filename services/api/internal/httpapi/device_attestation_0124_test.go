@@ -67,8 +67,8 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	deviceID, trustedAccess := registerHardwareDevice0124(t, h, access, priv)
 
-	// A different login session has not proven/bound the device yet and cannot
-	// ask the server to attest on behalf of the bound session.
+	// Другой сеанс входа ещё не подтвердил или не привязал устройство и
+	// не может запрашивать серверную аттестацию за привязанный сеанс.
 	unboundAccess, _ := deviceTrustLogin0121(t, h, "attestation-unbound")
 	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/begin", unboundAccess, map[string]any{})
 	if code != http.StatusConflict {
@@ -107,8 +107,8 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 		t.Fatalf("attestation overstated authorization/vendor semantics: %#v", complete)
 	}
 
-	// A challenge is consumed before signature verification, so both a normal
-	// replay and an attacker retry after a bad proof fail closed.
+	// Запрос challenge расходуется до проверки подписи; поэтому повтор корректного
+	// запроса и попытка злоумышленника после неверного доказательства всегда отклоняются.
 	code, replayOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/"+deviceID+"/attest/complete", attestedAccess, completeBody)
 	if code != http.StatusUnauthorized {
 		t.Fatalf("attestation replay accepted: status=%d body=%#v", code, replayOut)
@@ -163,7 +163,7 @@ func TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124(t *t
 	validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))
 	beginPayload := deviceAttestationPayload0124("challenge", challenge, device, "session-test", validUntil)
 
-	// Simulate the exact PostgreSQL timestamptz precision observed after round-trip.
+	// Смоделируйте точную микросекундную точность PostgreSQL timestamptz после обратного чтения.
 	fromPostgres := challenge
 	fromPostgres.CreatedAt = challenge.CreatedAt.Truncate(time.Microsecond)
 	fromPostgres.ExpiresAt = challenge.ExpiresAt.Truncate(time.Microsecond)

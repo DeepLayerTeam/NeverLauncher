@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// Capability declares a concrete connector feature. Capabilities are executable
-// promises: conformance validation rejects a connector that advertises a feature
-// without implementing the corresponding interface.
+// Capability объявляет конкретную возможность коннектора. Возможности
+// — исполняемые обязательства: проверка соответствия отклоняет коннектор,
+// заявляющий функцию без реализации соответствующего интерфейса.
 type Capability string
 
 const (
@@ -99,7 +99,7 @@ type RevokeRequest struct {
 	ProviderToken string
 }
 
-// Connector is the mandatory base interface for every authentication connector.
+// Connector — обязательный базовый интерфейс каждого коннектора аутентификации.
 type Connector interface {
 	Metadata() Metadata
 	Health(context.Context) error

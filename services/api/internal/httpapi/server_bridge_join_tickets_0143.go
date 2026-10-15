@@ -15,7 +15,7 @@ import (
 const serverBridgeJoinTicketVersion0143 = 2
 
 func newServerBridgeJoinTicketID0143() (string, error) {
-	buf := make([]byte, 24) // 192 bits; ticket identifiers never fall back to time/predictable entropy.
+	buf := make([]byte, 24) // 192 бита; идентификаторы токенов никогда не используют время или предсказуемую энтропию в качестве запасного варианта.
 	if _, err := rand.Read(buf); err != nil {
 		return "", fmt.Errorf("secure join ticket entropy unavailable: %w", err)
 	}

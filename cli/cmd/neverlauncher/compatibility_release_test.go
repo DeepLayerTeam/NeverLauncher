@@ -328,8 +328,8 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 				expected.Scope = "client"
 			}
 		} else if scope, modern21 := java21VanillaCompatibility0167[minecraft]; modern21 {
-			// 1.20.6 and 1.21.1 are Baseline II anchors but 0.16.7 keeps
-			// the stricter release-line scope binding authoritative.
+			// Версии 1.20.6 и 1.21.1 — контрольные точки Baseline II, но в 0.16.7
+			// остаётся обязательной более строгая привязка к диапазону релизов.
 			expected.JavaMajor = 21
 			expected.Scope = scope
 		}

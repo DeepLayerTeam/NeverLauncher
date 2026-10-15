@@ -12,7 +12,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 
-/** Network-free adversarial harness for Protocol v3 signing, replay and key rotation. */
+/** Тестовый модуль атак без сетевого доступа для подписей Protocol v3, повторов запросов и ротации ключей. */
 public final class ServerBridgeSecurityCertification01912Harness {
     private record SigningKey(java.security.PrivateKey privateKey, String publicKey, String fingerprint) {}
 

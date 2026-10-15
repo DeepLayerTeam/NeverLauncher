@@ -14,8 +14,8 @@ java {
 repositories {
     maven("https://maven.quiltmc.org/repository/release/")
     maven("https://maven.fabricmc.net/")
-    // Project repositories take priority over settings repositories.
-    // Sponge Mixin is published in SpongePowered Maven, not Maven Central.
+    // Репозитории проекта приоритетнее репозиториев настроек. Sponge
+    // Mixin публикуется в SpongePowered Maven, а не в Maven Central.
     maven("https://repo.spongepowered.org/maven/")
     mavenCentral()
 }
@@ -24,9 +24,9 @@ dependencies {
     minecraft("com.mojang:minecraft:1.21.1")
     mappings("net.fabricmc:yarn:1.21.1+build.3:v2")
     modImplementation("org.quiltmc:quilt-loader:0.26.4")
-    // Match the Minecraft 1.21.1 Yarn mappings used by the bridge sources.
-    // The QFAPI alpha here targets 1.21.0 and resolves incompatible Minecraft
-    // classes. The Fabric API implements the events used by this adapter.
+    // Используйте Yarn-маппинги Minecraft 1.21.1, соответствующие исходникам
+    // моста. Здесь альфа QFAPI предназначена для 1.21.0 и разрешает несовместимые
+    // классы Minecraft. Fabric API реализует события, используемые адаптером.
     modImplementation("net.fabricmc.fabric-api:fabric-api:0.116.17+1.21.1")
     compileOnly("org.spongepowered:mixin:0.8.7")
 

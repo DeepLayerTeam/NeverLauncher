@@ -83,7 +83,7 @@ type refreshFamilyRecord111 struct {
 type authSessionStore struct {
 	mu         sync.Mutex
 	sessions   map[string]authSessionRecord
-	tokens     map[string]refreshTokenRecord111 // key: SHA-256(refresh token)
+	tokens     map[string]refreshTokenRecord111 // ключ: SHA-256(refresh token)
 	families   map[string]refreshFamilyRecord111
 	persistent *authSessionPostgres111
 }
@@ -124,8 +124,8 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 	if err != nil {
 		return authSessionRecord{}, "", err
 	}
-	// Use the same unpredictable, collision-resistant identifiers as PostgreSQL.
-	// Timestamp-only IDs can alias within the clock's effective resolution.
+	// Используйте столь же непредсказуемые устойчивые к коллизиям ID, как PostgreSQL.
+	// ID только из временной метки могут совпасть в пределах разрешения часов.
 	sessionID, err := randomToken("sess")
 	if err != nil {
 		return authSessionRecord{}, "", err
@@ -190,7 +190,7 @@ func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (auth
 	hash := hashRefreshToken(refreshToken)
 	token, ok := s.tokens[hash]
 	if !ok {
-		// Upgrade compatibility for an in-memory/snapshot session created before 0.11.1.
+		// Обновление совместимости для сеанса в памяти или снимке, созданного до 0.11.1.
 		for _, record := range s.sessions {
 			if record.RefreshHash == hash {
 				token = refreshTokenRecord111{Hash: hash, FamilyID: record.RefreshFamily, SessionID: record.ID, Status: "current", CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt}

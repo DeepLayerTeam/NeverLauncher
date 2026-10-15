@@ -121,5 +121,5 @@ require(ci, [
     'cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings',
 ], "Windows native policy CI")
 
-# Markdown security documentation is optional; enforcement is verified above.
+# Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[NeverLauncher] NeverGuard Windows runtime/process policy 0.13.3 gate OK: {version}")

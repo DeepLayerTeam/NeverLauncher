@@ -11,8 +11,8 @@ JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
 TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
 TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-# A processor recovery probe intentionally mutates journals and may overwrite
-# installer outputs. Never replay it on the client verified/launched by E2E.
+# Проверка восстановления процессора специально меняет журналы и может перезаписать результаты
+# установщика. Никогда не выполняйте её повторно на клиенте, уже проверенном и запущенном E2E.
 SOURCE_CLIENT_DIR="$RUNTIME_DIR/materialized-client"
 CLIENT_DIR="$RUNTIME_DIR/loader-hardening-client"
 LOCK="$CLIENT_DIR/.neverlauncher/${LOADER}-resolution-lock.json"
@@ -28,10 +28,10 @@ rm -rf "$CLIENT_DIR"
 cp -R "$SOURCE_CLIENT_DIR" "$CLIENT_DIR"
 [[ -f "$LOCK" ]] || { echo "[loader-hardening] isolated resolution lock unavailable: $LOCK" >&2; exit 1; }
 
-# Forge/NeoForge must prove two recovery paths, not just a warm installer file:
-# remove the installer and mark one completed processor as interrupted. The
-# cache-only replay must restore the exact pinned installer and adopt only an
-# output whose installer-declared digest still verifies.
+# Forge/NeoForge должен доказать два пути восстановления, а не просто наличие
+# прогретого установщика: удалите установщик и отметьте завершённый процессор как
+# прерванный. Повтор из кеша обязан восстановить точный закреплённый установщик
+# и принять только результат с проверяемым объявленным установщиком дайджестом.
 if [[ "$LOADER" == "forge" || "$LOADER" == "neoforge" ]]; then
   find "$CLIENT_DIR/.neverlauncher/installers/$LOADER" -type f -name installer.jar -delete 2>/dev/null || true
   python3 - "$CLIENT_DIR" "$LOADER" "$RUNTIME_DIR/client-package.json" <<'PY'

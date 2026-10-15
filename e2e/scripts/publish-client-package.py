@@ -36,10 +36,10 @@ class APIClient:
         self.base_path = parsed.path.rstrip("/")
         self.token = token
         self.conn: http.client.HTTPConnection | None = None
-        # The backend deliberately issues short-lived (15 minute) access tokens.
-        # A real NeoForge client with thousands of assets can take longer to
-        # publish. Renew via the *existing* phishing-resistant WebAuthn session;
-        # never lengthen token TTL or relax the server's authorization policy.
+        # Бэкенд специально выдаёт короткие токены доступа на 15 минут. Публикация
+        # настоящего клиента NeoForge с тысячами ресурсов может длиться дольше.
+        # Обновляйте токен через уже существующий устойчивый к фишингу сеанс WebAuthn;
+        # не увеличивайте TTL и не ослабляйте политику авторизации сервера.
         self.passkey_helper: Path | None = None
         self.passkey_state: Path | None = None
         self.passkey_sign_count = 0
@@ -62,9 +62,9 @@ class APIClient:
                 continue
             if parsed > 0:
                 delays.append(parsed)
-        # The API exposes a fixed-window reset in seconds. Add one second so a
-        # retry never races the Redis TTL boundary. Keep an upper bound so a
-        # broken proxy cannot stall the release job indefinitely.
+        # API сообщает сброс фиксированного окна в секундах. Добавьте секунду,
+        # чтобы повторный запрос не столкнулся с границей TTL Redis. Установите
+        # верхнюю границу, чтобы сломанный прокси не останавливал выпуск бесконечно.
         return min(65, max(delays, default=1) + 1)
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
@@ -117,9 +117,9 @@ class APIClient:
     def refresh_upload_auth_if_due(self, *, force: bool = False) -> None:
         if self.passkey_helper is None or self.passkey_state is None:
             return
-        # Perform the first renewal before the slow multi-file upload, then at
-        # most every eight minutes, safely below the backend's 15-minute JWT.
-        # The proof counter advances only after a successful assertion.
+        # Первое обновление выполняйте до медленной многофайловой загрузки, затем не
+        # чаще одного раза в восемь минут, то есть раньше истечения 15-минутного JWT.
+        # Счётчик доказательств увеличивается только после успешного подтверждения.
         if force or self.passkey_refreshed_at == 0.0 or time.monotonic() - self.passkey_refreshed_at >= 8 * 60:
             self.passkey_step_up(self.passkey_helper, self.passkey_state)
 
@@ -311,9 +311,9 @@ def main() -> int:
         print("[e2e-upload] refresh phishing-resistant step-up before package signing", file=sys.stderr, flush=True)
         client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
 
-    # Never infer runtime or integrity certification from an administrative
-    # publish request. Explicitly complete the same audited package pipeline
-    # used by the public package API before final durable publication.
+    # Никогда не выводите сертификацию запуска или целостности из административного
+    # запроса публикации. До окончательной фиксации пройдите тот же аудируемый
+    # конвейер пакетов, что используется публичным API пакетов.
     package_path = f"/api/v1/packages/{quote(version_id, safe='')}"
     validated = client.json("POST", package_path + "/validate")
     if not isinstance(validated, dict) or validated.get("data", {}).get("status") != "valid":

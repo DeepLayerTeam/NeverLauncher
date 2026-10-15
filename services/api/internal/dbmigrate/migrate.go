@@ -175,9 +175,9 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 	if err := db.PingContext(ctx); err != nil {
 		return Status{}, err
 	}
-	// Serialize the whole validation/apply window across Backend and CLI migrators.
-	// A per-migration transaction lock leaves a downgrade race where a newer binary
-	// can commit an unknown migration after the older binary has validated its catalog.
+	// Сериализуйте всю проверку и применение миграций между Backend и CLI. Блокировка
+	// отдельной миграции оставляет гонку отката: новый бинарник может зафиксировать
+	// неизвестную старому миграцию уже после проверки старого каталога.
 	lockConn, err := db.Conn(ctx)
 	if err != nil {
 		return Status{}, err
@@ -207,11 +207,11 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 		return Status{}, err
 	}
 	for _, m := range ms {
-		// Run every migration transaction on the same dedicated connection that
-		// owns the session-level advisory lock above. Opening the transaction via
-		// db.BeginTx may select another pooled PostgreSQL session; that session
-		// would then block forever trying to acquire pg_advisory_xact_lock on a
-		// key already held by lockConn, until the caller context expires.
+		// Выполняйте все транзакции миграций в том же выделенном
+		// соединении, которое удерживает сессионную advisory lock.
+		// db.BeginTx может взять другую сессию PostgreSQL из пула;
+		// она бесконечно ждала бы pg_advisory_xact_lock для ключа,
+		// который уже удерживает lockConn, пока не истечёт контекст.
 		tx, err := lockConn.BeginTx(ctx, nil)
 		if err != nil {
 			return Status{}, err

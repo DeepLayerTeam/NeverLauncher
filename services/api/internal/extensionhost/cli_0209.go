@@ -72,10 +72,10 @@ func cliTarget0209(manifest model.ExtensionManifest) (model.ExtensionTarget, err
 	return model.ExtensionTarget{}, errors.New("extension does not declare a cli target")
 }
 
-// RunCLI0209 starts the immutable cli target as a short-lived isolated process.
-// The process authenticates to the same loopback Extension Host Protocol as a
-// backend extension and therefore receives capabilities only through the
-// deny-by-default broker. It never receives the Backend DB/auth/storage secrets.
+// RunCLI0209 запускает неизменяемую цель cli как короткоживущий изолированный
+// процесс. Он аутентифицируется в том же локальном Extension Host Protocol, что
+// расширение бэкенда, и получает возможности только через брокер с запретом по
+// умолчанию. Секреты БД, авторизации и хранилища бэкенда ему не передаются.
 func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInstall, argv []string) (CLIResult0209, error) {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled || install.CurrentVersion == "" {
 		return CLIResult0209{}, errors.New("extension must be enabled before cli invocation")

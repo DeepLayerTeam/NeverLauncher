@@ -60,7 +60,7 @@ if [[ "${status}" != "401" ]]; then
   exit 1
 fi
 
-# 0.11.1 regression: replay consumed refresh token must compromise the whole family.
+# Регрессия 0.11.1: повторное использование погашенного refresh-токена должно компрометировать всё семейство.
 replay_login=$(curl -fsS -X POST "${API_URL}/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@neverlauncher.local","password":"admin","deviceId":"auth-smoke-replay"}')

@@ -29,12 +29,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
- * Shared production runtime for proxy-layer ServerBridge integrations.
+ * Общая производственная среда для прокси-интеграций ServerBridge.
  *
- * Platform adapters own only proxy lifecycle/event wiring. Cryptographic node
- * identity, artifact measurement, heartbeat scheduling, retries and signed
- * one-time join validation stay here so Velocity/BungeeCord/Waterfall cannot
- * silently diverge on the security boundary.
+ * Адаптеры платформ отвечают только за жизненный цикл и привязку событий прокси.
+ * Криптографическая идентичность узла, измерение артефактов, heartbeat, повторные
+ * запросы и подписанная проверка одноразового входа сосредоточены здесь, чтобы
+ * Velocity/BungeeCord/Waterfall не расходились в правилах безопасности.
  */
 public final class ProxyBridgeRuntime implements AutoCloseable {
     private final String platformId;

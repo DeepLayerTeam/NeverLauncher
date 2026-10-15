@@ -32,10 +32,10 @@ const (
 	defaultLWJGLMavenBase        = "https://repo.maven.apache.org/maven2"
 )
 
-// 0.17.0v1 expands the actual-client Legacy Vanilla grid rather than treating
-// the old line as a handful of representative anchors. These IDs are consumed
-// by the materializer/runtime/release gates, so removing one silently is not a
-// supported configuration.
+// Версия 0.17.0v1 расширяет реальную матрицу старых клиентов Legacy
+// Vanilla, а не ограничивает её несколькими контрольными версиями.
+// Эти ID используются материализатором, средой выполнения и проверками
+// выпуска; незаметное удаление ID не поддерживается.
 var legacyVanilla0170v1Releases = []string{
 	"1.2.1", "1.2.2", "1.2.3", "1.2.4",
 	"1.3.1",
@@ -62,10 +62,10 @@ var legacyVanilla0170v1ReleaseSet = func() map[string]struct{} {
 	return out
 }()
 
-// 0.17.0v2 completes the Java-transition Vanilla grid with every requested
-// release that was not already certified by 0.16.6. The map is also a runtime
-// policy: materialization/server installation rejects missing or conflicting
-// Mojang javaVersion metadata before any client/server artifact is downloaded.
+// Версия 0.17.0v2 завершает матрицу перехода Java для Vanilla, включая каждый
+// требуемый выпуск, ещё не сертифицированный в 0.16.6. Карта также является
+// политикой запуска: подготовка и установка сервера отклоняют отсутствующие или
+// противоречивые метаданные Mojang javaVersion до загрузки файлов клиента или сервера.
 var java16_17Vanilla0170v2Releases = map[string]int{
 	"1.17":   16,
 	"1.18":   17,
@@ -78,10 +78,10 @@ var java16_17Vanilla0170v2Releases = map[string]int{
 	"1.20.3": 17,
 }
 
-// 0.17.0v3 closes the two release gaps in the modern Vanilla line. These
-// releases use the same production Mojang materializer/server installer as the
-// rest of the matrix, but are pinned here so missing/tampered javaVersion
-// metadata fails before game artifacts are downloaded.
+// Версия 0.17.0v3 закрывает два пропуска в современной линейке Vanilla.
+// Эти релизы используют стандартный производственный материализатор Mojang
+// и установщик сервера, но закреплены здесь, чтобы отсутствие или подмена
+// javaVersion приводили к отказу до загрузки игровых файлов.
 var java21_25Vanilla0170v3Releases = map[string]int{
 	"1.21.11": 21,
 	"26.2":    25,
@@ -475,10 +475,10 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		artifact := lib.Downloads.Artifact
 		hasArtifact := hasMojangDownloadDescriptor(artifact)
-		// Mojang legacy metadata contains classifier-only entries such as
-		// lwjgl-platform/jinput-platform. They are native containers, not
-		// classpath JARs. Synthesizing an artifact from the Maven coordinate
-		// creates a file that does not exist upstream and breaks 1.7.x/1.8.x.
+		// Старые метаданные Mojang содержат записи только с классификаторами,
+		// например lwjgl-platform/jinput-platform. Это контейнеры нативных
+		// библиотек, а не JAR для classpath. Синтез JAR из координат Maven
+		// создаёт несуществующий у издателя файл и ломает 1.7.x/1.8.x.
 		if !hasArtifact && len(lib.Downloads.Classifiers) == 0 {
 			if opts.StrictUpstream {
 				return vanillaInstallResult{}, fmt.Errorf("library %s: Mojang metadata не содержит проверяемый artifact", lib.Name)
@@ -499,10 +499,10 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(artifactPath, "/")
 			}
-			// Modern Mojang metadata uses native-classified Maven coordinates with
-			// downloads.artifact, rather than downloads.classifiers + natives.
-			// These archives must be extracted into the selected native directory;
-			// treating them as ordinary classpath libraries loses every native.
+			// В современных метаданных Mojang нативные координаты Maven используют
+			// downloads.artifact вместо downloads.classifiers + natives. Такие архивы
+			// нужно распаковывать в выбранный каталог нативных библиотек: обработка
+			// как обычных classpath-библиотек теряет все нативные зависимости.
 			if isClassifiedNativeLibrary(lib.Name) {
 				for _, target := range opts.Targets {
 					if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) {
@@ -521,11 +521,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			if !rulesAllowTarget(lib.Rules, target) || !libraryArtifactAppliesToTarget(lib.Name, target) {
 				continue
 			}
-			// Some Mojang 26.x manifests omit Linux ARM64 native classifiers
-			// altogether, while still listing the Java LWJGL modules. Do not
-			// substitute x86_64 binaries. Resolve the matching official Maven
-			// Central native artifact and verify its published checksum before
-			// it can enter the content-addressed client package.
+			// Некоторые манифесты Mojang 26.x вообще не содержат Linux
+			// ARM64-классификаторов, хотя модули LWJGL для Java перечислены. Не
+			// подставляйте бинарники x86_64. Найдите соответствующий официальный
+			// нативный артефакт Maven Central и проверьте опубликованную контрольную
+			// сумму до включения в адресуемый по содержимому пакет клиента.
 			if nativeRel, ok := lwjglLinuxARM64Fallback(lib.Name, target); ok {
 				if !mojangHasARM64Native(lib, metadata.Libraries) {
 					upstream := defaultLWJGLMavenBase + "/" + nativeRel
@@ -621,7 +621,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, err
 	}
 
-	// Metadata files are local trust inputs too; include their final SHA-256 in the report.
+	// Локальные файлы метаданных тоже являются входами доверенной проверки; включайте их окончательный SHA-256 в отчёт.
 	metadataHash := sha256.Sum256(versionBytes)
 	downloadedFiles = append(downloadedFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json")), Kind: "version-metadata", Size: int64(len(versionBytes)), SHA1: selected.SHA1, SHA256: hex.EncodeToString(metadataHash[:]), Cached: resolved.Recovered, Resumed: resolved.Recovered})
 	assetHash := sha256.Sum256(assetBytes)
@@ -638,9 +638,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		key := task.NativeTarget.OS + "/" + task.NativeTarget.Arch
 		nativeByTarget[key] = append(nativeByTarget[key], task)
 	}
-	// Generated natives are published transactionally per OS/arch. A failed
-	// extraction therefore leaves the previously verified directory intact
-	// instead of exposing a half-written native tree to the next launch.
+	// Сгенерированные нативные библиотеки публикуются транзакционно для каждой
+	// пары ОС и архитектуры. Поэтому ошибка распаковки сохраняет ранее проверенный
+	// каталог, не открывая следующему запуску наполовину записанное дерево.
 	for _, target := range opts.Targets {
 		key := target.OS + "/" + target.Arch
 		finalRel := filepath.ToSlash(filepath.Join("natives", target.OS, target.Arch))
@@ -665,11 +665,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				_ = os.RemoveAll(stagingDir)
 				return vanillaInstallResult{}, fmt.Errorf("native extraction %s: %w", task.Path, err)
 			}
-			// LWJGL's native ARM64 archives store the shared objects below
-			// linux/arm64/org/lwjgl/*.so. Unlike classifiers explicitly listed
-			// in Mojang's version metadata, these supplemental archives are
-			// absent from the JVM classpath, so also publish safe flat aliases
-			// for java.library.path / org.lwjgl.librarypath resolution.
+			// Архивы LWJGL для нативного ARM64 содержат разделяемые объекты
+			// в linux/arm64/org/lwjgl/*.so. В отличие от классификаторов,
+			// явно перечисленных Mojang, эти дополнительные архивы отсутствуют
+			// в classpath JVM; поэтому также создавайте безопасные плоские
+			// псевдонимы для java.library.path / org.lwjgl.librarypath.
 			if target.OS == "linux" && target.Arch == "aarch64" && strings.HasSuffix(task.Path, "-natives-linux-arm64.jar") && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") {
 				aliases, aliasErr := flattenLWJGLARM64Natives(stagingDir, extracted)
 				if aliasErr != nil {
@@ -1008,9 +1008,9 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	syncErr := out.Sync()
 	closeErr := out.Close()
 	totalWritten := resumeOffset + written
-	// Preserve the original transport error for the narrow caller-side retry
-	// policy. A formatted %v string loses errors.Is/As classification.
-	// Keep partial bytes for a later SHA-1-checked recovery attempt.
+	// Сохраняйте исходную транспортную ошибку для точного правила повторной попытки на стороне
+	// вызывающего кода. Форматирование через %v теряет классификацию errors.Is/As. Оставляйте
+	// частично полученные байты для последующего восстановления с проверкой SHA-1.
 	if copyErr != nil {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: запись не завершена: %w (sync=%v close=%v)", task.Path, copyErr, syncErr, closeErr)
 	}
@@ -1027,8 +1027,8 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact превышает лимит %d", task.Path, maxCompatibilityArtifact)
 	}
 	if task.Size > 0 && totalWritten != task.Size {
-		// A clean early EOF is also resumable; preserve the verified-size-bounded
-		// partial instead of throwing away progress.
+		// Корректно завершившаяся досрочно передача EOF также допускает возобновление;
+		// сохраняйте частичные данные с проверенным ограничением размера, не теряя прогресс.
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: неполная загрузка %d/%d bytes сохранена для recovery", task.Path, totalWritten, task.Size)
 	}
 	if task.SHA1 != "" && !strings.EqualFold(gotSHA1, task.SHA1) {
@@ -1079,8 +1079,8 @@ func fetchVanillaArtifactResponse(ctx context.Context, client *http.Client, task
 		if resp.StatusCode == http.StatusPartialContent {
 			return resp, true, nil
 		}
-		// Servers are allowed to ignore Range and return a full 200 response. In
-		// that case restart from zero; never append a full body to a partial file.
+		// Серверы могут игнорировать Range и возвращать полный HTTP 200. Тогда
+		// начинайте с нуля; никогда не дописывайте полное тело к частичному файлу.
 		if resp.StatusCode == http.StatusOK {
 			return resp, false, nil
 		}
@@ -1362,8 +1362,8 @@ func resolveRequestedMinecraftVersion(manifest MojangVersionManifest, requested 
 	case "latest-snapshot", "snapshot":
 		return manifest.Latest["snapshot"]
 	case "1.0.0":
-		// Mojang's canonical first release id is "1.0". Accept the common
-		// semantic-version spelling without fabricating a non-existent version.
+		// Канонический идентификатор первого выпуска Mojang — "1.0". Принимайте
+		// обычную запись семантической версии, не выдумывая несуществующую версию.
 		return "1.0"
 	default:
 		return normalized
@@ -1479,9 +1479,9 @@ func nativeClassifierForTarget(natives map[string]string, osName string) string 
 	return ""
 }
 
-// lwjglLinuxARM64Fallback describes only native LWJGL modules with published
-// ARM64 classifiers. This is not a generic fallback for missing Mojang libraries:
-// missing or malformed upstream checksums cause installation to fail closed.
+// lwjglLinuxARM64Fallback описывает только нативные модули LWJGL с опубликованными
+// ARM64-классификаторами. Это не универсальный резервный режим для отсутствующих библиотек
+// Mojang: неверные или отсутствующие контрольные суммы издателя приводят к отказу установки.
 func flattenLWJGLARM64Natives(root string, extracted []string) ([]string, error) {
 	aliases := []string{}
 	for _, rel := range extracted {
@@ -1526,11 +1526,11 @@ func lwjglLinuxARM64Fallback(name string, target vanillaTarget) (string, bool) {
 		return "", false
 	}
 	parts := strings.Split(name, ":")
-	// NeoForge 26.x can ship the LWJGL core as
-	// org.lwjgl:lwjgl:<version>:unsafe. The Java artifact still needs the
-	// *unclassified* core native archive, otherwise its early display fails
-	// before Minecraft's main class starts on Linux ARM64. Do not generalize
-	// this rule to other classifiers or Maven groups.
+	// NeoForge 26.x может поставлять ядро LWJGL как org.lwjgl:lwjgl:<version>:unsafe.
+	// Java-артефакту всё равно нужен базовый нативный архив без
+	// классификатора, иначе на Linux ARM64 ранний вывод окна падает до
+	// запуска главного класса Minecraft. Не распространяйте это правило
+	// на другие классификаторы или группы Maven.
 	if len(parts) == 4 && parts[0] == "org.lwjgl" && parts[1] == "lwjgl" && parts[3] == "unsafe" {
 		parts = parts[:3]
 	}
@@ -1540,7 +1540,7 @@ func lwjglLinuxARM64Fallback(name string, target vanillaTarget) (string, bool) {
 	switch parts[1] {
 	case "lwjgl", "lwjgl-freetype", "lwjgl-glfw", "lwjgl-jemalloc", "lwjgl-openal", "lwjgl-opengl", "lwjgl-sdl", "lwjgl-shaderc", "lwjgl-spvc", "lwjgl-stb", "lwjgl-tinyfd", "lwjgl-vma":
 	default:
-		return "", false // e.g. lwjgl-vulkan does not publish an ordinary native JAR
+		return "", false // Например, lwjgl-vulkan не публикует обычный нативный JAR.
 	}
 	if !regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:[-.][A-Za-z0-9]+)*$`).MatchString(parts[2]) {
 		return "", false
@@ -1549,7 +1549,7 @@ func lwjglLinuxARM64Fallback(name string, target vanillaTarget) (string, bool) {
 	return "org/lwjgl/" + module + "/" + ver + "/" + module + "-" + ver + "-natives-linux-arm64.jar", true
 }
 
-// Prefer exactly the classifiers supplied by Mojang whenever present.
+// Если Mojang предоставляет классификаторы, всегда предпочитайте именно их.
 func mojangHasARM64Native(lib MojangLibrary, all []MojangLibrary) bool {
 	for name := range lib.Downloads.Classifiers {
 		if name == "natives-linux-arm64" || name == "natives-linux-aarch64" {
@@ -1591,8 +1591,8 @@ func rulesAllowTarget(rules []map[string]any, target vanillaTarget) bool {
 				}
 			}
 		}
-		// build-side materialization has no dynamic launcher feature state; feature-gated entries are
-		// retained only if they don't require a true feature. Runtime evaluates them again at launch.
+		// При материализации на этапе сборки нет динамического состояния возможностей лаунчера; записи с условиями возможностей
+		// сохраняются лишь тогда, когда для них не требуется истинное значение возможности. Во время запуска среда проверяет их повторно.
 		if features, ok := rule["features"].(map[string]any); ok {
 			for _, expected := range features {
 				if value, ok := expected.(bool); ok && value {
@@ -1655,7 +1655,7 @@ func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
 	}
 	prefix := "natives-" + osToken
 	if !strings.HasPrefix(classifier, prefix) {
-		return false // A native archive for another OS is never executable here.
+		return false // Нативный архив другой ОС здесь никогда не выполняется.
 	}
 	suffix := strings.TrimPrefix(classifier, prefix)
 	switch suffix {
@@ -1781,9 +1781,9 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	if metadataMajor > 0 {
 		return metadataMajor, nil
 	}
-	// Unknown historical metadata outside the certified Legacy Vanilla release
-	// range keeps the old compatibility fallback, but certified 1.x releases are
-	// handled above by the exact Java 8 policy.
+	// Для неизвестных старых метаданных за пределами сертифицированного диапазона
+	// Legacy Vanilla сохраняется прежний резервный механизм совместимости;
+	// сертифицированные выпуски 1.x выше обрабатываются точной политикой Java 8.
 	return 8, nil
 }
 
@@ -1841,7 +1841,7 @@ func expectedJavaMajorForVanilla0168(version string) (int, bool) {
 	if !ok || major != 26 {
 		return 0, false
 	}
-	// 26.1.x and the 26.3 release require Java 25.
+	// Для 26.1.x и выпуска 26.3 требуется Java 25.
 	if minor == 1 || (minor == 3 && patch == 0) {
 		return 25, true
 	}

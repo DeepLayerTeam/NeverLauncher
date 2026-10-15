@@ -39,9 +39,9 @@ func (s Server) durableControlPlane0213() (repository.DurableControlPlane, error
 	return cp, nil
 }
 
-// StartDurableControlPlane0213 starts restart recovery for persisted publish jobs
-// and transactional outbox delivery. It is safe to run on every API replica:
-// PostgreSQL SKIP LOCKED + leases ensure a single active worker per item.
+// StartDurableControlPlane0213 запускает восстановление сохранённых заданий публикации
+// и транзакционную доставку outbox. Его можно включать на всех репликах API: PostgreSQL
+// SKIP LOCKED и аренды допускают одного активного исполнителя для каждого элемента.
 func (s Server) StartDurableControlPlane0213(parent context.Context) (context.CancelFunc, error) {
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
@@ -241,9 +241,9 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, err
 	}
 
-	// Authorization is intentionally checked a second time immediately before
-	// the irreversible database commit. A role/service-token revocation that
-	// happens while evidence/signatures are being verified must still stop the job.
+	// Авторизация намеренно проверяется повторно прямо перед необратимой
+	// фиксацией в БД. Отзыв роли или сервисного токена во время проверки
+	// свидетельств и подписей всё равно должен остановить задание.
 	decision = s.authorizationService().Authorize(ctx,
 		authorization.Actor{Kind: authorization.ActorUser, ID: job.ActorID},
 		job.Action,

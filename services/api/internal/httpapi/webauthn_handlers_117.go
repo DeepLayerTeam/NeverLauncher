@@ -147,7 +147,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusConflict, "passkey уже зарегистрирован")
 		return
 	}
-	// Registration itself is a fresh UV ceremony, so the current session is stepped up.
+	// Сама регистрация — свежая процедура UV, поэтому текущий сеанс получает повышенный уровень проверки.
 	session, err := s.State.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", time.Now().UTC())
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "сессия больше не активна")

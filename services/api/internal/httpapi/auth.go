@@ -187,7 +187,7 @@ func (s Server) requirePackagePermission(permission string, next http.HandlerFun
 			return
 		}
 		if !s.authorizeClaims(r, claims, permission, lookup.Release.ProjectID, "package", lookup.Release.ID).Allowed {
-			// Do not reveal package existence across project boundaries.
+			// Не раскрывайте существование пакета за пределами проекта.
 			writeError(w, http.StatusNotFound, "package не найден")
 			return
 		}
@@ -259,9 +259,9 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 	if !session.RiskUpdatedAt.IsZero() {
 		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
-	// keyBinding/provider stay informational: challenge-response attestation proves
-	// possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance.
-	// Device attestation claims are diagnostic and must not elevate RBAC/MFA strength.
+	// keyBinding/provider остаются информационными: аттестация вызов–ответ подтверждает
+	// владение зарегистрированным ключом и его актуальность, а не происхождение от TPM
+	// или Secure Enclave. Диагностические свойства устройства не повышают силу RBAC/MFA.
 	if session.TrustedDeviceID != "" {
 		if device, err := s.Repo.GetTrustedDevice(user.ID, session.TrustedDeviceID); err == nil && device.Status == "active" {
 			claims.DeviceKeyBinding = device.KeyBinding

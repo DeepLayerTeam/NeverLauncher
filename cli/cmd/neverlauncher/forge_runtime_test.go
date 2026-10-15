@@ -106,7 +106,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("processor output mismatch: %q %v", gotGenerated, err)
 			}
 
-			// Idempotency: verified processor output must skip the expensive processor on the next run.
+			// Идемпотентность: при проверенном результате процессора следующий запуск должен пропустить дорогостоящую обработку.
 			second, err := installForgeLike(context.Background(), forgeMaterializeOptions{
 				Loader: loader, MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, ClientDir: dir,
 				JavaExecutable: javaPath, InstallerURL: base + "/installer.jar", InstallerSHA1: installerSHA1,
@@ -120,9 +120,9 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("expected processor journal cache hit: %+v", second)
 			}
 
-			// Simulate a crash after the processor produced a verified output but before
-			// its durable journal could be committed. The next cache-only materialization
-			// must recover that running entry without executing the processor again.
+			// Имитируйте сбой после создания проверенного результата процессора, но до
+			// фиксации надёжного журнала. Следующая материализация только из кеша должна
+			// восстановить выполнявшуюся запись без повторного запуска процессора.
 			journalRaw, err := os.ReadFile(filepath.FromSlash(second.ProcessorJournalPath))
 			if err != nil {
 				t.Fatalf("read processor journal: %v", err)
@@ -157,8 +157,8 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 				t.Fatalf("invalid installer/processor recovery evidence: %+v", third)
 			}
 
-			// Recovery must also count an interrupted processor that cannot adopt
-			// its output and is successfully re-executed from pinned local inputs.
+			// Восстановление также должно учитывать прерванный процессор, результат которого нельзя
+			// принять, если его удалось успешно перезапустить с закреплёнными локальными входами.
 			journalRaw, err = os.ReadFile(filepath.FromSlash(third.ProcessorJournalPath))
 			if err != nil {
 				t.Fatal(err)
@@ -826,8 +826,8 @@ func TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable(t *testing.T) {
 	}
 }
 
-// Interrupted Forge CDN transfers are retried within one materialization.
-// The recovered file still has to match the publisher's exact SHA-1.
+// Прерванные передачи Forge CDN повторяются в рамках одной материализации.
+// Восстановленный файл всё равно должен соответствовать точному SHA-1 издателя.
 func TestForgeInstallerTransportRecovery(t *testing.T) {
 	payload := bytes.Repeat([]byte("forge-installer-content"), 4096)
 	digest := sha1HexLocal(payload)
@@ -836,7 +836,7 @@ func TestForgeInstallerTransportRecovery(t *testing.T) {
 		n := requests.Add(1)
 		w.Header().Set("Content-Length", fmt.Sprint(len(payload)))
 		if n == 1 {
-			// An early EOF after a valid HTTP 200 must never be committed.
+			// Преждевременный EOF после корректного HTTP 200 ни в коем случае нельзя фиксировать.
 			_, _ = w.Write(payload[:1024])
 			return
 		}

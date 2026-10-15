@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// IntegrityCheckResult records a server-side verification of the exact package
-// bytes currently stored for a release. It is intentionally not runtime proof.
+// IntegrityCheckResult фиксирует серверную проверку точных байтов пакета,
+// сохранённых для релиза. Намеренно не является доказательством выполнения.
 type IntegrityCheckResult struct {
 	ID                    string           `json:"id"`
 	PackageID             string           `json:"packageId"`
@@ -19,8 +19,8 @@ type IntegrityCheckResult struct {
 	CheckedAt             time.Time        `json:"checkedAt"`
 }
 
-// RuntimeValidationResult is accepted only after verification of signed runtime
-// evidence and is bound to an exact package/manifest digest.
+// RuntimeValidationResult принимается только после проверки подписанных
+// свидетельств выполнения и привязан к точному хешу пакета и манифеста.
 type RuntimeValidationResult struct {
 	ID                   string            `json:"id"`
 	PackageID            string            `json:"packageId"`
@@ -47,8 +47,8 @@ type RuntimeValidationResult struct {
 	CreatedAt            time.Time         `json:"createdAt"`
 }
 
-// TrustAssessment is the canonical trust view. Assurance remains a legacy
-// compatibility field on TrustedDevice and must not collapse these dimensions.
+// TrustAssessment — каноническое представление доверия. Assurance остаётся
+// устаревшим полем совместимости TrustedDevice и не должно смешивать эти аспекты.
 type TrustAssessment struct {
 	KeyPossession            string    `json:"keyPossession"`
 	LocalHardwareBinding     string    `json:"localHardwareBinding"`
@@ -61,7 +61,7 @@ type TrustAssessment struct {
 	EvidenceExpiresAt        time.Time `json:"evidenceExpiresAt,omitempty"`
 }
 
-// ProjectValidationPolicy controls the minimum evidence required to publish.
+// ProjectValidationPolicy задаёт минимальные доказательства, необходимые для публикации.
 type ProjectValidationPolicy struct {
 	ProjectID         string    `json:"projectId"`
 	RequiredLevel     string    `json:"requiredLevel"`

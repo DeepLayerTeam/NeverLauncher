@@ -17,7 +17,7 @@ import (
 
 // SQLRepository — минимальная SQL-реализация Repository для PostgreSQL-схемы NeverLauncher.
 //
-// Реализация intentionally narrow: она закрывает основные production-сущности API
+// Реализация намеренно ограничена: она охватывает основные производственные сущности API.
 // (projects, profiles, release_channels, release_versions, files, users, roles,
 // audit_events, telemetry_events, crash_reports) и больше не делегирует PostgreSQL-режим в MemoryRepository.
 // Для работы требуется зарегистрированный database/sql driver.
@@ -677,10 +677,10 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	}
 	defer tx.Rollback()
 
-	// Serialize JIT provisioning on the normalized email even when no row exists yet.
-	// The users.email constraint may be case-sensitive, while identity linking policy
-	// deliberately treats email case-insensitively. The transaction-scoped advisory
-	// lock closes the otherwise unavoidable "check-then-insert" race.
+	// Сериализуйте JIT-регистрацию по нормализованному email, даже если строки ещё
+	// нет. Ограничение users.email может учитывать регистр, тогда как политика
+	// связывания идентичностей сравнивает адреса без учёта регистра. Консультативная
+	// блокировка на уровне транзакции закрывает гонку «проверить, затем вставить».
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(lower($1), 0))`, user.Email); err != nil {
 		return model.User{}, model.AuthIdentity{}, fmt.Errorf("lock federated canonical email: %w", err)
 	}
@@ -693,8 +693,8 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 		return model.User{}, model.AuthIdentity{}, err
 	}
 
-	// JIT provisioning is create-once. ON CONFLICT DO NOTHING also makes concurrent
-	// first logins for the same deterministic canonical id idempotent.
+	// JIT-регистрация выполняет создание ровно один раз. ON CONFLICT DO NOTHING также делает
+	// конкурентные первые входы с одинаковым детерминированным каноническим ID идемпотентными.
 	result, err := tx.ExecContext(ctx, `INSERT INTO users (id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,last_login_at,disabled_at,created_at,updated_at)
 VALUES($1,$2,$3,$4,$5,$6,'',NULL,NULL,NULL,$7,$8)
 ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, user.Status, string(projectRoles), user.CreatedAt, user.UpdatedAt)
@@ -899,8 +899,8 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 			_ = json.Unmarshal(existingRaw, &manifest)
 		}
 	case errors.Is(err, sql.ErrNoRows):
-		// New release: no row exists to lock yet. The conditional UPSERT below is
-		// the second guard against a concurrent publisher creating the same version.
+		// Новый релиз: строки для блокировки пока не существует. Условный UPSERT
+		// ниже дополнительно защищает от одновременной публикации той же версии.
 	default:
 		return model.ReleaseVersion{}, err
 	}

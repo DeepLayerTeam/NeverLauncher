@@ -228,7 +228,7 @@ func normalizeRecoveryCode111(token string) string {
 }
 
 func normalizeProvidedRecoveryCode111(code string) string {
-	// Preserve the exact 0.10.x normalization so existing codes continue to work.
+	// Сохраняйте точную нормализацию 0.10.x, чтобы старые коды продолжали работать.
 	return stringsToUpperReplaceUnderscore111(code)
 }
 

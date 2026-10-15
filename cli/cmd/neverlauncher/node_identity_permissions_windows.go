@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Windows does not expose effective DACL permissions through FileMode.Perm().
-// Restrict the real NTFS ACL, rather than treating 0666 as equivalent to 0600.
+// Windows не раскрывает действующие права DACL через FileMode.Perm().
+// Ограничивайте реальный ACL NTFS вместо приравнивания 0666 к 0600.
 func windowsIdentityACL0199(path, script string) error {
 	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script)
 	cmd.Env = append(os.Environ(), "NEVERLAUNCHER_IDENTITY_ACL_PATH="+path)
@@ -22,8 +22,8 @@ func windowsIdentityACL0199(path, script string) error {
 }
 
 func restrictNodeIdentityPermissions0199(path string) error {
-	// /reset clears any pre-existing explicit ACE before inheritance is removed.
-	// Grant only this Windows user and SYSTEM access to the private key.
+	// /reset очищает ранее явно заданные ACE перед отключением наследования. Давайте
+	// доступ к закрытому ключу только текущему пользователю Windows и SYSTEM.
 	return windowsIdentityACL0199(path, `
 $ErrorActionPreference = 'Stop'
 $p = $env:NEVERLAUNCHER_IDENTITY_ACL_PATH
@@ -38,9 +38,9 @@ if ($LASTEXITCODE -ne 0) { throw 'icacls /grant:r failed' }
 }
 
 func verifyNodeIdentityPermissions0199(path string, _ os.FileInfo) error {
-	// Confirm a protected DACL and reject allow/deny rules for principals
-	// other than the current user and LocalSystem. This also catches inherited
-	// Users/Everyone/Authenticated Users permissions that chmod cannot detect.
+	// Проверяйте защищённый DACL и отклоняйте разрешающие или запрещающие правила для
+	// всех субъектов, кроме текущего пользователя и LocalSystem. Это также выявляет
+	// унаследованные разрешения Users/Everyone/Authenticated Users, которые chmod не видит.
 	return windowsIdentityACL0199(path, `
 $ErrorActionPreference = 'Stop'
 $p = $env:NEVERLAUNCHER_IDENTITY_ACL_PATH

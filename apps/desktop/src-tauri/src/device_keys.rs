@@ -197,9 +197,9 @@ fn validate_software_record(record: &mut SecureDeviceKeyRecord) -> Result<Signin
 
 fn is_hardware_backend_kind(provider: &str) -> bool {
     let p = provider.to_ascii_lowercase();
-    // Fail closed: only known Secure Enclave / TPM / WSL TPM bridge names are
-    // accepted. A future/unknown backend must be reviewed before it can be
-    // advertised as hardware-bound.
+    // При сомнениях отказываем: допустимы только известные имена Secure
+    // Enclave, TPM и моста TPM для WSL. Новый или неизвестный бэкенд
+    // должен пройти проверку перед объявлением аппаратно привязанным.
     (p.contains("tpm")
         || p.contains("secureenclave")
         || p.contains("secure_enclave")
@@ -214,9 +214,9 @@ fn hardware_signer(label: &str) -> Result<(SignerHandle, String), String> {
     let config = EnclaveConfig::new(DEVICE_HARDWARE_APP, label);
     let signer = create_signer(&config).map_err(|e| format!("hardware signer недоступен: {e}"))?;
     let provider = format!("{:?}", signer.backend_kind());
-    // Linux keyring and any explicit software/test backend are deliberately not
-    // promoted to hardware-bound identity. They remain eligible only for the
-    // existing Ed25519 + OS secure storage fallback.
+    // Связка ключей Linux и любые явно программные или тестовые бэкенды намеренно
+    // не считаются аппаратно привязанной идентификацией. Для них допустим только
+    // существующий резервный механизм Ed25519 и защищённого хранилища ОС.
     if !is_hardware_backend_kind(&provider) {
         return Err(format!("platform signer backend {provider} не является hardware-isolated"));
     }
@@ -745,9 +745,9 @@ pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) ->
     validate_record(&mut record)?;
     validate_device_attestation_payload(payload, &user, &record)?;
 
-    // Attestation intentionally has no software fallback. It is a separate IPC
-    // boundary from generic proof-of-possession and can only use the persisted
-    // non-exportable hardware key that was previously registered by the server.
+    // Для аттестации намеренно нет программного резервного режима. Это отдельная граница
+    // IPC, не связанная с обычным подтверждением владения ключом; используется только
+    // сохранённый неэкспортируемый аппаратный ключ, ранее зарегистрированный сервером.
     let (signer, _) = validate_hardware_record(&record)?;
     let der = signer.sign(&record.hardware_label, payload.as_bytes())
         .map_err(|e| format!("hardware device attestation signing failed: {e}"))?;

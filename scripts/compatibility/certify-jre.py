@@ -49,14 +49,14 @@ def parse_major(version: str) -> int | None:
 def executable_path(value: str) -> Path:
     raw = value.strip()
     if os.name == "nt":
-        # GitHub Actions uses Git Bash for the compatibility script; `command -v`
-        # may therefore return /c/... while this verifier runs under native Python.
+        # GitHub Actions использует Git Bash для скрипта совместимости; `command -v`
+        # может вернуть /c/..., тогда как проверяющий код запускается в нативном Python.
         match = re.fullmatch(r"/([A-Za-z])/(.+)", raw)
         if match:
             raw = f"{match.group(1)}:/{match.group(2)}"
     path = Path(raw).expanduser()
     if os.name == "nt" and path.suffix.lower() != ".exe":
-        # Git Bash `command -v java` omits .exe on Windows runners.
+        # В Windows CI команда Git Bash `command -v java` не добавляет .exe.
         executable = path.with_name(path.name + ".exe")
         if executable.is_file():
             path = executable

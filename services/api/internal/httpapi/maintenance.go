@@ -6,9 +6,9 @@ import (
 	"sync"
 )
 
-// maintenanceGate serializes destructive backup/restore operations against all
-// API mutations. Mutating requests keep a read lock for their full lifetime;
-// backup/restore handlers take the write lock before touching DB/storage.
+// maintenanceGate сериализует разрушающие операции резервирования и восстановления
+// относительно всех изменений API. Изменяющие запросы держат блокировку чтения весь срок
+// жизни; обработчики backup/restore берут блокировку записи перед работой с БД и хранилищем.
 type maintenanceGate struct {
 	mu sync.RWMutex
 }

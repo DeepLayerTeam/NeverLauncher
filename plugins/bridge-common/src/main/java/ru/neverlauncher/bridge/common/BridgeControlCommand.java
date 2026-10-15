@@ -6,8 +6,8 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// Legacy digest provenance retained for 0.19.5 compatibility checks:
-// NeverLauncher-ServerBridge-Control-Execution-v1. Protocol v3 uses v2 below.
+// Сохранено происхождение старого дайджеста для проверок совместимости 0.19.5:
+// NeverLauncher-ServerBridge-Control-Execution-v1. В Protocol v3 ниже используется v2.
 
 public record BridgeControlCommand(
     String serverId,
@@ -43,12 +43,12 @@ public record BridgeControlCommand(
             issuedAtUnixMillis, expiresAtUnixMillis, signerFingerprint);
     }
 
-    /** Canonical signed form for the active v3 signer. */
+    /** Каноническое подписываемое представление для активного подписанта v3. */
     public String canonical() {
         return canonicalForSigner(v3SigningKeyFingerprint);
     }
 
-    /** Stable execution identity includes node identity + runtime instance so signed commands cannot cross those boundaries; deliberately excludes lease attempt/timestamps. */
+    /** Устойчивая идентичность исполнения включает идентичность узла и экземпляр процесса, чтобы подписанные команды не пересекали эти границы; попытка аренды и временные метки намеренно исключены. */
     public String executionDigest() {
         String stable = String.join("\n",
             "NeverLauncher-ServerBridge-Control-Execution-v2",

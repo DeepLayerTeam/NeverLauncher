@@ -79,7 +79,7 @@ def validate_validation_pipeline() -> None:
         if needle not in validation:
             fail(f"validation evidence invariant missing: {needle}")
 
-    # Runtime PASS is derived from signed evidence, an actual client and a successful process exit.
+    # Статус PASS среды запуска выводится из подписанных свидетельств, настоящего клиента и успешного завершения процесса.
     if 'resultState := "failed"' not in validation or 'if e.ActualClient && e.ExitCode == 0 {' not in validation or 'resultState = "passed"' not in validation:
         fail("runtime result is not derived from successful actual-client evidence")
     if re.search(r'packageSmoke[\s\S]{0,1800}runtime[^\n]*passed', validation, flags=re.IGNORECASE):

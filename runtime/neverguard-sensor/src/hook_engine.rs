@@ -215,9 +215,9 @@ fn hook_specs() -> [HookSpec; 9] {
             canonical: &ORIGINAL_VIRTUAL_PROTECT,
             optional: false,
         },
-        // Optional Windows 10+ memory APIs. Some JDKs use these instead of
-        // classic VirtualAlloc/VirtualProtect; ignoring them loses JIT
-        // executable-memory provenance. Older systems need not export them.
+        // Необязательные API памяти Windows 10+. Некоторые JDK используют их вместо
+        // обычных VirtualAlloc/VirtualProtect; их игнорирование теряет происхождение
+        // исполняемой памяти JIT. Старые системы могут их не экспортировать.
         HookSpec {
             id: HOOK_VIRTUAL_ALLOC_FROM_APP,
             name: "VirtualAllocFromApp",
@@ -333,9 +333,9 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
             continue;
         }
         let Ok(_module_pin) = pin_module(module.base) else {
-            // A normal unload can race the module snapshot. Module Guard owns
-            // lifecycle enforcement; a still-loaded module is retried on the
-            // next reconciliation heartbeat.
+            // Обычная выгрузка способна совпасть по времени со снимком модулей.
+            // Module Guard контролирует жизненный цикл; всё ещё загруженный
+            // модуль перепроверяется при следующем согласовании heartbeat.
             continue;
         };
         let records = collect_hook_candidates(&module)?;
@@ -353,9 +353,9 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
                 }
                 if current != record.replacement {
                     if let Err(err) = patch_pointer(record.slot, record.replacement) {
-                        // patch_pointer can fail after the slot write (for example
-                        // while restoring page protection). Restore this slot and
-                        // all earlier writes before returning the failure.
+                        // patch_pointer может завершиться ошибкой после записи слота,
+                        // например при восстановлении защиты страницы. Перед возвратом
+                        // ошибки восстановите этот слот и все предшествующие записи.
                         let _ = patch_pointer(record.slot, current);
                         restore_records(&mut applied);
                         state.healthy = false;
@@ -843,9 +843,9 @@ unsafe extern "system" fn hook_virtual_protect(
     result
 }
 
-// Alternate Windows memory allocation APIs can be imported by JDK/native
-// runtimes instead of the classic Kernel32 entries. Intercept them only in
-// their own IAT, and record a transition *only after* the real call succeeds.
+// Альтернативные API выделения памяти Windows могут импортироваться JDK или нативными
+// средами вместо обычных функций Kernel32. Перехватывайте их только в собственной
+// IAT и записывайте переход исключительно после успешного настоящего вызова.
 unsafe extern "system" fn hook_virtual_alloc_from_app(
     address: *mut c_void,
     size: usize,
@@ -904,8 +904,8 @@ unsafe extern "system" fn hook_virtual_alloc_2(
     let result = unsafe {
         function(process, address, size, allocation_type, protect, extended_parameters, parameter_count)
     };
-    // NULL and GetCurrentProcess() select this process. Never treat an
-    // allocation in another process as local executable-memory provenance.
+    // NULL и GetCurrentProcess() выбирают текущий процесс. Никогда не считайте
+    // выделение в другом процессе происхождением локальной исполняемой памяти.
     if !result.is_null() && (process.is_null() || process == unsafe { GetCurrentProcess() }) {
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(result, protect, provenance);

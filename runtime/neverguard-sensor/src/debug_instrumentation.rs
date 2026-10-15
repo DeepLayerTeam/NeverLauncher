@@ -99,8 +99,8 @@ pub fn shutdown() {
 }
 
 fn query_debug_indicators() -> Result<DebugIndicators, String> {
-    // SAFETY: all APIs operate on the current process pseudo handle and fixed-size
-    // caller-owned output buffers. No foreign process memory is read or modified.
+    // БЕЗОПАСНОСТЬ: все API работают с псевдодескриптором текущего процесса и выходными буферами фиксированного
+    // размера, принадлежащими вызывающему коду. Память чужих процессов не читается и не изменяется.
     let process = unsafe { GetCurrentProcess() };
     if process.is_null() {
         return Err("NeverGuard Debug & Instrumentation Guard cannot obtain current process handle".to_string());
@@ -149,8 +149,8 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
         remote_debugger_present: remote_present != 0,
         debug_port_present: debug_port != 0,
         debug_object_present: !debug_object.is_null(),
-        // ProcessDebugFlags returns the inverse of the NoDebugInherit state.
-        // A healthy non-debugged process reports a nonzero value.
+        // ProcessDebugFlags возвращает инверсию состояния NoDebugInherit.
+        // У нормального процесса без отладчика значение ненулевое.
         debug_flags_no_debug_inherit: debug_flags != 0,
     })
 }
@@ -163,8 +163,8 @@ fn query_process_information(
     label: &str,
 ) -> Result<(), String> {
     let mut returned = 0u32;
-    // SAFETY: NtQueryInformationProcess only writes to the supplied fixed-size
-    // buffer for the requested debug information class.
+    // БЕЗОПАСНОСТЬ: NtQueryInformationProcess записывает только в переданный
+    // фиксированный буфер для запрошенного класса отладочной информации.
     let status = unsafe {
         NtQueryInformationProcess(process, class, output, output_len, &mut returned)
     };

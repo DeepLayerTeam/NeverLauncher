@@ -43,8 +43,8 @@ require(contracts,['serverbridge3-security-01912','securityCapabilityDigest','ac
 require(tests,['NodeCanonicalRejectsTamper','EventRejectsTamper','CommandCanonicalRejectsReplayAcrossRuntime','AllowlistRejectsTamperedBridge','SecurityFeatureSetIsExact'],'Go adversarial tests')
 require(event_tests,['TestServerBridgeEventMemoryAckReplay0194'],'event replay/idempotency regression')
 require(e2e,['TARGETS=(velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla)','for target in "${TARGETS[@]}"'],'per-target E2E execution')
-# The Docker backend uses a non-loopback HTTP hostname. A v3 bridge must be
-# provisioned with a trust anchor; silent HTTP TOFU would be a downgrade.
+# Docker-бэкенд использует нелокальное имя HTTP-хоста. Для моста v3 нужен
+# закреплённый якорь доверия; молчаливое HTTP TOFU было бы снижением защиты.
 minecraft_e2e=read('e2e/scripts/run-minecraft-e2e.sh')
 compose_e2e=read('e2e/docker-compose.minecraft-e2e.yml')
 require(minecraft_e2e, ['CONTROL_PUBLIC_KEY=', 'NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY',

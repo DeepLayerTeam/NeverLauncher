@@ -54,7 +54,7 @@ type serverBridgeControlAckRequest0195 struct {
 	ChannelID        string   `json:"channelId"`
 	LeaseToken       string   `json:"leaseToken"`
 	Status           string   `json:"status"`
-	Result           string   `json:"result"` // base64url canonical JSON object<string,string>
+	Result           string   `json:"result"` // Канонический объект JSON типа object<string,string> в кодировке base64url.
 	Error            string   `json:"error,omitempty"`
 }
 
@@ -62,7 +62,7 @@ func canonicalControlPayload0195(payload map[string]string) ([]byte, error) {
 	if payload == nil {
 		payload = map[string]string{}
 	}
-	return json.Marshal(payload) // encoding/json sorts string map keys
+	return json.Marshal(payload) // encoding/json сортирует строковые ключи карт.
 }
 
 func validateServerBridgeControlRequest0195(kind string, payload map[string]string) (map[string]string, error) {
@@ -380,8 +380,8 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		previousFingerprint = previousKey.Fingerprint
 		previousCanonical := serverBridgeControlCanonical01912(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, capabilityDigest, previousKey.Fingerprint, node.IdentityEpoch, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
 		previousSignature = base64.RawURLEncoding.EncodeToString(ed25519.Sign(previousKey.PrivateKey, []byte(previousCanonical)))
-		// During overlap, pre-0.19.12 bridges still trust the previous key. Keep the
-		// legacy signature on that key while v3 clients authenticate the active set.
+		// Во время перекрытия мосты до 0.19.12 доверяют прежнему ключу. Сохраняйте
+		// старую подпись этим ключом, пока клиенты v3 аутентифицируют активный набор.
 		legacyKey = *previousKey
 	}
 	legacyCanonical := serverBridgeControlCanonical0195(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)

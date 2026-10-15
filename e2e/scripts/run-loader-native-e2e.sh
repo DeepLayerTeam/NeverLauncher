@@ -86,10 +86,10 @@ if not any(needle in p.replace('\\','/') or version in p.rsplit('/',1)[-1] for p
     raise SystemExit(f'exact loader version {version!r} is not present in server runtime artifact paths')
 PY
 
-# Each matrix job starts with a freshly materialized game directory. Minecraft
-# 1.20+ can display onboarding / multiplayer disclosure screens before Quick
-# Play is processed; in a headless run nobody can dismiss those screens. Keep
-# the bypass confined to this disposable E2E profile, not production installs.
+# Каждое задание матрицы создаёт чистый каталог игры. Minecraft 1.20+
+# может показать первоначальные экраны и предупреждение о мультиплеере
+# до Quick Play; без интерфейса их никто не закроет. Обход допускается
+# только в одноразовом E2E-профиле, не в рабочих установках.
 CLIENT_OPTIONS="$RUNTIME_DIR/materialized-client/options.txt"
 if [[ ! -e "$CLIENT_OPTIONS" ]]; then
   cat > "$CLIENT_OPTIONS" <<'OPTIONS'

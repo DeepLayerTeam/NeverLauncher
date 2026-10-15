@@ -125,8 +125,8 @@ func VerifyAssertion(cfg VerifyConfig, clientDataJSON, authenticatorData, signat
 	if (parsed.flags&FlagBE != 0) != backupEligible {
 		return AssertionResult{}, errors.New("WebAuthn backup eligibility flag changed")
 	}
-	// A zero counter is valid. For non-backup-eligible authenticators, a non-increasing
-	// non-zero counter is treated as clone/replay evidence and rejected.
+	// Нулевое значение счётчика допустимо. Для аутентификаторов без поддержки резервирования нерастущий
+	// ненулевой счётчик рассматривается как признак клонирования или повтора и отклоняется.
 	if !backupEligible && storedSignCount != 0 && parsed.signCount != 0 && parsed.signCount <= storedSignCount {
 		return AssertionResult{}, errors.New("WebAuthn signature counter did not increase")
 	}

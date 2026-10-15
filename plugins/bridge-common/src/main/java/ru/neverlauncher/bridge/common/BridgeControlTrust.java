@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-/** Durable trust store with overlap-key rotation authenticated by the already trusted key. */
+/** Постоянное хранилище доверия с ротацией перекрывающихся ключей, подтверждаемой ранее доверенным ключом. */
 final class BridgeControlTrust {
     private final Path trustFile;
     private final String configuredPublicKey;
@@ -53,12 +53,12 @@ final class BridgeControlTrust {
         String canonical = BridgeProtocolSecurity.capabilityCanonical(capabilityDigest, activeFingerprint, previousFingerprint);
         boolean activeValid = BridgeProtocolSecurity.verify(activePublicKey, canonical, activeSignature);
         boolean previousValid = !previousPublicKey.isBlank() && BridgeProtocolSecurity.verify(previousPublicKey, canonical, previousSignature);
-        if (!activeValid) return false; // every document must prove possession of the announced active key
+        if (!activeValid) return false; // Каждый документ должен подтверждать владение объявленным активным ключом.
 
         LinkedHashSet<String> anchors = new LinkedHashSet<>(pinnedPublicKeys);
-        // The configured key is a bootstrap anchor only. Once a signed capability
-        // document has established durable pins, removed overlap keys must stop
-        // authorizing future rotations or commands.
+        // Настроенный ключ является только первоначальным якорем доверия. После
+        // закрепления ключей подписанным документом возможностей удалённые
+        // перекрывающиеся ключи больше не должны разрешать новые ротации или команды.
         if (anchors.isEmpty() && !configuredPublicKey.isBlank()) anchors.add(configuredPublicKey);
         boolean anchored = false;
         if (anchors.isEmpty()) {
@@ -83,7 +83,7 @@ final class BridgeControlTrust {
         if (!BridgeProtocolSecurity.PROFILE.equals(normalize(command.securityProfile()))) return false;
         if (!constantEquals(BridgeProtocolSecurity.expectedCapabilityDigest(), normalize(command.capabilityDigest()).toLowerCase())) return false;
         Set<String> trusted = pinnedPublicKeys;
-        if (trusted.isEmpty()) return false; // command endpoint can never bootstrap trust
+        if (trusted.isEmpty()) return false; // Конечная точка команд никогда не устанавливает доверие самостоятельно.
         if (verifyCommandWithKey(command, command.v3SigningPublicKey(), command.v3SigningKeyFingerprint(), command.v3Signature(), trusted)) return true;
         return verifyCommandWithKey(command, command.previousV3SigningPublicKey(), command.previousV3SigningKeyFingerprint(), command.previousV3Signature(), trusted);
     }

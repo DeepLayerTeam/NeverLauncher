@@ -263,10 +263,10 @@ pub fn shutdown() {
     }
 }
 
-/// Captures the caller chain while executing inside the NeverGuard IAT wrapper.
-/// HotSpot's Windows memory implementation calls VirtualAlloc/VirtualProtect from
-/// jvm.dll, so a legitimate JIT/code-cache transition must have its direct external
-/// caller in the immutable jvm.dll image range. The operation is allocation-free.
+/// Захватывает цепочку вызовов внутри обёртки IAT NeverGuard. Реализация памяти
+/// HotSpot для Windows вызывает VirtualAlloc/VirtualProtect из jvm.dll, поэтому
+/// допустимый JIT-переход или изменение кеша кода должны иметь прямой внешний
+/// вызов из неизменяемого диапазона образа jvm.dll. Операция не выделяет память.
 pub fn capture_transition_provenance() -> TransitionProvenance {
     if !JVM_ACTIVE.load(Ordering::Acquire) {
         return TransitionProvenance {
@@ -305,10 +305,10 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
         };
     }
 
-    // Find the first return address after the Sensor's own wrapper frames.
-    // Looking for "any" jvm.dll frame is insufficient: JNI/native code invoked
-    // by HotSpot naturally has jvm.dll deeper in its stack. Only the direct
-    // external caller of our IAT wrapper is allowed to authorize JIT memory.
+    // Найдите первый адрес возврата после собственных кадров обёртки
+    // Sensor. Искать любой кадр jvm.dll недостаточно: JNI или нативный
+    // код, вызванный HotSpot, естественно содержит jvm.dll глубже в стеке.
+    // Только прямой внешний вызов обёртки IAT может разрешать JIT-память.
     let mut saw_sensor_frame = false;
     for frame in frames.iter().take(captured) {
         let address = *frame as usize;
@@ -338,9 +338,9 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
     }
 }
 
-/// Records only transitions whose resulting target is committed executable
-/// MEM_PRIVATE memory. Image code-page changes remain owned by Memory Integrity,
-/// preserving its independent code-drift detection path.
+/// Учитывайте лишь переходы, чей результат — зафиксированная исполняемая
+/// память MEM_PRIVATE. Изменения страниц образов остаются в ведении Memory
+/// Integrity, сохраняя отдельный механизм обнаружения изменений кода.
 pub fn observe_memory_transition(
     address: *mut c_void,
     protect: u32,

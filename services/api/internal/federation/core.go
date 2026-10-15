@@ -38,9 +38,9 @@ type ProviderHealth struct {
 	Error    string                 `json:"error,omitempty"`
 }
 
-// Core owns provider dispatch and the mandatory ExternalIdentity -> canonical Never
-// User resolution boundary. Connectors authenticate external credentials; they never
-// mint Never access/refresh tokens and never bypass Never session policy.
+// Core управляет провайдерами и обязательной границей ExternalIdentity -> канонический
+// пользователь Never. Коннекторы аутентифицируют внешние данные, но никогда не
+// выдают токены доступа или обновления Never и не обходят политику сеансов.
 type ProviderPolicy struct {
 	AutoProvision bool
 	DefaultRole   string
@@ -216,10 +216,10 @@ func (c *Core) CompleteBrowserAuth(ctx context.Context, providerID string, callb
 	return c.resolveAuthentication(ctx, meta, auth)
 }
 
-// CompleteBrowserAuthProof verifies the external browser flow without resolving or
-// auto-provisioning a canonical Never user. This is the security boundary required
-// for explicit account linking: a proof can be linked only to the already-authenticated
-// Never user chosen by the caller.
+// CompleteBrowserAuthProof проверяет внешний браузерный поток без определения
+// либо автоматического создания канонического пользователя Never. Это необходимо
+// для явной привязки учётной записи: доказательство можно привязать только к
+// уже аутентифицированному пользователю Never, выбранному вызывающим кодом.
 func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (authconnector.Metadata, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -241,8 +241,8 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 	return meta, auth, nil
 }
 
-// RefreshProviderCredential rotates/revalidates an external provider credential.
-// The returned provider token remains internal and is never a Never access token.
+// RefreshProviderCredential обновляет или перепроверяет внешние учётные данные провайдера.
+// Полученный токен провайдера остаётся внутренним и никогда не становится токеном доступа Never.
 func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, providerToken, expectedSubject string) (authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -356,9 +356,9 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	})
 }
 
-// LinkAuthenticatedIdentity persists a provider identity only after the caller has
-// obtained an Authentication proof from that provider. It refuses silent reassignment:
-// one provider/subject cannot be moved between Never users.
+// LinkAuthenticatedIdentity сохраняет идентичность провайдера только после
+// подтверждения его аутентификации вызывающей стороной. Скрытое переназначение
+// запрещено: одну пару провайдер/subject нельзя переносить между пользователями Never.
 func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authentication authconnector.Authentication) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	if _, ok := c.Connector(providerID); !ok {
@@ -426,8 +426,8 @@ func cloneClaims(input map[string]any) map[string]any {
 	return out
 }
 
-// RevokeProviderCredential performs provider-side logout/revocation only. It does
-// not revoke the Never session; callers must make that a separate explicit action.
+// RevokeProviderCredential выполняет только выход или отзыв у провайдера. Сеанс Never
+// не отзывается; вызывающий код должен инициировать это отдельным явным действием.
 func (c *Core) RevokeProviderCredential(ctx context.Context, providerID, subject, providerToken string) error {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)

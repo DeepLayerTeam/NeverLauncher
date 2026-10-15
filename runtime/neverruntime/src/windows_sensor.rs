@@ -294,8 +294,8 @@ mod imp {
         }
     }
 
-    /// Authenticates the early JVM sensor, arms continuous Module Guard before
-    /// Agent_OnLoad returns and terminates the JVM if either stage fails.
+    /// Аутентифицирует ранний JVM Sensor, включает непрерывный Module Guard
+    /// до возврата Agent_OnLoad и завершает JVM при ошибке любого этапа.
     pub async fn authenticate_sensor_or_kill(
         bootstrap: WindowsSensorBootstrap,
         child: &mut tokio::process::Child,

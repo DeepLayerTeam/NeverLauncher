@@ -20,9 +20,9 @@ const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
 const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"neverguard-continuous-guard-ack-v1";
 const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
 const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
-// Software-rendered Minecraft/Forge on shared CI cores can occupy the parent
-// Guard scheduler for several seconds. Keep a bounded authenticated timeout
-// below the parent stream deadline (7s); missing ACKs still fail closed.
+// Minecraft/Forge с программным рендерингом на общих CI-ядрах способен занять планировщик
+// родительского Guard на несколько секунд. Держите ограниченный аутентифицированный тайм-аут
+// меньше предела родительского потока в 7 секунд; отсутствие ACK всё равно приводит к отказу.
 const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(5);
 const GUARD_ACK_POLL: Duration = Duration::from_millis(10);
 
@@ -111,9 +111,9 @@ pub fn wait_for_guard_ack(
     let deadline = Instant::now() + GUARD_ACK_TIMEOUT;
     loop {
         let mut available = 0u32;
-        // SAFETY: the handle comes from an open duplex named pipe File. All
-        // optional PeekNamedPipe output pointers except total availability are
-        // intentionally null because no bytes are consumed by this probe.
+        // БЕЗОПАСНОСТЬ: дескриптор получен из открытого двустороннего файла именованного
+        // канала. Все необязательные указатели PeekNamedPipe, кроме общего количества
+        // доступных байтов, намеренно нулевые: проверка ничего не читает.
         let ok = unsafe {
             PeekNamedPipe(
                 stream.as_raw_handle(),

@@ -279,8 +279,8 @@ fn resolve_guard_executable()->Result<PathBuf,String>{
     let contents=macos.parent().ok_or("desktop Contents directory missing")?;
     let helper=contents.join("Helpers").join("neverguard");
     if helper.is_file(){return Ok(helper)}
-    // Backward-compatible development fallback for pre-0.16.1 layouts only;
-    // canonical package verification above requires Contents/Helpers.
+    // Резервный путь для разработческих схем до 0.16.1;
+    // каноническая проверка пакета выше требует Contents/Helpers.
     Ok(macos.join("neverguard"))
 }
 

@@ -246,7 +246,7 @@ func validateBridgeEvent0194(serverID, runtimeID, keyFingerprint string, raw bri
 }
 
 func canonicalBridgeEventPayload0194(payload map[string]string) ([]byte, error) {
-	// encoding/json sorts string map keys, matching BridgeEventRecord's TreeMap encoding.
+	// encoding/json сортирует строковые ключи карты так же, как кодирование TreeMap в BridgeEventRecord.
 	if payload == nil {
 		payload = map[string]string{}
 	}
@@ -311,7 +311,7 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 	return model.ServerBridgeEventAppendResult{AckSequence: ack, Inserted: inserted}, nil
 }
 
-// deterministic helper used by tests/certification to keep the declared event types stable.
+// Детерминированный помощник для тестов и сертификации, обеспечивающий устойчивый набор объявленных типов событий.
 func serverBridgeEventTypesSorted0194() []string {
 	out := make([]string, 0, len(serverBridgeEventTypes0194))
 	for eventType := range serverBridgeEventTypes0194 {

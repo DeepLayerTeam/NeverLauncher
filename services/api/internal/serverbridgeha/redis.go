@@ -19,8 +19,8 @@ const (
 	releaseLeaseScript = `local v=redis.call('GET',KEYS[1]); if v==ARGV[1] then return redis.call('DEL',KEYS[1]) end; return 0`
 )
 
-// Coordinator is the ephemeral distributed fence used in addition to PostgreSQL's
-// durable row lease. Losing Redis never causes control to fail open.
+// Coordinator — эфемерная распределённая защита, дополняющая сохраняемую аренду
+// строки PostgreSQL. Потеря Redis никогда не разрешает управление в обход проверок.
 type Coordinator interface {
 	Backend() string
 	Health(context.Context) error

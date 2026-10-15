@@ -86,7 +86,7 @@ func (d *cborDecoder) read() (any, error) {
 		}
 		return out, nil
 	case 6:
-		return d.read() // semantic tags are irrelevant for WebAuthn structures handled here.
+		return d.read() // Семантические теги не имеют значения для обрабатываемых здесь структур WebAuthn.
 	case 7:
 		switch ai {
 		case 20:

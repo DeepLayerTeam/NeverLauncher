@@ -139,7 +139,7 @@ func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
 	if len(data) < 32 {
 		return macOSMachOInfo0154{}, errors.New("Mach-O header is truncated")
 	}
-	// 64-bit little-endian Mach-O magic (MH_MAGIC_64) appears as cf fa ed fe on disk.
+	// 64-битная сигнатура Mach-O в обратном порядке байтов (MH_MAGIC_64) записана на диске как cf fa ed fe.
 	if !bytes.Equal(data[:4], []byte{0xcf, 0xfa, 0xed, 0xfe}) {
 		return macOSMachOInfo0154{}, fmt.Errorf("unsupported Mach-O magic %x; thin 64-bit little-endian image required", data[:4])
 	}
@@ -535,10 +535,10 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	// Cross-platform verification has already validated every ZIP path and its
-	// embedded bytes. Native verification intentionally uses ditto so AppleDouble
-	// data, extended attributes and the stapled notarization ticket survive
-	// extraction before stapler/Gatekeeper inspect the .app bundle.
+	// Кроссплатформенная проверка уже проверила все пути ZIP и содержимое.
+	// Нативная проверка специально использует ditto, чтобы данные AppleDouble,
+	// расширенные атрибуты и прикреплённый билет нотариального заверения
+	// сохранились после распаковки перед проверками stapler/Gatekeeper пакета .app.
 	if output, err := exec.Command(ditto, "-x", "-k", packagePath, tmp).CombinedOutput(); err != nil {
 		return fmt.Errorf("ditto package extraction failed: %w: %s", err, strings.TrimSpace(string(output)))
 	}
@@ -566,9 +566,9 @@ func verifyMacOSNotarizationEvidence0154(dir, ver string, requireNotarized bool)
 	return verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver, requireNotarized, verifyMacOSNativePackage0154)
 }
 
-// Keep the production verifier hard-wired to the real Apple tooling. Only
-// synthetic fixture tests inject a verifier, since fabricated Mach-O bytes
-// cannot carry a real Developer ID signature or notarization ticket.
+// Производственный проверяющий код должен обязательно использовать настоящие инструменты Apple.
+// Только тесты с искусственными данными внедряют другую реализацию проверки: поддельные байты
+// Mach-O не содержат настоящей подписи Developer ID или билета нотариального заверения.
 func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requireNotarized bool, verifyNative func(string, string) error) error {
 	evidence, err := readMacOSNotarizationEvidence0154(dir)
 	if err != nil {

@@ -190,8 +190,8 @@ struct Library {
     rules: Vec<Rule>,
     #[serde(default)]
     extract: ExtractRules,
-    // Forge <=1.12.2 uses lowercase clientreq/serverreq in versionInfo.
-    // Server-only libraries must not leak into the client classpath.
+    // Forge <=1.12.2 использует в versionInfo поля clientreq/serverreq в нижнем
+    // регистре. Библиотеки только для сервера не должны попадать в classpath клиента.
     #[serde(default, alias = "clientreq")]
     client_req: Option<bool>,
 }
@@ -348,9 +348,9 @@ pub async fn resolve_compatibility(
         ("auth_access_token".to_string(), context.access_token.clone()),
         ("accessToken".to_string(), context.access_token.clone()),
         ("auth_session".to_string(), auth_session),
-        // Legacy launcher metadata (notably 1.7.x-1.12.x) passes this
-        // placeholder even for offline profiles. The official launcher uses
-        // a JSON object; an empty object is the correct offline value.
+        // В старых метаданных лаунчера, особенно 1.7.x–1.12.x, этот заполнитель
+        // передаётся даже офлайн-профилю. Официальный лаунчер использует
+        // JSON-объект; правильное значение для офлайна — пустой объект.
         ("user_properties".to_string(), "{}".to_string()),
         ("profile_properties".to_string(), "{}".to_string()),
         ("user_type".to_string(), context.user_type.clone()),
@@ -383,10 +383,10 @@ pub async fn resolve_compatibility(
         ));
     }
     let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
-    // Forge 1.20.2+ uses net.minecraftforge.bootstrap.BootstrapLauncher rather
-    // than cpw.mods.bootstraplauncher.BootstrapLauncher. Both launchers create
-    // a transformed named Minecraft module, and must ignore the Mojang client
-    // JAR on the bootstrap module path to avoid duplicate net.minecraft.*.
+    // Forge 1.20.2+ использует net.minecraftforge.bootstrap.BootstrapLauncher
+    // вместо cpw.mods.bootstraplauncher.BootstrapLauncher. Оба создают преобразованный
+    // именованный модуль Minecraft и должны игнорировать JAR клиента Mojang в
+    // bootstrap module path, чтобы избежать дублирования net.minecraft.*.
     let is_modern_forge = raw_game_args.iter().any(|value| value == "--fml.forgeVersion")
         && matches!(
             merged.main_class.as_str(),
@@ -395,10 +395,10 @@ pub async fn resolve_compatibility(
         );
     let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
     if raw_jvm_args.is_empty() {
-        // Minecraft releases before the arguments.jvm metadata era relied on the
-        // launcher to provide the native path, launcher identity and classpath.
-        // Keep that behavior here so old Vanilla versions are launched by the
-        // same Compatibility Engine instead of requiring an ad-hoc legacy path.
+        // До появления метаданных arguments.jvm старые выпуски Minecraft
+        // полагались на лаунчер для путей нативных библиотек, идентичности
+        // лаунчера и classpath. Сохраняйте это поведение, чтобы старый Vanilla
+        // запускался общим Compatibility Engine без особого устаревшего пути.
         raw_jvm_args = vec![
             "-Djava.library.path=${natives_directory}".to_string(),
             "-Dminecraft.launcher.brand=${launcher_name}".to_string(),
@@ -410,32 +410,32 @@ pub async fn resolve_compatibility(
     let game_args = substitute_all(raw_game_args, &variables)?;
     let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
     strip_classpath_pair(&mut jvm_args)?;
-    // Modern Mojang releases (including 26.x) can omit the old
-    // -Djava.library.path placeholder even though their LWJGL native binaries
-    // are extracted to the verified per-platform natives directory. Without
-    // the property, the game crashes before it can load SDL/LWJGL on Linux
-    // ARM64 (and can silently search the host rather than the packaged natives
-    // on other platforms). Preserve a property provided by upstream metadata.
+    // Современные выпуски Mojang, включая 26.x, могут не содержать
+    // старый параметр -Djava.library.path, хотя нативные LWJGL
+    // распакованы в проверенный каталог платформы. Без параметра
+    // игра падает до загрузки SDL/LWJGL на Linux ARM64 либо ищет
+    // библиотеки хоста вместо поставляемых на других системах.
+    // Сохраняйте значение из метаданных издателя, если оно есть.
     if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
         jvm_args.push(format!("-Djava.library.path={}", context.natives_directory));
     }
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
-    // Minecraft 26.x Vanilla and Fabric initialize SDL 3 themselves; forcing
-    // -XstartOnFirstThread aborts those clients on macOS. ForgeBootstrap still
-    // creates a GLFW/AppKit early-display window *before* handing control to
-    // Minecraft's SDL 3 renderer, and must run on the primordial thread.
-    // Classify the actual entry point, not only the Minecraft version.
+    // Minecraft 26.x Vanilla и Fabric сами инициализируют SDL 3;
+    // принудительный -XstartOnFirstThread прерывает их в macOS. Однако
+    // ForgeBootstrap создаёт раннее окно GLFW/AppKit до передачи
+    // управления SDL 3 и требует основной первоначальный поток.
+    // Определяйте фактическую точку входа, а не только версию Minecraft.
     let minecraft_26x = layers.iter().any(|(id, _, _)| id.starts_with("26."));
     let uses_sdl3_client = macos_uses_sdl3_game_entry(minecraft_26x, &merged.main_class);
     ensure_macos_first_thread(&mut jvm_args, &environment.os, uses_sdl3_client);
     if is_neoforge || is_modern_forge {
-        // Forge/NeoForge ModLauncher creates the transformed Minecraft module.
-        // Keep Mojang's base client on the legacy classpath, but prevent
-        // BootstrapLauncher from turning it into an additional named module.
-        // Otherwise Java's module resolver fails with duplicate packages
-        // (minecraft vs. the untransformed base client JAR module).
+        // Forge/NeoForge ModLauncher создаёт преобразованный модуль
+        // Minecraft. Оставляйте базовый клиент Mojang в старом classpath,
+        // но запретите BootstrapLauncher превращать его в дополнительный
+        // именованный модуль. Иначе разрешение модулей Java падает из-за
+        // повторяющихся пакетов minecraft и базового неизменённого JAR.
         ensure_neoforge_bootstrap_ignores_base_client(&mut jvm_args, &client_jar)?;
     }
 
@@ -507,12 +507,12 @@ fn merge_layers(
             if library.name.trim().is_empty() {
                 return Err(format!("Minecraft metadata {} содержит library без name", layer.id));
             }
-            // Filter *before* merging Maven coordinates. Mojang 1.6.x–1.12.x
-            // can list two versions of org.lwjgl.lwjgl:lwjgl with mutually
-            // exclusive OS rules (legacy LWJGL on Linux/Windows and a nightly
-            // variant on old macOS). Unconditionally replacing the earlier
-            // coordinate with the later, macOS-only one removes LWJGL from the
-            // Linux classpath even though the materializer downloaded it.
+            // Фильтруйте до объединения координат Maven. Mojang
+            // 1.6.x–1.12.x может перечислять две версии org.lwjgl.lwjgl:lwjgl
+            // с взаимоисключающими правилами ОС (старый LWJGL для
+            // Linux/Windows и ночная версия старой macOS). Безусловная
+            // замена первой координаты второй удалит LWJGL из classpath
+            // Linux, хотя материализатор скачал его.
             if library.client_req == Some(false)
                 || !rules_allow(&library.rules, environment)?
                 || !library_artifact_matches_environment(&library.name, environment)
@@ -562,9 +562,9 @@ fn resolve_libraries(
         if !rules_allow(&library.rules, environment)? || !library_artifact_matches_environment(&library.name, environment) {
             continue;
         }
-        // Some legacy Mojang entries are classifier-only native containers
-        // (for example lwjgl-platform and jinput-platform). They must not be
-        // synthesized into ordinary classpath artifacts.
+        // Часть старых записей Mojang — нативные контейнеры только
+        // с классификаторами, например lwjgl-platform и jinput-platform.
+        // Не превращайте их в обычные артефакты classpath.
         if let Some(artifact) = library.downloads.artifact.clone() {
             let path = if artifact.path.trim().is_empty() {
                 maven_path(&library.name)?
@@ -587,9 +587,9 @@ fn resolve_libraries(
             });
             classpath.push(path);
         } else if library.downloads.classifiers.is_empty() {
-            // Keep compatibility with old local metadata that predates the
-            // downloads object. The materializer remains fail-closed in
-            // strict mode; this fallback is only for already-present trees.
+            // Сохраняйте совместимость со старыми локальными метаданными, появившимися
+            // до объекта downloads. В строгом режиме материализатор по-прежнему отказывает
+            // при ошибке; резервный путь только для уже существующих деревьев.
             let path = maven_path(&library.name)?;
             let url = if !library.url.trim().is_empty() {
                 format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
@@ -608,12 +608,12 @@ fn resolve_libraries(
 
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
-            // Minecraft/Forge 1.7.x metadata predates downloads.classifiers.
-            // The Vanilla materializer already places the native classifier JARs
-            // into the Maven tree, so derive their paths from the legacy Maven
-            // coordinate instead of rejecting a valid LaunchWrapper profile.
-            // If a modern classifiers map is present but incomplete, remain
-            // fail-closed because that indicates corrupted modern metadata.
+            // Метаданные Minecraft/Forge 1.7.x появились до downloads.classifiers.
+            // Материализатор Vanilla уже размещает нативные JAR с
+            // классификаторами в Maven-дереве, поэтому определяйте их пути
+            // по старым Maven-координатам, не отклоняя корректный
+            // LaunchWrapper-профиль. Неполная современная карта classifiers
+            // означает повреждение и требует строгого отказа.
             let native = match library.downloads.classifiers.get(&classifier) {
                 Some(native) => Some(native),
                 None if library.downloads.classifiers.is_empty() => None,
@@ -960,7 +960,7 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
 }
 
 fn macos_uses_sdl3_game_entry(minecraft_26x: bool, main_class: &str) -> bool {
-    // ForgeBootstrap owns an early GLFW window even on SDL 3 Minecraft versions.
+    // ForgeBootstrap владеет ранним окном GLFW даже в версиях Minecraft с SDL 3.
     minecraft_26x && !main_class.starts_with("net.minecraftforge.bootstrap.")
 }
 
@@ -1225,8 +1225,8 @@ fn detect_os_version() -> String {
         .unwrap_or_default();
 
     if std::env::consts::OS == "windows" {
-        // `cmd /C ver` returns a localized prefix around the numeric kernel version.
-        // Mojang rules compare against Java's `os.version`, so expose only the version token.
+        // `cmd /C ver` возвращает локализованный префикс перед числовой версией ядра. Правила
+        // Mojang сравнивают Java `os.version`, поэтому отдавайте только сам номер версии.
         if let Ok(version_re) = Regex::new(r"(?P<version>\d+(?:\.\d+){1,3})") {
             if let Some(captures) = version_re.captures(&raw) {
                 if let Some(version) = captures.name("version") {
@@ -1278,7 +1278,7 @@ mod tests {
         let mut sdl3 = vec!["-Xmx1024m".to_string()];
         ensure_macos_first_thread(&mut sdl3, "osx", true);
         assert_eq!(sdl3, ["-Xmx1024m"]);
-        // An upstream flag is preserved rather than silently overridden.
+        // Сохраняйте параметр издателя вместо незаметного переопределения.
         let mut upstream = vec!["-XstartOnFirstThread".to_string()];
         ensure_macos_first_thread(&mut upstream, "osx", true);
         assert_eq!(upstream, ["-XstartOnFirstThread"]);
@@ -1331,8 +1331,8 @@ mod tests {
 
     #[tokio::test]
     async fn modern_minecraft_without_native_jvm_property_uses_verified_platform_natives() {
-        // Minecraft 26.x uses its own LWJGL bootstrap and no longer guarantees
-        // the historic -Djava.library.path argument in the version metadata.
+        // Minecraft 26.x использует собственную загрузку LWJGL и больше не
+        // гарантирует прежний аргумент -Djava.library.path в метаданных версии.
         let root = temp_root("modern-native-jvm-args");
         stdfs::create_dir_all(root.join("versions/26.3")).unwrap();
         stdfs::write(
@@ -1469,9 +1469,9 @@ mod tests {
 
     #[test]
     fn os_specific_lwjgl_variants_preserve_the_active_mojang_library() {
-        // Mojang 1.6.4 contains both lwjgl:2.9.0 (Linux/Windows) and a
-        // later macOS-only nightly 2.9.1. The inactive entry must not override
-        // the active one merely because its Maven group/artifact is equal.
+        // Mojang 1.6.4 содержит и lwjgl:2.9.0 для Linux/Windows, и более позднюю
+        // ночную сборку 2.9.1 только для macOS. Неактивная запись не должна
+        // перекрывать активную лишь потому, что группа и артефакт Maven совпадают.
         let metadata: VersionMetadata = serde_json::from_str(r#"{
             "id":"1.6.4",
             "libraries":[

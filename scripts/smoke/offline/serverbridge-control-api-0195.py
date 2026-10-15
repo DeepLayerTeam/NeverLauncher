@@ -82,7 +82,7 @@ for rel, needles in checks.items():
         if needle not in text:
             raise SystemExit(f"{rel}: missing {needle!r}")
 
-# OS shell/process execution is forbidden in the complete Control API path.
+# В полном пути Control API запрещены запуск оболочки ОС и выполнение процессов.
 control_sources = [
     ROOT / "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java",
     ROOT / "plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.java",

@@ -139,8 +139,8 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 		})
 	}
 
-	// Passkey is a Never authentication method rather than an external connector;
-	// it must nevertheless traverse the same session -> refresh -> Minecraft boundary.
+	// Passkey — метод аутентификации Never, а не внешний коннектор, но
+	// должен проходить ту же цепочку session -> refresh -> Minecraft.
 	t.Run("passkey", func(t *testing.T) {
 		user := model.User{ID: "user-passkey-matrix", Email: "passkey@matrix.invalid", DisplayName: "Passkey Matrix", RoleID: "player", Status: "active", ProjectRoles: map[string]string{}}
 		if _, err := repo.SaveUser(user); err != nil {

@@ -24,8 +24,8 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["QUILT_COMPATIBILITY_II_0172"])
-# Four historical entries are retained in the catalogue but have no
-# Quilt upstream metadata: do not imply these have actual-client certificates.
+# Четыре исторические записи сохранены в каталоге, но не имеют данных от
+# издателя Quilt; нельзя подразумевать наличие сертификатов настоящего клиента.
 blocked = {mc: 8 for mc in ("1.14", "1.14.1", "1.14.2", "1.14.3")}
 expected.update(blocked)
 if len(expected) != 48 or expected.get("1.14") != 8 or expected.get("1.17") != 16 or expected.get("1.20.5") != 21 or expected.get("26.3") != 25:

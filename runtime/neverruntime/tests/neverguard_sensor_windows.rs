@@ -248,8 +248,8 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
     assert!(status.success(), "JVM-Aware foreign exec javac failed: {status}");
 }
 
-// Java 8/16/17 System.load() does not accept Win32 verbatim namespace paths
-// (\\?\C:\...). Keep canonicalization, but pass a normal absolute Windows path.
+// Java 8/16/17 System.load() не принимает дословные Win32 namespace-пути вида (\\?\C:\...).
+// Продолжайте каноникализацию, но передавайте обычный абсолютный путь Windows.
 fn java_native_load_path(path: &Path) -> PathBuf {
     let absolute = fs::canonicalize(path).expect("canonicalize native probe DLL");
     let value = absolute.to_string_lossy();

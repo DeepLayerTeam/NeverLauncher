@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class NeverLauncherApiClient {
-    // Legacy backend compatibility is server-side only; retained here as migration provenance for the 0.14.2 signing lineage.
+    // Совместимость со старым бэкендом поддерживается только сервером; запись сохранена здесь как происхождение миграции цепочки подписей 0.14.2.
     private static final String LEGACY_NODE_SIGNATURE_DOMAIN = "NeverLauncher-ServerBridge-Node-v1";
     private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION);
     private static final List<String> SUPPORTED_FEATURES = List.of(
@@ -175,8 +175,8 @@ public final class NeverLauncherApiClient {
         InterruptedException lastInterrupted = null;
         for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
             try {
-                // A retry is a new authenticated request with a fresh nonce. Reusing
-                // a signed request would correctly be rejected as a replay.
+                // Повторная попытка — новый аутентифицированный запрос с новым nonce. Повторное
+                // использование подписанного запроса справедливо отклоняется как воспроизведение.
                 HttpResponse<String> response = sendSignedWithFailover("POST", config.validateJoinPath(), body);
                 String raw = response.body() == null ? "" : response.body();
                 boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
@@ -357,7 +357,7 @@ public final class NeverLauncherApiClient {
         }
     }
 
-    /** Enqueue an individually signed event without blocking the game/proxy thread on HTTP. */
+    /** Ставьте отдельно подписанное событие в очередь, не блокируя игровой или прокси-поток HTTP-запросом. */
     public boolean publishEvent(String type, Map<String, String> payload) {
         BridgeEventJournal journal = eventJournal;
         if (journal == null || eventClosed.get()) return false;
@@ -385,7 +385,7 @@ public final class NeverLauncherApiClient {
         flushEventStream();
     }
 
-    /** Start the authenticated Backend -> Bridge control worker. Execution is serialized and at-most-once per command journal. */
+    /** Запускайте аутентифицированный исполнитель управления Backend -> Bridge. Выполнение сериализовано, максимум один раз на команду по журналу. */
     public synchronized void startControlChannel(BridgeControlExecutor executor) {
         if (executor == null) throw new IllegalArgumentException("control executor is required");
         if (runtimeIdentity == null || identity == null || controlJournal == null || controlTrust == null) return;
@@ -412,7 +412,7 @@ public final class NeverLauncherApiClient {
 
     private void pollControlSafely() {
         if (controlClosed.get()) return;
-        try { pollControlOnce(); } catch (Exception ignored) { /* heartbeat/events surface backend health; control retries next interval */ }
+        try { pollControlOnce(); } catch (Exception ignored) { /* Heartbeat и события показывают доступность серверной части; следующая попытка управления выполняется в следующем интервале. */ }
     }
 
     private void pollControlOnce() throws Exception {
@@ -507,7 +507,7 @@ public final class NeverLauncherApiClient {
         controlJournal.acknowledgeSequence(command.deliverySequence());
     }
 
-    /** Best-effort final flush; the journal remains authoritative if the backend is unavailable. */
+    /** По возможности выполните окончательный сброс; при недоступности бэкенда авторитетным остаётся журнал. */
     public void closeEventStreamCleanly() {
         closeControlChannel();
         if (!eventClosed.compareAndSet(false, true)) return;
@@ -550,7 +550,7 @@ public final class NeverLauncherApiClient {
     private long sendEventBatch(List<BridgeEventRecord> batch) throws IOException, InterruptedException, GeneralSecurityException {
         BridgeProtocolNegotiation protocol = negotiateProtocol();
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
-            return batch.get(batch.size() - 1).sequence(); // rolling-upgrade backend: bounded local queue, feature unavailable
+            return batch.get(batch.size() - 1).sequence(); // Серверная часть при постепенном обновлении: локальная очередь ограничена, функция недоступна.
         }
         StringBuilder events = new StringBuilder("[");
         for (int i = 0; i < batch.size(); i++) {
@@ -603,8 +603,8 @@ public final class NeverLauncherApiClient {
                     last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
                     continue;
                 }
-                // Authentication/authorization failures are deliberately terminal: failover must
-                // never turn a rejected signed request into an implicit fail-open retry policy.
+                // Ошибки аутентификации и авторизации намеренно считаются окончательными: переключение узла не
+                // должно превращать отклонённый подписанный запрос в неявную политику повторов с разрешением.
                 backendPool.success(endpoint.index());
                 return response;
             } catch (IOException e) {

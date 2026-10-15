@@ -89,9 +89,9 @@ func validateAndVerifyBridgeRouting0196(server bridgeServerRecord, raw *bridgeRo
 	if r.PlayersOnline < 0 || r.PlayersOnline > 1_000_000 || r.CapacityMax < 0 || r.CapacityMax > 1_000_000 || (r.CapacityMax > 0 && r.PlayersOnline > r.CapacityMax) {
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_capacity_invalid")
 	}
-	// The wire flags must be internally consistent. Maintenance/drain never accept
-	// new routes, unhealthy nodes never accept routes, and full finite-capacity
-	// targets never advertise acceptance.
+	// Сетевые флаги должны быть согласованы. Обслуживание или вывод из
+	// работы запрещают новые маршруты; нездоровые узлы их не принимают,
+	// заполненные цели с конечной вместимостью не объявляют приём.
 	expectedAccepting := r.State == "ready" && r.Health != "unhealthy" && (r.CapacityMax == 0 || r.PlayersOnline < r.CapacityMax)
 	if r.AcceptingConnections != expectedAccepting {
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("serverbridge_routing_accepting_inconsistent")

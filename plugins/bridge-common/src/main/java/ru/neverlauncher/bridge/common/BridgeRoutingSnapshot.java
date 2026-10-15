@@ -7,9 +7,9 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /**
- * Signed runtime-bound routing advertisement used by Topology & Routing 2.
- * The node key signs the exact state/capacity/health tuple so the backend never
- * trusts unsigned route state carried by a proxy or server heartbeat.
+ * Подписанное объявление маршрутов, привязанное к процессу, для Topology & Routing
+ * 2. Ключ узла подписывает точный набор состояния, вместимости и здоровья, чтобы
+ * бэкенд не доверял неподписанному маршруту из heartbeat прокси или сервера.
  */
 public record BridgeRoutingSnapshot(
     String runtimeId,

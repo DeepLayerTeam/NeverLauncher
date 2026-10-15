@@ -167,8 +167,8 @@ FABRIC_COMPATIBILITY_II_0171: dict[str, int] = {
 }
 
 
-# Quilt Meta v3 responds HTTP 404 for these Minecraft versions; retaining
-# them as required would falsely claim upstream loader availability.
+# Quilt Meta v3 возвращает HTTP 404 для этих версий Minecraft; объявлять их
+# обязательными означало бы ложно подтверждать наличие загрузчика у издателя.
 UPSTREAM_BLOCKED_QUILT = frozenset({"1.14", "1.14.1", "1.14.2", "1.14.3"})
 UPSTREAM_BLOCKED_NEOFORGE = frozenset({
     "1.20.3", "1.20.5", "1.21.2", "1.21.6", "1.21.7", "1.21.9", "26.1", "26.1.1"
@@ -179,16 +179,16 @@ BLOCKED_UPSTREAM_REASONS = {
     ("neoforge", version): "upstream-prerelease-only" for version in UPSTREAM_BLOCKED_NEOFORGE
 }
 
-# Keep unsupported historical versions in the catalogue (not certified).
+# Сохраняйте неподдерживаемые исторические версии в каталоге, но без сертификата.
 QUILT_COMPATIBILITY_II_0172: dict[str, int] = {
     version: java for version, java in FABRIC_COMPATIBILITY_II_0171.items()
     if version not in UPSTREAM_BLOCKED_QUILT
 }
 
 
-# Forge Modern 0.17.3 certifies the official processor-based Forge line.
-# Forge switched to the processor installer model at Minecraft 1.13.2;
-# release points follow the stable Forge promotions catalogue.
+# Forge Modern 0.17.3 сертифицирует официальную линейку Forge с
+# процессорным установщиком. Forge перешёл на эту модель с Minecraft
+# 1.13.2; версии выбираются по каталогу стабильных выпусков Forge.
 FORGE_MODERN_0173: dict[str, int] = {
     "1.13.2": 8,
     "1.14.2": 8, "1.14.3": 8, "1.14.4": 8,
@@ -207,9 +207,9 @@ FORGE_MODERN_0173: dict[str, int] = {
 FORGE_LEGACY_1122_0174: dict[str, int] = {"1.12.2": 8}
 FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 
-# NeoForge Compatibility II 0.17.6 certifies every stable NeoForge Minecraft
-# release from the original 1.20.x line through the current stable 26.2 line.
-# 26.3 is intentionally absent until a stable net.neoforged:neoforge build exists.
+# NeoForge Compatibility II 0.17.6 сертифицирует все стабильные выпуски NeoForge
+# от исходных 1.20.x до текущей стабильной линейки 26.2. Версия 26.3 намеренно
+# исключена до появления стабильной сборки net.neoforged:neoforge.
 NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "1.20.1": 17, "1.20.2": 17, "1.20.4": 17, "1.20.6": 21,
     "1.21": 21, "1.21.1": 21, "1.21.3": 21,
@@ -218,10 +218,10 @@ NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "26.1.2": 25, "26.2": 25,
 }
 
-# Cross-platform Loaders 0.17.9 certifies a real current client for each
-# loader family on every supported desktop OS/architecture pair.  The Linux
-# x86_64 row is the existing wide-line target; the other five rows are
-# additional required platform certifications.
+# Cross-platform Loaders 0.17.9 сертифицирует настоящий современный
+# клиент каждого семейства загрузчиков для каждой поддерживаемой пары
+# ОС и архитектуры. Linux x86_64 уже является широким контрольным
+# вариантом; остальные пять — дополнительные обязательные сертификации.
 CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
     "fabric": ("26.3", 25),
     "quilt": ("26.3", 25),
@@ -230,9 +230,9 @@ CROSS_PLATFORM_LOADERS_0179: dict[str, tuple[str, int]] = {
 }
 CROSS_PLATFORM_LOADER_PLATFORMS_0179: tuple[tuple[str, str], ...] = CROSS_PLATFORM_VANILLA_0169
 
-# Loader Hardening 0.17.10 reuses the current-loader anchors but binds a
-# deterministic Linux/x86_64 recovery probe to each family. No duplicate target
-# rows are added: the existing cross-platform anchor is strengthened in place.
+# Loader Hardening 0.17.10 повторно использует контрольные современные загрузчики, но добавляет
+# к каждому семейству детерминированную проверку восстановления Linux/x86_64. Новые строки
+# целей не создаются: существующие кроссплатформенные проверки усиливаются на месте.
 LOADER_HARDENING_01710: dict[str, tuple[str, int]] = dict(CROSS_PLATFORM_LOADERS_0179)
 
 
@@ -712,9 +712,9 @@ def load_targets(path: Path) -> dict[str, Any]:
             "required": required,
             **({"unavailableReason": unavailable_reason} if unavailable_reason is not None else {}),
         })
-    # Historical upstream-unavailable entries are still part of the immutable
-    # compatibility catalogue. Reject dropped/duplicated entries rather than
-    # silently shrinking the declared surface or manufacturing PASS evidence.
+    # Исторические версии, недоступные у издателя, остаются в неизменяемом
+    # каталоге совместимости. Отклоняйте исчезнувшие или дублированные
+    # элементы вместо молчаливого сокращения перечня либо фиктивных PASS.
     expected_blocked_java: dict[tuple[str, str], int] = {
         **{("quilt", mc): 8 for mc in UPSTREAM_BLOCKED_QUILT},
         **{("neoforge", mc): java for mc, java in {
@@ -783,8 +783,8 @@ def runner_for_target(target: dict[str, Any]) -> str:
 
 
 def java_distribution_for_target(target: dict[str, Any]) -> str:
-    # Microsoft OpenJDK publishes Windows ARM64 for Java 25; Temurin remains
-    # the default everywhere else. This affects CI certification only.
+    # Microsoft OpenJDK публикует Windows ARM64 для Java 25; в остальных случаях
+    # по умолчанию используется Temurin. Это относится только к сертификации CI.
     if target["os"] == "windows" and target["arch"] == "aarch64" and target["javaMajor"] in {21, 25}:
         return "microsoft"
     return "temurin"
@@ -795,8 +795,8 @@ def command_plan(args: argparse.Namespace) -> int:
     include = []
     for target in payload["targets"]:
         if not target["required"]:
-            # Explicitly unsupported upstream targets remain in published
-            # evidence but do not consume CI runners or forge PASS claims.
+            # Явно неподдерживаемые издателем цели остаются в публикуемых
+            # свидетельствах, но не расходуют CI-агенты и не порождают фиктивные PASS.
             continue
         row = dict(target)
         row["runner"] = runner_for_target(target)

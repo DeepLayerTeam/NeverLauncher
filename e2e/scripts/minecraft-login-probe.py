@@ -153,7 +153,7 @@ def send_protocol_packet(sock: socket.socket, payload: bytes, compression_thresh
 
 
 def offline_uuid(name: str) -> uuid.UUID:
-    # Equivalent shape to Java's nameUUIDFromBytes for OfflinePlayer:<name>.
+    # Та же структура, что у Java nameUUIDFromBytes для OfflinePlayer:<name>.
     import hashlib
     digest = bytearray(hashlib.md5(("OfflinePlayer:" + name).encode("utf-8")).digest())
     digest[6] = (digest[6] & 0x0F) | 0x30
@@ -205,15 +205,15 @@ def enter_configuration(
             continue
         if packet_id == LOGIN_CUSTOM_QUERY:
             transaction_id, _ = decode_varint(payload)
-            # A null custom-query response identifies this as a vanilla client.
-            # FriendlyByteBuf.writeNullable encodes null as a single false byte.
+            # Ответ null на пользовательский запрос указывает на клиент Vanilla.
+            # FriendlyByteBuf.writeNullable кодирует null одним байтом false.
             response = varint(SERVERBOUND_LOGIN_CUSTOM_QUERY_ANSWER) + varint(transaction_id) + b"\x00"
             send_protocol_packet(sock, response, compression_threshold)
             continue
         if packet_id == LOGIN_COOKIE_REQUEST:
-            # No E2E runtime currently requests cookies during login. Failing
-            # closed here prevents silently claiming CONFIGURATION coverage if
-            # the protocol gains a prerequisite that this probe does not honor.
+            # Пока ни одна среда E2E не запрашивает cookies при входе. Строгий
+            # отказ не позволит безосновательно заявлять проверку CONFIGURATION,
+            # если в протоколе появится обязательный шаг, не реализованный здесь.
             raise ProtocolError("server requested an unsupported login cookie")
         if packet_id == LOGIN_SUCCESS:
             acknowledgement = varint(SERVERBOUND_LOGIN_ACKNOWLEDGED)
@@ -292,9 +292,9 @@ def drive_neoforge_configuration(
             continue
 
         if packet_id == CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS:
-            # ServerboundSelectKnownPacks encodes a collection. An empty list is
-            # a valid vanilla-client answer and makes the server send the full
-            # registry data before advancing to later configuration tasks.
+            # ServerboundSelectKnownPacks кодирует коллекцию. Пустой список
+            # допустим для клиента Vanilla и заставляет сервер отправить
+            # полный реестр перед следующими задачами конфигурации.
             response = varint(CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS) + varint(0)
             send_protocol_packet(sock, response, compression_threshold)
             known_packs_responses += 1
@@ -407,14 +407,14 @@ def main() -> int:
             if not response:
                 terminal = "eof"
         except socket.timeout:
-            # The default probe is only a login stimulus. The bridge decision is
-            # asserted by mandatory NeverLauncher allow/deny log checks.
+            # Обычный пробный запрос лишь инициирует вход. Решение моста проверяется
+            # обязательными записями разрешения или отказа NeverLauncher в журнале.
             response = b""
             terminal = "timeout"
         except ConnectionResetError:
-            # Proxy/Bukkit-family runtimes may abort the intentionally
-            # incomplete login exchange with TCP RST after consuming the login
-            # stimulus. Connect/send failures remain fatal.
+            # Среды прокси и Bukkit могут сбрасывать TCP-соединение
+            # через RST после намеренно неполного обмена входа. Ошибки
+            # подключения или отправки по-прежнему критичны.
             response = b""
             terminal = "reset"
     print(

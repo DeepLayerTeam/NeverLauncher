@@ -19,9 +19,9 @@ const (
 	serverBridgeV3GAMode0200              = "ga-frozen"
 )
 
-// serverBridgeV3FrozenFeatureSet0200 is the GA wire feature set. Protocol v3 is
-// frozen in 0.20.0: later product capabilities must use a new protocol version
-// instead of silently mutating the meaning of v3 negotiation.
+// serverBridgeV3FrozenFeatureSet0200 — зафиксированный набор сетевых возможностей
+// GA. Protocol v3 заморожен в 0.20.0: новые функции продукта должны получать
+// новую версию протокола, а не молча менять смысл согласования v3.
 func serverBridgeV3FrozenFeatureSet0200() []string {
 	return []string{
 		serverBridgeFeatureCapabilityNegotiation,

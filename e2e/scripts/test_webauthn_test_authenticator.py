@@ -21,9 +21,9 @@ class WebAuthnTestAuthenticator(unittest.TestCase):
     def test_registration_and_signed_assertion(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
-            # 0xf8 starts with base64url index 62 ('-'). These values reproduce
-            # the argparse failure that occurs when an opaque value is passed as
-            # a separate argv element after --challenge/--user-handle.
+            # 0xf8 начинается с индекса base64url 62 ('-'). Значения
+            # воспроизводят сбой argparse при передаче непрозрачного значения
+            # отдельным аргументом argv после --challenge/--user-handle.
             challenge = base64.urlsafe_b64encode(b"\xf8registration-challenge-32-byte!!").rstrip(b"=").decode()
             user_handle = base64.urlsafe_b64encode(b"\xf8user-handle-32-byte-test-value!!").rstrip(b"=").decode()
             self.assertTrue(challenge.startswith("-"))

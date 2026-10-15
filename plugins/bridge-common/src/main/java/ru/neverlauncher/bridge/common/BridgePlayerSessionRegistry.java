@@ -4,9 +4,9 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Runtime correlation registry for the logical NeverLauncher -> proxy -> backend
- * player lifecycle. Correlations are opaque backend-issued 256-bit identifiers;
- * invalid values are never propagated into handoff/event traffic.
+ * Реестр связей времени выполнения для логического жизненного цикла игрока NeverLauncher
+ * -> proxy -> backend. Связи — непрозрачные 256-битные идентификаторы, выданные бэкендом;
+ * неверные значения никогда не передаются в сообщения передачи или событий.
  */
 public final class BridgePlayerSessionRegistry {
     private final ConcurrentHashMap<String, String> correlations = new ConcurrentHashMap<>();

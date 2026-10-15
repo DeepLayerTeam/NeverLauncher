@@ -43,13 +43,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
- * Production Bukkit-family ServerBridge runtime shared by CraftBukkit, Spigot,
- * Paper, Purpur and Folia artifacts.
+ * Производственная среда ServerBridge семейства Bukkit, общая
+ * для артефактов CraftBukkit, Spigot, Paper, Purpur и Folia.
  *
- * No Bukkit scheduler is used for network I/O. Heartbeats run on a dedicated
- * daemon executor, which avoids main-thread stalls on classic servers and avoids
- * illegal global/region scheduler assumptions on Folia. Login validation runs in
- * AsyncPlayerPreLoginEvent and must complete before the server accepts the login.
+ * Планировщик Bukkit не используется для сетевого ввода-вывода. Heartbeat выполняются
+ * выделенным фоновым executor, предотвращая задержки главного потока старых серверов
+ * и недопустимые предположения о глобальном или региональном планировщике Folia. Вход
+ * проверяется в AsyncPlayerPreLoginEvent до допуска пользователя сервером.
  */
 public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Listener, CommandExecutor {
     private final BukkitFamilyPlatform expectedPlatform;
@@ -318,9 +318,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             }
             return;
         }
-        // Folia does not permit a classic Bukkit scheduler task. Use the global
-        // region scheduler reflectively so bridge-common keeps a Spigot API
-        // compile surface while the dedicated Folia artifact remains region-safe.
+        // Folia не разрешает стандартную задачу планировщика Bukkit. Используйте глобальный
+        // региональный планировщик через рефлексию, чтобы bridge-common продолжал собираться
+        // с API Spigot, а отдельный артефакт Folia соблюдал региональные правила.
         try {
             Method getter = Bukkit.class.getMethod("getGlobalRegionScheduler");
             Object scheduler = getter.invoke(null);
@@ -380,11 +380,11 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             metrics.add("worlds");
             metrics.add("dimensions");
 
-            // Paper/Purpur expose constant-time world counters. Bukkit/Spigot
-            // only expose APIs that materialize loaded-chunk/entity collections,
-            // which can violate the telemetry sampling budget on large worlds.
-            // Folia also requires region ownership for arbitrary world state, so
-            // those platforms intentionally report these counters as unsupported.
+            // Paper/Purpur предоставляют счётчики мира за O(1). Bukkit/Spigot имеют
+            // только API с формированием коллекций загруженных чанков и сущностей,
+            // что на больших мирах превышает лимит сбора телеметрии. Folia также
+            // требует владения регионом для произвольного состояния мира, поэтому
+            // для этих платформ счётчики намеренно помечены неподдерживаемыми.
             if (adapterProfile.supports(BridgeAdapterCapability.TELEMETRY_BOUNDED_WORLD_COUNTERS) && loaded.size() <= 64) {
                 long chunkTotal = 0L;
                 long entityTotal = 0L;
@@ -414,7 +414,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 budgetExceeded = true;
             }
         } catch (RuntimeException e) {
-            // Metrics are best-effort and never allowed to affect login/auth.
+            // Метрики собираются по возможности и никогда не должны влиять на вход или аутентификацию.
             budgetExceeded = true;
         }
 

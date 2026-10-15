@@ -989,8 +989,8 @@ func TestInstallVanillaServerRejectsMissingServerDownload(t *testing.T) {
 	}
 }
 
-// Minecraft 26.x can omit Mojang Linux ARM64 classifiers while retaining
-// the Java LWJGL modules. The fallback must never use x86_64 artifacts.
+// Minecraft 26.x может не содержать Linux ARM64-классификаторов Mojang, сохраняя
+// Java-модули LWJGL. Резервный механизм ни в коем случае не должен брать артефакты x86_64.
 func TestLWJGLLinuxARM64Fallback(t *testing.T) {
 	arm := vanillaTarget{OS: "linux", Arch: "aarch64"}
 	want := "org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3-natives-linux-arm64.jar"

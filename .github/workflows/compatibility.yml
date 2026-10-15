@@ -56,11 +56,11 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
-          # Forge 1.16.3/1.16.4 bundle ModLauncher 8.0.x, which references
-          # the one-argument ManifestEntryVerifier constructor removed in
-          # Java 8u321. This compatibility-only job must use the original
-          # supported Java 8 update; other targets retain current patched Java.
-          # Never use this retired JDK for production/authenticated workloads.
+          # Forge 1.16.3/1.16.4 содержит ModLauncher 8.0.x, который использует
+          # однопараметрический конструктор ManifestEntryVerifier, удалённый в Java 8u321.
+          # Только для этой проверки совместимости требуется исходное поддерживаемое
+          # обновление Java 8; остальные цели используют актуальную исправленную Java.
+          # Не применяйте устаревший JDK в производстве или при работе с аутентификацией.
           java-version: ${{ matrix.loader == 'forge' && (matrix.minecraft == '1.16.3' || matrix.minecraft == '1.16.4') && '8.0.312+7' || matrix.javaMajor }}
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
@@ -74,10 +74,10 @@ jobs:
           fi
           printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for loader/Gradle build tooling
-        # Vanilla certification invokes Go, Rust and the already pinned target
-        # JVM only; it never runs Gradle. A second JDK download makes otherwise
-        # valid ARM64 jobs fail on transient Adoptium/GitHub HTTP 5xx responses.
-        # Loader and integration jobs retain the existing Java 21 toolchain.
+        # Сертификация Vanilla запускает только Go, Rust и уже закреплённую целевую
+        # JVM; Gradle не используется. Повторная загрузка JDK приводит к сбоям
+        # корректных ARM64-заданий при временных ошибках HTTP 5xx от Adoptium/GitHub.
+        # Для загрузчиков и интеграционных проверок сохраняется Java 21.
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         uses: actions/setup-java@v4
         with:
@@ -98,8 +98,8 @@ jobs:
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
             libvulkan1 mesa-vulkan-drivers \
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
-          # Minecraft 26.x can require Vulkan WSI as well as OpenGL. Select
-          # Mesa's real software ICD rather than a non-existent hosted GPU.
+          # Minecraft 26.x может требовать Vulkan WSI наряду с OpenGL. Выбирайте настоящий
+          # программный ICD Mesa вместо отсутствующего GPU на размещённом агенте.
           for icd in /usr/share/vulkan/icd.d/lvp_icd.*.json; do
             if [[ -f "$icd" ]] && [[ "$icd" == *"$(uname -m)"* ]]; then
               printf 'VK_DRIVER_FILES=%s\n' "$icd" >> "$GITHUB_ENV"
@@ -209,10 +209,10 @@ jobs:
             e2e/runtime/bridge-diagnostics.json
           if-no-files-found: error
           retention-days: 14
-      # GitHub's artifact service can time out during CreateArtifact even
-      # when the real Minecraft/client certification finished successfully.
-      # Retry the same machine-verifiable evidence, never synthesize PASS.
-      # If the retry fails, it remains a required failed job.
+      # Сервис артефактов GitHub иногда выдаёт тайм-аут CreateArtifact даже после
+      # успешной сертификации реального клиента Minecraft. Повторно отправляйте
+      # те же машинно проверяемые свидетельства, никогда не подделывайте PASS.
+      # Неудачная повторная попытка остаётся обязательным проваленным заданием.
       - name: Retry transient compatibility evidence upload
         if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -235,11 +235,11 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.javaDistribution }}
-          # Forge 1.16.3/1.16.4 bundle ModLauncher 8.0.x, which references
-          # the one-argument ManifestEntryVerifier constructor removed in
-          # Java 8u321. This compatibility-only job must use the original
-          # supported Java 8 update; other targets retain current patched Java.
-          # Never use this retired JDK for production/authenticated workloads.
+          # Forge 1.16.3/1.16.4 содержит ModLauncher 8.0.x, который использует
+          # однопараметрический конструктор ManifestEntryVerifier, удалённый в Java 8u321.
+          # Только для этой проверки совместимости требуется исходное поддерживаемое
+          # обновление Java 8; остальные цели используют актуальную исправленную Java.
+          # Не применяйте устаревший JDK в производстве или при работе с аутентификацией.
           java-version: ${{ matrix.loader == 'forge' && (matrix.minecraft == '1.16.3' || matrix.minecraft == '1.16.4') && '8.0.312+7' || matrix.javaMajor }}
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       - name: Pin target Java executable for the Minecraft client
@@ -253,10 +253,10 @@ jobs:
           fi
           printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for loader/Gradle build tooling
-        # Vanilla certification invokes Go, Rust and the already pinned target
-        # JVM only; it never runs Gradle. A second JDK download makes otherwise
-        # valid ARM64 jobs fail on transient Adoptium/GitHub HTTP 5xx responses.
-        # Loader and integration jobs retain the existing Java 21 toolchain.
+        # Сертификация Vanilla запускает только Go, Rust и уже закреплённую целевую
+        # JVM; Gradle не используется. Повторная загрузка JDK приводит к сбоям
+        # корректных ARM64-заданий при временных ошибках HTTP 5xx от Adoptium/GitHub.
+        # Для загрузчиков и интеграционных проверок сохраняется Java 21.
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         uses: actions/setup-java@v4
         with:
@@ -277,8 +277,8 @@ jobs:
             jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
             libvulkan1 mesa-vulkan-drivers \
             libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
-          # Minecraft 26.x can require Vulkan WSI as well as OpenGL. Select
-          # Mesa's real software ICD rather than a non-existent hosted GPU.
+          # Minecraft 26.x может требовать Vulkan WSI наряду с OpenGL. Выбирайте настоящий
+          # программный ICD Mesa вместо отсутствующего GPU на размещённом агенте.
           for icd in /usr/share/vulkan/icd.d/lvp_icd.*.json; do
             if [[ -f "$icd" ]] && [[ "$icd" == *"$(uname -m)"* ]]; then
               printf 'VK_DRIVER_FILES=%s\n' "$icd" >> "$GITHUB_ENV"
@@ -387,10 +387,10 @@ jobs:
             e2e/runtime/bridge-diagnostics.json
           if-no-files-found: error
           retention-days: 14
-      # GitHub's artifact service can time out during CreateArtifact even
-      # when the real Minecraft/client certification finished successfully.
-      # Retry the same machine-verifiable evidence, never synthesize PASS.
-      # If the retry fails, it remains a required failed job.
+      # Сервис артефактов GitHub иногда выдаёт тайм-аут CreateArtifact даже после
+      # успешной сертификации реального клиента Minecraft. Повторно отправляйте
+      # те же машинно проверяемые свидетельства, никогда не подделывайте PASS.
+      # Неудачная повторная попытка остаётся обязательным проваленным заданием.
       - name: Retry transient compatibility evidence upload
         if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
         uses: actions/upload-artifact@v4

@@ -50,8 +50,8 @@ def safe_rel(rel: str) -> bool:
     for part in p.parts:
         if part not in EXCLUDED_PARTS:
             continue
-        # scripts/build contains the canonical ServerBridge production build entrypoint.
-        # Other build directories remain generated output and must stay excluded.
+        # В scripts/build лежит каноническая точка производственной сборки ServerBridge.
+        # Другие каталоги сборки содержат сгенерированные файлы и должны исключаться.
         if part == "build" and len(p.parts) >= 2 and p.parts[0] == "scripts" and p.parts[1] == "build":
             continue
         return False

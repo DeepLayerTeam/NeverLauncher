@@ -31,8 +31,8 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 		s.ServerBridgeReplicaID = fmt.Sprintf("%s-%d", hostname, os.Getpid())
 	}
 
-	// ServerBridge HA has its own Redis fence. It is independent from rate limiting:
-	// production control delivery must not silently fall back to process-local state.
+	// У ServerBridge HA собственный Redis-ограничитель. Он независим от rate limiting:
+	// производственная доставка команд не должна молча переходить к локальному состоянию процесса.
 	if strings.TrimSpace(cfg.RedisURL) != "" {
 		coordinator, coordErr := serverbridgeha.NewRedis(cfg.RedisURL)
 		if coordErr == nil {

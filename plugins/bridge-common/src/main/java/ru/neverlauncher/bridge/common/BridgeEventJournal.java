@@ -20,9 +20,9 @@ import java.util.TreeMap;
 import java.util.Set;
 
 /**
- * Small append-only durable journal for the ordered event stream. ACK records are
- * fsynced before pending events are discarded. The file is compacted atomically
- * after bounded progress so plugin reload/reconnect resumes from the last ACK.
+ * Небольшой постоянный журнал только для добавления записей упорядоченного потока событий. Записи ACK
+ * синхронизируются с диском до удаления ожидающих событий. После ограниченного прогресса файл атомарно
+ * уплотняется, чтобы перезагрузка плагина или повторное соединение продолжались с последнего ACK.
  */
 public final class BridgeEventJournal {
     private static final Set<PosixFilePermission> PRIVATE_PERMISSIONS = PosixFilePermissions.fromString("rw-------");
@@ -120,7 +120,7 @@ public final class BridgeEventJournal {
                     if (event != null && event.sequence() > loadedAck) loaded.put(event.sequence(), event);
                     clean = false;
                 }
-                default -> { /* forward-compatible journal reader */ }
+                default -> { /* Чтение журнала совместимо с будущими версиями. */ }
             }
         }
         if (!runtimeId.equalsIgnoreCase(existingRuntime)) {
@@ -195,7 +195,7 @@ public final class BridgeEventJournal {
             String runtimeId = eventId.length() >= 64 ? eventId.substring(0, 64) : "";
             if (runtimeId.length() != 64) return null;
             if (parts.length == 8) {
-                // Upgrade a pending pre-0.19.12 event in-place: preserve sequence/time/payload but re-sign in Protocol v3.
+                // Обновите ожидающее событие версии до 0.19.12 на месте: сохраните последовательность, время и данные, но подпишите заново по Protocol v3.
                 return BridgeEventRecord.signed(sequence, serverId, runtimeId, type, occurred, payload, identity);
             }
             return new BridgeEventRecord(sequence, eventId, runtimeId, type, occurred, payload, digest,

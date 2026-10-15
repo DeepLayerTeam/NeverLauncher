@@ -1,6 +1,6 @@
--- NeverLauncher 0.12.1 — Device Trust Core + persistent device registry.
--- Existing auth_sessions.device_id remains an untrusted client label for compatibility.
--- trusted_device_id is populated only after an Ed25519 proof-of-possession ceremony.
+-- NeverLauncher 0.12.1: ядро доверия устройствам и постоянный реестр. Старое
+-- auth_sessions.device_id остаётся недоверенной меткой клиента ради совместимости.
+-- trusted_device_id заполняется только после подтверждения владения Ed25519-ключом.
 
 CREATE TABLE IF NOT EXISTS trusted_devices (
     id TEXT PRIMARY KEY,

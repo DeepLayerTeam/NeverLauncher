@@ -246,7 +246,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 		}
 	}
 
-	// Loader layouts can expose an unambiguous platform even when the launcher/server JAR is a bootstrap wrapper.
+	// Структура загрузчиков позволяет однозначно определить платформу, даже когда JAR лаунчера или сервера является загрузочной обёрткой.
 	pathHints := []struct {
 		rel, platform string
 		score         int
@@ -562,7 +562,7 @@ func provisionServerBridge0199(args []string, requireExisting bool) error {
 		}
 	}()
 
-	// Remove old managed bridge artifacts transactionally before placing the exact platform artifact.
+	// Удаляйте старые управляемые артефакты моста транзакционно перед размещением точного артефакта платформы.
 	for _, old := range oldArtifacts {
 		if filepath.Clean(old) == filepath.Clean(target) {
 			continue
@@ -1044,7 +1044,7 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 	if !strings.EqualFold(fp, values["keyFingerprint"]) {
 		return bridgeIdentityMaterial0199{}, errors.New("node identity fingerprint mismatch")
 	}
-	// Ensure Java runtime will be able to parse the private key material before provisioning succeeds.
+	// До успешного завершения подготовки проверьте, что среда Java сможет разобрать материал закрытого ключа.
 	privDER, err := base64.RawURLEncoding.DecodeString(values["privateKeyPkcs8"])
 	if err != nil {
 		return bridgeIdentityMaterial0199{}, errors.New("invalid node identity privateKeyPkcs8")
@@ -1098,7 +1098,7 @@ func enrollServerBridge0199(args []string) error {
 	}
 	payload, err := httpJSONWithAuth("POST", backend+endpoint, body, token)
 	if err != nil && !rotate {
-		// Registration is intentionally idempotent when the exact node identity is already present.
+		// Регистрация намеренно идемпотентна, если точно такая идентичность узла уже существует.
 		listed, listErr := httpJSONWithAuth("GET", backend+"/api/v1/server-bridge/servers", nil, token)
 		if listErr == nil {
 			if node := findBackendBridgeNode0199(listed, req.ID); node != nil {
@@ -1494,10 +1494,10 @@ func atomicWrite0199(path string, data []byte, mode os.FileMode) error {
 	return nil
 }
 
-// replaceFile0199 keeps the same-directory temp-file write atomic on platforms
-// where rename-over-existing is supported. Windows does not guarantee that
-// behaviour, so fall back to remove+rename; the provisioning transaction has
-// already snapshotted managed destinations before this helper is used.
+// replaceFile0199 обеспечивает атомарность записи во временный файл того же каталога
+// на платформах, допускающих переименование поверх существующего файла. В Windows
+// это не гарантируется, поэтому применяется удаление и переименование; до вызова
+// помощника транзакция подготовки уже создала снимки управляемых назначений.
 func replaceFile0199(tempName, dst string) error {
 	err := os.Rename(tempName, dst)
 	if err == nil {

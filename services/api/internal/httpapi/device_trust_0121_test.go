@@ -202,8 +202,8 @@ func TestDeviceTrustRejectsWrongSignatureAndDuplicateKey0121(t *testing.T) {
 	if newAccess, _ := deviceTrustData0121(t, out)["accessToken"].(string); newAccess == "" {
 		t.Fatal("first registration did not return access token")
 	}
-	// 0.12.8 forbids enrolling a second key from an already-bound session. Use a fresh
-	// unbound session for the same account to keep testing the fingerprint tombstone.
+	// Версия 0.12.8 запрещает второй ключ из уже привязанного сеанса. Для проверки постоянного
+	// запрета по отпечатку используйте новый непривязанный сеанс той же учётной записи.
 	access, _ = deviceTrustLogin0121(t, h, "duplicate-key-unbound")
 	code, out = register("Duplicate key", false)
 	if code != http.StatusConflict {

@@ -18,10 +18,10 @@ import (
 var ErrLeaseBusy = errors.New("durable scope lease busy")
 var ErrLeaseLost = errors.New("durable lease lost")
 
-// DurableControlPlane is implemented by repositories that can persist work,
-// fencing leases, transactional publication and outbox delivery across process
-// restarts. PostgreSQL and the deterministic in-memory test repository implement
-// the same semantics; production uses PostgreSQL.
+// DurableControlPlane реализуют репозитории, способные сохранять задачи, защищённые
+// аренды, транзакционную публикацию и доставку через outbox между перезапусками
+// процессов. PostgreSQL и детерминированный тестовый репозиторий в памяти реализуют
+// одинаковую семантику; в производственной среде используется PostgreSQL.
 type DurableControlPlane interface {
 	EnqueueDurableJob(ctx context.Context, job model.DurableJob, ttl time.Duration) (model.DurableJob, bool, error)
 	GetDurableJob(ctx context.Context, id string) (model.DurableJob, error)
@@ -142,8 +142,8 @@ func (r *SQLRepository) EnqueueDurableJob(ctx context.Context, job model.Durable
 	}
 	defer tx.Rollback()
 
-	// The explicit idempotency ledger prevents accidental re-use of a caller key
-	// with different request bytes. The job's own unique key is a second guard.
+	// Явный журнал идемпотентности предотвращает случайное повторное использование ключа вызывающей
+	// стороны с другими байтами запроса. Уникальный ключ самой задачи служит второй защитой.
 	res, err := tx.ExecContext(ctx, `INSERT INTO idempotency_records(scope,idempotency_key,request_digest,status,response,created_at,updated_at,expires_at)
 VALUES($1,$2,$3,'in-progress',$4::jsonb,now(),now(),$5)
 ON CONFLICT(scope,idempotency_key) DO NOTHING`, durableJobIdempotencyScope0213(job), job.IdempotencyKey, job.PayloadDigest, `{"jobId":"`+job.ID+`"}`, time.Now().UTC().Add(ttl))
@@ -230,8 +230,8 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		return current, ErrLeaseBusy
 	}
 	if current.Status == model.DurableJobStatusRunning && !current.LeaseExpiresAt.After(now) && current.AttemptCount > 0 {
-		// Close the abandoned attempt before fencing a replacement worker. Leaving
-		// it marked running would make restart recovery operationally ambiguous.
+		// Закройте брошенную попытку перед блокировкой прежнего работника и назначением
+		// нового. Иначе статус running сделает восстановление после перезапуска неоднозначным.
 		if _, err := tx.ExecContext(ctx, `UPDATE durable_job_attempts SET status='failed',error='lease expired; recovered by another worker',finished_at=$3 WHERE job_id=$1 AND attempt=$2 AND status='running'`, current.ID, current.AttemptCount, now); err != nil {
 			return model.DurableJob{}, err
 		}
@@ -752,9 +752,9 @@ func (r *SQLRepository) ConsumeDurableNonce(ctx context.Context, namespace, nonc
 		return err
 	}
 	defer tx.Rollback()
-	// Expiry is part of the nonce contract, not merely retention metadata. Remove
-	// an expired matching nonce under the same transaction before attempting the
-	// single-use insert; a live nonce remains conflict-protected across replicas.
+	// Срок действия входит в контракт одноразового номера, а не просто задаёт
+	// хранение. Удалите истёкший номер в той же транзакции до одноразовой вставки;
+	// действующий номер останется защищён от конфликтов между репликами.
 	if _, err := tx.ExecContext(ctx, `DELETE FROM used_nonces WHERE namespace=$1 AND nonce_hash=$2 AND expires_at<=now()`, namespace, nonceHash); err != nil {
 		return err
 	}

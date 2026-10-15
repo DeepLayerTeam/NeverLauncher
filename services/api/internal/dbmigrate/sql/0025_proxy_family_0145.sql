@@ -1,6 +1,6 @@
--- NeverLauncher 0.14.5 — Proxy family: Velocity/BungeeCord/Waterfall.
--- Expand the durable ServerBridge node-kind invariant for Bungee-compatible
--- proxies while preserving Protocol v2, Ed25519 identity and one-time tickets.
+-- NeverLauncher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет
+-- постоянный инвариант типа узла ServerBridge для совместимых с Bungee прокси,
+-- сохраняя Protocol v2, Ed25519-идентичность и одноразовые разрешения.
 
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_kind_check;

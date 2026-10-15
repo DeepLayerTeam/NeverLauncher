@@ -13,8 +13,8 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
-// The integrity validator persists a transition from staged to integrity-passed.
-// Durable publish must enqueue that updated status, not the stale staged snapshot.
+// Проверяющий компонент сохраняет переход staged -> integrity-passed. Постоянная
+// публикация должна ставить в очередь обновлённый статус, а не устаревший снимок staged.
 func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://127.0.0.1")
 	store := storage.NewLocalStorage(t.TempDir())
@@ -47,8 +47,8 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	if _, err := srv.prepareAdminPublish0212(req, current); err == nil {
 		t.Fatal("publish must reject a release before explicit signing and integrity validation")
 	}
-	// Replicate the canonical sign -> stage -> integrity-check pipeline. This
-	// must happen before entering the administrative publish transaction.
+	// Повторите канонический конвейер sign -> stage -> integrity-check
+	// до начала административной транзакции публикации.
 	manifest := current.Manifest
 	manifest.Files = []model.ManifestFile{{Path: "client/data.jar", URL: key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}}
 	signed, err := srv.signManifest(manifest)

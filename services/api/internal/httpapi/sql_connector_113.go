@@ -15,10 +15,10 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
-// NewFederationCore builds the stable 0.12+ production provider registry. Every configured
-// provider is opened, health-checked, SDK-conformance checked and registered before
-// the API accepts traffic. A broken SQL/HTTP/OIDC provider therefore fails startup
-// instead of silently degrading authentication to another provider.
+// NewFederationCore создаёт устойчивый производственный реестр провайдеров
+// 0.12+. Каждый настроенный провайдер открывается, проходит проверку здоровья
+// и соответствия SDK и регистрируется до приёма трафика API. Неисправный
+// SQL/HTTP/OIDC провайдер мешает запуску, а не молча переносит вход к другому.
 func NewFederationCore(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	core := federation.New(repo)
 	local := localAuthConnector112{repo: repo}
@@ -123,19 +123,19 @@ func registerFederatedConnector(ctx context.Context, core *federation.Core, conn
 	return core.RegisterWithPolicy(connector, policy)
 }
 
-// NewFederationCore116 remains source-compatible for 0.11.6+ embedders.
+// NewFederationCore116 сохраняет совместимость исходного кода для встраиваний с 0.11.6+.
 func NewFederationCore116(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }
 
-// NewFederationCore115 remains source-compatible for 0.11.5 embedders.
+// NewFederationCore115 сохраняет совместимость исходного кода для встраиваний 0.11.5.
 func NewFederationCore115(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }
 
-// NewFederationCore113 remains source-compatible for embedders/tests compiled against
-// 0.11.3. It now delegates to the current registry and therefore also loads HTTP
-// providers when they are configured.
+// NewFederationCore113 сохраняет совместимость с встраиваниями
+// и тестами 0.11.3. Теперь он делегирует текущему реестру
+// и загружает также настроенные HTTP-провайдеры.
 func NewFederationCore114(ctx context.Context, repo repository.Repository, cfg config.Config) (*federation.Core, error) {
 	return NewFederationCore(ctx, repo, cfg)
 }

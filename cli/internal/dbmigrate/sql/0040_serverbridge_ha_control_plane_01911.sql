@@ -1,10 +1,10 @@
--- NeverLauncher 0.19.11: HA ServerBridge control-plane sequencing and fenced ownership.
+-- NeverLauncher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от устаревших исполнителей.
 ALTER TABLE server_bridge_control_commands_v3
     ADD COLUMN IF NOT EXISTS delivery_sequence BIGSERIAL,
     ADD COLUMN IF NOT EXISTS lease_owner TEXT NOT NULL DEFAULT '',
     ADD COLUMN IF NOT EXISTS lease_token TEXT NOT NULL DEFAULT '';
 
--- Existing rows receive deterministic sequence values from the backing sequence.
+-- Существующим строкам назначаются детерминированные значения из базовой последовательности.
 UPDATE server_bridge_control_commands_v3
 SET delivery_sequence = nextval(pg_get_serial_sequence('server_bridge_control_commands_v3','delivery_sequence'))
 WHERE delivery_sequence IS NULL;

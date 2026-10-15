@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Minimal bounded implementation of the Minecraft Source-RCON wire protocol. */
+/** Минимальная ограниченная реализация сетевого протокола Minecraft Source-RCON. */
 final class VanillaRconClient implements AutoCloseable {
     private static final int MAX_PACKET = 1024 * 1024;
     private final Socket socket = new Socket();

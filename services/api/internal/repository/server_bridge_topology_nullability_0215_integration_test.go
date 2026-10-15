@@ -10,9 +10,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// A topology read includes *all* registered proxy/backend pairs, including
-// legacy and just-registered nodes without a signed routing snapshot. Such
-// pairs must be marked stale, not fail with a SQL NULL -> time.Time scan error.
+// Чтение топологии включает все зарегистрированные пары прокси и серверной части, в том числе
+// устаревшие и только что зарегистрированные узлы без подписанного снимка маршрутизации. Такие
+// пары следует помечать как устаревшие, а не завершать запрос ошибкой SQL NULL → time.Time.
 func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
@@ -48,8 +48,8 @@ func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = r.db.ExecContext(context.Background(), `DELETE FROM server_bridge_nodes_v2 WHERE id=$1 OR id=$2`, ids[0], ids[1])
 	})
-	// One node has a heartbeat, but neither has a routing snapshot. This
-	// deliberately exercises both nullable timestamp fallback paths.
+	// Один узел отправил heartbeat, но у обоих нет снимка маршрутизации. Так
+	// намеренно проверяются оба пути обработки отсутствующих временных меток.
 	if err := r.TouchServerBridgeNodeHeartbeat(ctx, ids[0], "velocity", "0.21.5", 2, now); err != nil {
 		t.Fatal(err)
 	}

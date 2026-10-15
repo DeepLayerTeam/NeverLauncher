@@ -44,9 +44,9 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 }
 
 func consumePasswordWork(secret string, cfg PasswordConfig) {
-	// Unknown identifiers deliberately perform algorithm-appropriate work so a remote
-	// caller cannot trivially distinguish "user missing" from "password wrong" by
-	// comparing password-hash latency. Errors/results are intentionally discarded.
+	// Для неизвестных идентификаторов намеренно выполняется подходящая для алгоритма работа,
+	// чтобы удалённый клиент не мог легко отличить «пользователь не найден» от «неверный
+	// пароль» по длительности хеширования. Ошибки и результаты намеренно отбрасываются.
 	var encoded string
 	switch cfg.Algorithm {
 	case "argon2id":

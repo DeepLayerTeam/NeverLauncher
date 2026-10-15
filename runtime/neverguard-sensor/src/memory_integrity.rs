@@ -21,9 +21,9 @@ const PAGE_EXECUTE_READWRITE: u32 = 0x40;
 const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
 const PAGE_GUARD: u32 = 0x100;
 const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
-// Large HotSpot startup bursts can exceed a 1024-event queue before the
-// two-second image-integrity heartbeat. Preserve every provenance event; any
-// genuine overrun still fails closed in drain_transitions().
+// Большая нагрузка запуска HotSpot может превысить очередь на 1024 события до
+// двухсекундного heartbeat целостности образов. Сохраняйте все события происхождения;
+// настоящее переполнение по-прежнему приводит к отказу в drain_transitions().
 const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
 
@@ -208,9 +208,9 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
             }
         }
     }
-    // Coalesce only intersecting or adjacent pages from the same trusted
-    // initial snapshot. This retains exactly the same union and never spans
-    // an unobserved gap, while avoiding quadratic hot-path scans.
+    // Объединяйте только пересекающиеся или смежные страницы из одного доверенного
+    // исходного снимка. Объединение покрывает строго ту же область без ненаблюдаемых
+    // разрывов и предотвращает квадратичное сканирование горячего пути.
     coalesce_ranges(&mut state.allowed_dynamic);
     coalesce_ranges(&mut state.allowed_mapped);
     state.active = true;
@@ -235,11 +235,11 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
 
     drain_transitions(state)?;
     let regions = enumerate_executable_regions()?;
-    // The JVM can finish VirtualProtect on another thread *while* VirtualQuery
-    // walks the address space. Drain once more after the snapshot so completed
-    // and published hook events are visible before evaluating that snapshot.
-    // A transition never gets admitted without a successfully intercepted API
-    // call; truly missing provenance still fails closed.
+    // JVM может завершить VirtualProtect в другом потоке одновременно с
+    // обходом адресов VirtualQuery. Ещё раз опустошите очередь после снимка,
+    // чтобы завершённые и опубликованные события перехвата стали видны до
+    // проверки. Переход никогда не допускается без успешно перехваченного
+    // вызова API; отсутствие доказательства по-прежнему приводит к отказу.
     drain_transitions(state)?;
     let mut current_image_keys = HashSet::new();
 
@@ -265,9 +265,9 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                         ));
                     }
                 } else {
-                    // Newly loaded images are admitted only after the loader has mapped
-                    // them. Module Guard independently authenticates the backing DLL;
-                    // from this point onward the executable bytes are immutable.
+                    // Недавно загруженные образы разрешаются только после отображения
+                    // загрузчиком. Module Guard независимо аутентифицирует исходную
+                    // DLL; после этого исполняемые байты неизменяемы.
                     state.image_code.insert(key, current);
                 }
             }
@@ -299,9 +299,9 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
     Ok(snapshot_for_regions(state, &regions))
 }
 
-/// Drain observed, authenticated process-local memory transitions between the
-/// more expensive executable image snapshots. This prevents startup bursts
-/// from filling the ring while keeping the independent full scan in place.
+/// Опустошайте наблюдаемые аутентифицированные локальные переходы памяти процесса
+/// между более дорогими снимками исполняемых образов. Это предотвращает
+/// переполнение кольца при запуске, сохраняя независимое полное сканирование.
 pub fn drain_pending_transitions() -> Result<(), String> {
     let mut guard = MEMORY_STATE
         .lock()
@@ -321,9 +321,9 @@ pub fn shutdown() {
     }
 }
 
-/// Called from the IAT wrapper after a successful VirtualAlloc. This path is
-/// allocation-free and lock-free so it is safe even if the caller is a JVM
-/// allocator/compiler thread.
+/// Вызывается обёрткой IAT после успешного VirtualAlloc. Этот
+/// путь не выделяет память и не использует блокировки, поэтому
+/// безопасен даже в потоке выделителя или компилятора JVM.
 pub fn record_virtual_alloc(address: *mut c_void, size: usize, protect: u32) {
     if address.is_null() || size == 0 {
         return;
@@ -336,7 +336,7 @@ pub fn record_virtual_alloc(address: *mut c_void, size: usize, protect: u32) {
     });
 }
 
-/// Called from the IAT wrapper after a successful VirtualProtect.
+/// Вызывается обёрткой IAT после успешного VirtualProtect.
 pub fn record_virtual_protect(address: *mut c_void, size: usize, protect: u32) {
     if address.is_null() || size == 0 {
         return;
@@ -408,11 +408,11 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
             region.base, region.size
         ));
     }
-    // VirtualQuery MEM_IMAGE also covers image sections mapped using
-    // MapViewOfFile(SEC_IMAGE), not just modules in the Windows loader list.
-    // GetModuleHandleExW(FROM_ADDRESS) returns ERROR_MOD_NOT_FOUND for those
-    // legitimate mappings. Retain the loader reference when available, but
-    // *never* exempt an unregistered executable image from integrity checks.
+    // VirtualQuery MEM_IMAGE охватывает и секции образов, отображённые через
+    // MapViewOfFile(SEC_IMAGE), а не только модули из списка Windows-загрузчика.
+    // GetModuleHandleExW(FROM_ADDRESS) возвращает ERROR_MOD_NOT_FOUND для таких
+    // законных отображений. При возможности сохраняйте ссылку загрузчика, но никогда
+    // не исключайте незарегистрированный исполняемый образ из контроля целостности.
     let _pin = pin_image(region.allocation_base.max(region.base)).ok();
     let mut digest = Sha256::new();
     let mut buffer = [0u8; 64 * 1024];
@@ -442,8 +442,8 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
         offset += chunk;
     }
     buffer.fill(0);
-    // Fail closed if an image was unmapped/remapped or had permissions changed
-    // during the read; never trust a digest over two different mappings.
+    // Строго отказывайте, если во время чтения образ размонтирован, отображён заново или
+    // изменил разрешения; не доверяйте дайджесту, полученному из двух разных отображений.
     let mut after = MemoryBasicInformation::default();
     let queried = unsafe {
         VirtualQuery(
@@ -536,8 +536,8 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
     Ok(())
 }
 
-// Merge only overlapping/abutting intervals. Coverage is mathematically
-// unchanged, and a single missing executable page remains a fatal gap.
+// Объединяйте только пересекающиеся или соприкасающиеся интервалы. Математическое покрытие
+// неизменно, а одна пропущенная исполняемая страница остаётся критическим пробелом.
 fn coalesce_ranges(ranges: &mut Vec<AddressRange>) {
     if ranges.len() < 2 {
         return;
@@ -580,9 +580,9 @@ fn queue_transition(event: MemoryTransition) {
 }
 
 fn range_allowed(region: &ExecutableRegion, allowed: &[AddressRange]) -> bool {
-    // VirtualQuery merges adjacent pages with the same protection, while
-    // VirtualProtect records each independently verified transition range.
-    // Require *complete* union coverage; any unobserved gap remains fatal.
+    // VirtualQuery объединяет соседние страницы с одинаковой защитой, а
+    // VirtualProtect записывает каждый независимо проверенный диапазон перехода.
+    // Требуйте полного покрытия объединения; любой ненаблюдаемый пробел критичен.
     if allowed.iter().any(|range| range.contains(region.base, region.size)) {
         return true;
     }
@@ -651,8 +651,8 @@ fn snapshot_for_regions(
         })
         .collect::<Vec<_>>();
     code_rows.sort_unstable();
-    // Separate the code-set hash domain from raw image bytes using a fixed
-    // SHA-256 tag. Both the tag and the measured regions affect the digest.
+    // Отделяйте домен хеша набора кода от сырых байтов образа фиксированным
+    // SHA-256-тегом. На дайджест влияют и тег, и измеренные области.
     let code_domain = Sha256::digest(b"NeverGuard Memory Integrity code-set v1\0");
     let mut code_digest = Sha256::new();
     code_digest.update(code_domain);

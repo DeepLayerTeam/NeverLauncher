@@ -66,8 +66,8 @@ need('.github/workflows/ci.yml', [
     'cargo test --manifest-path src-tauri/Cargo.toml',
 ])
 
-# The backend must never treat a self-reported hardware binding as remote
-# attestation or phishing-resistant authentication in this release.
+# В этом выпуске бэкенд никогда не должен считать заявленную устройством аппаратную
+# привязку удалённой аттестацией или устойчивой к фишингу аутентификацией.
 server = (ROOT / 'services/api/internal/httpapi/device_trust_0121.go').read_text(encoding='utf-8')
 if 'Assurance:         "hardware"' in server or 'Assurance:         "attested"' in server:
     errors.append('device trust handler: unattested hardware binding повышает assurance')

@@ -242,8 +242,8 @@ func (c *Client) Unsubscribe(ctx context.Context, id int64) error {
 	return c.doJSON(ctx, http.MethodDelete, "/v1/events/subscriptions/"+strconv.FormatInt(id, 10), nil, nil)
 }
 
-// StartCallbackServer starts the loopback callback endpoint required for events/hooks.
-// The returned URL is safe to pass to Hello. Close the server when the extension exits.
+// StartCallbackServer создаёт loopback-конечную точку callback для событий и hooks.
+// Возвращённый URL безопасно передавать в Hello. Закройте сервер при завершении расширения.
 func (c *Client) StartCallbackServer(events EventHandler, hooks HookHandler) (*CallbackServer, error) {
 	if c.env.CallbackToken == "" {
 		return nil, errors.New("NeverLauncher callback token is missing")

@@ -61,9 +61,9 @@ type bridgeProtocolEnvelope0191 struct {
 	ProtocolVersion int `json:"protocolVersion"`
 }
 
-// Protocol v2 request contracts are retained byte-for-byte compatible for a
-// rolling upgrade. Protocol v3 has a separate wire contract and carries the
-// feature set selected by /server-bridge/capabilities.
+// Контракты запросов Protocol v2 сохраняются побайтно совместимыми для
+// постепенного обновления. У Protocol v3 отдельный сетевой контракт с
+// набором возможностей, выбранным через /server-bridge/capabilities.
 type bridgeHeartbeatV2Contract0191 struct {
 	ProtocolVersion int    `json:"protocolVersion"`
 	ServerID        string `json:"serverId"`

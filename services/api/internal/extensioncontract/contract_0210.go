@@ -15,7 +15,7 @@ const (
 	LegacyExtensionAPIVersion = "3.7"
 )
 
-// Contract is the frozen NeverExtensions 0.21 GA compatibility surface.
+// Контракт — зафиксированная поверхность совместимости NeverExtensions 0.21 GA.
 type Contract struct {
 	PackageFormatName     string   `json:"packageFormatName"`
 	PackageFormatVersion  string   `json:"packageFormatVersion"`
@@ -33,9 +33,9 @@ func Frozen() Contract {
 	}
 }
 
-// CanonicalAPIVersion accepts the 0.20 API marker as a compatibility alias, but
-// always maps it to the frozen Extension API v1 surface. This keeps signed
-// 0.20 packages runnable without mutating their manifests.
+// CanonicalAPIVersion принимает маркер API 0.20 как совместимый псевдоним,
+// но всегда сопоставляет его с фиксированным Extension API v1. Это
+// позволяет запускать подписанные пакеты 0.20 без изменения манифестов.
 func CanonicalAPIVersion(raw string) (string, error) {
 	switch strings.TrimSpace(raw) {
 	case "1.0", "1.0.0", "v1", "v1.0", "v1.0.0":
@@ -54,8 +54,8 @@ func IsLegacyAPIVersion(raw string) bool {
 	return raw == LegacyExtensionAPIVersion || raw == LegacyExtensionAPIVersion+".0"
 }
 
-// RequireGAAPIVersion is used for newly published/created 0.21 artifacts. The
-// legacy alias is intentionally rejected so the registry converges to API v1.
+// RequireGAAPIVersion применяется к новым артефактам 0.21. Старый
+// псевдоним намеренно отклоняется, чтобы реестр перешёл на API v1.
 func RequireGAAPIVersion(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw != ExtensionAPIVersion {
@@ -71,7 +71,7 @@ func SupportsHostHello(manifestAPI, helloAPI string) bool {
 	}
 	helloAPI = strings.TrimSpace(helloAPI)
 	if IsLegacyAPIVersion(manifestAPI) && helloAPI == "" {
-		// 0.20 SDKs did not send extensionApiVersion in the hello payload.
+		// SDK 0.20 не передавали extensionApiVersion в hello.
 		return true
 	}
 	if IsLegacyAPIVersion(manifestAPI) && (helloAPI == LegacyExtensionAPIVersion || helloAPI == LegacyExtensionAPIVersion+".0") {

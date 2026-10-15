@@ -53,7 +53,7 @@ materialize_loader_package() {
 materialize_loader_package
 FIRST_REPRODUCIBILITY_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("quilt") or {}).get("reproducibilitySha256") or "")' "$RUNTIME_DIR/client-package.json")"
 FIRST_LOCK_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("quilt") or {}).get("resolutionLockSha256") or "")' "$RUNTIME_DIR/client-package.json")"
-# Replay the same mutable selector through the generated lock. This must not re-resolve latest-stable.
+# Повторите изменяемый селектор через созданный lock-файл. Не разрешайте latest-stable повторно.
 materialize_loader_package
 cp "$RUNTIME_DIR/materialized-client/.neverlauncher/quilt-resolution-lock.json" "$RUNTIME_DIR/quilt-resolution-lock.json"
 

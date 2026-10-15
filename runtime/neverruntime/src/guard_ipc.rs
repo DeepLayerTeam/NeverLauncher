@@ -732,7 +732,7 @@ async fn connect_client_pipe(endpoint: &str) -> Result<NamedPipeClient, String> 
             Ok(pipe) => return Ok(pipe),
             Err(err) if Instant::now() < deadline => {
                 if !matches!(err.kind(), std::io::ErrorKind::NotFound | std::io::ErrorKind::WouldBlock) {
-                    // ERROR_PIPE_BUSY is reported as a platform-specific Other error on some toolchains.
+                    // На некоторых инструментариях ERROR_PIPE_BUSY отображается как платформенная ошибка Other.
                     if err.raw_os_error() != Some(231) {
                         return Err(format!("не удалось подключиться к NeverGuard IPC {endpoint}: {err}"));
                     }
@@ -1144,8 +1144,8 @@ fn current_windows_user_sid_string() -> Result<String, String> {
 
 #[cfg(windows)]
 pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServer, String> {
-    // Protected DACL: only LocalSystem and the exact launcher account receive access.
-    // Authentication still happens at the HMAC layer, so the ACL is defense in depth.
+    // Защищённый DACL: доступ имеют только LocalSystem и точная учётная запись лаунчера.
+    // Аутентификация всё равно проводится уровнем HMAC; ACL — дополнительная защита.
     let user_sid = current_windows_user_sid_string()?;
     let sddl: Vec<u16> = format!("D:P(A;;GA;;;SY)(A;;GA;;;{user_sid})")
         .encode_utf16()

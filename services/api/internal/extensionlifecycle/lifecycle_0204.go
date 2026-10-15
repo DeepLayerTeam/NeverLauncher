@@ -817,9 +817,9 @@ func (m *Manager) VerifyLockfile(ctx context.Context, id string, scope Scope) er
 	return nil
 }
 
-// CurrentPayloadDir returns the canonical activated payload directory for one
-// persisted extension installation. Extension Host uses this instead of
-// reconstructing lifecycle paths independently.
+// CurrentPayloadDir возвращает канонический каталог активных данных
+// для одной сохранённой установки расширения. Extension Host использует
+// его вместо самостоятельного вычисления путей жизненного цикла.
 func CurrentPayloadDir(root, scope, scopeID, extensionID string) (string, error) {
 	s, err := normalizeScope0204(Scope{Scope: scope, ScopeID: scopeID})
 	if err != nil {

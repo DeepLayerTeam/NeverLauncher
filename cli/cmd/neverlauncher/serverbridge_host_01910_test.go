@@ -130,10 +130,10 @@ while :; do sleep 1; done`)
 	if pid == 0 {
 		t.Fatal("Minecraft process did not enter running state")
 	}
-	// The supervisor publishes the PID as soon as it starts the subprocess,
-	// while the POSIX shell still needs to execute the TERM handler. Stopping
-	// before its `ready` marker races with trap installation (macOS CI).
-	// Readiness of the test fixture, not the PID alone, is the stop precondition.
+	// Супервизор публикует PID сразу после старта подпроцесса, хотя
+	// POSIX-оболочке ещё нужно установить обработчик TERM. Остановка до
+	// маркера `ready` создаёт гонку с установкой trap (macOS CI).
+	// Предусловие остановки — готовность тестового процесса, а не наличие PID.
 	ready := false
 	deadline = time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

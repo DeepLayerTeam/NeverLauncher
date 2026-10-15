@@ -20,9 +20,9 @@ type Report struct {
 	Checks      []Check `json:"checks"`
 }
 
-// Run performs executable SDK conformance checks. It intentionally does not invoke
-// authentication with synthetic credentials; connector-specific integration tests
-// remain responsible for credential fixtures.
+// Run выполняет исполняемые проверки соответствия SDK. Намеренно не запускает
+// аутентификацию с синтетическими учётными данными; фикстуры учётных данных
+// должны проверяться интеграционными тестами конкретного коннектора.
 func Run(ctx context.Context, connector authconnector.Connector) Report {
 	report := Report{Passed: true}
 	if connector == nil {

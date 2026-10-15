@@ -38,7 +38,7 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
     assert_eq!(status.windows_protection_profile, "aggressive");
     assert!(status.secure_pipe_acl);
     assert!(status.lifetime_job_enforced);
-    assert!(!status.package_manifest_verified); // integration binary deliberately bypasses release package validation
+    assert!(!status.package_manifest_verified); // Интеграционный исполняемый файл намеренно пропускает проверку пакета релиза.
     assert!(status.pid > 0);
 
     supervisor.ping().await.expect("authenticated ping must pass");

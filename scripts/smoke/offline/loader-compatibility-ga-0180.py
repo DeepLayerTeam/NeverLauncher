@@ -60,8 +60,8 @@ require(tests, [
 ], "GA regression tests")
 
 targets = json.loads(read("compatibility/targets.json"))["targets"]
-# Catalogue coverage is distinct from release certification. Upstream-unavailable
-# combinations remain visible with an explicit reason, but cannot count as PASS.
+# Покрытие каталога отличается от сертификации релизов. Недоступные у
+# издателя комбинации видны с явной причиной, но не засчитываются как PASS.
 required = [row for row in targets if row.get("required")]
 unavailable = [row for row in targets if not row.get("required")]
 blocked = {

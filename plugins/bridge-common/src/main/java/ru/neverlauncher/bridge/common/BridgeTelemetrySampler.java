@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Bounded ServerBridge telemetry sampler. JVM metrics are queried only once per
- * heartbeat. Platform adapters publish immutable samples into an AtomicReference
- * from their API-safe thread; the HTTP thread never enumerates worlds/entities.
+ * Ограниченный сборщик телеметрии ServerBridge. Метрики JVM считываются один раз
+ * за heartbeat. Адаптеры публикуют неизменяемые образцы в AtomicReference из
+ * безопасного для их API потока; HTTP-поток никогда не перечисляет миры или сущности.
  */
 public final class BridgeTelemetrySampler {
     private static final long PLATFORM_SAMPLE_MAX_AGE_MS = 120_000L;

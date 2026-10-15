@@ -238,7 +238,7 @@ func (c *Connector) lookup(parent context.Context, stmt *sql.Stmt, args ...any) 
 		return rowIdentity{}, authconnector.WrapError(authconnector.ErrUnavailable, "SQL provider query failed", err)
 	}
 	if len(found) == 0 {
-		// Deliberately use the same public error as a wrong password to avoid account enumeration.
+		// Намеренно используйте ту же публичную ошибку, что и при неверном пароле, чтобы избежать определения существования учётных записей.
 		return rowIdentity{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
 	}
 	if strings.TrimSpace(found[0].subject) == "" || strings.TrimSpace(found[0].passwordHash) == "" {
@@ -369,9 +369,9 @@ func parseStringList(raw string) ([]string, error) {
 	return normalizeList(strings.Split(raw, ",")), nil
 }
 
-// parsePostgresArray handles the one-dimensional text-array representation returned
-// by CAST(text[] AS TEXT). It deliberately rejects nested arrays and malformed quoted
-// elements instead of silently producing wrong role/group names.
+// parsePostgresArray обрабатывает одномерное представление текстового массива,
+// возвращённое CAST(text[] AS TEXT). Намеренно отклоняет вложенные массивы и некорректные
+// элементы в кавычках, а не выдаёт незаметно неправильные имена ролей или групп.
 func parsePostgresArray(raw string) ([]string, error) {
 	if len(raw) < 2 || raw[0] != '{' || raw[len(raw)-1] != '}' {
 		return nil, errors.New("invalid PostgreSQL array")

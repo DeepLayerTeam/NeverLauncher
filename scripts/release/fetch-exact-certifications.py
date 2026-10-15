@@ -37,8 +37,8 @@ def _artifact_redirect_request(req: urllib.request.Request, newurl: str) -> urll
         raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
     if not any(host.endswith(suffix) or host == suffix[1:] for suffix in ARTIFACT_REDIRECT_SUFFIXES):
         raise RuntimeError(f"artifact redirect host is not trusted: {host}")
-    # Never forward the GitHub bearer token to the signed artifact origin.
-    # The redirect URL already carries its own short-lived authorization query.
+    # Никогда не передавайте bearer-токен GitHub на подписанный источник артефакта. URL
+    # перенаправления уже содержит собственные краткосрочные параметры авторизации.
     return urllib.request.Request(
         newurl,
         headers={
@@ -126,8 +126,8 @@ def select_exact_run(runs: list[dict[str, Any]], commit: str) -> dict[str, Any] 
     exact = [r for r in runs if str(r.get("head_sha", "")).lower() == commit.lower()]
     if not exact:
         return None
-    # GitHub may expose re-runs for the same SHA. Prefer the newest run so a
-    # stale failed attempt can never mask a newer exact-commit retry.
+    # GitHub может хранить повторные запуски для одного SHA. Выбирайте новейший,
+    # чтобы устаревшая неудачная попытка не скрывала свежий повтор точного коммита.
     exact.sort(key=lambda r: (str(r.get("created_at", "")), int(r.get("id", 0))), reverse=True)
     return exact[0]
 

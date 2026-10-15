@@ -322,10 +322,10 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит выбранный loader artifact %s", loader, selectedEntry.Loader.Maven)
 	}
-	// Minecraft 26.1+ is distributed unobfuscated. Fabric Meta may use the
-	// sentinel intermediary:0.0.0 rather than a mapping JAR in launcher profiles.
-	// Do not require a fictitious mapping dependency for these releases, but
-	// keep the strict identity check for every actual intermediary artifact.
+	// Minecraft 26.1+ распространяется без обфускации. Fabric Meta может указывать
+	// маркер intermediary:0.0.0 вместо JAR с маппингами в профиле запуска. Не
+	// требуйте вымышленную зависимость от маппингов для этих выпусков, но сохраняйте
+	// строгую проверку идентичности настоящих intermediary-артефактов.
 	intermediary := selectedEntry.Intermediary.Maven
 	noMappingSentinel := loader == "fabric" && strings.HasPrefix(vanilla.MinecraftVersion, "26.") && intermediary == "net.fabricmc:intermediary:0.0.0"
 	if intermediary != "" && !noMappingSentinel && !profileHasLibrary(profile.Libraries, intermediary) {
@@ -461,9 +461,9 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
 		if strings.Contains(err.Error(), "HTTP 404") {
-			// Quilt/Fabric Meta returns 404 when the requested Minecraft version
-			// has no loader mapping. A valid HTTP 404 must never be converted to
-			// an invented fallback or accepted as a passing certification.
+			// Quilt/Fabric Meta возвращает 404, если для версии Minecraft нет
+			// соответствующих маппингов загрузчика. Корректный HTTP 404 нельзя
+			// заменять выдуманным резервным вариантом или считать успешной сертификацией.
 			return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: Minecraft %s is not present in the upstream compatibility index (HTTP 404): %w", loader, minecraftVersion, err)
 		}
 		return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader version metadata: %w", loader, err)
@@ -479,9 +479,9 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
 	if mutable {
 		if loader == "quilt" {
-			// Quilt Meta v3 does not guarantee newest-first ordering or a
-			// Fabric-style stable flag. Select the highest stable SemVer,
-			// not the first stable row (which may be years out of date).
+			// Quilt Meta v3 не гарантирует сортировку от новых версий к старым и не имеет
+			// обязательного флага stable как Fabric. Выбирайте максимальную стабильную версию
+			// SemVer, а не первую стабильную строку, которая может быть старой на несколько лет.
 			best := -1
 			for i, entry := range entries {
 				version := strings.TrimSpace(entry.Loader.Version)
@@ -519,10 +519,10 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
 }
 
-// Quilt Meta v3 does not guarantee the Fabric-style `stable` boolean on loader rows.
-// Stable Quilt Loader releases use a plain numeric SemVer core; prereleases carry a
-// suffix such as -beta/-rc. This keeps `latest-stable` fail-closed instead of silently
-// selecting the first prerelease returned by Meta.
+// Quilt Meta v3 не гарантирует булево поле `stable` в строках загрузчика,
+// как Fabric. Стабильные релизы Quilt Loader содержат обычное числовое ядро
+// SemVer; предварительные версии имеют суффиксы вроде -beta/-rc. Так
+// `latest-stable` не выберет молча первый предварительный релиз из Meta.
 func isStableQuiltLoaderVersion(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -547,8 +547,8 @@ func isStableQuiltLoaderVersion(value string) bool {
 	return true
 }
 
-// quiltStableVersionLess compares numeric SemVer triples without using
-// lexicographic ordering (0.9.9 must sort below 0.10.0).
+// quiltStableVersionLess сравнивает числовые тройки SemVer без
+// лексикографической сортировки (0.9.9 должно быть меньше 0.10.0).
 func quiltStableVersionLess(a, b string) bool {
 	aParts := strings.Split(strings.SplitN(a, "+", 2)[0], ".")
 	bParts := strings.Split(strings.SplitN(b, "+", 2)[0], ".")

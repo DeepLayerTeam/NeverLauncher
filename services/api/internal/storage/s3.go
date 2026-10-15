@@ -56,9 +56,9 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 		return "", 0, err
 	}
 
-	// SigV4 requires the payload digest before headers are signed. Spool the
-	// incoming stream to disk while hashing it, rather than buffering the whole
-	// object in memory. The temporary file is then streamed directly to S3.
+	// Для SigV4 хеш содержимого необходим до подписания заголовков. Сохраняйте
+	// входящий поток на диск при одновременном хешировании вместо буферизации целого
+	// объекта в памяти. Затем передавайте временный файл в S3 напрямую потоком.
 	tmp, err := os.CreateTemp("", "neverlauncher-s3-upload-*")
 	if err != nil {
 		return "", 0, fmt.Errorf("не удалось создать временный файл S3 upload: %w", err)

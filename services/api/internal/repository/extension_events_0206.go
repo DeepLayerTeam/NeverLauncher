@@ -16,9 +16,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-// ExtensionEventStore is the persistence boundary used by the 0.20.6 event bus.
-// SQLRepository implements it with durable PostgreSQL state; MemoryRepository
-// exists for tests/development with equivalent ordering/idempotency semantics.
+// ExtensionEventStore — слой постоянного хранения для шины событий 0.20.6.
+// SQLRepository реализует его на PostgreSQL; MemoryRepository предназначен для
+// тестов и разработки с эквивалентной семантикой порядка и идемпотентности.
 type ExtensionEventStore interface {
 	PublishExtensionEvent(context.Context, model.ExtensionEvent) (model.ExtensionEvent, bool, error)
 	SaveExtensionEventSubscription(context.Context, model.ExtensionEventSubscription) (model.ExtensionEventSubscription, error)
@@ -446,7 +446,7 @@ func (r *MemoryRepository) ListExtensionEventDeadLetters(ctx context.Context, ex
 	return out, nil
 }
 
-// SQL implementation.
+// Реализация SQL.
 func (r *SQLRepository) PublishExtensionEvent(ctx context.Context, in model.ExtensionEvent) (model.ExtensionEvent, bool, error) {
 	if err := r.check(); err != nil {
 		return model.ExtensionEvent{}, false, err

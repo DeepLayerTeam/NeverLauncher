@@ -10,8 +10,8 @@ import (
 func (s Server) Handler() http.Handler {
 	if s.State == nil {
 		s.State = NewRuntimeState()
-		// Test/development servers created directly in unit tests use the safe
-		// in-memory limiter and do not trust forwarded headers by default.
+		// Тестовые и разработческие серверы, созданные непосредственно в модульных тестах, используют
+		// безопасное ограничение частоты в памяти и по умолчанию не доверяют пересылаемым заголовкам.
 	}
 	if s.Authorization == nil && s.Repo != nil {
 		s.Authorization = authorization.New(s.Repo)

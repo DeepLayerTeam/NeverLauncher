@@ -36,7 +36,7 @@ func (s Server) extensionGAReconcile0210(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// Reconcile the process layer after invalid extensions were fail-closed.
+	// После строгого отключения некорректных расширений согласуйте состояние уровня процессов.
 	hostErrors := []string{}
 	if s.ExtensionHost != nil && !s.ExtensionSafeMode {
 		for _, e := range s.ExtensionHost.Reconcile(r.Context()) {
