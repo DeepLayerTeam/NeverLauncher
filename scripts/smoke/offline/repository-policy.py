@@ -1957,6 +1957,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     if "device-trust-release-0130.py" not in preflight or "device-trust-release-0130.py" not in ci:
         fail("0.13.0 Device Trust Release gate is not wired into preflight/CI")
 
+# 0.15.10 Migration + stabilization: verify state migration, locking and recovery.
 # В 0.15.10: миграция и стабилизация фиксируют локальное состояние и восстановление:
 # сериализованную проверку доверия, переход 2.0 -> 2.1, привязку манифеста к версии,
 # каноническое состояние компонентов и очистку завершённых данных обновления.

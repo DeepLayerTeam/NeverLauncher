@@ -1437,14 +1437,26 @@ mod imp {
     }
 
     fn module_snapshot(pid: u32) -> Result<Vec<LoadedModule>, String> {
-        let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
-        if snapshot == INVALID_HANDLE_VALUE {
-            return Err(format!(
-                "Module Guard snapshot failed for PID {pid}: {}",
-                std::io::Error::last_os_error()
-            ));
-        }
-        let snapshot = OwnedHandle(snapshot);
+        // Microsoft documents ERROR_BAD_LENGTH (24) as transient when modules
+        // load/unload while Toolhelp is taking a module snapshot. Retry only
+        // that case, with a strict finite bound; any other or persistent error
+        // continues to fail closed instead of trusting an incomplete module set.
+        const MAX_BAD_LENGTH_ATTEMPTS: usize = 12;
+        let snapshot = {
+            let mut handle = INVALID_HANDLE_VALUE;
+            for attempt in 0..MAX_BAD_LENGTH_ATTEMPTS {
+                handle = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
+                if handle != INVALID_HANDLE_VALUE {
+                    break;
+                }
+                let error = std::io::Error::last_os_error();
+                if error.raw_os_error() != Some(24) || attempt + 1 == MAX_BAD_LENGTH_ATTEMPTS {
+                    return Err(format!("Module Guard snapshot failed for PID {pid}: {error}"));
+                }
+                std::thread::sleep(Duration::from_millis(15));
+            }
+            OwnedHandle(handle)
+        };
         let mut entry = MODULEENTRY32W {
             dwSize: size_of::<MODULEENTRY32W>() as u32,
             ..Default::default()

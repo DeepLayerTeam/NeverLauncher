@@ -608,6 +608,7 @@ fn resolve_libraries(
 
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
+            // Legacy Minecraft/Forge metadata predates downloads.classifiers.
             // Метаданные Minecraft/Forge 1.7.x появились до downloads.classifiers.
             // Материализатор Vanilla уже размещает нативные JAR с
             // классификаторами в Maven-дереве, поэтому определяйте их пути

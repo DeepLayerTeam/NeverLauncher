@@ -273,6 +273,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		return nil, err
 	}
 
+	// Stage verified bytes before touching the live tree: all files pass SHA-256 and size checks.
 	// Подготовьте проверенные байты в промежуточном каталоге до изменения активного дерева.
 	for _, spec := range files {
 		stagePath := filepath.Join(stageDir, filepath.FromSlash(spec.Path))

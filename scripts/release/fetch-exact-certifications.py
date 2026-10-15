@@ -37,6 +37,7 @@ def _artifact_redirect_request(req: urllib.request.Request, newurl: str) -> urll
         raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
     if not any(host.endswith(suffix) or host == suffix[1:] for suffix in ARTIFACT_REDIRECT_SUFFIXES):
         raise RuntimeError(f"artifact redirect host is not trusted: {host}")
+    # Never forward the GitHub bearer token to signed artifact redirect hosts.
     # Никогда не передавайте bearer-токен GitHub на подписанный источник артефакта. URL
     # перенаправления уже содержит собственные краткосрочные параметры авторизации.
     return urllib.request.Request(

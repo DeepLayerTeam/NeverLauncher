@@ -259,6 +259,7 @@ func (s Server) issueAccessTokenForSession(user model.User, session authSessionR
 	if !session.RiskUpdatedAt.IsZero() {
 		claims.RiskUpdatedAt = session.RiskUpdatedAt.Unix()
 	}
+	// Authentication proves possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance.
 	// keyBinding/provider остаются информационными: аттестация вызов–ответ подтверждает
 	// владение зарегистрированным ключом и его актуальность, а не происхождение от TPM
 	// или Secure Enclave. Диагностические свойства устройства не повышают силу RBAC/MFA.

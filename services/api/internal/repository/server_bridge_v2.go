@@ -131,6 +131,7 @@ func (r *SQLRepository) SaveServerBridgeNode(ctx context.Context, n model.Server
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1401, hashtext($1))`, n.ID); err != nil {
 		return model.ServerBridgeNode{}, err
 	}
+	// Registration is intentionally create-only; identity rotation requires separate step-up.
 	// Регистрация намеренно допускает только создание. Консультативная блокировка по ID узла
 	// закрывает гонку GET перед INSERT между параллельными запросами администраторов; изменение
 	// существующей идентичности допускается только через RotateServerBridgeNodeIdentity, маршрут
