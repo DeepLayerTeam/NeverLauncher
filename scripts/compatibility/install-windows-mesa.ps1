@@ -29,7 +29,7 @@ try {
         catch { if ($attempt -eq 3) { throw }; Start-Sleep -Seconds (2 * $attempt) }
     }
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
-    if ($actual -cne $hashes[$arch]) { throw "Mesa archive checksum mismatch for $arch: $actual" }
+    if ($actual -cne $hashes[$arch]) { throw "Mesa archive checksum mismatch for ${arch}: $actual" }
     $sevenZip = Get-Command '7z.exe' -ErrorAction SilentlyContinue
     if (-not $sevenZip) { throw '7z.exe missing on Windows GitHub runner' }
     $unpack = Join-Path $work 'unpack'

@@ -712,6 +712,27 @@ def load_targets(path: Path) -> dict[str, Any]:
             "required": required,
             **({"unavailableReason": unavailable_reason} if unavailable_reason is not None else {}),
         })
+    # Historical upstream-unavailable entries are still part of the immutable
+    # compatibility catalogue. Reject dropped/duplicated entries rather than
+    # silently shrinking the declared surface or manufacturing PASS evidence.
+    expected_blocked_java: dict[tuple[str, str], int] = {
+        **{("quilt", mc): 8 for mc in UPSTREAM_BLOCKED_QUILT},
+        **{("neoforge", mc): java for mc, java in {
+            "1.20.3": 17, "1.20.5": 21, "1.21.2": 21,
+            "1.21.6": 21, "1.21.7": 21, "1.21.9": 21,
+            "26.1": 25, "26.1.1": 25,
+        }.items()},
+    }
+    for (loader, minecraft), java in expected_blocked_java.items():
+        blocked_rows = [target for target in normalized
+                        if target["loader"] == loader and target["minecraft"] == minecraft
+                        and target["os"] == "linux" and target["arch"] == "x86_64"]
+        feature = "Quilt Compatibility II 0.17.2" if loader == "quilt" else "NeoForge Compatibility II 0.17.6"
+        if len(blocked_rows) != 1:
+            die(f"{feature} requires exactly one catalogue target for upstream-unavailable Minecraft {minecraft}")
+        target = blocked_rows[0]
+        if target["javaMajor"] != java or target["scope"] != "client" or target["loaderVersion"] != "latest-stable":
+            die(f"{feature} upstream-unavailable {minecraft} must retain Java {java} client/latest-stable declaration")
     validate_baseline_ii(normalized)
     if loader_native_e2e_0178_required():
         for loader in ("fabric", "quilt", "forge", "neoforge"):

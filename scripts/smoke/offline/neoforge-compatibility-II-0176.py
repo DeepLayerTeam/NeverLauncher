@@ -24,13 +24,19 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["NEOFORGE_COMPATIBILITY_II_0176"])
+# Upstream versions with prereleases only: their release status must not be
+# represented as certified stable. Keep historical target catalogue complete.
+blocked = {"1.20.3": 17, "1.20.5": 21, "1.21.2": 21,
+           "1.21.6": 21, "1.21.7": 21, "1.21.9": 21,
+           "26.1": 25, "26.1.1": 25}
+expected.update(blocked)
 if len(expected) != 22 or expected.get("1.20.1") != 17 or expected.get("1.20.5") != 21 or expected.get("26.2") != 25 or "26.3" in expected:
     raise SystemExit("NeoForge Compatibility II 0.17.6 canonical stable release grid is incomplete or includes unsupported 26.3")
 
 target_doc = json.loads(read("compatibility/targets.json"))
-rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
+rows = [row for row in target_doc["targets"] if row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(rows) != len(expected):
-    raise SystemExit(f"NeoForge Compatibility II 0.17.6 requires exactly {len(expected)} required targets, got {len(rows)}")
+    raise SystemExit(f"NeoForge Compatibility II 0.17.6 requires exactly {len(expected)} catalogue targets, got {len(rows)}")
 by_version: dict[str, dict] = {}
 for row in rows:
     minecraft = row.get("minecraft")
@@ -46,6 +52,11 @@ for minecraft, java_major in expected.items():
         raise SystemExit(f"NeoForge {minecraft} must be Java {java_major} scope={expected_scope}")
     if row.get("os") != "linux" or row.get("arch") != "x86_64" or row.get("loaderVersion") != "latest-stable":
         raise SystemExit(f"NeoForge {minecraft} must be linux/x86_64 with runtime latest-stable resolution")
+    if minecraft in blocked:
+        if row.get("required") is not False or row.get("unavailableReason") != "upstream-prerelease-only":
+            raise SystemExit(f"NeoForge {minecraft} must be NOT CERTIFIED: upstream-prerelease-only")
+    elif row.get("required") is not True or row.get("unavailableReason") is not None:
+        raise SystemExit(f"NeoForge {minecraft} must require real client certification")
 
 runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
 require(runtime, [
@@ -106,4 +117,4 @@ require(tests, [
     '26.2.0.75', '1.20.1-47.1.79',
 ], "NeoForge 0.17.6 regression coverage")
 
-print(f"NeoForge Compatibility II 0.17.6 gate: OK ({len(rows)} stable NeoForge releases, 1.20.1..26.2, Java 17/21/25)")
+print(f"NeoForge Compatibility II 0.17.6 gate: OK ({len(rows)} catalogue targets; {len(rows)-len(blocked)} required, {len(blocked)} NOT CERTIFIED; 1.20.1..26.2, Java 17/21/25)")

@@ -59,14 +59,28 @@ require(tests, [
 ], "0.17.11 RC regression tests")
 
 targets = json.loads(read("compatibility/targets.json"))["targets"]
+# Catalogue coverage is distinct from release certification. Upstream-unavailable
+# combinations remain visible with an explicit reason, but cannot count as PASS.
 required = [row for row in targets if row.get("required")]
-if len(required) != 292:
-    raise SystemExit(f"Loader Compatibility RC 0.17.11 requires 292 required targets, got {len(required)}")
-family_counts = Counter(row.get("loader") for row in required)
+unavailable = [row for row in targets if not row.get("required")]
+blocked = {
+    ("quilt", minecraft): "upstream-missing"
+    for minecraft in ("1.14", "1.14.1", "1.14.2", "1.14.3")
+} | {
+    ("neoforge", minecraft): "upstream-prerelease-only"
+    for minecraft in ("1.20.3", "1.20.5", "1.21.2", "1.21.6", "1.21.7", "1.21.9", "26.1", "26.1.1")
+}
+if len(targets) != 292 or len(required) != 280 or len(unavailable) != len(blocked):
+    raise SystemExit("Compatibility catalogue must contain 292 targets: 280 required, 12 explicitly upstream-unavailable")
+if {(row.get("loader"), row.get("minecraft")): row.get("unavailableReason") for row in unavailable} != blocked:
+    raise SystemExit("Upstream-unavailable target set or reason drift")
+if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable):
+    raise SystemExit("Unexpected unavailable platform")
+family_counts = Counter(row.get("loader") for row in targets)
 expected_families = {"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
 if dict(family_counts) != expected_families:
     raise SystemExit(f"Loader Compatibility RC family coverage mismatch: {dict(family_counts)} != {expected_families}")
-platforms = {(row.get("os"), row.get("arch")) for row in required}
+platforms = {(row.get("os"), row.get("arch")) for row in targets}
 expected_platforms = {
     ("linux", "x86_64"), ("linux", "aarch64"),
     ("windows", "x86_64"), ("windows", "aarch64"),
@@ -74,7 +88,7 @@ expected_platforms = {
 }
 if platforms != expected_platforms:
     raise SystemExit(f"Loader Compatibility RC platform coverage mismatch: {sorted(platforms)}")
-if {row.get("javaMajor") for row in required} != {8, 16, 17, 21, 25}:
+if {row.get("javaMajor") for row in targets} != {8, 16, 17, 21, 25}:
     raise SystemExit("Loader Compatibility RC must cover Java 8/16/17/21/25")
 
-print("Loader Compatibility RC 0.17.11 gate: OK (292/292 targets, full evidence root, family/platform/Java coverage, signed release certificate)")
+print("Loader Compatibility RC 0.17.11 gate: OK (292 catalogue targets, 280 required, 12 NOT CERTIFIED, full evidence root, family/platform/Java coverage, signed release certificate)")

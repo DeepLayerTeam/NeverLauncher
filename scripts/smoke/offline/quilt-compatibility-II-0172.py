@@ -24,13 +24,17 @@ def require(text: str, tokens: list[str], name: str) -> None:
 
 matrix_globals = runpy.run_path(str(ROOT / "scripts/compatibility/matrix.py"))
 expected: dict[str, int] = dict(matrix_globals["QUILT_COMPATIBILITY_II_0172"])
+# Four historical entries are retained in the catalogue but have no
+# Quilt upstream metadata: do not imply these have actual-client certificates.
+blocked = {mc: 8 for mc in ("1.14", "1.14.1", "1.14.2", "1.14.3")}
+expected.update(blocked)
 if len(expected) != 48 or expected.get("1.14") != 8 or expected.get("1.17") != 16 or expected.get("1.20.5") != 21 or expected.get("26.3") != 25:
     raise SystemExit("Quilt 0.17.2 canonical release grid is incomplete")
 
 target_doc = json.loads(read("compatibility/targets.json"))
-quilt_rows = [row for row in target_doc["targets"] if row.get("required") and row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
+quilt_rows = [row for row in target_doc["targets"] if row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
 if len(quilt_rows) != len(expected):
-    raise SystemExit(f"Quilt 0.17.2 requires exactly {len(expected)} required targets, got {len(quilt_rows)}")
+    raise SystemExit(f"Quilt 0.17.2 requires exactly {len(expected)} catalogue targets, got {len(quilt_rows)}")
 by_version: dict[str, dict] = {}
 for row in quilt_rows:
     minecraft = row.get("minecraft")
@@ -48,6 +52,11 @@ for minecraft, java_major in expected.items():
         raise SystemExit(f"Quilt {minecraft} must be certified on linux/x86_64")
     if row.get("loaderVersion") != "latest-stable":
         raise SystemExit(f"Quilt {minecraft} must resolve latest-stable at execution time")
+    if minecraft in blocked:
+        if row.get("required") is not False or row.get("unavailableReason") != "upstream-missing":
+            raise SystemExit(f"Quilt {minecraft} must be NOT CERTIFIED: upstream-missing")
+    elif row.get("required") is not True or row.get("unavailableReason") is not None:
+        raise SystemExit(f"Quilt {minecraft} must require real client certification")
 
 loader_runtime = read("cli/cmd/neverlauncher/loader_runtime.go")
 require(loader_runtime, [
@@ -102,4 +111,4 @@ require(tests, [
     "TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases",
 ], "Quilt 0.17.2 regression coverage")
 
-print(f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} stable Quilt releases, 1.14..26.3, Java 8/16/17/21/25)")
+print(f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} catalogue targets; {len(quilt_rows)-len(blocked)} required, {len(blocked)} NOT CERTIFIED; 1.14..26.3, Java 8/16/17/21/25)")

@@ -118,7 +118,7 @@ EOFPROPS
 # Mojang world. Never apply this to a production server or to other versions.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
-generator-settings={"biome":"minecraft:plains","layers":[],"structures":{}}
+generator-settings={"biome":"minecraft:plains","layers":[],"structures":{"structures":{}}}
 gamemode=creative
 allow-flight=true
 EOFVOID

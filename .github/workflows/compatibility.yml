@@ -105,6 +105,19 @@ jobs:
               break
             fi
           done
+      - name: Verify Windows Mesa installer syntax
+        if: runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'scripts/compatibility/install-windows-mesa.ps1'),
+            [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -ne 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            throw 'Invalid Windows Mesa installer syntax'
+          }
       - name: Install verified software OpenGL for Windows client E2E
         if: runner.os == 'Windows' && matrix.scope == 'client'
         shell: pwsh
@@ -252,6 +265,19 @@ jobs:
               break
             fi
           done
+      - name: Verify Windows Mesa installer syntax
+        if: runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'scripts/compatibility/install-windows-mesa.ps1'),
+            [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -ne 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            throw 'Invalid Windows Mesa installer syntax'
+          }
       - name: Install verified software OpenGL for Windows client E2E
         if: runner.os == 'Windows' && matrix.scope == 'client'
         shell: pwsh

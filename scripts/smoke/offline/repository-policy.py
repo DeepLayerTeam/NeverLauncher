@@ -2234,7 +2234,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["quiltCompatibilityII0172", "compatibilityQuiltII0172Required", "QuiltVersions", "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client"]:
         if required not in quilt_release_0172:
             fail(f"0.17.2 Quilt release certification incomplete: {required}")
-    quilt_rows = [row for row in quilt_targets_0172 if row.get("required") and row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
+    quilt_rows = [row for row in quilt_targets_0172 if row.get("loader") == "quilt" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(quilt_rows) != 48 or len({row.get("minecraft") for row in quilt_rows}) != 48:
         fail("0.17.2 Quilt target grid must contain exactly 48 unique stable releases")
     if {8, 16, 17, 21, 25} - {row.get("javaMajor") for row in quilt_rows}:
@@ -2436,7 +2436,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                     "1.21": 21, "1.21.1": 21, "1.21.2": 21, "1.21.3": 21, "1.21.4": 21, "1.21.5": 21,
                     "1.21.6": 21, "1.21.7": 21, "1.21.8": 21, "1.21.9": 21, "1.21.10": 21, "1.21.11": 21,
                     "26.1": 25, "26.1.1": 25, "26.1.2": 25, "26.2": 25}
-    rows = [row for row in neo_targets_0176 if row.get("required") and row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
+    rows = [row for row in neo_targets_0176 if row.get("loader") == "neoforge" and row.get("os") == "linux" and row.get("arch") == "x86_64"]
     if len(rows) != len(expected_neo):
         fail(f"0.17.6 NeoForge grid requires exactly {len(expected_neo)} targets, got {len(rows)}")
     else:
@@ -2654,10 +2654,22 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in rc_production_workflow_01711:
             fail(f"0.17.11 production candidate RC assertion incomplete: {required}")
     required_rows = [row for row in rc_targets_01711 if row.get("required")]
-    if len(required_rows) != 292:
-        fail(f"0.17.11 full RC requires exactly 292 required compatibility targets, got {len(required_rows)}")
+    unavailable_rows = [row for row in rc_targets_01711 if not row.get("required")]
+    # Historical 292-target catalogue is retained; 12 targets have no stable
+    # upstream loader and MUST NOT be certified or represented as passing.
+    blocked = {
+        ("quilt", mc): "upstream-missing" for mc in ("1.14", "1.14.1", "1.14.2", "1.14.3")
+    } | {
+        ("neoforge", mc): "upstream-prerelease-only"
+        for mc in ("1.20.3", "1.20.5", "1.21.2", "1.21.6", "1.21.7", "1.21.9", "26.1", "26.1.1")
+    }
+    observed_blocked = {(row.get("loader"), row.get("minecraft")): row.get("unavailableReason") for row in unavailable_rows}
+    if len(rc_targets_01711) != 292 or len(required_rows) != 280 or len(unavailable_rows) != 12 or observed_blocked != blocked:
+        fail("0.17.11 requires 292 catalogue entries, 280 required certifications and 12 exact upstream exclusions")
+    if any((row.get("os"), row.get("arch")) != ("linux", "x86_64") for row in unavailable_rows):
+        fail("0.17.11 blocked target platform is not linux/x86_64")
     expected_family_counts = {"vanilla": 109, "fabric": 53, "quilt": 53, "forge": 50, "neoforge": 27}
-    actual_family_counts = {loader: sum(1 for row in required_rows if row.get("loader") == loader) for loader in expected_family_counts}
+    actual_family_counts = {loader: sum(1 for row in rc_targets_01711 if row.get("loader") == loader) for loader in expected_family_counts}
     if actual_family_counts != expected_family_counts:
         fail(f"0.17.11 loader family coverage mismatch: {actual_family_counts}")
     for required in ["TestLoaderCompatibilityReleaseCertificate01711Complete", "TestLoaderCompatibilityReleaseCertificate01711RejectsTamperedRoot", "TestLoaderCompatibilityReleaseCertificate01711RejectsMissingCertificate", "TestLoaderCompatibilityReleaseCertificate01711EvidenceRootChanges"]:

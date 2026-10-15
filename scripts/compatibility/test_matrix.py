@@ -205,6 +205,28 @@ class MatrixToolTests(unittest.TestCase):
             self.assertEqual(len(planned), len(doc["targets"]) - 12)
             self.assertFalse({t["id"] for t in blocked} & {t["id"] for t in planned})
 
+    def test_windows_mesa_installer_has_unambiguous_variable_interpolation(self) -> None:
+        """Catch the PowerShell parser error that blocked every Windows E2E shard."""
+        script = (ROOT / "scripts/compatibility/install-windows-mesa.ps1").read_text(encoding="utf-8")
+        self.assertIn('for ${arch}: $actual', script)
+        self.assertNotRegex(script, r'\$[A-Za-z_][A-Za-z_0-9]*:(?![A-Za-z_])')
+        workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')
+        self.assertEqual(workflow.count('Verify Windows Mesa installer syntax'), 2)
+        self.assertIn('System.Management.Automation.Language.Parser', workflow)
+
+    def test_canonical_upstream_catalogue_policies(self) -> None:
+        """Keep all 292 declared targets without pretending 12 unavailable ones passed."""
+        for rel in (
+            'scripts/smoke/offline/quilt-compatibility-II-0172.py',
+            'scripts/smoke/offline/neoforge-compatibility-II-0176.py',
+            'scripts/smoke/offline/loader-compatibility-rc-01711.py',
+            'scripts/smoke/offline/loader-compatibility-ga-0180.py',
+        ):
+            proc = subprocess.run(['python3', str(ROOT / rel)], cwd=ROOT, text=True,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(proc.returncode, 0, f'{rel}: {proc.stdout} {proc.stderr}')
+            self.assertIn('NOT CERTIFIED', proc.stdout)
+
     def test_cannot_rebrand_upstream_blocked_as_certified(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             doc = self.target_doc()
@@ -483,7 +505,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("exactly one required target", proc.stderr)
+            self.assertIn("exactly one catalogue target", proc.stderr)
 
     def test_validate_accepts_forge_modern_0173_grid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -770,7 +792,15 @@ class MatrixToolTests(unittest.TestCase):
             matrix = json.loads((tmp / "out" / "matrix.json").read_text(encoding="utf-8"))
             self.assertEqual(matrix["status"], "passed")
             self.assertEqual(len(matrix["targets"]), len(doc["targets"]))
-            self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", row["evidenceSha256"]) for row in matrix["targets"]))
+            # Unsupported upstream combinations cannot have a genuine
+            # certification evidence digest; only executed targets do.
+            for target, row in zip(doc["targets"], matrix["targets"]):
+                if target["required"]:
+                    self.assertRegex(row["evidenceSha256"], r"^[0-9a-f]{64}$")
+                else:
+                    self.assertEqual(row["status"], "unsupported")
+                    self.assertEqual(row["unavailableReason"], target["unavailableReason"])
+                    self.assertNotIn("evidenceSha256", row)
 
     def test_ga_aggregate_rejects_missing_jre_attestation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
