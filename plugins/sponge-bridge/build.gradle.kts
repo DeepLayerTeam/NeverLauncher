@@ -9,7 +9,7 @@ repositories {
 }
 val bridgeRuntime = configurations.create("bridgeRuntime")
 dependencies {
-    compileOnly("org.spongepowered:spongeapi:12.0.0")
+    compileOnly("org.spongepowered:spongeapi:17.0.0")
     implementation(project(":plugins:bridge-common"))
     add(bridgeRuntime.name, project(":plugins:bridge-common"))
 }
