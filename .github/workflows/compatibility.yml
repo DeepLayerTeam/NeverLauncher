@@ -32,6 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
+          python3 e2e/scripts/test_prepare_vanilla_1171_void_world.py
           full_matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
           matrix="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[:mid]},separators=(",",":")))' <<<"$full_matrix")"
           matrix_b="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[mid:]},separators=(",",":")))' <<<"$full_matrix")"
@@ -139,6 +140,12 @@ jobs:
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
+      - name: Export bounded Windows native-fault metadata
+        if: always() && runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          ./scripts/compatibility/export-windows-faults.ps1 `
+            -OutputPath 'e2e/runtime/windows-fault-summary.txt'
       - name: Export bounded and redacted Minecraft crash diagnostics
         if: always()
         shell: bash
@@ -158,6 +165,7 @@ jobs:
             e2e/runtime/result.json
             e2e/runtime/client-package.json
             e2e/runtime/client-diagnostics.txt
+            e2e/runtime/windows-fault-summary.txt
             e2e/runtime/certification-retry.json
             e2e/runtime/fabric-certification.first-attempt.json
             e2e/runtime/forge-certification.first-attempt.json
@@ -300,6 +308,12 @@ jobs:
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
+      - name: Export bounded Windows native-fault metadata
+        if: always() && runner.os == 'Windows' && matrix.scope == 'client'
+        shell: pwsh
+        run: |
+          ./scripts/compatibility/export-windows-faults.ps1 `
+            -OutputPath 'e2e/runtime/windows-fault-summary.txt'
       - name: Export bounded and redacted Minecraft crash diagnostics
         if: always()
         shell: bash
@@ -319,6 +333,7 @@ jobs:
             e2e/runtime/result.json
             e2e/runtime/client-package.json
             e2e/runtime/client-diagnostics.txt
+            e2e/runtime/windows-fault-summary.txt
             e2e/runtime/certification-retry.json
             e2e/runtime/fabric-certification.first-attempt.json
             e2e/runtime/forge-certification.first-attempt.json

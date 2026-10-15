@@ -111,27 +111,28 @@ enable-rcon=false
 enable-query=false
 motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
-# Minecraft 1.17.1 can accept --server before the initial texture/resource
-# reload finishes. Flat worlds with an omitted layers list default to a
-# bedrock floor, which triggers rendering before resource reload completes.
-# Keep the 1.17.1 flat-generator codec minimal. The previous custom "lakes",
-# "features" and nested "structures" object emitted "Not a registry ops"
-# and the server silently fell back to the classic bedrock floor. The target
-# still requires the real client to complete the full matching-server E2E.
-# Never apply this CI-specific world setup to production servers.
+# Minecraft 1.17.1 has a documented dedicated-server generator-settings
+# regression (MC-195468). Let the server create a real flat world first, then
+# change its own level.dat in an offline, verified second stage.
+# The first boot is never counted as matching-server/client certification.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
-generator-settings={"biome":"minecraft:plains","layers":[{"block":"minecraft:air","height":1}]}
 gamemode=creative
 allow-flight=true
 EOFVOID
+  mkfifo "$SERVER_DIR/server-console.fifo"
+  # Keep a writer open so the server's FIFO stdin cannot close before stop.
+  exec {SERVER_CONTROL_FD}<>"$SERVER_DIR/server-console.fifo"
+  SERVER_STDIN="$SERVER_DIR/server-console.fifo"
+else
+  SERVER_STDIN=/dev/null
 fi
 
 printf '[matching-e2e] start Mojang server %s on 127.0.0.1:%s with Java %s\n' "$MINECRAFT_VERSION" "$SERVER_PORT" "$JAVA_MAJOR"
 (
   cd "$SERVER_DIR"
   exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
-) > "$RUNTIME_DIR/matching-server.log" 2>&1 &
+) < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &
 SERVER_PID=$!
 
 python3 - "$SERVER_PID" "$SERVER_PORT" "$RUNTIME_DIR/matching-server.log" <<'PY'
@@ -158,6 +159,51 @@ try: last=open(log,encoding='utf-8',errors='replace').read()[-8000:]
 except OSError: pass
 raise SystemExit('matching server did not become ready\n'+last)
 PY
+
+# Rebuild the 1.17.1 world with an air-only generator using the *actual*
+# server-produced level.dat NBT. Stop the first server gracefully, ensure the
+# world metadata has been flushed, remove old bedrock chunks, then restart.
+if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  printf '[matching-e2e] stop initial 1.17.1 server for offline world preparation\n'
+  printf 'stop\n' >&"$SERVER_CONTROL_FD"
+  for _ in $(seq 1 120); do
+    if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then break; fi
+    sleep 0.25
+  done
+  if kill -0 "$SERVER_PID" >/dev/null 2>&1; then
+    echo '[matching-e2e] 1.17.1 server failed to stop cleanly' >&2
+    exit 1
+  fi
+  wait "$SERVER_PID" || { echo '[matching-e2e] initial server exited with failure' >&2; exit 1; }
+  python3 "$ROOT/e2e/scripts/prepare-vanilla-1171-void-world.py" "$SERVER_DIR/world/level.dat"
+  # Existing chunks retain bedrock independently of the generator settings.
+  rm -rf "$SERVER_DIR/world/region" "$SERVER_DIR/world/entities" "$SERVER_DIR/world/poi"
+  printf '[matching-e2e] restart 1.17.1 server with verified void world\n'
+  (
+    cd "$SERVER_DIR"
+    exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
+  ) < "$SERVER_STDIN" >> "$RUNTIME_DIR/matching-server.log" 2>&1 &
+  SERVER_PID=$!
+  python3 - "$SERVER_PID" "$SERVER_PORT" "$RUNTIME_DIR/matching-server.log" <<'PYREADY'
+import os, socket, sys, time
+pid, port, log = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
+deadline = time.monotonic() + 150
+while time.monotonic() < deadline:
+    try: os.kill(pid, 0)
+    except OSError: raise SystemExit('1.17.1 void-world server exited before ready')
+    with socket.socket() as sock:
+        sock.settimeout(1)
+        if sock.connect_ex(('127.0.0.1', port)) == 0:
+            print('[matching-e2e] 1.17.1 void-world TCP ready')
+            break
+    time.sleep(1)
+else: raise SystemExit('1.17.1 void-world server did not become ready')
+with open(log, encoding='utf-8', errors='replace') as inp:
+    body = inp.read()
+if 'Not a registry ops' in body or 'No key structures in MapLike' in body:
+    raise SystemExit('1.17.1 world codec rejected generated settings')
+PYREADY
+fi
 
 # Modern clients otherwise stop on first-run UI before automatic multiplayer connection.
 cat > "$CLIENT_DIR/options.txt" <<'OPTIONS'

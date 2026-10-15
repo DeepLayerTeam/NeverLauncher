@@ -173,7 +173,11 @@ mod imp {
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
     const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-    const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(7);
+    // Java 25/ARM64 can spend several seconds hashing newly mapped executable
+    // images during the in-process integrity sweep. Keep a bounded watchdog,
+    // but allow one full sweep before treating a missing authenticated packet
+    // as a dead Sensor. Failed HMAC/sequence/integrity proofs remain fatal.
+    const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15);
     const RECONCILE_GRACE: Duration = Duration::from_millis(350);
     const STILL_ACTIVE_EXIT_CODE: u32 = 259;
 

@@ -28,6 +28,9 @@ const HOOK_LOAD_LIBRARY_EX_A: u32 = 3;
 const HOOK_LOAD_LIBRARY_EX_W: u32 = 4;
 const HOOK_VIRTUAL_ALLOC: u32 = 5;
 const HOOK_VIRTUAL_PROTECT: u32 = 6;
+const HOOK_VIRTUAL_ALLOC_FROM_APP: u32 = 7;
+const HOOK_VIRTUAL_PROTECT_FROM_APP: u32 = 8;
+const HOOK_VIRTUAL_ALLOC_2: u32 = 9;
 
 static HOOK_CALL_COUNT: AtomicU64 = AtomicU64::new(0);
 static ORIGINAL_LOAD_LIBRARY_A: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -36,6 +39,9 @@ static ORIGINAL_LOAD_LIBRARY_EX_A: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::
 static ORIGINAL_LOAD_LIBRARY_EX_W: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_VIRTUAL_ALLOC: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_VIRTUAL_PROTECT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_VIRTUAL_ALLOC_FROM_APP: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_VIRTUAL_PROTECT_FROM_APP: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_VIRTUAL_ALLOC_2: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 #[repr(C)]
 #[allow(dead_code)]
@@ -156,9 +162,10 @@ struct HookSpec {
     c_name: &'static [u8],
     replacement: usize,
     canonical: &'static AtomicPtr<c_void>,
+    optional: bool,
 }
 
-fn hook_specs() -> [HookSpec; 6] {
+fn hook_specs() -> [HookSpec; 9] {
     [
         HookSpec {
             id: HOOK_LOAD_LIBRARY_A,
@@ -166,6 +173,7 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"LoadLibraryA\0",
             replacement: hook_load_library_a as usize,
             canonical: &ORIGINAL_LOAD_LIBRARY_A,
+            optional: false,
         },
         HookSpec {
             id: HOOK_LOAD_LIBRARY_W,
@@ -173,6 +181,7 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"LoadLibraryW\0",
             replacement: hook_load_library_w as usize,
             canonical: &ORIGINAL_LOAD_LIBRARY_W,
+            optional: false,
         },
         HookSpec {
             id: HOOK_LOAD_LIBRARY_EX_A,
@@ -180,6 +189,7 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"LoadLibraryExA\0",
             replacement: hook_load_library_ex_a as usize,
             canonical: &ORIGINAL_LOAD_LIBRARY_EX_A,
+            optional: false,
         },
         HookSpec {
             id: HOOK_LOAD_LIBRARY_EX_W,
@@ -187,6 +197,7 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"LoadLibraryExW\0",
             replacement: hook_load_library_ex_w as usize,
             canonical: &ORIGINAL_LOAD_LIBRARY_EX_W,
+            optional: false,
         },
         HookSpec {
             id: HOOK_VIRTUAL_ALLOC,
@@ -194,6 +205,7 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"VirtualAlloc\0",
             replacement: hook_virtual_alloc as usize,
             canonical: &ORIGINAL_VIRTUAL_ALLOC,
+            optional: false,
         },
         HookSpec {
             id: HOOK_VIRTUAL_PROTECT,
@@ -201,6 +213,34 @@ fn hook_specs() -> [HookSpec; 6] {
             c_name: b"VirtualProtect\0",
             replacement: hook_virtual_protect as usize,
             canonical: &ORIGINAL_VIRTUAL_PROTECT,
+            optional: false,
+        },
+        // Optional Windows 10+ memory APIs. Some JDKs use these instead of
+        // classic VirtualAlloc/VirtualProtect; ignoring them loses JIT
+        // executable-memory provenance. Older systems need not export them.
+        HookSpec {
+            id: HOOK_VIRTUAL_ALLOC_FROM_APP,
+            name: "VirtualAllocFromApp",
+            c_name: b"VirtualAllocFromApp\0",
+            replacement: hook_virtual_alloc_from_app as usize,
+            canonical: &ORIGINAL_VIRTUAL_ALLOC_FROM_APP,
+            optional: true,
+        },
+        HookSpec {
+            id: HOOK_VIRTUAL_PROTECT_FROM_APP,
+            name: "VirtualProtectFromApp",
+            c_name: b"VirtualProtectFromApp\0",
+            replacement: hook_virtual_protect_from_app as usize,
+            canonical: &ORIGINAL_VIRTUAL_PROTECT_FROM_APP,
+            optional: true,
+        },
+        HookSpec {
+            id: HOOK_VIRTUAL_ALLOC_2,
+            name: "VirtualAlloc2",
+            c_name: b"VirtualAlloc2\0",
+            replacement: hook_virtual_alloc_2 as usize,
+            canonical: &ORIGINAL_VIRTUAL_ALLOC_2,
+            optional: true,
         },
     ]
 }
@@ -274,7 +314,7 @@ fn resolve_canonical_targets() -> Result<(), String> {
     }
     for spec in hook_specs() {
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
-        if address.is_null() {
+        if address.is_null() && !spec.optional {
             return Err(format!("NeverGuard Hook Engine cannot resolve {}", spec.name));
         }
         spec.canonical.store(address, Ordering::Release);
@@ -464,7 +504,10 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
             if thunk & ordinal_mask == 0 {
                 let name_offset = (thunk & !ordinal_mask) as usize;
                 let function_name = read_ascii(base, size, name_offset + 2, MAX_IMPORT_NAME)?;
-                if let Some(spec) = specs.iter().find(|spec| spec.name == function_name) {
+                if let Some(spec) = specs.iter().find(|spec| {
+                    spec.name == function_name
+                        && !spec.canonical.load(Ordering::Acquire).is_null()
+                }) {
                     let expected = unsafe { GetProcAddress(imported_module, spec.c_name.as_ptr().cast()) };
                     if expected.is_null() {
                         return Err(format!(
@@ -796,6 +839,77 @@ unsafe extern "system" fn hook_virtual_protect(
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(address, new_protect, provenance);
         crate::memory_integrity::record_virtual_protect(address, size, new_protect);
+    }
+    result
+}
+
+// Alternate Windows memory allocation APIs can be imported by JDK/native
+// runtimes instead of the classic Kernel32 entries. Intercept them only in
+// their own IAT, and record a transition *only after* the real call succeeds.
+unsafe extern "system" fn hook_virtual_alloc_from_app(
+    address: *mut c_void,
+    size: usize,
+    allocation_type: u32,
+    protect: u32,
+) -> *mut c_void {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_VIRTUAL_ALLOC_FROM_APP.load(Ordering::Acquire);
+    if target.is_null() { return std::ptr::null_mut(); }
+    let function: unsafe extern "system" fn(*mut c_void, usize, u32, u32) -> *mut c_void =
+        unsafe { std::mem::transmute(target) };
+    let result = unsafe { function(address, size, allocation_type, protect) };
+    if !result.is_null() {
+        let provenance = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
+    }
+    result
+}
+
+unsafe extern "system" fn hook_virtual_protect_from_app(
+    address: *mut c_void,
+    size: usize,
+    protect: u32,
+    old_protect: *mut u32,
+) -> i32 {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_VIRTUAL_PROTECT_FROM_APP.load(Ordering::Acquire);
+    if target.is_null() { return 0; }
+    let function: unsafe extern "system" fn(*mut c_void, usize, u32, *mut u32) -> i32 =
+        unsafe { std::mem::transmute(target) };
+    let result = unsafe { function(address, size, protect, old_protect) };
+    if result != 0 {
+        let provenance = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(address, protect, provenance);
+        crate::memory_integrity::record_virtual_protect(address, size, protect);
+    }
+    result
+}
+
+unsafe extern "system" fn hook_virtual_alloc_2(
+    process: *mut c_void,
+    address: *mut c_void,
+    size: usize,
+    allocation_type: u32,
+    protect: u32,
+    extended_parameters: *mut c_void,
+    parameter_count: u32,
+) -> *mut c_void {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_VIRTUAL_ALLOC_2.load(Ordering::Acquire);
+    if target.is_null() { return std::ptr::null_mut(); }
+    let function: unsafe extern "system" fn(
+        *mut c_void, *mut c_void, usize, u32, u32, *mut c_void, u32
+    ) -> *mut c_void = unsafe { std::mem::transmute(target) };
+    let result = unsafe {
+        function(process, address, size, allocation_type, protect, extended_parameters, parameter_count)
+    };
+    // NULL and GetCurrentProcess() select this process. Never treat an
+    // allocation in another process as local executable-memory provenance.
+    if !result.is_null() && (process.is_null() || process == unsafe { GetCurrentProcess() }) {
+        let provenance = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
 }
