@@ -2,11 +2,11 @@
 
 **NeverLauncher** — открытая платформа управления и доставки Minecraft-клиентов: серверное API, веб-панель, настольный лаунчер, CLI, собственный runtime, NeverGuard, ServerBridge и NeverExtensions. Репозиторий содержит код продукта, инфраструктуру развертывания и тестовые матрицы; это не готовый Minecraft-сервер или дистрибутив игры.
 
-- **Текущая версия исходников:** [`VERSION`](VERSION) (`0.21.5` на момент составления документации). Другие модули синхронизируются с этим файлом; не изменяйте версию вручную в отдельных пакетах.
+- **Текущая версия исходников:** [`VERSION`](VERSION). Другие модули синхронизируются с этим файлом; не изменяйте версию вручную в отдельных пакетах.
 - **Лицензия:** [Apache License 2.0](LICENSE), дополнительные сведения — [NOTICE](NOTICE).
 - **Исходники:** https://github.com/DeepLayerTeam/NeverLauncher
 - **Совместимость:** [COMPATIBILITY.md](COMPATIBILITY.md), [матрица целевых сочетаний](compatibility/targets.json). Запись в матрице не означает успешную сертификацию.
-- **Обратная связь:** [Issues](https://github.com/DeepLayerTeam/NeverLauncher/issues), [Discussions](https://github.com/DeepLayerTeam/NeverLauncher/discussions); сообщения об уязвимостях — через [SECURITY.md](SECURITY.md).
+- **Обратная связь:** [задачи](https://github.com/DeepLayerTeam/NeverLauncher/issues), [обсуждения](https://github.com/DeepLayerTeam/NeverLauncher/discussions); сообщения об уязвимостях — через [SECURITY.md](SECURITY.md).
 
 ## Состав продукта
 
@@ -23,7 +23,7 @@
 
 ## Быстрый старт для разработчиков
 
-Установите Go 1.23 (как в CI), Node.js/npm, Python 3, Rust/Cargo; для мостов также JDK и Gradle. Для реального API необходимы PostgreSQL и, в предусмотренных сценариях, Redis. **Не используйте пример `.env` для production.**
+Установите Go 1.23 (как в CI), Node.js/npm, Python 3, Rust/Cargo; для мостов также JDK и Gradle. Для реального API необходимы PostgreSQL и, в предусмотренных сценариях, Redis. **Не используйте пример `.env` для промышленной эксплуатации.**
 
 ```bash
 # Из корня репозитория: проверка версии и OpenAPI
@@ -49,8 +49,8 @@ python3 scripts/contracts/validate-openapi.py
 
 ## Проверки и ограничения
 
-Workflow GitHub Actions включают тесты Go, Rust, TypeScript, статические контракты и платформенные матрицы. **Успешная проверка структуры не эквивалентна реальному запуску Minecraft**. Для выпуска изучайте сертификаты точного коммита и результаты [release preflight](docs/security/release-certification.md). Некоторые пользовательские сценарии (например, полноценный UI optional mods или официальный Minecraft ownership flow) могут требовать дополнительной реализации и проверки — наличие отдельных API не подтверждает законченный end-to-end сценарий.
+Процессы GitHub Actions включают тесты Go, Rust, TypeScript, статические контракты и платформенные матрицы. **Успешная проверка структуры не эквивалентна реальному запуску Minecraft**. Для выпуска изучайте сертификаты точного коммита и результаты [предрелизные проверки](docs/security/release-certification.md). Некоторые пользовательские сценарии (например, полноценный интерфейс выбора дополнительных модов или официальную проверку владения Minecraft) могут требовать дополнительной реализации и проверки — наличие отдельных API не подтверждает завершённый сквозной сценарий.
 
 ## Участие
 
-Перед изменением кода прочитайте [CONTRIBUTING.md](CONTRIBUTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Не помещайте секреты, персональные данные или неподписанные release-артефакты в pull request.
+Перед изменением кода прочитайте [CONTRIBUTING.md](CONTRIBUTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Не помещайте секреты, персональные данные или неподписанные артефакты релиза в pull request.

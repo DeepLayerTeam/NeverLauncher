@@ -1,4 +1,4 @@
-# Predictable line endings in a multi-platform repository.
+# Единые окончания строк для разных операционных систем.
 * text=auto
 
 *.md text eol=lf
@@ -28,7 +28,7 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# Avoid corrupting build assets and signed packages.
+# Не изменять бинарные ресурсы сборки и подписанные пакеты.
 *.png binary
 *.jpg binary
 *.jpeg binary
@@ -51,6 +51,6 @@
 *.p12 binary
 *.pfx binary
 
-# Keep generated lockfiles in repository; avoid misleading language diff for artifacts.
+# Сохранять файлы блокировки зависимостей в репозитории; скрывать их из статистики языков.
 package-lock.json linguist-generated=true
 Cargo.lock linguist-generated=true

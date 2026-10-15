@@ -1,56 +1,56 @@
-name: Feature request
-description: Propose a product capability or enhancement
+name: Предложение новой возможности
+description: Предложите новую функцию или улучшение существующей
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        Describe the user-facing problem and measurable acceptance criteria.
-        See [ROADMAP.md](../../ROADMAP.md); the roadmap does not promise a release date.
+        Опишите проблему пользователя и проверяемые критерии готовности.
+        Ознакомьтесь с [дорожной картой](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/ROADMAP.md). Она не устанавливает обязательных сроков выпуска.
   - type: dropdown
     id: area
     attributes:
-      label: Area
+      label: Область продукта
       options:
-        - Backend API
-        - Admin
-        - Desktop
-        - Minecraft compatibility / NeverRuntime
-        - NeverGuard / security
+        - Серверный API
+        - Панель администрирования
+        - Настольный лаунчер
+        - Совместимость Minecraft / NeverRuntime
+        - NeverGuard / безопасность
         - ServerBridge
         - NeverExtensions / SDK
-        - Installer / CLI / release
-        - Documentation / Developer experience
-        - Other
+        - Установщик / CLI / выпуск релиза
+        - Документация / инструменты разработчика
+        - Другое
     validations:
       required: true
   - type: textarea
     id: problem
     attributes:
-      label: Problem and use case
-      description: Which user and workflow would benefit, and what is missing today?
+      label: Проблема и сценарий использования
+      description: Кому поможет изменение, в каком сценарии и чего сейчас не хватает?
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
-      description: Outline the workflow or interface, not just a feature name.
+      label: Предлагаемое решение
+      description: Опишите процесс использования или интерфейс, а не только название функции.
     validations:
       required: true
   - type: textarea
     id: criteria
     attributes:
-      label: Acceptance criteria
+      label: Критерии готовности
       placeholder: |
-        - [ ] Documented end-to-end scenario ...
-        - [ ] Regression tests on affected platforms ...
+        - [ ] Описан и проверен сквозной пользовательский сценарий ...
+        - [ ] Добавлены регрессионные тесты для затронутых платформ ...
     validations:
       required: true
   - type: textarea
     id: compatibility
     attributes:
-      label: Compatibility, security and migration considerations
-      description: Note platform, Minecraft loader, API, permissions and backward-compatibility concerns.
+      label: Совместимость, безопасность и миграции
+      description: Укажите влияние на платформы, загрузчики Minecraft, API, разрешения и обратную совместимость.
     validations:
       required: false

@@ -1,4 +1,4 @@
-# Consistent defaults across Go, Rust, Java, TypeScript, Python, YAML and documentation.
+# Единые правила форматирования для Go, Rust, Java, TypeScript, Python, YAML и документации.
 root = true
 
 [*]
@@ -37,4 +37,4 @@ indent_style = tab
 end_of_line = crlf
 
 [*.{png,jpg,jpeg,gif,ico,icns,pdf,jar,zip,gz,woff,woff2}]
-# Binary formats are excluded from text-processing conventions by Git attributes.
+# Правила для бинарных форматов задаются отдельно в .gitattributes.

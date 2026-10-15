@@ -1,32 +1,32 @@
-name: Documentation issue
-description: Report incorrect, missing, or outdated project documentation
+name: Ошибка в документации
+description: Сообщите о неточной, отсутствующей или устаревшей документации
 labels: [documentation]
 body:
   - type: input
     id: page
     attributes:
-      label: Affected document or URL
-      placeholder: Example — docs/getting-started/production.md
+      label: Документ или ссылка
+      placeholder: 'Например: docs/getting-started/production.md'
     validations:
       required: true
   - type: textarea
     id: problem
     attributes:
-      label: What is incorrect or missing?
-      description: Explain the discrepancy and version/commit where it occurs.
+      label: Что неверно или отсутствует?
+      description: Опишите расхождение и укажите версию либо коммит, в котором оно обнаружено.
     validations:
       required: true
   - type: textarea
     id: suggestion
     attributes:
-      label: Proposed correction
-      description: Include verified commands or source references where possible.
+      label: Предлагаемое исправление
+      description: По возможности приведите проверенные команды или ссылки на исходный код.
     validations:
       required: false
   - type: checkboxes
     id: confirmation
     attributes:
-      label: Confirmation
+      label: Подтверждение
       options:
-        - label: I did not include credentials or private information.
+        - label: Я не включил учётные данные и конфиденциальную информацию.
           required: true

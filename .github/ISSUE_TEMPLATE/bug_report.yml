@@ -1,72 +1,72 @@
-name: Bug report
-description: Reproducible defect in NeverLauncher
+name: Сообщение об ошибке
+description: Сообщите о воспроизводимой ошибке в NeverLauncher
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Before submitting, check [troubleshooting](../../docs/troubleshooting/common.md) and existing issues.
-        **Do not include credentials, private keys, access tokens, personal data, or exploitation details.**
-        Send vulnerabilities through the private channel described in SECURITY.md.
+        Перед отправкой ознакомьтесь с [руководством по диагностике](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/docs/troubleshooting/common.md) и проверьте существующие задачи.
+        **Не публикуйте пароли, закрытые ключи, токены доступа, персональные данные и подробности эксплуатации уязвимостей.**
+        Об уязвимостях сообщайте конфиденциально согласно [политике безопасности](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/SECURITY.md).
   - type: input
     id: component
     attributes:
-      label: Component
-      description: Backend, Admin, Desktop, CLI, NeverRuntime, NeverGuard, ServerBridge, NeverExtensions, CI, or other.
-      placeholder: Example — NeverRuntime / Fabric
+      label: Компонент
+      description: 'Например: Backend, Admin, Desktop, CLI, NeverRuntime, NeverGuard, ServerBridge, NeverExtensions или CI.'
+      placeholder: 'Например: NeverRuntime / Fabric'
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: Version / commit SHA
-      placeholder: Example — 0.21.5 / 40-character commit SHA
+      label: Версия и хеш коммита
+      placeholder: 'Например: 0.21.5 / полный SHA коммита'
     validations:
       required: true
   - type: input
     id: environment
     attributes:
-      label: Environment
-      placeholder: Example — Windows 11 x64, Java 21, Fabric 1.20.1
+      label: Окружение
+      placeholder: 'Например: Windows 11 x64, Java 21, Fabric 1.20.1'
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Steps to reproduce
-      description: Minimal deterministic steps, no secrets.
+      label: Шаги для воспроизведения
+      description: Укажите минимальную последовательность действий без секретных данных.
       placeholder: |
-        1. Configure ...
-        2. Execute ...
-        3. Observe ...
+        1. Настроить ...
+        2. Выполнить ...
+        3. Проверить результат ...
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected behavior
+      label: Ожидаемое поведение
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: Actual behavior
+      label: Фактическое поведение
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Sanitized diagnostics and CI links
-      description: Redact tokens, emails, hostnames, user IDs and private configuration.
+      label: Обезличенные логи и ссылки на CI
+      description: Удалите токены, адреса электронной почты, имена хостов, идентификаторы пользователей и закрытые настройки.
       render: text
     validations:
       required: false
   - type: checkboxes
     id: checklist
     attributes:
-      label: Checklist
+      label: Проверка перед отправкой
       options:
-        - label: I verified that this issue does not contain secrets or an undisclosed vulnerability.
+        - label: В сообщении нет секретов и сведений о нераскрытой уязвимости.
           required: true
-        - label: I checked existing issues and relevant documentation.
+        - label: Я проверил существующие задачи и документацию.
           required: true

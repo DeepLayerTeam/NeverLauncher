@@ -1,32 +1,32 @@
-name: Idea / architectural proposal
-description: Discuss an improvement before opening an implementation issue
+name: Идея или архитектурное предложение
+description: Обсудите улучшение до создания задачи на реализацию
 labels: [idea]
 body:
   - type: textarea
     id: context
     attributes:
-      label: Problem and affected users
-      description: Explain the scenario and current limitation.
+      label: Проблема и затронутые пользователи
+      description: Опишите сценарий использования и текущее ограничение.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed approach
-      description: Include trade-offs and possible alternatives.
+      label: Предлагаемый подход
+      description: Укажите преимущества, недостатки и возможные альтернативы.
     validations:
       required: true
   - type: textarea
     id: impacts
     attributes:
-      label: Compatibility, security, and operations impact
-      description: Platforms, API, Minecraft version, migrations and release evidence.
+      label: Влияние на совместимость, безопасность и эксплуатацию
+      description: Учтите ОС, API, версии Minecraft, миграции и подтверждение готовности релиза.
     validations:
       required: false
   - type: textarea
     id: references
     attributes:
-      label: References or prototype
-      description: Public links only; never share access tokens or personal data.
+      label: Ссылки и прототипы
+      description: Приводите только общедоступные ссылки. Не публикуйте токены доступа и персональные данные.
     validations:
       required: false
