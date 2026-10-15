@@ -1,6 +1,6 @@
 plugins {
     java
-    id("net.minecraftforge.gradle") version "7.0.31"
+    id("net.minecraftforge.gradle") version "7.0.40"
 }
 version = rootProject.file("VERSION").readText().trim()
 group = "ru.neverlauncher"
