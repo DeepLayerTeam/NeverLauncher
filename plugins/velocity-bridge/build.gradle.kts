@@ -3,7 +3,7 @@ version = rootProject.file("VERSION").readText().trim()
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 dependencies {
     implementation(project(":plugins:proxy-family-common"))
-    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    compileOnly("com.velocitypowered:velocity-api:4.2.1-SNAPSHOT")
 }
 tasks.jar {
     dependsOn(configurations.runtimeClasspath.get().buildDependencies)
