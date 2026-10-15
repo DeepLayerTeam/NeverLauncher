@@ -21,7 +21,10 @@ const PAGE_EXECUTE_READWRITE: u32 = 0x40;
 const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
 const PAGE_GUARD: u32 = 0x100;
 const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
-const MEMORY_TRANSITION_RING_CAPACITY: usize = 1024;
+// Large HotSpot startup bursts can exceed a 1024-event queue before the
+// two-second image-integrity heartbeat. Preserve every provenance event; any
+// genuine overrun still fails closed in drain_transitions().
+const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
 
 const TRANSITION_VIRTUAL_ALLOC: u32 = 1;
@@ -285,6 +288,22 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
     Ok(snapshot_for_regions(state, &regions))
 }
 
+/// Drain observed, authenticated process-local memory transitions between the
+/// more expensive executable image snapshots. This prevents startup bursts
+/// from filling the ring while keeping the independent full scan in place.
+pub fn drain_pending_transitions() -> Result<(), String> {
+    let mut guard = MEMORY_STATE
+        .lock()
+        .map_err(|_| "NeverGuard Memory Integrity state lock poisoned".to_string())?;
+    let state = guard
+        .as_mut()
+        .ok_or_else(|| "NeverGuard Memory Integrity is not initialized".to_string())?;
+    if !state.active || !state.healthy {
+        return Err("NeverGuard Memory Integrity is not active/healthy".to_string());
+    }
+    drain_transitions(state)
+}
+
 pub fn shutdown() {
     if let Ok(mut guard) = MEMORY_STATE.lock() {
         *guard = None;
@@ -524,9 +543,28 @@ fn queue_transition(event: MemoryTransition) {
 }
 
 fn range_allowed(region: &ExecutableRegion, allowed: &[AddressRange]) -> bool {
-    allowed
-        .iter()
-        .any(|range| range.contains(region.base, region.size))
+    // VirtualQuery merges adjacent pages with the same protection, while
+    // VirtualProtect records each independently verified transition range.
+    // Require *complete* union coverage; any unobserved gap remains fatal.
+    if allowed.iter().any(|range| range.contains(region.base, region.size)) {
+        return true;
+    }
+    let Some(end) = region.base.checked_add(region.size) else {
+        return false;
+    };
+    let mut covered = region.base;
+    while covered < end {
+        let Some(next) = allowed
+            .iter()
+            .filter(|range| range.start <= covered && range.end > covered)
+            .map(|range| range.end)
+            .max()
+        else {
+            return false;
+        };
+        covered = next;
+    }
+    true
 }
 
 fn snapshot_for_regions(
@@ -576,8 +614,11 @@ fn snapshot_for_regions(
         })
         .collect::<Vec<_>>();
     code_rows.sort_unstable();
+    // Separate the code-set hash domain from raw image bytes using a fixed
+    // SHA-256 tag. Both the tag and the measured regions affect the digest.
+    let code_domain = Sha256::digest(b"NeverGuard Memory Integrity code-set v1\0");
     let mut code_digest = Sha256::new();
-    code_digest.update(b"NeverGuard Memory Integrity code-set v1\0");
+    code_digest.update(code_domain);
     for row in code_rows {
         code_digest.update((row.len() as u32).to_le_bytes());
         code_digest.update(row.as_bytes());
@@ -602,4 +643,43 @@ fn is_executable(protect: u32) -> bool {
         protect & 0xFF,
         PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY
     )
+}
+
+#[cfg(test)]
+mod transition_coverage_tests {
+    use super::*;
+
+    fn private_region(base: usize, size: usize) -> ExecutableRegion {
+        ExecutableRegion {
+            base,
+            allocation_base: base,
+            size,
+            protect: PAGE_EXECUTE_READ,
+            kind: MEM_PRIVATE,
+        }
+    }
+
+    #[test]
+    fn adjacent_observed_transitions_cover_merged_virtualquery_region() {
+        let pages = [
+            AddressRange::from_base_size(0x10000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x11000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x12000, 0x1000).unwrap(),
+        ];
+        assert!(range_allowed(&private_region(0x10000, 0x3000), &pages));
+    }
+
+    #[test]
+    fn unknown_executable_page_between_transitions_remains_blocked() {
+        let pages = [
+            AddressRange::from_base_size(0x10000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x12000, 0x1000).unwrap(),
+        ];
+        assert!(!range_allowed(&private_region(0x10000, 0x3000), &pages));
+    }
+
+    #[test]
+    fn ring_can_retain_startup_bursts_without_relaxing_fail_closed() {
+        assert!(MEMORY_TRANSITION_RING_CAPACITY >= 32768);
+    }
 }

@@ -24,6 +24,7 @@ class VanillaSDL3RetryWiringTests(unittest.TestCase):
         self.assertIn('"${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3"', script)
         self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla"', script)
         self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric"', script)
+        self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "forge"', script)
         self.assertIn('python3 "$eligibility" --report "$output" --client-root "$client_root"', script)
         self.assertIn('"$runtime_bin" "$@" > "$output"', script)
 
@@ -31,6 +32,7 @@ class VanillaSDL3RetryWiringTests(unittest.TestCase):
         flow = (ROOT / ".github/workflows/compatibility.yml").read_text()
         self.assertIn("e2e/runtime/vanilla-certification.first-attempt.json", flow)
         self.assertIn("e2e/runtime/fabric-certification.first-attempt.json", flow)
+        self.assertIn("e2e/runtime/forge-certification.first-attempt.json", flow)
 
     def test_real_vanilla_retry_requires_successful_second_launch(self):
         with tempfile.TemporaryDirectory() as tmp:

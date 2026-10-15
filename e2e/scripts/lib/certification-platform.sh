@@ -36,9 +36,10 @@ certification_run_client() {
   if [[ "$os_name" == "linux" ]]; then
     export LIBGL_ALWAYS_SOFTWARE=1
     xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "$runtime_bin" "$@" > "$output"
-  elif [[ "$os_name" == "macos" && "${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" && ( "${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla" ) ]]; then
-    # Some hosted macOS Vanilla/Fabric 26.3 runs abort in SDL 3 before
-    # creating a window. ForgeBootstrap uses a different first-thread mode.
+  elif [[ "$os_name" == "macos" && "${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" && ( "${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "forge" ) ]]; then
+    # Some hosted macOS 26.3 clients abort in SDL 3 before creating a
+    # window, including ForgeBootstrap on macOS x64. Retry only after an
+    # observed native SDL SIGABRT; success requires full real E2E evidence.
     # Re-run the *real, verified* client once only when the first result proves
     # that exact native abort. No retry for JVM exceptions, security failures,
     # missing dependencies, normal exits, or other Minecraft/loader versions.

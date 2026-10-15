@@ -68,6 +68,7 @@ const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
 const MODULE_RING_CAPACITY: usize = 512;
 const MODULE_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 const MODULE_WORKER_POLL_INTERVAL: Duration = Duration::from_millis(20);
+const MEMORY_TRANSITION_DRAIN_INTERVAL: Duration = Duration::from_millis(100);
 const THREAD_INTEGRITY_CHECK_INTERVAL: Duration = Duration::from_millis(500);
 const DEBUG_INSTRUMENTATION_CHECK_INTERVAL: Duration = Duration::from_millis(250);
 const JVM_AWARE_CHECK_INTERVAL: Duration = Duration::from_millis(500);
@@ -634,6 +635,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     let mut debug_check_at = Instant::now();
     let mut jvm_aware_check_at = Instant::now();
     let mut continuous_heartbeat_at = Instant::now();
+    let mut memory_drain_at = Instant::now();
     let mut latest_thread_snapshot = match thread_integrity::reconcile_and_verify() {
         Ok(snapshot) => snapshot,
         Err(err) => {
@@ -699,6 +701,25 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 channel.secret.zeroize();
                 std::process::abort();
             }
+        }
+
+        // The native JVM can create thousands of protected memory regions
+        // during startup. Drain the bounded queue without replacing the
+        // independent full executable-region/hash verification below.
+        if memory_drain_at.elapsed() >= MEMORY_TRANSITION_DRAIN_INTERVAL {
+            if let Err(err) = memory_integrity::drain_pending_transitions() {
+                let tamper = memory_tamper_event(&err);
+                let _ = write_module_event(
+                    &mut channel.stream,
+                    &channel.secret,
+                    channel.pid,
+                    &mut sequence,
+                    &tamper,
+                );
+                channel.secret.zeroize();
+                std::process::abort();
+            }
+            memory_drain_at = Instant::now();
         }
 
         if debug_check_at.elapsed() >= DEBUG_INSTRUMENTATION_CHECK_INTERVAL {

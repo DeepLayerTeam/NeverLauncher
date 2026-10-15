@@ -112,13 +112,13 @@ enable-query=false
 motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
 # Minecraft 1.17.1 can accept --server before the initial texture/resource
-# reload finishes. A superflat bedrock world sends block tessellation work
-# during that reload, leading to a Mojang NPE, not a failed join. For the
-# disposable matching-server scenario test protocol/join in an empty *real*
-# Mojang world. Never apply this to a production server or to other versions.
+# reload finishes. Flat worlds with an omitted layers list default to a
+# bedrock floor, which triggers rendering before resource reload completes.
+# Use one explicit AIR layer instead of an empty list for a real server world;
+# do not change the actual join/exit certification conditions. Never apply this to a production server or to other versions.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
-generator-settings={"biome":"minecraft:plains","layers":[],"structures":{"structures":{}}}
+generator-settings={"lakes":false,"features":false,"biome":"minecraft:the_void","layers":[{"block":"minecraft:air","height":1}],"structures":{"structures":{}}}
 gamemode=creative
 allow-flight=true
 EOFVOID

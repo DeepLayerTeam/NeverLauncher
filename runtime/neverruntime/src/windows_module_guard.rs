@@ -742,7 +742,7 @@ mod imp {
                         report.last_heartbeat_unix_ms = now_unix_ms();
                     });
                     if last_module_event.elapsed() >= RECONCILE_GRACE {
-                        reconcile_snapshot(pid, &expected, &state)
+                        reconcile_snapshot(pid, &mut expected, &policy, &state)
                     } else {
                         Ok(())
                     }
@@ -1364,46 +1364,22 @@ mod imp {
 
     fn reconcile_snapshot(
         pid: u32,
-        expected: &HashMap<u64, String>,
+        expected: &mut HashMap<u64, String>,
+        policy: &WindowsModuleGuardPolicy,
         state: &Arc<Mutex<WindowsModuleGuardReport>>,
     ) -> Result<(), String> {
+        // ToolHelp and LdrRegisterDllNotification do not take one atomic
+        // snapshot. A just-mapped native DLL may be visible to ToolHelp
+        // before its loader notification has been delivered to the worker.
+        // Independently authenticate every such DLL rather than skipping the
+        // discrepancy or trusting an unmeasured path. Removed modules and
+        // changed paths still fail closed.
         let observed = module_snapshot(pid)?;
         let observed_map = observed
             .iter()
             .map(|module| (module.base_address, module.normalized_path.as_str()))
             .collect::<HashMap<_, _>>();
-        if observed_map.len() != expected.len() {
-            // Count-only errors did not show whether the Sensor missed a
-            // loader notification or whether a previously measured DLL was
-            // unexpectedly unloaded. Hash the paths to avoid disclosing CI
-            // home directories or installation paths in uploaded diagnostics.
-            // This is diagnostic only: any difference still fails closed.
-            let mut added = observed_map
-                .iter()
-                .filter(|(base, _)| !expected.contains_key(*base))
-                .map(|(base, path)| (*base, *path))
-                .collect::<Vec<_>>();
-            added.sort_unstable_by_key(|(base, _)| *base);
-            let missing = expected.keys().filter(|base| !observed_map.contains_key(*base)).count();
-            let samples = added
-                .iter()
-                .take(4)
-                .map(|(base, path)| {
-                    let fingerprint = hex::encode(Sha256::digest(path.as_bytes()));
-                    format!("0x{base:X}:{}", &fingerprint[..16])
-                })
-                .collect::<Vec<_>>()
-                .join(",");
-            return Err(format!(
-                "Module Guard external snapshot drift: expected {} modules, observed {}; unobserved loads={}, missing unloads={}, path digests=[{}]",
-                expected.len(),
-                observed_map.len(),
-                added.len(),
-                missing,
-                samples
-            ));
-        }
-        for (base, expected_path) in expected {
+        for (base, expected_path) in expected.iter() {
             let Some(observed_path) = observed_map.get(base) else {
                 return Err(format!(
                     "Module Guard external snapshot missing module base 0x{base:X}"
@@ -1414,6 +1390,39 @@ mod imp {
                     "Module Guard module path drift at base 0x{base:X}: expected {expected_path}, observed {observed_path}"
                 ));
             }
+        }
+
+        let mut authenticated_new = Vec::new();
+        for module in &observed {
+            if expected.contains_key(&module.base_address) {
+                continue;
+            }
+            // An unexpected module is permitted into the measured set only
+            // after the *same* canonical path, trust-root/Authenticode and
+            // SHA-256 checks applied to a signed Sensor load event. Any
+            // missing file, untrusted DLL, or path replacement is fatal.
+            let (normalized, _sha256) = policy
+                .validate_loaded_module(&module.path)
+                .map_err(|err| format!(
+                    "Module Guard external snapshot drift: unobserved module at base 0x{:X} failed independent trust validation: {err}",
+                    module.base_address
+                ))?;
+            if !normalized.eq_ignore_ascii_case(&module.normalized_path) {
+                return Err(format!(
+                    "Module Guard external snapshot canonical path drift at base 0x{:X}",
+                    module.base_address
+                ));
+            }
+            authenticated_new.push((module.base_address, normalized));
+        }
+        for (base, normalized) in authenticated_new {
+            expected.insert(base, normalized);
+        }
+        if expected.len() != observed_map.len() {
+            return Err(format!(
+                "Module Guard external snapshot count mismatch: expected {}, observed {}",
+                expected.len(), observed_map.len()
+            ));
         }
         let set_hash = module_set_sha256(&observed);
         update_counter(state, |report| {
