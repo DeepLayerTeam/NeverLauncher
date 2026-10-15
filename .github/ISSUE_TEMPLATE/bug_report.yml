@@ -1,0 +1,72 @@
+name: Bug report
+description: Reproducible defect in NeverLauncher
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, check [troubleshooting](../../docs/troubleshooting/common.md) and existing issues.
+        **Do not include credentials, private keys, access tokens, personal data, or exploitation details.**
+        Send vulnerabilities through the private channel described in SECURITY.md.
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      description: Backend, Admin, Desktop, CLI, NeverRuntime, NeverGuard, ServerBridge, NeverExtensions, CI, or other.
+      placeholder: Example — NeverRuntime / Fabric
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit SHA
+      placeholder: Example — 0.21.5 / 40-character commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: Example — Windows 11 x64, Java 21, Fabric 1.20.1
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal deterministic steps, no secrets.
+      placeholder: |
+        1. Configure ...
+        2. Execute ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized diagnostics and CI links
+      description: Redact tokens, emails, hostnames, user IDs and private configuration.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I verified that this issue does not contain secrets or an undisclosed vulnerability.
+          required: true
+        - label: I checked existing issues and relevant documentation.
+          required: true

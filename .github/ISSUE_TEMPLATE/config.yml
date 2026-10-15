@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability report
+    url: https://github.com/DeepLayerTeam/NeverLauncher/security/advisories/new
+    about: Report suspected vulnerabilities privately; do not publish exploits in an issue.
+  - name: Documentation index
+    url: https://github.com/DeepLayerTeam/NeverLauncher/blob/main/docs/README.md
+    about: Read setup, operation, and development documentation before opening an issue.
+  - name: General project discussions
+    url: https://github.com/DeepLayerTeam/NeverLauncher/discussions
+    about: Ask questions or discuss proposals, if Discussions is enabled.

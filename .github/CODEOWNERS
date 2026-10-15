@@ -1,0 +1,11 @@
+# Primary code owner is the authenticated repository administrator.
+# Teams can replace this user entry after GitHub team permissions are configured.
+* @TheSkiF4er
+
+# Keep security, CI, contracts, and release paths reviewed by the owner.
+/.github/ @TheSkiF4er
+/schemas/ @TheSkiF4er
+/scripts/release/ @TheSkiF4er
+/services/api/ @TheSkiF4er
+/runtime/ @TheSkiF4er
+/deploy/ @TheSkiF4er

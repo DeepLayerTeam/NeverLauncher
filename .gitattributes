@@ -1,0 +1,56 @@
+# Predictable line endings in a multi-platform repository.
+* text=auto
+
+*.md text eol=lf
+*.go text eol=lf
+*.rs text eol=lf
+*.java text eol=lf
+*.kt text eol=lf
+*.kts text eol=lf
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.xml text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+*.sql text eol=lf
+*.properties text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Avoid corrupting build assets and signed packages.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.webp binary
+*.pdf binary
+*.jar binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.zst binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.woff binary
+*.woff2 binary
+*.p12 binary
+*.pfx binary
+
+# Keep generated lockfiles in repository; avoid misleading language diff for artifacts.
+package-lock.json linguist-generated=true
+Cargo.lock linguist-generated=true

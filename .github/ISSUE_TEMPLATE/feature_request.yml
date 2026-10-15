@@ -1,0 +1,56 @@
+name: Feature request
+description: Propose a product capability or enhancement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user-facing problem and measurable acceptance criteria.
+        See [ROADMAP.md](../../ROADMAP.md); the roadmap does not promise a release date.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Backend API
+        - Admin
+        - Desktop
+        - Minecraft compatibility / NeverRuntime
+        - NeverGuard / security
+        - ServerBridge
+        - NeverExtensions / SDK
+        - Installer / CLI / release
+        - Documentation / Developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and use case
+      description: Which user and workflow would benefit, and what is missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Outline the workflow or interface, not just a feature name.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Documented end-to-end scenario ...
+        - [ ] Regression tests on affected platforms ...
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility, security and migration considerations
+      description: Note platform, Minecraft loader, API, permissions and backward-compatibility concerns.
+    validations:
+      required: false

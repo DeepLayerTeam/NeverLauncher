@@ -1,0 +1,40 @@
+# Consistent defaults across Go, Rust, Java, TypeScript, Python, YAML and documentation.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{go,py,rs,java,kt,kts}]
+indent_size = 4
+
+[*.go]
+indent_style = tab
+
+[*.{yml,yaml,json,jsonc,ts,tsx,js,jsx,css,html}]
+indent_size = 2
+
+[*.{sh,bash}]
+indent_size = 2
+
+[*.{ps1,psm1}]
+indent_size = 4
+
+[*.{toml,ini,properties}]
+indent_size = 2
+
+[{Makefile,makefile,GNUmakefile}]
+indent_style = tab
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[*.{png,jpg,jpeg,gif,ico,icns,pdf,jar,zip,gz,woff,woff2}]
+# Binary formats are excluded from text-processing conventions by Git attributes.

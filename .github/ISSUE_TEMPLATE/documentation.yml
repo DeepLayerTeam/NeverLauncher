@@ -1,0 +1,32 @@
+name: Documentation issue
+description: Report incorrect, missing, or outdated project documentation
+labels: [documentation]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Affected document or URL
+      placeholder: Example — docs/getting-started/production.md
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is incorrect or missing?
+      description: Explain the discrepancy and version/commit where it occurs.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Proposed correction
+      description: Include verified commands or source references where possible.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I did not include credentials or private information.
+          required: true
