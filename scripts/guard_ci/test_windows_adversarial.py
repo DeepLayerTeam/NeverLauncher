@@ -58,6 +58,17 @@ def synthetic_result(java_major: int, repository: str = "DeepLayerTeam/NeverLaun
 
 
 class WindowsAdversarialTests(unittest.TestCase):
+    def test_module_guard_first_heartbeat_is_an_authenticated_sensor_event(self):
+        source = (Path(__file__).resolve().parents[2] / "runtime/neverguard-sensor/src/lib.rs").read_text(encoding="utf-8")
+        worker = source.split("fn module_worker(", 1)[1].split("/// JVM native-agent entry point.", 1)[0]
+        initial = worker.split("let startup_heartbeat = RawModuleEvent {", 1)[1].split("    loop {", 1)[0]
+        self.assertIn("reason: MODULE_EVENT_REASON_HEARTBEAT", initial)
+        self.assertIn("write_module_event(", initial)
+        self.assertIn("&channel.secret,", initial)
+        self.assertIn("&mut sequence,", initial)
+        self.assertIn("std::process::abort()", initial)
+        self.assertIn("MODULE_HEARTBEAT_INTERVAL", worker)
+
     def test_valid_result_is_accepted(self):
         payload = synthetic_result(21)
         self.assertEqual([], mod.validate_result(payload, repository=payload["repository"], commit=payload["commit"], run_id=payload["runId"]))

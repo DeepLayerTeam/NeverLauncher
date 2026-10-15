@@ -154,9 +154,11 @@ jobs:
             --runtime e2e/runtime \
             --output e2e/runtime/client-diagnostics.txt
       - name: Upload machine-verifiable compatibility result
+        id: compatibility_evidence_upload
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
-        with:
+        with: &compatibility_evidence_a
           name: compatibility-${{ matrix.id }}
           path: |
             e2e/compatibility-result/compatibility-result.json
@@ -198,6 +200,7 @@ jobs:
             e2e/runtime/health-loader-native.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
+            e2e/runtime/matching-server.initial.log
             e2e/runtime/manifest.json
             e2e/runtime/runtime-verify.json
             e2e/runtime/runtime-sync.json
@@ -206,6 +209,14 @@ jobs:
             e2e/runtime/bridge-diagnostics.json
           if-no-files-found: error
           retention-days: 14
+      # GitHub's artifact service can time out during CreateArtifact even
+      # when the real Minecraft/client certification finished successfully.
+      # Retry the same machine-verifiable evidence, never synthesize PASS.
+      # If the retry fails, it remains a required failed job.
+      - name: Retry transient compatibility evidence upload
+        if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with: *compatibility_evidence_a
 
   compatibility-e2e-b:
     name: shard B · ${{ matrix.loader }} ${{ matrix.minecraft }} · ${{ matrix.os }}/${{ matrix.arch }}
@@ -322,9 +333,11 @@ jobs:
             --runtime e2e/runtime \
             --output e2e/runtime/client-diagnostics.txt
       - name: Upload machine-verifiable compatibility result
+        id: compatibility_evidence_upload
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
-        with:
+        with: &compatibility_evidence_b
           name: compatibility-${{ matrix.id }}
           path: |
             e2e/compatibility-result/compatibility-result.json
@@ -365,6 +378,7 @@ jobs:
             e2e/runtime/health-loader-native.json
             e2e/runtime/matching-server.json
             e2e/runtime/matching-server.log
+            e2e/runtime/matching-server.initial.log
             e2e/runtime/manifest.json
             e2e/runtime/runtime-verify.json
             e2e/runtime/runtime-sync.json
@@ -373,6 +387,14 @@ jobs:
             e2e/runtime/bridge-diagnostics.json
           if-no-files-found: error
           retention-days: 14
+      # GitHub's artifact service can time out during CreateArtifact even
+      # when the real Minecraft/client certification finished successfully.
+      # Retry the same machine-verifiable evidence, never synthesize PASS.
+      # If the retry fails, it remains a required failed job.
+      - name: Retry transient compatibility evidence upload
+        if: always() && steps.compatibility_evidence_upload.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with: *compatibility_evidence_b
 
   publish-matrix:
     name: Publish public compatibility matrix

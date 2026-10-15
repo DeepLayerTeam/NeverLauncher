@@ -116,7 +116,12 @@ EOFPROPS
 # change its own level.dat in an offline, verified second stage.
 # The first boot is never counted as matching-server/client certification.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  # This codec (1.17.1) requires a complete flat generator-settings object.
+  # The default {} produces "No key layers / No key structures" errors.
+  # Preserve these settings for both the initial and restarted server;
+  # mutate only the server-generated level.dat layers while it is stopped.
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
+generator-settings={"biome":"minecraft:plains","layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"structures":{"structures":{}},"features":false,"lakes":false}
 gamemode=creative
 allow-flight=true
 EOFVOID
@@ -175,6 +180,9 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
     exit 1
   fi
   wait "$SERVER_PID" || { echo '[matching-e2e] initial server exited with failure' >&2; exit 1; }
+  # Keep first-boot diagnostics but never conflate them with the certification
+  # server log. The second boot starts a clean log for the actual join proof.
+  cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"
   python3 "$ROOT/e2e/scripts/prepare-vanilla-1171-void-world.py" "$SERVER_DIR/world/level.dat"
   # Existing chunks retain bedrock independently of the generator settings.
   rm -rf "$SERVER_DIR/world/region" "$SERVER_DIR/world/entities" "$SERVER_DIR/world/poi"
@@ -182,7 +190,7 @@ if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   (
     cd "$SERVER_DIR"
     exec "$JAVA_BIN" -Xms256M -Xmx768M -jar server.jar nogui
-  ) < "$SERVER_STDIN" >> "$RUNTIME_DIR/matching-server.log" 2>&1 &
+  ) < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &
   SERVER_PID=$!
   python3 - "$SERVER_PID" "$SERVER_PORT" "$RUNTIME_DIR/matching-server.log" <<'PYREADY'
 import os, socket, sys, time

@@ -998,5 +998,22 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("evidence files are incomplete", proc.stderr)
 
+class EvidenceUploadRetryContractTests(unittest.TestCase):
+    def test_fail_closed_upload_retry_for_both_client_shards(self) -> None:
+        workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')
+        self.assertEqual(workflow.count('id: compatibility_evidence_upload'), 2)
+        self.assertEqual(workflow.count('continue-on-error: true\n        uses: actions/upload-artifact@v4'), 2)
+        self.assertEqual(workflow.count("steps.compatibility_evidence_upload.outcome == 'failure'"), 2)
+        self.assertIn('with: &compatibility_evidence_a', workflow)
+        self.assertIn('with: *compatibility_evidence_a', workflow)
+        self.assertIn('with: &compatibility_evidence_b', workflow)
+        self.assertIn('with: *compatibility_evidence_b', workflow)
+        # The retry has no continue-on-error: it must fail if Github's
+        # CreateArtifact endpoint is still unavailable.
+        for block in workflow.split('- name: Retry transient compatibility evidence upload')[1:]:
+            self.assertIn('uses: actions/upload-artifact@v4', block.split('      - name:', 1)[0])
+            self.assertNotIn('continue-on-error', block.split('      - name:', 1)[0])
+
+
 if __name__ == "__main__":
     unittest.main()

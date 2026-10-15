@@ -208,6 +208,11 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
             }
         }
     }
+    // Coalesce only intersecting or adjacent pages from the same trusted
+    // initial snapshot. This retains exactly the same union and never spans
+    // an unobserved gap, while avoiding quadratic hot-path scans.
+    coalesce_ranges(&mut state.allowed_dynamic);
+    coalesce_ranges(&mut state.allowed_mapped);
     state.active = true;
     state.healthy = true;
     let snapshot = snapshot_for_regions(&state, &regions);
@@ -230,6 +235,12 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
 
     drain_transitions(state)?;
     let regions = enumerate_executable_regions()?;
+    // The JVM can finish VirtualProtect on another thread *while* VirtualQuery
+    // walks the address space. Drain once more after the snapshot so completed
+    // and published hook events are visible before evaluating that snapshot.
+    // A transition never gets admitted without a successfully intercepted API
+    // call; truly missing provenance still fails closed.
+    drain_transitions(state)?;
     let mut current_image_keys = HashSet::new();
 
     for region in &regions {
@@ -490,6 +501,7 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
             "NeverGuard Memory Integrity transition ring overflow: dropped {dropped} events"
         ));
     }
+    let mut updated_dynamic = false;
     loop {
         let read = TRANSITION_READ_INDEX.load(Ordering::Acquire);
         let write = TRANSITION_WRITE_INDEX.load(Ordering::Acquire);
@@ -512,12 +524,37 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
                     .any(|existing| existing.start == range.start && existing.end == range.end)
                 {
                     state.allowed_dynamic.push(range);
+                    updated_dynamic = true;
                 }
             }
         }
         let _ = event.kind;
     }
+    if updated_dynamic {
+        coalesce_ranges(&mut state.allowed_dynamic);
+    }
     Ok(())
+}
+
+// Merge only overlapping/abutting intervals. Coverage is mathematically
+// unchanged, and a single missing executable page remains a fatal gap.
+fn coalesce_ranges(ranges: &mut Vec<AddressRange>) {
+    if ranges.len() < 2 {
+        return;
+    }
+    ranges.sort_unstable_by_key(|range| (range.start, range.end));
+    let mut output = 1usize;
+    for idx in 1..ranges.len() {
+        let current = ranges[idx];
+        let last = &mut ranges[output - 1];
+        if current.start <= last.end {
+            last.end = last.end.max(current.end);
+        } else {
+            ranges[output] = current;
+            output += 1;
+        }
+    }
+    ranges.truncate(output);
 }
 
 fn queue_transition(event: MemoryTransition) {
@@ -676,6 +713,22 @@ mod transition_coverage_tests {
             AddressRange::from_base_size(0x12000, 0x1000).unwrap(),
         ];
         assert!(!range_allowed(&private_region(0x10000, 0x3000), &pages));
+    }
+
+    #[test]
+    fn coalescing_preserves_observed_union_without_admitting_gaps() {
+        let mut pages = vec![
+            AddressRange::from_base_size(0x15000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x10000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x11000, 0x1000).unwrap(),
+            AddressRange::from_base_size(0x10000, 0x1000).unwrap(),
+        ];
+        coalesce_ranges(&mut pages);
+        assert_eq!(pages.len(), 2);
+        assert_eq!((pages[0].start, pages[0].end), (0x10000, 0x12000));
+        assert!(!range_allowed(&private_region(0x10000, 0x6000), &pages));
+        assert!(range_allowed(&private_region(0x10000, 0x2000), &pages));
+        assert!(range_allowed(&private_region(0x15000, 0x1000), &pages));
     }
 
     #[test]

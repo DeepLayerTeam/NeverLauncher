@@ -651,6 +651,31 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             std::process::abort();
         }
     };
+    // Send an authenticated liveness event as soon as this worker is running
+    // and the initial real thread snapshot has succeeded. In a short-lived
+    // Java process, waiting two seconds before the first Module Guard event
+    // made the legitimate lifecycle certificate report zero heartbeats.
+    // Unlike incrementing a counter locally, this traverses the exact signed
+    // event stream (sequence, HMAC and event-chain verification) that is used
+    // for subsequent periodic Module Guard heartbeats. Expensive integrity
+    // scans remain independently mandatory on their existing cadence.
+    let startup_heartbeat = RawModuleEvent {
+        reason: MODULE_EVENT_REASON_HEARTBEAT,
+        ..EMPTY_MODULE_EVENT
+    };
+    if write_module_event(
+        &mut channel.stream,
+        &channel.secret,
+        channel.pid,
+        &mut sequence,
+        &startup_heartbeat,
+    )
+    .is_err()
+    {
+        channel.secret.zeroize();
+        std::process::abort();
+    }
+
     loop {
         let dropped = MODULE_DROPPED_EVENTS.swap(0, Ordering::AcqRel);
         if dropped > 0 {

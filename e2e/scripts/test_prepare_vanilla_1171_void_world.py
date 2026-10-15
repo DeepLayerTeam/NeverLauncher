@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Pure-Python regression tests for the 1.17.1 offline void-world conversion."""
 import importlib.util
+import json
 import struct
 import unittest
 from pathlib import Path
@@ -86,6 +87,24 @@ class VoidWorldTests(unittest.TestCase):
         before = b'\x0a' + world.encode_name('') + world.encode_payload(10, {'Data': (10, {})})
         with self.assertRaisesRegex(world.NBTError, 'WorldGenSettings'):
             world.prepare(before)
+
+    def test_1171_server_properties_supply_complete_flat_codec(self):
+        script = Path(__file__).with_name('run-vanilla-matching-e2e.sh').read_text()
+        settings = [line.split('=', 1)[1] for line in script.splitlines()
+                    if line.startswith('generator-settings=')]
+        self.assertEqual(len(settings), 1)
+        flat = json.loads(settings[0])
+        self.assertEqual(flat['biome'], 'minecraft:plains')
+        self.assertTrue(flat['layers'])
+        self.assertEqual(flat['structures'], {'structures': {}})
+        self.assertFalse(flat['features'])
+        self.assertFalse(flat['lakes'])
+        self.assertIn('if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then', script)
+        self.assertLess(script.index('if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then'),
+                        script.index('generator-settings='))
+        self.assertIn('cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"', script)
+        self.assertIn(') < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)
+        self.assertNotIn(') < "$SERVER_STDIN" >> "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)
 
 if __name__ == '__main__':
     unittest.main()
