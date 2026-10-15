@@ -36,6 +36,14 @@ class APIClient:
         self.base_path = parsed.path.rstrip("/")
         self.token = token
         self.conn: http.client.HTTPConnection | None = None
+        # The backend deliberately issues short-lived (15 minute) access tokens.
+        # A real NeoForge client with thousands of assets can take longer to
+        # publish. Renew via the *existing* phishing-resistant WebAuthn session;
+        # never lengthen token TTL or relax the server's authorization policy.
+        self.passkey_helper: Path | None = None
+        self.passkey_state: Path | None = None
+        self.passkey_sign_count = 0
+        self.passkey_refreshed_at = 0.0
 
     def _connect(self) -> http.client.HTTPConnection:
         if self.conn is None:
@@ -101,7 +109,25 @@ class APIClient:
             raise RuntimeError(f"{method} {path} => HTTP {status}: {raw.decode(errors='replace')}")
         return json.loads(raw or b"{}")
 
-    def passkey_step_up(self, helper: Path, state: Path, sign_count: int = 1) -> None:
+    def set_upload_passkey(self, helper: Path, state: Path) -> None:
+        if not helper.is_file() or not state.is_file():
+            raise RuntimeError("WebAuthn upload credentials are unavailable")
+        self.passkey_helper, self.passkey_state = helper, state
+
+    def refresh_upload_auth_if_due(self, *, force: bool = False) -> None:
+        if self.passkey_helper is None or self.passkey_state is None:
+            return
+        # Perform the first renewal before the slow multi-file upload, then at
+        # most every eight minutes, safely below the backend's 15-minute JWT.
+        # The proof counter advances only after a successful assertion.
+        if force or self.passkey_refreshed_at == 0.0 or time.monotonic() - self.passkey_refreshed_at >= 8 * 60:
+            self.passkey_step_up(self.passkey_helper, self.passkey_state)
+
+    def passkey_step_up(self, helper: Path, state: Path, sign_count: int | None = None) -> None:
+        if sign_count is None:
+            sign_count = self.passkey_sign_count + 1
+        if sign_count <= self.passkey_sign_count:
+            raise RuntimeError("WebAuthn assertion counter must increase monotonically")
         if not helper.is_file():
             raise RuntimeError(f"WebAuthn helper is unavailable: {helper}")
         if not state.is_file():
@@ -147,6 +173,8 @@ class APIClient:
         if not token or not isinstance(session, dict) or session.get("authStrength") != "phishing-resistant":
             raise RuntimeError("passkey step-up did not produce phishing-resistant access token")
         self.token = token
+        self.passkey_sign_count = sign_count
+        self.passkey_refreshed_at = time.monotonic()
 
     def upload(self, path: str, local_file: Path, expected_sha256: str, expected_size: int, executable: bool, target_os: list[str]) -> object:
         boundary = "----neverlauncher-e2e-" + secrets.token_hex(16)
@@ -255,6 +283,13 @@ def main() -> int:
 
     client.json("PUT", f"/api/v1/admin/projects/{quote(project, safe='')}/versions/{quote(version_id, safe='')}/manifest", settings)
 
+    if bool(args.webauthn_helper) != bool(args.webauthn_state):
+        raise RuntimeError("--webauthn-helper and --webauthn-state must be provided together")
+    if args.webauthn_helper and args.webauthn_state:
+        client.set_upload_passkey(args.webauthn_helper, args.webauthn_state)
+        print("[e2e-upload] renew access before long file transfer", file=sys.stderr, flush=True)
+        client.refresh_upload_auth_if_due(force=True)
+
     total = len(files)
     total_bytes = 0
     for index, item in enumerate(files, 1):
@@ -266,13 +301,12 @@ def main() -> int:
         local_file = safe_local(args.client_dir, relative)
         if not local_file.is_file():
             raise RuntimeError(f"package file missing: {relative}")
+        client.refresh_upload_auth_if_due()
         client.upload(relative, local_file, expected_sha, expected_size, bool(item.get("executable", False)), list(item.get("targetOs") or []))
         total_bytes += expected_size
         if index == 1 or index % 250 == 0 or index == total:
             print(f"[e2e-upload] {index}/{total} files, {total_bytes} bytes", file=sys.stderr, flush=True)
 
-    if bool(args.webauthn_helper) != bool(args.webauthn_state):
-        raise RuntimeError("--webauthn-helper and --webauthn-state must be provided together")
     if args.webauthn_helper and args.webauthn_state:
         print("[e2e-upload] refresh phishing-resistant step-up before package signing", file=sys.stderr, flush=True)
         client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
@@ -292,7 +326,7 @@ def main() -> int:
 
     if args.webauthn_helper and args.webauthn_state:
         print("[e2e-upload] refresh phishing-resistant step-up immediately before publish", file=sys.stderr, flush=True)
-        client.passkey_step_up(args.webauthn_helper, args.webauthn_state, sign_count=2)
+        client.passkey_step_up(args.webauthn_helper, args.webauthn_state)
 
     published = client.json("POST", f"/api/v1/admin/projects/{quote(project, safe='')}/versions/{quote(version_id, safe='')}/publish")
     manifest_url = f"{args.api.rstrip('/')}/api/v1/projects/{quote(project, safe='')}/profiles/{quote(profile, safe='')}/manifest?channel={quote(channel, safe='')}"

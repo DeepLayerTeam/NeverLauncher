@@ -82,6 +82,10 @@ class PasskeyStepUpTests(unittest.TestCase):
     class Client(module.APIClient):
         def __init__(self) -> None:
             self.token = "old-token"
+            self.passkey_sign_count = 0
+            self.passkey_refreshed_at = 0.0
+            self.passkey_helper = None
+            self.passkey_state = None
             self.calls: list[tuple[str, str, object | None]] = []
 
         def json(self, method: str, path: str, payload: object | None = None) -> object:
@@ -111,6 +115,43 @@ class PasskeyStepUpTests(unittest.TestCase):
             self.assertIn("--transaction-token=-tx-leading-dash", argv)
             self.assertIn("--challenge=-challenge-leading-dash", argv)
             self.assertIn("--sign-count=3", argv)
+            self.assertEqual(client.passkey_sign_count, 3)
+
+    def test_long_upload_renews_at_eight_minutes_and_keeps_monotonic_counter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            helper, state = Path(tmp) / "authenticator.py", Path(tmp) / "state.json"
+            helper.write_text("# fixture\n", encoding="utf-8")
+            state.write_text("{}\n", encoding="utf-8")
+            client = self.Client()
+            client.set_upload_passkey(helper, state)
+            assertion = '{"transactionToken":"x","credential":{"type":"public-key"}}'
+            with patch.object(module.subprocess, "run", return_value=SimpleNamespace(returncode=0, stdout=assertion, stderr="")) as run, patch.object(module.time, "monotonic", side_effect=[100, 200, 581, 582, 583]):
+                client.refresh_upload_auth_if_due(force=True)  # count=1 @100
+                client.refresh_upload_auth_if_due()            # 100 seconds later
+                client.refresh_upload_auth_if_due()            # 481 seconds later
+                client.refresh_upload_auth_if_due()            # one second later
+            self.assertEqual(run.call_count, 2)
+            self.assertEqual([c.args[0][-1] for c in run.call_args_list], ["--sign-count=1", "--sign-count=2"])
+            self.assertEqual(client.passkey_sign_count, 2)
+            self.assertEqual(client.token, "fresh-token")
+
+    def test_failed_assertion_does_not_consume_counter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            helper, state = Path(tmp) / "authenticator.py", Path(tmp) / "state.json"
+            helper.write_text("# fixture\n", encoding="utf-8")
+            state.write_text("{}\n", encoding="utf-8")
+            client = self.Client()
+            with patch.object(module.subprocess, "run", return_value=SimpleNamespace(returncode=1, stdout="", stderr="rejected")):
+                with self.assertRaisesRegex(RuntimeError, "assertion helper failed"):
+                    client.passkey_step_up(helper, state)
+            self.assertEqual(client.passkey_sign_count, 0)
+            self.assertEqual(client.token, "old-token")
+
+    def test_non_increasing_counter_is_rejected(self) -> None:
+        client = self.Client()
+        client.passkey_sign_count = 2
+        with self.assertRaisesRegex(RuntimeError, "monotonically"):
+            client.passkey_step_up(Path("missing"), Path("missing"), sign_count=2)
 
 
 if __name__ == "__main__":

@@ -114,11 +114,14 @@ EOFPROPS
 # Minecraft 1.17.1 can accept --server before the initial texture/resource
 # reload finishes. Flat worlds with an omitted layers list default to a
 # bedrock floor, which triggers rendering before resource reload completes.
-# Use one explicit AIR layer instead of an empty list for a real server world;
-# do not change the actual join/exit certification conditions. Never apply this to a production server or to other versions.
+# Keep the 1.17.1 flat-generator codec minimal. The previous custom "lakes",
+# "features" and nested "structures" object emitted "Not a registry ops"
+# and the server silently fell back to the classic bedrock floor. The target
+# still requires the real client to complete the full matching-server E2E.
+# Never apply this CI-specific world setup to production servers.
 if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
   cat >> "$SERVER_DIR/server.properties" <<'EOFVOID'
-generator-settings={"lakes":false,"features":false,"biome":"minecraft:the_void","layers":[{"block":"minecraft:air","height":1}],"structures":{"structures":{}}}
+generator-settings={"biome":"minecraft:plains","layers":[{"block":"minecraft:air","height":1}]}
 gamemode=creative
 allow-flight=true
 EOFVOID
