@@ -53,6 +53,23 @@ def main() -> int:
         ],
         "real bounded IAT interception/self-integrity backend",
     )
+    # JVMs may import native ntdll memory APIs directly. These must be observed
+    # through precisely typed, current-process-only wrappers; a failed NTSTATUS
+    # must never grant executable-page provenance.
+    require(
+        engine,
+        [
+            'name: "NtAllocateVirtualMemory"',
+            'name: "NtProtectVirtualMemory"',
+            'fn hook_nt_allocate_virtual_memory(',
+            'fn hook_nt_protect_virtual_memory(',
+            'import_dll.eq_ignore_ascii_case("ntdll.dll")',
+            'status >= 0 && process == unsafe { GetCurrentProcess() }',
+            'record_virtual_alloc(address, size, protect)',
+            'record_virtual_protect(address, size, protect)',
+        ],
+        "current-process NT memory provenance with NTSTATUS fail-closed",
+    )
     for forbidden in ("SetWindowsHookEx", "WriteProcessMemory", "CreateRemoteThread", "NtWriteVirtualMemory"):
         if forbidden in engine:
             raise SystemExit(

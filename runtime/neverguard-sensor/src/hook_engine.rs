@@ -31,6 +31,9 @@ const HOOK_VIRTUAL_PROTECT: u32 = 6;
 const HOOK_VIRTUAL_ALLOC_FROM_APP: u32 = 7;
 const HOOK_VIRTUAL_PROTECT_FROM_APP: u32 = 8;
 const HOOK_VIRTUAL_ALLOC_2: u32 = 9;
+// Direct ntdll imports bypass the Kernel32/KernelBase IAT slots.
+const HOOK_NT_ALLOCATE_VIRTUAL_MEMORY: u32 = 10;
+const HOOK_NT_PROTECT_VIRTUAL_MEMORY: u32 = 11;
 
 static HOOK_CALL_COUNT: AtomicU64 = AtomicU64::new(0);
 static ORIGINAL_LOAD_LIBRARY_A: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -42,6 +45,8 @@ static ORIGINAL_VIRTUAL_PROTECT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::nu
 static ORIGINAL_VIRTUAL_ALLOC_FROM_APP: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_VIRTUAL_PROTECT_FROM_APP: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_VIRTUAL_ALLOC_2: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_NT_ALLOCATE_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 #[repr(C)]
 #[allow(dead_code)]
@@ -165,7 +170,7 @@ struct HookSpec {
     optional: bool,
 }
 
-fn hook_specs() -> [HookSpec; 9] {
+fn hook_specs() -> [HookSpec; 11] {
     [
         HookSpec {
             id: HOOK_LOAD_LIBRARY_A,
@@ -242,6 +247,22 @@ fn hook_specs() -> [HookSpec; 9] {
             canonical: &ORIGINAL_VIRTUAL_ALLOC_2,
             optional: true,
         },
+        HookSpec {
+            id: HOOK_NT_ALLOCATE_VIRTUAL_MEMORY,
+            name: "NtAllocateVirtualMemory",
+            c_name: b"NtAllocateVirtualMemory\0",
+            replacement: hook_nt_allocate_virtual_memory as usize,
+            canonical: &ORIGINAL_NT_ALLOCATE_VIRTUAL_MEMORY,
+            optional: true,
+        },
+        HookSpec {
+            id: HOOK_NT_PROTECT_VIRTUAL_MEMORY,
+            name: "NtProtectVirtualMemory",
+            c_name: b"NtProtectVirtualMemory\0",
+            replacement: hook_nt_protect_virtual_memory as usize,
+            canonical: &ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY,
+            optional: true,
+        },
     ]
 }
 
@@ -308,11 +329,14 @@ pub fn shutdown_restore() -> Result<(), String> {
 
 fn resolve_canonical_targets() -> Result<(), String> {
     let kernel32 = wide_null("kernel32.dll");
-    let module = unsafe { GetModuleHandleW(kernel32.as_ptr()) };
-    if module.is_null() {
-        return Err("NeverGuard Hook Engine cannot resolve kernel32.dll".to_string());
+    let kernel32 = unsafe { GetModuleHandleW(kernel32.as_ptr()) };
+    let ntdll = wide_null("ntdll.dll");
+    let ntdll = unsafe { GetModuleHandleW(ntdll.as_ptr()) };
+    if kernel32.is_null() || ntdll.is_null() {
+        return Err("NeverGuard Hook Engine cannot resolve kernel32.dll/ntdll.dll".to_string());
     }
     for spec in hook_specs() {
+        let module = if spec.name.starts_with("Nt") { ntdll } else { kernel32 };
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
         if address.is_null() && !spec.optional {
             return Err(format!("NeverGuard Hook Engine cannot resolve {}", spec.name));
@@ -506,6 +530,8 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                 let function_name = read_ascii(base, size, name_offset + 2, MAX_IMPORT_NAME)?;
                 if let Some(spec) = specs.iter().find(|spec| {
                     spec.name == function_name
+                        // Never pair Nt* hooks with forwarded Kernel32 imports.
+                        && (import_dll.eq_ignore_ascii_case("ntdll.dll") == spec.name.starts_with("Nt"))
                         && !spec.canonical.load(Ordering::Acquire).is_null()
                 }) {
                     let expected = unsafe { GetProcAddress(imported_module, spec.c_name.as_ptr().cast()) };
@@ -688,6 +714,7 @@ fn supported_import_dll(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
     lower == "kernel32.dll"
         || lower == "kernelbase.dll"
+        || lower == "ntdll.dll"
         || lower.starts_with("api-ms-win-core-libraryloader-")
         || lower.starts_with("api-ms-win-core-memory-")
 }
@@ -912,4 +939,66 @@ unsafe extern "system" fn hook_virtual_alloc_2(
         crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
+}
+
+// The NT routines are invoked only through verified ntdll imports in a
+// non-system module. Never replace executable-memory authorization with
+// the mere presence of an ntdll page: a successful, observed transition is
+// still required, and the existing fail-closed coverage checks remain intact.
+// NTSTATUS success is nonnegative; negative statuses never confer provenance.
+unsafe extern "system" fn hook_nt_allocate_virtual_memory(
+    process: *mut c_void,
+    base_address: *mut *mut c_void,
+    zero_bits: usize,
+    region_size: *mut usize,
+    allocation_type: u32,
+    protect: u32,
+) -> i32 {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_NT_ALLOCATE_VIRTUAL_MEMORY.load(Ordering::Acquire);
+    if target.is_null() { return 0xC000_0002u32 as i32; }
+    let function: unsafe extern "system" fn(
+        *mut c_void, *mut *mut c_void, usize, *mut usize, u32, u32
+    ) -> i32 = unsafe { std::mem::transmute(target) };
+    let status = unsafe { function(process, base_address, zero_bits, region_size, allocation_type, protect) };
+    if status >= 0 && process == unsafe { GetCurrentProcess() }
+        && !base_address.is_null() && !region_size.is_null()
+    {
+        let address = unsafe { *base_address };
+        let size = unsafe { *region_size };
+        if !address.is_null() && size > 0 {
+            let caller = crate::jvm_awareness::capture_transition_provenance();
+            crate::jvm_awareness::observe_memory_transition(address, protect, caller);
+            crate::memory_integrity::record_virtual_alloc(address, size, protect);
+        }
+    }
+    status
+}
+
+unsafe extern "system" fn hook_nt_protect_virtual_memory(
+    process: *mut c_void,
+    base_address: *mut *mut c_void,
+    region_size: *mut usize,
+    protect: u32,
+    old_protect: *mut u32,
+) -> i32 {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY.load(Ordering::Acquire);
+    if target.is_null() { return 0xC000_0002u32 as i32; }
+    let function: unsafe extern "system" fn(
+        *mut c_void, *mut *mut c_void, *mut usize, u32, *mut u32
+    ) -> i32 = unsafe { std::mem::transmute(target) };
+    let status = unsafe { function(process, base_address, region_size, protect, old_protect) };
+    if status >= 0 && process == unsafe { GetCurrentProcess() }
+        && !base_address.is_null() && !region_size.is_null()
+    {
+        let address = unsafe { *base_address };
+        let size = unsafe { *region_size };
+        if !address.is_null() && size > 0 {
+            let caller = crate::jvm_awareness::capture_transition_provenance();
+            crate::jvm_awareness::observe_memory_transition(address, protect, caller);
+            crate::memory_integrity::record_virtual_protect(address, size, protect);
+        }
+    }
+    status
 }

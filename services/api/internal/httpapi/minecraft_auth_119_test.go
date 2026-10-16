@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
@@ -64,11 +65,45 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	if wrongIPV.Code != http.StatusNoContent {
 		t.Fatalf("hasJoined must reject mismatched optional ip: %d %s", wrongIPV.Code, wrongIPV.Body.String())
 	}
-	hr := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
-	hv := httptest.NewRecorder()
-	handler.ServeHTTP(hv, hr)
-	if hv.Code != http.StatusOK || !strings.Contains(hv.Body.String(), uuid) {
-		t.Fatalf("hasJoined=%d %s", hv.Code, hv.Body.String())
+	// The PostgreSQL repository consumes with a single conditional UPDATE; the
+	// in-memory repository uses the same atomic consume-once contract under a lock.
+	// Exercise competing HTTP requests, not just a sequential replay, so a
+	// regression in the read/consume ordering becomes observable.
+	const concurrentJoins = 12
+	start := make(chan struct{})
+	var joined sync.WaitGroup
+	joined.Add(concurrentJoins)
+	statuses := make(chan int, concurrentJoins)
+	for i := 0; i < concurrentJoins; i++ {
+		go func() {
+			defer joined.Done()
+			<-start
+			hr := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
+			hv := httptest.NewRecorder()
+			handler.ServeHTTP(hv, hr)
+			if hv.Code == http.StatusOK && !strings.Contains(hv.Body.String(), uuid) {
+				statuses <- http.StatusInternalServerError
+				return
+			}
+			statuses <- hv.Code
+		}()
+	}
+	close(start)
+	joined.Wait()
+	close(statuses)
+	allowed, denied := 0, 0
+	for code := range statuses {
+		switch code {
+		case http.StatusOK:
+			allowed++
+		case http.StatusNoContent:
+			denied++
+		default:
+			t.Fatalf("concurrent /hasJoined unexpected status %d", code)
+		}
+	}
+	if allowed != 1 || denied != concurrentJoins-1 {
+		t.Fatalf("only the first concurrent /hasJoined may succeed: allowed=%d denied=%d", allowed, denied)
 	}
 	replay := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
 	replayV := httptest.NewRecorder()

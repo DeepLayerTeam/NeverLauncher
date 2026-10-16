@@ -560,6 +560,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := repo.ConsumeMinecraftJoin(username, serverID, join.MinecraftSessionID, time.Now().UTC()); err != nil {
+		// only the first concurrent /hasJoined may consume a session ticket.
 		// Одноразовые билеты входа: только первый параллельный /hasJoined данного сеанса
 		// может разрешить подключение. Проигравшие и повторные запросы строго отклоняются.
 		w.WriteHeader(http.StatusNoContent)
