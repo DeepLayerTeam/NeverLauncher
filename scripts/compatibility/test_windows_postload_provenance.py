@@ -47,12 +47,12 @@ class WindowsPostloadProvenanceTests(unittest.TestCase):
 class WindowsGuardRaceRegressionTests(unittest.TestCase):
     """Source-level contract checks; native semantics require Windows CI."""
 
-    def test_trusted_dispatchers_are_exact_system32_images(self):
+    def test_trusted_system_and_jre_dispatchers_validate_exact_loaded_path(self):
         source = (ROOT / 'runtime/neverguard-sensor/src/jvm_awareness.rs').read_text(encoding='utf-8')
         resolver = source.split('fn resolve_system_dispatchers()', 1)[1].split('pub fn capture_transition_provenance()', 1)[0]
         self.assertIn('GetSystemDirectoryW', resolver)
         self.assertIn('GetModuleFileNameW', resolver)
-        self.assertIn('loaded_path != format!', resolver)
+        self.assertIn('loaded_path != expected_path', resolver)
         self.assertIn('GetModuleHandleW', resolver)
         self.assertIn('K32GetModuleInformation', resolver)
         self.assertIn('TRUSTED_SYSTEM_DISPATCHERS', source)
@@ -62,6 +62,32 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn('FOREIGN_EXECUTABLE_TRANSITIONS.fetch_add(1', source)
         self.assertIn('outside jvm.dll provenance', source)
         self.assertNotIn('DISABLE_JVM_GUARD', source)
+
+    def test_opengl_dispatcher_from_certified_jdk_or_system32(self):
+        source = (ROOT / 'runtime/neverguard-sensor/src/jvm_awareness.rs').read_text(encoding='utf-8')
+        resolver = source.split('fn resolve_system_dispatchers()', 1)[1].split('pub fn capture_transition_provenance()', 1)[0]
+        self.assertIn('"opengl32.dll"', resolver)
+        self.assertIn('module_path(jvm_module)?', resolver)
+        self.assertIn('runtime_opengl = jvm_bin.join("opengl32.dll")', resolver)
+        self.assertIn('std::fs::symlink_metadata(&runtime_opengl)', resolver)
+        self.assertIn('metadata.file_type().is_symlink()', resolver)
+        self.assertIn('LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32', resolver)
+        self.assertIn('LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32)', resolver)
+        self.assertIn('loaded_path != expected_path', resolver)
+        self.assertIn('K32GetModuleInformation', resolver)
+        self.assertIn('TransitionOrigin::ForeignNative =>', source)
+        self.assertIn('FOREIGN_EXECUTABLE_TRANSITIONS.fetch_add(1', source)
+        self.assertNotIn('DISABLE_JVM_GUARD', source)
+
+    def test_runtime_event_watchdog_remains_bounded_and_fail_closed(self):
+        source = (ROOT / 'runtime/neverruntime/src/windows_module_guard.rs').read_text(encoding='utf-8')
+        self.assertIn('MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15)', source)
+        self.assertIn('MODULE_RUNTIME_EVENT_TIMEOUT: Duration = Duration::from_secs(45)', source)
+        loop = source.split('async fn monitor_loop(', 1)[1].split('fn hook_digest_from_event(', 1)[0]
+        self.assertIn('timeout(MODULE_RUNTIME_EVENT_TIMEOUT, server.read_exact(&mut packet)).await', loop)
+        self.assertIn('Module Guard heartbeat timeout', loop)
+        self.assertIn('fail_closed(&state, pid, &reason, 0)', loop)
+        self.assertIn('parse_event_packet(&packet, secret, pid, expected_sequence)', loop)
 
     def test_unloads_require_signed_notification_and_bounded_grace(self):
         source = (ROOT / 'runtime/neverruntime/src/windows_module_guard.rs').read_text(encoding='utf-8')

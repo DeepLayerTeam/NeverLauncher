@@ -173,11 +173,13 @@ mod imp {
     const MODULE_PATH_WCHARS: usize = 2048;
     const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
     const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-    // Java 25/ARM64 может несколько секунд хешировать новые исполняемые образы во время
-    // внутрипроцессной проверки. Сохраняйте ограниченный watchdog, но разрешайте один
-    // полный проход до признания Sensor мёртвым из-за отсутствия аутентифицированного
-    // пакета. Ошибки HMAC, последовательности и целостности остаются критичными.
+    // Initialization packets have their own short, fail-closed deadline.
+    // During Minecraft/Forge texture loading, the Sensor's single worker may
+    // spend >15s hashing new executable code before its next signed event.
+    // Use a bounded runtime read deadline, not an unbounded retry, and still
+    // fail closed for any missing, malformed, stale or unauthenticated event.
     const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15);
+    const MODULE_RUNTIME_EVENT_TIMEOUT: Duration = Duration::from_secs(45);
     const RECONCILE_GRACE: Duration = Duration::from_millis(350);
     // LdrRegisterDllNotification and ToolHelp snapshots do not share a lock.
     // An unload is only accepted once its authenticated notification arrives;
@@ -672,7 +674,7 @@ mod imp {
 
         loop {
             packet.fill(0);
-            let read = timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut packet)).await;
+            let read = timeout(MODULE_RUNTIME_EVENT_TIMEOUT, server.read_exact(&mut packet)).await;
             match read {
                 Err(_) => {
                     if process_alive(pid) {

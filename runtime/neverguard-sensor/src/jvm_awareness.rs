@@ -24,6 +24,8 @@ const MAX_MODULE_PATH: usize = 32768;
 const MAX_STACK_FRAMES: usize = 16;
 const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 0x0000_0002;
 const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
+const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x0000_0800;
+const LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR: u32 = 0x0000_0100;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -71,6 +73,7 @@ struct VsFixedFileInfo {
 extern "system" {
     fn GetCurrentProcess() -> *mut c_void;
     fn GetModuleHandleW(name: *const u16) -> *mut c_void;
+    fn LoadLibraryExW(name: *const u16, file: *mut c_void, flags: u32) -> *mut c_void;
     fn GetModuleHandleExW(flags: u32, name_or_address: *const u16, module: *mut *mut c_void) -> i32;
     fn GetModuleFileNameW(module: *mut c_void, filename: *mut u16, size: u32) -> u32;
     fn GetSystemDirectoryW(buffer: *mut u16, size: u32) -> u32;
@@ -301,10 +304,10 @@ fn caller_module_basename(address: usize) -> String {
     path.rsplit(['\\', '/']).next().unwrap_or("unknown").to_string()
 }
 
-// Only exact operating-system images installed in the actual System32 path
-// qualify. Neither module basenames from user-controlled folders nor JDK or
-// modpack-native DLLs receive this exemption. Those remain fail-closed and
-// independently enforced by Module Guard and Memory Integrity.
+// Trust only verified System32 dispatcher images, plus the exact OpenGL image
+// that belongs to the already inspected JVM installation. Module Guard pins
+// loaded DLL path and content; Memory Integrity independently checks image
+// code. No modpack-native or arbitrary PATH-resolved module is exempted.
 fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     let mut directory = [0u16; MAX_MODULE_PATH];
     let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
@@ -316,18 +319,70 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         .replace('/', "\\")
         .to_ascii_lowercase();
     let mut ranges = Vec::new();
-    for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll"] {
+    // OpenGL dispatchers legitimately allocate executable MEM_PRIVATE memory.
+    // The CI uses a SHA-256-verified Mesa opengl32.dll installed beside
+    // java.exe, *not* the Windows System32 opengl32.dll. Resolve only the
+    // already-certified JVM's bin directory (or the OS System32 fallback).
+    // Preloading once before installing hooks prevents a later LoadLibrary
+    // from introducing an unclassified dispatcher in the middle of JIT work.
+    let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
+    if jvm_module.is_null() {
+        return Err("NeverGuard JVM-Aware Protection cannot locate jvm.dll for OpenGL provenance".to_string());
+    }
+    let jvm_path = module_path(jvm_module)?;
+    let jvm_dir = std::path::Path::new(&jvm_path).parent()
+        .ok_or_else(|| "NeverGuard JVM-Aware Protection invalid jvm.dll directory".to_string())?;
+    let jvm_dir_name = jvm_dir.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    let jvm_bin = jvm_dir.parent()
+        .ok_or_else(|| "NeverGuard JVM-Aware Protection missing JVM bin directory".to_string())?;
+    if !(jvm_dir_name.eq_ignore_ascii_case("server") || jvm_dir_name.eq_ignore_ascii_case("client"))
+        || !jvm_bin.file_name().and_then(|name| name.to_str()).unwrap_or("").eq_ignore_ascii_case("bin")
+    {
+        return Err("NeverGuard JVM-Aware Protection unexpected JVM directory layout".to_string());
+    }
+    let runtime_opengl = jvm_bin.join("opengl32.dll");
+    let runtime_opengl_metadata = std::fs::symlink_metadata(&runtime_opengl);
+    let runtime_opengl_exists = match runtime_opengl_metadata {
+        Ok(ref metadata) if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 => {
+            return Err("NeverGuard JVM-Aware Protection rejected non-regular Java runtime OpenGL image".to_string());
+        }
+        Ok(_) => true,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
+        Err(err) => return Err(format!("NeverGuard JVM-Aware Protection cannot inspect Java runtime OpenGL image: {err}")),
+    };
+    for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll", "opengl32.dll"] {
         let wide = wide_null(name);
-        let module = unsafe { GetModuleHandleW(wide.as_ptr()) };
-        if module.is_null() { continue; }
+        let (module, expected_path) = if name == "opengl32.dll" {
+            if runtime_opengl_exists {
+                let path = runtime_opengl.to_string_lossy().into_owned();
+                let loaded = unsafe {
+                    LoadLibraryExW(wide_null(&path).as_ptr(), std::ptr::null_mut(),
+                        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)
+                };
+                (loaded, path.replace('/', "\\").to_ascii_lowercase())
+            } else {
+                let loaded = unsafe {
+                    LoadLibraryExW(wide.as_ptr(), std::ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32)
+                };
+                (loaded, format!("{system_root}\\{name}"))
+            }
+        } else {
+            (unsafe { GetModuleHandleW(wide.as_ptr()) }, format!("{system_root}\\{name}"))
+        };
+        if module.is_null() {
+            if name == "opengl32.dll" {
+                return Err(format!("NeverGuard JVM-Aware Protection cannot load verified OpenGL dispatcher: {}", std::io::Error::last_os_error()));
+            }
+            continue;
+        }
         let mut path = [0u16; MAX_MODULE_PATH];
         let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
         if count == 0 || count >= path.len() {
             return Err(format!("NeverGuard JVM-Aware Protection cannot identify {name}"));
         }
         let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
-        if loaded_path != format!("{system_root}\\{name}") {
-            return Err(format!("NeverGuard JVM-Aware Protection unexpected system dispatcher location: {name}"));
+        if loaded_path != expected_path {
+            return Err(format!("NeverGuard JVM-Aware Protection unexpected dispatcher image location: {name}"));
         }
         let mut info = ModuleInfo::default();
         let ok = unsafe {
@@ -342,7 +397,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         ranges.push((base, end));
     }
     if ranges.is_empty() {
-        return Err("NeverGuard JVM-Aware Protection no verified System32 dispatchers".to_string());
+        return Err("NeverGuard JVM-Aware Protection no verified dispatchers".to_string());
     }
     Ok(ranges)
 }
