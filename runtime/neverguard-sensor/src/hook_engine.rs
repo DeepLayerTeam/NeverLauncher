@@ -34,6 +34,7 @@ const HOOK_VIRTUAL_ALLOC_2: u32 = 9;
 // Direct ntdll imports bypass the Kernel32/KernelBase IAT slots.
 const HOOK_NT_ALLOCATE_VIRTUAL_MEMORY: u32 = 10;
 const HOOK_NT_PROTECT_VIRTUAL_MEMORY: u32 = 11;
+const HOOK_GET_PROC_ADDRESS: u32 = 12;
 
 static HOOK_CALL_COUNT: AtomicU64 = AtomicU64::new(0);
 static ORIGINAL_LOAD_LIBRARY_A: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -47,6 +48,7 @@ static ORIGINAL_VIRTUAL_PROTECT_FROM_APP: AtomicPtr<c_void> = AtomicPtr::new(std
 static ORIGINAL_VIRTUAL_ALLOC_2: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_NT_ALLOCATE_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_GET_PROC_ADDRESS: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 #[repr(C)]
 #[allow(dead_code)]
@@ -170,7 +172,7 @@ struct HookSpec {
     optional: bool,
 }
 
-fn hook_specs() -> [HookSpec; 11] {
+fn hook_specs() -> [HookSpec; 12] {
     [
         HookSpec {
             id: HOOK_LOAD_LIBRARY_A,
@@ -262,6 +264,17 @@ fn hook_specs() -> [HookSpec; 11] {
             replacement: hook_nt_protect_virtual_memory as usize,
             canonical: &ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY,
             optional: true,
+        },
+        // HotSpot/native libraries may dynamically resolve memory APIs rather
+        // than import their addresses through IAT. Wrap only genuine exports
+        // whose returned address equals our independently resolved target.
+        HookSpec {
+            id: HOOK_GET_PROC_ADDRESS,
+            name: "GetProcAddress",
+            c_name: b"GetProcAddress\0",
+            replacement: hook_get_proc_address as usize,
+            canonical: &ORIGINAL_GET_PROC_ADDRESS,
+            optional: false,
         },
     ]
 }
@@ -824,6 +837,34 @@ unsafe extern "system" fn hook_load_library_ex_w(
     let function: unsafe extern "system" fn(*const u16, *mut c_void, u32) -> *mut c_void =
         unsafe { std::mem::transmute(target) };
     unsafe { function(name, file, flags) }
+}
+
+// Track dynamically resolved entry points as well as static IAT imports.
+// Never redirect unknown exports or ordinal lookups, and never manufacture
+// executable-memory evidence simply because an export was resolved.
+unsafe extern "system" fn hook_get_proc_address(
+    module: *mut c_void,
+    name: *const c_char,
+) -> *mut c_void {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_GET_PROC_ADDRESS.load(Ordering::Acquire);
+    if target.is_null() { return std::ptr::null_mut(); }
+    let original: unsafe extern "system" fn(*mut c_void, *const c_char) -> *mut c_void =
+        unsafe { std::mem::transmute(target) };
+    let result = unsafe { original(module, name) };
+    if result.is_null() || name.is_null() || (name as usize) <= 0xFFFF {
+        return result;
+    }
+    let requested = unsafe { std::ffi::CStr::from_ptr(name) }.to_bytes_with_nul();
+    for spec in hook_specs() {
+        if spec.name == "GetProcAddress" { continue; }
+        if requested == spec.c_name
+            && result == spec.canonical.load(Ordering::Acquire)
+        {
+            return spec.replacement as *mut c_void;
+        }
+    }
+    result
 }
 
 unsafe extern "system" fn hook_virtual_alloc(

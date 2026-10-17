@@ -26,6 +26,9 @@ const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
 // настоящее переполнение по-прежнему приводит к отказу в drain_transitions().
 const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
+// Allow in-flight successful IAT callbacks to publish their evidence before
+// refusing an otherwise unknown executable page; never trust a timer alone.
+const PROVENANCE_RECHECKS: usize = 4;
 
 const TRANSITION_VIRTUAL_ALLOC: u32 = 1;
 const TRANSITION_VIRTUAL_PROTECT: u32 = 2;
@@ -186,10 +189,12 @@ impl Drop for PinnedModule {
 }
 
 pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
-    TRANSITION_WRITE_INDEX.store(0, Ordering::Release);
-    TRANSITION_READ_INDEX.store(0, Ordering::Release);
-    TRANSITION_DROPPED.store(0, Ordering::Release);
-
+    // Hook Engine is already active when this function runs. Do not reset the
+    // producer/consumer indices here: a concurrent JIT allocation can publish a
+    // successful transition between the first hook installation and this scan.
+    // Zeroing the indices discards that evidence and produces a false fail-closed
+    // violation for newly executable pages. The ring is initialized statically
+    // once per Sensor process; all producer events remain ordered and auditable.
     let mut state = MemoryIntegrityState::new();
     let regions = enumerate_executable_regions()?;
     for region in &regions {
@@ -213,6 +218,10 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
     // разрывов и предотвращает квадратичное сканирование горячего пути.
     coalesce_ranges(&mut state.allowed_dynamic);
     coalesce_ranges(&mut state.allowed_mapped);
+    // Account for executable transitions completed while VirtualQuery walked
+    // the initial address space, including events queued before this method.
+    // A real overflow remains fatal in drain_transitions().
+    drain_transitions(&mut state)?;
     state.active = true;
     state.healthy = true;
     let snapshot = snapshot_for_regions(&state, &regions);
@@ -273,11 +282,24 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
             }
             MEM_PRIVATE => {
                 if !range_allowed(region, &state.allowed_dynamic) {
-                    state.healthy = false;
-                    return Err(format!(
-                        "NeverGuard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
-                        region.base, region.size
-                    ));
+                    // VirtualQuery can observe a newly executable page after the
+                    // OS call returned but before its IAT wrapper published the
+                    // transition. Recheck the lock-free queue a bounded number
+                    // of times; do not whitelist any region without evidence.
+                    for _ in 0..PROVENANCE_RECHECKS {
+                        std::thread::yield_now();
+                        drain_transitions(state)?;
+                        if range_allowed(region, &state.allowed_dynamic) {
+                            break;
+                        }
+                    }
+                    if !range_allowed(region, &state.allowed_dynamic) {
+                        state.healthy = false;
+                        return Err(format!(
+                            "NeverGuard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
+                            region.base, region.size
+                        ));
+                    }
                 }
             }
             MEM_MAPPED => {
@@ -516,8 +538,8 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
         slot.ready.store(false, Ordering::Release);
         TRANSITION_READ_INDEX.store(read + 1, Ordering::Release);
         state.transition_count = state.transition_count.saturating_add(1);
-        if is_executable(event.protect) {
-            if let Some(range) = AddressRange::from_base_size(event.address, event.size) {
+        if let Some(range) = AddressRange::from_base_size(event.address, event.size) {
+            if is_executable(event.protect) {
                 if !state
                     .allowed_dynamic
                     .iter()
@@ -526,6 +548,12 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
                     state.allowed_dynamic.push(range);
                     updated_dynamic = true;
                 }
+            } else {
+                // Previously executable pages can be returned to read/write
+                // memory and later reallocated. Revoke precisely those pages:
+                // a new executable mapping requires another observed success.
+                revoke_range(&mut state.allowed_dynamic, range);
+                updated_dynamic = true;
             }
         }
         let _ = event.kind;
@@ -534,6 +562,25 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
         coalesce_ranges(&mut state.allowed_dynamic);
     }
     Ok(())
+}
+
+// Remove only pages affected by a successful non-executable allocation/protection
+// change. Other pages in a larger trusted allocation keep their provenance.
+fn revoke_range(ranges: &mut Vec<AddressRange>, revoked: AddressRange) {
+    let mut replacement = Vec::with_capacity(ranges.len().saturating_add(1));
+    for current in ranges.drain(..) {
+        if current.end <= revoked.start || current.start >= revoked.end {
+            replacement.push(current);
+            continue;
+        }
+        if current.start < revoked.start {
+            replacement.push(AddressRange { start: current.start, end: revoked.start });
+        }
+        if current.end > revoked.end {
+            replacement.push(AddressRange { start: revoked.end, end: current.end });
+        }
+    }
+    *ranges = replacement;
 }
 
 // Объединяйте только пересекающиеся или соприкасающиеся интервалы. Математическое покрытие
@@ -734,5 +781,47 @@ mod transition_coverage_tests {
     #[test]
     fn ring_can_retain_startup_bursts_without_relaxing_fail_closed() {
         assert!(MEMORY_TRANSITION_RING_CAPACITY >= 32768);
+    }
+}
+
+#[cfg(test)]
+mod provenance_range_tests {
+    use super::{coalesce_ranges, range_allowed, revoke_range, AddressRange, ExecutableRegion, MEM_PRIVATE};
+
+    fn region(base: usize, size: usize) -> ExecutableRegion {
+        ExecutableRegion { base, allocation_base: base, size, protect: 0x20, kind: MEM_PRIVATE }
+    }
+
+    #[test]
+    fn removal_revokes_only_touched_executable_pages() {
+        let mut ranges = vec![AddressRange { start: 0x1000, end: 0x6000 }];
+        revoke_range(&mut ranges, AddressRange { start: 0x3000, end: 0x4000 });
+        assert!(range_allowed(&region(0x1000, 0x2000), &ranges));
+        assert!(!range_allowed(&region(0x3000, 0x1000), &ranges));
+        assert!(range_allowed(&region(0x4000, 0x2000), &ranges));
+        assert!(!range_allowed(&region(0x2000, 0x3000), &ranges));
+    }
+
+    #[test]
+    fn full_revoke_and_new_grant_do_not_preserve_stale_permissions() {
+        let mut ranges = vec![AddressRange { start: 0x1000, end: 0x3000 }];
+        revoke_range(&mut ranges, AddressRange { start: 0x1000, end: 0x3000 });
+        assert!(!range_allowed(&region(0x1000, 0x1000), &ranges));
+        ranges.push(AddressRange { start: 0x2000, end: 0x3000 });
+        assert!(!range_allowed(&region(0x1000, 0x2000), &ranges));
+        assert!(range_allowed(&region(0x2000, 0x1000), &ranges));
+    }
+
+    #[test]
+    fn adjacent_real_grants_cover_a_region_but_gaps_do_not() {
+        let mut ranges = vec![
+            AddressRange { start: 0x1000, end: 0x2000 },
+            AddressRange { start: 0x3000, end: 0x4000 },
+        ];
+        coalesce_ranges(&mut ranges);
+        assert!(!range_allowed(&region(0x1000, 0x3000), &ranges));
+        ranges.push(AddressRange { start: 0x2000, end: 0x3000 });
+        coalesce_ranges(&mut ranges);
+        assert!(range_allowed(&region(0x1000, 0x3000), &ranges));
     }
 }
