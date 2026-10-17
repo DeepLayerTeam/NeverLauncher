@@ -22,9 +22,11 @@ const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
 const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
 // The Guard parent allows 15 seconds per authenticated event read. Under
 // software-rendered Minecraft/Forge the parent may briefly be descheduled.
-// Wait for the *authenticated* ACK within a bounded 12 seconds (strictly less
-// than the parent stream watchdog); invalid MAC/sequence still fails closed.
-const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(12);
+// Forge on emulated Windows ARM64 can spend >12 seconds processing signed
+// module events before replying to a heartbeat. Keep a finite deadline shorter
+// than the parent's 45-second runtime-event watchdog; every received ACK still
+// requires exact PID, sequence, event-chain and HMAC verification.
+const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(35);
 const GUARD_ACK_POLL: Duration = Duration::from_millis(10);
 
 static SENSOR_EVENT_CHAIN: Mutex<[u8; 32]> = Mutex::new([0u8; 32]);

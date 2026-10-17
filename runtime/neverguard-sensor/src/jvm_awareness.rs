@@ -3,6 +3,7 @@
 use sha2::{Digest, Sha256};
 use std::{
     ffi::c_void,
+    path::PathBuf,
     mem::size_of,
     sync::{
         atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering},
@@ -22,6 +23,7 @@ const PAGE_GUARD: u32 = 0x100;
 const PAGE_NOACCESS: u32 = 0x01;
 const MAX_MODULE_PATH: usize = 32768;
 const MAX_STACK_FRAMES: usize = 16;
+const GET_MODULE_HANDLE_EX_FLAG_PIN: u32 = 0x0000_0001;
 const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 0x0000_0002;
 const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
 const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x0000_0800;
@@ -174,6 +176,20 @@ static TRUSTED_SYSTEM_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 // Initialized once before hooks are active. No Win32 pathname resolution,
 // allocation or locking is performed from inside a VirtualAlloc hook.
 static TRUSTED_SYSTEM_DISPATCHERS: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
+// LWJGL is loaded only after Agent_OnLoad. Pin the exact, hashed native from
+// the launch directory so its image base cannot be recycled for an untrusted
+// DLL. No path resolution or heap allocation is performed inside memory hooks.
+static VERIFIED_NATIVE_LAUNCH_ROOT: OnceLock<PathBuf> = OnceLock::new();
+static VERIFIED_LWJGL_IMAGE: OnceLock<VerifiedNativeImage> = OnceLock::new();
+static RUNTIME_NATIVE_LOAD_FAILED: AtomicBool = AtomicBool::new(false);
+
+#[derive(Debug)]
+struct VerifiedNativeImage {
+    base: usize,
+    end: usize,
+    canonical_path: PathBuf,
+    file_sha256: [u8; 32],
+}
 static FOREIGN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 static UNKNOWN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 static LAST_FOREIGN_CALLER: AtomicUsize = AtomicUsize::new(0);
@@ -207,6 +223,19 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
             .map_err(|_| "NeverGuard JVM-Aware Protection system dispatcher initialization race".to_string())?;
     }
 
+    let launch_root = std::env::current_dir()
+        .and_then(std::fs::canonicalize)
+        .map_err(|err| format!("NeverGuard JVM-Aware cannot resolve native launch root: {err}"))?;
+    if let Some(existing) = VERIFIED_NATIVE_LAUNCH_ROOT.get() {
+        if existing != &launch_root {
+            return Err("NeverGuard JVM-Aware native launch root changed".to_string());
+        }
+    } else {
+        VERIFIED_NATIVE_LAUNCH_ROOT.set(launch_root)
+            .map_err(|_| "NeverGuard JVM-Aware native launch root initialization race".to_string())?;
+    }
+    RUNTIME_NATIVE_LOAD_FAILED.store(false, Ordering::Release);
+
     JIT_TRANSITIONS.store(0, Ordering::Release);
     TRUSTED_SYSTEM_TRANSITIONS.store(0, Ordering::Release);
     FOREIGN_EXECUTABLE_TRANSITIONS.store(0, Ordering::Release);
@@ -237,6 +266,25 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
 }
 
 pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
+    if RUNTIME_NATIVE_LOAD_FAILED.load(Ordering::Acquire) {
+        return Err("NeverGuard JVM-Aware rejected unexpected LWJGL native image".to_string());
+    }
+    if let Some(native) = VERIFIED_LWJGL_IMAGE.get() {
+        // Loader pinning prevents address recycling. Independently recheck the
+        // image on disk, including modifications after successful loading.
+        let bytes = std::fs::read(&native.canonical_path)
+            .map_err(|err| format!("NeverGuard JVM-Aware LWJGL image disappeared: {err}"))?;
+        let mut digest = [0u8; 32];
+        digest.copy_from_slice(&Sha256::digest(&bytes));
+        if digest != native.file_sha256 {
+            return Err("NeverGuard JVM-Aware LWJGL image content changed".to_string());
+        }
+    }
+    // A DLL loaded through a direct ntdll path may execute once before the
+    // IAT LoadLibrary callback registers it. Only a *single* pending event
+    // may be reclassified, and only after the identical strict path/image
+    // checks above. Multiple/unknown transitions still fail closed.
+    reconcile_first_runtime_native_transition()?;
     let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     if foreign != 0 {
         let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
@@ -402,6 +450,120 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     Ok(ranges)
 }
 
+fn reconcile_first_runtime_native_transition() -> Result<(), String> {
+    if FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire) != 1 {
+        return Ok(());
+    }
+    let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
+    if caller == 0 {
+        return Ok(());
+    }
+    if VERIFIED_LWJGL_IMAGE.get().is_none() {
+        let mut module = std::ptr::null_mut();
+        let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+        if unsafe { GetModuleHandleExW(flags, caller as *const u16, &mut module) } == 0 || module.is_null() {
+            return Ok(());
+        }
+        // This checks basename only to decide whether registration should be
+        // attempted; registration checks canonical path, ancestry and SHA.
+        let path = module_path(module)?;
+        if !PathBuf::from(path).file_name().is_some_and(|name| {
+            name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")
+        }) {
+            return Ok(());
+        }
+        register_loaded_native_dispatcher(module)?;
+    }
+    if VERIFIED_LWJGL_IMAGE.get().is_some_and(|native| {
+        caller >= native.base && caller < native.end
+    }) && FOREIGN_EXECUTABLE_TRANSITIONS.compare_exchange(
+        1, 0, Ordering::AcqRel, Ordering::Acquire
+    ).is_ok() {
+        TRUSTED_SYSTEM_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
+/// Register the one permitted LWJGL dispatcher after LoadLibrary returns.
+/// The complete canonical path must be exactly the platform-specific native
+/// from the materialized client, not merely any file named lwjgl.dll. Module
+/// Guard independently verifies and hashes authenticated DLL load events.
+pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), String> {
+    if module.is_null() || !JVM_ACTIVE.load(Ordering::Acquire) {
+        return Ok(());
+    }
+    let path = module_path(module)?;
+    let loaded = PathBuf::from(path.as_str());
+    if !loaded.file_name().is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case("lwjgl.dll")) {
+        return Ok(());
+    }
+    let result = (|| -> Result<(), String> {
+        let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
+            .ok_or_else(|| "NeverGuard JVM-Aware missing pinned native launch root".to_string())?;
+        let expected = launch_root.join("natives").join("windows")
+            .join(std::env::consts::ARCH).join("lwjgl.dll");
+        // Reparse points in the native directory chain must not redirect the
+        // otherwise exact path into an attacker-controlled location.
+        let mut component = expected.as_path();
+        while component != launch_root.as_path() {
+            let metadata = std::fs::symlink_metadata(component)
+                .map_err(|err| format!("NeverGuard JVM-Aware native path inspection failed: {err}"))?;
+            if metadata.file_type().is_symlink() {
+                return Err("NeverGuard JVM-Aware rejected reparse/symlink native path".to_string());
+            }
+            component = component.parent()
+                .ok_or_else(|| "NeverGuard JVM-Aware invalid native directory ancestry".to_string())?;
+        }
+        let metadata = std::fs::symlink_metadata(&loaded)
+            .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect LWJGL native: {err}"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
+            return Err("NeverGuard JVM-Aware LWJGL native is not a regular file".to_string());
+        }
+        let canonical_path = std::fs::canonicalize(&loaded)
+            .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
+        let expected_path = std::fs::canonicalize(&expected)
+            .map_err(|err| format!("NeverGuard JVM-Aware cannot find expected native: {err}"))?;
+        if !expected_path.starts_with(launch_root) {
+            return Err("NeverGuard JVM-Aware native path escapes the launch root".to_string());
+        }
+        if !canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
+            return Err("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory".to_string());
+        }
+        let mut info = ModuleInfo::default();
+        if unsafe { K32GetModuleInformation(GetCurrentProcess(), module, &mut info,
+            size_of::<ModuleInfo>() as u32) } == 0 || info.size_of_image == 0 {
+            return Err("NeverGuard JVM-Aware cannot inspect loaded LWJGL image".to_string());
+        }
+        let base = info.base_of_dll as usize;
+        let end = base.checked_add(info.size_of_image as usize)
+            .ok_or_else(|| "NeverGuard JVM-Aware LWJGL module address overflow".to_string())?;
+        if let Some(existing) = VERIFIED_LWJGL_IMAGE.get() {
+            if existing.base == base && existing.end == end && existing.canonical_path == canonical_path {
+                return Ok(());
+            }
+            return Err("NeverGuard JVM-Aware unexpected LWJGL module replacement".to_string());
+        }
+        let bytes = std::fs::read(&canonical_path)
+            .map_err(|err| format!("NeverGuard JVM-Aware cannot hash LWJGL image: {err}"))?;
+        let mut file_sha256 = [0u8; 32];
+        file_sha256.copy_from_slice(&Sha256::digest(&bytes));
+        // Permanently pin this one verified native for the process lifetime:
+        // otherwise an unload/reload could recycle its trusted address range.
+        let mut pinned = std::ptr::null_mut();
+        if unsafe { GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            base as *const u16, &mut pinned) } == 0 || pinned != module {
+            return Err("NeverGuard JVM-Aware cannot pin verified LWJGL module".to_string());
+        }
+        VERIFIED_LWJGL_IMAGE.set(VerifiedNativeImage {
+            base, end, canonical_path, file_sha256,
+        }).map_err(|_| "NeverGuard JVM-Aware LWJGL registration race".to_string())
+    })();
+    if result.is_err() {
+        RUNTIME_NATIVE_LOAD_FAILED.store(true, Ordering::Release);
+    }
+    result
+}
+
 /// Захватывает цепочку вызовов внутри обёртки IAT NeverGuard. Реализация памяти
 /// HotSpot для Windows вызывает VirtualAlloc/VirtualProtect из jvm.dll, поэтому
 /// допустимый JIT-переход или изменение кеша кода должны иметь прямой внешний
@@ -467,6 +629,9 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
             } else if TRUSTED_SYSTEM_DISPATCHERS
                 .get()
                 .is_some_and(|ranges| ranges.iter().any(|(base, end)| address >= *base && address < *end))
+                || VERIFIED_LWJGL_IMAGE.get().is_some_and(|native| {
+                    address >= native.base && address < native.end
+                })
             {
                 TransitionOrigin::TrustedSystemDispatcher
             } else {

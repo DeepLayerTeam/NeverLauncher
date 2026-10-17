@@ -440,6 +440,12 @@ fn reconcile_after_library_load(module: *mut c_void) {
     if module.is_null() {
         return;
     }
+    // LWJGL may allocate executable code immediately after it loads. Verify
+    // and pin its exact native image before normal IAT reconciliation; the
+    // JVM-Aware heartbeat fails closed if this registration is rejected.
+    if let Err(err) = crate::jvm_awareness::register_loaded_native_dispatcher(module) {
+        eprintln!("NeverGuard JVM-Aware native registration rejected: {err}");
+    }
     // Hook reconciliation itself may require OS loader operations. Never wait
     // recursively for ENGINE_STATE from inside a LoadLibrary callback.
     let Ok(mut state) = ENGINE_STATE.try_lock() else {

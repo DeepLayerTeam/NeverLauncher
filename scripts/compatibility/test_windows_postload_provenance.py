@@ -101,11 +101,43 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
 
     def test_ack_still_requires_signed_packet_and_bounded_deadline(self):
         source = (ROOT / 'runtime/neverguard-sensor/src/continuous_guard.rs').read_text(encoding='utf-8')
-        self.assertIn('GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(12)', source)
+        self.assertIn('GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(35)', source)
         self.assertIn('mac.verify_slice', source)
         self.assertIn('Guard-ACK sequence mismatch', source)
         self.assertIn('Guard-ACK event-chain mismatch', source)
         self.assertIn('Guard-ACK heartbeat timeout', source)
+
+    def test_lwjgl_native_is_pinned_to_materialized_platform_directory(self):
+        source = (ROOT / 'runtime/neverguard-sensor/src/jvm_awareness.rs').read_text(encoding='utf-8')
+        hooks = HOOKS.read_text(encoding='utf-8')
+        region = source.split('pub fn register_loaded_native_dispatcher(', 1)[1].split('pub fn capture_transition_provenance(', 1)[0]
+        self.assertIn('launch_root.join("natives").join("windows")', region)
+        self.assertIn('.join(std::env::consts::ARCH).join("lwjgl.dll")', region)
+        self.assertIn('std::fs::symlink_metadata(&loaded)', region)
+        self.assertIn('std::fs::canonicalize(&expected)', region)
+        self.assertIn('expected_path.starts_with(launch_root)', region)
+        self.assertIn('rejected reparse/symlink native path', region)
+        self.assertIn('LWJGL loaded outside certified natives directory', region)
+        self.assertIn('GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN', region)
+        self.assertIn('Sha256::digest(&bytes)', region)
+        self.assertIn('RUNTIME_NATIVE_LOAD_FAILED.store(true', region)
+        self.assertIn('register_loaded_native_dispatcher(module)', hooks)
+        self.assertIn('VERIFIED_LWJGL_IMAGE.get().is_some_and', source)
+        self.assertIn('LWJGL image content changed', source)
+        self.assertIn('reconcile_first_runtime_native_transition()?;', source)
+        self.assertIn('FOREIGN_EXECUTABLE_TRANSITIONS.compare_exchange(', source)
+        self.assertIn('TransitionOrigin::ForeignNative =>', source)
+
+    def test_ack_deadline_remains_shorter_than_guard_stream_watchdog(self):
+        sensor = (ROOT / 'runtime/neverguard-sensor/src/continuous_guard.rs').read_text(encoding='utf-8')
+        guard = (ROOT / 'runtime/neverruntime/src/windows_module_guard.rs').read_text(encoding='utf-8')
+        import re
+        ack = int(re.search(r'GUARD_ACK_TIMEOUT: Duration = Duration::from_secs\((\d+)\)', sensor).group(1))
+        stream = int(re.search(r'MODULE_RUNTIME_EVENT_TIMEOUT: Duration = Duration::from_secs\((\d+)\)', guard).group(1))
+        self.assertLess(ack, stream)
+        self.assertGreater(ack, 12)
+        self.assertIn('mac.verify_slice', sensor)
+        self.assertIn('Guard-ACK event-chain mismatch', sensor)
 
     def test_abort_diagnostics_include_rejected_reason(self):
         source = (ROOT / 'runtime/neverguard-sensor/src/lib.rs').read_text(encoding='utf-8')
