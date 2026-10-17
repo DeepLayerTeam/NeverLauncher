@@ -809,18 +809,23 @@ pub async fn certify_vanilla_compatibility(
     // Добавляйте его краткую причину в артефакт сертификации клиента
     // вместо пустого журнала, чтобы ошибки Windows-агента были понятны.
     #[cfg(windows)]
-    if exit_code == Some(0xE3) {
+    if exit_code == Some(0xE3) || exit_code == Some(0xC000_0409u32 as i32) {
+        // Windows Rust abort() also yields 0xC0000409. Attach authenticated
+        // Guard violation details only if one actually arrived; never label
+        // an unrelated JVM/graphics fail-fast as a Guard finding.
         let guard = _sensor_session.report().module_guard;
-        let reason = if guard.last_violation.is_empty() {
-            "Guard terminated the runtime without a recorded violation"
-        } else {
-            guard.last_violation.as_str()
-        };
-        let bounded = reason.chars().take(1024).collect::<String>();
-        let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-            .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
-        writeln!(diagnostics, "--- NeverGuard fail-closed ---\n{bounded}")
-            .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+        if !guard.last_violation.is_empty() {
+            let bounded = guard.last_violation.chars().take(1024).collect::<String>();
+            let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
+                .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
+            writeln!(diagnostics, "--- NeverGuard fail-closed ---\n{bounded}")
+                .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+        } else if exit_code == Some(0xE3) {
+            let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
+                .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
+            writeln!(diagnostics, "--- NeverGuard fail-closed ---\nGuard terminated the runtime without a recorded violation")
+                .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+        }
     }
     let finished_at = now_unix()?;
     let runtime_seconds = finished_at.saturating_sub(started_at);

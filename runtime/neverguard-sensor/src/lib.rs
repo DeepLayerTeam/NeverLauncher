@@ -631,6 +631,16 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
     event
 }
 
+// Rust abort() produces Windows 0xC0000409; mark intentional fail-closed
+// termination distinctly from a JVM or GPU driver native crash. Do not log
+// secrets, memory contents or full host filesystem paths.
+#[track_caller]
+fn guard_fail_closed_abort() -> ! {
+    let site = std::panic::Location::caller();
+    eprintln!("NeverGuard Sensor fail-closed abort: {}:{}", site.file(), site.line());
+    std::process::abort();
+}
+
 fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequence: u64) {
     let mut heartbeat_at = Instant::now();
     let mut thread_check_at = Instant::now();
@@ -650,7 +660,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 &tamper,
             );
             channel.secret.zeroize();
-            std::process::abort();
+            guard_fail_closed_abort();
         }
     };
     // Отправляйте аутентифицированное событие жизнеспособности сразу после
@@ -675,6 +685,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     .is_err()
     {
         channel.secret.zeroize();
+        eprintln!("NeverGuard Sensor startup heartbeat write failed");
         std::process::abort();
     }
 
@@ -697,7 +708,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
         }
 
@@ -726,7 +737,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
         }
 
@@ -744,7 +755,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     &tamper,
                 );
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             memory_drain_at = Instant::now();
         }
@@ -764,7 +775,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
                 Err(err) => {
                     let tamper = debug_instrumentation_tamper_event(&err);
@@ -776,7 +787,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             debug_check_at = Instant::now();
@@ -799,7 +810,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
                 Err(err) => {
                     let tamper = thread_process_tamper_event(&err);
@@ -811,7 +822,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             thread_check_at = Instant::now();
@@ -834,7 +845,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     .is_err()
                     {
                         channel.secret.zeroize();
-                        std::process::abort();
+                        guard_fail_closed_abort();
                     }
                 }
                 Ok(_) => {
@@ -849,7 +860,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
                 Err(err) => {
                     let tamper = jvm_aware_tamper_event(&err);
@@ -861,7 +872,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             jvm_aware_check_at = Instant::now();
@@ -886,7 +897,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             };
             if write_module_event(
@@ -899,7 +910,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             let event_chain = match continuous_guard::current_event_chain() {
                 Ok(chain) => chain,
@@ -916,7 +927,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             };
             let next_guard_sequence = match guard_sequence.checked_add(1) {
@@ -934,7 +945,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             };
             if let Err(err) = continuous_guard::wait_for_guard_ack(
@@ -957,7 +968,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     &tamper,
                 );
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             guard_sequence = next_guard_sequence;
             continuous_heartbeat_at = Instant::now();
@@ -978,7 +989,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             break;
         }
@@ -996,7 +1007,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     .is_err()
                     {
                         channel.secret.zeroize();
-                        std::process::abort();
+                        guard_fail_closed_abort();
                     }
                 }
                 Err(err) => {
@@ -1009,7 +1020,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             match memory_integrity::reconcile_and_verify() {
@@ -1025,7 +1036,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     .is_err()
                     {
                         channel.secret.zeroize();
-                        std::process::abort();
+                        guard_fail_closed_abort();
                     }
                 }
                 Ok(_) => {
@@ -1038,7 +1049,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
                 Err(err) => {
                     let tamper = memory_tamper_event(&err);
@@ -1050,7 +1061,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             let thread_heartbeat = thread_process_event(
@@ -1067,7 +1078,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             match debug_instrumentation::reconcile_and_verify() {
                 Ok(snapshot) if snapshot.active && snapshot.healthy => {
@@ -1085,7 +1096,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     .is_err()
                     {
                         channel.secret.zeroize();
-                        std::process::abort();
+                        guard_fail_closed_abort();
                     }
                 }
                 Ok(_) => {
@@ -1100,7 +1111,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
                 Err(err) => {
                     let tamper = debug_instrumentation_tamper_event(&err);
@@ -1112,7 +1123,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                         &tamper,
                     );
                     channel.secret.zeroize();
-                    std::process::abort();
+                    guard_fail_closed_abort();
                 }
             }
             let heartbeat = RawModuleEvent {
@@ -1129,7 +1140,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
             .is_err()
             {
                 channel.secret.zeroize();
-                std::process::abort();
+                guard_fail_closed_abort();
             }
             heartbeat_at = Instant::now();
         }

@@ -7,7 +7,7 @@ use std::{
     ffi::{c_char, c_void},
     mem::size_of,
     sync::{
-        atomic::{AtomicPtr, AtomicU64, Ordering},
+        atomic::{AtomicPtr, AtomicU64, AtomicUsize, Ordering},
         Mutex,
     },
 };
@@ -65,6 +65,8 @@ struct ModuleInfo {
 #[link(name = "kernel32")]
 extern "system" {
     fn GetCurrentProcess() -> *mut c_void;
+    fn GetLastError() -> u32;
+    fn SetLastError(error: u32);
     fn GetCurrentProcessId() -> u32;
     fn GetProcessId(process: *mut c_void) -> u32;
     fn K32EnumProcessModules(
@@ -344,7 +346,7 @@ pub fn shutdown_restore() -> Result<(), String> {
         let Ok(_module_pin) = pin_module(record.module_base) else {
             continue;
         };
-        let current = unsafe { std::ptr::read_volatile(record.slot as *const usize) };
+        let current = read_hook_slot(record.slot);
         if current == record.replacement {
             if let Err(err) = patch_pointer(record.slot, record.original) {
                 errors.push(err);
@@ -401,7 +403,7 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
         if !records.is_empty() {
             let mut applied = Vec::with_capacity(records.len());
             for record in records {
-                let current = unsafe { std::ptr::read_volatile(record.slot as *const usize) };
+                let current = read_hook_slot(record.slot);
                 if current != record.original && current != record.replacement {
                     restore_records(&mut applied);
                     state.healthy = false;
@@ -430,12 +432,36 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
     Ok(())
 }
 
+// A module can start using its imports immediately after LoadLibrary returns.
+// Reconciling IAT only at the two-second heartbeat misses memory transitions
+// made by newly loaded JVM/LWJGL modules. This runs only after the native loader
+// has returned (never from DllMain / LdrDllNotification).
+fn reconcile_after_library_load(module: *mut c_void) {
+    if module.is_null() {
+        return;
+    }
+    // Hook reconciliation itself may require OS loader operations. Never wait
+    // recursively for ENGINE_STATE from inside a LoadLibrary callback.
+    let Ok(mut state) = ENGINE_STATE.try_lock() else {
+        return; // regular heartbeat remains mandatory and will reconcile
+    };
+    if !state.active || !state.healthy || state.seen_modules.contains(&(module as usize)) {
+        return;
+    }
+    if let Err(err) = reconcile_locked(&mut state).and_then(|_| verify_locked(&mut state)) {
+        // Do not let a failed patch silently grant executable-memory origin.
+        // The worker's mandatory Hook Engine heartbeat fails closed.
+        state.healthy = false;
+        eprintln!("NeverGuard Hook Engine post-load reconciliation failed: {err}");
+    }
+}
+
 fn verify_locked(state: &mut HookEngineState) -> Result<(), String> {
     for record in &state.records {
         let Ok(_module_pin) = pin_module(record.module_base) else {
             continue;
         };
-        let current = unsafe { std::ptr::read_volatile(record.slot as *const usize) };
+        let current = read_hook_slot(record.slot);
         if current != record.replacement {
             state.healthy = false;
             return Err(format!(
@@ -602,7 +628,16 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     Ok(candidates)
 }
 
+fn read_hook_slot(slot: usize) -> usize {
+    // PE IAT pointer slots are naturally pointer-aligned. Atomic reads pair
+    // with the release stores in patch_pointer on concurrent JVM threads.
+    unsafe { AtomicUsize::from_ptr(slot as *mut usize).load(Ordering::Acquire) }
+}
+
 fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
+    if slot % std::mem::align_of::<AtomicUsize>() != 0 {
+        return Err("NeverGuard Hook Engine unaligned IAT slot".to_string());
+    }
     let mut old_protect = 0u32;
     let ok = unsafe {
         VirtualProtect(
@@ -619,7 +654,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
         ));
     }
     unsafe {
-        std::ptr::write_volatile(slot as *mut usize, value);
+        AtomicUsize::from_ptr(slot as *mut usize).store(value, Ordering::Release);
     }
     let mut ignored = 0u32;
     let restore_ok = unsafe {
@@ -648,7 +683,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
 
 fn restore_records(records: &mut Vec<HookRecord>) {
     for record in records.iter().rev() {
-        let current = unsafe { std::ptr::read_volatile(record.slot as *const usize) };
+        let current = read_hook_slot(record.slot);
         if current == record.replacement {
             let _ = patch_pointer(record.slot, record.original);
         }
@@ -818,7 +853,14 @@ unsafe extern "system" fn hook_load_library_a(name: *const c_char) -> *mut c_voi
         return std::ptr::null_mut();
     }
     let function: unsafe extern "system" fn(*const c_char) -> *mut c_void = unsafe { std::mem::transmute(target) };
-    unsafe { function(name) }
+    let module = unsafe { function(name) };
+    if !module.is_null() {
+        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        let last_error = unsafe { GetLastError() };
+        reconcile_after_library_load(module);
+        unsafe { SetLastError(last_error); }
+    }
+    module
 }
 
 unsafe extern "system" fn hook_load_library_w(name: *const u16) -> *mut c_void {
@@ -828,7 +870,14 @@ unsafe extern "system" fn hook_load_library_w(name: *const u16) -> *mut c_void {
         return std::ptr::null_mut();
     }
     let function: unsafe extern "system" fn(*const u16) -> *mut c_void = unsafe { std::mem::transmute(target) };
-    unsafe { function(name) }
+    let module = unsafe { function(name) };
+    if !module.is_null() {
+        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        let last_error = unsafe { GetLastError() };
+        reconcile_after_library_load(module);
+        unsafe { SetLastError(last_error); }
+    }
+    module
 }
 
 unsafe extern "system" fn hook_load_library_ex_a(
@@ -843,7 +892,14 @@ unsafe extern "system" fn hook_load_library_ex_a(
     }
     let function: unsafe extern "system" fn(*const c_char, *mut c_void, u32) -> *mut c_void =
         unsafe { std::mem::transmute(target) };
-    unsafe { function(name, file, flags) }
+    let module = unsafe { function(name, file, flags) };
+    if !module.is_null() {
+        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        let last_error = unsafe { GetLastError() };
+        reconcile_after_library_load(module);
+        unsafe { SetLastError(last_error); }
+    }
+    module
 }
 
 unsafe extern "system" fn hook_load_library_ex_w(
@@ -858,7 +914,14 @@ unsafe extern "system" fn hook_load_library_ex_w(
     }
     let function: unsafe extern "system" fn(*const u16, *mut c_void, u32) -> *mut c_void =
         unsafe { std::mem::transmute(target) };
-    unsafe { function(name, file, flags) }
+    let module = unsafe { function(name, file, flags) };
+    if !module.is_null() {
+        // Preserve Win32 last-error semantics for callers of LoadLibrary.
+        let last_error = unsafe { GetLastError() };
+        reconcile_after_library_load(module);
+        unsafe { SetLastError(last_error); }
+    }
+    module
 }
 
 // Track dynamically resolved entry points as well as static IAT imports.
