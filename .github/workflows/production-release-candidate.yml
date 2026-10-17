@@ -110,7 +110,7 @@ jobs:
             --output-dir external-certifications \
             --timeout-seconds 1200 \
             --poll-seconds 15
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
