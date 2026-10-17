@@ -500,34 +500,66 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
     let result = (|| -> Result<(), String> {
         let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
             .ok_or_else(|| "NeverGuard JVM-Aware missing pinned native launch root".to_string())?;
-        let expected = launch_root.join("natives").join("windows")
-            .join(std::env::consts::ARCH).join("lwjgl.dll");
-        // Reparse points in the native directory chain must not redirect the
-        // otherwise exact path into an attacker-controlled location.
-        let mut component = expected.as_path();
-        while component != launch_root.as_path() {
-            let metadata = std::fs::symlink_metadata(component)
-                .map_err(|err| format!("NeverGuard JVM-Aware native path inspection failed: {err}"))?;
-            if metadata.file_type().is_symlink() {
-                return Err("NeverGuard JVM-Aware rejected reparse/symlink native path".to_string());
+        let native_root = launch_root.join("natives").join("windows")
+            .join(std::env::consts::ARCH);
+        // The materialized Mojang LWJGL classifier preserves its archive
+        // entry hierarchy. The approved Windows/x86_64 manifest records
+        // natives/windows/x86_64/windows/x64/org/lwjgl/lwjgl.dll, rather
+        // than the older flat natives/windows/x86_64/lwjgl.dll. Only these
+        // *exact* platform layouts are permitted, never a filename search.
+        let classifier_arch = match std::env::consts::ARCH {
+            "x86_64" => "x64",
+            "aarch64" => "arm64",
+            arch => return Err(format!("NeverGuard JVM-Aware unsupported LWJGL architecture: {arch}")),
+        };
+        let candidates = [
+            native_root.join("lwjgl.dll"),
+            native_root.join("windows").join(classifier_arch)
+                .join("org").join("lwjgl").join("lwjgl.dll"),
+        ];
+        let canonical_path = std::fs::canonicalize(&loaded)
+            .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
+        // A missing legacy layout must not poison the Sensor when the native
+        // is legitimately stored under the platform's archive hierarchy.
+        let mut matched = false;
+        for expected in &candidates {
+            // Check each directory component before canonicalizing: no
+            // symlink/reparse traversal from inside the certified client.
+            let mut component = expected.as_path();
+            let mut safe = true;
+            while component != launch_root.as_path() {
+                match std::fs::symlink_metadata(component) {
+                    Ok(metadata) if metadata.file_type().is_symlink() => {
+                        return Err("NeverGuard JVM-Aware rejected reparse/symlink native path".to_string());
+                    }
+                    Ok(_) => {},
+                    Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                        safe = false;
+                        break;
+                    }
+                    Err(err) => return Err(format!("NeverGuard JVM-Aware native path inspection failed: {err}")),
+                }
+                component = component.parent()
+                    .ok_or_else(|| "NeverGuard JVM-Aware invalid native directory ancestry".to_string())?;
             }
-            component = component.parent()
-                .ok_or_else(|| "NeverGuard JVM-Aware invalid native directory ancestry".to_string())?;
+            if !safe { continue; }
+            let expected_path = std::fs::canonicalize(expected)
+                .map_err(|err| format!("NeverGuard JVM-Aware cannot find expected native: {err}"))?;
+            if !expected_path.starts_with(launch_root) {
+                return Err("NeverGuard JVM-Aware native path escapes the launch root".to_string());
+            }
+            if canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
+            return Err("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory".to_string());
         }
         let metadata = std::fs::symlink_metadata(&loaded)
             .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect LWJGL native: {err}"))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
             return Err("NeverGuard JVM-Aware LWJGL native is not a regular file".to_string());
-        }
-        let canonical_path = std::fs::canonicalize(&loaded)
-            .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
-        let expected_path = std::fs::canonicalize(&expected)
-            .map_err(|err| format!("NeverGuard JVM-Aware cannot find expected native: {err}"))?;
-        if !expected_path.starts_with(launch_root) {
-            return Err("NeverGuard JVM-Aware native path escapes the launch root".to_string());
-        }
-        if !canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
-            return Err("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory".to_string());
         }
         let mut info = ModuleInfo::default();
         if unsafe { K32GetModuleInformation(GetCurrentProcess(), module, &mut info,

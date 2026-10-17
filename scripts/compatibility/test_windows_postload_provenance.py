@@ -112,9 +112,14 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         hooks = HOOKS.read_text(encoding='utf-8')
         region = source.split('pub fn register_loaded_native_dispatcher(', 1)[1].split('pub fn capture_transition_provenance(', 1)[0]
         self.assertIn('launch_root.join("natives").join("windows")', region)
-        self.assertIn('.join(std::env::consts::ARCH).join("lwjgl.dll")', region)
+        self.assertIn('join(std::env::consts::ARCH)', region)
+        self.assertIn('"x86_64" => "x64"', region)
+        self.assertIn('"aarch64" => "arm64"', region)
+        self.assertIn('.join("org").join("lwjgl").join("lwjgl.dll")', region)
+        self.assertIn('let candidates = [', region)
+        self.assertIn('if !matched {', region)
         self.assertIn('std::fs::symlink_metadata(&loaded)', region)
-        self.assertIn('std::fs::canonicalize(&expected)', region)
+        self.assertIn('std::fs::canonicalize(expected)', region)
         self.assertIn('expected_path.starts_with(launch_root)', region)
         self.assertIn('rejected reparse/symlink native path', region)
         self.assertIn('LWJGL loaded outside certified natives directory', region)
@@ -146,5 +151,16 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn('guard_fail_closed_abort();', source)
 
 
+class AdversarialProbeRuntimeTests(unittest.TestCase):
+    def test_module_lifecycle_probe_allows_two_full_heartbeat_cycles(self):
+        source = (ROOT / 'runtime/neverruntime/tests/neverguard_sensor_windows.rs').read_text(encoding='utf-8')
+        block = source.split('fn compile_module_probe(', 1)[1].split('fn compile_memory_integrity_probe(', 1)[0]
+        self.assertIn('Thread.sleep(10000L);', block)
+        self.assertIn('report.hook_engine.integrity_check_count >= 2', source)
+        self.assertIn('report.memory_integrity.integrity_check_count >= 2', source)
+
+
 if __name__ == '__main__':
     unittest.main()
+
+

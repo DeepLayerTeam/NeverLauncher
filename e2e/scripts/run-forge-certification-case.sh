@@ -152,6 +152,14 @@ MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 [[ -n "$PROFILE_ID" && -n "$RESOLVED_LOADER" && -n "$MAIN_CLASS" ]] || { echo "[forge-cert] incomplete Forge profile evidence" >&2; exit 1; }
 case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[forge-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
 
+# Forge 1.14.4 bundles NightConfig 3.6.0. Its first-launch correction of an
+# absent fml.toml may throw ConcurrentModificationException in ConfigSpec.
+# Seed only the documented defaults, after package verification and without
+# modifying any file included in the signed client manifest.
+python3 "$ROOT/e2e/scripts/prepare-legacy-forge-config.py" \
+  --client-root "$RUNTIME_DIR/materialized-client" \
+  --minecraft "$MINECRAFT_VERSION"
+
 printf '[forge-cert] launch actual Forge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
 export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
