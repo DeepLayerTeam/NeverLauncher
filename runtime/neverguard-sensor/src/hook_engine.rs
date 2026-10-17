@@ -35,6 +35,8 @@ const HOOK_VIRTUAL_ALLOC_2: u32 = 9;
 const HOOK_NT_ALLOCATE_VIRTUAL_MEMORY: u32 = 10;
 const HOOK_NT_PROTECT_VIRTUAL_MEMORY: u32 = 11;
 const HOOK_GET_PROC_ADDRESS: u32 = 12;
+const HOOK_VIRTUAL_ALLOC_EX: u32 = 13;
+const HOOK_VIRTUAL_PROTECT_EX: u32 = 14;
 
 static HOOK_CALL_COUNT: AtomicU64 = AtomicU64::new(0);
 static ORIGINAL_LOAD_LIBRARY_A: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -49,6 +51,8 @@ static ORIGINAL_VIRTUAL_ALLOC_2: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::nu
 static ORIGINAL_NT_ALLOCATE_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_NT_PROTECT_VIRTUAL_MEMORY: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_GET_PROC_ADDRESS: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_VIRTUAL_ALLOC_EX: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_VIRTUAL_PROTECT_EX: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 #[repr(C)]
 #[allow(dead_code)]
@@ -61,6 +65,8 @@ struct ModuleInfo {
 #[link(name = "kernel32")]
 extern "system" {
     fn GetCurrentProcess() -> *mut c_void;
+    fn GetCurrentProcessId() -> u32;
+    fn GetProcessId(process: *mut c_void) -> u32;
     fn K32EnumProcessModules(
         process: *mut c_void,
         modules: *mut *mut c_void,
@@ -172,7 +178,7 @@ struct HookSpec {
     optional: bool,
 }
 
-fn hook_specs() -> [HookSpec; 12] {
+fn hook_specs() -> [HookSpec; 14] {
     [
         HookSpec {
             id: HOOK_LOAD_LIBRARY_A,
@@ -268,6 +274,22 @@ fn hook_specs() -> [HookSpec; 12] {
         // HotSpot/native libraries may dynamically resolve memory APIs rather
         // than import their addresses through IAT. Wrap only genuine exports
         // whose returned address equals our independently resolved target.
+        HookSpec {
+            id: HOOK_VIRTUAL_ALLOC_EX,
+            name: "VirtualAllocEx",
+            c_name: b"VirtualAllocEx\0",
+            replacement: hook_virtual_alloc_ex as usize,
+            canonical: &ORIGINAL_VIRTUAL_ALLOC_EX,
+            optional: true,
+        },
+        HookSpec {
+            id: HOOK_VIRTUAL_PROTECT_EX,
+            name: "VirtualProtectEx",
+            c_name: b"VirtualProtectEx\0",
+            replacement: hook_virtual_protect_ex as usize,
+            canonical: &ORIGINAL_VIRTUAL_PROTECT_EX,
+            optional: true,
+        },
         HookSpec {
             id: HOOK_GET_PROC_ADDRESS,
             name: "GetProcAddress",
@@ -882,9 +904,9 @@ unsafe extern "system" fn hook_virtual_alloc(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, allocation_type, protect) };
     if !result.is_null() {
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
-        crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
 }
@@ -904,9 +926,9 @@ unsafe extern "system" fn hook_virtual_protect(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, new_protect, old_protect) };
     if result != 0 {
+        crate::memory_integrity::record_virtual_protect(address, size, new_protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(address, new_protect, provenance);
-        crate::memory_integrity::record_virtual_protect(address, size, new_protect);
     }
     result
 }
@@ -927,9 +949,9 @@ unsafe extern "system" fn hook_virtual_alloc_from_app(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, allocation_type, protect) };
     if !result.is_null() {
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
-        crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
 }
@@ -947,9 +969,66 @@ unsafe extern "system" fn hook_virtual_protect_from_app(
         unsafe { std::mem::transmute(target) };
     let result = unsafe { function(address, size, protect, old_protect) };
     if result != 0 {
+        crate::memory_integrity::record_virtual_protect(address, size, protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(address, protect, provenance);
+    }
+    result
+}
+
+// NT memory APIs accept both the pseudo-handle (-1) and a real opened or
+// duplicated handle to the same process. Pointer equality with -1 silently
+// drops legitimate self-process JIT transitions; validate the process ID
+// instead. Invalid/foreign process handles can never grant local provenance.
+fn is_current_process_handle(process: *mut c_void) -> bool {
+    if process.is_null() {
+        return false;
+    }
+    let pid = unsafe { GetProcessId(process) };
+    pid != 0 && pid == unsafe { GetCurrentProcessId() }
+}
+
+// Ex functions can operate on a real handle for this process. Observing only
+// self-process successes prevents a remote allocation from authorizing a local
+// executable page, while catching JVM/native callers using the Ex variants.
+unsafe extern "system" fn hook_virtual_alloc_ex(
+    process: *mut c_void,
+    address: *mut c_void,
+    size: usize,
+    allocation_type: u32,
+    protect: u32,
+) -> *mut c_void {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_VIRTUAL_ALLOC_EX.load(Ordering::Acquire);
+    if target.is_null() { return std::ptr::null_mut(); }
+    let function: unsafe extern "system" fn(*mut c_void, *mut c_void, usize, u32, u32) -> *mut c_void =
+        unsafe { std::mem::transmute(target) };
+    let result = unsafe { function(process, address, size, allocation_type, protect) };
+    if !result.is_null() && is_current_process_handle(process) {
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
+        let origin = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(result, protect, origin);
+    }
+    result
+}
+
+unsafe extern "system" fn hook_virtual_protect_ex(
+    process: *mut c_void,
+    address: *mut c_void,
+    size: usize,
+    protect: u32,
+    old_protect: *mut u32,
+) -> i32 {
+    HOOK_CALL_COUNT.fetch_add(1, Ordering::Relaxed);
+    let target = ORIGINAL_VIRTUAL_PROTECT_EX.load(Ordering::Acquire);
+    if target.is_null() { return 0; }
+    let function: unsafe extern "system" fn(*mut c_void, *mut c_void, usize, u32, *mut u32) -> i32 =
+        unsafe { std::mem::transmute(target) };
+    let result = unsafe { function(process, address, size, protect, old_protect) };
+    if result != 0 && is_current_process_handle(process) {
         crate::memory_integrity::record_virtual_protect(address, size, protect);
+        let origin = crate::jvm_awareness::capture_transition_provenance();
+        crate::jvm_awareness::observe_memory_transition(address, protect, origin);
     }
     result
 }
@@ -972,12 +1051,12 @@ unsafe extern "system" fn hook_virtual_alloc_2(
     let result = unsafe {
         function(process, address, size, allocation_type, protect, extended_parameters, parameter_count)
     };
-    // NULL и GetCurrentProcess() выбирают текущий процесс. Никогда не считайте
-    // выделение в другом процессе происхождением локальной исполняемой памяти.
-    if !result.is_null() && (process.is_null() || process == unsafe { GetCurrentProcess() }) {
+    // VirtualAlloc2 accepts NULL or any valid handle to the current process.
+    // Validate real handles instead of comparing only to the pseudo-handle.
+    if !result.is_null() && (process.is_null() || is_current_process_handle(process)) {
+        crate::memory_integrity::record_virtual_alloc(result, size, protect);
         let provenance = crate::jvm_awareness::capture_transition_provenance();
         crate::jvm_awareness::observe_memory_transition(result, protect, provenance);
-        crate::memory_integrity::record_virtual_alloc(result, size, protect);
     }
     result
 }
@@ -1002,15 +1081,15 @@ unsafe extern "system" fn hook_nt_allocate_virtual_memory(
         *mut c_void, *mut *mut c_void, usize, *mut usize, u32, u32
     ) -> i32 = unsafe { std::mem::transmute(target) };
     let status = unsafe { function(process, base_address, zero_bits, region_size, allocation_type, protect) };
-    if status >= 0 && process == unsafe { GetCurrentProcess() }
+    if status >= 0 && is_current_process_handle(process)
         && !base_address.is_null() && !region_size.is_null()
     {
         let address = unsafe { *base_address };
         let size = unsafe { *region_size };
         if !address.is_null() && size > 0 {
+            crate::memory_integrity::record_virtual_alloc(address, size, protect);
             let caller = crate::jvm_awareness::capture_transition_provenance();
             crate::jvm_awareness::observe_memory_transition(address, protect, caller);
-            crate::memory_integrity::record_virtual_alloc(address, size, protect);
         }
     }
     status
@@ -1030,16 +1109,40 @@ unsafe extern "system" fn hook_nt_protect_virtual_memory(
         *mut c_void, *mut *mut c_void, *mut usize, u32, *mut u32
     ) -> i32 = unsafe { std::mem::transmute(target) };
     let status = unsafe { function(process, base_address, region_size, protect, old_protect) };
-    if status >= 0 && process == unsafe { GetCurrentProcess() }
+    if status >= 0 && is_current_process_handle(process)
         && !base_address.is_null() && !region_size.is_null()
     {
         let address = unsafe { *base_address };
         let size = unsafe { *region_size };
         if !address.is_null() && size > 0 {
+            crate::memory_integrity::record_virtual_protect(address, size, protect);
             let caller = crate::jvm_awareness::capture_transition_provenance();
             crate::jvm_awareness::observe_memory_transition(address, protect, caller);
-            crate::memory_integrity::record_virtual_protect(address, size, protect);
         }
     }
     status
+}
+
+#[cfg(test)]
+mod self_process_handle_tests {
+    use super::*;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut c_void;
+        fn CloseHandle(handle: *mut c_void) -> i32;
+    }
+
+    #[test]
+    fn pseudo_and_real_self_process_handles_are_recognized() {
+        let pseudo = unsafe { GetCurrentProcess() };
+        assert!(is_current_process_handle(pseudo));
+        // PROCESS_QUERY_LIMITED_INFORMATION is sufficient for GetProcessId.
+        let opened = unsafe { OpenProcess(0x1000, 0, GetCurrentProcessId()) };
+        assert!(!opened.is_null(), "OpenProcess(self) must succeed");
+        assert!(is_current_process_handle(opened));
+        assert_ne!(opened, pseudo);
+        unsafe { CloseHandle(opened); }
+        assert!(!is_current_process_handle(std::ptr::null_mut()));
+    }
 }

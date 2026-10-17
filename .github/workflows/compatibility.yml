@@ -139,6 +139,10 @@ jobs:
           NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
           NEVERLAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          # CI runners have no physical audio device; force OpenAL Soft's
+          # genuine null backend rather than failing to open the default one.
+          # This only affects certification runners, not launcher releases.
+          ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
       - name: Export bounded Windows native-fault metadata
@@ -320,6 +324,10 @@ jobs:
           NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
           NEVERLAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          # CI runners have no physical audio device; force OpenAL Soft's
+          # genuine null backend rather than failing to open the default one.
+          # This only affects certification runners, not launcher releases.
+          ALSOFT_DRIVERS: "null"
         shell: bash
         run: bash e2e/scripts/run-compatibility-case.sh
       - name: Export bounded Windows native-fault metadata

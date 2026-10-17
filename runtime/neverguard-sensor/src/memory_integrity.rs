@@ -28,7 +28,7 @@ const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
 // Allow in-flight successful IAT callbacks to publish their evidence before
 // refusing an otherwise unknown executable page; never trust a timer alone.
-const PROVENANCE_RECHECKS: usize = 4;
+const PROVENANCE_RECHECKS: usize = 16;
 
 const TRANSITION_VIRTUAL_ALLOC: u32 = 1;
 const TRANSITION_VIRTUAL_PROTECT: u32 = 2;
@@ -287,7 +287,10 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     // transition. Recheck the lock-free queue a bounded number
                     // of times; do not whitelist any region without evidence.
                     for _ in 0..PROVENANCE_RECHECKS {
-                        std::thread::yield_now();
+                        // A runnable producer may still be waiting for its time slice.
+                        // Bound the race with a short wait, without ever trusting
+                        // elapsed time as a substitute for observed provenance.
+                        std::thread::sleep(std::time::Duration::from_millis(1));
                         drain_transitions(state)?;
                         if range_allowed(region, &state.allowed_dynamic) {
                             break;

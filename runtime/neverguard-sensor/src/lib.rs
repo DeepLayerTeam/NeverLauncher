@@ -65,7 +65,9 @@ const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
 const MODULE_PATH_WCHARS: usize = 2048;
 const MODULE_EVENT_PREFIX_LEN: usize = 48 + MODULE_PATH_WCHARS * 2;
 const MODULE_EVENT_PACKET_LEN: usize = MODULE_EVENT_PREFIX_LEN + 32;
-const MODULE_RING_CAPACITY: usize = 512;
+// Native Minecraft startup can load more than 512 DLLs between worker polls.
+// Preserve every notification; actual overflow still remains a guard violation.
+const MODULE_RING_CAPACITY: usize = 2048;
 const MODULE_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 const MODULE_WORKER_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const MEMORY_TRANSITION_DRAIN_INTERVAL: Duration = Duration::from_millis(100);

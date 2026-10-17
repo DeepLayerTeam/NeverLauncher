@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 MODULE_PATH = Path(__file__).with_name("publish-client-package.py")
 spec = importlib.util.spec_from_file_location("publish_client_package", MODULE_PATH)
@@ -76,6 +76,75 @@ class RetryAfterTests(unittest.TestCase):
     def test_retry_after_defaults_to_short_backoff(self) -> None:
         response = self.Response({})
         self.assertEqual(module.APIClient._retry_after_seconds(response), 2)
+
+
+class UploadRecoveryTests(unittest.TestCase):
+    class Response:
+        def __init__(self, status: int, payload: bytes = b"{}", connection: str = "") -> None:
+            self.status = status
+            self.payload = payload
+            self.connection = connection
+
+        def read(self) -> bytes:
+            return self.payload
+
+        def getheader(self, name: str, default: str = "") -> str:
+            return self.connection if name == "Connection" else default
+
+    def make_client(self) -> module.APIClient:
+        return module.APIClient("http://127.0.0.1:8000", "test-token")
+
+    def test_interrupted_file_upload_retries_exact_body_and_checks_response(self) -> None:
+        client = self.make_client()
+        conn = Mock()
+        attempts = 0
+        def transmit(method: str, path: str, **kwargs: object) -> None:
+            nonlocal attempts
+            attempts += 1
+            if attempts <= 2:
+                raise BrokenPipeError(32, "Broken pipe")
+        conn.request.side_effect = transmit
+        conn.getresponse.return_value = self.Response(201, b'{"file":"ok"}')
+        # Reconnect to a fresh HTTPConnection on every transport failure.
+        with patch.object(client, "_connect", return_value=conn), patch.object(module.time, "sleep") as sleep:
+            status, response = client._request("POST", "/api/v1/admin/projects/p/versions/v/files", b"same-body", {"Content-Length": "9"})
+        self.assertEqual((status, response), (201, b'{"file":"ok"}'))
+        self.assertEqual(attempts, 3)
+        self.assertEqual([call.kwargs["body"] for call in conn.request.call_args_list], [b"same-body"] * 3)
+        self.assertEqual([call.kwargs["headers"]["Authorization"] for call in conn.request.call_args_list], ["Bearer test-token"] * 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1, 2])
+
+    def test_non_idempotent_post_has_no_extended_retries(self) -> None:
+        client = self.make_client()
+        conn = Mock()
+        conn.request.side_effect = BrokenPipeError(32, "Broken pipe")
+        with patch.object(client, "_connect", return_value=conn), patch.object(module.time, "sleep"):
+            with self.assertRaises(BrokenPipeError):
+                client._request("POST", "/api/v1/packages/id/sign", b"{}", {})
+        self.assertEqual(conn.request.call_count, 2)
+
+    def test_temporary_gateway_errors_retry_file_upload_only(self) -> None:
+        client = self.make_client()
+        conn = Mock()
+        conn.getresponse.side_effect = [self.Response(503), self.Response(201, b"success")]
+        with patch.object(client, "_connect", return_value=conn), patch.object(module.time, "sleep"):
+            self.assertEqual(client._request("POST", "/api/v1/admin/projects/p/versions/v/files", b"body", {}), (201, b"success"))
+        self.assertEqual(conn.request.call_count, 2)
+        other = self.make_client()
+        no_retry = Mock()
+        no_retry.getresponse.return_value = self.Response(503)
+        with patch.object(other, "_connect", return_value=no_retry):
+            self.assertEqual(other._request("POST", "/api/v1/packages/id/sign", b"body", {}), (503, b"{}"))
+        self.assertEqual(no_retry.request.call_count, 1)
+
+    def test_connection_close_is_not_reused(self) -> None:
+        client = self.make_client()
+        conn = Mock()
+        conn.getresponse.return_value = self.Response(201, connection="close")
+        client.conn = conn
+        self.assertEqual(client._request("POST", "/api/v1/admin/projects/p/versions/v/files", b"body", {})[0], 201)
+        self.assertIsNone(client.conn)
+        conn.close.assert_called_once()
 
 
 class PasskeyStepUpTests(unittest.TestCase):

@@ -68,18 +68,24 @@ class APIClient:
         return min(65, max(delays, default=1) + 1)
 
     def _request(self, method: str, path: str, body: bytes | None, headers: dict[str, str]) -> tuple[int, bytes]:
-        merged = {"Authorization": f"Bearer {self.token}", "User-Agent": f"NeverLauncher-E2E/{PRODUCT_VERSION}", **headers}
         request_path = self.base_path + path
+        # The SQL repository uses an upsert keyed by (version_id, path), so an
+        # interrupted *file upload* can safely be retransmitted with the exact
+        # same bytes and independently rechecked SHA-256. Never apply a lengthy
+        # POST retry loop to authentication, signing, or publishing operations.
+        upload_endpoint = method == "POST" and path.startswith("/api/v1/admin/projects/") and path.endswith("/files")
+        max_transport_retries = 6 if upload_endpoint else 1
         transport_retries = 0
         rate_limit_retries = 0
         while True:
             conn = self._connect()
+            merged = {"Authorization": f"Bearer {self.token}", "User-Agent": f"NeverLauncher-E2E/{PRODUCT_VERSION}", **headers}
             try:
                 conn.request(method, request_path, body=body, headers=merged)
                 response = conn.getresponse()
                 payload = response.read()
-                transport_retries = 0
                 if response.getheader("Connection", "").lower() == "close":
+                    conn.close()
                     self.conn = None
                 if response.status == 429 and rate_limit_retries < 8:
                     delay = self._retry_after_seconds(response)
@@ -91,16 +97,30 @@ class APIClient:
                     )
                     time.sleep(delay)
                     continue
+                # 502/503/504 may be emitted while the API container is
+                # restarted. The uploaded file is repeatable; other POSTs are not.
+                if upload_endpoint and response.status in {502, 503, 504} and transport_retries < max_transport_retries:
+                    transport_retries += 1
+                    delay = min(10, 2 ** (transport_retries - 1))
+                    print(f"[e2e-upload] transient HTTP {response.status}; retry {transport_retries}/{max_transport_retries} after {delay}s", file=sys.stderr, flush=True)
+                    if self.conn is not None:
+                        self.conn.close()
+                        self.conn = None
+                    time.sleep(delay)
+                    continue
                 return response.status, payload
-            except (ConnectionError, OSError, http.client.HTTPException):
+            except (ConnectionError, OSError, http.client.HTTPException) as exc:
                 try:
                     conn.close()
                 except Exception:
                     pass
                 self.conn = None
-                if transport_retries >= 1:
+                if transport_retries >= max_transport_retries:
                     raise
                 transport_retries += 1
+                delay = min(10, 2 ** (transport_retries - 1))
+                print(f"[e2e-upload] transport {type(exc).__name__}; retry {transport_retries}/{max_transport_retries} after {delay}s", file=sys.stderr, flush=True)
+                time.sleep(delay)
 
     def json(self, method: str, path: str, payload: object | None = None) -> object:
         body = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()
