@@ -33,6 +33,7 @@ jobs:
           set -euo pipefail
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 e2e/scripts/test_prepare_vanilla_1171_void_world.py
+          python3 e2e/scripts/test_vanilla_1171_resource_ready_proxy.py
           full_matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
           matrix="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[:mid]},separators=(",",":")))' <<<"$full_matrix")"
           matrix_b="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[mid:]},separators=(",",":")))' <<<"$full_matrix")"
@@ -176,6 +177,8 @@ jobs:
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json
             e2e/runtime/vanilla-certification.json
+            e2e/runtime/resource-ready-proxy.json
+            e2e/runtime/resource-ready-proxy.log
             e2e/runtime/fabric-install.json
             e2e/runtime/fabric-certification.json
             e2e/runtime/quilt-install.json
@@ -354,6 +357,8 @@ jobs:
             e2e/runtime/vanilla-install.json
             e2e/runtime/vanilla-server-install.json
             e2e/runtime/vanilla-certification.json
+            e2e/runtime/resource-ready-proxy.json
+            e2e/runtime/resource-ready-proxy.log
             e2e/runtime/fabric-install.json
             e2e/runtime/fabric-certification.json
             e2e/runtime/quilt-install.json

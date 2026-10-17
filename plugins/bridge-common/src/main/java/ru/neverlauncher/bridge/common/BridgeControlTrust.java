@@ -83,7 +83,7 @@ final class BridgeControlTrust {
         if (!BridgeProtocolSecurity.PROFILE.equals(normalize(command.securityProfile()))) return false;
         if (!constantEquals(BridgeProtocolSecurity.expectedCapabilityDigest(), normalize(command.capabilityDigest()).toLowerCase())) return false;
         Set<String> trusted = pinnedPublicKeys;
-        if (trusted.isEmpty()) return false; // Конечная точка команд никогда не устанавливает доверие самостоятельно.
+        if (trusted.isEmpty()) return false; // The command endpoint can never bootstrap trust; only pinned capability keys can authorize commands.
         if (verifyCommandWithKey(command, command.v3SigningPublicKey(), command.v3SigningKeyFingerprint(), command.v3Signature(), trusted)) return true;
         return verifyCommandWithKey(command, command.previousV3SigningPublicKey(), command.previousV3SigningKeyFingerprint(), command.previousV3Signature(), trusted);
     }

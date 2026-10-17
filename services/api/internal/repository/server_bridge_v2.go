@@ -1542,7 +1542,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, id))
 }
 
-// CompleteServerBridgeControlCommand — идемпотентная фиксация с защитой токеном аренды.
+// CompleteServerBridgeControlCommand — idempotent fenced commit: a completed command can be acknowledged again only with the same lease identity, status and result; a conflicting replay fails.
 // Завершить команду может только канал с токеном, получивший её. Токен сохраняется после
 // завершения, чтобы повтор на другой реплике Backend получил тот же сохранённый результат.
 func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, serverID string, runtimeEpoch int64, runtimeID, commandID, leaseOwner, leaseToken string, deliverySequence int64, status string, result map[string]string, failure string, now time.Time) (model.ServerBridgeControlCommand, error) {
@@ -1553,6 +1553,10 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if !allowed[status] || len(strings.TrimSpace(leaseOwner)) < 16 || len(strings.TrimSpace(leaseToken)) < 16 || deliverySequence < 1 {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
 	}
+	// Normalize before both the original commit and all idempotent replays.
+	// Otherwise a failure longer than 1024 bytes is persisted truncated but
+	// a byte-identical retry is rejected as a conflicting acknowledgement.
+	failure = normalizeServerBridgeControlFailure(failure)
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1580,9 +1584,6 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	}
 	if current.Status != "leased" || !current.LeaseUntil.After(now) {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease expired", ErrConflict)
-	}
-	if len(failure) > 1024 {
-		failure = failure[:1024]
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -113,5 +114,33 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	replay, err := a.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, winner.cmd.ID, winner.cmd.LeaseOwner, winner.cmd.LeaseToken, winner.cmd.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", now.Add(2*time.Second))
 	if err != nil || replay.Status != "succeeded" {
 		t.Fatalf("cross-replica idempotent ACK: %+v err=%v", replay, err)
+	}
+	// A retried FAILED acknowledgement with an oversized reason must resolve
+	// to the same normalized persisted response across backend replicas.
+	failedCommand := cmd
+	failedCommand.ID = "ctl_ha01911_long_failure"
+	failedCommand.IdempotencyKey = "ha01911-idem-long-failure"
+	createdFailed, _, createErr := a.CreateServerBridgeControlCommand(ctx, failedCommand, now)
+	if createErr != nil || createdFailed.ID != failedCommand.ID {
+		t.Fatalf("create long-failure command: %+v err=%v", createdFailed, createErr)
+	}
+	failedLease, leaseErr := b.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
+		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "longfailure_0123456789abcdef", created.DeliverySequence,
+		now, 30*time.Second)
+	if leaseErr != nil || failedLease.ID != failedCommand.ID {
+		t.Fatalf("lease long-failure command: %+v err=%v", failedLease, leaseErr)
+	}
+	longFailure := "reason: " + strings.Repeat("x", 1500)
+	failed, failedErr := a.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
+		failedLease.ID, failedLease.LeaseOwner, failedLease.LeaseToken,
+		failedLease.DeliverySequence, "failed", map[string]string{"reason": "test"}, longFailure, now.Add(time.Second))
+	if failedErr != nil || len(failed.Error) != 1024 || failed.Status != "failed" {
+		t.Fatalf("persist normalized failure: %+v err=%v", failed, failedErr)
+	}
+	replayed, replayErr := b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
+		failedLease.ID, failedLease.LeaseOwner, failedLease.LeaseToken,
+		failedLease.DeliverySequence, "failed", map[string]string{"reason": "test"}, longFailure, now.Add(2*time.Second))
+	if replayErr != nil || replayed.Error != failed.Error {
+		t.Fatalf("idempotent failed acknowledgement across replicas: %+v err=%v", replayed, replayErr)
 	}
 }

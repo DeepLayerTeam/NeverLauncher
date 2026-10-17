@@ -28,7 +28,11 @@ mkdir -p "$CLIENT_DIR" "$SERVER_DIR"
 NL_BIN="$RUNTIME_DIR/nl"
 NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime"
 SERVER_PID=""
+PROXY_PID=""
 cleanup() {
+  if [[ -n "$PROXY_PID" ]] && kill -0 "$PROXY_PID" >/dev/null 2>&1; then
+    kill "$PROXY_PID" >/dev/null 2>&1 || true
+  fi
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" >/dev/null 2>&1; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     for _ in $(seq 1 20); do
@@ -239,6 +243,30 @@ biomeBlendRadius:0
 OPTIONS
 fi
 
+# Minecraft 1.17.1 can enter a chunk while its initial blocks texture atlas
+# is still being created by Mesa/llvmpipe. Do not fake client readiness or
+# delay a fixed number of seconds. Defer only the TCP handshake until the
+# actual Mojang client emits its texture-atlas creation marker, then forward
+# unmodified protocol bytes to the verified exact-version Mojang server.
+CERT_PORT="$SERVER_PORT"
+if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then
+  python3 "$ROOT/e2e/scripts/vanilla-1171-resource-ready-proxy.py" \
+    --backend-port "$SERVER_PORT" \
+    --logs "$CLIENT_DIR/logs" \
+    --port-file "$RUNTIME_DIR/resource-ready-proxy.port" \
+    --evidence "$RUNTIME_DIR/resource-ready-proxy.json" \
+    --timeout 45 > "$RUNTIME_DIR/resource-ready-proxy.log" 2>&1 &
+  PROXY_PID=$!
+  for _ in $(seq 1 100); do
+    [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] && break
+    kill -0 "$PROXY_PID" >/dev/null 2>&1 || { echo '[matching-e2e] resource gate exited before binding localhost' >&2; exit 1; }
+    sleep 0.1
+  done
+  [[ -s "$RUNTIME_DIR/resource-ready-proxy.port" ]] || { echo '[matching-e2e] resource gate did not bind' >&2; exit 1; }
+  CERT_PORT="$(cat "$RUNTIME_DIR/resource-ready-proxy.port")"
+  [[ "$CERT_PORT" =~ ^[0-9]{1,5}$ ]] || { echo '[matching-e2e] invalid gated client port' >&2; exit 1; }
+fi
+
 printf '[matching-e2e] launch actual Mojang client %s and connect to exact matching server\n' "$MINECRAFT_VERSION"
 # На размещённом Linux-агенте нет устройства ALSA. OpenAL Soft постоянно ищет
 # отсутствующее оборудование при первоначальной перезагрузке ресурсов, замедляя
@@ -256,14 +284,14 @@ xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
     --java "$JAVA_BIN" \
     --required-java-major "$JAVA_MAJOR" \
     --server 127.0.0.1 \
-    --server-port "$SERVER_PORT" \
+    --server-port "$CERT_PORT" \
     --max-runtime-seconds "$CLIENT_RUNTIME_SECONDS" \
     > "$RUNTIME_DIR/vanilla-certification.json"
 
-python3 - "$RUNTIME_DIR/vanilla-certification.json" "$RUNTIME_DIR/matching-server.log" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$SERVER_PORT" "$PLAYER_USERNAME" "$SERVER_PID" "$RUNTIME_DIR/matching-server.json" <<'PY'
+python3 - "$RUNTIME_DIR/vanilla-certification.json" "$RUNTIME_DIR/matching-server.log" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$SERVER_PORT" "$CERT_PORT" "$PLAYER_USERNAME" "$SERVER_PID" "$RUNTIME_DIR/matching-server.json" "$RUNTIME_DIR/resource-ready-proxy.json" <<'PY'
 import json, os, re, sys
-cert_p, log_p, mc, java, port, username, pid, out = sys.argv[1:]
-java=int(java); port=int(port); pid=int(pid)
+cert_p, log_p, mc, java, port, cert_port, username, pid, out, proxy_p = sys.argv[1:]
+java=int(java); port=int(port); cert_port=int(cert_port); pid=int(pid)
 cert=json.load(open(cert_p,encoding='utf-8'))
 log=open(log_p,encoding='utf-8',errors='replace').read()
 joined = bool(re.search(r'(?im)\b'+re.escape(username)+r'\b.*(?:joined the game|logged in with entity id)', log))
@@ -271,12 +299,27 @@ try:
     os.kill(pid,0); alive=True
 except OSError:
     alive=False
-client_ok=(cert.get('status')=='passed' and cert.get('minecraftVersion')==mc and cert.get('requiredJavaMajor')==java and cert.get('detectedJavaMajor')==java and (cert.get('timedOut') is True or cert.get('success') is True) and cert.get('matchingServer')=='127.0.0.1' and cert.get('matchingServerPort')==port)
+proxy_ok = True
+if mc == '1.17.1':
+    try:
+        proxy=json.load(open(proxy_p, encoding='utf-8'))
+    except (OSError, ValueError):
+        proxy={}
+    proxy_ok = (proxy.get('status') == 'released'
+                and proxy.get('atlasReady') is True
+                and proxy.get('backendConnected') is True
+                and proxy.get('backendHost') == '127.0.0.1'
+                and proxy.get('backendPort') == port
+                and proxy.get('listenHost') == '127.0.0.1'
+                and proxy.get('listenPort') == cert_port)
+client_ok=(cert.get('status')=='passed' and cert.get('minecraftVersion')==mc and cert.get('requiredJavaMajor')==java and cert.get('detectedJavaMajor')==java and (cert.get('timedOut') is True or cert.get('success') is True) and cert.get('matchingServer')=='127.0.0.1' and cert.get('matchingServerPort')==cert_port and proxy_ok)
 payload={
   'schemaVersion':'1.0','status':'passed' if client_ok and joined and alive else 'failed',
   'minecraftVersion':mc,'clientVersion':mc,'serverVersion':mc,'javaMajor':java,
   'serverHost':'127.0.0.1','serverPort':port,'serverProcessAlive':alive,
   'serverVersionMatched':True,'clientJoinedServer':joined,'actualClient':client_ok,
+  'resourceGateVerified':proxy_ok if mc == '1.17.1' else None,
+  'clientConnectPort':cert_port,
   'serverLog':'matching-server.log','serverArtifactEvidence':'vanilla-server-install.json'
 }
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
@@ -294,7 +337,7 @@ payload={
   'minecraft':{'version':mc,'loader':'vanilla','client':'actual-mojang-client','server':'actual-mojang-server','serverVersion':mc,'matchingServer':'passed'},
   'platform':{'os':os_name,'arch':arch},'java':{'requiredMajor':java,'detectedMajor':java},
   'checks':{'materialized':True,'packageVerified':True,'runtimeResolved':True,'javaMatched':True,'actualClient':True,'matchingServer':True,'serverVersionMatched':True,'serverHealthy':True,'clientJoinedServer':True},
-  'evidence':['client-package.json','materialized-client-verify.json','vanilla-install.json','vanilla-server-install.json','vanilla-certification.json','matching-server.json','matching-server.log']
+  'evidence':['client-package.json','materialized-client-verify.json','vanilla-install.json','vanilla-server-install.json','vanilla-certification.json','matching-server.json','matching-server.log'] + (['resource-ready-proxy.json'] if mc == '1.17.1' else [])
 }
 open(out,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY

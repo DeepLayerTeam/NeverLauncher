@@ -31,6 +31,20 @@ public final class ServerBridgeSecurityCertification01912Harness {
         SigningKey attacker = signingKey();
         String digest = BridgeProtocolSecurity.expectedCapabilityDigest();
 
+        // A perfectly valid signature must not authorize a command before
+        // signed capability negotiation establishes a pinned trust anchor.
+        BridgeControlCommand unpinned = new BridgeControlCommand(serverId, "pre-pin", "a".repeat(64), 1, 1,
+            "server.save", Map.of(), "1".repeat(64), 1, "pre-pin-channel", "pre-pin-lease", 1,
+            1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
+            keyA.publicKey, keyA.fingerprint, "", "", "", "");
+        String unpinnedSignature = sign(keyA, unpinned.canonicalForSigner(keyA.fingerprint));
+        BridgeControlCommand signedUnpinned = new BridgeControlCommand(unpinned.serverId(), unpinned.commandId(),
+            unpinned.runtimeId(), unpinned.runtimeEpoch(), unpinned.identityEpoch(), unpinned.type(),
+            unpinned.payload(), unpinned.payloadSha256(), unpinned.deliverySequence(), unpinned.channelId(),
+            unpinned.leaseToken(), unpinned.attempt(), unpinned.issuedAtUnixMillis(), unpinned.expiresAtUnixMillis(),
+            unpinned.securityProfile(), unpinned.capabilityDigest(), keyA.publicKey, keyA.fingerprint,
+            unpinnedSignature, "", "", "");
+        require(!trust.verify(signedUnpinned), "command endpoint can never bootstrap trust");
         String firstCanonical = BridgeProtocolSecurity.capabilityCanonical(digest, keyA.fingerprint, "");
         require(trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, digest, keyA.publicKey, keyA.fingerprint, "", "", sign(keyA, firstCanonical), ""), "initial capability trust");
 
@@ -59,6 +73,41 @@ public final class ServerBridgeSecurityCertification01912Harness {
         BridgeControlCommand unsigned = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3, "server.save", Map.of(), payloadHash,
             11, "0123456789abcdef0123456789abcdef", "lease-token-01912", 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
             keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        // Delivery metadata may vary on retries without changing the stable
+        // exactly-once identity. Those same fields remain bound by the v3
+        // signature, so an attacker cannot change them in a signed command.
+        BridgeControlCommand retry = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3,
+            "server.save", Map.of(), payloadHash, 500, "different-channel", "new-lease", 7,
+            5000, 9000, BridgeProtocolSecurity.PROFILE, digest,
+            keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        require(unsigned.executionDigest().equals(retry.executionDigest()),
+            "exactly-once digest stable across retry and lease metadata");
+        require(!unsigned.canonical().equals(retry.canonical()),
+            "v3 signed canonical binds retry and lease metadata");
+        BridgeControlCommand alteredPayload = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 3,
+            "server.save", Map.of(), "2".repeat(64), 11, unsigned.channelId(),
+            unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
+            keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        require(!unsigned.executionDigest().equals(alteredPayload.executionDigest()),
+            "exactly-once digest rejects same commandId with changed payload hash");
+        BridgeControlCommand alteredRuntime = new BridgeControlCommand(serverId, "cmd-01912", runtime, 8, 3,
+            "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
+            unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
+            keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        require(!unsigned.executionDigest().equals(alteredRuntime.executionDigest()),
+            "exactly-once digest binds runtime epoch against cross-runtime replay");
+        BridgeControlCommand alteredIdentity = new BridgeControlCommand(serverId, "cmd-01912", runtime, 7, 4,
+            "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
+            unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
+            keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        require(!unsigned.executionDigest().equals(alteredIdentity.executionDigest()),
+            "exactly-once digest binds node identity epoch");
+        BridgeControlCommand alteredCommand = new BridgeControlCommand(serverId, "other-command", runtime, 7, 3,
+            "server.save", Map.of(), payloadHash, 11, unsigned.channelId(),
+            unsigned.leaseToken(), 1, 1000, 2000, BridgeProtocolSecurity.PROFILE, digest,
+            keyB.publicKey, keyB.fingerprint, "", "", "", "");
+        require(!unsigned.executionDigest().equals(alteredCommand.executionDigest()),
+            "exactly-once digest binds command identity");
         String commandSignature = sign(keyB, unsigned.canonicalForSigner(keyB.fingerprint));
         BridgeControlCommand command = new BridgeControlCommand(unsigned.serverId(), unsigned.commandId(), unsigned.runtimeId(), unsigned.runtimeEpoch(), unsigned.identityEpoch(), unsigned.type(), unsigned.payload(), unsigned.payloadSha256(),
             unsigned.deliverySequence(), unsigned.channelId(), unsigned.leaseToken(), unsigned.attempt(), unsigned.issuedAtUnixMillis(), unsigned.expiresAtUnixMillis(), unsigned.securityProfile(), unsigned.capabilityDigest(),
