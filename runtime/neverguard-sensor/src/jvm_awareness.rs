@@ -6,7 +6,7 @@ use std::{
     mem::size_of,
     sync::{
         atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering},
-        Mutex,
+        Mutex, OnceLock,
     },
 };
 
@@ -73,6 +73,7 @@ extern "system" {
     fn GetModuleHandleW(name: *const u16) -> *mut c_void;
     fn GetModuleHandleExW(flags: u32, name_or_address: *const u16, module: *mut *mut c_void) -> i32;
     fn GetModuleFileNameW(module: *mut c_void, filename: *mut u16, size: u32) -> u32;
+    fn GetSystemDirectoryW(buffer: *mut u16, size: u32) -> u32;
     fn K32GetModuleInformation(
         process: *mut c_void,
         module: *mut c_void,
@@ -112,6 +113,9 @@ extern "system" {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransitionOrigin {
     HotSpotJvm,
+    // Verified OS dispatchers may allocate executable pages while servicing
+    // HotSpot on Windows; this is not the same as an arbitrary native DLL.
+    TrustedSystemDispatcher,
     ForeignNative,
     Unknown,
 }
@@ -131,6 +135,7 @@ pub struct JvmAwareSnapshot {
     pub jvm_path_sha256: String,
     pub baseline_private_executable_region_count: u32,
     pub jit_transition_count: u64,
+    pub trusted_system_transition_count: u64,
     pub foreign_executable_transition_count: u64,
     pub unknown_executable_transition_count: u64,
     pub integrity_check_count: u64,
@@ -162,6 +167,10 @@ static JVM_MAJOR: AtomicU32 = AtomicU32::new(0);
 static SENSOR_BASE: AtomicUsize = AtomicUsize::new(0);
 static SENSOR_END: AtomicUsize = AtomicUsize::new(0);
 static JIT_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+static TRUSTED_SYSTEM_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
+// Initialized once before hooks are active. No Win32 pathname resolution,
+// allocation or locking is performed from inside a VirtualAlloc hook.
+static TRUSTED_SYSTEM_DISPATCHERS: OnceLock<Vec<(usize, usize)>> = OnceLock::new();
 static FOREIGN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 static UNKNOWN_EXECUTABLE_TRANSITIONS: AtomicU64 = AtomicU64::new(0);
 static LAST_FOREIGN_CALLER: AtomicUsize = AtomicUsize::new(0);
@@ -184,8 +193,19 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
         .ok_or_else(|| "NeverGuard JVM-Aware Protection jvm.dll address range overflow".to_string())?;
 
     let (sensor_base, sensor_end) = current_sensor_image_range()?;
+    let system_dispatchers = resolve_system_dispatchers()?;
+    if let Some(existing) = TRUSTED_SYSTEM_DISPATCHERS.get() {
+        if existing != &system_dispatchers {
+            return Err("NeverGuard JVM-Aware Protection system module identity drift".to_string());
+        }
+    } else {
+        TRUSTED_SYSTEM_DISPATCHERS
+            .set(system_dispatchers)
+            .map_err(|_| "NeverGuard JVM-Aware Protection system dispatcher initialization race".to_string())?;
+    }
 
     JIT_TRANSITIONS.store(0, Ordering::Release);
+    TRUSTED_SYSTEM_TRANSITIONS.store(0, Ordering::Release);
     FOREIGN_EXECUTABLE_TRANSITIONS.store(0, Ordering::Release);
     UNKNOWN_EXECUTABLE_TRANSITIONS.store(0, Ordering::Release);
     LAST_FOREIGN_CALLER.store(0, Ordering::Release);
@@ -218,14 +238,16 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if foreign != 0 {
         let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}"
+            "NeverGuard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}, module={}",
+            caller_module_basename(caller)
         ));
     }
     let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     if unknown != 0 {
         let caller = LAST_UNKNOWN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}"
+            "NeverGuard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}, module={}",
+            caller_module_basename(caller)
         ));
     }
 
@@ -261,6 +283,68 @@ pub fn shutdown() {
     if let Ok(mut guard) = JVM_STATE.lock() {
         *guard = None;
     }
+}
+
+// Resolve provenance for diagnostics on the worker thread only; never query
+// module paths or allocate strings from inside the VirtualAlloc hook.
+fn caller_module_basename(address: usize) -> String {
+    if address == 0 { return "unknown".to_string(); }
+    let mut module = std::ptr::null_mut();
+    let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+    if unsafe { GetModuleHandleExW(flags, address as *const u16, &mut module) } == 0 || module.is_null() {
+        return "unmapped".to_string();
+    }
+    let mut wide = [0u16; MAX_MODULE_PATH];
+    let len = unsafe { GetModuleFileNameW(module, wide.as_mut_ptr(), wide.len() as u32) } as usize;
+    if len == 0 || len >= wide.len() { return "unavailable".to_string(); }
+    let path = String::from_utf16_lossy(&wide[..len]);
+    path.rsplit(['\\', '/']).next().unwrap_or("unknown").to_string()
+}
+
+// Only exact operating-system images installed in the actual System32 path
+// qualify. Neither module basenames from user-controlled folders nor JDK or
+// modpack-native DLLs receive this exemption. Those remain fail-closed and
+// independently enforced by Module Guard and Memory Integrity.
+fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
+    let mut directory = [0u16; MAX_MODULE_PATH];
+    let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
+    if len == 0 || len >= directory.len() {
+        return Err("NeverGuard JVM-Aware Protection cannot resolve System32".to_string());
+    }
+    let system_root = String::from_utf16_lossy(&directory[..len])
+        .trim_end_matches('\\')
+        .replace('/', "\\")
+        .to_ascii_lowercase();
+    let mut ranges = Vec::new();
+    for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll"] {
+        let wide = wide_null(name);
+        let module = unsafe { GetModuleHandleW(wide.as_ptr()) };
+        if module.is_null() { continue; }
+        let mut path = [0u16; MAX_MODULE_PATH];
+        let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
+        if count == 0 || count >= path.len() {
+            return Err(format!("NeverGuard JVM-Aware Protection cannot identify {name}"));
+        }
+        let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
+        if loaded_path != format!("{system_root}\\{name}") {
+            return Err(format!("NeverGuard JVM-Aware Protection unexpected system dispatcher location: {name}"));
+        }
+        let mut info = ModuleInfo::default();
+        let ok = unsafe {
+            K32GetModuleInformation(GetCurrentProcess(), module, &mut info, size_of::<ModuleInfo>() as u32)
+        };
+        if ok == 0 || info.size_of_image == 0 {
+            return Err(format!("NeverGuard JVM-Aware Protection cannot inspect {name}"));
+        }
+        let base = info.base_of_dll as usize;
+        let end = base.checked_add(info.size_of_image as usize)
+            .ok_or_else(|| format!("NeverGuard JVM-Aware Protection {name} image overflow"))?;
+        ranges.push((base, end));
+    }
+    if ranges.is_empty() {
+        return Err("NeverGuard JVM-Aware Protection no verified System32 dispatchers".to_string());
+    }
+    Ok(ranges)
 }
 
 /// Захватывает цепочку вызовов внутри обёртки IAT NeverGuard. Реализация памяти
@@ -325,6 +409,11 @@ pub fn capture_transition_provenance() -> TransitionProvenance {
         return TransitionProvenance {
             origin: if address >= jvm_base && address < jvm_end {
                 TransitionOrigin::HotSpotJvm
+            } else if TRUSTED_SYSTEM_DISPATCHERS
+                .get()
+                .is_some_and(|ranges| ranges.iter().any(|(base, end)| address >= *base && address < *end))
+            {
+                TransitionOrigin::TrustedSystemDispatcher
             } else {
                 TransitionOrigin::ForeignNative
             },
@@ -369,6 +458,9 @@ pub fn observe_memory_transition(
     match provenance.origin {
         TransitionOrigin::HotSpotJvm => {
             JIT_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
+        }
+        TransitionOrigin::TrustedSystemDispatcher => {
+            TRUSTED_SYSTEM_TRANSITIONS.fetch_add(1, Ordering::Relaxed);
         }
         TransitionOrigin::ForeignNative => {
             LAST_FOREIGN_CALLER.store(provenance.caller, Ordering::Release);
@@ -565,6 +657,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
 
 fn snapshot_for_state(state: &JvmAwareState) -> JvmAwareSnapshot {
     let jit = JIT_TRANSITIONS.load(Ordering::Acquire);
+    let trusted_system = TRUSTED_SYSTEM_TRANSITIONS.load(Ordering::Acquire);
     let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     let mut digest = Sha256::new();
@@ -575,6 +668,7 @@ fn snapshot_for_state(state: &JvmAwareState) -> JvmAwareSnapshot {
     digest.update(state.identity.path_sha256.as_bytes());
     digest.update(state.baseline_private_executable_region_count.to_le_bytes());
     digest.update(jit.to_le_bytes());
+    digest.update(trusted_system.to_le_bytes());
     digest.update(foreign.to_le_bytes());
     digest.update(unknown.to_le_bytes());
     digest.update(state.integrity_check_count.to_le_bytes());
@@ -586,6 +680,7 @@ fn snapshot_for_state(state: &JvmAwareState) -> JvmAwareSnapshot {
         jvm_path_sha256: state.identity.path_sha256.clone(),
         baseline_private_executable_region_count: state.baseline_private_executable_region_count,
         jit_transition_count: jit,
+        trusted_system_transition_count: trusted_system,
         foreign_executable_transition_count: foreign,
         unknown_executable_transition_count: unknown,
         integrity_check_count: state.integrity_check_count,

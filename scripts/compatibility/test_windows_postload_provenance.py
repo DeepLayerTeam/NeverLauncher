@@ -44,5 +44,49 @@ class WindowsPostloadProvenanceTests(unittest.TestCase):
         self.assertIn('0xC000_0409u32 as i32', source)
 
 
+class WindowsGuardRaceRegressionTests(unittest.TestCase):
+    """Source-level contract checks; native semantics require Windows CI."""
+
+    def test_trusted_dispatchers_are_exact_system32_images(self):
+        source = (ROOT / 'runtime/neverguard-sensor/src/jvm_awareness.rs').read_text(encoding='utf-8')
+        resolver = source.split('fn resolve_system_dispatchers()', 1)[1].split('pub fn capture_transition_provenance()', 1)[0]
+        self.assertIn('GetSystemDirectoryW', resolver)
+        self.assertIn('GetModuleFileNameW', resolver)
+        self.assertIn('loaded_path != format!', resolver)
+        self.assertIn('GetModuleHandleW', resolver)
+        self.assertIn('K32GetModuleInformation', resolver)
+        self.assertIn('TRUSTED_SYSTEM_DISPATCHERS', source)
+        self.assertIn('caller_module_basename(caller)', source)
+        self.assertIn('GetModuleHandleExW(flags, address as *const u16', source)
+        self.assertIn('TransitionOrigin::ForeignNative =>', source)
+        self.assertIn('FOREIGN_EXECUTABLE_TRANSITIONS.fetch_add(1', source)
+        self.assertIn('outside jvm.dll provenance', source)
+        self.assertNotIn('DISABLE_JVM_GUARD', source)
+
+    def test_unloads_require_signed_notification_and_bounded_grace(self):
+        source = (ROOT / 'runtime/neverruntime/src/windows_module_guard.rs').read_text(encoding='utf-8')
+        self.assertIn('UNLOAD_EVENT_GRACE: Duration = Duration::from_secs(4)', source)
+        self.assertIn('pending_unload_notifications.remove(&event.base_address)', source)
+        self.assertIn('pending_unloads.entry(*base).or_insert_with(Instant::now)', source)
+        self.assertIn('if first_missing.elapsed() >= UNLOAD_EVENT_GRACE', source)
+        self.assertIn('module base reused before authenticated unload', source)
+        self.assertIn('validate_loaded_module(&module.path)', source)
+        self.assertIn('Module Guard module path drift', source)
+
+    def test_ack_still_requires_signed_packet_and_bounded_deadline(self):
+        source = (ROOT / 'runtime/neverguard-sensor/src/continuous_guard.rs').read_text(encoding='utf-8')
+        self.assertIn('GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(12)', source)
+        self.assertIn('mac.verify_slice', source)
+        self.assertIn('Guard-ACK sequence mismatch', source)
+        self.assertIn('Guard-ACK event-chain mismatch', source)
+        self.assertIn('Guard-ACK heartbeat timeout', source)
+
+    def test_abort_diagnostics_include_rejected_reason(self):
+        source = (ROOT / 'runtime/neverguard-sensor/src/lib.rs').read_text(encoding='utf-8')
+        self.assertIn('NeverGuard JVM-Aware violation:', source)
+        self.assertIn('NeverGuard Continuous Guard ACK violation:', source)
+        self.assertIn('guard_fail_closed_abort();', source)
+
+
 if __name__ == '__main__':
     unittest.main()

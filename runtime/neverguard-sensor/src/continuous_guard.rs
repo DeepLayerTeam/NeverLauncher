@@ -20,10 +20,11 @@ const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
 const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"neverguard-continuous-guard-ack-v1";
 const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
 const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
-// Minecraft/Forge с программным рендерингом на общих CI-ядрах способен занять планировщик
-// родительского Guard на несколько секунд. Держите ограниченный аутентифицированный тайм-аут
-// меньше предела родительского потока в 7 секунд; отсутствие ACK всё равно приводит к отказу.
-const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(5);
+// The Guard parent allows 15 seconds per authenticated event read. Under
+// software-rendered Minecraft/Forge the parent may briefly be descheduled.
+// Wait for the *authenticated* ACK within a bounded 12 seconds (strictly less
+// than the parent stream watchdog); invalid MAC/sequence still fails closed.
+const GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(12);
 const GUARD_ACK_POLL: Duration = Duration::from_millis(10);
 
 static SENSOR_EVENT_CHAIN: Mutex<[u8; 32]> = Mutex::new([0u8; 32]);

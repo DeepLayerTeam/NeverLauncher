@@ -179,6 +179,10 @@ mod imp {
     // пакета. Ошибки HMAC, последовательности и целостности остаются критичными.
     const MODULE_STREAM_TIMEOUT: Duration = Duration::from_secs(15);
     const RECONCILE_GRACE: Duration = Duration::from_millis(350);
+    // LdrRegisterDllNotification and ToolHelp snapshots do not share a lock.
+    // An unload is only accepted once its authenticated notification arrives;
+    // a missing module that remains unacknowledged past this bound is tampering.
+    const UNLOAD_EVENT_GRACE: Duration = Duration::from_secs(4);
     const STILL_ACTIVE_EXIT_CODE: u32 = 259;
 
     #[derive(Clone, Debug)]
@@ -654,6 +658,7 @@ mod imp {
         let mut packet = [0u8; MODULE_EVENT_PACKET_LEN];
         let mut expected_sequence = lock_report(&state).last_sequence.saturating_add(1);
         let mut last_module_event = Instant::now() - RECONCILE_GRACE;
+        let mut pending_unload_notifications: HashMap<u64, Instant> = HashMap::new();
         let mut event_chain = {
             let report = lock_report(&state);
             let mut decoded = [0u8; 32];
@@ -717,6 +722,12 @@ mod imp {
                     } else {
                         match policy.validate_loaded_module(&event.path) {
                             Ok((normalized, sha256)) => {
+                                // Reusing a base before the authenticated unload arrives
+                                // cannot silently clear a pending mismatch.
+                                if pending_unload_notifications.contains_key(&event.base_address) {
+                                    fail_closed(&state, pid, "Module Guard module base reused before authenticated unload", 0);
+                                    return;
+                                }
                                 module_hash = sha256;
                                 expected.insert(event.base_address, normalized);
                                 update_counter(&state, |report| report.load_events += 1);
@@ -736,6 +747,7 @@ mod imp {
                             event.base_address
                         ))
                     } else {
+                        pending_unload_notifications.remove(&event.base_address);
                         update_counter(&state, |report| report.unload_events += 1);
                         Ok(())
                     }
@@ -746,7 +758,13 @@ mod imp {
                         report.last_heartbeat_unix_ms = now_unix_ms();
                     });
                     if last_module_event.elapsed() >= RECONCILE_GRACE {
-                        reconcile_snapshot(pid, &mut expected, &policy, &state)
+                        reconcile_snapshot(
+                            pid,
+                            &mut expected,
+                            &mut pending_unload_notifications,
+                            &policy,
+                            &state,
+                        )
                     } else {
                         Ok(())
                     }
@@ -1369,6 +1387,7 @@ mod imp {
     fn reconcile_snapshot(
         pid: u32,
         expected: &mut HashMap<u64, String>,
+        pending_unloads: &mut HashMap<u64, Instant>,
         policy: &WindowsModuleGuardPolicy,
         state: &Arc<Mutex<WindowsModuleGuardReport>>,
     ) -> Result<(), String> {
@@ -1385,10 +1404,15 @@ mod imp {
             .collect::<HashMap<_, _>>();
         for (base, expected_path) in expected.iter() {
             let Some(observed_path) = observed_map.get(base) else {
-                return Err(format!(
-                    "Module Guard external snapshot missing module base 0x{base:X}"
-                ));
+                let first_missing = pending_unloads.entry(*base).or_insert_with(Instant::now);
+                if first_missing.elapsed() >= UNLOAD_EVENT_GRACE {
+                    return Err(format!(
+                        "Module Guard external snapshot missing module base 0x{base:X}: no authenticated unload within grace"
+                    ));
+                }
+                continue;
             };
+            pending_unloads.remove(base);
             if !observed_path.eq_ignore_ascii_case(expected_path) {
                 return Err(format!(
                     "Module Guard module path drift at base 0x{base:X}: expected {expected_path}, observed {observed_path}"
@@ -1422,10 +1446,13 @@ mod imp {
         for (base, normalized) in authenticated_new {
             expected.insert(base, normalized);
         }
-        if expected.len() != observed_map.len() {
+        // During the bounded unload-notification window, the expected set
+        // includes missing bases. They remain mandatory until an authenticated
+        // unload arrives; never infer an unload from ToolHelp alone.
+        if expected.len().saturating_sub(pending_unloads.len()) != observed_map.len() {
             return Err(format!(
-                "Module Guard external snapshot count mismatch: expected {}, observed {}",
-                expected.len(), observed_map.len()
+                "Module Guard external snapshot count mismatch: expected {} active, observed {}",
+                expected.len().saturating_sub(pending_unloads.len()), observed_map.len()
             ));
         }
         let set_hash = module_set_sha256(&observed);
