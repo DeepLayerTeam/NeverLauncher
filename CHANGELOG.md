@@ -12,6 +12,15 @@
 
 ## [Unreleased]
 
+## [0.22.1] — Profile/Manifest Schema Evolution
+
+- Added genuine Profile v2 persistence: SHA-256 digests, monotonic revisions, compare-and-swap updates and immutable PostgreSQL revision history with migration/backfill (`0056`).
+- New release drafts freeze a Profile v2 snapshot in Manifest v2; backend and NeverRuntime sign, verify and validate the embedded snapshot.
+- Preserved existing signed Manifest v1 payloads and signatures without any mass migration or re-sign.
+- Prevented draft manifests being served as published and stopped duplicate release draft creation from replacing stored versions.
+- Exposed actual profile revision history and optional optimistic update precondition; added regression tests and upgrade/rollback guidance.
+
+
 ## [0.22.0] — Admin General Availability candidate (certification required)
 
 - Restored parity of Backend and CLI immutable PostgreSQL migration catalogs (0053–0055) and fixed current-schema regression tests.

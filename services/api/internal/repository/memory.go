@@ -154,6 +154,8 @@ type MemoryRepository struct {
 	durableNonces                  map[string]time.Time
 	idempotencyDigests             map[string]string
 	projects                       []model.Project
+	profileMu                      sync.RWMutex
+	profileHistory                 map[string][]model.ProfileSnapshot
 	profiles                       []model.Profile
 	channels                       []model.ReleaseChannel
 	releases                       []model.ReleaseVersion
@@ -200,14 +202,24 @@ type MemoryRepository struct {
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
+	for _, existing := range r.releases {
+		if existing.ProjectID == projectID && existing.ProfileID == profileID && existing.Channel == channel && existing.Version == version {
+			return model.ReleaseVersion{}, ErrConflict
+		}
+	}
 	now := time.Now().UTC()
+	snapshot, err := ReadProfileSnapshot(r, projectID, profileID)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	manifest := model.Manifest{
-		SchemaVersion: "1.0",
-		ProjectID:     "demo-project",
-		ProfileID:     "vanilla",
-		Channel:       "stable",
-		Version:       "3.4.0",
-		CreatedAt:     now.Format(time.RFC3339),
+		SchemaVersion:   model.ManifestSchemaV2,
+		ProfileSnapshot: &snapshot,
+		ProjectID:       "demo-project",
+		ProfileID:       "vanilla",
+		Channel:         "stable",
+		Version:         "3.4.0",
+		CreatedAt:       now.Format(time.RFC3339),
 		Minecraft: model.MinecraftInfo{
 			Version:   "1.21.1",
 			Loader:    "vanilla",
@@ -344,9 +356,16 @@ func (r *MemoryRepository) ListProfiles(projectID string) ([]model.Profile, erro
 	if _, err := r.GetProject(projectID); err != nil {
 		return nil, err
 	}
+	r.profileMu.RLock()
+	defer r.profileMu.RUnlock()
 	var result []model.Profile
 	for _, item := range r.profiles {
 		if item.ProjectID == projectID {
+			item.SchemaVersion = model.ProfileSchemaV2
+			if item.Revision == 0 {
+				item.Revision = 1
+			}
+			item.Digest = model.ProfileDigest(model.ProfileSpecOf(item))
 			result = append(result, item)
 		}
 	}
@@ -358,36 +377,75 @@ func (r *MemoryRepository) SaveProfile(profile model.Profile) (model.Profile, er
 	if _, err := r.GetProject(profile.ProjectID); err != nil {
 		return model.Profile{}, err
 	}
-	now := time.Now().UTC()
 	profile.ID = strings.TrimSpace(profile.ID)
 	profile.Name = strings.TrimSpace(profile.Name)
 	if profile.ID == "" {
 		profile.ID = strings.ToLower(strings.ReplaceAll(profile.Name, " ", "-"))
 	}
-	if profile.ID == "" || profile.ProjectID == "" || profile.Name == "" {
-		return model.Profile{}, fmt.Errorf("projectId, id и name профиля обязательны")
+	var err error
+	profile, err = model.NormalizeProfileV2(profile)
+	if err != nil {
+		return model.Profile{}, err
 	}
-	if profile.Loader == "" {
-		profile.Loader = "vanilla"
+	now := time.Now().UTC()
+	r.profileMu.Lock()
+	defer r.profileMu.Unlock()
+	if r.profileHistory == nil {
+		r.profileHistory = make(map[string][]model.ProfileSnapshot)
 	}
+	key := profile.ProjectID + "\x00" + profile.ID
 	for i := range r.profiles {
-		if r.profiles[i].ProjectID == profile.ProjectID && r.profiles[i].ID == profile.ID {
-			if profile.CreatedAt.IsZero() {
-				profile.CreatedAt = r.profiles[i].CreatedAt
+		current := r.profiles[i]
+		if current.ProjectID == profile.ProjectID && current.ID == profile.ID {
+			if current.Revision == 0 {
+				current.Revision = 1
 			}
+			current.SchemaVersion = model.ProfileSchemaV2
+			current.Digest = model.ProfileDigest(model.ProfileSpecOf(current))
+			if profile.Revision != 0 && profile.Revision != current.Revision {
+				return model.Profile{}, ErrConflict
+			}
+			if len(r.profileHistory[key]) == 0 {
+				r.profileHistory[key] = append(r.profileHistory[key], model.SnapshotProfile(current))
+			}
+			if profile.Digest == current.Digest {
+				return current, nil
+			}
+			profile.Revision = current.Revision + 1
+			profile.CreatedAt = current.CreatedAt
 			profile.UpdatedAt = now
 			r.profiles[i] = profile
+			r.profileHistory[key] = append(r.profileHistory[key], model.SnapshotProfile(profile))
 			return profile, nil
 		}
 	}
-	if profile.CreatedAt.IsZero() {
-		profile.CreatedAt = now
+	if profile.Revision > 1 {
+		return model.Profile{}, ErrConflict
 	}
-	if profile.UpdatedAt.IsZero() {
-		profile.UpdatedAt = now
-	}
+	profile.Revision = 1
+	profile.CreatedAt = now
+	profile.UpdatedAt = now
 	r.profiles = append(r.profiles, profile)
+	r.profileHistory[key] = append(r.profileHistory[key], model.SnapshotProfile(profile))
 	return profile, nil
+}
+
+func (r *MemoryRepository) ListProfileRevisions(projectID, profileID string) ([]model.ProfileSnapshot, error) {
+	r.profileMu.RLock()
+	defer r.profileMu.RUnlock()
+	key := projectID + "\x00" + profileID
+	for _, p := range r.profiles {
+		if p.ProjectID == projectID && p.ID == profileID {
+			result := append([]model.ProfileSnapshot(nil), r.profileHistory[key]...)
+			if len(result) == 0 {
+				p.SchemaVersion = model.ProfileSchemaV2
+				p.Revision = 1
+				result = append(result, model.SnapshotProfile(p))
+			}
+			return result, nil
+		}
+	}
+	return nil, ErrNotFound
 }
 
 func (r *MemoryRepository) ListChannels(projectID string) ([]model.ReleaseChannel, error) {
@@ -789,17 +847,6 @@ func (r *MemoryRepository) GetManifest(projectID, profileID, channel string) (mo
 	if latest != nil {
 		return latest.Manifest, nil
 	}
-	for i := range r.releases {
-		item := &r.releases[i]
-		if item.ProjectID == projectID && item.ProfileID == profileID && item.Channel == channel {
-			if latest == nil || item.PublishedAt.After(latest.PublishedAt) {
-				latest = item
-			}
-		}
-	}
-	if latest != nil {
-		return latest.Manifest, nil
-	}
 	return model.Manifest{}, ErrNotFound
 }
 
@@ -878,15 +925,25 @@ func (r *MemoryRepository) CreateVersion(projectID, profileID, channel, version 
 	if version == "" {
 		version = time.Now().UTC().Format("20060102150405")
 	}
+	for _, existing := range r.releases {
+		if existing.ProjectID == projectID && existing.ProfileID == profileID && existing.Channel == channel && existing.Version == version {
+			return model.ReleaseVersion{}, ErrConflict
+		}
+	}
 	now := time.Now().UTC()
+	snapshot, err := ReadProfileSnapshot(r, projectID, profileID)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	manifest := model.Manifest{
-		SchemaVersion: "1.0",
-		ProjectID:     projectID,
-		ProfileID:     profileID,
-		Channel:       channel,
-		Version:       version,
-		CreatedAt:     now.Format(time.RFC3339),
-		Files:         []model.ManifestFile{},
+		SchemaVersion:   model.ManifestSchemaV2,
+		ProfileSnapshot: &snapshot,
+		ProjectID:       projectID,
+		ProfileID:       profileID,
+		Channel:         channel,
+		Version:         version,
+		CreatedAt:       now.Format(time.RFC3339),
+		Files:           []model.ManifestFile{},
 	}
 	release := model.ReleaseVersion{
 		ID:          fmt.Sprintf("%s-%s-%s", projectID, profileID, version),

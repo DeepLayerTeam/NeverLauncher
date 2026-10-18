@@ -16,15 +16,18 @@ type Project struct {
 
 // Profile описывает клиентский профиль проекта.
 type Profile struct {
-	ID          string    `json:"id"`
-	ProjectID   string    `json:"projectId"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Loader      string    `json:"loader"`
-	Preset      string    `json:"preset"`
-	IsDefault   bool      `json:"isDefault"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	SchemaVersion string    `json:"schemaVersion,omitempty"`
+	Revision      int64     `json:"revision,omitempty"`
+	Digest        string    `json:"digest,omitempty"`
+	ID            string    `json:"id"`
+	ProjectID     string    `json:"projectId"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	Loader        string    `json:"loader"`
+	Preset        string    `json:"preset"`
+	IsDefault     bool      `json:"isDefault"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 // ReleaseChannel описывает канал релиза: dev, beta или stable.
@@ -115,17 +118,18 @@ type AdminSession struct {
 
 // Manifest — минимальная структура манифеста, которую backend отдаёт desktop client.
 type Manifest struct {
-	SchemaVersion string         `json:"schemaVersion"`
-	ProjectID     string         `json:"projectId"`
-	ProfileID     string         `json:"profileId"`
-	Channel       string         `json:"channel"`
-	Version       string         `json:"version"`
-	CreatedAt     string         `json:"createdAt"`
-	Minecraft     MinecraftInfo  `json:"minecraft"`
-	Runtime       RuntimeInfo    `json:"runtime"`
-	Directories   Directories    `json:"directories,omitempty"`
-	Files         []ManifestFile `json:"files"`
-	Signature     *SignatureInfo `json:"signature,omitempty"`
+	SchemaVersion   string           `json:"schemaVersion"`
+	ProjectID       string           `json:"projectId"`
+	ProfileID       string           `json:"profileId"`
+	Channel         string           `json:"channel"`
+	Version         string           `json:"version"`
+	CreatedAt       string           `json:"createdAt"`
+	Minecraft       MinecraftInfo    `json:"minecraft"`
+	Runtime         RuntimeInfo      `json:"runtime"`
+	Directories     Directories      `json:"directories,omitempty"`
+	Files           []ManifestFile   `json:"files"`
+	ProfileSnapshot *ProfileSnapshot `json:"profileSnapshot,omitempty"`
+	Signature       *SignatureInfo   `json:"signature,omitempty"`
 }
 
 // SignatureInfo описывает подпись манифеста Ed25519.

@@ -116,7 +116,53 @@ pub struct Manifest {
     pub directories: Directories,
     pub files: Vec<ManifestFile>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_snapshot: Option<ProfileSnapshot>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<SignatureInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProfileSpec {
+    pub project_id: String,
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub loader: String,
+    pub preset: String,
+    pub is_default: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProfileSnapshot {
+    pub schema_version: String,
+    pub revision: u64,
+    pub digest: String,
+    pub spec: ProfileSpec,
+}
+
+fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
+    match (manifest.schema_version.as_str(), manifest.profile_snapshot.as_ref()) {
+        ("1.0", None) => Ok(()),
+        ("2.0", Some(snapshot)) => {
+            if snapshot.schema_version != "2.0" || snapshot.revision == 0 ||
+               snapshot.spec.project_id != manifest.project_id || snapshot.spec.id != manifest.profile_id ||
+               snapshot.spec.name.is_empty() || snapshot.spec.loader.is_empty() {
+                return Err("invalid v2 profile snapshot identity".into());
+            }
+            use sha2::{Sha256, Digest};
+            let sep = "\0";
+            let digest_payload = [snapshot.spec.project_id.as_str(), snapshot.spec.id.as_str(),
+                snapshot.spec.name.as_str(), snapshot.spec.description.as_str(),
+                snapshot.spec.loader.as_str(), snapshot.spec.preset.as_str(),
+                if snapshot.spec.is_default {"true"} else {"false"}].join(sep);
+            let actual = hex::encode(Sha256::digest(digest_payload.as_bytes()));
+            if snapshot.digest != actual {return Err("v2 profile snapshot digest mismatch".into());}
+            Ok(())
+        }
+        _ => Err(format!("unsupported manifest schema or missing profileSnapshot: {}", manifest.schema_version)),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -400,6 +446,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
     let verifying_key = VerifyingKey::from_bytes(&public_key_array)
         .map_err(|err| format!("публичный ключ Ed25519 некорректен: {err}"))?;
     let signature = Signature::from_bytes(&signature_array);
+    validate_manifest_schema(manifest)?;
     let payload = manifest_signing_payload(manifest)?;
     verifying_key
         .verify(&payload, &signature)
@@ -414,6 +461,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
 pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: &str) -> Result<String, String> {
     let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("private key не является hex: {err}"))?;
     let seed: [u8; 32] = bytes.try_into().map_err(|_| "Ed25519 private key seed должен быть 32 байта".to_string())?;
+    validate_manifest_schema(manifest)?;
     manifest.signature = None;
     let payload = manifest_signing_payload(manifest)?;
     let signing_key = SigningKey::from_bytes(&seed);
@@ -1402,8 +1450,33 @@ mod tests {
                 executable: false,
                 target_os: Vec::new(),
             }],
+            profile_snapshot: None,
             signature: None,
         }
+    }
+
+    #[test]
+    fn v2_manifest_signed_snapshot_is_verified_and_tamper_protected() {
+        use sha2::{Sha256, Digest};
+        let mut manifest = sample_manifest();
+        manifest.schema_version = "2.0".into();
+        let spec = ProfileSpec {
+            project_id: "demo".into(), id: "vanilla".into(), name: "Vanilla".into(),
+            description: "Signed snapshot".into(), loader: "vanilla".into(),
+            preset: "".into(), is_default: true,
+        };
+        let bytes = ["demo", "vanilla", "Vanilla", "Signed snapshot", "vanilla", "", "true"].join("\0");
+        manifest.profile_snapshot = Some(ProfileSnapshot {
+            schema_version: "2.0".into(), revision: 4,
+            digest: hex::encode(Sha256::digest(bytes.as_bytes())), spec,
+        });
+        let seed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+        let key = sign_manifest(&mut manifest, seed, "2026-10-18T00:00:00Z").expect("v2 sign");
+        verify_manifest_signature(&manifest, &key).expect("v2 verify");
+        manifest.profile_snapshot.as_mut().unwrap().spec.name = "Forged".into();
+        assert!(verify_manifest_signature(&manifest, &key).is_err());
+        manifest.profile_snapshot = None;
+        assert!(verify_manifest_signature(&manifest, &key).is_err());
     }
 
     #[test]

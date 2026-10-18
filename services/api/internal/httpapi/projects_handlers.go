@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
 func (s Server) projects(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +70,12 @@ func (s Server) manifest(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusNotFound, "манифест не найден")
 		return
+	}
+	if manifest.SchemaVersion == model.ManifestSchemaV2 {
+		if err := s.verifyManifestSignature(manifest); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "published manifest failed signature verification")
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, manifest)
 }

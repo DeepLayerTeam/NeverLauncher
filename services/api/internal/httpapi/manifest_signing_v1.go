@@ -33,6 +33,9 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 	if err != nil {
 		return model.Manifest{}, err
 	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		return model.Manifest{}, err
+	}
 	manifest.Signature = nil
 	payload, err := json.Marshal(manifest)
 	if err != nil {
@@ -62,6 +65,9 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	signature, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.Signature))
 	if err != nil || len(signature) != ed25519.SignatureSize {
 		return errors.New("manifest содержит некорректную Ed25519 signature")
+	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		return err
 	}
 	unsigned := manifest
 	unsigned.Signature = nil

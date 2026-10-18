@@ -2,12 +2,14 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
 type adminProjectCRUDRequest struct {
@@ -20,12 +22,13 @@ type adminProjectCRUDRequest struct {
 }
 
 type adminProfileCRUDRequest struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Loader      string `json:"loader"`
-	Preset      string `json:"preset"`
-	IsDefault   bool   `json:"isDefault"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	Loader           string `json:"loader"`
+	Preset           string `json:"preset"`
+	IsDefault        bool   `json:"isDefault"`
+	ExpectedRevision *int64 `json:"expectedRevision,omitempty"`
 }
 
 type adminChannelCRUDRequest struct {
@@ -187,8 +190,16 @@ func (s Server) adminProfileUpdate(w http.ResponseWriter, r *http.Request) {
 		profile.Preset = req.Preset
 	}
 	profile.IsDefault = req.IsDefault
+	if req.ExpectedRevision != nil && *req.ExpectedRevision != profile.Revision {
+		writeError(w, http.StatusConflict, "profile revision conflict")
+		return
+	}
 	saved, err := s.Repo.SaveProfile(profile)
 	if err != nil {
+		if errors.Is(err, repository.ErrConflict) {
+			writeError(w, http.StatusConflict, "profile revision conflict")
+			return
+		}
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

@@ -153,65 +153,140 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.desc
 	return r.GetProject(project.ID)
 }
 
+func scanProfile0221(scanner interface{ Scan(...any) error }) (model.Profile, error) {
+	var p model.Profile
+	if err := scanner.Scan(&p.ID, &p.ProjectID, &p.Name, &p.Description, &p.Loader, &p.Preset, &p.IsDefault, &p.CreatedAt, &p.UpdatedAt, &p.SchemaVersion, &p.Revision, &p.Digest); err != nil {
+		return p, err
+	}
+	if p.SchemaVersion != model.ProfileSchemaV2 || p.Revision < 1 || p.Digest != model.ProfileDigest(model.ProfileSpecOf(p)) {
+		return p, fmt.Errorf("profile %s/%s has inconsistent v2 schema/revision/digest", p.ProjectID, p.ID)
+	}
+	return p, nil
+}
+
+const profileColumns0221 = "id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest"
+
 func (r *SQLRepository) ListProfiles(projectID string) ([]model.Profile, error) {
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	rows, err := r.db.Query(`SELECT id, project_id, name, description, loader, COALESCE(preset, ''), is_default, created_at, updated_at FROM profiles WHERE project_id = $1 ORDER BY id`, projectID)
+	rows, err := r.db.Query(`SELECT `+profileColumns0221+` FROM profiles WHERE project_id=$1 ORDER BY id`, projectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var result []model.Profile
+	result := []model.Profile{}
 	for rows.Next() {
-		var item model.Profile
-		if err := rows.Scan(&item.ID, &item.ProjectID, &item.Name, &item.Description, &item.Loader, &item.Preset, &item.IsDefault, &item.CreatedAt, &item.UpdatedAt); err != nil {
+		p, err := scanProfile0221(rows)
+		if err != nil {
 			return nil, err
 		}
-		result = append(result, item)
+		result = append(result, p)
 	}
 	return result, rows.Err()
 }
 
-func (r *SQLRepository) SaveProfile(profile model.Profile) (model.Profile, error) {
+// SaveProfile atomically writes both the mutable head and append-only history.
+// The caller's nonzero revision is a compare-and-swap precondition.
+func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 	if err := r.check(); err != nil {
 		return model.Profile{}, err
 	}
-	if _, err := r.GetProject(profile.ProjectID); err != nil {
+	p.ID = strings.TrimSpace(p.ID)
+	p.Name = strings.TrimSpace(p.Name)
+	if p.ID == "" {
+		p.ID = strings.ToLower(strings.ReplaceAll(p.Name, " ", "-"))
+	}
+	var err error
+	p, err = model.NormalizeProfileV2(p)
+	if err != nil {
 		return model.Profile{}, err
 	}
+	tx, err := r.db.Begin()
+	if err != nil {
+		return model.Profile{}, err
+	}
+	defer tx.Rollback()
+	// INSERT initially serializes concurrent first-writers on the unique index.
+	// No overwriting on conflict; a subsequent SELECT FOR UPDATE handles updates.
 	now := time.Now().UTC()
-	profile.ID = strings.TrimSpace(profile.ID)
-	profile.Name = strings.TrimSpace(profile.Name)
-	if profile.ID == "" {
-		profile.ID = strings.ToLower(strings.ReplaceAll(profile.Name, " ", "-"))
-	}
-	if profile.ID == "" || profile.ProjectID == "" || profile.Name == "" {
-		return model.Profile{}, fmt.Errorf("projectId, id и name профиля обязательны")
-	}
-	if profile.Loader == "" {
-		profile.Loader = "vanilla"
-	}
-	if profile.CreatedAt.IsZero() {
-		profile.CreatedAt = now
-	}
-	profile.UpdatedAt = now
-	_, err := r.db.Exec(`INSERT INTO profiles (id, project_id, name, description, loader, preset, is_default, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT (project_id, id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, loader = EXCLUDED.loader, preset = EXCLUDED.preset, is_default = EXCLUDED.is_default, updated_at = EXCLUDED.updated_at`, profile.ID, profile.ProjectID, profile.Name, profile.Description, profile.Loader, profile.Preset, profile.IsDefault, profile.CreatedAt, profile.UpdatedAt)
+	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,'2.0',1,$9) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Digest)
 	if err != nil {
 		return model.Profile{}, err
 	}
-	profiles, err := r.ListProfiles(profile.ProjectID)
-	if err != nil {
-		return model.Profile{}, err
-	}
-	for _, item := range profiles {
-		if item.ID == profile.ID {
-			return item, nil
+	n, _ := res.RowsAffected()
+	var actual model.Profile
+	if n == 1 {
+		p.Revision = 1
+		p.CreatedAt = now
+		p.UpdatedAt = now
+		actual = p
+	} else {
+		actual, err = scanProfile0221(tx.QueryRow(`SELECT `+profileColumns0221+` FROM profiles WHERE project_id=$1 AND id=$2 FOR UPDATE`, p.ProjectID, p.ID))
+		if err != nil {
+			return model.Profile{}, err
+		}
+		if p.Revision != 0 && p.Revision != actual.Revision {
+			return model.Profile{}, ErrConflict
+		}
+		if actual.Digest != p.Digest {
+			p.Revision = actual.Revision + 1
+			p.CreatedAt = actual.CreatedAt
+			p.UpdatedAt = now
+			if _, err = tx.Exec(`UPDATE profiles SET name=$3,description=$4,loader=$5,preset=$6,is_default=$7,updated_at=$8,revision=$9,digest=$10
+     WHERE project_id=$1 AND id=$2`, p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Revision, p.Digest); err != nil {
+				return model.Profile{}, err
+			}
+			actual = p
 		}
 	}
-	return profile, nil
+	snapshot := model.SnapshotProfile(actual)
+	raw, err := json.Marshal(snapshot.Spec)
+	if err != nil {
+		return model.Profile{}, err
+	}
+	if _, err = tx.Exec(`INSERT INTO profile_revisions_0221(project_id,profile_id,revision,schema_version,digest,spec,created_at)
+  VALUES($1,$2,$3,$4,$5,$6::jsonb,$7) ON CONFLICT (project_id,profile_id,revision) DO NOTHING`, actual.ProjectID, actual.ID, actual.Revision, snapshot.SchemaVersion, snapshot.Digest, string(raw), now); err != nil {
+		return model.Profile{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return model.Profile{}, err
+	}
+	return actual, nil
+}
+
+func (r *SQLRepository) ListProfileRevisions(projectID, profileID string) ([]model.ProfileSnapshot, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	rows, err := r.db.Query(`SELECT schema_version,revision,digest,spec FROM profile_revisions_0221 WHERE project_id=$1 AND profile_id=$2 ORDER BY revision`, projectID, profileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.ProfileSnapshot{}
+	for rows.Next() {
+		var x model.ProfileSnapshot
+		var raw []byte
+		if err := rows.Scan(&x.SchemaVersion, &x.Revision, &x.Digest, &raw); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(raw, &x.Spec); err != nil {
+			return nil, err
+		}
+		if err := model.ValidateProfileSnapshot(x, projectID, profileID); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(out) == 0 {
+		return nil, ErrNotFound
+	}
+	return out, nil
 }
 
 func (r *SQLRepository) ListChannels(projectID string) ([]model.ReleaseChannel, error) {
@@ -832,7 +907,7 @@ func (r *SQLRepository) GetManifest(projectID, profileID, channel string) (model
 	if err := r.check(); err != nil {
 		return model.Manifest{}, err
 	}
-	row := r.db.QueryRow(`SELECT manifest FROM release_versions WHERE project_id = $1 AND profile_id = $2 AND channel = $3 ORDER BY published_at DESC LIMIT 1`, projectID, profileID, channel)
+	row := r.db.QueryRow(`SELECT manifest FROM release_versions WHERE project_id = $1 AND profile_id = $2 AND channel = $3 AND status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`, projectID, profileID, channel)
 	var raw []byte
 	if err := row.Scan(&raw); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -842,6 +917,9 @@ func (r *SQLRepository) GetManifest(projectID, profileID, channel string) (model
 	}
 	var manifest model.Manifest
 	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return model.Manifest{}, err
+	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
 		return model.Manifest{}, err
 	}
 	return manifest, nil
@@ -858,7 +936,11 @@ func (r *SQLRepository) CreateVersion(projectID, profileID, channel, version str
 		version = time.Now().UTC().Format("20060102150405")
 	}
 	now := time.Now().UTC()
-	manifest := model.Manifest{SchemaVersion: "1.0", ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
+	snapshot, err := ReadProfileSnapshot(r, projectID, profileID)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	manifest := model.Manifest{SchemaVersion: model.ManifestSchemaV2, ProfileSnapshot: &snapshot, ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
 	return r.saveRelease(model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
 }
 
@@ -877,7 +959,11 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 	}
 	now := time.Now().UTC()
 	releaseID := fmt.Sprintf("%s-%s-%s", projectID, profileID, version)
-	manifest := model.Manifest{SchemaVersion: "1.0", ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
+	snapshot, snapErr := ReadProfileSnapshot(r, projectID, profileID)
+	if snapErr != nil {
+		return model.ReleaseVersion{}, snapErr
+	}
+	manifest := model.Manifest{SchemaVersion: model.ManifestSchemaV2, ProfileSnapshot: &snapshot, ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
 
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -939,6 +1025,9 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 			manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
 		}
 	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	manifestRaw, err := json.Marshal(manifest)
 	if err != nil {
 		return model.ReleaseVersion{}, err
@@ -981,6 +1070,9 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 	}
 	if manifest.Files == nil {
 		manifest.Files = []model.ManifestFile{}
+	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		return model.ReleaseVersion{}, err
 	}
 	manifestRaw, err := json.Marshal(manifest)
 	if err != nil {
@@ -1270,11 +1362,14 @@ func (r *SQLRepository) saveRelease(release model.ReleaseVersion) (model.Release
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	_, err = r.db.Exec(`INSERT INTO release_versions (id, project_id, profile_id, channel, version, status, manifest, published_at)
+	result, err := r.db.Exec(`INSERT INTO release_versions (id, project_id, profile_id, channel, version, status, manifest, published_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-ON CONFLICT (project_id, profile_id, channel, version) DO UPDATE SET status = EXCLUDED.status, manifest = EXCLUDED.manifest, published_at = EXCLUDED.published_at`, release.ID, release.ProjectID, release.ProfileID, release.Channel, release.Version, release.Status, string(manifestRaw), release.PublishedAt)
+ON CONFLICT (project_id, profile_id, channel, version) DO NOTHING`, release.ID, release.ProjectID, release.ProfileID, release.Channel, release.Version, release.Status, string(manifestRaw), release.PublishedAt)
 	if err != nil {
 		return model.ReleaseVersion{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return model.ReleaseVersion{}, ErrConflict
 	}
 	return release, nil
 }
