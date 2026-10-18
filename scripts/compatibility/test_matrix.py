@@ -937,7 +937,8 @@ class MatrixToolTests(unittest.TestCase):
         self.assertEqual(len(restore_blocks), 2, "both matrix shards must use the same Java rule")
         for block in restore_blocks:
             self.assertIn("if: matrix.loader != 'vanilla' && matrix.javaMajor != 21", block)
-            self.assertIn("uses: actions/setup-java@v4", block)
+            self.assertIn("uses: actions/setup-java@v5", block)
+            self.assertIn("id: java21_tooling", block)
             self.assertIn("java-version: '21'", block)
         self.assertEqual(workflow.count("- name: Install target Java ${{ matrix.javaMajor }}"), 2)
         self.assertEqual(workflow.count("NEVERLAUNCHER_E2E_JAVA=%s"), 2)

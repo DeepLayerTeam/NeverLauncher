@@ -160,7 +160,30 @@ class AdversarialProbeRuntimeTests(unittest.TestCase):
         self.assertIn('report.memory_integrity.integrity_check_count >= 2', source)
 
 
+
+
+
+
+class MaterializedWindowsLWJGLTests(unittest.TestCase):
+    def test_windows_classifier_natives_are_published_as_verified_flat_copies(self):
+        source = (ROOT / 'cli/cmd/neverlauncher/vanilla_runtime.go').read_text(encoding='utf-8')
+        self.assertIn('flattenLWJGLWindowsNatives(stagingDir, extracted, target.Arch)', source)
+        self.assertIn('extracted = append(extracted, aliases...)', source)
+        self.assertIn('publishFiles = append(publishFiles, vanillaDownloadedFile{', source)
+        self.assertIn('"windows/" + classifierArch + "/org/lwjgl/"', source)
+        self.assertIn('secureClientDestination(root, clean)', source)
+        self.assertIn('secureClientDestination(root, base)', source)
+        self.assertIn('LWJGL Windows native filename collision', source)
+        self.assertIn('writeAtomicBytes(to, data, 0o644)', source)
+
+    def test_java21_tooling_retries_setup_but_never_skips_failure(self):
+        workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')
+        self.assertEqual(workflow.count('id: java21_tooling'), 2)
+        self.assertEqual(workflow.count('steps.java21_tooling.outcome == \'failure\''), 2)
+        self.assertEqual(workflow.count('name: Retry Java 21 tooling after transient extraction failure'), 2)
+        self.assertEqual(workflow.count('distribution: temurin'), 4)
+        self.assertNotIn('actions/setup-java@v4', workflow)
+        self.assertEqual(workflow.count('continue-on-error: true\n        uses: actions/setup-java@v5'), 2)
+
 if __name__ == '__main__':
     unittest.main()
-
-

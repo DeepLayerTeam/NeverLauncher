@@ -678,6 +678,19 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				extracted = append(extracted, aliases...)
 			}
+			// Mojang's modern Windows classifier stores DLLs below
+			// windows/{x64,arm64}/org/lwjgl/, whereas java.library.path
+			// and org.lwjgl.librarypath point at the platform natives root.
+			// Materialize exact-content flat copies so the JVM loads the
+			// signed-package native instead of extracting another DLL elsewhere.
+			if target.OS == "windows" && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") && strings.Contains(task.Path, "-natives-windows") {
+				aliases, aliasErr := flattenLWJGLWindowsNatives(stagingDir, extracted, target.Arch)
+				if aliasErr != nil {
+					_ = os.RemoveAll(stagingDir)
+					return vanillaInstallResult{}, fmt.Errorf("LWJGL Windows aliases: %w", aliasErr)
+				}
+				extracted = append(extracted, aliases...)
+			}
 			for _, rel := range extracted {
 				full := filepath.Join(stagingDir, filepath.FromSlash(rel))
 				sum, size, err := hashFile(full)
@@ -1477,6 +1490,59 @@ func nativeClassifierForTarget(natives map[string]string, osName string) string 
 		return natives["macos"]
 	}
 	return ""
+}
+
+// flattenLWJGLWindowsNatives copies only the exact native classifier layout
+// into java.library.path. The source JAR was SHA-1 verified by Mojang's
+// metadata, and both the original and the alias enter the SHA-256 package
+// manifest. Collisions or symlinks always fail closed.
+func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([]string, error) {
+	classifierArch := ""
+	switch arch {
+	case "x86_64":
+		classifierArch = "x64"
+	case "aarch64":
+		classifierArch = "arm64"
+	default:
+		return nil, fmt.Errorf("unsupported LWJGL Windows architecture: %s", arch)
+	}
+	prefix := "windows/" + classifierArch + "/org/lwjgl/"
+	aliases := make([]string, 0)
+	for _, rel := range extracted {
+		clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
+		if !strings.HasPrefix(clean, prefix) || !strings.HasSuffix(strings.ToLower(clean), ".dll") {
+			continue
+		}
+		base := path.Base(clean)
+		if base == "." || base == ".." || strings.ContainsAny(base, "\\/") {
+			return nil, fmt.Errorf("invalid LWJGL Windows native name: %q", base)
+		}
+		from, err := secureClientDestination(root, clean)
+		if err != nil {
+			return nil, err
+		}
+		to, err := secureClientDestination(root, base)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := os.Lstat(to); err == nil {
+			return nil, fmt.Errorf("LWJGL Windows native filename collision: %s", base)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		data, err := os.ReadFile(from)
+		if err != nil {
+			return nil, err
+		}
+		if len(data) == 0 || int64(len(data)) > maxCompatibilityNativeEntry {
+			return nil, fmt.Errorf("invalid LWJGL Windows native size: %s", base)
+		}
+		if err := writeAtomicBytes(to, data, 0o644); err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, base)
+	}
+	return aliases, nil
 }
 
 // lwjglLinuxARM64Fallback описывает только нативные модули LWJGL с опубликованными

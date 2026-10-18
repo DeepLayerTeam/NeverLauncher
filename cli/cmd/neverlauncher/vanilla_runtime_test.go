@@ -1055,3 +1055,83 @@ func TestFlattenLWJGLARM64Natives(t *testing.T) {
 		t.Fatal("collision should fail closed")
 	}
 }
+
+func TestFlattenLWJGLWindowsNativesFromVerifiedClassifier(t *testing.T) {
+	for _, tc := range []struct{ arch, sub string }{
+		{"x86_64", "x64"},
+		{"aarch64", "arm64"},
+	} {
+		t.Run(tc.arch, func(t *testing.T) {
+			root := t.TempDir()
+			rel := "windows/" + tc.sub + "/org/lwjgl/lwjgl.dll"
+			data := []byte("signed-classifier-content-" + tc.arch)
+			archive := filepath.Join(root, "source.jar")
+			if err := os.WriteFile(archive, testNamedNativeZip(t, rel, data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			extracted, err := extractNativeJar(archive, root, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			aliases, err := flattenLWJGLWindowsNatives(root, extracted, tc.arch)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(aliases) != 1 || aliases[0] != "lwjgl.dll" {
+				t.Fatalf("unexpected aliases: %v", aliases)
+			}
+			flat, err := os.ReadFile(filepath.Join(root, "lwjgl.dll"))
+			if err != nil || !bytes.Equal(flat, data) {
+				t.Fatalf("alias content mismatch: %v", err)
+			}
+			original, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+			if err != nil || !bytes.Equal(original, flat) {
+				t.Fatalf("classifier content mismatch: %v", err)
+			}
+		})
+	}
+}
+
+func TestFlattenLWJGLWindowsNativesRejectsCollisionsAndForeignPaths(t *testing.T) {
+	root := t.TempDir()
+	rel := "windows/x64/org/lwjgl/lwjgl.dll"
+	original := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(original), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(original, []byte("verified"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	aliases, err := flattenLWJGLWindowsNatives(root, []string{"windows/arm64/org/lwjgl/lwjgl.dll"}, "x86_64")
+	if err != nil || len(aliases) != 0 {
+		t.Fatalf("foreign architecture should be ignored: %v, %v", aliases, err)
+	}
+	aliases, err = flattenLWJGLWindowsNatives(root, []string{"other/path/lwjgl.dll"}, "x86_64")
+	if err != nil || len(aliases) != 0 {
+		t.Fatalf("foreign path should be ignored: %v, %v", aliases, err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "lwjgl.dll"), []byte("existing"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil || !strings.Contains(err.Error(), "collision") {
+		t.Fatalf("expected strict native collision failure, got %v", err)
+	}
+	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "unknown"); err == nil {
+		t.Fatal("unsupported architecture accepted")
+	}
+}
+
+func TestFlattenLWJGLWindowsNativesRejectsSymlinkSource(t *testing.T) {
+	root := t.TempDir()
+	rel := "windows/x64/org/lwjgl/lwjgl.dll"
+	file := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "outside.dll"), file); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil {
+		t.Fatal("symlink native source accepted")
+	}
+}
