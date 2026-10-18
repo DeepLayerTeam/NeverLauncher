@@ -9,6 +9,21 @@ use tokio::fs;
 
 const MAX_INHERITANCE_DEPTH: usize = 16;
 
+const LWJGL_EXTRACT_PROPERTY: &str = "-Dorg.lwjgl.system.SharedLibraryExtractPath=";
+
+pub(crate) fn pin_windows_lwjgl_extract_path(args: &mut Vec<String>, game_root: &Path, os: &str, arch: &str) {
+    if os != "windows" {
+        return;
+    }
+    // The Sensor accepts this single, platform-specific extraction directory.
+    // Strip publisher/mod-provided overrides so the JVM and Sensor cannot
+    // disagree on where LWJGL's classpath natives are expected to be loaded.
+    args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY));
+    let extract = game_root.join(".neverlauncher").join("lwjgl-extract")
+        .join("windows").join(arch);
+    args.push(format!("{LWJGL_EXTRACT_PROPERTY}{}", extract.display()));
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CompatibilityEnvironment {
@@ -422,6 +437,17 @@ pub async fn resolve_compatibility(
     if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
         jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
     }
+    // LWJGL 3 prefers native resources on the classpath and can extract
+    // lwjgl.dll even when java.library.path points at a verified flat copy.
+    // Keep extraction inside the pinned client root, never in a user-global
+    // temp directory. NeverGuard rechecks extracted bytes against the signed
+    // package's native copy before trusting any executable-memory calls.
+    pin_windows_lwjgl_extract_path(
+        &mut jvm_args,
+        Path::new(&context.game_directory),
+        &environment.os,
+        &environment.arch,
+    );
     // Minecraft 26.x Vanilla и Fabric сами инициализируют SDL 3;
     // принудительный -XstartOnFirstThread прерывает их в macOS. Однако
     // ForgeBootstrap создаёт раннее окно GLFW/AppKit до передачи
@@ -1823,5 +1849,34 @@ mod tests {
     fn legacy_argument_split_preserves_quoted_values() {
         let args = split_legacy_arguments(r#"--username Player --title "Hello world" --token 'abc def'"#).unwrap();
         assert_eq!(args, vec!["--username", "Player", "--title", "Hello world", "--token", "abc def"]);
+    }
+}
+
+#[cfg(test)]
+mod windows_lwjgl_extract_tests {
+    use super::{pin_windows_lwjgl_extract_path, LWJGL_EXTRACT_PROPERTY};
+    use std::path::Path;
+
+    #[test]
+    fn windows_paths_are_arch_scoped_and_replace_untrusted_overrides() {
+        let mut args = vec![
+            "-Xmx1024m".to_string(),
+            format!("{LWJGL_EXTRACT_PROPERTY}C:\\Users\\Public"),
+        ];
+        pin_windows_lwjgl_extract_path(&mut args, Path::new("C:/client"), "windows", "aarch64");
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0], "-Xmx1024m");
+        assert!(args[1].starts_with(LWJGL_EXTRACT_PROPERTY));
+        assert!(args[1].contains(".neverlauncher"));
+        assert!(args[1].contains("lwjgl-extract"));
+        assert!(args[1].contains("aarch64"));
+        assert!(!args[1].contains("Public"));
+    }
+
+    #[test]
+    fn non_windows_platform_does_not_modify_args() {
+        let mut args = vec!["-Xmx2048m".to_string()];
+        pin_windows_lwjgl_extract_path(&mut args, Path::new("/client"), "linux", "x86_64");
+        assert_eq!(args, vec!["-Xmx2048m"]);
     }
 }

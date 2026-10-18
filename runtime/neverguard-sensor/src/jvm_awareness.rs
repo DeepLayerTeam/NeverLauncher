@@ -516,13 +516,19 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             native_root.join("lwjgl.dll"),
             native_root.join("windows").join(classifier_arch)
                 .join("org").join("lwjgl").join("lwjgl.dll"),
+            // LWJGL 3 can extract the classpath native rather than loading
+            // java.library.path. NeverRuntime pins this extraction directory
+            // with org.lwjgl.system.SharedLibraryExtractPath. A file here
+            // is trusted only if its SHA-256 equals the certified flat copy.
+            launch_root.join(".neverlauncher").join("lwjgl-extract")
+                .join("windows").join(std::env::consts::ARCH).join("lwjgl.dll"),
         ];
         let canonical_path = std::fs::canonicalize(&loaded)
             .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
         // A missing legacy layout must not poison the Sensor when the native
         // is legitimately stored under the platform's archive hierarchy.
-        let mut matched = false;
-        for expected in &candidates {
+        let mut matched = None;
+        for (candidate_index, expected) in candidates.iter().enumerate() {
             // Check each directory component before canonicalizing: no
             // symlink/reparse traversal from inside the certified client.
             let mut component = expected.as_path();
@@ -549,13 +555,16 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                 return Err("NeverGuard JVM-Aware native path escapes the launch root".to_string());
             }
             if canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
-                matched = true;
+                matched = Some(candidate_index);
                 break;
             }
         }
-        if !matched {
-            return Err("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory".to_string());
-        }
+        let matched = matched.ok_or_else(|| {
+            let location = canonical_path.strip_prefix(launch_root)
+                .map(|relative| relative.to_string_lossy().chars().take(180).collect::<String>())
+                .unwrap_or_else(|_| "outside pinned client root".to_string());
+            format!("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory ({location})")
+        })?;
         let metadata = std::fs::symlink_metadata(&loaded)
             .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect LWJGL native: {err}"))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
@@ -579,6 +588,38 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             .map_err(|err| format!("NeverGuard JVM-Aware cannot hash LWJGL image: {err}"))?;
         let mut file_sha256 = [0u8; 32];
         file_sha256.copy_from_slice(&Sha256::digest(&bytes));
+        if matched == 2 {
+            // Extracted bytes come from a classpath resource, not the
+            // already-certified package tree. Require an exact digest match
+            // to the pinned flat alias published by the Mojang-verified
+            // installer. This disallows arbitrary DLLs in the extract cache.
+            let certified = &candidates[0];
+            let mut current = certified.as_path();
+            while current != launch_root.as_path() {
+                let metadata = std::fs::symlink_metadata(current)
+                    .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect certified LWJGL component: {err}"))?;
+                if metadata.file_type().is_symlink() {
+                    return Err("NeverGuard JVM-Aware certified LWJGL path contains reparse/symlink".to_string());
+                }
+                current = current.parent().ok_or_else(||
+                    "NeverGuard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
+            }
+            let canonical_certified = std::fs::canonicalize(certified)
+                .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize certified LWJGL: {err}"))?;
+            if !canonical_certified.starts_with(launch_root) {
+                return Err("NeverGuard JVM-Aware certified LWJGL escapes pinned client root".to_string());
+            }
+            let metadata = std::fs::metadata(&canonical_certified)
+                .map_err(|err| format!("NeverGuard JVM-Aware certified LWJGL metadata failed: {err}"))?;
+            if !metadata.is_file() || metadata.len() == 0 {
+                return Err("NeverGuard JVM-Aware certified LWJGL is not a regular file".to_string());
+            }
+            let expected_digest = Sha256::digest(std::fs::read(&canonical_certified)
+                .map_err(|err| format!("NeverGuard JVM-Aware cannot hash certified LWJGL: {err}"))?);
+            if file_sha256.as_slice() != expected_digest.as_slice() {
+                return Err("NeverGuard JVM-Aware extracted LWJGL differs from certified package image".to_string());
+            }
+        }
         // Permanently pin this one verified native for the process lifetime:
         // otherwise an unload/reload could recycle its trusted address range.
         let mut pinned = std::ptr::null_mut();

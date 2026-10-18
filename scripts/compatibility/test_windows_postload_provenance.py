@@ -117,7 +117,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn('"aarch64" => "arm64"', region)
         self.assertIn('.join("org").join("lwjgl").join("lwjgl.dll")', region)
         self.assertIn('let candidates = [', region)
-        self.assertIn('if !matched {', region)
+        self.assertIn('let matched = matched.ok_or_else(||', region)
         self.assertIn('std::fs::symlink_metadata(&loaded)', region)
         self.assertIn('std::fs::canonicalize(expected)', region)
         self.assertIn('expected_path.starts_with(launch_root)', region)
@@ -175,6 +175,27 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn('secureClientDestination(root, base)', source)
         self.assertIn('LWJGL Windows native filename collision', source)
         self.assertIn('writeAtomicBytes(to, data, 0o644)', source)
+
+    def test_classpath_lwjgl_extracts_only_into_pinned_client_directory(self):
+        runtime = (ROOT / 'runtime/neverruntime/src/compatibility.rs').read_text(encoding='utf-8')
+        source = (ROOT / 'runtime/neverguard-sensor/src/jvm_awareness.rs').read_text(encoding='utf-8')
+        self.assertIn('LWJGL_EXTRACT_PROPERTY', runtime)
+        self.assertIn('"-Dorg.lwjgl.system.SharedLibraryExtractPath="', runtime)
+        self.assertIn('pin_windows_lwjgl_extract_path(', runtime)
+        self.assertIn('args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY))', runtime)
+        self.assertIn('join(".neverlauncher").join("lwjgl-extract")', runtime)
+        self.assertIn('join("windows").join(std::env::consts::ARCH).join("lwjgl.dll")', source)
+        self.assertIn('if matched == 2', source)
+        self.assertIn('Sha256::digest(std::fs::read(&canonical_certified)', source)
+        self.assertIn('file_sha256.as_slice() != expected_digest.as_slice()', source)
+        self.assertIn('extracted LWJGL differs from certified package image', source)
+        self.assertIn('rejected reparse/symlink native path', source)
+        self.assertIn('outside pinned client root', source)
+        self.assertIn('RUNTIME_NATIVE_LOAD_FAILED.store(true', source)
+        launch = (ROOT / 'runtime/neverruntime/src/lib.rs').read_text(encoding='utf-8')
+        self.assertIn('compatibility::pin_windows_lwjgl_extract_path(', launch)
+        self.assertIn('if strategy == "compatibility" || strategy == "mojang"', launch)
+
 
     def test_java21_tooling_retries_setup_but_never_skips_failure(self):
         workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')

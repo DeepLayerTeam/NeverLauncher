@@ -1051,6 +1051,18 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     plan.java_executable = java_executable;
 
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
+    // Manifest JVM args are appended after Mojang resolution. Repin the
+    // extraction root here so a later manifest override cannot redirect the
+    // LWJGL loader outside the client's NeverGuard-certified native cache.
+    #[cfg(windows)]
+    if strategy == "compatibility" || strategy == "mojang" {
+        compatibility::pin_windows_lwjgl_extract_path(
+            &mut plan.jvm_args,
+            Path::new(&plan.working_directory),
+            "windows",
+            std::env::consts::ARCH,
+        );
+    }
     plan.command_preview = redacted_command_preview119(&plan, credentials.map(|c| c.access_token.as_str()));
     Ok(plan)
 }
