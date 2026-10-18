@@ -786,7 +786,7 @@ func (r *SQLRepository) ListAuditEvents() []model.AuditEvent {
 	if err := r.check(); err != nil {
 		return nil
 	}
-	rows, err := r.db.Query(`SELECT id, actor, action, target, ip, user_agent, created_at FROM audit_events ORDER BY created_at DESC LIMIT 500`)
+	rows, err := r.db.Query(`SELECT id, actor, action, target, ip, user_agent, created_at, correlation_id, reason_code, job_id FROM audit_events ORDER BY created_at DESC LIMIT 500`)
 	if err != nil {
 		return nil
 	}
@@ -794,7 +794,7 @@ func (r *SQLRepository) ListAuditEvents() []model.AuditEvent {
 	var result []model.AuditEvent
 	for rows.Next() {
 		var item model.AuditEvent
-		if err := rows.Scan(&item.ID, &item.Actor, &item.Action, &item.Target, &item.IP, &item.UserAgent, &item.CreatedAt); err == nil {
+		if err := rows.Scan(&item.ID, &item.Actor, &item.Action, &item.Target, &item.IP, &item.UserAgent, &item.CreatedAt, &item.CorrelationID, &item.ReasonCode, &item.JobID); err == nil {
 			result = append(result, item)
 		}
 	}
@@ -811,7 +811,7 @@ func (r *SQLRepository) AddAuditEvent(event model.AuditEvent) {
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()
 	}
-	if _, err := r.db.Exec(`INSERT INTO audit_events (id, actor, action, target, ip, user_agent, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, event.ID, event.Actor, event.Action, event.Target, event.IP, event.UserAgent, event.CreatedAt); err != nil {
+	if _, err := r.db.Exec(`INSERT INTO audit_events (id, actor, action, target, ip, user_agent, created_at, correlation_id, reason_code, job_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, event.ID, event.Actor, event.Action, event.Target, event.IP, event.UserAgent, event.CreatedAt, event.CorrelationID, event.ReasonCode, event.JobID); err != nil {
 		return
 	}
 	r.auditSinkMu.RLock()

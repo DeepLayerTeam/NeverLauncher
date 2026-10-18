@@ -1,6 +1,9 @@
 package httpapi
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -221,11 +224,47 @@ func writeJSON(w http.ResponseWriter, code int, value any) {
 }
 
 func writeError(w http.ResponseWriter, code int, message string) {
-	writeJSON(w, code, map[string]any{"error": map[string]any{"code": code, "message": message}})
+	reason := "operation_failed"
+	switch code {
+	case 400:
+		reason = "invalid_input"
+	case 401:
+		reason = "authentication_required"
+	case 403:
+		reason = "insufficient_permissions"
+	case 404:
+		reason = "not_found"
+	case 409:
+		reason = "conflict_reload"
+	case 429:
+		reason = "rate_limited"
+	case 503:
+		reason = "service_unavailable"
+	}
+	writeReason02111(w, code, reason, message)
+}
+
+type correlationKey02111 struct{}
+
+func correlationID02111(r *http.Request) string {
+	value, _ := r.Context().Value(correlationKey02111{}).(string)
+	return value
+}
+func newCorrelation02111() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b[:])
 }
 
 func logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		correlation := newCorrelation02111()
+		if correlation != "" {
+			w.Header().Set("X-Correlation-ID", correlation)
+			r = r.WithContext(context.WithValue(r.Context(), correlationKey02111{}, correlation))
+		}
 		if !strings.HasPrefix(r.URL.Path, "/health") && !strings.HasPrefix(r.URL.Path, "/ready") && !strings.HasPrefix(r.URL.Path, "/metrics") {
 			log.Printf("%s %s", r.Method, r.URL.Path)
 		}
@@ -253,6 +292,7 @@ func withCORS(next http.Handler, allowedOrigins []string) http.Handler {
 			} else {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Expose-Headers", "X-Correlation-ID")
 				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 				w.Header().Set("Access-Control-Max-Age", "600")
 			}

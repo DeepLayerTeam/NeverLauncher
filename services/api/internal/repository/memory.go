@@ -135,6 +135,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	operationalConfigMu            sync.Mutex
+	operationalConfigRevisions     []OperationalConfigRevision
 	draftMu                        sync.Mutex
 	releaseDrafts                  map[string]ReleaseDraft
 	validationMu                   sync.Mutex

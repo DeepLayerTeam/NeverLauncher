@@ -130,3 +130,10 @@ code { color: #bfdbfe; }
 
 /* 0.21.9: ServerBridge operations, scoped runtime snapshots and actual Bridge ACKs. */
 .bridgeWorkspace{display:grid;gap:16px}.bridgeWorkspace .bridgeMetricGrid{margin:0}.bridgeWorkspace .bridgeNodeButton{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;min-width:0;background:#0b1220;border:1px solid #334155;border-radius:12px;padding:16px;color:#e5e7eb;cursor:pointer;overflow-wrap:anywhere}.bridgeNodeButton.selected{outline:2px solid #60a5fa;background:#12223b}.bridgeNodeButton:hover{border-color:#60a5fa}.bridgeNodeButton .badge{align-self:flex-start}.bridgeFacts{display:grid;grid-template-columns:minmax(125px,180px) minmax(0,1fr);gap:10px;margin:12px 0}.bridgeFacts dt{color:#94a3b8}.bridgeFacts dd{margin:0;overflow-wrap:anywhere}.bridgeControls .field{max-width:700px}.bridgeControls .field input,.bridgeControls .field select,.bridgeControls .field textarea{width:100%;background:#020617;border:1px solid #475569;color:#e5e7eb;border-radius:10px;padding:10px}.bridgeControls .check input{width:auto}.bridgePending{border:1px solid #a16207;border-radius:10px;padding:12px;margin-top:12px}.bridgeControls .buttonRow button,.bridgeSection .buttonRow button{border-radius:9px;padding:9px 12px;background:#1d4ed8;color:white;border:1px solid #334155;cursor:pointer}.bridgeControls button:disabled,.bridgeSection button:disabled{opacity:.45;cursor:not-allowed}@media(max-width:650px){.bridgeFacts{grid-template-columns:1fr;gap:3px}.bridgeFacts dd{padding-bottom:10px;border-bottom:1px solid #1e293b}}
+
+/* 0.21.11 - typed configuration and server-side audit */
+.configFields,.auditFilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0;}
+.configRestore{padding:16px;border:1px solid var(--border,#718096);border-radius:8px;margin-top:12px;}
+.configFields .field,.auditFilters .field{min-width:0;}
+.configFields input[type=checkbox]{width:24px;height:24px;}
+.configRestore input{max-width:320px;}

@@ -532,7 +532,7 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) audit(r *http.Request, actor, action, target string) {
-	s.Repo.AddAuditEvent(model.AuditEvent{Actor: actor, Action: action, Target: target, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{Actor: actor, Action: action, Target: target, IP: clientIP(r), UserAgent: r.UserAgent(), CorrelationID: correlationID02111(r), CreatedAt: time.Now().UTC()})
 }
 
 func (s Server) adminProjectExport(w http.ResponseWriter, r *http.Request) {

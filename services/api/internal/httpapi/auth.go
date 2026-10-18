@@ -98,6 +98,7 @@ func (s Server) requirePermission(permission string, next http.HandlerFunc) http
 		}
 		decision := s.authorizeClaims(r, claims, permission, "", "global", "")
 		if !decision.Allowed {
+			s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "authorization:denied", Target: permission + ":" + r.URL.Path, CorrelationID: correlationID02111(r), ReasonCode: "insufficient_permissions", CreatedAt: time.Now().UTC()})
 			writeError(w, http.StatusForbidden, "недостаточно глобальных прав для выполнения операции")
 			return
 		}
@@ -141,6 +142,7 @@ func (s Server) requireProjectPermission(permission, projectParam, resourceKind 
 			}
 		}
 		if !s.authorizeClaims(r, claims, permission, projectID, resourceKind, resourceID).Allowed {
+			s.Repo.AddAuditEvent(model.AuditEvent{Actor: claims.Sub, Action: "authorization:denied", Target: permission + ":" + projectID + ":" + resourceID, CorrelationID: correlationID02111(r), ReasonCode: "insufficient_permissions", CreatedAt: time.Now().UTC()})
 			writeError(w, http.StatusForbidden, "недостаточно прав в проекте")
 			return
 		}

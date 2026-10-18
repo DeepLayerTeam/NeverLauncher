@@ -138,13 +138,16 @@ type SignatureInfo struct {
 
 // AuditEvent описывает запись журнала безопасности и административных действий.
 type AuditEvent struct {
-	ID        string    `json:"id"`
-	Actor     string    `json:"actor"`
-	Action    string    `json:"action"`
-	Target    string    `json:"target"`
-	IP        string    `json:"ip"`
-	UserAgent string    `json:"userAgent"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	Actor         string    `json:"actor"`
+	Action        string    `json:"action"`
+	Target        string    `json:"target"`
+	IP            string    `json:"ip"`
+	UserAgent     string    `json:"userAgent"`
+	CreatedAt     time.Time `json:"createdAt"`
+	CorrelationID string    `json:"correlationId,omitempty"`
+	ReasonCode    string    `json:"reasonCode,omitempty"`
+	JobID         string    `json:"jobId,omitempty"`
 }
 
 type MinecraftInfo struct {

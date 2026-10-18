@@ -5,7 +5,7 @@ export const sections: Section[] = [
   { id: 'profiles', title: 'Профили' }, { id: 'channels', title: 'Каналы' },
   { id: 'packages', title: 'Пакеты и файлы' }, { id: 'releases', title: 'Релизы' },
   { id: 'users', title: 'Пользователи' }, { id: 'roles', title: 'Роли' },
-  { id: 'operations', title: 'Операции' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' },
+  { id: 'operations', title: 'Операции' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
   { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
   { id: 'extensions-manager', title: 'Admin Extensions' }, { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'diagnostics', title: 'Диагностика' }, { id: 'backup-restore', title: 'Резервное копирование' },
@@ -25,6 +25,7 @@ export function endpointForSection(active: SectionId, projectId: string): string
     case 'roles': return '/api/v1/admin/roles';
     case 'devices': return '/api/v1/admin/auth/devices';
     case 'audit': return '/api/v1/admin/audit';
+    case 'config': return '/api/v1/admin/config';
     case 'storage': return '/api/v1/admin/storage/health';
     case 'extension-registry': return '/api/v1/admin/extension-registry/extensions';
     case 'extensions-manager': return '/api/v1/admin/extensions/manager';

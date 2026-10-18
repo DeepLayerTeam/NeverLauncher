@@ -32,19 +32,24 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid status")
 		return
 	}
+	settings, settingsErr := s.operationalSettings02111(r)
+	if settingsErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "настройки списка заданий недоступны")
+		return
+	}
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 	if err != nil {
-		limit = 25
+		limit = settings.JobsDefaultPageSize
 	}
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 	if err != nil {
 		offset = 0
 	}
 	if limit < 1 {
-		limit = 25
+		limit = settings.JobsDefaultPageSize
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > settings.JobsMaxPageSize {
+		limit = settings.JobsMaxPageSize
 	}
 	if offset < 0 || offset > 10000 {
 		writeError(w, http.StatusBadRequest, "offset out of range")

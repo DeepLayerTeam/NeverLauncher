@@ -271,7 +271,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	if err != nil {
 		return nil, err
 	}
-	s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "channel:rollback", Target: job.ID + ":" + release.ID, CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "channel:rollback", Target: job.ID + ":" + release.ID, JobID: job.ID, CorrelationID: job.ID, ReasonCode: "executed", CreatedAt: time.Now().UTC()})
 	return map[string]any{"status": "rolled-back-as-new-validated-immutable-release", "projectId": p.ProjectID, "profileId": p.ProfileID, "channel": p.Channel, "targetVersion": p.ToVersion, "rollbackVersion": release.Version, "packageId": release.ID, "release": release, "jobId": publishJob.ID}, nil
 }
 func (s Server) lookupRollbackRelease0217(id string) (model.ReleaseVersion, error) {
