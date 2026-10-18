@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { AdminExtensions } from '../admin_extensions_0208';
 import { RegistryWorkspace } from './RegistryWorkspace';
 import { OperationsWorkspace } from './OperationsWorkspace';
+import { ReleaseWorkspace } from './ReleaseWorkspace';
+import { JobMonitor } from './JobMonitor';
 import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
@@ -242,7 +244,7 @@ export function AdminApp() {
   }
 
   async function loadActive() {
-    if (!token || !mayRead || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
+    if (!token || !mayRead || ['release-workspace','job-monitor'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
     const result = await requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token);
     setPayload(result);
   }
@@ -277,7 +279,7 @@ export function AdminApp() {
   useEffect(() => {
     let live = true;
     setPayload(null); setSelectedRecordId('');
-    if (!token || !mayRead || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
+    if (!token || !mayRead || ['release-workspace','job-monitor'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
       .catch((err: Error) => { if (live) setError(err.message); });
@@ -426,8 +428,10 @@ export function AdminApp() {
       {mayRead && crudPanel}
       {mayRead && packagePanel}
       {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
+      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
+      {token && mayRead && active === 'job-monitor' && <section className='card wide'><JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} /></section>}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && active !== 'extensions-manager' && active !== 'operations' && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

@@ -9,6 +9,14 @@
 - Заполнены корневые руководства, каталог `docs/`, шаблоны GitHub, `.editorconfig` и `.gitattributes`.
 - Добавлены указатели на актуальные исходники контрактов, проверки и production-конфигурации.
 
+## [0.21.8] — Release Workspace
+
+- Полноценный пошаговый мастер релиза в Admin с созданием, редактированием, удалением и возобновлением серверных черновиков (PostgreSQL + CAS `revision`), с привязкой к владельцу/проекту.
+- Выбор профиля/Minecraft/загрузчика, создание настоящего пакета, загрузка файлов и вызов реальных validate, Ed25519 sign, stage, integrity-check и signed runtime evidence API.
+- Предпросмотр публикации и rollback через Unified Operations; постоянный Idempotency-Key и восстановление job по черновику после потери ответа. Отдельный job monitor с историей попыток.
+- Добавлены миграция, OpenAPI маршруты, регрессионные тесты и руководство `docs/administration/release-workspace-0218.md`.
+- Legacy `/smoke-test` остаётся проверкой integrity, а не запуском Minecraft: подтверждение реального smoke достигается только доверенным подписанным runtime evidence.
+
 ## [0.21.7] — Unified Operations
 
 - Добавлен работающий единый lifecycle операций Admin/CLI/API `validate`, `execute`, `status`, `cancel`, `retry`, `attempts` для публикации пакетов и отката каналов.
@@ -31,6 +39,7 @@
 Исходный архив фиксирует версию `0.21.5`. Подробные исторические заметки об изменениях этого релиза в исходном файле CHANGELOG отсутствовали. Перечень фактически поставленных функций и список успешно сертифицированных платформ необходимо проверять по Git-тегу, исходникам и сертификатам CI.
 
 [Unreleased]: https://github.com/DeepLayerTeam/NeverLauncher/commits/main
+[0.21.8]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.7]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.6]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.5]: https://github.com/DeepLayerTeam/NeverLauncher/releases

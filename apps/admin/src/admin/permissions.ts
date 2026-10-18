@@ -28,6 +28,8 @@ export const globalPermissionForSection: Record<string, string> = {
 
 export function canSeeSection(identity: AdminIdentity | null, section: string, projectId: string): boolean {
   if (section === 'dashboard') return !!identity;
+  if (section === 'release-workspace') return can(identity, 'release:prepare', projectId);
+  if (section === 'job-monitor') return can(identity, 'project:read', projectId);
   const global = globalPermissionForSection[section];
   if (global) {
     if (section === 'storage') return can(identity, global) || can(identity, global, projectId);

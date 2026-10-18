@@ -169,6 +169,22 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Persist the actual selected Minecraft/loader metadata into the release,
+	// not only into the wizard draft. It will be covered by the Ed25519 signature.
+	if strings.TrimSpace(req.MinecraftVersion) != "" || strings.TrimSpace(req.Loader) != "" {
+		manifest := release.Manifest
+		if strings.TrimSpace(req.MinecraftVersion) != "" {
+			manifest.Minecraft.Version = strings.TrimSpace(req.MinecraftVersion)
+		}
+		if strings.TrimSpace(req.Loader) != "" {
+			manifest.Minecraft.Loader = strings.TrimSpace(req.Loader)
+		}
+		release, err = s.Repo.UpdateVersionManifest(release.ProjectID, release.ID, manifest)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "unable to store selected Minecraft metadata: "+err.Error())
+			return
+		}
+	}
 	s.audit(r, s.adminActor(r), "package:create", release.ID)
 	s.packageEvent0206(r, "package.created", "created", release)
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(release, nil, "created")})
@@ -477,6 +493,7 @@ func (s Server) packagePayload(release model.ReleaseVersion, files []model.FileO
 		"profileId":     release.ProfileID,
 		"channel":       release.Channel,
 		"version":       release.Version,
+		"minecraft":     release.Manifest.Minecraft,
 		"status":        status,
 		"storageDriver": s.Storage.Driver(),
 		"delivery":      s.deliveryPolicyPayload(),

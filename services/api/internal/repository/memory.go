@@ -135,6 +135,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	draftMu                        sync.Mutex
+	releaseDrafts                  map[string]ReleaseDraft
 	validationMu                   sync.Mutex
 	deviceMu                       sync.Mutex
 	minecraftMu                    sync.Mutex

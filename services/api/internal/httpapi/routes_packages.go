@@ -6,6 +6,12 @@ import (
 )
 
 func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
+	mux.Handle("GET /api/v1/release-drafts", s.requireAuthenticated(s.draftList0218))
+	mux.Handle("POST /api/v1/release-drafts", s.requireAuthenticated(s.draftCreate0218))
+	mux.Handle("GET /api/v1/release-drafts/{draftId}", s.requireAuthenticated(s.draftGet0218))
+	mux.Handle("GET /api/v1/release-drafts/{draftId}/operation", s.requireAuthenticated(s.draftJob0218))
+	mux.Handle("PUT /api/v1/release-drafts/{draftId}", s.requireAuthenticated(s.draftUpdate0218))
+	mux.Handle("DELETE /api/v1/release-drafts/{draftId}", s.requireAuthenticated(s.draftDelete0218))
 	s.registerOperationRoutes0217(mux)
 	mux.HandleFunc("POST /api/v1/admin/login", s.adminLogin)
 	mux.Handle("GET /api/v1/admin/me", s.requireAuthenticated(s.adminMe))
