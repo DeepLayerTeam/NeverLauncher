@@ -82,11 +82,11 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if clean["status"] != "quarantined" {
-		t.Fatalf("cleanup=%v", clean)
+	if clean["status"] != "preserved" {
+		t.Fatalf("cleanup must preserve untracked user-owned mod: %v", clean)
 	}
-	if _, err := os.Stat(filepath.Join(client, "mods", "orphan.jar")); !os.IsNotExist(err) {
-		t.Fatalf("orphan still exists: %v", err)
+	if bytes, err := os.ReadFile(filepath.Join(client, "mods", "orphan.jar")); err != nil || string(bytes) != "orphan" {
+		t.Fatalf("untracked mod was deleted: %v %q", err, bytes)
 	}
 
 	mustWrite(filepath.Join(source, "mods", "core.jar"), "v2-core")
@@ -118,6 +118,9 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 	}
 	if afterRollback != v1 {
 		t.Fatalf("rollback checksum=%s want=%s", afterRollback, v1)
+	}
+	if bytes, err := os.ReadFile(filepath.Join(client, "mods", "orphan.jar")); err != nil || string(bytes) != "orphan" {
+		t.Fatalf("rollback removed user-owned mod: %v %q", err, bytes)
 	}
 	verify, err = verifyClientInstallation(pkg1Path, client)
 	if err != nil || !verify.Valid {

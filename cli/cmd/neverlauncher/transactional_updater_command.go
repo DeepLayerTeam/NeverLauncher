@@ -19,25 +19,37 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 	if err != nil {
 		return nil, err
 	}
+	if err := validateManifestFilePolicy0224(oldManifest); err != nil {
+		return nil, fmt.Errorf("from manifest: %w", err)
+	}
+	if err := validateManifestFilePolicy0224(newManifest); err != nil {
+		return nil, fmt.Errorf("to manifest: %w", err)
+	}
 	if strings.TrimSpace(sourceRoot) == "" || strings.TrimSpace(targetRoot) == "" {
 		return nil, errors.New("update apply требует --source-root и --root")
 	}
 	files := make([]updaterFileSpec0156, 0, len(newManifest.Files))
 	wanted := map[string]bool{}
 	for _, file := range newManifest.Files {
-		if !manifestFileAppliesToCurrentOS0156(file) {
+		wanted[file.Path] = true // existing user-owned/optional files must never become stale removal targets
+		if !manifestFileAppliesToCurrentOS0156(file) || !managedUpdateFile0224(file) {
 			continue
 		}
 		if err := validateUpdaterPath0156(file.Path); err != nil {
 			return nil, err
 		}
 		src := filepath.Join(sourceRoot, filepath.FromSlash(file.Path))
+		if manifestOwnership0224(file) == "optional" {
+			if _, err := os.Stat(src); errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+		}
 		files = append(files, updaterFileSpec0156{Path: file.Path, Source: src, Size: file.Size, SHA256: file.SHA256, Executable: file.Executable})
 		wanted[file.Path] = true
 	}
 	remove := []string{}
 	for _, file := range oldManifest.Files {
-		if !manifestFileAppliesToCurrentOS0156(file) || wanted[file.Path] {
+		if !manifestFileAppliesToCurrentOS0156(file) || wanted[file.Path] || !removableUpdateFile0224(file) {
 			continue
 		}
 		if err := validateUpdaterPath0156(file.Path); err != nil {
@@ -52,10 +64,24 @@ func applyManifestUpdate0156(fromPath, toPath, sourceRoot, targetRoot string) (m
 	}
 	verify := func() error {
 		for _, file := range newManifest.Files {
-			if !manifestFileAppliesToCurrentOS0156(file) {
+			if !manifestFileAppliesToCurrentOS0156(file) || !managedUpdateFile0224(file) {
 				continue
 			}
 			path := filepath.Join(targetRoot, filepath.FromSlash(file.Path))
+			if manifestOwnership0224(file) == "optional" {
+				if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+					mandatory := false
+					for _, rule := range newManifest.FileRules {
+						if rule.Action == "verify" && filePolicyMatch0224(rule.Pattern, file.Path) {
+							mandatory = true
+							break
+						}
+					}
+					if !mandatory {
+						continue
+					}
+				}
+			}
 			if err := verifyUpdaterFile0156(path, file.Size, file.SHA256); err != nil {
 				return fmt.Errorf("%s: %w", file.Path, err)
 			}

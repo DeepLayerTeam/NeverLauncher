@@ -1,5 +1,6 @@
 pub mod attestation;
 pub mod compatibility;
+pub mod file_ownership;
 pub mod managed_java;
 pub mod guard_ipc;
 mod integrity;
@@ -115,6 +116,8 @@ pub struct Manifest {
     #[serde(default)]
     pub directories: Directories,
     pub files: Vec<ManifestFile>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub file_rules: Vec<file_ownership::FileRule>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile_snapshot: Option<ProfileSnapshot>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -160,6 +163,7 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
             let actual = hex::encode(Sha256::digest(digest_payload.as_bytes()));
             if snapshot.digest != actual {return Err("v2 profile snapshot digest mismatch".into());}
             validate_runtime_constraints_0223(manifest)?;
+            file_ownership::validate_policy(manifest)?;
             Ok(())
         }
         _ => Err(format!("unsupported manifest schema or missing profileSnapshot: {}", manifest.schema_version)),
@@ -290,6 +294,8 @@ pub struct ManifestFile {
     pub executable: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub target_os: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ownership: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -485,6 +491,7 @@ pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: 
     let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("private key не является hex: {err}"))?;
     let seed: [u8; 32] = bytes.try_into().map_err(|_| "Ed25519 private key seed должен быть 32 байта".to_string())?;
     validate_manifest_schema(manifest)?;
+    file_ownership::validate_download_targets(manifest)?;
     manifest.signature = None;
     let payload = manifest_signing_payload(manifest)?;
     let signing_key = SigningKey::from_bytes(&seed);
@@ -506,10 +513,13 @@ fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
 }
 
 pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileCheckResult>, String> {
+    validate_manifest_schema(manifest)?;
     let mut results = Vec::with_capacity(manifest.files.len());
     for file in &manifest.files {
         if !manifest_file_applies(file) { continue; }
+        if file_ownership::skip_verification(manifest, file) { continue; }
         let local_path = safe_join(root, &file.path)?;
+        file_ownership::ensure_no_symlinks(root, &local_path)?;
         match fs::metadata(&local_path).await {
             Ok(metadata) => {
                 if metadata.len() != file.size {
@@ -523,7 +533,11 @@ pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileChe
                     results.push(FileCheckResult { path: file.path.clone(), status: "invalid".into(), message: "SHA-256 не совпадает".into() });
                 }
             }
-            Err(_) => results.push(FileCheckResult { path: file.path.clone(), status: "missing".into(), message: "файл отсутствует".into() }),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                let optional = file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path);
+                results.push(FileCheckResult { path: file.path.clone(), status: if optional { "optional-missing" } else { "missing" }.into(), message: "файл отсутствует".into() });
+            },
+            Err(err) => return Err(format!("{}: {err}", local_path.display())),
         }
     }
     Ok(results)
@@ -564,12 +578,15 @@ async fn get_release_file_with_rate_limit_retry(
 
 pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
+    file_ownership::validate_download_targets(manifest)?;
     let client = reqwest::Client::new();
     let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0, bytes_downloaded: 0, failed_files: Vec::new(), messages: Vec::new() };
 
     for file in &manifest.files {
-        if !manifest_file_applies(file) { result.skipped += 1; continue; }
+        if !manifest_file_applies(file) || file_ownership::skip_download(manifest, file) { result.skipped += 1; continue; }
         let local_path = safe_join(root, &file.path)?;
+        file_ownership::ensure_no_symlinks(root, &local_path)?;
+        if manifest.schema_version == "2.0" && file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path) && !local_path.exists() { result.skipped += 1; continue; }
         let is_actual = match fs::metadata(&local_path).await {
             Ok(metadata) if metadata.len() == file.size => sha256_file(&local_path).await.map(|hash| hash.eq_ignore_ascii_case(&file.sha256)).unwrap_or(false),
             _ => false,
@@ -581,6 +598,7 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
         if let Some(parent) = local_path.parent() {
             fs::create_dir_all(parent).await.map_err(|err| format!("не удалось создать каталог {}: {err}", parent.display()))?;
         }
+        file_ownership::ensure_no_symlinks(root, &local_path)?;
 
         let mut response = match get_release_file_with_rate_limit_retry(&client, &file.url).await {
             Ok(response) => response,
@@ -598,8 +616,9 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
             continue;
         }
 
-        let part_path = local_path.with_extension("nlpart");
-        let mut output = fs::File::create(&part_path).await.map_err(|err| format!("не удалось создать временный файл {}: {err}", part_path.display()))?;
+        let part_name = format!("{}.nlpart-{}-{}", file.path.rsplit('/').next().unwrap_or("blob"), std::process::id(), now_unix()?);
+        let part_path = local_path.with_file_name(part_name);
+        let mut output = fs::OpenOptions::new().write(true).create_new(true).open(&part_path).await.map_err(|err| format!("не удалось безопасно создать временный файл {}: {err}", part_path.display()))?;
         let mut hasher = Sha256::new();
         let mut written: u64 = 0;
         while let Some(chunk) = response.chunk().await.map_err(|err| format!("{}: ошибка чтения response stream: {err}", file.path))? {
@@ -608,6 +627,8 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
             written += chunk.len() as u64;
         }
         output.flush().await.map_err(|err| format!("не удалось flush {}: {err}", part_path.display()))?;
+        output.sync_all().await.map_err(|err| format!("не удалось sync {}: {err}", part_path.display()))?;
+        drop(output);
         let hash = hex::encode(hasher.finalize());
         if written != file.size || !hash.eq_ignore_ascii_case(&file.sha256) {
             let _ = fs::remove_file(&part_path).await;
@@ -616,7 +637,8 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
             result.messages.push(format!("{}: скачанный файл не прошёл size/SHA-256 verification", file.path));
             continue;
         }
-        fs::rename(&part_path, &local_path).await.map_err(|err| format!("не удалось атомарно заменить {}: {err}", local_path.display()))?;
+        file_ownership::ensure_no_symlinks(root, &local_path)?;
+        replace_verified_managed_file_0224(&part_path, &local_path).await?;
         set_executable_if_needed(&local_path, file.executable).await?;
         result.downloaded += 1;
         result.repaired += 1;
@@ -625,12 +647,33 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
     Ok(result)
 }
 
+// On Unix rename replaces the destination atomically. Windows rename does not
+// replace an existing file; retain the original until the verified staged bytes
+// are installed, and restore it if the replacement fails.
+async fn replace_verified_managed_file_0224(part: &Path, target: &Path) -> Result<(), String> {
+    #[cfg(not(windows))]
+    { fs::rename(part,target).await.map_err(|e| format!("managed file switch {}: {e}",target.display())) }
+    #[cfg(windows)]
+    {
+        if !target.exists() { return fs::rename(part,target).await.map_err(|e| format!("managed file switch {}: {e}",target.display())); }
+        let name = target.file_name().ok_or("invalid managed filename")?.to_string_lossy();
+        let backup = target.with_file_name(format!("{name}.nlbackup-{}-{}",std::process::id(),now_unix()?));
+        if std::fs::symlink_metadata(&backup).is_ok() {return Err("managed backup collision".into());}
+        fs::rename(target,&backup).await.map_err(|e| format!("managed backup {}: {e}",target.display()))?;
+        if let Err(err)=fs::rename(part,target).await {
+            fs::rename(&backup,target).await.map_err(|restore|format!("managed replacement failed: {err}; restore failed: {restore}; backup {}",backup.display()))?;
+            return Err(format!("managed replacement failed: {err}"));
+        }
+        fs::remove_file(&backup).await.map_err(|e| format!("managed replacement installed but backup cleanup failed {}: {e}",backup.display()))
+    }
+}
+
 pub async fn repair_client(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<RepairResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     let before = check_files(manifest, root).await?;
     let download = download_missing_files(manifest, root, pinned_public_key).await?;
     let after = check_files(manifest, root).await?;
-    let broken_after = after.iter().filter(|item| item.status != "ok").count();
+    let broken_after = after.iter().filter(|item| item.status != "ok" && item.status != "optional-missing").count();
     Ok(RepairResult {
         status: if broken_after == 0 { "ready" } else { "failed" }.to_string(),
         before,
@@ -641,35 +684,39 @@ pub async fn repair_client(manifest: &Manifest, root: &Path, pinned_public_key: 
     })
 }
 
-pub async fn clean_unused_files(manifest: &Manifest, root: &Path) -> Result<CleanUnusedResult, String> {
-    let mut expected: HashSet<String> = HashSet::new();
-    for file in &manifest.files { expected.insert(file.path.replace('\\', "/")); }
-    let preserve_prefixes = ["saves", "screenshots", "resourcepacks", "shaderpacks", "logs", "diagnostics"];
-    let preserve_files = ["options.txt", "servers.dat"];
-    let started_at = now_unix()?;
-    let quarantine = root.join(".neverlauncher-quarantine").join(started_at.to_string());
-    let mut moved = 0usize;
-    let mut preserved = 0usize;
-    let mut messages = Vec::new();
-    if !root.exists() {
-        return Ok(CleanUnusedResult { moved, preserved, quarantine_dir: quarantine.to_string_lossy().to_string(), messages: vec!["каталог клиента не существует".to_string()] });
-    }
+pub async fn clean_unused_files(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<CleanUnusedResult, String> {
+    verify_manifest_signature(manifest, pinned_public_key)?;
+    file_ownership::ensure_no_symlinks(root, root)?;
+    let expected: HashSet<String> = manifest.files.iter().map(|f| f.path.clone()).collect();
+    let quarantine = root.join(".neverlauncher-quarantine").join(now_unix()?.to_string());
+    let mut result = CleanUnusedResult { moved: 0, preserved: 0, quarantine_dir: quarantine.to_string_lossy().into_owned(), messages: Vec::new() };
+    if !root.exists() { return Ok(result); }
+    // Unknown files are user-owned by default. Only explicitly signed include
+    // rules for managed directories authorize quarantine. Never follow links.
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let entries = match std::fs::read_dir(&dir) { Ok(entries) => entries, Err(err) => { messages.push(format!("{}: {err}", dir.display())); continue; } };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path == quarantine || path.starts_with(root.join(".neverlauncher-quarantine")) { continue; }
-            if path.is_dir() { stack.push(path); continue; }
-            let rel = match path.strip_prefix(root) { Ok(rel) => rel.to_string_lossy().replace('\\', "/"), Err(_) => continue };
-            let top = rel.split('/').next().unwrap_or("");
-            if expected.contains(&rel) || preserve_prefixes.contains(&top) || preserve_files.contains(&rel.as_str()) { preserved += 1; continue; }
+        let entries = std::fs::read_dir(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let p = entry.path();
+            let rel = p.strip_prefix(root).map_err(|e| e.to_string())?.to_string_lossy().replace('\\', "/");
+            if rel == ".neverlauncher-quarantine" || rel.starts_with(".neverlauncher-quarantine/") { continue; }
+            let meta = std::fs::symlink_metadata(&p).map_err(|e| e.to_string())?;
+            if meta.file_type().is_symlink() { result.preserved += 1; continue; }
+            if meta.is_dir() { stack.push(p); continue; }
+            if expected.contains(&rel) || !file_ownership::can_quarantine(manifest, &rel) {
+                result.preserved += 1;
+                continue;
+            }
+            file_ownership::ensure_no_symlinks(root, &p)?;
             let target = quarantine.join(&rel);
-            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|err| format!("не удалось создать quarantine: {err}"))?; }
-            match std::fs::rename(&path, &target) { Ok(_) => { moved += 1; messages.push(format!("{} → {}", rel, target.display())); }, Err(err) => messages.push(format!("{}: {err}", rel)) }
+            if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
+            std::fs::rename(&p, &target).map_err(|e| format!("failed to quarantine {rel}: {e}"))?;
+            result.moved += 1;
+            result.messages.push(format!("{rel} → {}", target.display()));
         }
     }
-    Ok(CleanUnusedResult { moved, preserved, quarantine_dir: quarantine.to_string_lossy().to_string(), messages })
+    Ok(result)
 }
 
 pub async fn prepare_profile_directory(base_dir: &Path, project_id: &str, profile_id: &str) -> Result<PathBuf, String> {
@@ -1721,7 +1768,9 @@ mod tests {
                 required: true,
                 executable: false,
                 target_os: Vec::new(),
+                ownership: String::new(),
             }],
+            file_rules: Vec::new(),
             profile_snapshot: None,
             signature: None,
         }
@@ -1840,4 +1889,55 @@ mod tests {
         assert_eq!(parse_java_major_version("java version \"1.8.0_402\""), Some(8));
         assert_eq!(parse_java_major_version("unexpected output"), None);
     }
+    #[tokio::test]
+    async fn signed_file_policy_quarantines_only_explicitly_managed_orphans() {
+        use sha2::{Digest, Sha256};
+        let root = std::env::temp_dir().join(format!("nl-repair-ownership-{}-{}", std::process::id(), now_unix().unwrap()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("mods")).unwrap();
+        std::fs::create_dir_all(root.join("saves/world")).unwrap();
+        std::fs::create_dir_all(root.join("resourcepacks")).unwrap();
+        std::fs::write(root.join("saves/world/level.dat"), b"world").unwrap();
+        std::fs::write(root.join("resourcepacks/custom.zip"), b"custom").unwrap();
+        std::fs::write(root.join("options.txt"), b"user settings").unwrap();
+        std::fs::write(root.join("mods/stale.jar"), b"stale").unwrap();
+        let mut manifest = sample_manifest();
+        manifest.schema_version = "2.0".into();
+        let spec = ProfileSpec {
+            project_id: "demo".into(), id: "vanilla".into(), name: "Vanilla".into(),
+            description: "".into(), loader: "vanilla".into(), preset: "".into(), is_default: false,
+        };
+        let digest = hex::encode(Sha256::digest(["demo","vanilla","Vanilla","","vanilla","","false"].join("\0").as_bytes()));
+        manifest.profile_snapshot = Some(ProfileSnapshot{schema_version:"2.0".into(),revision:1,digest,spec});
+        manifest.file_rules.push(file_ownership::FileRule {
+            pattern:"mods/**".into(),action:"include".into(),ownership:"managed".into(),
+        });
+        let key=sign_manifest(&mut manifest,"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f","2026-10-18T00:00:00Z").unwrap();
+        let result=clean_unused_files(&manifest,&root,&key).await.unwrap();
+        assert_eq!(result.moved,1);
+        assert!(!root.join("mods/stale.jar").exists());
+        assert_eq!(std::fs::read(root.join("saves/world/level.dat")).unwrap(),b"world");
+        assert_eq!(std::fs::read(root.join("resourcepacks/custom.zip")).unwrap(),b"custom");
+        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"user settings");
+        let mut modified=manifest.clone();
+        modified.file_rules[0].pattern="saves/**".into();
+        assert!(clean_unused_files(&modified,&root,&key).await.is_err());
+        let _=std::fs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn legacy_repair_does_not_replace_saves_or_settings() {
+        let root=std::env::temp_dir().join(format!("nl-v1-ownership-{}-{}",std::process::id(),now_unix().unwrap()));
+        let _=std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("options.txt"),b"modified user options").unwrap();
+        let mut manifest=sample_manifest();
+        manifest.files[0].path="options.txt".into();
+        let key=sign_manifest(&mut manifest,"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f","2026-10-18T00:00:00Z").unwrap();
+        let result=repair_client(&manifest,&root,&key).await.unwrap();
+        assert_eq!(result.repaired,0);
+        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"modified user options");
+        let _=std::fs::remove_dir_all(root);
+    }
+
 }

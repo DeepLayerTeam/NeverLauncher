@@ -246,6 +246,18 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "sha256 не совпадает", "expected": expected, "actual": actualSHA}})
 		return
 	}
+	ownership := strings.TrimSpace(r.FormValue("ownership"))
+	if ownership == "" {
+		ownership = "required"
+	}
+	if ownership != "required" && ownership != "managed" && ownership != "optional" {
+		writeError(w, http.StatusBadRequest, "file upload permits only required/managed/optional ownership")
+		return
+	}
+	if err := model.ValidateFileOwnership0224(model.Manifest{SchemaVersion: model.ManifestSchemaV2, Files: []model.ManifestFile{{Path: relativePath, Required: ownership != "optional", Ownership: ownership}}}); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := s.beforeStorageWrite0206(r, lookup.Release.ProjectID, lookup.Release.ID, relativePath); err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
@@ -255,7 +267,8 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	object := model.FileObject{ID: fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()), ProjectID: lookup.Release.ProjectID, VersionID: lookup.Release.ID, Path: relativePath, Size: size, SHA256: actualSHA, URL: s.deliveryURL(lookup.Release.ProjectID, lookup.Release.ID, relativePath), Required: true, Executable: executable, TargetOS: targetOS}
+
+	object := model.FileObject{ID: fmt.Sprintf("file-%d", time.Now().UTC().UnixNano()), ProjectID: lookup.Release.ProjectID, VersionID: lookup.Release.ID, Path: relativePath, Size: size, SHA256: actualSHA, URL: s.deliveryURL(lookup.Release.ProjectID, lookup.Release.ID, relativePath), Required: ownership != "optional", Executable: executable, TargetOS: targetOS, Ownership: ownership}
 	saved, err := s.Repo.AddFile(object)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -338,7 +351,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	manifest := lookup.Release.Manifest
 	manifest.Files = manifest.Files[:0]
 	for _, file := range lookup.Files {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Ownership: file.Ownership})
 	}
 	if err := validateCompatibilityManifest(manifest); err != nil {
 		writeError(w, http.StatusConflict, err.Error())

@@ -16,6 +16,7 @@ type versionManifestRequest struct {
 	Minecraft   model.MinecraftInfo `json:"minecraft"`
 	Runtime     model.RuntimeInfo   `json:"runtime"`
 	Directories model.Directories   `json:"directories"`
+	FileRules   *[]model.FileRule   `json:"fileRules,omitempty"`
 }
 
 func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +63,13 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 	manifest.Minecraft = req.Minecraft
 	manifest.Runtime = req.Runtime
 	manifest.Directories = req.Directories
+	if req.FileRules != nil {
+		manifest.FileRules = *req.FileRules
+	}
+	if err := model.ValidateManifestSchema(manifest); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	manifest.Signature = nil
 	updated, err := s.Repo.UpdateVersionManifest(projectID, versionID, manifest)
@@ -99,6 +107,9 @@ func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.Runt
 
 func validateCompatibilityManifest(manifest model.Manifest) error {
 	if manifest.SchemaVersion == model.ManifestSchemaV2 {
+		if err := model.ValidatePublishFileOwnership0224(manifest); err != nil {
+			return err
+		}
 		// Drafts may be incomplete, but no package reaches publish with a
 		// missing runtime or an invalid effective command line.
 		if manifest.Runtime.Java.MajorVersion <= 0 {

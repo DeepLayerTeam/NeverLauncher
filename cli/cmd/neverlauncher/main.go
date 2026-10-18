@@ -69,6 +69,7 @@ type Manifest struct {
 	Version       string         `json:"version"`
 	CreatedAt     string         `json:"createdAt"`
 	Files         []ManifestFile `json:"files"`
+	FileRules     []FileRule0224 `json:"fileRules,omitempty"`
 }
 
 type ManifestFile struct {
@@ -79,6 +80,7 @@ type ManifestFile struct {
 	Required   bool     `json:"required"`
 	Executable bool     `json:"executable,omitempty"`
 	TargetOS   []string `json:"targetOs,omitempty"`
+	Ownership  string   `json:"ownership,omitempty"`
 }
 
 type ManifestDiff struct {

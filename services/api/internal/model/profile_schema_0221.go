@@ -79,6 +79,9 @@ func ValidateManifestSchema(m Manifest) error {
 		if err := ValidateRuntimeConstraints0223(m); err != nil {
 			return err
 		}
+		if err := ValidateFileOwnership0224(m); err != nil {
+			return err
+		}
 	}
 	return nil
 }

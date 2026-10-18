@@ -401,7 +401,7 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	query := `SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text FROM files WHERE project_id = $1`
+	query := `SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text, ownership FROM files WHERE project_id = $1`
 	args := []any{projectID}
 	if versionID != "" {
 		query += ` AND version_id = $2`
@@ -417,7 +417,7 @@ func (r *SQLRepository) ListFiles(projectID, versionID string) ([]model.FileObje
 	for rows.Next() {
 		var item model.FileObject
 		var targetOSRaw string
-		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required, &item.Executable, &targetOSRaw); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProjectID, &item.VersionID, &item.Path, &item.Size, &item.SHA256, &item.URL, &item.Required, &item.Executable, &targetOSRaw, &item.Ownership); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(targetOSRaw), &item.TargetOS); err != nil {
@@ -1177,16 +1177,17 @@ func (r *SQLRepository) AddFile(file model.FileObject) (model.FileObject, error)
 	if file.ID == "" {
 		file.ID = fmt.Sprintf("file-%d", time.Now().UTC().UnixNano())
 	}
-	if !file.Required {
-		file.Required = true
+	if file.Ownership == "" {
+		file.Ownership = "required"
 	}
+	file.Required = file.Ownership == "required" || file.Ownership == "managed"
 	targetOSRaw, err := json.Marshal(file.TargetOS)
 	if err != nil {
 		return model.FileObject{}, err
 	}
-	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)
-ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required, executable=EXCLUDED.executable, target_os=EXCLUDED.target_os`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required, file.Executable, string(targetOSRaw)); err != nil {
+	if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os, ownership)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)
+ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED.sha256, url=EXCLUDED.url, required=EXCLUDED.required, executable=EXCLUDED.executable, target_os=EXCLUDED.target_os, ownership=EXCLUDED.ownership`, file.ID, file.ProjectID, file.VersionID, file.Path, file.Size, file.SHA256, file.URL, file.Required, file.Executable, string(targetOSRaw), file.Ownership); err != nil {
 		return model.FileObject{}, err
 	}
 	var manifest model.Manifest
@@ -1194,13 +1195,13 @@ ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED
 	updated := false
 	for i := range manifest.Files {
 		if manifest.Files[i].Path == file.Path {
-			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)}
+			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Ownership: file.Ownership}
 			updated = true
 			break
 		}
 	}
 	if !updated {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Ownership: file.Ownership})
 	}
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 	next, err := json.Marshal(manifest)

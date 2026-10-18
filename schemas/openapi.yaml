@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.22.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.22.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -13335,6 +13335,15 @@
           }
         }
       },
+      "FileRule": {
+        "type": "object",
+        "required": ["pattern", "action", "ownership"],
+        "properties": {
+          "pattern": { "type": "string", "description": "Exact path or anchored directory/**" },
+          "action": { "type": "string", "enum": ["include", "exclude", "verify"] },
+          "ownership": { "type": "string", "enum": ["managed", "required", "optional", "user-owned", "generated"] }
+        }
+      },
       "ManifestFile": {
         "type": "object",
         "required": [
@@ -13372,6 +13381,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "ownership": {
+            "type": "string",
+            "enum": ["managed", "required", "optional", "user-owned", "generated"],
+            "description": "Manifest v2 only. Defaults to required or optional according to required."
           }
         }
       },
@@ -13424,6 +13438,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ManifestFile"
+            }
+          },
+          "fileRules": {
+            "type": "array",
+            "description": "Signed policy in Manifest v2; overlapping or unsafe rules fail validation.",
+            "items": {
+              "$ref": "#/components/schemas/FileRule"
             }
           },
           "signature": {

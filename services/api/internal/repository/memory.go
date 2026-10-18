@@ -1003,9 +1003,10 @@ func (r *MemoryRepository) AddFile(file model.FileObject) (model.FileObject, err
 	if file.ID == "" {
 		file.ID = fmt.Sprintf("file-%d", time.Now().UTC().UnixNano())
 	}
-	if file.Required == false {
-		file.Required = true
+	if file.Ownership == "" {
+		file.Ownership = "required"
 	}
+	file.Required = file.Ownership == "required" || file.Ownership == "managed"
 	r.files = append(r.files, file)
 	for i := range r.releases {
 		if r.releases[i].ProjectID == file.ProjectID && r.releases[i].ID == file.VersionID {
@@ -1017,6 +1018,7 @@ func (r *MemoryRepository) AddFile(file model.FileObject) (model.FileObject, err
 				Required:   file.Required,
 				Executable: file.Executable,
 				TargetOS:   append([]string(nil), file.TargetOS...),
+				Ownership:  file.Ownership,
 			})
 			r.releases[i].Manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 			break

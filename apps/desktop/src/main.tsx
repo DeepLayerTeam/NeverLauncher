@@ -23,7 +23,7 @@ type DesktopSettings = {
   configPath?: string;
 };
 
-type ManifestFile = { path: string; size: number; sha256: string; url: string; required: boolean; executable?: boolean };
+type ManifestFile = { path: string; size: number; sha256: string; url: string; required: boolean; executable?: boolean; ownership?: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' };
 type Manifest = {
   schemaVersion: string;
   projectId: string;
@@ -38,6 +38,7 @@ type Manifest = {
     launch?: { mainClass?: string; mainModule?: string; classpathStrategy?: string; classpathEntries?: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; nativesDirectory?: string; offlineMode?: boolean };
   };
   files: ManifestFile[];
+  fileRules?: { pattern: string; action: 'include' | 'exclude' | 'verify'; ownership: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' }[];
 };
 
 type ManagedJavaResult = {
@@ -949,7 +950,7 @@ function App() {
     }
     setStage('cleanup');
     try {
-      const result = await callTauri<CleanUnusedResult>('clean_unused_files', { manifest, root: settings.gameDirectory });
+      const result = await callTauri<CleanUnusedResult>('clean_unused_files', { manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
       setCleanResult(result);
       log(`Очистка завершена: перемещено ${result.moved}, сохранено ${result.preserved}. Карантин: ${result.quarantineDir}.`);
     } catch (error) {

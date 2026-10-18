@@ -426,22 +426,23 @@ func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) b
 		return false
 	}
 	type item struct {
-		Size int64
-		SHA  string
-		Exec bool
-		OS   string
+		Size      int64
+		SHA       string
+		Exec      bool
+		OS        string
+		Ownership string
 	}
 	actual := map[string]item{}
 	for _, f := range files {
 		osv := append([]string(nil), f.TargetOS...)
 		sort.Strings(osv)
-		actual[f.Path] = item{f.Size, strings.ToLower(f.SHA256), f.Executable, strings.Join(osv, ",")}
+		actual[f.Path] = item{f.Size, strings.ToLower(f.SHA256), f.Executable, strings.Join(osv, ","), f.Ownership}
 	}
 	for _, f := range manifest.Files {
 		osv := append([]string(nil), f.TargetOS...)
 		sort.Strings(osv)
 		want, ok := actual[f.Path]
-		if !ok || want.Size != f.Size || want.SHA != strings.ToLower(f.SHA256) || want.Exec != f.Executable || want.OS != strings.Join(osv, ",") {
+		if !ok || want.Size != f.Size || want.SHA != strings.ToLower(f.SHA256) || want.Exec != f.Executable || want.OS != strings.Join(osv, ",") || want.Ownership != f.Ownership {
 			return false
 		}
 	}

@@ -26,6 +26,9 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 		}
 		m.Runtime.Launch.Features = copy
 	}
+	if m.FileRules != nil {
+		m.FileRules = append([]model.FileRule(nil), m.FileRules...)
+	}
 	if m.Files != nil {
 		files := make([]model.ManifestFile, len(m.Files))
 		copy(files, m.Files)

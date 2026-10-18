@@ -351,7 +351,7 @@ async fn download_missing_files(manifest: Manifest, root: String, pinned_public_
 #[tauri::command]
 async fn repair_client(manifest: Manifest, root: String, pinned_public_key: String) -> Result<RepairResult, String> { neverruntime::repair_client(&manifest, &PathBuf::from(root), &pinned_public_key).await }
 #[tauri::command]
-async fn clean_unused_files(manifest: Manifest, root: String) -> Result<CleanUnusedResult, String> { neverruntime::clean_unused_files(&manifest, &PathBuf::from(root)).await }
+async fn clean_unused_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<CleanUnusedResult, String> { neverruntime::clean_unused_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
 #[tauri::command]
 async fn prepare_profile_directory(base_dir: String, project_id: String, profile_id: String) -> Result<String, String> { Ok(neverruntime::prepare_profile_directory(&PathBuf::from(base_dir), &project_id, &profile_id).await?.to_string_lossy().to_string()) }
 #[tauri::command]

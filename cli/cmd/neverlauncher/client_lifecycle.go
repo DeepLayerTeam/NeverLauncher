@@ -96,6 +96,9 @@ func verifyClientInstallation(packagePath, clientDir string) (clientVerifyResult
 	}
 	expected := make(map[string]ClientPackageFile, len(manifest.Files))
 	for _, file := range manifest.Files {
+		if protectedUpdatePath0224(file.Path) {
+			return result, fmt.Errorf("client package may not own user data: %s", file.Path)
+		}
 		if err := validateClientPackagePath(file.Path); err != nil {
 			return result, err
 		}
@@ -267,9 +270,23 @@ func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, e
 	stamp := time.Now().UTC().Format("20060102T150405.000000000Z")
 	quarantine := filepath.Join(clientDir, ".neverlauncher", "quarantine", stamp)
 	moved := []string{}
+	tracked := map[string]bool{}
+	for _, rel := range currentStatePaths(clientDir) {
+		tracked[rel] = true
+	}
+	preserved := 0
 	for _, rel := range verify.Orphans {
-		if !isManagedClientPath(rel) {
-			return nil, fmt.Errorf("cleanup отказался трогать unmanaged path: %s", rel)
+		if !isManagedClientPath(rel) || !tracked[rel] || protectedUpdatePath0224(rel) {
+			preserved++
+			continue
+		}
+		info, err := os.Lstat(filepath.Join(clientDir, filepath.FromSlash(rel)))
+		if err != nil {
+			return nil, err
+		}
+		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			preserved++
+			continue
 		}
 		src := filepath.Join(clientDir, filepath.FromSlash(rel))
 		dst := filepath.Join(quarantine, filepath.FromSlash(rel))
@@ -285,7 +302,7 @@ func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, e
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "quarantined", "quarantine": quarantine, "quarantined": moved, "verify": after}, nil
+	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": map[bool]string{true: "preserved", false: "quarantined"}[len(moved) == 0], "quarantine": quarantine, "quarantined": moved, "preserved": preserved, "verify": after}, nil
 }
 
 func rollbackClientInstallation(clientDir, target string) (map[string]any, error) {
@@ -303,6 +320,9 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 	files := make([]updaterFileSpec0156, 0, len(snap.Files)+1)
 	wanted := make(map[string]bool, len(snap.Files)+1)
 	for _, rel := range snap.Files {
+		if protectedUpdatePath0224(rel) {
+			return nil, fmt.Errorf("snapshot tries to restore user data: %s", rel)
+		}
 		if err := validateUpdaterPath0156(rel); err != nil {
 			return nil, fmt.Errorf("snapshot %s contains invalid path %s: %w", snap.ID, rel, err)
 		}
@@ -387,38 +407,11 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 func collectClientRollbackPaths0156(clientDir string) ([]string, error) {
 	paths := map[string]bool{}
 	for _, rel := range currentStatePaths(clientDir) {
-		if err := validateUpdaterPath0156(rel); err == nil {
-			paths[rel] = true
-		}
-	}
-	for _, root := range managedClientRoots {
-		base := filepath.Join(clientDir, root)
-		err := filepath.WalkDir(base, func(path string, d os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				if errors.Is(walkErr, os.ErrNotExist) {
-					return nil
-				}
-				return walkErr
-			}
-			if d.IsDir() {
-				return nil
-			}
-			if d.Type()&os.ModeSymlink != 0 {
-				return fmt.Errorf("rollback refuses managed symlink: %s", path)
-			}
-			rel, err := filepath.Rel(clientDir, path)
-			if err != nil {
-				return err
-			}
-			rel = filepath.ToSlash(rel)
-			if err := validateUpdaterPath0156(rel); err != nil {
-				return err
-			}
-			paths[rel] = true
-			return nil
-		})
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := validateUpdaterPath0156(rel); err != nil {
 			return nil, err
+		}
+		if !protectedUpdatePath0224(rel) {
+			paths[rel] = true
 		}
 	}
 	out := make([]string, 0, len(paths))
@@ -453,27 +446,9 @@ func createClientSnapshot(clientDir string) (string, error) {
 
 	paths := map[string]bool{}
 	for _, rel := range currentStatePaths(clientDir) {
-		paths[rel] = true
-	}
-	for _, root := range managedClientRoots {
-		base := filepath.Join(clientDir, root)
-		_ = filepath.WalkDir(base, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					return nil
-				}
-				return err
-			}
-			if d.IsDir() {
-				return nil
-			}
-			rel, err := filepath.Rel(clientDir, path)
-			if err != nil {
-				return err
-			}
-			paths[filepath.ToSlash(rel)] = true
-			return nil
-		})
+		if !protectedUpdatePath0224(rel) {
+			paths[rel] = true
+		}
 	}
 	list := make([]string, 0, len(paths))
 	for rel := range paths {
@@ -481,7 +456,7 @@ func createClientSnapshot(clientDir string) (string, error) {
 			continue
 		}
 		src := filepath.Join(clientDir, filepath.FromSlash(rel))
-		if st, err := os.Stat(src); err == nil && !st.IsDir() {
+		if st, err := os.Lstat(src); err == nil && st.Mode().IsRegular() {
 			if err := copyFileAtomic(src, filepath.Join(filesRoot, filepath.FromSlash(rel))); err != nil {
 				return "", err
 			}

@@ -63,6 +63,7 @@ type FileObject struct {
 	Required   bool     `json:"required"`
 	Executable bool     `json:"executable,omitempty"`
 	TargetOS   []string `json:"targetOs,omitempty"`
+	Ownership  string   `json:"ownership,omitempty"`
 }
 
 // User описывает пользователя backend/admin panel.
@@ -128,6 +129,7 @@ type Manifest struct {
 	Runtime         RuntimeInfo      `json:"runtime"`
 	Directories     Directories      `json:"directories,omitempty"`
 	Files           []ManifestFile   `json:"files"`
+	FileRules       []FileRule       `json:"fileRules,omitempty"`
 	ProfileSnapshot *ProfileSnapshot `json:"profileSnapshot,omitempty"`
 	Signature       *SignatureInfo   `json:"signature,omitempty"`
 }
@@ -212,6 +214,7 @@ type ManifestFile struct {
 	Required   bool     `json:"required"`
 	Executable bool     `json:"executable"`
 	TargetOS   []string `json:"targetOs,omitempty"`
+	Ownership  string   `json:"ownership,omitempty"`
 }
 
 // TelemetryEvent описывает минимальное событие телеметрии без персональных данных.
