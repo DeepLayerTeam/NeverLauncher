@@ -290,7 +290,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy Backend API linux/amd64 (production pgx, fail-closed)"
   (
     cd "${ROOT_DIR}/services/api"
-    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-api-linux-amd64" ./cmd/neverlauncher-api
+    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/neverlauncher-api-linux-amd64" ./cmd/neverlauncher-api
   )
   chmod +x "${OUT_DIR}/neverlauncher-api-linux-amd64"
 fi

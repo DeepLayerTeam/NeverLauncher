@@ -11,6 +11,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __NEVERLAUNCHER_VERSION__: JSON.stringify(version),
+    __NEVERLAUNCHER_SOURCE_COMMIT__: JSON.stringify(/^[a-f0-9]{40}$/.test(process.env.NEVERLAUNCHER_SOURCE_COMMIT ?? '') ? process.env.NEVERLAUNCHER_SOURCE_COMMIT : 'unknown'),
   },
   server: {
     port: 5174,

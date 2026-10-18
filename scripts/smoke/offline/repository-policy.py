@@ -40,7 +40,7 @@ if version_check.returncode != 0:
 dynamic_version_expectations = {
     "cli/cmd/neverlauncher/main.go": 'var version = "dev"',
     "services/api/cmd/neverlauncher-api/main.go": 'var version = "dev"',
-    "apps/admin/src/main.tsx": "const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;",
+    "apps/admin/src/admin/AdminApp.tsx": "const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;",
     "apps/desktop/src/main.tsx": "const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;",
     "apps/admin/vite.config.ts": "../../VERSION",
     "apps/desktop/vite.config.ts": "../../VERSION",
@@ -141,7 +141,11 @@ if 'const cliSchemaVersion = "1.0"' not in main_go:
     fail('cli/cmd/neverlauncher/main.go: отсутствует canonical cliSchemaVersion = "1.0"')
 
 # Документация Markdown необязательна; проверяйте согласование версий только в работающем интерфейсе.
-ui_files = ["apps/admin/src/main.tsx", "apps/desktop/src/main.tsx"]
+# The Admin entrypoint only mounts the modular AdminApp. Validate its executable
+# component rather than requiring version code in the entrypoint's source.
+if "<AdminApp" not in read("apps/admin/src/main.tsx"):
+    fail("apps/admin/src/main.tsx must render the canonical versioned AdminApp")
+ui_files = ["apps/admin/src/admin/AdminApp.tsx", "apps/desktop/src/main.tsx"]
 for rel in ui_files:
     text = read(rel)
     if "__NEVERLAUNCHER_VERSION__" not in text:
@@ -542,9 +546,18 @@ package_product_tests = read("services/api/internal/httpapi/package_product_test
 for required in ["ErrImmutable", 'Status == "published"']:
     if required not in memory_repo or required not in postgres_repo:
         fail(f"repository immutable guard отсутствует на memory/postgres слое: {required}")
-for required in ["published release immutable", "http.StatusConflict", "lockPackageMutation", "rolled-back-as-new-validated-immutable-release"]:
+# The release pipeline was split between package_product, mutation locking,
+# admin handlers and the durable rollback worker. Check the actual execution
+# locations, not that all tokens happen to appear in one legacy monolith.
+for required in ["published release immutable", "http.StatusConflict"]:
     if required not in package_product:
-        fail(f"HTTP package lifecycle не блокирует/не сериализует immutable release: {required}")
+        fail(f"HTTP package lifecycle immutable guard missing: {required}")
+if "lockPackageMutation" not in read("services/api/internal/httpapi/admin_handlers.go"):
+    fail("admin file and package handlers must take package mutation locks")
+rollback_worker = read("services/api/internal/httpapi/rollback_durable_0217.go")
+for required in ["lockPackageMutation", "rolled-back-as-new-validated-immutable-release", "workerAuthorized0217", "verifyManifestSignature"]:
+    if required not in rollback_worker:
+        fail(f"durable rollback lifecycle invariant missing: {required}")
 if "FOR UPDATE" not in postgres_repo or "status <> 'published'" not in postgres_repo:
     fail("PostgreSQL immutable guard должен использовать row locking и conditional mutation")
 for required in ["UpdateVersionStatus", "UpdateVersionManifest", "AddFile", "PublishVersionWithManifest"]:

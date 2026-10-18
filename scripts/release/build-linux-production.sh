@@ -50,7 +50,7 @@ echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build CLI/API"
 )
 (
   cd "${ROOT_DIR}/services/api"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-api-linux-${ARCH}" ./cmd/neverlauncher-api
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/neverlauncher-api-linux-${ARCH}" ./cmd/neverlauncher-api
 )
 
 echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build Desktop/NeverGuard/NeverRuntime natively"

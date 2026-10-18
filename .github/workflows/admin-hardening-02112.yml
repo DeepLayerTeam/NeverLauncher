@@ -50,6 +50,7 @@ jobs:
     env:
       E2E_ADMIN_URL: ${{ vars.NL_E2E_ADMIN_URL }}
       E2E_API_URL: ${{ vars.NL_E2E_API_URL }}
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
       E2E_PROJECT_ID: ${{ vars.NL_E2E_PROJECT_ID }}
       E2E_FOREIGN_PROJECT_ID: ${{ vars.NL_E2E_FOREIGN_PROJECT_ID }}
       E2E_ADMIN_TOKEN: ${{ secrets.NL_E2E_ADMIN_TOKEN }}

@@ -646,8 +646,8 @@ jobs:
       - name: Build API and Admin production images
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f services/api/Dockerfile -t neverlauncher-api:ci .
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
+          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f services/api/Dockerfile -t neverlauncher-api:ci .
+          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
 
   managed-jre-production:
     name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery

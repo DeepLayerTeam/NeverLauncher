@@ -12,6 +12,18 @@
 
 ## [Unreleased]
 
+## [0.22.0] — Admin General Availability candidate (certification required)
+
+- Restored parity of Backend and CLI immutable PostgreSQL migration catalogs (0053–0055) and fixed current-schema regression tests.
+- Updated repository policy for modular Admin UI and the durable rollback implementation without relaxing immutability, lock or signature checks.
+- Added executable fail-closed production certification: version/OpenAPI/SDK reproducibility, Go race/vet/build, Admin production Vite build, live PostgreSQL/ServerBridge and browser E2E.
+- Corrected live Playwright suite to use the canonical product version and check staging API readiness, version and build SHA; stale staging is rejected.
+- Added real ServerBridge v3 GA operator probe: disposable Minecraft server save/drain/undrain, confirmed execution ACK and duplicate-request protection; failures block release.
+- Embedded the build source commit in Backend status and Admin frontend metadata, and required the live staging E2E to match it. Production image and Linux build paths propagate the commit.
+- Gated production release-candidate bundling on an Admin certificate from the same source SHA. The source version alone is **not** a GA approval.
+- Documented actual deployment, SQL migration and safe rollback requirements in `docs/administration/ga-0220.md`.
+
+
 ### Документация
 
 - Заполнены корневые руководства, каталог `docs/`, шаблоны GitHub, `.editorconfig` и `.gitattributes`.

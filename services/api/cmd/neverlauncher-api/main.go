@@ -24,6 +24,9 @@ import (
 
 var version = "dev"
 
+// commit is injected by production builds using -ldflags; local builds report unknown.
+var commit = "unknown"
+
 func main() {
 	cfg := config.Load()
 	noExtensions := hasCommandArg02012(os.Args[1:], "--no-extensions")
@@ -198,6 +201,7 @@ func main() {
 
 	server := httpapi.Server{
 		Version:           version,
+		SourceCommit:      commit,
 		ExtensionSafeMode: noExtensions,
 		Config:            cfg,
 		Repo:              repo,

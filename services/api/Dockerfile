@@ -1,13 +1,14 @@
 FROM golang:1.22-alpine AS build
 WORKDIR /src
 ARG NEVERLAUNCHER_VERSION=dev
+ARG NEVERLAUNCHER_SOURCE_COMMIT=unknown
 RUN apk add --no-cache build-base argon2-dev
 COPY services/api/go.mod services/api/go.sum ./
 RUN go mod download
 COPY services/api/cmd ./cmd
 COPY services/api/internal ./internal
 COPY services/api/pkg ./pkg
-RUN go build -trimpath -ldflags="-s -w -X main.version=${NEVERLAUNCHER_VERSION}" -o /out/neverlauncher-api ./cmd/neverlauncher-api
+RUN go build -trimpath -ldflags="-s -w -X main.version=${NEVERLAUNCHER_VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT}" -o /out/neverlauncher-api ./cmd/neverlauncher-api
 
 FROM alpine:3.20
 RUN apk add --no-cache postgresql-client argon2-libs wget ca-certificates \

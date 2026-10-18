@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+import json
+from pathlib import Path
 from playwright.async_api import async_playwright
 
 
@@ -26,17 +28,38 @@ async def main():
     operator = required('E2E_OPERATOR_TOKEN')
     project = required('E2E_PROJECT_ID')
     other = required('E2E_FOREIGN_PROJECT_ID')
+    version = (Path(__file__).resolve().parents[2] / 'VERSION').read_text(encoding='utf-8').strip()
+    expected_commit = os.environ.get('E2E_EXPECTED_COMMIT', '').strip()
+    if expected_commit and (len(expected_commit) != 40 or any(c not in '0123456789abcdef' for c in expected_commit)):
+        raise AssertionError('E2E_EXPECTED_COMMIT must be a lowercase 40-digit SHA-1 commit ID')
+    # A stale staging deployment is not a release candidate of this checkout.
+    async with async_playwright() as probe:
+        request = await probe.request.new_context()
+        try:
+            status = await request.get(api + '/api/v1/status', timeout=15000)
+            if status.status != 200 or (await status.json()).get('version') != version:
+                raise AssertionError(f'Backend staging version mismatch: expected {version}, status {status.status}')
+            if expected_commit and (await status.json()).get('sourceCommit') != expected_commit:
+                raise AssertionError('Backend staging source commit does not match candidate SHA')
+            readiness = await request.get(api + '/ready', timeout=15000)
+            if readiness.status != 200 or (await readiness.json()).get('status') != 'ready':
+                raise AssertionError(f'Backend not ready for GA E2E: {readiness.status}')
+        finally:
+            await request.dispose()
     if project == other:
         raise SystemExit('E2E_PROJECT_ID and E2E_FOREIGN_PROJECT_ID must differ')
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         try:
             ctx = await browser.new_context()
-            await ctx.add_init_script(f"sessionStorage.setItem('neverlauncher.admin.token', {admin!r}); sessionStorage.setItem('neverlauncher.admin.projectId', {project!r}); localStorage.setItem('neverlauncher.backendUrl', {api!r});")
+            await ctx.add_init_script(f"sessionStorage.setItem('neverlauncher.admin.token', {json.dumps(admin)}); sessionStorage.setItem('neverlauncher.admin.projectId', {json.dumps(project)}); localStorage.setItem('neverlauncher.backendUrl', {json.dumps(api)});")
             page1, page2 = await ctx.new_page(), await ctx.new_page()
             url = web + '/#/release-workspace'
             await asyncio.gather(page1.goto(url), page2.goto(url))
-            await asyncio.gather(page1.get_by_role('heading', name='Release Workspace · 0.21.12').wait_for(timeout=20000), page2.get_by_role('heading', name='Release Workspace · 0.21.12').wait_for(timeout=20000))
+            await asyncio.gather(page1.get_by_role('heading', name=f'Release Workspace · {version}').wait_for(timeout=20000), page2.get_by_role('heading', name=f'Release Workspace · {version}').wait_for(timeout=20000))
+            if expected_commit:
+                source = await page1.locator('meta[name=neverlauncher-source-commit]').get_attribute('content')
+                assert source == expected_commit, 'Admin staging bundle source commit does not match candidate SHA'
             await page1.get_by_text('Черновики проекта').first.wait_for(timeout=20000)
             headers = { 'Authorization': 'Bearer ' + admin, 'Content-Type': 'application/json' }
             fields = {
@@ -73,7 +96,7 @@ async def main():
                                                headers={'Authorization': 'Bearer ' + operator})
                 assert denied.status == 403, f'Cross-project jobs were visible: {denied.status}'
                 op_ctx = await browser.new_context()
-                await op_ctx.add_init_script(f"sessionStorage.setItem('neverlauncher.admin.token', {operator!r}); sessionStorage.setItem('neverlauncher.admin.projectId', {project!r}); localStorage.setItem('neverlauncher.backendUrl', {api!r});")
+                await op_ctx.add_init_script(f"sessionStorage.setItem('neverlauncher.admin.token', {json.dumps(operator)}); sessionStorage.setItem('neverlauncher.admin.projectId', {json.dumps(project)}); localStorage.setItem('neverlauncher.backendUrl', {json.dumps(api)});")
                 op_page = await op_ctx.new_page()
                 await op_page.goto(web + '/#/config')
                 await op_page.get_by_text('Нет доступа').wait_for(timeout=20000)

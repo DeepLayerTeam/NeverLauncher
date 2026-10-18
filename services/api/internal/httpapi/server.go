@@ -22,6 +22,7 @@ import (
 
 type Server struct {
 	Version           string
+	SourceCommit      string
 	ExtensionSafeMode bool
 	Config            config.Config
 	Repo              repository.Repository
@@ -36,12 +37,13 @@ type Server struct {
 }
 
 type statusResponse struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Status      string `json:"status"`
-	Environment string `json:"environment"`
-	Message     string `json:"message"`
-	Storage     string `json:"storage"`
+	Name         string `json:"name"`
+	Version      string `json:"version"`
+	SourceCommit string `json:"sourceCommit,omitempty"`
+	Status       string `json:"status"`
+	Environment  string `json:"environment"`
+	Message      string `json:"message"`
+	Storage      string `json:"storage"`
 }
 
 type contractInfo struct {
@@ -106,11 +108,11 @@ type crashRequest struct {
 }
 
 func (s Server) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher API", Version: s.Version, Status: "ok", Environment: s.Config.Environment, Message: "Backend API работает", Storage: s.Storage.Driver()})
+	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher API", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Backend API работает", Storage: s.Storage.Driver()})
 }
 
 func (s Server) status(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher", Version: s.Version, Status: "ok", Environment: s.Config.Environment, Message: "Сервис доступен", Storage: s.Storage.Driver()})
+	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Сервис доступен", Storage: s.Storage.Driver()})
 }
 
 func (s Server) contracts(w http.ResponseWriter, r *http.Request) {

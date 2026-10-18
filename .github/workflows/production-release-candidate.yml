@@ -39,9 +39,53 @@ jobs:
     uses: ./.github/workflows/macos-production-delivery.yml
     secrets: inherit
 
+  admin-ga-certification:
+    name: Admin 0.22.0 real GA certification (fail closed)
+    needs: [base-ci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      NEVERLAUNCHER_GA_SOURCE_SHA: ${{ github.sha }}
+      E2E_ADMIN_URL: ${{ vars.NL_E2E_ADMIN_URL }}
+      E2E_API_URL: ${{ vars.NL_E2E_API_URL }}
+      E2E_PROJECT_ID: ${{ vars.NL_E2E_PROJECT_ID }}
+      E2E_FOREIGN_PROJECT_ID: ${{ vars.NL_E2E_FOREIGN_PROJECT_ID }}
+      E2E_SERVERBRIDGE_NODE_ID: ${{ vars.NL_E2E_SERVERBRIDGE_NODE_ID }}
+      E2E_DESTRUCTIVE_STAGING_ACK: ${{ vars.NL_E2E_DESTRUCTIVE_STAGING_ACK }}
+      E2E_ADMIN_TOKEN: ${{ secrets.NL_E2E_ADMIN_TOKEN }}
+      E2E_OPERATOR_TOKEN: ${{ secrets.NL_E2E_OPERATOR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install real browser runtime
+        run: |
+          python3 -m pip install playwright==1.58.0
+          python3 -m playwright install --with-deps chromium
+      - name: Certify candidate with real builds, PostgreSQL and staging
+        run: bash scripts/release/certify-admin-ga-0220.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-admin-ga-${{ github.sha }}
+          path: dist/ga-certification/admin-0220.json
+          if-no-files-found: error
+          retention-days: 90
+
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, windows-production-signed, macos-production-notarized]
+    needs: [base-ci, admin-ga-certification, windows-production-signed, macos-production-notarized]
     permissions:
       contents: read
       actions: read
@@ -49,6 +93,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Verify exact-commit Admin GA result
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-admin-ga-${{ github.sha }}
+          path: admin-ga-certification
+      - name: Reject missing or mismatched Admin GA certification
+        run: |
+          jq -e --arg commit "$GITHUB_SHA" --arg version "$(cat VERSION)" \
+            '.status == "passed" and .commit == $commit and .productVersion == $version and (.adminBundle | length > 0) and (.checks | index("live-playwright-rbac-two-tabs-recovery") != null) and (.checks | index("postgresql-serverbridge-integration") != null) and (.checks | index("live-serverbridge-v3-save-drain-ack") != null)' \
+            admin-ga-certification/admin-0220.json >/dev/null
       - name: Download certified Linux Guard artifacts
         uses: actions/download-artifact@v4
         with:
