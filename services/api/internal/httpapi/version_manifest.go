@@ -98,6 +98,16 @@ func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.Runt
 }
 
 func validateCompatibilityManifest(manifest model.Manifest) error {
+	if manifest.SchemaVersion == model.ManifestSchemaV2 {
+		// Drafts may be incomplete, but no package reaches publish with a
+		// missing runtime or an invalid effective command line.
+		if manifest.Runtime.Java.MajorVersion <= 0 {
+			return errors.New("v2 publish requires runtime.java.majorVersion")
+		}
+		if err := model.ValidateRuntimeConstraints0223(manifest); err != nil {
+			return err
+		}
+	}
 	metadataPath, enabled, err := compatibilityMetadataPath(manifest.Minecraft, manifest.Runtime)
 	if err != nil || !enabled {
 		return err

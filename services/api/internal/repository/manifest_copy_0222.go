@@ -16,6 +16,9 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 	}
 	m.Minecraft.GameArgs = append([]string(nil), m.Minecraft.GameArgs...)
 	m.Runtime.JVMArgs = append([]string(nil), m.Runtime.JVMArgs...)
+	m.Runtime.Launch.ClasspathEntries = append([]string(nil), m.Runtime.Launch.ClasspathEntries...)
+	m.Runtime.Launch.ModulepathEntries = append([]string(nil), m.Runtime.Launch.ModulepathEntries...)
+	m.Runtime.Launch.EnvironmentAllowlist = append([]string(nil), m.Runtime.Launch.EnvironmentAllowlist...)
 	if m.Runtime.Launch.Features != nil {
 		copy := make(map[string]bool, len(m.Runtime.Launch.Features))
 		for k, v := range m.Runtime.Launch.Features {

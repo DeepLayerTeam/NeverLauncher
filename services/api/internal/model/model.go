@@ -170,18 +170,25 @@ type RuntimeInfo struct {
 }
 
 type JavaInfo struct {
-	MajorVersion    int    `json:"majorVersion"`
-	Distribution    string `json:"distribution"`
-	AllowCustomPath bool   `json:"allowCustomPath,omitempty"`
+	MajorVersion            int    `json:"majorVersion"`
+	MinimumMajorVersion     int    `json:"minimumMajorVersion,omitempty"`
+	RecommendedMajorVersion int    `json:"recommendedMajorVersion,omitempty"`
+	MaximumMajorVersion     int    `json:"maximumMajorVersion,omitempty"`
+	Distribution            string `json:"distribution"`
+	AllowCustomPath         bool   `json:"allowCustomPath,omitempty"`
 }
 
 type RuntimeLaunch struct {
-	MainClass           string          `json:"mainClass,omitempty"`
-	ClasspathStrategy   string          `json:"classpathStrategy,omitempty"`
-	NativesDirectory    string          `json:"nativesDirectory,omitempty"`
-	VersionMetadataPath string          `json:"versionMetadataPath,omitempty"`
-	Features            map[string]bool `json:"features,omitempty"`
-	OfflineMode         bool            `json:"offlineMode,omitempty"`
+	MainClass            string          `json:"mainClass,omitempty"`
+	ClasspathStrategy    string          `json:"classpathStrategy,omitempty"`
+	NativesDirectory     string          `json:"nativesDirectory,omitempty"`
+	VersionMetadataPath  string          `json:"versionMetadataPath,omitempty"`
+	ClasspathEntries     []string        `json:"classpathEntries,omitempty"`
+	ModulepathEntries    []string        `json:"modulepathEntries,omitempty"`
+	MainModule           string          `json:"mainModule,omitempty"`
+	EnvironmentAllowlist []string        `json:"environmentAllowlist,omitempty"`
+	Features             map[string]bool `json:"features,omitempty"`
+	OfflineMode          bool            `json:"offlineMode,omitempty"`
 }
 
 type MemoryInfo struct {

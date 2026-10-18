@@ -159,6 +159,7 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
                 if snapshot.spec.is_default {"true"} else {"false"}].join(sep);
             let actual = hex::encode(Sha256::digest(digest_payload.as_bytes()));
             if snapshot.digest != actual {return Err("v2 profile snapshot digest mismatch".into());}
+            validate_runtime_constraints_0223(manifest)?;
             Ok(())
         }
         _ => Err(format!("unsupported manifest schema or missing profileSnapshot: {}", manifest.schema_version)),
@@ -203,6 +204,12 @@ pub struct RuntimeInfo {
 #[serde(rename_all = "camelCase")]
 pub struct JavaInfo {
     pub major_version: u32,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub minimum_major_version: u32,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub recommended_major_version: u32,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub maximum_major_version: u32,
     pub distribution: String,
     #[serde(default, skip_serializing_if = "is_false")]
     pub allow_custom_path: bool,
@@ -230,6 +237,14 @@ pub struct RuntimeLaunch {
     pub natives_directory: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub version_metadata_path: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub classpath_entries: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modulepath_entries: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub main_module: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub environment_allowlist: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub features: HashMap<String, bool>,
     #[serde(default, skip_serializing_if = "is_false")]
@@ -359,6 +374,14 @@ pub struct LaunchPlan {
     pub working_directory: String,
     pub main_class: String,
     pub classpath_entries: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modulepath_entries: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub main_module: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub environment_allowlist: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub restrict_java_environment: bool,
     pub jvm_args: Vec<String>,
     pub game_args: Vec<String>,
     pub command_preview: String,
@@ -776,6 +799,10 @@ pub async fn certify_vanilla_compatibility(
         working_directory: root.to_string_lossy().to_string(),
         main_class: resolution.main_class.clone(),
         classpath_entries,
+        modulepath_entries: Vec::new(),
+        main_module: String::new(),
+        environment_allowlist: Vec::new(),
+        restrict_java_environment: false,
         jvm_args,
         game_args,
         command_preview: format!("{} ... {}", java_path, resolution.main_class),
@@ -806,11 +833,8 @@ pub async fn certify_vanilla_compatibility(
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
+    apply_launch_command_0223(&mut command, &plan);
     command
-        .arg("-cp")
-        .arg(join_classpath(&plan.classpath_entries))
-        .arg(&plan.main_class)
-        .args(&plan.game_args)
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
@@ -938,11 +962,8 @@ pub async fn launch_with_timeout(
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
+    apply_launch_command_0223(&mut command, &plan);
     command
-        .arg("-cp")
-        .arg(join_classpath(&plan.classpath_entries))
-        .arg(&plan.main_class)
-        .args(&plan.game_args)
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(log_file));
@@ -1017,7 +1038,11 @@ pub(crate) async fn create_launch_plan(manifest: &Manifest, root: &Path, java_pa
 
 pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
+    if manifest.schema_version == "2.0" { validate_runtime_constraints_0223(manifest)?; }
     let mut required_java = manifest.runtime.java.major_version;
+    if manifest.schema_version == "2.0" && manifest.runtime.java.recommended_major_version > 0 {
+        required_java = manifest.runtime.java.recommended_major_version;
+    }
     let mut plan = if strategy == "compatibility" || strategy == "mojang" {
         let game_dir = manifest_directory(root, &manifest.directories.game, ".")?;
         let assets_dir = manifest_directory(root, &manifest.directories.assets, "assets")?;
@@ -1074,6 +1099,10 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             working_directory: game_dir.to_string_lossy().to_string(),
             main_class: resolution.main_class,
             classpath_entries,
+            modulepath_entries: Vec::new(),
+            main_module: String::new(),
+            environment_allowlist: Vec::new(),
+            restrict_java_environment: false,
             jvm_args,
             game_args,
             command_preview: String::new(),
@@ -1082,8 +1111,10 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         create_manifest_launch_plan(manifest, root, "", credentials.map(|c| c.username.clone()).or(username), credentials).await?
     };
 
-    if let Some(credentials) = credentials {
-        apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
+    if manifest.schema_version != "2.0" {
+        if let Some(credentials) = credentials {
+            apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
+        }
     }
 
     if required_java == 0 {
@@ -1097,8 +1128,29 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     )
     .await?;
     plan.java_executable = java_executable;
+    if manifest.schema_version == "2.0" {
+        let java = &manifest.runtime.java;
+        if (java.minimum_major_version > 0 && required_java < java.minimum_major_version) ||
+           (java.maximum_major_version > 0 && required_java > java.maximum_major_version) {
+            return Err("selected Java falls outside profile major version range".into());
+        }
+    }
 
+    if manifest.schema_version == "2.0" {
+        apply_explicit_paths_0223(manifest, root, &mut plan)?;
+        plan.environment_allowlist = manifest.runtime.launch.environment_allowlist.clone();
+        plan.restrict_java_environment = true;
+        validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
+    }
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
+    if manifest.schema_version == "2.0" {
+        validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
+        // Authlib injector is an internal, trusted argument derived only from
+        // the pinned, signed manifest artifact; do not treat it as custom args.
+        if let Some(credentials) = credentials {
+            apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
+        }
+    }
     // Manifest JVM args are appended after Mojang resolution. Repin the
     // extraction root here so a later manifest override cannot redirect the
     // LWJGL loader outside the client's NeverGuard-certified native cache.
@@ -1146,7 +1198,7 @@ async fn platform_natives_directory(base: &Path) -> PathBuf {
 
 async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_executable: &str, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
     let main_class = if !manifest.runtime.launch.main_class.trim().is_empty() { manifest.runtime.launch.main_class.clone() } else { manifest.minecraft.main_class.clone() };
-    if main_class.trim().is_empty() { return Err("в манифесте не указан mainClass".to_string()); }
+    if main_class.trim().is_empty() && manifest.runtime.launch.main_module.trim().is_empty() { return Err("в манифесте не указан mainClass или mainModule".to_string()); }
     let mut classpath_entries = Vec::new();
     for file in &manifest.files {
         if !manifest_file_applies(file) { continue; }
@@ -1158,7 +1210,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
             if fs::metadata(&local_path).await.is_ok() { classpath_entries.push(local_path.to_string_lossy().to_string()); }
         }
     }
-    if classpath_entries.is_empty() { return Err("classpath пуст: JAR-файлы для запуска не найдены".to_string()); }
+    if classpath_entries.is_empty() && manifest.runtime.launch.modulepath_entries.is_empty() { return Err("classpath/modulepath пуст: JAR-файлы для запуска не найдены".to_string()); }
     let mut jvm_args = manifest.runtime.jvm_args.clone();
     if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
         let natives_dir = if manifest.runtime.launch.natives_directory.trim().is_empty() { "natives" } else { manifest.runtime.launch.natives_directory.as_str() };
@@ -1174,7 +1226,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
     replace_or_append_arg_pair(&mut game_args, "--version", manifest.minecraft.version.clone());
     replace_or_append_arg_pair(&mut game_args, "--gameDir", root.to_string_lossy().to_string());
     replace_or_append_arg_pair(&mut game_args, "--assetsDir", root.join("assets").to_string_lossy().to_string());
-    Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, jvm_args, game_args, command_preview: String::new() })
+    Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, modulepath_entries: Vec::new(), main_module: String::new(), environment_allowlist: Vec::new(), restrict_java_environment: false, jvm_args, game_args, command_preview: String::new() })
 }
 
 fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &MinecraftLaunchCredentials, plan: &mut LaunchPlan) -> Result<(), String> {
@@ -1207,14 +1259,180 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
 fn tokio_path_exists119(path: &Path) -> bool { std::fs::metadata(path).is_ok() }
 
 fn redacted_command_preview119(plan: &LaunchPlan, access_token: Option<&str>) -> String {
-    let raw = format!("{} {} -cp {} {} {}", plan.java_executable, plan.jvm_args.join(" "), join_classpath(&plan.classpath_entries), plan.main_class, plan.game_args.join(" "));
+    let cp = if plan.classpath_entries.is_empty() { String::new() } else { format!("-cp {} ", join_classpath(&plan.classpath_entries)) };
+    let entry = if plan.main_module.is_empty() { format!("{}{}", cp, plan.main_class) } else { format!("{}--module-path {} -m {}", cp, join_classpath(&plan.modulepath_entries), plan.main_module) };
+    let raw = format!("{} {} {} {}", plan.java_executable, plan.jvm_args.join(" "), entry, plan.game_args.join(" "));
     match access_token.filter(|v| !v.is_empty()) { Some(token) => raw.replace(token, "[REDACTED]"), None => raw }
+}
+
+// 0.22.3: runtime constraints are enforced both when verifying v2 signatures
+// and again immediately before constructing the OS process.
+fn validate_runtime_constraints_0223(m: &Manifest) -> Result<(), String> {
+    let j = &m.runtime.java;
+    let launch = &m.runtime.launch;
+    if j.major_version == 0 && j.distribution.is_empty() && m.runtime.jvm_args.is_empty() &&
+        m.runtime.memory.minimum_mb == 0 && m.runtime.memory.recommended_mb == 0 &&
+        m.runtime.memory.maximum_mb == 0 && launch.main_class.is_empty() &&
+        launch.classpath_strategy.is_empty() && launch.classpath_entries.is_empty() &&
+        launch.modulepath_entries.is_empty() && launch.main_module.is_empty() &&
+        launch.environment_allowlist.is_empty() {
+        // Empty pre-release drafts can still be inspected. Publishing must
+        // require a runnable runtime before they can reach a public channel.
+        return Ok(());
+    }
+    if j.major_version == 0 || j.major_version > 255 || j.minimum_major_version > 255 ||
+       j.recommended_major_version > 255 || j.maximum_major_version > 255 ||
+       (j.minimum_major_version != 0 && j.maximum_major_version != 0 && j.minimum_major_version > j.maximum_major_version) ||
+       (j.minimum_major_version != 0 && j.major_version < j.minimum_major_version) ||
+       (j.maximum_major_version != 0 && j.major_version > j.maximum_major_version) ||
+       (j.recommended_major_version != 0 && j.minimum_major_version != 0 && j.recommended_major_version < j.minimum_major_version) ||
+       (j.recommended_major_version != 0 && j.maximum_major_version != 0 && j.recommended_major_version > j.maximum_major_version) {
+        return Err("runtime.java major version range is inconsistent".into());
+    }
+    let mem = &m.runtime.memory;
+    if (mem.maximum_mb != 0 && mem.minimum_mb > mem.maximum_mb) ||
+       (mem.recommended_mb != 0 && mem.minimum_mb != 0 && mem.recommended_mb < mem.minimum_mb) ||
+       (mem.maximum_mb != 0 && mem.recommended_mb > mem.maximum_mb) {
+        return Err("runtime.memory minimum/recommended/maximum MB order invalid".into());
+    }
+    if !matches!(launch.classpath_strategy.trim().to_ascii_lowercase().as_str(), "" | "manifest" | "libraries" | "compatibility" | "mojang") {
+        return Err("unsupported runtime.launch.classpathStrategy".into());
+    }
+    validate_memory_arguments_0223(mem, &m.runtime.jvm_args)?;
+    let files: HashSet<&str> = m.files.iter().filter(|f| f.required).map(|f| f.path.as_str()).collect();
+    let mut seen = HashSet::new();
+    for path in launch.classpath_entries.iter().chain(launch.modulepath_entries.iter()) {
+        if path.is_empty() || path.starts_with('/') || path.contains('\\') || path.contains(':') ||
+           path.contains('\0') || path.contains('\r') || path.contains('\n') ||
+           path.split('/').any(|part| part.is_empty() || part == "." || part == "..") ||
+           !path.to_ascii_lowercase().ends_with(".jar") || !files.contains(path.as_str()) || !seen.insert(path) {
+            return Err(format!("invalid/unsigned/duplicate launch JAR path: {path}"));
+        }
+    }
+    if launch.main_module.is_empty() != launch.modulepath_entries.is_empty() {
+        return Err("mainModule and modulepathEntries must be set together".into());
+    }
+    if !launch.main_module.is_empty() {
+        let valid = regex::Regex::new(r"^[A-Za-z_][A-Za-z0-9_.]*(/[A-Za-z_$][A-Za-z0-9_.$]*)?$").map_err(|e| e.to_string())?;
+        if !valid.is_match(&launch.main_module) { return Err("invalid mainModule".into()); }
+    }
+    let valid_environment = regex::Regex::new(r"^[A-Za-z_][A-Za-z0-9_]*$").map_err(|e| e.to_string())?;
+    let mut env_names = HashSet::new();
+    for name in &launch.environment_allowlist {
+        let upper = name.to_ascii_uppercase();
+        if !valid_environment.is_match(name) || !env_names.insert(upper.clone()) ||
+           matches!(upper.as_str(), "JAVA_TOOL_OPTIONS" | "_JAVA_OPTIONS" | "JDK_JAVA_OPTIONS" | "CLASSPATH") {
+            return Err(format!("invalid/unsafe/duplicate environment allowlist key {name}"));
+        }
+    }
+    for arg in &m.minecraft.game_args {
+        if arg.contains('\0') || arg.contains('\r') || arg.contains('\n') { return Err("invalid game argument".into()); }
+    }
+    Ok(())
+}
+
+fn parse_heap_arg_0223(arg: &str) -> Result<Option<(char, u64)>, String> {
+    let lower = arg.to_ascii_lowercase();
+    if !(lower.starts_with("-xmx") || lower.starts_with("-xms")) { return Ok(None); }
+    let heap_type = lower.as_bytes()[3] as char;
+    let payload = &lower[4..];
+    let digits = match payload.chars().last() {
+        Some('k' | 'm' | 'g') => &payload[..payload.len()-1],
+        _ => payload,
+    };
+    if digits.is_empty() || digits.starts_with('0') || !digits.bytes().all(|c| c.is_ascii_digit()) {
+        return Err(format!("invalid heap argument {arg}"));
+    }
+    let value = digits.parse::<u64>().map_err(|_| format!("invalid heap argument {arg}"))?;
+    // Convert to MB with checked multiplication and ceiling for k/bytes.
+    let mb = match payload.chars().last() {
+        Some('k') => value.checked_add(1023).map(|v| v / 1024),
+        Some('m') => Some(value),
+        Some('g') => value.checked_mul(1024),
+        _ => value.checked_add(1048575).map(|v| v / 1048576),
+    }.ok_or_else(|| format!("heap argument overflow: {arg}"))?;
+    Ok(Some((heap_type, mb)))
+}
+
+fn validate_memory_arguments_0223(mem: &MemoryInfo, args: &[String]) -> Result<(), String> {
+    let mut xms = None;
+    let mut xmx = None;
+    for arg in args {
+        let lower = arg.to_ascii_lowercase();
+        if arg.trim().is_empty() || arg.contains('\0') || arg.contains('\r') || arg.contains('\n') {
+            return Err("invalid JVM argument".into());
+        }
+        if matches!(lower.as_str(), "-cp" | "-classpath" | "--class-path" | "--module-path" | "--patch-module" | "--upgrade-module-path" | "-p" | "-m" | "--module" | "-jar") ||
+            ["-xbootclasspath", "--class-path=", "--module-path=", "--patch-module", "--upgrade-module-path", "-javaagent:", "-agentpath:", "-agentlib:", "-xx:onerror=", "-xx:onoutofmemoryerror="].iter().any(|v| lower.starts_with(v)) {
+            return Err(format!("JVM entrypoint/path/agent override prohibited: {arg}"));
+        }
+        if let Some((kind, mb)) = parse_heap_arg_0223(arg)? {
+            if (mem.minimum_mb > 0 && mb < mem.minimum_mb as u64) ||
+               (mem.maximum_mb > 0 && mb > mem.maximum_mb as u64) {
+                return Err(format!("heap argument outside profile limits: {arg}"));
+            }
+            let slot = if kind == 's' { &mut xms } else { &mut xmx };
+            if slot.replace(mb).is_some() { return Err(format!("duplicate heap argument: {arg}")); }
+        }
+    }
+    if let (Some(min), Some(max)) = (xms, xmx) {
+        if min > max { return Err("-Xms exceeds -Xmx".into()); }
+    }
+    Ok(())
+}
+
+fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -> Result<(), String> {
+    let launch = &m.runtime.launch;
+    for name in launch.classpath_entries.iter().chain(launch.modulepath_entries.iter()) {
+        if !m.files.iter().any(|file| file.path == *name && file.required && manifest_file_applies(file)) {
+            return Err(format!("signed runtime path not applicable to current platform: {name}"));
+        }
+    }
+    if !launch.classpath_entries.is_empty() {
+        plan.classpath_entries = launch.classpath_entries.iter().map(|v| safe_join(root, v).map(|p| p.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
+    }
+    plan.modulepath_entries = launch.modulepath_entries.iter().map(|v| safe_join(root, v).map(|p| p.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
+    plan.main_module = launch.main_module.clone();
+    if !plan.main_module.is_empty() && launch.classpath_entries.is_empty() {
+        // Modules must not silently reappear on the legacy classpath.
+        plan.classpath_entries.clear();
+    }
+    if plan.main_module.is_empty() && plan.classpath_entries.is_empty() {
+        return Err("launch requires signed classpath entries or mainModule".into());
+    }
+    Ok(())
+}
+
+fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
+    if plan.restrict_java_environment && !plan.environment_allowlist.is_empty() {
+        let inherited: Vec<(String, String)> = plan.environment_allowlist.iter().filter_map(|key| std::env::var(key).ok().map(|value| (key.clone(), value))).collect();
+        command.env_clear();
+        for (key, value) in inherited { command.env(key, value); }
+        #[cfg(windows)]
+        for key in ["SystemRoot", "WINDIR"] {
+            if let Ok(value) = std::env::var(key) { command.env(key, value); }
+        }
+    }
+    if plan.restrict_java_environment {
+        for forbidden in ["JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS", "CLASSPATH"] {
+            command.env_remove(forbidden);
+        }
+    }
+    if !plan.classpath_entries.is_empty() {
+        command.arg("-cp").arg(join_classpath(&plan.classpath_entries));
+    }
+    if !plan.modulepath_entries.is_empty() {
+        command.arg("--module-path").arg(join_classpath(&plan.modulepath_entries));
+    }
+    if !plan.main_module.is_empty() { command.arg("-m").arg(&plan.main_module); }
+    else { command.arg(&plan.main_class); }
+    command.args(&plan.game_args);
 }
 
 fn apply_memory_policy(memory: &MemoryInfo, jvm_args: &mut Vec<String>) {
     if memory.minimum_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xms")) { jvm_args.push(format!("-Xms{}M", memory.minimum_mb)); }
-    if memory.recommended_mb > 0 && !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
-        let max = if memory.maximum_mb > 0 { memory.recommended_mb.min(memory.maximum_mb) } else { memory.recommended_mb };
+    if (memory.recommended_mb > 0 || memory.maximum_mb > 0) && !jvm_args.iter().any(|arg| arg.starts_with("-Xmx")) {
+        let max = if memory.recommended_mb > 0 { memory.recommended_mb } else { memory.maximum_mb };
         jvm_args.push(format!("-Xmx{}M", max));
     }
 }
@@ -1372,6 +1590,53 @@ mod tests {
     use super::*;
 
     #[test]
+    fn v2_runtime_constraints_enforce_signed_jars_java_heap_and_environment_0223() {
+        let mut m = sample_manifest();
+        m.schema_version = "2.0".into();
+        m.runtime.java.minimum_major_version = 16;
+        m.runtime.java.recommended_major_version = 17;
+        m.runtime.java.maximum_major_version = 21;
+        m.runtime.launch.classpath_entries = vec!["libraries/fixture.jar".into()];
+        m.runtime.launch.environment_allowlist = vec!["LANG".into()];
+        assert!(validate_runtime_constraints_0223(&m).is_ok());
+        m.runtime.jvm_args.push("-Xmx2048M".into());
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "duplicate heap override");
+        m.runtime.jvm_args.clear();
+        m.runtime.jvm_args.push("-Xmx1024M".into());
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "heap beyond max");
+        m.runtime.jvm_args.clear();
+        m.runtime.launch.classpath_entries = vec!["libraries/missing.jar".into()];
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "unsigned classpath");
+        m.runtime.launch.classpath_entries = vec!["libraries/fixture.jar".into()];
+        m.runtime.launch.environment_allowlist = vec!["JAVA_TOOL_OPTIONS".into()];
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Java env injection");
+        m.runtime.launch.environment_allowlist.clear();
+        m.runtime.java.maximum_major_version = 16;
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Java constraint mismatch");
+    }
+
+    #[test]
+    fn runtime_0223_launch_command_uses_argument_arrays_for_java_modules() {
+        let mut plan = LaunchPlan {
+            java_executable: "java".into(), working_directory: ".".into(),
+            main_class: "ignored.Main".into(),
+            classpath_entries: vec!["lib one.jar".into()], modulepath_entries: vec!["mod one.jar".into()],
+            main_module: "example.mod/example.Main".into(), environment_allowlist: vec!["LANG".into()], restrict_java_environment: true,
+            jvm_args: vec!["-Xmx1G".into()], game_args: vec!["value with spaces".into()], command_preview: String::new(),
+        };
+        let mut cmd = Command::new("java");
+        cmd.args(&plan.jvm_args);
+        apply_launch_command_0223(&mut cmd, &plan);
+        let args: Vec<String> = cmd.as_std().get_args().map(|v| v.to_string_lossy().to_string()).collect();
+        assert_eq!(args, vec!["-Xmx1G", "-cp", "lib one.jar", "--module-path", "mod one.jar", "-m", "example.mod/example.Main", "value with spaces"]);
+        plan.main_module.clear();
+        plan.modulepath_entries.clear();
+        let mut legacy_cmd = Command::new("java");
+        apply_launch_command_0223(&mut legacy_cmd, &plan);
+        assert!(legacy_cmd.as_std().get_args().any(|v| v.to_string_lossy() == "ignored.Main"));
+    }
+
+    #[test]
     fn modded_profile_uses_root_minecraft_release_for_quick_play() {
         for profile in [
             "fabric-loader-0.19.5-1.21.1",
@@ -1422,6 +1687,9 @@ mod tests {
             runtime: RuntimeInfo {
                 java: JavaInfo {
                     major_version: 17,
+                    minimum_major_version: 0,
+                    recommended_major_version: 0,
+                    maximum_major_version: 0,
                     distribution: "temurin".to_string(),
                     allow_custom_path: true,
                 },
@@ -1436,6 +1704,10 @@ mod tests {
                     classpath_strategy: "manifest".to_string(),
                     natives_directory: "natives".to_string(),
                     version_metadata_path: String::new(),
+                    classpath_entries: Vec::new(),
+                    modulepath_entries: Vec::new(),
+                    main_module: String::new(),
+                    environment_allowlist: Vec::new(),
                     features: HashMap::new(),
                     offline_mode: true,
                 },
@@ -1473,6 +1745,9 @@ mod tests {
         let seed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
         let key = sign_manifest(&mut manifest, seed, "2026-10-18T00:00:00Z").expect("v2 sign");
         verify_manifest_signature(&manifest, &key).expect("v2 verify");
+        let mut altered_runtime = manifest.clone();
+        altered_runtime.runtime.java.minimum_major_version = 16;
+        assert!(verify_manifest_signature(&altered_runtime, &key).is_err(), "Java policy is covered by the Ed25519 signature");
         manifest.profile_snapshot.as_mut().unwrap().spec.name = "Forged".into();
         assert!(verify_manifest_signature(&manifest, &key).is_err());
         manifest.profile_snapshot = None;

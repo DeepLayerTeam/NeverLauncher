@@ -32,10 +32,10 @@ type Manifest = {
   version: string;
   minecraft: { version: string; loader: string; mainClass?: string; gameArgs?: string[] };
   runtime: {
-    java: { majorVersion: number; distribution: string; allowCustomPath?: boolean };
+    java: { majorVersion: number; minimumMajorVersion?: number; recommendedMajorVersion?: number; maximumMajorVersion?: number; distribution: string; allowCustomPath?: boolean };
     jvmArgs?: string[];
     memory?: { minimumMb: number; recommendedMb: number; maximumMb: number };
-    launch?: { mainClass?: string; classpathStrategy?: string; nativesDirectory?: string; offlineMode?: boolean };
+    launch?: { mainClass?: string; mainModule?: string; classpathStrategy?: string; classpathEntries?: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; nativesDirectory?: string; offlineMode?: boolean };
   };
   files: ManifestFile[];
 };
@@ -59,7 +59,7 @@ type JavaInfoResult = {
 
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; failedFiles?: string[]; messages: string[] };
-type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; classpathEntries: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string };
+type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; mainModule?: string; classpathEntries: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string };
 type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string; windowsSensor?: any };
 type RepairResult = { status: string; before: FileCheckResult[]; download: DownloadResult; after: FileCheckResult[]; repaired: number; message: string };
 type CleanUnusedResult = { moved: number; preserved: number; quarantineDir: string; messages: string[] };
@@ -880,7 +880,7 @@ function App() {
     setStage('java');
     try {
       const activeManifest = manifest;
-      const required = activeManifest?.runtime.java.majorVersion ?? 17;
+      const required = activeManifest?.runtime.java.recommendedMajorVersion || activeManifest?.runtime.java.majorVersion || 17;
       const distribution = activeManifest?.runtime.java.distribution || 'temurin';
       let result = await callTauri<JavaInfoResult>('check_java', {
         javaPath: settings.javaPath || null,
@@ -1253,7 +1253,7 @@ function App() {
           <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/profiles/{profile}/manifest?channel=stable" /></label>
           <label>Каталог игры<input value={settings.gameDirectory} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('gameDirectory', event.target.value)} /></label>
           <label>Имя игрока<input value={settings.username} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('username', event.target.value)} /></label>
-          <label>Память, МБ<input type="number" value={settings.memoryMb} min={512} max={32768} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(event.target.value))} /></label>
+          <label>Память, МБ<input type="number" value={settings.memoryMb} min={Math.max(512, manifest?.runtime.memory?.minimumMb || 0)} max={Math.min(32768, manifest?.runtime.memory?.maximumMb || 32768)} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(event.target.value))} /></label>
           <label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label>
         </section>
 

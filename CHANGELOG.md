@@ -1,3 +1,11 @@
+## 0.22.3 — Runtime Constraints
+
+- Added runtime Java major range (min/recommended/max), typed memory enforcement and strict JVM argument validation to signed v2 manifests.
+- Implemented signed ordered classpath/modulepath and Java mainModule execution in NeverRuntime without shell invocation.
+- Prevented JVM heap/path/agent overrides and unsafe inherited Java environment variables for v2; preserved v1 signature compatibility.
+- Applied checks to editable API manifests, publication validation and resolved runtime launches; added positive/negative model and runtime unit tests.
+- Production certification still requires full integration and Rust builds; see `docs/runtime/runtime-constraints-0223.md`.
+
 ## 0.21.10 — Everyday Lifecycle
 
 ## 0.22.2 — Schema Evolution Integrity

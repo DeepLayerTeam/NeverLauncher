@@ -75,6 +75,11 @@ func ValidateManifestSchema(m Manifest) error {
 	default:
 		return fmt.Errorf("unsupported manifest schema %q", m.SchemaVersion)
 	}
+	if m.SchemaVersion == ManifestSchemaV2 {
+		if err := ValidateRuntimeConstraints0223(m); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
