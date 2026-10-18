@@ -29,6 +29,12 @@ const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;
 // Allow in-flight successful IAT callbacks to publish their evidence before
 // refusing an otherwise unknown executable page; never trust a timer alone.
 const PROVENANCE_RECHECKS: usize = 16;
+// Windows may report ERROR_PARTIAL_COPY while a loader mapping is settling.
+// Retry only while VirtualQuery proves that the same executable MEM_IMAGE
+// segment remains mapped. Hash validation and fail-closed still apply.
+const IMAGE_READ_RECHECKS: usize = 4;
+const ERROR_PARTIAL_COPY: i32 = 299;
+
 
 const TRANSITION_VIRTUAL_ALLOC: u32 = 1;
 const TRANSITION_VIRTUAL_PROTECT: u32 = 2;
@@ -445,22 +451,60 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
     let process = unsafe { GetCurrentProcess() };
     while offset < region.size {
         let chunk = (region.size - offset).min(buffer.len());
-        let mut read = 0usize;
-        let copied = unsafe {
-            ReadProcessMemory(
-                process,
+        let mut copied_all = false;
+        let mut last_error = String::new();
+        for attempt in 0..IMAGE_READ_RECHECKS {
+            let mut read = 0usize;
+            let copied = unsafe {
+                ReadProcessMemory(
+                    process,
+                    (region.base + offset) as *const c_void,
+                    buffer.as_mut_ptr().cast(),
+                    chunk,
+                    &mut read,
+                )
+            };
+            if copied != 0 && read == chunk {
+                copied_all = true;
+                break;
+            }
+            let error = std::io::Error::last_os_error();
+            last_error = error.to_string();
+            // Retry only a known transient Windows error, after confirming
+            // the exact original mapping is still executable and unchanged.
+            if error.raw_os_error() != Some(ERROR_PARTIAL_COPY)
+                || attempt + 1 == IMAGE_READ_RECHECKS
+            {
+                break;
+            }
+            let mut now = MemoryBasicInformation::default();
+            let queried = unsafe { VirtualQuery(
                 (region.base + offset) as *const c_void,
-                buffer.as_mut_ptr().cast(),
-                chunk,
-                &mut read,
-            )
-        };
-        if copied == 0 || read != chunk {
+                &mut now,
+                std::mem::size_of::<MemoryBasicInformation>(),
+            ) };
+            if queried == 0
+                || now.base_address as usize != region.base
+                || now.allocation_base as usize != region.allocation_base
+                || now.region_size != region.size
+                || now.protect != region.protect
+                || now.state != MEM_COMMIT
+                || now.kind != MEM_IMAGE
+            {
+                buffer.fill(0);
+                return Err(format!(
+                    "NeverGuard Memory Integrity executable image mapping changed during read at 0x{:X}",
+                    region.base + offset
+                ));
+            }
+            buffer.fill(0);
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        if !copied_all {
             buffer.fill(0);
             return Err(format!(
                 "NeverGuard Memory Integrity executable image unreadable at 0x{:X}: {}",
-                region.base + offset,
-                std::io::Error::last_os_error()
+                region.base + offset, last_error
             ));
         }
         digest.update(&buffer[..chunk]);
